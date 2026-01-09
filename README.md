@@ -1,8 +1,7 @@
 <img src="https://www.austral.edu.ar/wp-content/uploads/2022/10/facultades-horizontales-03.png" width="50%" alt="Universidad Austral - Facultad de Ingeniería">
 
-### Tesis para Magister en Ciencia de Datos
 # Navegación Autónoma de Drones Urbanos con Visión Monocular y SLM
-#### Maestría en Ciencia de Datos 2024/2025
+### Tesis para Magister en Ciencia de Datos | Maestría en Ciencia de Datos 2024/2025
 
 Directores:
 
