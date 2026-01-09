@@ -1,0 +1,13 @@
+{
+    "servers": {
+        "drone-control": {
+            "command": "D:\\TesisMCD\\lmdrone_env\\python.exe",
+            "args": [
+                "D:\\TesisMCD\\python_poc\\drone_mcp_server.py"
+            ],
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
+        }
+    }
+}
