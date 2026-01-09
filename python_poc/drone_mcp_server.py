@@ -162,12 +162,17 @@ async def reset() -> str:
     return await asyncio.to_thread(_action_sync, "reset")
 
 if __name__ == "__main__":
-    # Try to connect immediately on startup (Main Thread)
-    # This ensures the client is ready before any tool is called.
     log("Server starting...")
-    client = _connect_to_airsim()
-    
+    sys.stderr.flush()
     try:
+        log("Running MCP server...")
+        sys.stderr.flush()
         mcp.run()
+    except BrokenPipeError:
+        log("Client disconnected (broken pipe)")
+    except KeyboardInterrupt:
+        log("Server interrupted")
     except Exception as e:
         log(f"Fatal Error: {e}")
+        import traceback
+        traceback.print_exc(file=sys.stderr)
