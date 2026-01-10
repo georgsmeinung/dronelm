@@ -13,9 +13,9 @@ Alumno:
 -   NICOLAU, Jorge Enrique
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![AirSim](https://img.shields.io/badge/Simulator-AirSim-critical)](https://microsoft.github.io/AirSim/)
-[![Platform](https://img.shields.io/badge/Hardware-Jetson%20Nano-green)](https://developer.nvidia.com/embedded/jetson-nano-developer-kit)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![UnrealEngine](https://img.shields.io/badge/Simulator-Unreal_Engine_5.5-green)](https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-engine-5-5-documentation?application_version=5.5)
+[![AirSim](https://img.shields.io/badge/Plug_in-Cosys_AirSim-critical)](https://github.com/Cosys-Lab/Cosys-AirSim/)
 
 Este repositorio contiene la implementación del Trabajo Final de Máster en Ingeniería (Ciencia de Datos) de la **Universidad Austral**.
 
@@ -35,7 +35,7 @@ La navegación autónoma de drones en entornos urbanos densos, como la ciudad de
 El sistema integra:
 * **Modelos de Lenguaje Ligero (SLM)** para la toma de decisiones reactiva.
 * **Visión por Computadora** (YOLOv8n, ORB-SLAM2) para percepción.
-* **Simulación de Alta Fidelidad** en AirSim con entornos generados a partir de datos reales de la ciudad.
+* **Simulación Realista** en AirSim con entornos urbanos.
 
 El objetivo principal es comparar el rendimiento de los SLM frente a las tradicionales Máquinas de Estados Finitos (FSM) en tareas de detección, mapeo y aterrizaje.
 
@@ -63,7 +63,7 @@ Ejecución de la lógica de vuelo y percepción.
 ## 🛠️ Stack Tecnológico
 
 * **Lenguaje:** Python, C++.
-* **Simulación:** Microsoft AirSim, Unreal Engine 4/5.
+* **Simulación:** Microsoft AirSim, Unreal Engine 5.5.
 * **Visión por Computadora:** OpenCV, YOLOv8, ORB-SLAM2.
 * **Deep Learning:** PyTorch / TensorFlow (para SLM y segmentación).
 * **Infraestructura:** Docker, NVIDIA TensorRT (para optimización en Jetson).
