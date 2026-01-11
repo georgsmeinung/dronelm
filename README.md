@@ -5,12 +5,12 @@
 
 Directores:
 
--   DEL ROSSO, Rodrigo
--   NUSKE, Ezequiel
+-   [DEL ROSSO, Rodrigo](https://www.linkedin.com/in/rodrigodelrosso/)
+-   [NUSKE, Ezequiel](https://www.linkedin.com/in/ezequiel-nuske-15137862/)
 
 Alumno:
 
--   NICOLAU, Jorge Enrique
+-   [NICOLAU, Jorge Enrique](https://www.linkedin.com/in/jorgenicolau/)
 
 Este repositorio contiene la implementación del Trabajo Final de Máster en Ingeniería (Ciencia de Datos) de la **Universidad Austral**.
 
