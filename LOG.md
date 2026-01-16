@@ -1,3 +1,6 @@
+**2026-0115**
+---
+* Generado proyecto auxiliar, a partir de un fork, para control de drone desde el teclado https://github.com/georgsmeinung/airsim-drone-kc utilizando la nueva librería `cosysairsim`
 
 **2026-0109**
 ---
