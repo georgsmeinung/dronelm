@@ -1,3 +1,10 @@
+**2026-0203**
+---
+* Inicio borrador de informe
+* Determinado alcance y curso de acción en la arquitectura seleccionada
+* Bosquejo de arquitectura seleccionada
+* Consdieraciones sobre Optimización de uso de la GPU
+
 **2026-0131**
 ---
 * Instalado QGroudControl para control de misión. 
