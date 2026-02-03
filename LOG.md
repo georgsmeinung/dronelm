@@ -1,7 +1,7 @@
 **2026-0203**
 ---
 * Inicio borrador de informe
-* Determinado alcance y curso de acción en la arquitectura seleccionada
+* Determinado alcance y plan para desplegar la arquitectura de solución
 * Bosquejo de arquitectura seleccionada
 * Consdieraciones sobre Optimización de uso de la GPU
 
