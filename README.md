@@ -14,10 +14,6 @@ Alumno:
 
 Este repositorio contiene la implementación del Trabajo Final de Máster en Ingeniería (Ciencia de Datos) de la **Universidad Austral**.
 
-**Título:** Navegación Autónoma de Drones Urbanos con Visión Monocular y SLM
-**Autor:** Jorge Enrique Nicolau
-**Director:** Rodrigo Del Rosso | **Codirector:** Ezequiel Omar Nuske
-
 #### Proyecto:
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
