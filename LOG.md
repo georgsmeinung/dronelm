@@ -1,12 +1,27 @@
+**2026-0205**
+---
+* Restaurado configuración para sólo API Python, no se va a implementar STIL por MAVLink hasta calibrar el escenario:
+```json
+{
+  "SeeDocsAt": "https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docs/settings_example.json",
+  "SettingsVersion": 2.0,
+  "SimMode": "Multirotor",
+  "LocalHostIp": "127.0.0.1",
+  "ApiServerPort": 41451,
+  "RecordUIVisible": false
+}
+```
+* Prueba de captura (en pantalla) en simultaneo con navegación controlada por API
+
 **2026-0204**
 ---
 * Instalado Docker Desktop para ejecutar PX4 Autopilot
 * Instalado container con Autopilot cloando repositorio:
-```
+```bash
 git clone https://github.com/PX4/PX4-Autopilot.git --recursive
 ```
 * Generado `docker-compose.yml`:
-```
+```yaml
 services:
   px4_sitl:
       image: px4io/px4-dev-simulation-focal:latest
@@ -24,11 +39,11 @@ services:
 ```
 Iniciando contenedor con volumen referenciado al repositorio clonado:
 
-```
+```bash
 docker-compose up
 ```
 * Configurado Airsim para hacer de bridge en entre PX4 y QGroundControl
-```
+```json
 {
   "SeeDocsAt": "https://cosys-lab.github.io/settings/",
   "SettingsVersion": 2.0,
