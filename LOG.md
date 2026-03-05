@@ -1,6 +1,37 @@
+
+
+**2026-0304**
+---
+* Instalado https://huggingface.co/DevQuasar/HuggingFaceTB.SmolLM2-135M-Instruct-GGUF en lmstudio. 
+* `HuggingFaceTB/SmolLM2-135M` no es muy bueno interpretando comandos.
+* Probando con:
+```
+Model: Qwen/Qwen2.5-Coder-0.5B-Instruct
+Provider: Alibaba
+Parameters: 494M
+Best Quant: Q8_0 (for this hardware) 
+Context: 32768 tokens
+Use Case: Code generation and completion
+```
+* `Qwen/Qwen2.5-Coder-0.5B-Instruct` funciona bien para procesar comandos simples
+
 **2026-0303**
 ---
-* Determinando mejor llm local con `llmfit`
+* Determinando mejor llm local con `llmfit`. 
+Seleccionado:
+```
+Model: HuggingFaceTB/SmolLM2-135M
+Provider: huggingfacetb
+Parameters: 135M
+Quantization: Q4_K_M
+Best Quant: Q8_0 (for this hardware)
+Context: 8192 tokens
+Use Case: General purpose text generation
+Category: General
+Released: 2024-10-31
+Runtime: llama.cpp (baseline est. ~1046.7 tok/s)
+Installed: No provider running
+```
 
 **2026-0212**
 ---
