@@ -1,0 +1,392 @@
+2026-03-10 20:13:22,556 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:13:22,556 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:13:22,557 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:13:22,557 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:13:22,557 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:13:22,558 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:13:22,558 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:13:22,558 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:13:22,571 - INFO - Initializing DroneController...
+2026-03-10 20:13:22,571 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:13:22,574 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:13:22,579 - INFO - Confirming connection...
+2026-03-10 20:13:22,583 - DEBUG - Connected!
+2026-03-10 20:13:22,586 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:13:22,587 - INFO - Enabling API control...
+2026-03-10 20:13:22,588 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:13:22,588 - INFO - DroneController initialization complete.
+2026-03-10 20:13:22,618 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:15:07,882 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:15:07,882 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:15:07,883 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:15:07,883 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:15:07,883 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:15:07,883 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:15:07,884 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:15:07,884 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:15:07,893 - INFO - Initializing DroneController...
+2026-03-10 20:15:07,893 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:15:07,893 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:15:07,896 - INFO - Confirming connection...
+2026-03-10 20:15:07,900 - DEBUG - Connected!
+2026-03-10 20:15:07,903 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:15:07,903 - INFO - Enabling API control...
+2026-03-10 20:15:07,903 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:15:07,904 - INFO - DroneController initialization complete.
+2026-03-10 20:15:07,928 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:15:54,157 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:15:54,157 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:15:54,158 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:15:54,158 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:15:54,158 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:15:54,158 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:15:54,158 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:15:54,158 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:15:54,171 - INFO - Initializing DroneController...
+2026-03-10 20:15:54,171 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:15:54,171 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:15:54,178 - INFO - Confirming connection...
+2026-03-10 20:15:54,181 - DEBUG - Connected!
+2026-03-10 20:15:54,182 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:15:54,182 - INFO - Enabling API control...
+2026-03-10 20:15:54,183 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:15:54,183 - INFO - DroneController initialization complete.
+2026-03-10 20:15:54,210 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:15:54,226 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:15:56,424 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:15:56,424 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:15:56,425 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:15:56,425 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:15:56,425 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:15:56,425 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:15:56,425 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:15:56,425 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:15:56,435 - INFO - Initializing DroneController...
+2026-03-10 20:15:56,435 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:15:56,435 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:15:56,440 - INFO - Confirming connection...
+2026-03-10 20:15:56,445 - DEBUG - Connected!
+2026-03-10 20:15:56,449 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:15:56,449 - INFO - Enabling API control...
+2026-03-10 20:15:56,450 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:15:56,450 - INFO - DroneController initialization complete.
+2026-03-10 20:15:56,477 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:15:56,493 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:15:56,516 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000001A6BD6D9E70>
+2026-03-10 20:15:56,517 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:15:56,517 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:15:56,518 - DEBUG - Response sent
+2026-03-10 20:16:10,010 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000001A6BD6D9D80>
+2026-03-10 20:16:10,011 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:16:10,011 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:16:10,012 - DEBUG - Response sent
+2026-03-10 20:16:10,050 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000001A6BD6D9C60>
+2026-03-10 20:16:10,050 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:16:10,051 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:16:10,052 - DEBUG - Response sent
+2026-03-10 20:16:15,655 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000001A6BD6D9390>
+2026-03-10 20:16:15,655 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:16:15,655 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:16:15,656 - DEBUG - Response sent
+2026-03-10 20:16:23,314 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000001A6BD6D95A0>
+2026-03-10 20:16:23,314 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:16:23,314 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:16:23,315 - DEBUG - Response sent
+2026-03-10 20:18:29,983 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:18:29,984 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:18:29,984 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:18:29,984 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:18:29,985 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:18:29,985 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:18:29,985 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:18:29,985 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:18:30,000 - INFO - Initializing DroneController...
+2026-03-10 20:18:30,001 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:18:30,001 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:18:30,008 - INFO - Confirming connection...
+2026-03-10 20:18:30,013 - DEBUG - Connected!
+2026-03-10 20:18:30,015 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:18:30,016 - INFO - Enabling API control...
+2026-03-10 20:18:30,020 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:18:30,020 - INFO - DroneController initialization complete.
+2026-03-10 20:18:30,050 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:18:30,068 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:18:32,044 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:18:32,045 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:18:32,045 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:18:32,045 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:18:32,045 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:18:32,045 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:18:32,045 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:18:32,045 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:18:32,056 - INFO - Initializing DroneController...
+2026-03-10 20:18:32,056 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:18:32,056 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:18:32,062 - INFO - Confirming connection...
+2026-03-10 20:18:32,068 - DEBUG - Connected!
+2026-03-10 20:18:32,070 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:18:32,070 - INFO - Enabling API control...
+2026-03-10 20:18:32,071 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:18:32,071 - INFO - DroneController initialization complete.
+2026-03-10 20:18:32,095 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:18:32,111 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:18:32,133 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x00000205D907E3B0>
+2026-03-10 20:18:32,134 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:18:32,134 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:18:32,135 - DEBUG - Response sent
+2026-03-10 20:19:15,265 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:19:15,265 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:19:15,266 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:19:15,266 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:19:15,266 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:19:15,266 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:19:15,266 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:19:15,266 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:19:15,276 - INFO - Initializing DroneController...
+2026-03-10 20:19:15,276 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:19:15,277 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:19:15,281 - INFO - Confirming connection...
+2026-03-10 20:19:15,287 - DEBUG - Connected!
+2026-03-10 20:19:15,290 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:19:15,290 - INFO - Enabling API control...
+2026-03-10 20:19:15,290 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:19:15,291 - INFO - DroneController initialization complete.
+2026-03-10 20:19:15,317 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:19:15,330 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:19:15,355 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000017CD5466380>
+2026-03-10 20:19:15,356 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:19:15,356 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:19:15,357 - DEBUG - Response sent
+2026-03-10 20:19:15,414 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000017CD5466290>
+2026-03-10 20:19:15,415 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:19:15,415 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:19:15,417 - DEBUG - Response sent
+2026-03-10 20:19:16,578 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000017CD5465780>
+2026-03-10 20:19:16,578 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:19:16,579 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:19:16,581 - DEBUG - Response sent
+2026-03-10 20:19:16,581 - INFO - Warning: RuntimeWarning: coroutine 'ClientTransport.send_message' was never awaited
+2026-03-10 20:19:22,700 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000017CD5466260>
+2026-03-10 20:19:22,700 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:19:22,700 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:19:22,701 - DEBUG - Response sent
+2026-03-10 20:20:52,637 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:20:52,638 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:20:52,638 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:20:52,638 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:20:52,639 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:20:52,639 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:20:52,639 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:20:52,639 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:20:52,647 - INFO - Initializing DroneController...
+2026-03-10 20:20:52,648 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:20:52,648 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:20:52,654 - INFO - Confirming connection...
+2026-03-10 20:20:52,658 - DEBUG - Connected!
+2026-03-10 20:20:52,660 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:20:52,660 - INFO - Enabling API control...
+2026-03-10 20:20:52,660 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:20:52,661 - INFO - DroneController initialization complete.
+2026-03-10 20:20:52,687 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:20:52,702 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:20:54,714 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:20:54,715 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:20:54,715 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:20:54,715 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:20:54,715 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:20:54,715 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:20:54,715 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:20:54,715 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:20:54,724 - INFO - Initializing DroneController...
+2026-03-10 20:20:54,725 - INFO - Connecting to AirSim MultirotorClient...
+2026-03-10 20:20:54,725 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:20:54,730 - INFO - Confirming connection...
+2026-03-10 20:20:54,733 - DEBUG - Connected!
+2026-03-10 20:20:54,735 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:20:54,735 - INFO - Enabling API control...
+2026-03-10 20:20:54,736 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:20:54,736 - INFO - DroneController initialization complete.
+2026-03-10 20:20:54,764 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:20:54,776 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:20:54,798 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002C75B8DDE40>
+2026-03-10 20:20:54,798 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:20:54,798 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:20:54,800 - DEBUG - Response sent
+2026-03-10 20:21:08,731 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002C75B8DDD50>
+2026-03-10 20:21:08,732 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:21:08,732 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:21:08,733 - DEBUG - Response sent
+2026-03-10 20:21:13,553 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002C75B8DDC30>
+2026-03-10 20:21:13,553 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:21:13,553 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:21:13,555 - DEBUG - Response sent
+2026-03-10 20:21:13,581 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002C75B8DD420>
+2026-03-10 20:21:13,581 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:21:13,581 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:21:13,582 - DEBUG - Response sent
+2026-03-10 20:21:15,899 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002C75B8DD2D0>
+2026-03-10 20:21:15,899 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:21:15,899 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:21:15,900 - DEBUG - Response sent
+2026-03-10 20:21:21,956 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002C75B8DDBA0>
+2026-03-10 20:21:21,956 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:21:21,956 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:21:21,956 - DEBUG - Response sent
+2026-03-10 20:24:46,909 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:24:46,910 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:24:46,910 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:24:46,910 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:24:46,911 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:24:46,911 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:24:46,911 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:24:46,911 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:24:46,921 - INFO - Initializing DroneController...
+2026-03-10 20:24:46,922 - INFO - Connecting to AirSim MultirotorClient in dedicated thread...
+2026-03-10 20:24:46,923 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:24:46,928 - INFO - Confirming connection...
+2026-03-10 20:24:46,931 - DEBUG - Connected!
+2026-03-10 20:24:46,933 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:24:46,933 - INFO - Enabling API control...
+2026-03-10 20:24:46,934 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:24:46,934 - INFO - DroneController initialization complete.
+2026-03-10 20:24:46,960 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:24:46,973 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:24:48,945 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-10 20:24:48,945 - DEBUG - Registering handler for ListToolsRequest
+2026-03-10 20:24:48,946 - DEBUG - Registering handler for CallToolRequest
+2026-03-10 20:24:48,946 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-10 20:24:48,947 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-10 20:24:48,947 - DEBUG - Registering handler for PromptListRequest
+2026-03-10 20:24:48,948 - DEBUG - Registering handler for GetPromptRequest
+2026-03-10 20:24:48,948 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-10 20:24:48,959 - INFO - Initializing DroneController...
+2026-03-10 20:24:48,960 - INFO - Connecting to AirSim MultirotorClient in dedicated thread...
+2026-03-10 20:24:48,961 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:24:48,967 - INFO - Confirming connection...
+2026-03-10 20:24:48,973 - DEBUG - Connected!
+2026-03-10 20:24:48,974 - DEBUG - Client Ver:4 (Min Req: 4), Server Ver:4 (Min Req: 4)
+2026-03-10 20:24:48,975 - INFO - Enabling API control...
+2026-03-10 20:24:48,975 - INFO - Connection confirmed and API control enabled.
+2026-03-10 20:24:48,975 - INFO - DroneController initialization complete.
+2026-03-10 20:24:49,007 - DEBUG - Using proactor: IocpProactor
+2026-03-10 20:24:49,025 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-10 20:24:49,049 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BE50>
+2026-03-10 20:24:49,050 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:24:49,050 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:24:49,050 - DEBUG - Response sent
+2026-03-10 20:24:56,900 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BD60>
+2026-03-10 20:24:56,900 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:24:56,900 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:24:56,900 - DEBUG - Response sent
+2026-03-10 20:24:56,929 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650A620>
+2026-03-10 20:24:56,929 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:24:56,929 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:24:56,930 - DEBUG - Response sent
+2026-03-10 20:25:00,918 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000026976509D50>
+2026-03-10 20:25:00,919 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:25:00,919 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:25:00,924 - DEBUG - Response sent
+2026-03-10 20:25:07,860 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BE20>
+2026-03-10 20:25:07,860 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:25:07,860 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:25:07,861 - DEBUG - Response sent
+2026-03-10 20:25:18,701 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BA00>
+2026-03-10 20:25:18,702 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:25:18,702 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:25:18,703 - DEBUG - Response sent
+2026-03-10 20:25:18,731 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BC40>
+2026-03-10 20:25:18,732 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:25:18,732 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:25:18,733 - DEBUG - Response sent
+2026-03-10 20:25:21,474 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BD30>
+2026-03-10 20:25:21,474 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:25:21,475 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:25:21,477 - DEBUG - Response sent
+2026-03-10 20:25:22,296 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BF70>
+2026-03-10 20:25:22,297 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:25:22,297 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:25:25,730 - DEBUG - Response sent
+2026-03-10 20:25:27,401 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000026976509D50>
+2026-03-10 20:25:27,402 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:25:27,402 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:25:27,407 - DEBUG - Response sent
+2026-03-10 20:25:31,855 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BCA0>
+2026-03-10 20:25:31,855 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:25:31,855 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:25:31,861 - DEBUG - Response sent
+2026-03-10 20:25:33,701 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BEE0>
+2026-03-10 20:25:33,702 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:25:33,702 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-10 20:25:33,705 - DEBUG - Response sent
+2026-03-10 20:25:38,208 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650BA30>
+2026-03-10 20:25:38,209 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:25:38,209 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:25:38,209 - DEBUG - Response sent
+2026-03-10 20:25:46,359 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000026976509BA0>
+2026-03-10 20:25:46,360 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:25:46,360 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:25:46,360 - DEBUG - Response sent
+2026-03-10 20:25:46,395 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000002697650A110>
+2026-03-10 20:25:46,395 - INFO - Processing request of type ListToolsRequest
+2026-03-10 20:25:46,395 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-10 20:25:46,396 - DEBUG - Response sent
+2026-03-10 20:25:51,565 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000026976484F10>
+2026-03-10 20:25:51,565 - INFO - Processing request of type CallToolRequest
+2026-03-10 20:25:51,565 - DEBUG - Dispatching request of type CallToolRequest
+2026-03-12 20:59:57,618 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-12 20:59:57,618 - DEBUG - Registering handler for ListToolsRequest
+2026-03-12 20:59:57,618 - DEBUG - Registering handler for CallToolRequest
+2026-03-12 20:59:57,618 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-12 20:59:57,618 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-12 20:59:57,618 - DEBUG - Registering handler for PromptListRequest
+2026-03-12 20:59:57,619 - DEBUG - Registering handler for GetPromptRequest
+2026-03-12 20:59:57,619 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-12 20:59:57,625 - INFO - Initializing DroneController...
+2026-03-12 20:59:57,626 - INFO - Connecting to AirSim MultirotorClient in dedicated thread...
+2026-03-12 20:59:57,626 - DEBUG - Using proactor: IocpProactor
+2026-03-12 20:59:57,629 - INFO - Confirming connection...
+2026-03-12 21:00:01,728 - ERROR - Failed to initialize AirSim client: Retry connection over the limit
+2026-03-12 21:00:01,746 - DEBUG - Using proactor: IocpProactor
+2026-03-12 21:00:01,755 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-12 21:00:02,958 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-12 21:00:02,958 - DEBUG - Registering handler for ListToolsRequest
+2026-03-12 21:00:02,958 - DEBUG - Registering handler for CallToolRequest
+2026-03-12 21:00:02,958 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-12 21:00:02,959 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-12 21:00:02,959 - DEBUG - Registering handler for PromptListRequest
+2026-03-12 21:00:02,959 - DEBUG - Registering handler for GetPromptRequest
+2026-03-12 21:00:02,959 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-12 21:00:02,964 - INFO - Initializing DroneController...
+2026-03-12 21:00:02,965 - INFO - Connecting to AirSim MultirotorClient in dedicated thread...
+2026-03-12 21:00:02,966 - DEBUG - Using proactor: IocpProactor
+2026-03-12 21:00:02,968 - INFO - Confirming connection...
+2026-03-12 21:00:07,063 - ERROR - Failed to initialize AirSim client: Retry connection over the limit
+2026-03-12 21:00:07,078 - DEBUG - Using proactor: IocpProactor
+2026-03-12 21:00:07,086 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-12 21:00:07,101 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x0000017599C1BFA0>
+2026-03-12 21:00:07,101 - INFO - Processing request of type ListToolsRequest
+2026-03-12 21:00:07,101 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-12 21:00:07,102 - DEBUG - Response sent
+2026-03-12 21:02:24,148 - DEBUG - Initializing server 'AirSimDroneController'
+2026-03-12 21:02:24,149 - DEBUG - Registering handler for ListToolsRequest
+2026-03-12 21:02:24,149 - DEBUG - Registering handler for CallToolRequest
+2026-03-12 21:02:24,149 - DEBUG - Registering handler for ListResourcesRequest
+2026-03-12 21:02:24,149 - DEBUG - Registering handler for ReadResourceRequest
+2026-03-12 21:02:24,149 - DEBUG - Registering handler for PromptListRequest
+2026-03-12 21:02:24,149 - DEBUG - Registering handler for GetPromptRequest
+2026-03-12 21:02:24,149 - DEBUG - Registering handler for ListResourceTemplatesRequest
+2026-03-12 21:02:24,155 - INFO - Initializing DroneController...
+2026-03-12 21:02:24,156 - INFO - Connecting to AirSim MultirotorClient in dedicated thread...
+2026-03-12 21:02:24,156 - DEBUG - Using proactor: IocpProactor
+2026-03-12 21:02:24,159 - INFO - Confirming connection...
+2026-03-12 21:02:28,255 - ERROR - Failed to initialize AirSim client: Retry connection over the limit
+2026-03-12 21:02:28,270 - DEBUG - Using proactor: IocpProactor
+2026-03-12 21:02:28,278 - DEBUG - Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2026-03-12 21:02:28,293 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000001D548E56470>
+2026-03-12 21:02:28,294 - INFO - Processing request of type ListToolsRequest
+2026-03-12 21:02:28,294 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-12 21:02:28,294 - DEBUG - Response sent
+2026-03-12 21:02:28,295 - DEBUG - Received message: <mcp.shared.session.RequestResponder object at 0x000001D548E56110>
+2026-03-12 21:02:28,295 - INFO - Processing request of type ListToolsRequest
+2026-03-12 21:02:28,295 - DEBUG - Dispatching request of type ListToolsRequest
+2026-03-12 21:02:28,296 - DEBUG - Response sent
