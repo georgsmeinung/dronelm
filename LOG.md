@@ -13,8 +13,7 @@ Para asegurar que el LLM se mantenga estrictamente dentro de 2 GB y no interfi
 **3. Estabilidad entre aplicaciones**. En el **Panel de Control de NVIDIA**, setear **“Background Application Max Frame Rate”** para que esté limitado para LM Studio a **20–30 FPS**. Esto evita que la interfaz del LLM compita con Unreal por los recursos de la GPU. 
 
 **Consideraciones adionales: ¿Por qué no usar BitNet aquí?**
-Aunque **BitNet (1.58‑bit)** usa aún menos VRAM (**\~0.4 GB**), requiere **bitnet.cpp** o *kernels* especializados. Dado que **LM Studio 0.4.1** todavía no soporta de forma nativa la arquitectura BitNet, se perdería la conveniencia del nuevo endpoint “compatible con Anthropic”.  
-**Qwen 1.5B** es un buen equilibrio entre compatibilidad nativa con LM Studio y bajo consumo de recursos.
+Aunque **BitNet (1.58‑bit)** usa aún menos VRAM (**\~0.4 GB**), requiere **bitnet.cpp** o *kernels* especializados. Dado que **LM Studio 0.4.1** todavía no soporta de forma nativa la arquitectura BitNet, se perdería la conveniencia del nuevo endpoint “compatible con Anthropic”. **Qwen 1.5B** es un buen equilibrio entre compatibilidad nativa con LM Studio y bajo consumo de recursos.
 
 **Configuración (PowerShell)**
 Una vez que el servidor esté corriendo en el puerto **1234** en LM Studio:
@@ -26,6 +25,12 @@ claude
 ```
 
 Si Unreal Engine empieza a dar lags en el render, revisar el uso de VRAM en la barra inferior de LM Studio. Si supera **1.8 GB**, bajar la ventana de contexto a **4.096**.
+
+**2026-0310**
+---
+* Generada una versión funcional del Airsim Drone MCP server
+* Pruebas de conexión y funcionamiento del loop de eventos de Airsim y el MCP
+
 
 **2026-0304**
 ---
