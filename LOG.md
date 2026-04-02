@@ -1,3 +1,7 @@
+**2026-0402**
+---
+* En preparación para vuelos de calibración, agregada la condicion de reset para detener el `airsim_logger.py` (escritura de telemetría a archivos)
+
 **2026-0331**
 ---
 * Los modelos Qwen no están interpretando bien los comandos y el Phi 4 no es eficiente. Probando con modelo: (**nvidia/nemotron-3-nano-4b
