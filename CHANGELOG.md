@@ -1,3 +1,7 @@
+**2026-0409**
+---
+* Generado script de vuelo de calibración y archivo de comandos
+
 **2026-0402**
 ---
 * En preparación para vuelos de calibración, agregada la condicion de reset para detener el `airsim_logger.py` (escritura de telemetría a archivos)
