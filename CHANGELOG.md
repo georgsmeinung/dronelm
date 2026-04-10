@@ -1,6 +1,7 @@
 **2026-0409**
 ---
 * Generado script de vuelo de calibración y archivo de comandos
+* Ejecutados los 10 primeros vuelos de calibración. Cada vuelo individual tiene la telmetría registrada en un .CSV separado
 
 **2026-0402**
 ---
