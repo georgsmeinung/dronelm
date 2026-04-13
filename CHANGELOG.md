@@ -1,3 +1,12 @@
+**2026-0413**
+---
+* Reunión avance de Tesis
+TODO
+* Revisar telemetría real de drones cuadricópteros en https://zenodo.org/records/15912415
+* Generar telemetría automatizada de al menos 100 vuelos simulados
+* Generar métricas sugeridas inicialmente
+* Considerar simular el vuelo de 5 waypoints recogidos de drones reales
+
 **2026-0409**
 ---
 * Generado script de vuelo de calibración y archivo de comandos
