@@ -1,4 +1,4 @@
-TODO
+**TODO**
 * Generar métricas sugeridas inicialmente
 * Considerar simular el vuelo de 5 waypoints recogidos de drones reales
 
@@ -9,7 +9,7 @@ TODO
 
 **2026-0413**
 ---
-* Reunión avance de Tesis
+* Reunión avance de Tesis con Ezequiel y determinación de próximos pasos.
 * Decargado datos de  telemetría real de drones cuadricópteros en https://zenodo.org/records/15912415
 * Creado script de iteración apara generar telemetría automatizada de al menos 100 vuelos simulados
 * Generados telemetria de 100 vuelos simulados
@@ -254,8 +254,3 @@ Configuración optimizada en [./CityParkSim/Config/DefaultEngine.ini](./CityPark
 **2025-0829**
 ---
 * Aprobación de [Plan de Tesis](./plan_tesis/nicolau-plan-aprobado.pdf)
-
-
-
-
-
