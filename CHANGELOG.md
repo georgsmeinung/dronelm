@@ -2,6 +2,130 @@
 * Generar métricas sugeridas inicialmente
 * Considerar simular el vuelo de 5 waypoints recogidos de drones reales
 
+**2026-0506**
+---
+Implementando servidor de inferencia en `Ubuntu 26.04 LTS`. Tareas implementar el servidor de inferencia ThinkPad T15 Gen 2 con **Kubuntu**.
+
+### A. Optimización del Entorno Linux (Kubuntu)
+Antes de instalar el software de IA local (LM Studio Headless), es necesario asegurar que el kernel y los drivers de Intel estén listos para la carga computacional.
+
+1. **Actualización de Drivers Mesa:** a la versión más reciente para el soporte de Vulkan en la iGPU Iris Xe.
+```bash
+sudo add-apt-repository ppa:kisak/kisak-mesa
+sudo apt update && sudo apt upgrade -y
+sudo apt install mesa-vulkan-drivers vulkan-tools
+```
+
+2. **Gestión de Energía:** Para evitar el *throttling* térmico en el chasis delgado de la T15:
+```bash
+sudo apt install power-profiles-daemon
+powerprofilesctl set performance
+```
+
+### B. Instalación de `llmster` (Headless Daemon)
+Se usa el CLI de LM Studio para gestionar el servicio de inferencia.
+
+1. **Instalación del CLI:**
+```bash
+curl -fsSL https://lmstudio.ai/install.sh | bash
+```
+
+2. **Inicialización del Daemon:**
+```bash
+lms daemon up
+```
+
+### C. Configuración y Carga del Modelo
+Configuraremos el modelo **Gemma 4 E4B** para cargarlo en la zona de memoria de alto rendimiento del RAM compartida de la iGPU
+
+1. **Descarga y Carga:**
+```bash
+lms load gemma-4-e4b --quantization q8_0 --gpu max
+```
+
+*Nota: El parámetro `--gpu max` fuerza al motor a usar los 80 EUs de la Iris Xe vía Vulkan.*
+
+2. **Verificación de Memoria:** Dado que el sistema tiene 40 GB, el modelo Q8_0 (~5 GB) se alojará automáticamente en los primeros 16 GB (Dual-Channel), garantizando la máxima tasa de transferencia.
+
+### D. Exposición del Servidor a la Red Local (LAN)
+Para que la workstation de Windows 11 pueda conectarse, el servidor debe escuchar en todas las interfaces de red disponibles.
+
+1. **Arranque del Servidor:**
+
+```bash
+lms server start --host 0.0.0.0 --port 1234
+```
+
+2.  **Identificación de IP:**
+```bash
+hostname -I | awk '{print $1}'
+```
+*(Ejemplo  IP: `192.168.1.15`)*.
+
+### E. Automatización con `systemd` (Persistencia)
+Para que el servidor se inicie tras un reinicio, se crea un archivo de unidad:
+
+1.  **Crear el archivo:** `sudo nano /etc/systemd/system/llmster.service`
+2.  **Contenido:**
+    ```ini
+    [Unit]
+    Description=Llmster Headless Inference Server
+    After=network.target
+
+    [Service]
+    ExecStart=/usr/local/bin/lms server start --host 0.0.0.0 --port 1234
+    Restart=always
+    User=tu_usuario
+    Environment=DISPLAY=:0
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+3.  **Habilitar:**
+    ```bash
+    sudo systemctl enable llmster
+    sudo systemctl start llmster
+    ```
+
+### F. Configuración del Cliente (Windows 11)
+Desde la estación de trabajo principal:
+
+1.  **Web UI:** En la configuración de Open WebUI o LibreChat, apunte el endpoint a: `[http://192.168.1.15:1234/v1](http://192.168.1.15:1234/v1)`.
+2.  **Desarrollo (OpenCode):** En los ajustes de la extensión, reemplace `localhost` por la IP de la ThinkPad.
+
+### Consideraciones Finales de Mantenimiento
+*   **Apertura de Puertos:** revisar si el firewall de Kubuntu (`ufw`) está activo, permita el tráfico:
+    `sudo ufw allow 1234/tcp`
+*   **Monitoreo Térmico:** Supervisar la temperatura durante las primeras inferencias largas con `watch -n 1 nvidia-smi` (si se usa capas compatibles) o la herramienta nativa `intel_gpu_top` (paquete `intel-gpu-tools`).
+
+
+**2026-0506**
+---
+* Reconsiderando un entorno distribuido entre dos plataformas para descargar trabajo de la RTX 5060 con VRAM limitada a 8GB, dejando la GPU dedicada a Unreal Engine 5.5 con Cosys Airsim.
+* Diseño de Infraestructura de Inferencia de IA Local distribuida con este despliegue
+
+### Arquitectura de Inferencia Distribuida (Gemma 4 / Iris Xe)
+#### 1. Nodo de Inferencia (Headless Server)
+- Host: Lenovo ThinkPad T15 Gen 2 (Intel Core i5, Iris Xe 80 EUs).
+- OS: Kubuntu (Kernel Linux 6.x / Mesa Drivers con soporte Vulkan anv).
+- Memoria: 40 GB DDR4. El modelo se carga en el bloque inicial de 16 GB para aprovechar el Dual-Channel (Flex Memory), minimizando cuellos de botella en el ancho de banda.
+- Backend: llmster (vía lms CLI). Ejecución optimizada mediante GPU Offloading (NGL) total sobre la iGPU para liberar ciclos de CPU.
+- Modelo:  [**google/gemma-4-E4B**](https://huggingface.co/google/gemma-4-E4B) con cuantizacion Q8_0. Implementación de KV Cache optimizada para una ventana de contexto de 32k tokens.
+
+#### 2. Capa de Aplicación y Red
+- Protocolo: API REST compatible con OpenAI (v1) expuesta en 0.0.0.0:1234.
+- Orquestación: Despliegue de Open WebUI mediante contenedor Docker en el host de Windows 11, vinculado al endpoint remoto por LAN.
+- Integración IDE: Conexión vía OpenCode / VS Code para telemetría y generación de código local (Local Code-Reviewer).
+
+#### 3. Implementación Agéntica
+- Framework: OpenClaw o CreoAI para ejecución de herramientas locales y Gemini CLI (MCP) como fallback híbrido para contextos extensos (128k+).
+- Control de Potencia: Configuración de perfil de energía performance en Linux para evitar el throttling térmico del SoC durante la inferencia sostenida.
+
+**2026-0504**
+---
+* Intento de desplegar entorno en Linux con Unreal Engine for Linux
+* El entorno es muy inestable
+
 **2026-0415**
 ---
 * Generado una versión más avanzada de control por teclado
@@ -25,13 +149,12 @@
 
 **2026-0331**
 ---
-* Los modelos Qwen no están interpretando bien los comandos y el Phi 4 no es eficiente. Probando con modelo: (**nvidia/nemotron-3-nano-4b
-**)[https://lmstudio.ai/models/nvidia/nemotron-3-nano-4b]
+* Los modelos Qwen no están interpretando bien los comandos y el Phi 4 no es eficiente. Probando con modelo: [**nvidia/nemotron-3-nano-4b**](https://lmstudio.ai/models/nvidia/nemotron-3-nano-4b)
 * Determinada plataforma para calibración: Drone con nvidia/nemotron-3-nano-4b. Funciona mejor sin el modo thinking, para no llenar la ventana de contexto muy rápidamente.
 
 **2026-0313**
 ---
-* Probando una versión destilada de Claude 4.6 Opus para evitar consumir muchas VRAM: (**Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF**)[https://huggingface.co/Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF] funciona ocupando sólo 1.69 GB con cuantización de 4 bits  y venta de contexto de 8192 tokens.
+* Probando una versión destilada de Claude 4.6 Opus para evitar consumir muchas VRAM: [**Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF**](https://huggingface.co/Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF) funciona ocupando sólo 1.69 GB con cuantización de 4 bits  y venta de contexto de 8192 tokens.
 * Conectado Claude Code con modelo local `Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF` corriendo en LMStudio, pero tuve que subir la ventana de contexto a 32768 por la cantidad de system promps que envia Claude.
 
 **2026-0312**
