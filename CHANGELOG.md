@@ -1,6 +1,10 @@
 **TODO**
 * Generar métricas sugeridas inicialmente
-* Considerar simular el vuelo de 5 waypoints recogidos de drones reales
+
+**2026-0522**
+---
+* AirSim funcionando en [City Sample](https://fab.com/s/5e8f5eda64d8), ambiente desnamente urbano. Con peatones y tráfico gestionado por IA autónoma de Unreal Engine.
+* Airsim funcionando junto el modelo [liquid/lfm2.5-1.2b](https://lmstudio.ai/models/liquid/lfm2.5-1.2b) corriendo en lmstudio.
 
 **2026-0521**
 ---
