@@ -1,5 +1,7 @@
-**TODO**
-* Generar métricas sugeridas inicialmente
+**2026-0604**
+---
+* Análisis de Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales
+* Generado reporte en [notebook de Jupyter](./calibration_flight/telemetry_analysis.ipynb) con estadísticas descriptivas y pruebas inferenciales para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
 
 **2026-0522**
 ---
