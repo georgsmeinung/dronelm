@@ -1,7 +1,7 @@
 **2026-0604**
 ---
-* Análisis de Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales
-* Generado reporte en [notebook de Jupyter](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis.ipynb) con estadísticas descriptivas y pruebas inferenciales para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
+* Generado Notebook para [consolidar datos de telemtría de drones reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_UAV_plan/consolidate_telemetry.ipynb)
+* Análisis de Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales generando reporte en [notebook de Jupyter](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis.ipynb) con estadísticas descriptivas y pruebas inferenciales para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
 
 **2026-0522**
 ---

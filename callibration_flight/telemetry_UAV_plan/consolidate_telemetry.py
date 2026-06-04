@@ -1,7 +1,7 @@
 import json
 import os
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 def facebook_timestamp_to_iso(timestamp_ms):
@@ -18,8 +18,8 @@ def facebook_timestamp_to_iso(timestamp_ms):
         timestamp_ms = int(timestamp_ms)
         # Convert milliseconds to seconds
         timestamp_s = timestamp_ms / 1000.0
-        dt = datetime.utcfromtimestamp(timestamp_s)
-        return dt.isoformat() + 'Z'
+        dt = datetime.fromtimestamp(timestamp_s, timezone.utc)
+        return dt.isoformat().replace('+00:00', 'Z')
     except (ValueError, OverflowError) as e:
         print(f"Error converting timestamp {timestamp_ms}: {e}")
         return None
@@ -131,8 +131,8 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     # Define directories to process
-    drone1_dir = os.path.join(script_dir, "telemetry_UAV_plan", "UAV_telemetry_dataset", "flightplan_drone1")
-    drone2_dir = os.path.join(script_dir, "telemetry_UAV_plan", "UAV_telemetry_dataset", "flightplan_drone2")
+    drone1_dir = os.path.join(script_dir, "UAV_telemetry_dataset", "flightplan_drone1")
+    drone2_dir = os.path.join(script_dir, "UAV_telemetry_dataset", "flightplan_drone2")
     
     # Define output path
     output_csv = os.path.join(script_dir, "consolidated_telemetry.csv")
