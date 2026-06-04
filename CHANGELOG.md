@@ -12,6 +12,7 @@
 **2026-0521**
 ---
 * Generando nuevo ambiente de pruebas con [Downtown West Modular Pack](https://fab.com/s/be5ea9a2cae4) para ambiente semi urbano con más realismo y configurando Cosys Airsim en el nuevo proyecto. Pruebas OK.
+<img src="informe/2026-0521 Drone en Entorno Semi Urbano.png"/>
 * Generando nuevo ambiente de pruebas con [City Sample](https://fab.com/s/5e8f5eda64d8) para ambiente desnamente urbano. Configurando Small_City_LVL para no consumir toda la VRAM.
 
 **2026-0509**
