@@ -1,12 +1,13 @@
 **2026-0604**
 ---
 * Generado Notebook para [consolidar datos de telemtría de drones reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_UAV_plan/consolidate_telemetry.ipynb)
-* Análisis de Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales generando reporte en [notebook de Jupyter](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis.ipynb) con estadísticas descriptivas y pruebas inferenciales para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
+* Análisis de [Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis.ipynb) generando reporte en notebook de Jupyter con estadísticas descriptivas y pruebas estadísiticas para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
 
 **2026-0522**
 ---
 * AirSim funcionando en [City Sample](https://fab.com/s/5e8f5eda64d8), ambiente desnamente urbano. Con peatones y tráfico gestionado por IA autónoma de Unreal Engine.
 * Airsim funcionando junto el modelo [liquid/lfm2.5-1.2b](https://lmstudio.ai/models/liquid/lfm2.5-1.2b) corriendo en lmstudio.
+<img src="informe/2026-0522 Drone en Entorno Urbano.png"/>
 
 **2026-0521**
 ---
@@ -296,6 +297,7 @@ Configuración optimizada en [./CityParkSim/Config/DefaultEngine.ini](./CityPark
 * Creado este repositorio de proyecto: https://github.com/georgsmeinung/lm-drone 
 * Instalado LM Studio con el modelo `qwen/qwen3-vl-4b one` para correr modelos de lenguaje localmente y disponibilizarlos con una [API compatible con OpenAI](https://lmstudio.ai/docs/developer/openai-compat)
 * Subido video ["Airsim Plugin on UE 5.5 controlled through MCP Server PoC" video"](https://youtu.be/lNdmPKZekkk) a YouTube  mostrando el control del drone a través de un server MCP muy básico disponible en `./python_poc/drone_mcp_server.py` con comunicación STDIO
+<img src="informe/2026-0108  Airsim Plugin on UE 5_5 controlled through MCP Server PoC.png"/>
 
 **2025-1202**
 ---
@@ -306,6 +308,7 @@ Configuración optimizada en [./CityParkSim/Config/DefaultEngine.ini](./CityPark
 * Compilación del [Plugin Airsim](https://github.com/Cosys-Lab/Cosys-AirSim). Abandonado el proyecto original [AirSim por Microsoft](https://github.com/microsoft/AirSim), se utiliza la actual versión a partir de un fork mantenido por el [Cosys-Lab](https://www.uantwerpen.be/en/research-groups/cosys-lab/): Laboratorio de Co-Diseño para Sistema Ciber-físicos de la Universidad de Ambéres en Bélgica
 * Incorporación del Plugin al proyecto [CityParkSim](https://drive.google.com/drive/folders/1ImTngQAt0gAlrXNOfOYs5csRWQt3IhS_?usp=sharing) configurado para utilizar [Unreal Engine 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-engine-5-5-documentation?application_version=5.5)
 * Subido video ["Airsim Plugin on UE 5.5 controlled by Python PoC video"](https://youtu.be/4ykS1tUelrY) a YouTube mostrando el control del drone desde un script de Phython.
+<img src="informe/2025-1203 Airsim Plugin on UE 5_5 controlled by Python PoC video.png"/>
 
 **2025-0912**
 ---

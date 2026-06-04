@@ -1,4 +1,4 @@
-MIT License
+[MIT License](https://opensource.org/license/MIT)
 
 Copyright (c) 2026 Jorge Nicolau
 
