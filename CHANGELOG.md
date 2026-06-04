@@ -7,6 +7,7 @@
 ---
 * AirSim funcionando en [City Sample](https://fab.com/s/5e8f5eda64d8), ambiente desnamente urbano. Con peatones y tráfico gestionado por IA autónoma de Unreal Engine.
 * Airsim funcionando junto el modelo [liquid/lfm2.5-1.2b](https://lmstudio.ai/models/liquid/lfm2.5-1.2b) corriendo en lmstudio.
+<img src="informe/2026-0522 Drone en Entorno Urbano.png"/>
 
 **2026-0521**
 ---
