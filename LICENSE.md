@@ -1,4 +1,4 @@
-[MIT License](https://opensource.org/license/MIT)
+[MIT License](https://tlo.mit.edu/understand-ip/exploring-mit-open-source-license-comprehensive-guide)
 
 Copyright (c) 2026 Jorge Nicolau
 
