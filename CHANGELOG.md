@@ -1,6 +1,42 @@
-**TODO**
+**2026-0610**
 ---
-* [ ] Generar los vuelos simulados con las mismas trayectorias que los reales
+* Generación de telemetría de los vuelos simulados con las mismas trayectorias que los reales, a la misma altura y la misma velocidad. 
+
+<img src="informe/2026-0610 Trayectoria vuelos Reales.png"/>
+
+* Vuelo simulado con la trayectoria del Drone 1. Los puntos de las trayectorias están redondeados a múltiplos de 5.
+```
+takeoff
+move(0,0,-30,5)
+move(245,-65,-30,5)
+move(30,-45,-30,5)
+move(30,95,-30,5)
+move(-135,95,-30,5)
+move(-135,-45,-30,5)
+move(39,-45,-30,5)
+move(245,-65,-30,5)
+reset
+```
+
+* Vuelo simulado con la trayectoria del Drone 2. Los puntos de las trayectorias están redondeados a múltiplos de 5.
+```
+takeoff
+move(0,0,-30,5)
+move(50,-75,-30,5)
+move(-45,-20,-30,5)
+move(95,-20,-30,5)
+move(95,-110,-30,5)
+move(-100,-110,-30,5)
+move(-100,110,-30,5)
+move(125,110,-30,5)
+move(-45,-20,-30,5)
+move(50,-75,-30,5)
+reset
+```
+
+* Subido video ["AirSim Plugin on UE 5.5 Calibration Flight with Drone 2 trajectory"](https://www.youtube.com/watch?v=xNnIMdziv5g) a YouTube mostrando uno de los vuelos de calibración.
+<img src="informe/2026-0610 AirSim Plugin on UE 5_5 Calibration Flight with Drone 2 trajectory.png"/>
+
 
 **2026-0605**
 ---
