@@ -1,3 +1,11 @@
+**2026-0612**
+---
+* Depuración de configuración para tener el cliente de AirSime en un servidor separado
+* Prepararción de entorno para ARM64
+* Modificación de scripts para que tome la información del Host Airsim de un .env
+
+
+
 **2026-0611**
 ---
 * Configuración de servidor de inferencia en Mac mini con LMStudio:
