@@ -5,6 +5,7 @@
 * Entorno de trabajo remoto configurado en VS Code para Windows 11 a server remoto en Mac OS Tahoe
 * Prueba de control desde host IA hacia host AirSim remoto OK.
 
+<img src="informe/2026-0619 Control Airsim desde Host IA.png"/>
 
 **2026-0612**
 ---
