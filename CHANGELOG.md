@@ -1,10 +1,16 @@
+**2026-0619**
+---
+* Prueba de conexión desde server con servicio LLM a server con servicio AirSim y simulación
+* Comunicación física mediante cable cruzado Ethernet.
+* Entorno de trabajo remoto configurado en VS Code para Windows 11 a server remoto en Mac OS Tahoe
+* Prueba de control desde host IA hacia host AirSim remoto OK.
+
+
 **2026-0612**
 ---
 * Depuración de configuración para tener el cliente de AirSime en un servidor separado
 * Prepararción de entorno para ARM64
 * Modificación de scripts para que tome la información del Host Airsim de un .env
-
-
 
 **2026-0611**
 ---
