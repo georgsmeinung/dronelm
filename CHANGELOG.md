@@ -1,3 +1,9 @@
+**2026-0624**
+---
+* Revisión de documentación actualizad de [Cosys-AirSim](https://cosys-airsim.com/)
+* Revisión de [configuración de Cosys-Airsim](https://cosys-lab.github.io/Cosys-AirSim/settings/)
+* Revisión versiones en [repositorio GitHub de Cosys-Airsim](https://github.com/Cosys-Lab/Cosys-AirSim)
+
 **2026-0623**
 ---
 * Revisión y ordenamiento de CHANGELOG.MD
