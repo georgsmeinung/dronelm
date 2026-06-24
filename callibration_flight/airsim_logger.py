@@ -45,7 +45,7 @@ client.confirmConnection()
 csv_file = f"telemetry_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
 with open(csv_file, 'w', newline='') as f:
     writer = csv.writer(f)
-    writer.writerow(["time", "sim_t", "x", "y", "z", "vx", "vy", "vz", "yaw_deg"])
+    writer.writerow(["time", "sim_t", "x", "y", "z", "vx", "vy", "vz", "roll_deg", "pitch_deg", "yaw_deg"])
 
     print("Logging started (Ctrl+C to stop)")
     last_timestamp = -1
@@ -70,7 +70,9 @@ with open(csv_file, 'w', newline='') as f:
             last_timestamp = state.timestamp
 
             vel = state.kinematics_estimated.linear_velocity
-            _, _, yaw = quaternion_to_euler(state.kinematics_estimated.orientation)
+            roll, pitch, yaw = quaternion_to_euler(state.kinematics_estimated.orientation)
+            roll_deg = roll * 180 / math.pi
+            pitch_deg = pitch * 180 / math.pi
             yaw_deg = yaw * 180 / math.pi
 
             writer.writerow([
@@ -78,7 +80,7 @@ with open(csv_file, 'w', newline='') as f:
                 state.timestamp / 1e9,
                 pos.x_val, pos.y_val, pos.z_val,
                 vel.x_val, vel.y_val, vel.z_val,
-                yaw_deg
+                roll_deg, pitch_deg, yaw_deg
             ])
             f.flush()
 
@@ -86,7 +88,7 @@ with open(csv_file, 'w', newline='') as f:
                 f"time={datetime.now().isoformat()}, sim_t={state.timestamp / 1e9:.2f}, "
                 f"pos=({pos.x_val:.2f}, {pos.y_val:.2f}, {pos.z_val:.2f}), "
                 f"vel=({vel.x_val:.2f}, {vel.y_val:.2f}, {vel.z_val:.2f}), "
-                f"yaw={yaw_deg:.2f}"
+                f"rpy=({roll_deg:.1f}, {pitch_deg:.1f}, {yaw_deg:.1f})"
             )
 
             dt = time.time() - start

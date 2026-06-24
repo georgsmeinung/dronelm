@@ -1,0 +1,5 @@
+dataset,maneuver,n,roll_mean,roll_std,pitch_mean,pitch_std
+Real_T*,Giro,94164,0.0546,7.0348,0.0137,9.3677
+Real_T*,Recta,216048,-0.0046,1.3419,-0.1125,8.2478
+Sim,Giro,4013,-1.4408,34.7369,6.8247,32.7908
+Sim,Recta,75291,0.6055,10.1979,-0.8856,15.191
