@@ -10,7 +10,9 @@ Director: [**Rodrigo DEL ROSSO**](https://www.linkedin.com/in/rodrigodelrosso/)
 
 Codirector: [**Ezequiel Omar NUSKE**](https://www.linkedin.com/in/ezequiel-nuske-15137862/)
 
-02-07-2025
+**02-07-2025**
+
+Versión aprobada en [PDF](https://github.com/georgsmeinung/lm-drone/blob/main/plan_tesis/nicolau-plan-aprobado.pdf)
 
 ## Resumen
 
