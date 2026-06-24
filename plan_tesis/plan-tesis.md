@@ -150,20 +150,16 @@ En todos estos escenarios, la construcción de plataformas económicas y extensi
 
 ## Objetivo del trabajo
 
-### Objetivo general
-
+### [![Objetivo General](https://img.shields.io/badge/Objetivo-General-blue)]() Objetivo general
 Desarrollar un sistema de visión por computadora basado en visión monocular con capacidad de navegación autónoma de cuadricópteros eVTOL para aplicaciones varias como mantenimiento de infraestructuras, atender emergencias o realizar entrega expedita de paquetes, donde se requiera logística en entornos urbanos como el de Buenos Aires.
 
-#### Objetivo específico
-
+#### [![Objetivo Simulacion](https://img.shields.io/badge/Objetivo-Simulación-red)]() Objetivo específico
 Centrar la implementación de un pipeline reproducible, diseñado para ser ejecutado en el simulador AirSim (basado en Unreal Engine) a fin de validar el desempeño del sistema de navegación implementado.
 
-#### Objetivo específico
-
+#### [![Objetivo Navegación](https://img.shields.io/badge/Objetivo-Navegación-yellow)]() Objetivo específico
 Integrar en el sistema tareas de detección de obstáculos, aterrizaje de precisión y mapeo mediante SLAM visual, utilizando modelos ligeros optimizados para hardware de bajo costo de modo de conseguir un caso de negocio viable para economías como la local.
 
-#### Objetivo específico
-
+#### [![Objetivo Comparación](https://img.shields.io/badge/Objetivo-Comparación-green)]() Objetivo específico
 Evaluar el rendimiento de la solución del rendimiento de un modelo ligero de aprendizaje automático (SLM) frente a pilotos automáticos tradicionales basados en máquinas de estados finitos (FSM), utilizando métricas como tasa de éxito, tiempo de reacción y consumo computacional para determinar el mejor modelo de navegación autónoma.
 
 ## 5. Trabajos relacionados
