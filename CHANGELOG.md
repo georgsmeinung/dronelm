@@ -73,13 +73,27 @@
 <img src="informe/RTX-5060-Ti-8Gb-Msi.jpeg" width="50%"/>
 
 ```
-      Model Name: NVIDIA GeForce RTX 5060
-      Arquitectura: NVIDIA Blackwell (Proceso de fabricación de 5 nm).
-      Memoria VRAM: 8 GB GDDR7.
-      Interfaz de Memoria: 128-bit.
-      Velocidad de Memoria: 28 Gbps.
-      Núcleos CUDA: 3840.
-      Tecnologías Adicionales: Compatibilidad con DLSS 4 (con generación de fotogramas), núcleos Ray Tracing de 4ª generación y núcleos Tensor de 5ª generación
+        Marketing Name: GeForce RTX™ 5060 8G GAMING OC 
+        Model Name: G5060-8GC 
+        Graphics Processing Unit: NVIDIA® GeForce RTX™ 5060
+        Arquitecture: NVIDIA Blackwell (5 nm litography).
+        Interface: PCI Express® Gen 5 x16 pin(uses x8) 
+        Core Clocks: Extreme Performance: 2640 MHz (MSI Center) Boost: 2625 MHz 
+        CUDA® CORES: 3840 Units 
+        Memory Speed: 28 Gbps 
+        Memory: 8GB GDDR7 
+        Memory Bus: 128-bit 
+        HDCP Support: Y 
+        Power consumption: 155 W 
+        Power connectors: 8-pin x 1 
+        Recommended PSU: 550 W 
+        Card Dimension (mm): 248 x 135 x 41 mm 
+        Weight (Card / Package): 649 g / 966 g 
+        DirectX Version Support: 12 Ultimate 
+        OpenGL Version Support: 4.6 
+        Maximum Displays: 4 
+        G-SYNC® technology: Y 
+        Digital Maximum Resolution: 7680 x 4320
 ```
 
 
