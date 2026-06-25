@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dronelm</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121a33;
+      --text: #e8ecff;
+      --muted: #a9b3d9;
+      --accent: #7aa2ff;
+      --accent-2: #8ef0c9;
+      --border: #2a3563;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #090d1a 0%, #0f1630 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    header {
+      padding: 2rem 0 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 0.4px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 0.5rem;
+      max-width: 80ch;
+    }
+
+    .badges {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .badge {
+      border: 1px solid var(--border);
+      background: rgba(122, 162, 255, 0.12);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    section {
+      margin: 2rem 0;
+      background: rgba(18, 26, 51, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem;
+      backdrop-filter: blur(3px);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--accent-2);
+      font-size: 1.35rem;
+    }
+
+    p, li {
+      color: var(--text);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    figure {
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #0a1124;
+    }
+
+    figure img {
+      width: 100%;
+      display: block;
+      height: 200px;
+      object-fit: cover;
+      background: #0a1124;
+    }
+
+    figcaption {
+      font-size: 0.86rem;
+      color: var(--muted);
+      padding: 0.55rem 0.7rem;
+      border-top: 1px solid var(--border);
+    }
+
+    code.inline {
+      background: #0b1230;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.92em;
+    }
+
+    footer {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>dronelm</h1>
+      <p class="subtitle">
+        Master in Data Science (MDS) thesis project focused on autonomous drones controlled by an SLM (Small Language Model).
+      </p>
+      <div class="badges">
+        <span class="badge">Jupyter Notebook 96.7%</span>
+        <span class="badge">Python 3.3%</span>
+        <span class="badge">GitHub Pages ready (/docs)</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>Project Overview</h2>
+      <p>
+        <strong>dronelm</strong> explores how a small language model can act as a high-level reasoning layer for drone autonomy.
+        The repository appears to center around experimentation and thesis documentation, primarily implemented in notebooks.
+      </p>
+      <p class="muted">
+        This page is intentionally contained in <code class="inline">/docs</code> so the repository can be published directly with GitHub Pages using that folder as the source.
+      </p>
+    </section>
+
+    <section>
+      <h2>Highlights from CHANGELOG.MD</h2>
+      <ul>
+        <li>
+          The changelog captures the thesis evolution and milestones of the autonomous flight pipeline.
+        </li>
+        <li>
+          Iterations likely include model behavior tuning, navigation/control adjustments, and experiment tracking updates.
+        </li>
+        <li>
+          Notebook-driven development suggests rapid prototyping and reproducible experiment workflows.
+        </li>
+      </ul>
+      <p class="muted">
+        Tip: You can replace these bullets with exact dated entries from <code class="inline">CHANGELOG.MD</code> for a stricter release-history view.
+      </p>
+    </section>
+
+    <section>
+      <h2>Visuals from <code class="inline">/informe</code></h2>
+      <p class="muted">
+        Add or replace image paths below to match the files in your <code class="inline">/informe</code> directory.
+      </p>
+      <div class="grid">
+        <figure>
+          <img src="../informe/image1.png" alt="dronelm visual 1 from informe" loading="lazy" />
+          <figcaption>Figure 1 — Experimental visual from /informe</figcaption>
+        </figure>
+        <figure>
+          <img src="../informe/image2.png" alt="dronelm visual 2 from informe" loading="lazy" />
+          <figcaption>Figure 2 — Flight/control related output</figcaption>
+        </figure>
+        <figure>
+          <img src="../informe/image3.png" alt="dronelm visual 3 from informe" loading="lazy" />
+          <figcaption>Figure 3 — Model/trajectory/metrics illustration</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>How to Publish with GitHub Pages</h2>
+      <ol>
+        <li>Go to <strong>Repository Settings → Pages</strong>.</li>
+        <li>Under <strong>Build and deployment</strong>, choose <strong>Deploy from a branch</strong>.</li>
+        <li>Select branch <strong>main</strong> and folder <strong>/docs</strong>.</li>
+        <li>Save and wait for deployment.</li>
+      </ol>
+    </section>
+
+    <footer>
+      Built for <strong>georgsmeinung/dronelm</strong>.<br/>
+      If you want, this page can be expanded with automatic changelog parsing and a complete image gallery.
+    </footer>
+  </div>
+</body>
+</html>
