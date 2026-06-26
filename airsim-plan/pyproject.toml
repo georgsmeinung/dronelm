@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "airsim-plan"
+version = "0.1.0"
+description = "Ground-station Mission Planner for the two-brain drone stack (airsim-loop is the in-flight tactical brain)."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Jorge E. Nicolau" }]
+license = { text = "MIT" }
+dependencies = [
+    # LLM client (LM Studio / Ollama expose an OpenAI-compatible API).
+    "openai>=1.0.0",
+    # Manifest schema + validation.
+    "pydantic>=2.5.0",
+    # .env loading.
+    "python-dotenv>=1.0.0",
+    # AirSim native client (optional at import time).
+    "cosys-airsim>=1.8.0",
+    # CLI.
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0.0", "pytest-mock>=3.12.0"]
+
+[project.scripts]
+airsim-plan = "airsim_plan.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"airsim_plan" = ["prompts/*.md", "schemas/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

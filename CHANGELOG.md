@@ -34,7 +34,7 @@ eval duration:        17.698413s
 eval rate:            79.05 tokens/s
 ```
 * Primera implementación del loop de control en `airsim-loop`
-
+* Primera implementación del planificador en `airsim-plan`
 
 ## 2026-0625
 

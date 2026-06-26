@@ -1,0 +1,14 @@
+{
+  "mission_id": "PERIMETER_NORTH_01",
+  "summary": "Recorre el perimetro norte hasta [50, 100, -10] ignorando personas y vehiculos.",
+  "waypoints": [
+    {"x": 0, "y": 50, "z": -10, "label": "north_edge"},
+    {"x": 50, "y": 100, "z": -10, "label": "target"}
+  ],
+  "rules_of_engagement": {
+    "ignore_objects": ["person", "car"],
+    "return_to_launch_battery_threshold": 20.0,
+    "max_speed_mps": 5.0,
+    "min_altitude_m": -10.0
+  }
+}

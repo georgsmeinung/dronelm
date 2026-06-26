@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual envs
+.venv/
+venv/
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Local config + compiled manifests (we keep examples/ under VCS)
+.env
+missions/*.json
+!missions/.gitkeep
