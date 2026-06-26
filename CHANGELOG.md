@@ -37,7 +37,7 @@ eval rate:            79.05 tokens/s
 
 ## 2026-0625
 
-### Prototipando solución de Nagevación con SLM y LangGraph
+### Diseñando solución de Nagevación con SLM y LangGraph para comenzar el prototipado
 <img src="informe/2026-0626 Infografia Drone Autónomo.png"/>
 
 * Bucle de Navegación implementado con LangGraph
@@ -59,7 +59,7 @@ eval rate:            79.05 tokens/s
     3. Inyección al Estado de LangGraph: El estado del dron se actualiza con la semántica del entorno.
     4. Evaluación de Disparadores (Gatekeeper): Si el camino está despejado, se ejecuta control directo (rutina estándar). Si se detecta un cambio o un obstáculo, se dispara el nodo del SLM.
 
-### Prototipando solución de Planificación de Misión
+### Diseñanando solución de Planificación de Misión para comenzar el prototipado
 El complemento necesario para el sistema de navegación autonoma a bordo es la contraparte terrena que genera el manifiesto de vuelo
 
 <img src="informe/2026-0626 Infografia Planificacion Vuelo.png"/>
