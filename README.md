@@ -17,7 +17,7 @@ Este repositorio contiene la implementación del Trabajo Final de Máster en Ing
 #### Proyecto:
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Activity](https://img.shields.io/badge/Log-2026--0623-teal)](CHANGELOG.md) 
+[![Activity](https://img.shields.io/badge/Log-2026--0626-teal)](CHANGELOG.md) 
 [![Plan](https://img.shields.io/badge/Plan-Aprobado_2025--0829-drakgray)](./plan_tesis/plan-tesis.md)
 [![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)](./plan_tesis/plan-tesis.md#objetivo-del-trabajo)
 
