@@ -1,7 +1,7 @@
 ## 2026-0625
 
 ### Prototipando solución de Nagevación con SLM y LangGraph
-<img src="informe/2026-0625 Navegación con SLM.png"/>
+<img src="informe/2026-0626 Navegación con SLM - Fondo Blanco.png"/>
 
 * Bucle de Navegación implementado con LangGraph
   - **Paso 1: Captura Sensorial.** El inicio del ciclo donde la API de AirSim proporciona imágenes RGB y telemetría crítica.
@@ -25,7 +25,7 @@
 ### Prototipando solución de Planificación de Misión
 El complemento necesario para el sistema de navegación autonoma a bordo es la contraparte terrena que genera el manifiesto de vuelo
 
-<img src="informe/2026-0625 Planificacion de Mision UAV.png"/>
+<img src="informe/2026-0626 Planificacion de Mision.png"/>
 
 El operador de vuelo sigue este flujo para la planificación:
   1. **Estación Terrena (Planificación).** El operador interactúa con una interfaz visual local, definiendo la ruta (Waypoints) y las reglas de seguridad sin necesidad de código complejo.
