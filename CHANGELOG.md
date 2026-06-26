@@ -4,6 +4,35 @@
 * LMStudio está mejorar explorar modelos y su rendimiento, pero Ollama parece tener más eficiencia para construir soluciones. 
 * Posiblemente para una instalación en un dispositivo Edge, probablemente [llama.cpp](https://llama.app/) sea la mejor opción.
 * Corrección de infografías
+* Instalación de [openai/gpt-oss-20b](https://huggingface.co/openai/gpt-oss-20b) en Ollama directamenete desde el repositorio de Hugging Face de OpenAI:
+``` Bash
+# gpt-oss-20b
+ollama pull gpt-oss:20b
+ollama run gpt-oss:20b
+```
+* `gpt-oss-20b` is recommeded for lower latency, and local or specialized use cases (21B parameters with 3.6B active parameters)
+* Igual tiene tiempo tiempos de respuesta altos para el proposito del prototipo y no es SLM. Prueba simple de conversación:
+```
+total duration:       50.381895541s
+load duration:        228.9805ms
+prompt eval count:    75 token(s)
+prompt eval duration: 2.533294s
+prompt eval rate:     29.61 tokens/s
+eval count:           918 token(s)
+eval duration:        47.494863s
+eval rate:            19.33 tokens/s
+```
+* Probando con el modelo [LiquidAI/LFM2.5-8B-A1B](https://huggingface.co/LiquidAI/LFM2.5-8B-A1B). Prueba de conversación simple:
+```
+total duration:       17.997622792s
+load duration:        135.492042ms
+prompt eval count:    15 token(s)
+prompt eval duration: 162.112ms
+prompt eval rate:     92.53 tokens/s
+eval count:           1399 token(s)
+eval duration:        17.698413s
+eval rate:            79.05 tokens/s
+```
 
 
 ## 2026-0625
