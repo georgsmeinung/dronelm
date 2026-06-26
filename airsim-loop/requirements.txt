@@ -1,0 +1,6 @@
+langgraph>=0.2.0
+cosys-airsim>=1.8.0
+ultralytics>=8.0.0
+openai>=1.0.0
+python-dotenv>=1.0.0
+numpy>=1.24.0
