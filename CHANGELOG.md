@@ -35,6 +35,55 @@ eval rate:            79.05 tokens/s
 ```
 * Primera implementación del loop de control en `airsim-loop`
 * Primera implementación del planificador en `airsim-plan`
+* Subido video ["AirSim Plugin on UE 5.5 Trajectory Auditory and RGB Video Capture at 720p"](https://youtu.be/BkV4tYFSrrs) para determinar el comportamiento del piloto automático en trayectorias porgramadas 
+
+<img src="informe/2026-0626 Control de Trayectoria.png"/>
+
+* Activada la opción de traza del Airsim (linea violeta flotando destrás del drone en el video). La falta de saltos de una trayectoria conocida de antemano por el piloto automático sugiere que procesa la aceleración más ordenadamente que con comandos separados. Esto puede se la explicación de las desacelearaciones brusas en las pruebas de generación de telemetría sintética. Habría que repetir el experimento con trayectorias en lugar de comandos aislados.
+* Aunque el render del editor de Unreal Engine tenga algunos saltos, la captura de video de la cámara de abordo muestra el vuelo correctamente renderizado y sin saltos.
+* Configuración en AirSim `settings.json` para subir la resolución de la camára del dron a 1080x720p. El archivo queda así:
+``` JSON
+{
+  "SeeDocsAt": "https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docs/settings_example.json",
+  "SettingsVersion": 2.0,
+  "SimMode": "Multirotor",
+  "LocalHostIp": "0.0.0.0",
+  "ApiServerPort": 41451,
+  "RecordUIVisible": false,
+  "ClockType": "SteppableClock",
+  "OriginGeopoint": {
+    "Latitude": 47.641468,
+    "Longitude": -122.140165,
+    "Altitude": 122
+  },
+  "CameraDefaults": {
+    "CaptureSettings": [
+      {
+        "ImageType": 0,
+        "Width": 1080,
+        "Height": 720
+      },
+      {
+        "ImageType": 3,
+        "Width": 1080,
+        "Height": 720
+      },
+      {
+        "ImageType": 5,
+        "Width": 1080,
+        "Height": 720
+      },
+      {
+        "ImageType": 1,
+        "Width": 1080,
+        "Height": 720
+      }
+    ]
+  }
+}
+```
+* Con esta resolución se puede empezar la prueba del procesamiento YOLO y del SLM del loop del control del drone
+* También fue necesario ajustar el renderizado del escena a `Epic` para tener una imagen monocular utilizable.
 
 ## 2026-0625
 
