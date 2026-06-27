@@ -1,9 +1,22 @@
+## 2026-0627
+
+* Modificados los scripts `airsim_commander.py` y `airsim_iterator.py` para soportar trayectorias completas como comando y para recibirlas por línea de comando.
+* Subido video [AirSim Plugin on UE 5.5 synthetic telemetry for Drone 1 trajectory](https://youtu.be/LGso1VYQsPY) con muestra de generación de telemetría sintética del drone 1 (trayectoria en azul)
+
+<img src="informe/2026-0627 Generación de telemetría sintética del drone 1 - azul.png"/>
+
+* Subido video [AirSim Plugin on UE 5.5 synthetic telemetry for Drone 2 trajectory](https://youtu.be/xgItxxe4yRM) con muestra de generación de telemetría sintética del drone 2 (trayectoria en marrón)
+
+<img src="informe/2026-0627 Generación de telemetría sintética del drone 2 - marrón.png"/>
+
+* Regeneración de telemetría sintética con trayectorias de vuelos reales.
+
 ## 2026-0626
 
 * Explorando usar [Ollama](https://ollama.com/) directamente en vez de [LMStudio](https://lmstudio.ai/)
-* LMStudio está mejorar explorar modelos y su rendimiento, pero Ollama parece tener más eficiencia para construir soluciones. 
-* Posiblemente para una instalación en un dispositivo Edge, probablemente [llama.cpp](https://llama.app/) sea la mejor opción.
-* Corrección de infografías
+* LMStudio es muy útil explorar modelos, su rendimiento y configuración de inferencia óptima pero Ollama parece tener más eficiencia para construir soluciones. 
+* Posiblemente para una instalación en un dispositivo Edge, con bajo poder de cómputo como una companion computer del drone, probablemente [llama.cpp](https://llama.app/) sea la mejor opción.
+* Corrección de infografías generadas por IA con [Nano Banana](https://gemini.google/tm/overview/image-generation/?hl=en-TM) a través de la app de escritorio de [Gemini](https://gemini.google.com/app)
 * Instalación de [openai/gpt-oss-20b](https://huggingface.co/openai/gpt-oss-20b) en Ollama directamenete desde el repositorio de Hugging Face de OpenAI:
 ``` Bash
 # gpt-oss-20b
