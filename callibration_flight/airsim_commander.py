@@ -6,11 +6,13 @@ import sys
 import re
 from dotenv import load_dotenv
 
+TIMEOUT = 1200  # 20 mins
+
 def main():
     # Iniciar airsim_logger.py como un proceso separado
     script_dir = os.path.dirname(os.path.abspath(__file__))
     logger_path = os.path.join(script_dir, "airsim_logger.py")
-    path_file = os.path.join(script_dir, "calibration_path_20260610_drone2.txt")
+    path_file = os.path.join(script_dir, "simulated_telemetry\\flights\\20260627\\calibration_path_20260627_drone1.txt")
 
     print(f"Starting logger: {logger_path}")
     # Uso de sys.executable para asegurar que se use el mismo entorno de python
@@ -46,6 +48,45 @@ def main():
             continue
 
         print(f"Executing command: {cmd}")
+
+        if cmd.startswith("moveOnPath("):
+            match = re.match(r"moveOnPath\((.*)\)", cmd)
+            if match:
+                args = ["moveOnPath"] + [arg.strip() for arg in match.group(1).split(",") if arg.strip()]
+                print("MoveOnPath received")
+                if len(args) % 3 != 2:
+                    print("Move needs 3 args per position args")
+                    continue
+
+                client.enableApiControl(True)
+                iterations = (len(args) - 2) / 3
+                path = []
+                for i in range(int(iterations)):
+                    point = airsim.Vector3r(
+                        float(args[(i * 3) + 1]),
+                        float(args[(i * 3) + 2]),
+                        float(args[(i * 3) + 3]),
+                    )
+                    path.append(point)
+
+                try:
+                    client.moveOnPathAsync(
+                        path,
+                        float(args[-1]),
+                        TIMEOUT,
+                        airsim.DrivetrainType.ForwardOnly,
+                        airsim.YawMode(False, 0),
+                        20,
+                        1,
+                    ).join()
+                except Exception as e:
+                    print(f"moveOnPath threw exception: {e}")
+
+                client.hoverAsync().join()
+                print("Path moved!")
+            else:
+                print(f"Invalid moveOnPath command format: {cmd}")
+            continue
 
         if cmd == "takeoff":
             client.takeoffAsync().join()
