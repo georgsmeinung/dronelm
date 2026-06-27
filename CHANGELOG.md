@@ -4,18 +4,20 @@
 
 * Modificados los scripts `airsim_commander.py` y `airsim_iterator.py` para soportar trayectorias completas como comando y para recibirlas por línea de comando.
 * Subido video [AirSim Plugin on UE 5.5 synthetic telemetry for Drone 1 trajectory](https://youtu.be/LGso1VYQsPY) con muestra de generación de telemetría sintética del drone 1 (trayectoria en azul)
-
-<img src="informe/2026-0627 Generación de telemetría sintética del drone 1 - azul.png"/>
-
 * Subido video [AirSim Plugin on UE 5.5 synthetic telemetry for Drone 2 trajectory](https://youtu.be/xgItxxe4yRM) con muestra de generación de telemetría sintética del drone 2 (trayectoria en marrón)
-
-<img src="informe/2026-0627 Generación de telemetría sintética del drone 2 - marrón.png"/>
-
 * Regeneración de telemetría sintética con trayectorias de vuelos reales.
 * Análisis de [Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis_20260627.ipynb) con nueva telemetría sintética generada el 2026-0627, generando reporte en notebook de Jupyter con estadísticas descriptivas y pruebas estadísiticas para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
 
+#### Comparación Drone 1
+
+<img src="informe/2026-0627 Generación de telemetría sintética del drone 1 - azul.png"/>
+<img src="informe/2026-0627 Trayectorias Drone 1.png"/>
 <img src="informe/2026-0627 Comparación de Pefiles de velocidad - Drone 1.png"/>
 
+#### Comparación Drone 2
+
+<img src="informe/2026-0627 Generación de telemetría sintética del drone 2 - marrón.png"/>
+<img src="informe/2026-0627 Trayectorias Drone 2.png"/>
 <img src="informe/2026-0627 Comparación de Pefiles de velocidad - Drone 2.png"/>
 
 * Al contrastar la telemetría real frente a la simulada en las trayectorias específicas del 2026-06-27 para Dron 1 y Dron 2, concluimos lo siguiente:
@@ -33,9 +35,10 @@
    - Durante las fases **rectas**, la telemetría simulada en AirSim es idealizada (varianza de actitud cercana a 0), sin fuerzas externas de viento ni ruido de sensores.
    - El dron real, por otro lado, manifiesta una variabilidad permanente de $\pm 2^\circ - 3^\circ$ en roll y pitch incluso en tramos rectos estables, producto del viento real de la zona y de las correcciones del piloto automático.
 
+### La optimización de Modelos de Lenguaje Pequeños (SLM) con LoRA (Low-Rank Adaptation) 
+
 <img src="informe/2026-0627 Optimización_de_Modelos_Pequeños.png"/>
 
-### La optimización de Modelos de Lenguaje Pequeños (SLM) con LoRA (Low-Rank Adaptation) 
 Para mejorar la navegación y respuesta del SLM corriendo abordo se considera **LoRA (Low-Rank Adaptation)**, que es una estrategia altamente eficiente que forma parte de las técnicas de **Ajuste Fino Eficiente en Parámetros (PEFT)**.  
 LoRA optimiza los modelos funcionando mediante una **descomposición de bajo rango**: actualiza solo un subconjunto muy pequeño de parámetros (o afina unas pocas capas específicas) mientras mantiene fijos la mayor parte de los parámetros del modelo preentrenado original.
 
