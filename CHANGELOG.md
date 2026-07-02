@@ -1,21 +1,54 @@
+## 2026-0702
+
+### Evaluando performance de SLM corriendo localmente con Ollama
+
+* Instalación de [ollama-benchmark](https://github.com/LarHope/ollama-benchmark)
+* Evaluando: `gemma2:2b`, `qwen3.5:4b`,`llama3.2:latest`,`LiquidAI/lfm2.5-1.2b-instruct:latest`, `phi4-mini:latest`,`LiquidAI/lfm2.5-350m:latest`
+* Generando tablas comparativa con: `ollama-benchmark --verbose --prompts "Write a hello world in Rust" "Explain quantum computing" "How blockchain works" --table_output --models gemma2:2b qwen3.5:4b llama3.2:latest LiquidAI/lfm2.5-1.2b-instruct:latest phi4-mini:latest LiquidAI/lfm2.5-350m:latest`
+
+| Model Name | Prompt Evaluation Rate (T/s) | Evaluation Rate (T/s) | Total Rate (T/s) | Load Time (s) | Prompt Evaluation Count | Prompt Evaluation Time (s) | Evaluation Count | Evaluation Time (s) | Total Time (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| gemma2:2b | 240.05 | 54.03 | 55.11 | 0.31 | 39 | 0.16 | 1501 | 27.78 | 28.27 |
+| qwen3.5:4b | 153.76 | 28.82 | 29.01 | 0.51 | 43 | 0.28 | 5359 | 185.92 | 186.79 |
+| llama3.2:latest | 1133.67 | 44.79 | 47.54 | 0.32 | 88 | 0.08 | 1370 | 30.59 | 31.01 |
+| LiquidAI/lfm2.5-1.2b-instruct:latest | 1245.20 | 120.67 | 139.95 | 0.11 | 85 | 0.07 | 472 | 3.91 | 4.10 |
+| phi4-mini:latest | 238.22 | 37.19 | 37.98 | 0.34 | 21 | 0.09 | 839 | 22.56 | 23.01 |
+| LiquidAI/lfm2.5-350m:latest | 3928.09 | 220.06 | 292.20 | 0.12 | 85 | 0.02 | 240 | 1.09 | 1.24 |
+
+* Considerando tests más completos, por ejemplo [promptFoo](https://dev.to/roobia/como-probar-aplicaciones-llm-guia-completa-de-promptfoo-2026-k4p)
+
+
 ## 2026-0627
 
 ### Regeneración de Datos Sintéticos
 
 * Modificados los scripts `airsim_commander.py` y `airsim_iterator.py` para soportar trayectorias completas como comando y para recibirlas por línea de comando.
+
 * Subido video [AirSim Plugin on UE 5.5 synthetic telemetry for Drone 1 trajectory](https://youtu.be/LGso1VYQsPY) con muestra de generación de telemetría sintética del drone 1 (trayectoria en azul)
 * Subido video [AirSim Plugin on UE 5.5 synthetic telemetry for Drone 2 trajectory](https://youtu.be/xgItxxe4yRM) con muestra de generación de telemetría sintética del drone 2 (trayectoria en marrón)
 * Regeneración de telemetría sintética con trayectorias de vuelos reales.
 * Análisis de [Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis_20260627.ipynb) con nueva telemetría sintética generada el 2026-0627, generando reporte en notebook de Jupyter con estadísticas descriptivas y pruebas estadísiticas para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
 
 #### Comparación Drone 1
-
+* Vuelo simulado con la trayectoria del Drone 1. Los puntos de las trayectorias están redondeados a múltiplos de 5.
+```
+# Trayetoria del drone 1, traza en azul (1E2A56)
+takeoff
+moveOnPath(0,0,-120,245,-65,-120,30,-45,-120,30,95,-120,-135,95,-120,-135,-45,-120,39,-45,-120,245,-65,-120,0,0,-120,0,0,0,5)
+reset
+```
 <img src="informe/2026-0627 Generación de telemetría sintética del drone 1 - azul.png"/>
 <img src="informe/2026-0627 Trayectorias Drone 1.png"/>
 <img src="informe/2026-0627 Comparación de Pefiles de velocidad - Drone 1.png"/>
 
 #### Comparación Drone 2
-
+* Vuelo simulado con la trayectoria del Drone 2. Los puntos de las trayectorias están redondeados a múltiplos de 5.
+```
+# Trayectoria del drone 2, traza en marrón (8B4513)
+takeoff
+moveOnPath(0,0,-120, 50,-75,-120, -45,-20,-120, 95,-20,-120, 95,-110,-120, -100,-110,-120, -100,110,-120, 125,110,-120, -45,-20,-120, 50,-75,-120,0,0,-120,0,0,0,5)
+reset
+```
 <img src="informe/2026-0627 Generación de telemetría sintética del drone 2 - marrón.png"/>
 <img src="informe/2026-0627 Trayectorias Drone 2.png"/>
 <img src="informe/2026-0627 Comparación de Pefiles de velocidad - Drone 2.png"/>
