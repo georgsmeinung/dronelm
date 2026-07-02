@@ -16,6 +16,72 @@
 | LiquidAI/lfm2.5-350m:latest | 3928.09 | 220.06 | 292.20 | 0.12 | 85 | 0.02 | 240 | 1.09 | 1.24 |
 
 * Considerando tests más completos, por ejemplo [promptFoo](https://dev.to/roobia/como-probar-aplicaciones-llm-guia-completa-de-promptfoo-2026-k4p)
+* Instalación de [promptFoo](https://www.promptfoo.dev/docs/getting-started/) 
+```
+brew install promptfoo
+mkdir local-llm-eval
+cd local-llm-eval
+promptfoo init 
+promptfoo eval setup
+```
+* Configuración de prueba con los mismos modelos y promtps:
+#### Providers
+<img src="informe/2026-0702 promptFoo Providers.png"/>
+
+#### Prompts
+<img src="informe/2026-0702 PrompFoo Prompts.png"/>
+
+#### Configuración completa de la prueba
+``` yaml
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: ''
+env: {}
+extensions: []
+prompts:
+  - Write a hello world in Rust
+  - Explain quantum computing
+  - How blockchain works
+providers:
+  - id: ollama:chat:llama3.2:latest
+  - id: ollama:gemma2:2b
+    config: {}
+    label: ollama:gemma2:2b
+  - id: ollama:qwen3.5:4b
+    config: {}
+    label: ollama:qwen3.5:4b
+  - id: ollama:llama3.2:latest
+    config: {}
+    label: ollama:llama3.2:latest
+  - id: ollama:LiquidAI/lfm2.5-1.2b-instruct:latest
+    config: {}
+    label: ollama:LiquidAI/lfm2.5-1.2b-instruct:latest
+  - id: ollama:phi4-mini:latest
+    config: {}
+    label: ollama:phi4-mini:latest
+  - id: ollama:LiquidAI/lfm2.5-350m:latest
+    config: {}
+    label: ollama:LiquidAI/lfm2.5-350m:latest
+scenarios: []
+tests:
+  - description: Fun animal adventure story
+    vars:
+      animal: penguin
+      location: tropical island
+    assert: []
+evaluateOptions:
+  delay: 0
+defaultTest:
+  options:
+    provider: ollama:chat:llama3.2:latest
+derivedMetrics: []
+```
+
+#### Resultados de la prueba
+* Visualización con 
+```
+promptfoo view
+```
+<img src="informe/2026-0702 prompFoo Results.png"/>
 
 
 ## 2026-0627
