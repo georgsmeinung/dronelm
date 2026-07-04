@@ -1,0 +1,7 @@
+{
+  "SeeDocsAt": "https://github.com/Microsoft/AirSim/blob/main/docs/settings.md",
+  "SettingsVersion": 1.2,
+  "LocalHostIp": "127.0.0.1",
+  "ApiServerPort": 41451,
+  "SimMode": "Multirotor"
+}

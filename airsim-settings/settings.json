@@ -1,0 +1,47 @@
+{
+  "SeeDocsAt": "https://cosys-lab.github.io/Cosys-AirSim/settings/",
+  "SettingsVersion": 2.0,
+  "LogMessagesVisible": false,
+  "SimMode": "Multirotor",
+  "LocalHostIp": "0.0.0.0",
+  "ApiServerPort": 41451,
+  "RecordUIVisible": false,
+  "ClockType": "SteppableClock",
+  "OriginGeopoint": {
+    "Latitude": 47.641468,
+    "Longitude": -122.140165,
+    "Altitude": 122
+  },
+  "CameraDefaults": {
+    "CaptureSettings": [
+      {
+        "ImageType": 0,
+        "Width": 1080,
+        "Height": 720
+      },
+      {
+        "ImageType": 3,
+        "Width": 1080,
+        "Height": 720
+      },
+      {
+        "ImageType": 5,
+        "Width": 1080,
+        "Height": 720
+      },
+      {
+        "ImageType": 1,
+        "Width": 1080,
+        "Height": 720
+      }
+    ]
+  },
+  "SubWindows": [
+    {
+      "WindowID": 2,
+      "CameraName": "Front Camera",
+      "ImageType": 0,
+      "Visible": true
+    }
+  ]
+}
