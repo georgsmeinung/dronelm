@@ -1,5 +1,5 @@
 {
-  "SeeDocsAt": "https://cosys-lab.github.io/Cosys-AirSim/settings/",
+  "SeeDocsAt": "https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docs/settings.md",
   "SettingsVersion": 2.0,
   "LogMessagesVisible": false,
   "SimMode": "Multirotor",
