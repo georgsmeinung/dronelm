@@ -87,7 +87,9 @@ Ejecución de la lógica de vuelo y percepción.
 
 2. **Iniciar la Simulación (Cosys-AirSim):**
 * Descargar el proyecto `CitySim` con el plugin de Cosys AirSim compilado. El proyecto es muy pesado para subir a GitHub por lo que está en [Google Drive](https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7?usp=drive_link).
+* Un alternativa para una prueba concepto es usar el entorno `MiniSim`, mucho más liviano.
 * Lanzar el entorno de virtual desde Unreal Engine editor en modo play.
+* Si se quiere configurar un entorno propio o customizar la configuración del Cosys-Airsim, referise a  la documentación en [`airsim-settings`](https://github.com/georgsmeinung/dronelm/tree/main/airsim-settings)
 
 3. **Probar conexión al Drone mediante:**
 * Scripts de navegación autónoma en [`airsim-poc/my_hello_drone.py`](https://github.com/georgsmeinung/dronelm/tree/main/airsim-poc)
