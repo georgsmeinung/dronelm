@@ -65,7 +65,7 @@ pip install -r requirements.txt
 **4. Verificar que AirSim responde.** Antes de tocar el grafo, un handshake rápido:
 
 ```python
-import airsim
+import cosysairsim
 c = airsim.MultirotorClient(ip="127.0.0.1", port=41451)
 c.confirmConnection()
 c.enableApiControl(True)
