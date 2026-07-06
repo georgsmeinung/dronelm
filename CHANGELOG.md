@@ -26,7 +26,6 @@ Primero, instala las dependencias en tu terminal:
 
 ```bash
 pip install ultralytics opencv-python touch
-
 ```
 
 #### Código de Implementación
@@ -77,7 +76,6 @@ while cap.isOpened():
 # Liberar recursos
 cap.release()
 cv2.destroyAllWindows()
-
 ```
 
 ### 3. Claves para lograr "Tiempo Real" (Optimización)
@@ -87,6 +85,14 @@ Si se nota retraso (lag) en el stream, se pueden aplicar los siguientes ajustes:
 * **Elige el modelo correcto:** Usar `yolov8n-seg.pt` (Nano). Es el más ligero, diseñado específicamente para dispositivos con recursos limitados (como CPUs o Raspberry Pi) y alcanza la mayor tasa de FPS (cuadros por segundo).
 * **Aprovecha la GPU (CUDA):** Si se tiene una tarjeta gráfica NVIDIA, asegúrarse de tener instalado PyTorch con soporte CUDA. YOLOv8 la detectará automáticamente, multiplicando la velocidad por 10 o más.
 * **Reducción de resolución:** Se puede indicar al modelo que procese las imágenes a un tamaño menor utilizando el parámetro `imgsz`. Por ejemplo: `model(frame, imgsz=320, stream=True)`. Menos píxeles se traducen en un procesamiento mucho más rápido.
+
+### Prueba de Captura y procesamiento YOLO
+
+* Generación de script `capture_video.py` para captura manual de fotogramas con cámara del drone para verificar cuál es la entrada de YOLO.
+* Prueba de correcta ejecución del loop de control en ambiente mínimo (`TownSim`)  con el drone Airsim en un entorno con obstáculos en un ambito urbano. Control del dronen en manual
+* Subido video ["AirSim Plugin on UE 5.5 video capture and YOLO in real time"](https://youtu.be/BkV4tYFSrrs) con prueba de captura de video y segmentación con YOLO en tiempo real.
+
+<img src="informe/2026-0706 Captura Video YOLO.png"/>
 
 ## 2026-0705
 
