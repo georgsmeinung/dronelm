@@ -540,10 +540,6 @@ tr:hover td {
   max-width: 600px;
 }
 
-.timeline-content figure img {
-  max-height: 250px;
-}
-
 /* Custom alert box */
 .alert-box {
   border-left: 4px solid var(--primary);
