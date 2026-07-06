@@ -31,85 +31,102 @@ Este repositorio contiene la implementación del Trabajo Final de Máster en Ing
 
 ## 📋 Resumen del Proyecto
 
-La navegación autónoma de drones en entornos urbanos densos, como la ciudad de Buenos Aires, presenta desafíos críticos debido a la pérdida de señal GPS, obstáculos dinámicos y regulaciones estrictas. Este proyecto desarrolla un pipeline integral para la navegación autónoma de cuadricópteros eVTOL utilizando **visión monocular** y **hardware de bajo costo**.
+Este proyecto consiste en el desarrollo y evaluación de un sistema de **navegación autónoma para drones** (cuadricópteros eVTOL) en entornos urbanos simulados mediante **visión monocular** y **Modelos de Lenguaje Pequeños (SLMs)** que corren localmente.
 
-El sistema integra:
-* **Modelos de Lenguaje Ligero (SLM)** para la toma de decisiones reactiva.
-* **Visión por Computadora** (YOLOv8n, ORB-SLAM2) para percepción.
-* **Simulación Realista** en AirSim con entornos urbanos.
+El objetivo central es diseñar un pipeline de dos niveles (lazo de planificación en tierra y lazo táctico en vuelo) y contrastar la toma de decisiones basada en SLMs con lógicas tradicionales (como Máquinas de Estados Finitos - FSM) y control manual, analizando latencias, consumo computacional, robustez ante obstáculos e imprecisiones físicas.
 
-El objetivo principal es comparar el rendimiento de los SLM frente a las tradicionales Máquinas de Estados Finitos (FSM) en tareas de detección, mapeo y aterrizaje.
+La simulación se ejecuta sobre **Unreal Engine 5.5** utilizando el plugin **Cosys-AirSim**, recreando entornos urbanos reales y sintéticos.
+
+---
 
 ## 🏗️ Arquitectura del Sistema
 
-El proyecto se divide en dos pipelines principales de procesamiento:
+El sistema implementa una arquitectura desacoplada de dos cerebros:
 
-### 1. Pipeline de Digitalización de Entornos (Digital Twin)
-Generación de escenarios 3D fotorrealistas de Buenos Aires para la simulación.
-1.  **Adquisición:** Extracción de frames de videos públicos (YouTube) de drones en la ciudad.
-2.  **Preprocesamiento:** Filtrado y selección de diversidad visual.
-3.  **Modelado 3D:** Reconstrucción mediante **RealityCapture** y optimización de malla en **Blender**.
-4.  **Despliegue:** Integración de los modelos en **Unreal Engine / AirSim**.
+1. **Lazo de Planificación (Ground-Station - `airsim-plan`):** Se ejecuta en tierra antes del despegue. Recibe instrucciones en lenguaje natural y, a través de un LLM local, genera un manifiesto de misión estructurado ([`MissionManifest.json`](./airsim-plan/examples/perimeter_north_01.json)) con waypoints, reglas de empeño y prompts tácticos.
+2. **Lazo de Vuelo Táctico (In-Flight - `airsim-loop`):** Es un bucle continuo de baja latencia basado en **LangGraph**. Procesa frames de cámara RGB con **YOLOv8n** para detectar obstáculos y mapear su distancia/posición. Si el camino está despejado, se navega mediante una regla reactiva rápida. Si detecta un obstáculo inminente, el *Gatekeeper* deriva el control al SLM local para decidir maniobras de evasión utilizando decodificación restringida o esquemas JSON estructurados.
 
-### 2. Pipeline de Navegación Autónoma (SITL)
-Ejecución de la lógica de vuelo y percepción.
-* **Simulador:** AirSim provee datos sensoriales (Cámara RGB, IMU, GPS).
-* **Companion Computer Simulada:** Contenedor **Docker** emulando una **NVIDIA Jetson Nano** (L4T).
-* **Stack de Percepción:**
-    * *Detección:* YOLOv8n (Obstáculos).
-    * *Segmentación:* MobileNetV3 + U-Net (Zonas de aterrizaje).
-    * *SLAM:* ORB-SLAM2 (Localización y Mapeo).
-* **Control:** Interacción vía **MAVLink** con un controlador de vuelo **PX4** virtual.
+Para ilustrar el flujo completo desde las instrucciones iniciales hasta la ejecución en el simulador:
+
+<img src="informe/Infografia README Fondo Blanco.png"/>
+
+1. **Ground Station:** Las *Instrucciones en Lenguaje Natural* son procesadas por `airsim-plan` para compilar el `MissionManifest.json` (Contrato de Vuelo).
+2. **Inyección al Lazo Táctico:** El manifiesto se transfiere al bucle autónomo en vuelo (`airsim-loop`).
+3. **Percepción y Traducción:** Los sensores capturan el entorno, el módulo de percepción (YOLOv8n) procesa la imagen y el *Traductor Pixeles a Palabras* genera un resumen de la escena.
+4. **Enrutamiento (Gatekeeper):** - **Camino Libre:** Activa la *Navegación Reactiva* (regla directa).
+   - **Obstáculo Central:** Activa el *Cerebro Deliberativo* (SLM Local) para calcular la evasión.
+5. **Actuación:** El *Módulo Motor* recibe las velocidades o comandos JSON y ejecuta el control final sobre el simulador `Cosys-AirSim`.
+
+---
+
+## 📂 Estructura del Repositorio
+
+El código del proyecto se organiza en los siguientes componentes:
+
+*   **[`airsim-plan`](./airsim-plan):** Planificador de misiones en tierra. Contiene el CLI `airsim-plan` para compilar, validar y ejecutar misiones a partir de lenguaje natural.
+*   **[`airsim-loop`](./airsim-loop):** Lazo de control autónomo del dron. Implementa el grafo de navegación (Percepción, Gatekeeper, SLM Táctico y ejecución motriz).
+*   **[`airsim-mcp`](./airsim-mcp):** Servidor de Model Context Protocol (MCP) que expone herramientas de telemetría y control de AirSim para interactuar con agentes autónomos externos.
+*   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`simple_control.py` y `advanced_control.py`) para volar el dron y configurar segmentación en AirSim.
+*   **[`airsim-poc`](./airsim-poc):** Pruebas de concepto iniciales de conexión y telemetría rápida (`my_hello_drone.py`).
+*   **[`callibration_flight`](./callibration_flight):** Scripts de automatización de trayectorias (`airsim_commander.py`, `airsim_iterator.py`) y notebooks de análisis estadístico (`telemetry_analysis_*.ipynb`) que comparan la variabilidad física y de actitud (pitch, roll, yaw y velocidad) de vuelos simulados vs. vuelos de drones reales (DJI) para la calibración del simulador.
+*   **[`local-llm-eval`](./local-llm-eval):** Suite de evaluación y benchmarking para comparar la velocidad de generación (tokens/segundo), tiempos de carga y precisión estructural de diferentes SLMs locales (Gemma 2, Llama 3.2, Qwen 2.5, Liquid LFM, Phi) mediante `promptfoo` y `ollama-benchmark`.
+*   **[`plan_tesis`](./plan_tesis), [`docs`](./docs) e [`informe`](./informe):** Documentación del plan de tesis, objetivos aprobados, bibliografía y borradores del reporte final del master.
+
+---
 
 ## 🛠️ Stack Tecnológico
 
-* **Lenguaje:** Python, C++.
-* **Simulación:** Microsoft AirSim, Unreal Engine 5.5.
-* **Visión por Computadora:** OpenCV, YOLOv8, ORB-SLAM2.
-* **Deep Learning:** PyTorch / TensorFlow (para SLM y segmentación).
-* **Infraestructura:** Docker, NVIDIA TensorRT (para optimización en Jetson).
-* **Protocolos:** MAVLink, ROS (Robot Operating System).
+*   **Simulación:** Unreal Engine 5.5 + Cosys-AirSim.
+*   **Lenguajes y Entorno:** Python 3.10+, Conda.
+*   **Modelos de Visión:** YOLOv8n (Ultralytics) para detección de obstáculos en tiempo real.
+*   **Modelos de Lenguaje (SLM):** Ollama / LM Studio (API local compatible con OpenAI) para inferencia de modelos locales (`llama3.2`, `gemma2:2b`, `qwen3.5:4b`, `phi-3/phi-4`, `Liquid LFM`).
+*   **Control y Orquestación:** LangGraph (para la estructura del lazo de vuelo) y Pydantic (para validación de esquemas).
+*   **Evaluación:** Promptfoo (para prompts y parsing JSON) y Jupyter Notebooks (análisis estadístico de telemetría con SciPy/Matplotlib).
+
+---
 
 ## 🚀 Instalación y Uso
 
 ### Prerrequisitos
-* NVIDIA GPU con soporte para CUDA (para correr Unreal Engine y entrenamiento).
-* Docker Desktop instalado.
-* Unreal Engine (versión compatible con AirSim).
+*   GPU NVIDIA con soporte para CUDA (esencial para la simulación y la inferencia ágil de visión/SLM).
+*   Unreal Engine 5.5 con el entorno de simulación correspondiente.
+*   Ollama o LM Studio corriendo localmente (para servir los SLMs).
 
-### Configuración del Entorno
+### 1. Configuración del Entorno Python
+Crea y activa el entorno de Conda utilizando el archivo `environment.yml` provisto en la raíz:
 
-1. **Clonar el repositorio:**
 ```bash
-   git clone https://github.com/georgsmeinung/lm-drone.git
-   cd lm-drone
+conda env create -f environment.yml
+conda activate airsimenv
 ```
 
-2. **Iniciar la Simulación (Cosys-AirSim):**
-* Descargar el proyecto `CitySim` con el plugin de Cosys AirSim compilado. El proyecto es muy pesado para subir a GitHub por lo que está en [Google Drive](https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7?usp=drive_link).
-* Un alternativa para una prueba concepto es usar el entorno `MiniSim`, mucho más liviano.
-* Lanzar el entorno de virtual desde Unreal Engine editor en modo play.
-* Si se quiere configurar un entorno propio o customizar la configuración del Cosys-Airsim, referise a  la documentación en [`airsim-settings`](https://github.com/georgsmeinung/dronelm/tree/main/airsim-settings)
+### 2. Preparar el Simulador (Cosys-AirSim)
+*   Descarga el entorno virtual compilado (como `CitySim` desde Google Drive o el entorno ligero de prueba `MiniSim`).
+*   Ejecuta el proyecto de Unreal Engine en modo **Play**.
+*   Asegúrate de que la configuración de puertos y vehículo en tu archivo `Settings.json` de AirSim coincida con los puertos de tu script (puerto por defecto: `41451`).
 
-3. **Probar conexión al Drone mediante:**
-* Scripts de navegación autónoma en [`airsim-poc/my_hello_drone.py`](https://github.com/georgsmeinung/dronelm/tree/main/airsim-poc)
-* O iniciando el Servidor MCP para control con LLMs (Model Context Protocol) en [`airsim-mcp/mcp_server.py`](https://github.com/georgsmeinung/dronelm/tree/main/airsim-mcp).
-* También puede a Airsim con alguno de los scripts de control manual disponibles en [`airsim-kc`](https://github.com/georgsmeinung/dronelm/tree/main/airsim-kc)
+### 3. Ejecución del Lazo Autónomo Completo
+Para ejecutar una misión completa compilando una instrucción en lenguaje natural e invocando el lazo de vuelo:
 
-## 📊 Evaluación y Métricas
+1. Configura el archivo `.env` en `airsim-plan` y `airsim-loop` (especificando las URLs del LLM y de la simulación).
+2. Ejecuta el planificador:
+    ```bash
+    cd airsim-plan
+    pip install -e .
+    airsim-plan run -i "Recorre el perímetro norte a 10 metros de altitud y a velocidad máxima de 5 m/s, esquiva obstáculos"
+    ```
+    Esto compilará el plan, armará el dron, despegará e iniciará el lazo táctico en `airsim-loop`.
 
-El sistema se evalúa comparativamente (SLM vs FSM) utilizando las siguientes métricas:
+---
 
-* **Tasa de Éxito de Misión:** Porcentaje de recorridos completados sin colisiones.
-* **Tiempo de Reacción:** Latencia entre percepción y comando de control.
-* **Consumo Computacional:** Uso de CPU/GPU y memoria (FPS), crucial para validar la viabilidad en Jetson Nano.
+## 📊 Evaluación y Calibración del Simulador
 
-## 🤝 Créditos
+Uno de los aportes del proyecto es el análisis empírico de la fidelidad física de la simulación. En [`callibration_flight`](./callibration_flight) se incluyen estudios detallados que comparan:
+*   **Variabilidad Inercial:** Evaluaciones estadísticas que prueban la rigidez física de la actitud en el simulador (AirSim tiende a generar variaciones extremas en giros bruscos para mantener la trayectoria exacta del PID) vs. drones reales (restringidos a límites físicos de ±30°).
+*   **Ruido de Sensores:** Modelado del ruido ambiental real (viento, estocasticidad) ausente en las trayectorias de simulación.
+*   **Benchmarking de SLMs:** Análisis comparativo de rendimiento (Tokens por segundo y latencia de carga) de modelos locales en hardware embebido/local.
 
-Este trabajo ha sido desarrollado como parte de la Maestría en Ciencia de Datos de la Universidad Austral.
-
-* **Investigación y Desarrollo:** Jorge Enrique Nicolau
-* **Supervisión:** Rodrigo Del Rosso & Ezequiel Omar Nuske
+---
 
 ## 📄 Licencia
 
