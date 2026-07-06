@@ -372,10 +372,9 @@ figure:hover {
 
 figure img {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
   object-fit: cover;
-  max-height: 480px;
 }
 
 figcaption {
@@ -542,7 +541,7 @@ tr:hover td {
 }
 
 .timeline-content figure img {
-  max-height: 250px;
+  /* max-height: 250px; */
 }
 
 /* Custom alert box */
