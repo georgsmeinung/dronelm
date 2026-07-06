@@ -1,4 +1,4 @@
-## 2026-0706
+## 2026-0705
 ### Pruebas y ajustes al loop de control autónomo en `airsim-loop`
 
 * Carga inicial de pesos de YOLOv8.
