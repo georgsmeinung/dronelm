@@ -18,9 +18,12 @@ except Exception:  # pragma: no cover
     pass
 
 try:
-    import airsim  # type: ignore
-except Exception:  # pragma: no cover - dependencia opcional en tiempo de import
-    airsim = None  # type: ignore
+    import cosysairsim as airsim  # type: ignore
+except Exception:
+    try:
+        import airsim  # type: ignore
+    except Exception:  # pragma: no cover - dependencia opcional en tiempo de import
+        airsim = None  # type: ignore
 
 import numpy as np
 

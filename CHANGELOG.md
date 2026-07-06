@@ -1,3 +1,11 @@
+## 2026-0706
+### Pruebas y ajustes al loop de control autónomo
+
+* Generación de script `capture_frame.py` para captura manual de fotogramas
+* Generación de script `main.py` para ejecución del loop de control
+* Ajustes a `requirements.txt` con las dependencias necesarias
+* Integración del SLM local con LangGraph
+
 ## 2026-0702
 
 ### Evaluando performance de SLM corriendo localmente con Ollama
