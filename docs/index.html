@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM) en Unreal Engine." />
+  <meta name="description"
+    content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM) en Unreal Engine." />
   <title>Navegación Autónoma de Drones con SLM - Tesis Maestría Ciencia de Datos</title>
-  
+
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+    rel="stylesheet">
+
   <style>
     :root {
       --bg-primary: #f8fafc;
@@ -18,28 +22,28 @@
       --text-primary: #0f172a;
       --text-secondary: #334155;
       --text-muted: #64748b;
-      
+
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
       --primary-light: #eff6ff;
       --primary-border: #bfdbfe;
-      
+
       --accent: #0d9488;
       --accent-hover: #0f766e;
       --accent-light: #ccfbf1;
-      
+
       --border-color: #e2e8f0;
       --code-bg: #f1f5f9;
       --code-text: #0f172a;
-      
+
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-      
+
       --font-sans: 'Inter', sans-serif;
       --font-heading: 'Outfit', sans-serif;
       --font-mono: 'Fira Code', monospace;
-      
+
       --sidebar-width: 320px;
     }
 
@@ -178,7 +182,8 @@
       transition: all 0.2s ease;
     }
 
-    nav a:hover, nav a.active {
+    nav a:hover,
+    nav a.active {
       background-color: var(--primary-light);
       color: var(--primary);
       font-weight: 600;
@@ -240,10 +245,29 @@
       opacity: 0.9;
     }
 
-    .badge-blue { background-color: var(--primary-light); color: var(--primary); border: 1px solid var(--primary-border); }
-    .badge-teal { background-color: var(--accent-light); color: var(--accent); border: 1px solid #99f6e4; }
-    .badge-gray { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-    .badge-orange { background-color: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .badge-blue {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+    }
+
+    .badge-teal {
+      background-color: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid #99f6e4;
+    }
+
+    .badge-gray {
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    .badge-orange {
+      background-color: #fffbeb;
+      color: #d97706;
+      border: 1px solid #fde68a;
+    }
 
     /* Sections styling */
     section {
@@ -291,7 +315,8 @@
       color: var(--text-primary);
     }
 
-    ul, ol {
+    ul,
+    ol {
       margin-bottom: 1.5rem;
       padding-left: 1.5rem;
       color: var(--text-secondary);
@@ -573,7 +598,7 @@
         border-bottom: 1px solid var(--border-color);
         padding: 2rem;
       }
-      
+
       main {
         margin-left: 0;
         padding: 2rem;
@@ -585,25 +610,30 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <!-- Sidebar Navigation -->
     <aside id="sidebar">
       <div class="university-logo-container">
         <!-- Logo de la Universidad Austral local fallback to remote path -->
-        <img class="university-logo" src="../informe/Austral-Ingenieria.png" onerror="this.src='https://www.austral.edu.ar/wp-content/uploads/2022/10/facultades-horizontales-03.png'" alt="Universidad Austral - Facultad de Ingeniería" />
+        <img class="university-logo"
+          src="https://github.com/georgsmeinung/dronelm/blob/main/informe/Austral-Ingenieria.png"
+          onerror="this.src='https://www.austral.edu.ar/wp-content/uploads/2022/10/facultades-horizontales-03.png'"
+          alt="Universidad Austral - Facultad de Ingeniería" />
       </div>
-      
+
       <div class="thesis-meta">
         <h4>Tesis de Maestría</h4>
         <div class="thesis-meta-item">
           <span class="meta-label">Alumno</span>
-          <span class="meta-value"><a href="https://www.linkedin.com/in/jorgenicolau/" target="_blank">Jorge E. Nicolau</a></span>
+          <span class="meta-value"><a href="https://www.linkedin.com/in/jorgenicolau/" target="_blank">Jorge E.
+              Nicolau</a></span>
         </div>
         <div class="thesis-meta-item">
           <span class="meta-label">Directores</span>
           <span class="meta-value">
-            <a href="https://www.linkedin.com/in/rodrigodelrosso/" target="_blank">Rodrigo Del Rosso</a><br/>
+            <a href="https://www.linkedin.com/in/rodrigodelrosso/" target="_blank">Rodrigo Del Rosso</a><br />
             <a href="https://www.linkedin.com/in/ezequiel-nuske-15137862/" target="_blank">Ezequiel Nuske</a>
           </span>
         </div>
@@ -632,7 +662,9 @@
       <header>
         <h1>Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM)</h1>
         <p class="lead-subtitle">
-          Esta documentación reúne el trabajo final de posgrado de la <strong>Maestría en Ciencia de Datos</strong> de la <strong>Universidad Austral</strong>. Explora el comportamiento deliberativo de modelos de lenguaje pequeños frente a aproximaciones estándar en la simulación de vuelo en tres dimensiones.
+          Esta documentación reúne el trabajo final de posgrado de la <strong>Maestría en Ciencia de Datos</strong> de
+          la <strong>Universidad Austral</strong>. Explora el comportamiento deliberativo de modelos de lenguaje
+          pequeños frente a aproximaciones estándar en la simulación de vuelo en tres dimensiones.
         </p>
         <div class="badges-row">
           <a href="LICENSE.md" class="badge-pill badge-blue">Licencia: MIT</a>
@@ -646,14 +678,22 @@
       <section id="introduccion">
         <h2>Resumen del Proyecto</h2>
         <p>
-          Este proyecto de tesis consiste en el diseño, implementación y evaluación experimental de un sistema de <strong>navegación autónoma para drones cuadricópteros (eVTOL)</strong> operando en entornos urbanos simulados de alta fidelidad. 
+          Este proyecto de tesis consiste en el diseño, implementación y evaluación experimental de un sistema de
+          <strong>navegación autónoma para drones cuadricópteros (eVTOL)</strong> operando en entornos urbanos simulados
+          de alta fidelidad.
         </p>
         <p>
-          El núcleo científico es el contraste entre la toma de decisiones basada en <strong>Modelos de Lenguaje Pequeños (SLMs)</strong> locales y aproximaciones de control convencionales como <strong>Máquinas de Estados Finitos (FSM)</strong> y pilotaje manual. Se examinan dimensiones clave como la latencia de respuesta, el uso de memoria/VRAM, la robustez ante colisiones y el comportamiento inercial en dinámicas tridimensionales.
+          El núcleo científico es el contraste entre la toma de decisiones basada en <strong>Modelos de Lenguaje
+            Pequeños (SLMs)</strong> locales y aproximaciones de control convencionales como <strong>Máquinas de Estados
+            Finitos (FSM)</strong> y pilotaje manual. Se examinan dimensiones clave como la latencia de respuesta, el
+          uso de memoria/VRAM, la robustez ante colisiones y el comportamiento inercial en dinámicas tridimensionales.
         </p>
         <div class="alert-box">
           <p>
-            <strong>Paradigma de Operación:</strong> La simulación se ejecuta de manera fotorrealista sobre <strong>Unreal Engine 5.5</strong> usando el plugin avanzado <strong>Cosys-AirSim</strong>, lo que permite evaluar el rendimiento óptico y de control en tiempo real en entornos dinámicos con tráfico urbano y peatones.
+            <strong>Paradigma de Operación:</strong> La simulación se ejecuta de manera fotorrealista sobre
+            <strong>Unreal Engine 5.5</strong> usando el plugin avanzado <strong>Cosys-AirSim</strong>, lo que permite
+            evaluar el rendimiento óptico y de control en tiempo real en entornos dinámicos con tráfico urbano y
+            peatones.
           </p>
         </div>
       </section>
@@ -662,33 +702,49 @@
       <section id="arquitectura">
         <h2>Arquitectura del Sistema</h2>
         <p>
-          El sistema implementa una arquitectura desacoplada de dos niveles (Lazo de Planificación y Lazo de Vuelo Táctico) que interactúan para mantener el vuelo guiado e inteligente del dron.
+          El sistema implementa una arquitectura desacoplada de dos niveles (Lazo de Planificación y Lazo de Vuelo
+          Táctico) que interactúan para mantener el vuelo guiado e inteligente del dron.
         </p>
-        
+
         <h3>1. Lazo de Planificación (Ground-Station - <code>airsim-plan</code>)</h3>
         <p>
-          Se ejecuta en la estación de tierra antes del vuelo. El operador introduce instrucciones en lenguaje natural (ej. <em>"Recorre el perímetro norte a 10m de altitud..."</em>). Un LLM local procesa esta directiva y genera un <strong>Contrato de Vuelo estructurado</strong> en formato JSON (<code>MissionManifest.json</code>), el cual predefine waypoints, límites de seguridad y parámetros operativos.
+          Se ejecuta en la estación de tierra antes del vuelo. El operador introduce instrucciones en lenguaje natural
+          (ej. <em>"Recorre el perímetro norte a 10m de altitud..."</em>). Un LLM local procesa esta directiva y genera
+          un <strong>Contrato de Vuelo estructurado</strong> en formato JSON (<code>MissionManifest.json</code>), el
+          cual predefine waypoints, límites de seguridad y parámetros operativos.
         </p>
 
         <h3>2. Lazo de Vuelo Táctico (In-Flight - <code>airsim-loop</code>)</h3>
         <p>
-          Es un bucle autónomo continuo de alta frecuencia implementado sobre <strong>LangGraph</strong> que coordina la telemetría y percepción óptica:
+          Es un bucle autónomo continuo de alta frecuencia implementado sobre <strong>LangGraph</strong> que coordina la
+          telemetría y percepción óptica:
         </p>
         <ul>
-          <li><strong>Percepción Visual:</strong> Un modelo de red convolucional ligera (<strong>YOLOv8n</strong>) extrae en tiempo real los fotogramas del feed de video del dron, localizando obstáculos.</li>
-          <li><strong>Traductor Pixeles a Palabras:</strong> Transforma las bounding boxes en resúmenes lingüísticos textuales (sector del obstáculo: Izquierda/Centro/Derecha, tamaño y proximidad estimada).</li>
-          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si la escena central está libre de peligros, dirige el flujo a una regla reactiva directa de bajo costo computacional. Si se intercepta un obstáculo, delega la evasión al <strong>SLM Local</strong>.</li>
-          <li><strong>Cerebro Deliberativo (SLM):</strong> El modelo local procesa el estado textual y determina maniobras de evasión utilizando <strong>decodificación restringida (JSON Schema)</strong> para evitar desviaciones estructurales.</li>
+          <li><strong>Percepción Visual:</strong> Un modelo de red convolucional ligera (<strong>YOLOv8n</strong>)
+            extrae en tiempo real los fotogramas del feed de video del dron, localizando obstáculos.</li>
+          <li><strong>Traductor Pixeles a Palabras:</strong> Transforma las bounding boxes en resúmenes lingüísticos
+            textuales (sector del obstáculo: Izquierda/Centro/Derecha, tamaño y proximidad estimada).</li>
+          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si la escena central está libre de
+            peligros, dirige el flujo a una regla reactiva directa de bajo costo computacional. Si se intercepta un
+            obstáculo, delega la evasión al <strong>SLM Local</strong>.</li>
+          <li><strong>Cerebro Deliberativo (SLM):</strong> El modelo local procesa el estado textual y determina
+            maniobras de evasión utilizando <strong>decodificación restringida (JSON Schema)</strong> para evitar
+            desviaciones estructurales.</li>
         </ul>
 
         <figure>
-          <img src="../informe/Infografia README Fondo Blanco.png" alt="Arquitectura del Doble Lazo del Sistema DronELM" loading="lazy" />
-          <figcaption>Figura 1 — Flujo conceptual y comunicación entre la estación de tierra y el bucle de vuelo en el dron.</figcaption>
+          <img src="https://github.com/georgsmeinung/dronelm/blob/main/informe/Infografia README Fondo Blanco.png"
+            alt="Arquitectura del Doble Lazo del Sistema DronELM" loading="lazy" />
+          <figcaption>Figura 1 — Flujo conceptual y comunicación entre la estación de tierra y el bucle de vuelo en el
+            dron.</figcaption>
         </figure>
 
         <figure>
-          <img src="../informe/2026-0626 Navegación con SLM - Fondo Blanco.png" alt="Detalle del Lazo Táctico en LangGraph" loading="lazy" />
-          <figcaption>Figura 2 — Grafo de ejecución en vuelo (airsim-loop) con el Gatekeeper controlando el paso deliberativo.</figcaption>
+          <img
+            src="https://github.com/georgsmeinung/dronelm/blob/main/informe/2026-0626 Navegación con SLM - Fondo Blanco.png"
+            alt="Detalle del Lazo Táctico en LangGraph" loading="lazy" />
+          <figcaption>Figura 2 — Grafo de ejecución en vuelo (airsim-loop) con el Gatekeeper controlando el paso
+            deliberativo.</figcaption>
         </figure>
       </section>
 
@@ -696,33 +752,40 @@
       <section id="estructura">
         <h2>Estructura del Repositorio</h2>
         <p>
-          El código fuente está modularizado en submódulos especializados para optimizar la carga computacional en entornos distribuidos:
+          El código fuente está modularizado en submódulos especializados para optimizar la carga computacional en
+          entornos distribuidos:
         </p>
-        
+
         <div class="card-grid">
           <div class="card">
             <h4><code>airsim-plan</code></h4>
-            <p>Planificador e interfaz de comando en tierra. Traduce peticiones en lenguaje natural a manifiestos de vuelo estructurados.</p>
+            <p>Planificador e interfaz de comando en tierra. Traduce peticiones en lenguaje natural a manifiestos de
+              vuelo estructurados.</p>
           </div>
           <div class="card">
             <h4><code>airsim-loop</code></h4>
-            <p>El lazo táctico. Orquesta el procesamiento de imágenes YOLO, la lógica del Gatekeeper de LangGraph y la inferencia con el SLM local.</p>
+            <p>El lazo táctico. Orquesta el procesamiento de imágenes YOLO, la lógica del Gatekeeper de LangGraph y la
+              inferencia con el SLM local.</p>
           </div>
           <div class="card">
             <h4><code>airsim-mcp</code></h4>
-            <p>Servidor bajo el Model Context Protocol para exponer control de vuelo y telemetría como herramientas (tools) para agentes externos.</p>
+            <p>Servidor bajo el Model Context Protocol para exponer control de vuelo y telemetría como herramientas
+              (tools) para agentes externos.</p>
           </div>
           <div class="card">
             <h4><code>callibration_flight</code></h4>
-            <p>Planillas, comandos y notebooks estadísticos para comparar la fidelidad inercial y física del simulador contra telemetría de drones reales.</p>
+            <p>Planillas, comandos y notebooks estadísticos para comparar la fidelidad inercial y física del simulador
+              contra telemetría de drones reales.</p>
           </div>
           <div class="card">
             <h4><code>local-llm-eval</code></h4>
-            <p>Suite de benchmarking local para medir tokens por segundo y latencias de carga de modelos mediante promptfoo y ollama-benchmark.</p>
+            <p>Suite de benchmarking local para medir tokens por segundo y latencias de carga de modelos mediante
+              promptfoo y ollama-benchmark.</p>
           </div>
           <div class="card">
             <h4><code>airsim-kc</code> y <code>poc</code></h4>
-            <p>Scripts de control manual por teclado y pruebas de concepto rápidas de conexión con la API de simulación.</p>
+            <p>Scripts de control manual por teclado y pruebas de concepto rápidas de conexión con la API de simulación.
+            </p>
           </div>
         </div>
       </section>
@@ -730,8 +793,9 @@
       <!-- Stack Tecnológico -->
       <section id="stack">
         <h2>Stack Tecnológico</h2>
-        <p>El ecosistema tecnológico combina motores gráficos industriales con las últimas técnicas de inferencia de IA local:</p>
-        
+        <p>El ecosistema tecnológico combina motores gráficos industriales con las últimas técnicas de inferencia de IA
+          local:</p>
+
         <div class="table-container">
           <table>
             <thead>
@@ -781,21 +845,29 @@
       <section id="evaluacion">
         <h2>Evaluación y Calibración</h2>
         <p>
-          Un pilar fundamental de la tesis es garantizar la representatividad física del simulador y medir cuantitativamente el comportamiento de los modelos de lenguaje locales.
+          Un pilar fundamental de la tesis es garantizar la representatividad física del simulador y medir
+          cuantitativamente el comportamiento de los modelos de lenguaje locales.
         </p>
 
         <h3>1. Calibración del Simulador vs. Telemetría Real</h3>
         <p>
-          Utilizando el dataset público de telemetría de drones DJI, se contrastó la variabilidad física frente a vuelos equivalentes generados en Unreal Engine con Cosys-AirSim. 
+          Utilizando el dataset público de telemetría de drones DJI, se contrastó la variabilidad física frente a vuelos
+          equivalentes generados en Unreal Engine con Cosys-AirSim.
         </p>
         <ul>
-          <li><strong>Rigidez Física en Giros:</strong> Las pruebas estadísticas de Levene confirmaron que la simulación tiene una varianza de actitud significativamente mayor (<em>p</em> &lt;&lt; 0.05). En simulación, el dron adopta ángulos extremos de pitch/roll de forma instantánea para seguir la trayectoria, mientras que los límites reales de DJI limitan el giro a un plano de ±30°.</li>
-          <li><strong>Estocasticidad y Viento:</strong> En tramos rectos estables, la actitud de la simulación es idealizada (varianza ~0), mientras que el dron real exhibe un ruido permanente de ±2° a ±3° provocado por corrientes de aire y correcciones del piloto automático.</li>
+          <li><strong>Rigidez Física en Giros:</strong> Las pruebas estadísticas de Levene confirmaron que la simulación
+            tiene una varianza de actitud significativamente mayor (<em>p</em> &lt;&lt; 0.05). En simulación, el dron
+            adopta ángulos extremos de pitch/roll de forma instantánea para seguir la trayectoria, mientras que los
+            límites reales de DJI limitan el giro a un plano de ±30°.</li>
+          <li><strong>Estocasticidad y Viento:</strong> En tramos rectos estables, la actitud de la simulación es
+            idealizada (varianza ~0), mientras que el dron real exhibe un ruido permanente de ±2° a ±3° provocado por
+            corrientes de aire y correcciones del piloto automático.</li>
         </ul>
 
         <h3>2. Benchmark de Inferencia de SLMs Locales</h3>
         <p>
-          Utilizando <code>ollama-benchmark</code>, se analizó el rendimiento de tokens por segundo (T/s) y la velocidad de carga de diversos modelos ligeros candidatos para la companion computer:
+          Utilizando <code>ollama-benchmark</code>, se analizó el rendimiento de tokens por segundo (T/s) y la velocidad
+          de carga de diversos modelos ligeros candidatos para la companion computer:
         </p>
 
         <div class="table-container">
@@ -856,7 +928,8 @@
           </table>
         </div>
         <p class="muted">
-          * Los modelos de LiquidAI (arquitectura LFM) destacan de manera abrumadora en tasa de generación, convirtiéndose en fuertes candidatos para el procesamiento táctico en vuelo de baja latencia.
+          * Los modelos de LiquidAI (arquitectura LFM) destacan de manera abrumadora en tasa de generación,
+          convirtiéndose en fuertes candidatos para el procesamiento táctico en vuelo de baja latencia.
         </p>
       </section>
 
@@ -875,9 +948,11 @@
             </div>
             <div class="timeline-content">
               <h4>Pruebas y ajustes al loop de control autónomo</h4>
-              <p>Carga inicial de pesos de YOLOv8n. Desarrollo de la utilidad de diagnóstico <code>capture_frame.py</code> para validar el procesamiento óptico directo del simulador.</p>
+              <p>Carga inicial de pesos de YOLOv8n. Desarrollo de la utilidad de diagnóstico
+                <code>capture_frame.py</code> para validar el procesamiento óptico directo del simulador.</p>
               <figure>
-                <img src="../informe/imagen_20260706_003541.jpg" alt="Captura de fotograma del drone" loading="lazy" />
+                <img src="https://github.com/georgsmeinung/dronelm/blob/main/informe/imagen_20260706_003541.jpg"
+                  alt="Captura de fotograma del drone" loading="lazy" />
                 <figcaption>Vista del entorno de simulación (MiniSim) capturada por la cámara frontal.</figcaption>
               </figure>
             </div>
@@ -892,9 +967,12 @@
             </div>
             <div class="timeline-content">
               <h4>Performance de SLMs locales e integración de promptfoo</h4>
-              <p>Despliegue de suite de evaluación utilizando <code>promptfoo</code> para probar precisión y velocidad de estructuración JSON en modelos ligeros. Los modelos Liquid LFM demuestran un rendimiento sobresaliente.</p>
+              <p>Despliegue de suite de evaluación utilizando <code>promptfoo</code> para probar precisión y velocidad
+                de estructuración JSON en modelos ligeros. Los modelos Liquid LFM demuestran un rendimiento
+                sobresaliente.</p>
               <figure>
-                <img src="../informe/2026-0702 prompFoo Results.png" alt="Resultados promptfoo" loading="lazy" />
+                <img src="https://github.com/georgsmeinung/dronelm/blob/main/informe/2026-0702 prompFoo Results.png"
+                  alt="Resultados promptfoo" loading="lazy" />
                 <figcaption>Métricas e interfaces de comparación de prompts de promptfoo.</figcaption>
               </figure>
             </div>
@@ -909,9 +987,13 @@
             </div>
             <div class="timeline-content">
               <h4>Ajuste fino (LoRA) y decodificación restringida</h4>
-              <p>Definición del pipeline de ajuste fino eficiente de SLMs locales mediante Low-Rank Adaptation (LoRA) y mitigación de fallas con decodificación guiada por JSON Schema (motores Outlines/Guidance) para evitar alucinaciones.</p>
+              <p>Definición del pipeline de ajuste fino eficiente de SLMs locales mediante Low-Rank Adaptation (LoRA) y
+                mitigación de fallas con decodificación guiada por JSON Schema (motores Outlines/Guidance) para evitar
+                alucinaciones.</p>
               <figure>
-                <img src="../informe/2026-0627 Optimización_de_Modelos_Pequeños.png" alt="Esquema LoRA y Decodificación" loading="lazy" />
+                <img
+                  src="https://github.com/georgsmeinung/dronelm/blob/main/informe/2026-0627 Optimización_de_Modelos_Pequeños.png"
+                  alt="Esquema LoRA y Decodificación" loading="lazy" />
                 <figcaption>Diagrama de descomposición de bajo rango (LoRA) en la inferencia del drone.</figcaption>
               </figure>
             </div>
@@ -926,7 +1008,9 @@
             </div>
             <div class="timeline-content">
               <h4>Vuelo en entorno masivo (City Sample) con tráfico e IA</h4>
-              <p>Optimización del nivel <code>Small_City_LVL</code> para ejecutar simulaciones dinámicas complejas (tráfico masivo y peatones con IA) dentro de la capacidad de la GPU RTX 5060, aplicando las guías de rendimiento de Cosys-Lab.</p>
+              <p>Optimización del nivel <code>Small_City_LVL</code> para ejecutar simulaciones dinámicas complejas
+                (tráfico masivo y peatones con IA) dentro de la capacidad de la GPU RTX 5060, aplicando las guías de
+                rendimiento de Cosys-Lab.</p>
             </div>
           </div>
         </div>
@@ -944,7 +1028,8 @@ conda env create -f environment.yml
 conda activate airsimenv</code></pre>
 
         <h3>2. Configurar el archivo de simulación</h3>
-        <p>Asegúrese de ubicar la configuración correspondiente de Cosys-AirSim en su archivo local <code>Settings.json</code> de AirSim:</p>
+        <p>Asegúrese de ubicar la configuración correspondiente de Cosys-AirSim en su archivo local
+          <code>Settings.json</code> de AirSim:</p>
         <pre><code>{
   "SettingsVersion": 2.0,
   "SimMode": "Multirotor",
@@ -962,16 +1047,19 @@ conda activate airsimenv</code></pre>
 }</code></pre>
 
         <h3>3. Lanzar la misión</h3>
-        <p>Inicie la simulación en Unreal Engine en modo <strong>Play</strong>. A continuación, ejecute el planificador desde la terminal de comandos:</p>
+        <p>Inicie la simulación en Unreal Engine en modo <strong>Play</strong>. A continuación, ejecute el planificador
+          desde la terminal de comandos:</p>
         <pre><code>cd airsim-plan
 pip install -e .
 airsim-plan run -i "Recorre el perímetro norte a 10 metros de altitud y a velocidad máxima de 5 m/s, esquiva obstáculos"</code></pre>
-        <p>El planificador generará el manifiesto y lanzará el bucle táctico reactivo/deliberativo (<code>airsim-loop</code>).</p>
+        <p>El planificador generará el manifiesto y lanzará el bucle táctico reactivo/deliberativo
+          (<code>airsim-loop</code>).</p>
       </section>
 
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
-        <p style="margin-top: 0.5rem; font-size: 0.8rem;">Desarrollado y mantenido para el repositorio <code>georgsmeinung/dronelm</code>.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.8rem;">Desarrollado y mantenido para el repositorio
+          <code>georgsmeinung/dronelm</code>.</p>
       </footer>
     </main>
   </div>
@@ -1000,4 +1088,5 @@ airsim-plan run -i "Recorre el perímetro norte a 10 metros de altitud y a veloc
     });
   </script>
 </body>
+
 </html>
