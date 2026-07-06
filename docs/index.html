@@ -1,225 +1,1003 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>dronelm</title>
+  <meta name="description" content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM) en Unreal Engine." />
+  <title>Navegación Autónoma de Drones con SLM - Tesis Maestría Ciencia de Datos</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
   <style>
     :root {
-      --bg: #0b1020;
-      --card: #121a33;
-      --text: #e8ecff;
-      --muted: #a9b3d9;
-      --accent: #7aa2ff;
-      --accent-2: #8ef0c9;
-      --border: #2a3563;
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --primary-border: #bfdbfe;
+      
+      --accent: #0d9488;
+      --accent-hover: #0f766e;
+      --accent-light: #ccfbf1;
+      
+      --border-color: #e2e8f0;
+      --code-bg: #f1f5f9;
+      --code-text: #0f172a;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+      
+      --font-sans: 'Inter', sans-serif;
+      --font-heading: 'Outfit', sans-serif;
+      --font-mono: 'Fira Code', monospace;
+      
+      --sidebar-width: 320px;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
-      margin: 0;
-      font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      background: linear-gradient(180deg, #090d1a 0%, #0f1630 100%);
-      color: var(--text);
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
       line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2rem 1rem 4rem;
-    }
-
-    header {
-      padding: 2rem 0 1rem;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 2rem;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2rem, 4vw, 3rem);
-      letter-spacing: 0.4px;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      margin-top: 0.5rem;
-      max-width: 80ch;
-    }
-
-    .badges {
+    /* Layout structure */
+    .container {
       display: flex;
-      gap: 0.6rem;
-      flex-wrap: wrap;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Sidebar Navigation */
+    aside {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      padding: 2.5rem 1.5rem;
+      overflow-y: auto;
+    }
+
+    .university-logo-container {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .university-logo {
+      max-width: 100%;
+      height: auto;
+      max-height: 60px;
+      object-fit: contain;
+    }
+
+    .thesis-meta {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 2rem;
+      font-size: 0.875rem;
+    }
+
+    .thesis-meta h4 {
+      font-family: var(--font-heading);
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.35rem;
+    }
+
+    .thesis-meta-item {
+      margin-bottom: 0.75rem;
+    }
+
+    .thesis-meta-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .meta-label {
+      color: var(--text-muted);
+      font-weight: 500;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    .meta-value {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .meta-value a {
+      color: var(--primary);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .meta-value a:hover {
+      color: var(--primary-hover);
+      text-decoration: underline;
+    }
+
+    /* Navigation Links */
+    nav {
+      flex-grow: 1;
+    }
+
+    nav h5 {
+      font-family: var(--font-heading);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
       margin-top: 1rem;
     }
 
-    .badge {
-      border: 1px solid var(--border);
-      background: rgba(122, 162, 255, 0.12);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 0.35rem 0.75rem;
-      font-size: 0.9rem;
+    nav ul {
+      list-style-type: none;
     }
 
+    nav li {
+      margin-bottom: 0.5rem;
+    }
+
+    nav a {
+      display: block;
+      padding: 0.6rem 0.85rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.925rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    nav a:hover, nav a.active {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Main content container */
+    main {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 3rem 4rem;
+      max-width: 1200px;
+    }
+
+    /* Document header inside main content */
+    header {
+      margin-bottom: 3.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2rem;
+    }
+
+    h1 {
+      font-family: var(--font-heading);
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .lead-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      max-width: 85ch;
+      font-weight: 400;
+    }
+
+    /* Badges */
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .badge-pill {
+      font-size: 0.775rem;
+      font-weight: 600;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      transition: opacity 0.2s ease;
+    }
+
+    .badge-pill:hover {
+      opacity: 0.9;
+    }
+
+    .badge-blue { background-color: var(--primary-light); color: var(--primary); border: 1px solid var(--primary-border); }
+    .badge-teal { background-color: var(--accent-light); color: var(--accent); border: 1px solid #99f6e4; }
+    .badge-gray { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .badge-orange { background-color: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+
+    /* Sections styling */
     section {
-      margin: 2rem 0;
-      background: rgba(18, 26, 51, 0.72);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.2rem;
-      backdrop-filter: blur(3px);
+      margin-bottom: 4.5rem;
+      scroll-margin-top: 2rem;
     }
 
     h2 {
-      margin-top: 0;
-      color: var(--accent-2);
-      font-size: 1.35rem;
+      font-family: var(--font-heading);
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    p, li {
-      color: var(--text);
+    h2::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 1.5rem;
+      background-color: var(--primary);
+      border-radius: 2px;
     }
 
-    .muted {
-      color: var(--muted);
+    h3 {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
     }
 
-    .grid {
+    p {
+      margin-bottom: 1.25rem;
+      color: var(--text-secondary);
+      font-size: 1rem;
+      max-width: 80ch;
+    }
+
+    strong {
+      color: var(--text-primary);
+    }
+
+    ul, ol {
+      margin-bottom: 1.5rem;
+      padding-left: 1.5rem;
+      color: var(--text-secondary);
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    /* Cards */
+    .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
     }
 
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-border);
+    }
+
+    .card h4 {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card h4 code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      color: var(--primary);
+      background: none;
+      padding: 0;
+    }
+
+    .card p {
+      font-size: 0.875rem;
+      margin-bottom: 0;
+      color: var(--text-secondary);
+    }
+
+    /* Figures and Images */
     figure {
-      margin: 0;
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      margin: 2rem 0;
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
       overflow: hidden;
-      background: #0a1124;
+      box-shadow: var(--shadow-md);
+      transition: transform 0.2s ease;
+    }
+
+    figure:hover {
+      box-shadow: var(--shadow-lg);
     }
 
     figure img {
       width: 100%;
+      height: auto;
       display: block;
-      height: 200px;
       object-fit: cover;
-      background: #0a1124;
+      max-height: 480px;
     }
 
     figcaption {
-      font-size: 0.86rem;
-      color: var(--muted);
-      padding: 0.55rem 0.7rem;
-      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0.85rem 1.25rem;
+      background-color: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      text-align: center;
     }
 
-    code.inline {
-      background: #0b1230;
-      border: 1px solid var(--border);
-      color: var(--accent);
+    /* Inline elements */
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.875em;
+      background-color: var(--code-bg);
+      color: var(--code-text);
+      padding: 0.2rem 0.4rem;
       border-radius: 6px;
-      padding: 0.1rem 0.35rem;
-      font-size: 0.92em;
+      font-weight: 500;
     }
 
+    pre {
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 1.25rem;
+      border-radius: 12px;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    pre code {
+      background-color: transparent;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: 0.875rem;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.5rem 0;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+      background-color: var(--bg-secondary);
+    }
+
+    th {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-weight: 600;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: var(--bg-primary);
+    }
+
+    /* Timeline styling */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+      margin: 2.5rem 0;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 0.5rem;
+      bottom: 0;
+      width: 2px;
+      background-color: var(--border-color);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 2.5rem;
+    }
+
+    .timeline-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .timeline-badge {
+      position: absolute;
+      left: -2rem;
+      top: 0.25rem;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      border: 4px solid var(--bg-secondary);
+      box-shadow: 0 0 0 1px var(--primary-border);
+      z-index: 2;
+    }
+
+    .timeline-date {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .timeline-date .tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      background-color: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .timeline-content {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .timeline-content h4 {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .timeline-content ul {
+      margin-bottom: 0;
+      padding-left: 1.25rem;
+      font-size: 0.925rem;
+    }
+
+    .timeline-content figure {
+      margin: 1rem 0 0 0;
+      max-width: 600px;
+    }
+
+    .timeline-content figure img {
+      max-height: 250px;
+    }
+
+    /* Custom alert box */
+    .alert-box {
+      border-left: 4px solid var(--primary);
+      background-color: var(--primary-light);
+      padding: 1rem 1.25rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+    }
+
+    .alert-box p {
+      margin-bottom: 0;
+      color: #1e40af;
+      font-size: 0.95rem;
+    }
+
+    /* Footer */
     footer {
-      margin-top: 2rem;
-      color: var(--muted);
-      font-size: 0.9rem;
-      border-top: 1px solid var(--border);
-      padding-top: 1rem;
+      margin-top: 6rem;
+      border-top: 1px solid var(--border-color);
+      padding-top: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
     }
 
-    a {
-      color: var(--accent);
-      text-decoration: none;
-    }
+    /* Responsive designs */
+    @media (max-width: 1024px) {
+      aside {
+        width: 100%;
+        position: relative;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 2rem;
+      }
+      
+      main {
+        margin-left: 0;
+        padding: 2rem;
+      }
 
-    a:hover { text-decoration: underline; }
+      .container {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>dronelm</h1>
-      <p class="subtitle">
-        Master in Data Science (MDS) thesis project focused on autonomous drones controlled by an SLM (Small Language Model).
-      </p>
-      <div class="badges">
-        <span class="badge">Jupyter Notebook 96.7%</span>
-        <span class="badge">Python 3.3%</span>
-        <span class="badge">GitHub Pages ready (/docs)</span>
+  <div class="container">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+      <div class="university-logo-container">
+        <!-- Logo de la Universidad Austral local fallback to remote path -->
+        <img class="university-logo" src="../informe/Austral-Ingenieria.png" onerror="this.src='https://www.austral.edu.ar/wp-content/uploads/2022/10/facultades-horizontales-03.png'" alt="Universidad Austral - Facultad de Ingeniería" />
       </div>
-    </header>
-
-    <section>
-      <h2>Project Overview</h2>
-      <p>
-        <strong>dronelm</strong> explores how a small language model can act as a high-level reasoning layer for drone autonomy.
-        The repository appears to center around experimentation and thesis documentation, primarily implemented in notebooks.
-      </p>
-      <p class="muted">
-        This page is intentionally contained in <code class="inline">/docs</code> so the repository can be published directly with GitHub Pages using that folder as the source.
-      </p>
-    </section>
-
-    <section>
-      <h2>Highlights from CHANGELOG.MD</h2>
-      <ul>
-        <li>
-          The changelog captures the thesis evolution and milestones of the autonomous flight pipeline.
-        </li>
-        <li>
-          Iterations likely include model behavior tuning, navigation/control adjustments, and experiment tracking updates.
-        </li>
-        <li>
-          Notebook-driven development suggests rapid prototyping and reproducible experiment workflows.
-        </li>
-      </ul>
-      <p class="muted">
-        Tip: You can replace these bullets with exact dated entries from <code class="inline">CHANGELOG.MD</code> for a stricter release-history view.
-      </p>
-    </section>
-
-    <section>
-      <h2>Visuals from <code class="inline">/informe</code></h2>
-      <p class="muted">
-        Add or replace image paths below to match the files in your <code class="inline">/informe</code> directory.
-      </p>
-      <div class="grid">
-        <figure>
-          <img src="../informe/image1.png" alt="dronelm visual 1 from informe" loading="lazy" />
-          <figcaption>Figure 1 — Experimental visual from /informe</figcaption>
-        </figure>
-        <figure>
-          <img src="../informe/image2.png" alt="dronelm visual 2 from informe" loading="lazy" />
-          <figcaption>Figure 2 — Flight/control related output</figcaption>
-        </figure>
-        <figure>
-          <img src="../informe/image3.png" alt="dronelm visual 3 from informe" loading="lazy" />
-          <figcaption>Figure 3 — Model/trajectory/metrics illustration</figcaption>
-        </figure>
+      
+      <div class="thesis-meta">
+        <h4>Tesis de Maestría</h4>
+        <div class="thesis-meta-item">
+          <span class="meta-label">Alumno</span>
+          <span class="meta-value"><a href="https://www.linkedin.com/in/jorgenicolau/" target="_blank">Jorge E. Nicolau</a></span>
+        </div>
+        <div class="thesis-meta-item">
+          <span class="meta-label">Directores</span>
+          <span class="meta-value">
+            <a href="https://www.linkedin.com/in/rodrigodelrosso/" target="_blank">Rodrigo Del Rosso</a><br/>
+            <a href="https://www.linkedin.com/in/ezequiel-nuske-15137862/" target="_blank">Ezequiel Nuske</a>
+          </span>
+        </div>
+        <div class="thesis-meta-item">
+          <span class="meta-label">Período</span>
+          <span class="meta-value">2024 / 2025</span>
+        </div>
       </div>
-    </section>
 
-    <section>
-      <h2>How to Publish with GitHub Pages</h2>
-      <ol>
-        <li>Go to <strong>Repository Settings → Pages</strong>.</li>
-        <li>Under <strong>Build and deployment</strong>, choose <strong>Deploy from a branch</strong>.</li>
-        <li>Select branch <strong>main</strong> and folder <strong>/docs</strong>.</li>
-        <li>Save and wait for deployment.</li>
-      </ol>
-    </section>
+      <nav>
+        <h5>Navegación</h5>
+        <ul>
+          <li><a href="#introduccion" class="active">Resumen</a></li>
+          <li><a href="#arquitectura">Arquitectura del Sistema</a></li>
+          <li><a href="#estructura">Estructura del Repositorio</a></li>
+          <li><a href="#stack">Stack Tecnológico</a></li>
+          <li><a href="#evaluacion">Evaluación y Calibración</a></li>
+          <li><a href="#changelog">Historial de Cambios</a></li>
+          <li><a href="#instalacion">Instalación y Uso</a></li>
+        </ul>
+      </nav>
+    </aside>
 
-    <footer>
-      Built for <strong>georgsmeinung/dronelm</strong>.<br/>
-      If you want, this page can be expanded with automatic changelog parsing and a complete image gallery.
-    </footer>
+    <!-- Main Content Area -->
+    <main>
+      <header>
+        <h1>Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM)</h1>
+        <p class="lead-subtitle">
+          Esta documentación reúne el trabajo final de posgrado de la <strong>Maestría en Ciencia de Datos</strong> de la <strong>Universidad Austral</strong>. Explora el comportamiento deliberativo de modelos de lenguaje pequeños frente a aproximaciones estándar en la simulación de vuelo en tres dimensiones.
+        </p>
+        <div class="badges-row">
+          <a href="LICENSE.md" class="badge-pill badge-blue">Licencia: MIT</a>
+          <span class="badge-pill badge-teal">Actividad: 2026-07-06</span>
+          <a href="./plan_tesis/plan-tesis.md" class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
+          <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
+        </div>
+      </header>
+
+      <!-- Resumen del Proyecto -->
+      <section id="introduccion">
+        <h2>Resumen del Proyecto</h2>
+        <p>
+          Este proyecto de tesis consiste en el diseño, implementación y evaluación experimental de un sistema de <strong>navegación autónoma para drones cuadricópteros (eVTOL)</strong> operando en entornos urbanos simulados de alta fidelidad. 
+        </p>
+        <p>
+          El núcleo científico es el contraste entre la toma de decisiones basada en <strong>Modelos de Lenguaje Pequeños (SLMs)</strong> locales y aproximaciones de control convencionales como <strong>Máquinas de Estados Finitos (FSM)</strong> y pilotaje manual. Se examinan dimensiones clave como la latencia de respuesta, el uso de memoria/VRAM, la robustez ante colisiones y el comportamiento inercial en dinámicas tridimensionales.
+        </p>
+        <div class="alert-box">
+          <p>
+            <strong>Paradigma de Operación:</strong> La simulación se ejecuta de manera fotorrealista sobre <strong>Unreal Engine 5.5</strong> usando el plugin avanzado <strong>Cosys-AirSim</strong>, lo que permite evaluar el rendimiento óptico y de control en tiempo real en entornos dinámicos con tráfico urbano y peatones.
+          </p>
+        </div>
+      </section>
+
+      <!-- Arquitectura del Sistema -->
+      <section id="arquitectura">
+        <h2>Arquitectura del Sistema</h2>
+        <p>
+          El sistema implementa una arquitectura desacoplada de dos niveles (Lazo de Planificación y Lazo de Vuelo Táctico) que interactúan para mantener el vuelo guiado e inteligente del dron.
+        </p>
+        
+        <h3>1. Lazo de Planificación (Ground-Station - <code>airsim-plan</code>)</h3>
+        <p>
+          Se ejecuta en la estación de tierra antes del vuelo. El operador introduce instrucciones en lenguaje natural (ej. <em>"Recorre el perímetro norte a 10m de altitud..."</em>). Un LLM local procesa esta directiva y genera un <strong>Contrato de Vuelo estructurado</strong> en formato JSON (<code>MissionManifest.json</code>), el cual predefine waypoints, límites de seguridad y parámetros operativos.
+        </p>
+
+        <h3>2. Lazo de Vuelo Táctico (In-Flight - <code>airsim-loop</code>)</h3>
+        <p>
+          Es un bucle autónomo continuo de alta frecuencia implementado sobre <strong>LangGraph</strong> que coordina la telemetría y percepción óptica:
+        </p>
+        <ul>
+          <li><strong>Percepción Visual:</strong> Un modelo de red convolucional ligera (<strong>YOLOv8n</strong>) extrae en tiempo real los fotogramas del feed de video del dron, localizando obstáculos.</li>
+          <li><strong>Traductor Pixeles a Palabras:</strong> Transforma las bounding boxes en resúmenes lingüísticos textuales (sector del obstáculo: Izquierda/Centro/Derecha, tamaño y proximidad estimada).</li>
+          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si la escena central está libre de peligros, dirige el flujo a una regla reactiva directa de bajo costo computacional. Si se intercepta un obstáculo, delega la evasión al <strong>SLM Local</strong>.</li>
+          <li><strong>Cerebro Deliberativo (SLM):</strong> El modelo local procesa el estado textual y determina maniobras de evasión utilizando <strong>decodificación restringida (JSON Schema)</strong> para evitar desviaciones estructurales.</li>
+        </ul>
+
+        <figure>
+          <img src="../informe/Infografia README Fondo Blanco.png" alt="Arquitectura del Doble Lazo del Sistema DronELM" loading="lazy" />
+          <figcaption>Figura 1 — Flujo conceptual y comunicación entre la estación de tierra y el bucle de vuelo en el dron.</figcaption>
+        </figure>
+
+        <figure>
+          <img src="../informe/2026-0626 Navegación con SLM - Fondo Blanco.png" alt="Detalle del Lazo Táctico en LangGraph" loading="lazy" />
+          <figcaption>Figura 2 — Grafo de ejecución en vuelo (airsim-loop) con el Gatekeeper controlando el paso deliberativo.</figcaption>
+        </figure>
+      </section>
+
+      <!-- Estructura del Repositorio -->
+      <section id="estructura">
+        <h2>Estructura del Repositorio</h2>
+        <p>
+          El código fuente está modularizado en submódulos especializados para optimizar la carga computacional en entornos distribuidos:
+        </p>
+        
+        <div class="card-grid">
+          <div class="card">
+            <h4><code>airsim-plan</code></h4>
+            <p>Planificador e interfaz de comando en tierra. Traduce peticiones en lenguaje natural a manifiestos de vuelo estructurados.</p>
+          </div>
+          <div class="card">
+            <h4><code>airsim-loop</code></h4>
+            <p>El lazo táctico. Orquesta el procesamiento de imágenes YOLO, la lógica del Gatekeeper de LangGraph y la inferencia con el SLM local.</p>
+          </div>
+          <div class="card">
+            <h4><code>airsim-mcp</code></h4>
+            <p>Servidor bajo el Model Context Protocol para exponer control de vuelo y telemetría como herramientas (tools) para agentes externos.</p>
+          </div>
+          <div class="card">
+            <h4><code>callibration_flight</code></h4>
+            <p>Planillas, comandos y notebooks estadísticos para comparar la fidelidad inercial y física del simulador contra telemetría de drones reales.</p>
+          </div>
+          <div class="card">
+            <h4><code>local-llm-eval</code></h4>
+            <p>Suite de benchmarking local para medir tokens por segundo y latencias de carga de modelos mediante promptfoo y ollama-benchmark.</p>
+          </div>
+          <div class="card">
+            <h4><code>airsim-kc</code> y <code>poc</code></h4>
+            <p>Scripts de control manual por teclado y pruebas de concepto rápidas de conexión con la API de simulación.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stack Tecnológico -->
+      <section id="stack">
+        <h2>Stack Tecnológico</h2>
+        <p>El ecosistema tecnológico combina motores gráficos industriales con las últimas técnicas de inferencia de IA local:</p>
+        
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Componente</th>
+                <th>Herramienta / Framework</th>
+                <th>Propósito / Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Entorno & Física</strong></td>
+                <td>Unreal Engine 5.5 + Cosys-AirSim</td>
+                <td>Simulación física y visual del espacio aéreo urbano.</td>
+              </tr>
+              <tr>
+                <td><strong>Visión Artificial</strong></td>
+                <td>YOLOv8-nano (Ultralytics)</td>
+                <td>Detección de objetos 2D en tiempo real (RGB) para evasión rápida.</td>
+              </tr>
+              <tr>
+                <td><strong>Orquestación</strong></td>
+                <td>LangGraph & Pydantic</td>
+                <td>Implementación del grafo táctico en vuelo de baja latencia.</td>
+              </tr>
+              <tr>
+                <td><strong>Inferencia Local</strong></td>
+                <td>Ollama / LM Studio (API OpenAI compatible)</td>
+                <td>Ejecución abordo de SLMs ligeros en la CPU/iGPU del sistema.</td>
+              </tr>
+              <tr>
+                <td><strong>Modelos Evaluados</strong></td>
+                <td>Llama 3.2 (3B), Gemma 2 (2B), Liquid LFM (1.2B / 350M), Phi-4</td>
+                <td>Modelos de razonamiento táctico evaluados para el desvío deliberativo.</td>
+              </tr>
+              <tr>
+                <td><strong>Infraestructura de Inferencia</strong></td>
+                <td>GPU NVIDIA RTX 5060 + Iris Xe (Headless Node)</td>
+                <td>Configuración distribuida para mitigar cuellos de botella gráficos.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Evaluación y Calibración -->
+      <section id="evaluacion">
+        <h2>Evaluación y Calibración</h2>
+        <p>
+          Un pilar fundamental de la tesis es garantizar la representatividad física del simulador y medir cuantitativamente el comportamiento de los modelos de lenguaje locales.
+        </p>
+
+        <h3>1. Calibración del Simulador vs. Telemetría Real</h3>
+        <p>
+          Utilizando el dataset público de telemetría de drones DJI, se contrastó la variabilidad física frente a vuelos equivalentes generados en Unreal Engine con Cosys-AirSim. 
+        </p>
+        <ul>
+          <li><strong>Rigidez Física en Giros:</strong> Las pruebas estadísticas de Levene confirmaron que la simulación tiene una varianza de actitud significativamente mayor (<em>p</em> &lt;&lt; 0.05). En simulación, el dron adopta ángulos extremos de pitch/roll de forma instantánea para seguir la trayectoria, mientras que los límites reales de DJI limitan el giro a un plano de ±30°.</li>
+          <li><strong>Estocasticidad y Viento:</strong> En tramos rectos estables, la actitud de la simulación es idealizada (varianza ~0), mientras que el dron real exhibe un ruido permanente de ±2° a ±3° provocado por corrientes de aire y correcciones del piloto automático.</li>
+        </ul>
+
+        <h3>2. Benchmark de Inferencia de SLMs Locales</h3>
+        <p>
+          Utilizando <code>ollama-benchmark</code>, se analizó el rendimiento de tokens por segundo (T/s) y la velocidad de carga de diversos modelos ligeros candidatos para la companion computer:
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Model Name</th>
+                <th>Prompt Eval (T/s)</th>
+                <th>Evaluation Rate (T/s)</th>
+                <th>Total Rate (T/s)</th>
+                <th>Load Time (s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>LiquidAI/lfm2.5-350m:latest</strong></td>
+                <td>3928.09</td>
+                <td>220.06</td>
+                <td>292.20</td>
+                <td>0.12</td>
+              </tr>
+              <tr>
+                <td><strong>LiquidAI/lfm2.5-1.2b-instruct:latest</strong></td>
+                <td>1245.20</td>
+                <td>120.67</td>
+                <td>139.95</td>
+                <td>0.11</td>
+              </tr>
+              <tr>
+                <td><strong>llama3.2:latest (3B)</strong></td>
+                <td>1133.67</td>
+                <td>44.79</td>
+                <td>47.54</td>
+                <td>0.32</td>
+              </tr>
+              <tr>
+                <td><strong>gemma2:2b</strong></td>
+                <td>240.05</td>
+                <td>54.03</td>
+                <td>55.11</td>
+                <td>0.31</td>
+              </tr>
+              <tr>
+                <td><strong>phi4-mini:latest</strong></td>
+                <td>238.22</td>
+                <td>37.19</td>
+                <td>37.98</td>
+                <td>0.34</td>
+              </tr>
+              <tr>
+                <td><strong>qwen3.5:4b</strong></td>
+                <td>153.76</td>
+                <td>28.82</td>
+                <td>29.01</td>
+                <td>0.51</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted">
+          * Los modelos de LiquidAI (arquitectura LFM) destacan de manera abrumadora en tasa de generación, convirtiéndose en fuertes candidatos para el procesamiento táctico en vuelo de baja latencia.
+        </p>
+      </section>
+
+      <!-- Historial de Cambios (Changelog Reciente) -->
+      <section id="changelog">
+        <h2>Historial de Cambios Destacados</h2>
+        <p>Evolución reciente del repositorio y hitos de desarrollo alcanzados:</p>
+
+        <div class="timeline">
+          <!-- Item 1 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-07-06
+              <span class="tag">Vuelo</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Pruebas y ajustes al loop de control autónomo</h4>
+              <p>Carga inicial de pesos de YOLOv8n. Desarrollo de la utilidad de diagnóstico <code>capture_frame.py</code> para validar el procesamiento óptico directo del simulador.</p>
+              <figure>
+                <img src="../informe/imagen_20260706_003541.jpg" alt="Captura de fotograma del drone" loading="lazy" />
+                <figcaption>Vista del entorno de simulación (MiniSim) capturada por la cámara frontal.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-07-02
+              <span class="tag">IA Local</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Performance de SLMs locales e integración de promptfoo</h4>
+              <p>Despliegue de suite de evaluación utilizando <code>promptfoo</code> para probar precisión y velocidad de estructuración JSON en modelos ligeros. Los modelos Liquid LFM demuestran un rendimiento sobresaliente.</p>
+              <figure>
+                <img src="../informe/2026-0702 prompFoo Results.png" alt="Resultados promptfoo" loading="lazy" />
+                <figcaption>Métricas e interfaces de comparación de prompts de promptfoo.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-06-27
+              <span class="tag">Optimización</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Ajuste fino (LoRA) y decodificación restringida</h4>
+              <p>Definición del pipeline de ajuste fino eficiente de SLMs locales mediante Low-Rank Adaptation (LoRA) y mitigación de fallas con decodificación guiada por JSON Schema (motores Outlines/Guidance) para evitar alucinaciones.</p>
+              <figure>
+                <img src="../informe/2026-0627 Optimización_de_Modelos_Pequeños.png" alt="Esquema LoRA y Decodificación" loading="lazy" />
+                <figcaption>Diagrama de descomposición de bajo rango (LoRA) en la inferencia del drone.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 4 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-06-23
+              <span class="tag">Simulación</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Vuelo en entorno masivo (City Sample) con tráfico e IA</h4>
+              <p>Optimización del nivel <code>Small_City_LVL</code> para ejecutar simulaciones dinámicas complejas (tráfico masivo y peatones con IA) dentro de la capacidad de la GPU RTX 5060, aplicando las guías de rendimiento de Cosys-Lab.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Instalación y Uso -->
+      <section id="instalacion">
+        <h2>Instalación y Uso</h2>
+        <p>Siga estos pasos para configurar de forma local tanto el simulador como el entorno del dron:</p>
+
+        <h3>1. Clonar el entorno e instalar dependencias</h3>
+        <p>Se proporciona un archivo <code>environment.yml</code> para configurar un entorno conda reproducible:</p>
+        <pre><code># Crear y activar el entorno conda
+conda env create -f environment.yml
+conda activate airsimenv</code></pre>
+
+        <h3>2. Configurar el archivo de simulación</h3>
+        <p>Asegúrese de ubicar la configuración correspondiente de Cosys-AirSim en su archivo local <code>Settings.json</code> de AirSim:</p>
+        <pre><code>{
+  "SettingsVersion": 2.0,
+  "SimMode": "Multirotor",
+  "LocalHostIp": "0.0.0.0",
+  "ApiServerPort": 41451,
+  "CameraDefaults": {
+    "CaptureSettings": [
+      {
+        "ImageType": 0,
+        "Width": 1080,
+        "Height": 720
+      }
+    ]
+  }
+}</code></pre>
+
+        <h3>3. Lanzar la misión</h3>
+        <p>Inicie la simulación en Unreal Engine en modo <strong>Play</strong>. A continuación, ejecute el planificador desde la terminal de comandos:</p>
+        <pre><code>cd airsim-plan
+pip install -e .
+airsim-plan run -i "Recorre el perímetro norte a 10 metros de altitud y a velocidad máxima de 5 m/s, esquiva obstáculos"</code></pre>
+        <p>El planificador generará el manifiesto y lanzará el bucle táctico reactivo/deliberativo (<code>airsim-loop</code>).</p>
+      </section>
+
+      <footer>
+        <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
+        <p style="margin-top: 0.5rem; font-size: 0.8rem;">Desarrollado y mantenido para el repositorio <code>georgsmeinung/dronelm</code>.</p>
+      </footer>
+    </main>
   </div>
+
+  <!-- Responsive Active Section Highlight script -->
+  <script id="active-nav-script">
+    window.addEventListener('DOMContentLoaded', () => {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const id = entry.target.getAttribute('id');
+          if (entry.intersectionRatio > 0.1) {
+            document.querySelectorAll('nav a').forEach(a => {
+              a.classList.remove('active');
+              if (a.getAttribute('href') === `#${id}`) {
+                a.classList.add('active');
+              }
+            });
+          }
+        });
+      }, { threshold: [0.1, 0.2, 0.3], rootMargin: "0px 0px -70% 0px" });
+
+      // Track all sections that have an id and are direct children of main
+      document.querySelectorAll('main > section').forEach((section) => {
+        observer.observe(section);
+      });
+    });
+  </script>
 </body>
 </html>
