@@ -3,7 +3,9 @@
 
 * Carga inicial de pesos de YOLOv8.
 * Generación de script `capture_frame.py` para captura manual de fotogramas con cámara del drone para verificar cuál es la entrada de YOLO.
+
 <img src="informe/imagen_20260706_003541.jpg"/>
+
 * Ajuste del script `main.py` para la correcta ejecución del loop de control
 * Prueba de correcta ejecución del loop de control en ambiente mínimo (`MiniSim`) sólo con el drone Airsim sin obstáculos ni meteorología. Falta forzar la toma decisión con una manifiesto de vuelo mínimo para verificar el cambio del YOLO al SLM Local. Todavía resta probar la generación asistiada y estructurada del manifiesto de misión.
 * Ajustes a `requirements.txt` con las dependencias necesarias
