@@ -1,4 +1,95 @@
+## 2026-0706
+
+**YOLOv8** (You Only Look Once, versión 8), lanzado por Ultralytics, es uno de los modelos de visión artificial más avanzados, rápidos y eficientes de la actualidad.
+
+A diferencia de las primeras versiones de YOLO que solo detectaban objetos en cajas (bounding boxes), YOLOv8 es una plataforma unificada capaz de realizar múltiples tareas: **detección de objetos, segmentación de instancias, clasificación de imágenes y seguimiento de objetos (tracking)**.
+
+<img src="informe/2026-0706 YOLO infografia.png"/>
+
+### 1. ¿Cómo funciona YOLOv8 para la segmentación?
+
+La **segmentación de instancias** no solo detecta qué objetos hay en una imagen y dónde están, sino que identifica cada píxel exacto que pertenece a ese objeto (creando una "máscara").
+
+YOLOv8 logra esto en tiempo real gracias a su arquitectura:
+
+* **Red de un solo paso (Single-Shot):** Procesa la imagen completa de una sola vez. No necesita proponer regiones primero y luego clasificarlas (como hacían redes más lentas tipo R-CNN).
+* **Split-Head (Cabezas divididas):** Separa físicamente las tareas de clasificación (qué es) y regresión (dónde está) en la punta de la red. Para la segmentación, añade una "cabeza" adicional que predice las máscaras de píxeles mediante coeficientes de prototipos.
+* **Sin Anclas (Anchor-Free):** Predice directamente el centro de los objetos en lugar de usar cajas de referencia predefinidas. Esto reduce drásticamente el tiempo de cómputo y mejora la precisión en objetos deformes o superpuestos.
+
+### 2. Implementación en Tiempo Casi Real (Video Streams)
+
+Para procesar un stream de video (como una cámara web, un archivo de video o un flujo RTSP de una cámara de seguridad) a alta velocidad, se utiliza Python junto con la librería oficial de `ultralytics` y `opencv`.
+
+#### Requisitos Previos
+
+Primero, instala las dependencias en tu terminal:
+
+```bash
+pip install ultralytics opencv-python touch
+
+```
+
+#### Código de Implementación
+
+Este script captura el video frame por frame, le aplica el modelo de segmentación de YOLOv8 y muestra el resultado renderizado en tiempo real.
+
+```python
+import cv2
+from ultralytics import YOLO
+
+# 1. Cargar el modelo YOLOv8 de segmentación (la 'x' al final indica el tamaño, 'n' es el más rápido)
+# Tamaños disponibles: yolov8n-seg (nano), yolov8s-seg (small), yolov8m-seg (medium), yolov8l-seg (large), yolov8x-seg
+model = YOLO("yolov8n-seg.pt") 
+
+# 2. Configurar la fuente de video
+# Usa '0' para la webcam integrada, o la ruta de un archivo/stream ("video.mp4" o "rtsp://...")
+source = 0 
+cap = cv2.VideoCapture(source)
+
+if not cap.isOpened():
+    print("Error: No se pudo abrir la fuente de video.")
+    exit()
+
+print("Presiona 'q' para salir del stream.")
+
+while cap.isOpened():
+    success, frame = cap.read()
+    
+    if not success:
+        print("Fin del video o stream interrumpido.")
+        break
+
+    # 3. Realizar la inferencia en el frame actual
+    # 'stream=True' optimiza el uso de memoria RAM para flujos continuos de video
+    results = model(frame, stream=True)
+
+    for r in results:
+        # 4. Dibujar las máscaras y cajas de segmentación en el frame
+        annotated_frame = r.plot() 
+        
+    # 5. Mostrar el frame procesado en una ventana
+    cv2.imshow("YOLOv8 Real-Time Segmentation", annotated_frame)
+
+    # Romper el bucle si se presiona la tecla 'q'
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+# Liberar recursos
+cap.release()
+cv2.destroyAllWindows()
+
+```
+
+### 3. Claves para lograr "Tiempo Real" (Optimización)
+
+Si se nota retraso (lag) en el stream, se pueden aplicar los siguientes ajustes:
+
+* **Elige el modelo correcto:** Usar `yolov8n-seg.pt` (Nano). Es el más ligero, diseñado específicamente para dispositivos con recursos limitados (como CPUs o Raspberry Pi) y alcanza la mayor tasa de FPS (cuadros por segundo).
+* **Aprovecha la GPU (CUDA):** Si se tiene una tarjeta gráfica NVIDIA, asegúrarse de tener instalado PyTorch con soporte CUDA. YOLOv8 la detectará automáticamente, multiplicando la velocidad por 10 o más.
+* **Reducción de resolución:** Se puede indicar al modelo que procese las imágenes a un tamaño menor utilizando el parámetro `imgsz`. Por ejemplo: `model(frame, imgsz=320, stream=True)`. Menos píxeles se traducen en un procesamiento mucho más rápido.
+
 ## 2026-0705
+
 ### Pruebas y ajustes al loop de control autónomo en `airsim-loop`
 
 * Carga inicial de pesos de YOLOv8.
