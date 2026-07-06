@@ -617,8 +617,7 @@
     <aside id="sidebar">
       <div class="university-logo-container">
         <!-- Logo de la Universidad Austral local fallback to remote path -->
-        <img class="university-logo"
-          src="images/Austral-Ingenieria.png"
+        <img class="university-logo" src="images/Austral-Ingenieria.png"
           onerror="this.src='https://www.austral.edu.ar/wp-content/uploads/2022/10/facultades-horizontales-03.png'"
           alt="Universidad Austral - Facultad de Ingeniería" />
       </div>
@@ -733,16 +732,13 @@
         </ul>
 
         <figure>
-          <img src="images/Infografia README Fondo Blanco.png"
-            alt="Arquitectura del Doble Lazo del Sistema DronELM" loading="lazy" />
+          <img src="images/arquitectura.png" alt="Arquitectura del Doble Lazo del Sistema DronELM" loading="lazy" />
           <figcaption>Figura 1 — Flujo conceptual y comunicación entre la estación de tierra y el bucle de vuelo en el
             dron.</figcaption>
         </figure>
 
         <figure>
-          <img
-            src="images/2026-0626 Navegación con SLM - Fondo Blanco.png"
-            alt="Detalle del Lazo Táctico en LangGraph" loading="lazy" />
+          <img src="images/infografia.png" alt="Detalle del Lazo Táctico en LangGraph" loading="lazy" />
           <figcaption>Figura 2 — Grafo de ejecución en vuelo (airsim-loop) con el Gatekeeper controlando el paso
             deliberativo.</figcaption>
         </figure>
@@ -949,10 +945,10 @@
             <div class="timeline-content">
               <h4>Pruebas y ajustes al loop de control autónomo</h4>
               <p>Carga inicial de pesos de YOLOv8n. Desarrollo de la utilidad de diagnóstico
-                <code>capture_frame.py</code> para validar el procesamiento óptico directo del simulador.</p>
+                <code>capture_frame.py</code> para validar el procesamiento óptico directo del simulador.
+              </p>
               <figure>
-                <img src="images/imagen_20260706_003541.jpg"
-                  alt="Captura de fotograma del drone" loading="lazy" />
+                <img src="images/fotograma.jpg" alt="Captura de fotograma del drone" loading="lazy" />
                 <figcaption>Vista del entorno de simulación (MiniSim) capturada por la cámara frontal.</figcaption>
               </figure>
             </div>
@@ -971,8 +967,7 @@
                 de estructuración JSON en modelos ligeros. Los modelos Liquid LFM demuestran un rendimiento
                 sobresaliente.</p>
               <figure>
-                <img src="images/2026-0702 prompFoo Results.png"
-                  alt="Resultados promptfoo" loading="lazy" />
+                <img src="images/resultados-prompfoo.png" alt="Resultados promptfoo" loading="lazy" />
                 <figcaption>Métricas e interfaces de comparación de prompts de promptfoo.</figcaption>
               </figure>
             </div>
@@ -991,9 +986,7 @@
                 mitigación de fallas con decodificación guiada por JSON Schema (motores Outlines/Guidance) para evitar
                 alucinaciones.</p>
               <figure>
-                <img
-                  src="images/2026-0627 Optimización_de_Modelos_Pequeños.png"
-                  alt="Esquema LoRA y Decodificación" loading="lazy" />
+                <img src="images/optimizacion-slm.png" alt="Esquema LoRA y Decodificación" loading="lazy" />
                 <figcaption>Diagrama de descomposición de bajo rango (LoRA) en la inferencia del drone.</figcaption>
               </figure>
             </div>
@@ -1029,7 +1022,8 @@ conda activate airsimenv</code></pre>
 
         <h3>2. Configurar el archivo de simulación</h3>
         <p>Asegúrese de ubicar la configuración correspondiente de Cosys-AirSim en su archivo local
-          <code>Settings.json</code> de AirSim:</p>
+          <code>Settings.json</code> de AirSim:
+        </p>
         <pre><code>{
   "SettingsVersion": 2.0,
   "SimMode": "Multirotor",
@@ -1059,7 +1053,8 @@ airsim-plan run -i "Recorre el perímetro norte a 10 metros de altitud y a veloc
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p style="margin-top: 0.5rem; font-size: 0.8rem;">Desarrollado y mantenido para el repositorio
-          <code>georgsmeinung/dronelm</code>.</p>
+          <code>georgsmeinung/dronelm</code>.
+        </p>
       </footer>
     </main>
   </div>
