@@ -18,6 +18,9 @@ class KeyController:
         # print('{0} released'.format(key))
         if key in self.key_pressed:
             self.key_pressed.remove(key)
+        if key == KeyCode.from_char('t'):
+            self.listener.stop()
+            return False
 
     def run(self):
         self.listener.start()

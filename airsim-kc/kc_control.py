@@ -5,7 +5,7 @@ import string
 from dotenv import load_dotenv
 import cosysairsim as airsim
 import numpy as np
-from pynput.keyboard import KeyCode
+from pynput.keyboard import Key, KeyCode
 
 from KeyController import KeyController
 
@@ -13,6 +13,7 @@ from KeyController import KeyController
 from airsim_functions.orbit import OrbitNavigator
 
 TIMEOUT = 1200  # 20 mins
+HEIGHT_STEP = 0.6
 
 # Mesh ID's
 BG = 0
@@ -20,22 +21,6 @@ LAND = 100
 WATER = 200
 SHIP = 300
 
-# Commands:
-ARM = "arm"
-CLEAR = "clear"
-DISARM = "disarm"
-MOVE = "move"
-MOVE_PATH = "moveonpath"
-HELP = "help"
-HOME = "home"
-STATE = "state"
-TAKEOFF = "takeoff"
-RESET = "reset"
-STOP = "stop"
-STATE = "state"
-KEYBOARD_CONTROL = "kc"
-PILOT_CONTROL = "pc"
-ORBIT = "inspect"
 FORWARD_FORCE = 1
 BACKWARD_FORCE = -1
 RIGHT_FORCE = 1
@@ -98,10 +83,16 @@ class SimpleTerminalController:
         state = self.client.getMultirotorState()
         # print("Takeoff received")
         if state.landed_state == airsim.LandedState.Landed:
+            self.client.armDisarm(True)
             print("taking off...")
             self.client.takeoffAsync().join()
         else:
             self.client.hoverAsync().join()
+
+    def land(self):
+        print("landing in place...")
+        self.client.landAsync().join()
+        self.client.armDisarm(False)
 
     def arm(self):
         # print("Arm received")
@@ -251,41 +242,114 @@ class SimpleTerminalController:
         if positive_axis_press and negative_axis_press:
             return current_height
         if positive_axis_press:
-            return current_height + 0.2
+            return current_height + HEIGHT_STEP
         if negative_axis_press:
-            return current_height - 0.2
+            return current_height - HEIGHT_STEP
         return current_height
 
+    @staticmethod
+    def body_to_world_velocity(forward_vel: float, right_vel: float, yaw_rad: float) -> tuple[float, float]:
+        world_x = (forward_vel * np.cos(yaw_rad)) - (right_vel * np.sin(yaw_rad))
+        world_y = (forward_vel * np.sin(yaw_rad)) + (right_vel * np.cos(yaw_rad))
+        return world_x, world_y
+
+    @staticmethod
+    def quaternion_to_yaw(orientation) -> float:
+        # yaw (z-axis rotation) from quaternion
+        siny_cosp = 2.0 * ((orientation.w_val * orientation.z_val) + (orientation.x_val * orientation.y_val))
+        cosy_cosp = 1.0 - (2.0 * ((orientation.y_val * orientation.y_val) + (orientation.z_val * orientation.z_val)))
+        return float(np.arctan2(siny_cosp, cosy_cosp))
+
     def enter_keyboard_control(self):
-        print("Keyboard Control mode. Press 't' to return to Command mode.")
+        print("Keyboard Control mode active.")
+        print("W/S: forward/back | A/D: left/right | Z/X: z-axis | Q/E: yaw")
+        print("H: hover | T: takeoff | L: land | R: reset | Space: help | ?: telemetry | ESC: exit")
         kc = KeyController()
-        z = self.client.getMultirotorState().kinematics_estimated.position.z_val
         self.client.enableApiControl(True)
-        last_pos = None
+        previous_keys = set()
         while kc.listener.running:
             self.client.cancelLastTask()
             self.client.enableApiControl(True)
             keys = kc.get_key_pressed()
+            keys_set = set(keys)
+
+            if Key.esc in keys_set:
+                kc.stop()
+                break
+
+            is_takeoff_pressed = KeyCode.from_char('t') in keys_set
+            was_takeoff_pressed = KeyCode.from_char('t') in previous_keys
+            if is_takeoff_pressed and not was_takeoff_pressed:
+                self.takeoff()
+
+            is_land_pressed = KeyCode.from_char('l') in keys_set
+            was_land_pressed = KeyCode.from_char('l') in previous_keys
+            if is_land_pressed and not was_land_pressed:
+                self.land()
+
+            is_reset_pressed = KeyCode.from_char('r') in keys_set
+            was_reset_pressed = KeyCode.from_char('r') in previous_keys
+            if is_reset_pressed and not was_reset_pressed:
+                self.reset()
+                self.client.enableApiControl(True)
+
+            is_state_pressed = KeyCode.from_char('?') in keys_set
+            was_state_pressed = KeyCode.from_char('?') in previous_keys
+            if is_state_pressed and not was_state_pressed:
+                self.print_stats()
+
+            is_space_pressed = Key.space in keys_set
+            was_space_pressed = Key.space in previous_keys
+            if is_space_pressed and not was_space_pressed:
+                self.clear_terminal()
+                self.show_help()
+                self.client.cancelLastTask()
+                self.client.hoverAsync().join()
+                self.client.enableApiControl(True)
+                self.vx = 0
+                self.vy = 0
+                self.vz = 0
+                self.yaw = 0
+                print("Keyboard control restarted.")
+
             if 'h' in keys:
                 self.client.hoverAsync()
             else:
-                quad_vel = self.client.getMultirotorState().kinematics_estimated.linear_velocity
                 self.vx = self.handle_key_pressed(keys_to_check=['w', 's'], pressed_keys=keys,
-                                                  current_vel=quad_vel.x_val)
+                                                  current_vel=self.vx)
                 self.vy = self.handle_key_pressed(keys_to_check=['d', 'a'], pressed_keys=keys,
-                                                  current_vel=quad_vel.y_val)
-                z = self.handle_height(keys_to_check=['z', 'x'], pressed_keys=keys, current_height=z)
+                                                  current_vel=self.vy)
                 self.yaw = self.handle_rotation(keys_to_check=['e', 'q'], pressed_keys=keys)
-                #print("current vel: \n vx:{0}, nvx:{1}\n vy:{2}, nvy:{3}\n vz:{4}, nvz:{5}\n".format(quad_vel.x_val, self.vx, quad_vel.y_val,self.vy, quad_vel.z_val, self.vz))
-                current_pos = self.client.getMultirotorState().kinematics_estimated.position
+                # self.vx/self.vy are body-frame commands (forward/right).
+                state = self.client.getMultirotorState()
+                orientation = state.kinematics_estimated.orientation
+                yaw_rad = self.quaternion_to_yaw(orientation)
+                world_vx, world_vy = self.body_to_world_velocity(self.vx, self.vy, yaw_rad)
+                current_pos = state.kinematics_estimated.position
+                z_target = self.handle_height(keys_to_check=['z', 'x'], pressed_keys=keys,
+                                              current_height=current_pos.z_val)
                 # print("current pos: \n x:{0:.2f}, y:{1:.2f}\n z:{2:.2f}\n".format(current_pos.x_val, current_pos.y_val, current_pos.z_val))
 
-                self.client.moveByVelocityZAsync(self.vx, self.vy, z, 0.1, airsim.DrivetrainType.MaxDegreeOfFreedom, airsim.YawMode(True, self.yaw)).join()
+                self.client.moveByVelocityZAsync(world_vx, world_vy, z_target, 0.1, airsim.DrivetrainType.MaxDegreeOfFreedom, airsim.YawMode(True, self.yaw)).join()
+            previous_keys = keys_set
             # self.client.moveByVelocityAsync(self.vx, self.vy, self.vz, 0.1, airsim.DrivetrainType.MaxDegreeOfFreedom,
             #                                 airsim.YawMode(True, self.yaw)).join()
             # airsim.time.sleep(0.2)
-        # print("'t' has been pressed and the console control is back")
         self.client.hoverAsync().join()
+
+    def close_connection(self):
+        try:
+            self.client.hoverAsync().join()
+        except Exception:
+            pass
+        try:
+            self.client.armDisarm(False)
+        except Exception:
+            pass
+        try:
+            self.client.enableApiControl(False)
+        except Exception:
+            pass
 
     def print_stats(self):
         state = self.client.getMultirotorState()
@@ -318,31 +382,24 @@ class SimpleTerminalController:
         print("Type 'help' for listing commands.")
 
     def show_help(self):
-        """Shows commands supported."""
+        """Shows keyboard controls supported."""
         print("""
-        Commands:
-            arm
-            disarm
-            takeoff
-            home
-            reset
-            stop
-            state
-            kc = Keyboard Control
-            move (x y z vel)
-            moveOnPath (x1 y1 z1 ... xn yn zn vel)
-        
         Keyboard Control:
-            W = + x-axis
-            S = - x-axis
-            D = + y-axis
-            A = - y-axis
+            W = forward (relative to current yaw)
+            S = backward (relative to current yaw)
+            D = move right (relative to current yaw)
+            A = move left (relative to current yaw)
             X = + z-axis (down)
             Z = - z-axis (up)
             E = turn right
             Q = turn left
-            T = Terminate kc mode, return to command mode
+            H = hover
+            T = takeoff / hover if already flying
+            L = land in place (current x/y position)
+            R = reset simulation
+            Space = clear screen, show this help, and restart keyboard control state
             ? = Get drone telemetry
+            ESC = end control script and release AirSim control
         """)
 
     def reset(self):
@@ -350,51 +407,14 @@ class SimpleTerminalController:
         self.client.reset()
 
     def run(self):
-        # Map command strings to lambda functions to normalize the input signature.
-        # All lambdas accept 'args', but only pass them to methods that need them.
-        command_dispatch = {
-            ARM: lambda _: self.arm(),
-            CLEAR: lambda _: self.clear_terminal(),
-            DISARM: lambda _: self.disarm(),
-            MOVE: lambda args: self.move_to_position(args),
-            MOVE_PATH: lambda args: self.move_on_path(args),
-            HELP: lambda _: self.show_help(),
-            HOME: lambda _: self.home(),
-            TAKEOFF: lambda _: self.takeoff(),
-            STATE: lambda _: self.print_stats(),
-            RESET: lambda _: self.reset(),
-            KEYBOARD_CONTROL: lambda _: self.enter_keyboard_control(),
-            STATE: lambda _: self.print_stats(),
-            STOP: lambda _: self.stop(),
-            ORBIT: lambda args: self.orbit(args),
-        }
-
-        while True:
-            try:
-                # Get input and clean it
-                raw_input = input("> ").strip()
-                if not raw_input: continue
-
-                args = raw_input.split(" ")
-                command_type = args[0].lower()
-
-                # print("Args given", args)
-
-                # 1. Look up the function (returns None if not found)
-                action = command_dispatch.get(command_type)
-
-                # 2. Execute or handle error
-                if action:
-                    action(args)
-                else:
-                    print("The command given is not a valid command.")
-
-                # 3. Handle loop exit condition
-                if command_type == STOP.lower():
-                    break
-
-            except (KeyboardInterrupt, EOFError):
-                break
+        self.show_help()
+        try:
+            self.enter_keyboard_control()
+        except (KeyboardInterrupt, EOFError):
+            pass
+        finally:
+            self.close_connection()
+            print("Control script ended and AirSim connection released.")
 
 
 if __name__ == '__main__':

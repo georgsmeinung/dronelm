@@ -1,3 +1,8 @@
+## 2026-0708
+
+* Update tp **YOLO26** model for computer vision segmentation
+* Implemented a simpler keyboard commander for object detection experiments
+
 ## 2026-0706
 
 **YOLOv8** (You Only Look Once, versión 8), lanzado por Ultralytics, es uno de los modelos de visión artificial más avanzados, rápidos y eficientes de la actualidad.
