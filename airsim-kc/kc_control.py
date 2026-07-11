@@ -402,10 +402,6 @@ class SimpleTerminalController:
             ESC = end control script and release AirSim control
         """)
 
-    def reset(self):
-        print("Resetting simulation")
-        self.client.reset()
-
     def run(self):
         self.show_help()
         try:
