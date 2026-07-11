@@ -1,12 +1,12 @@
 ## 2026-0711
 
-* Corrected actitude control form manual control and from orbit in base to Z axis value
-* Remove the old manual control script for terminal controller
+* Corrección de angulo de actitud del drone en base al valor del eje Z en el script de control manual cuando cambia la posición horizontal del drone.
+* Eliminación de código muerto en `airsim-kc/main.py`
 
 ## 2026-0708
 
-* Update tp **YOLO26** model for computer vision segmentation
-* Implemented a simpler keyboard commander for object detection experiments
+* Modelo de segmentación automática YOLO actualizado a **YOLO26**
+* Implementación de controlador de teclado más simple para experimentos de detección de objetos
 
 ## 2026-0706
 
