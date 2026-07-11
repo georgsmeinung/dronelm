@@ -14,17 +14,21 @@ Alumno:
 
 Este repositorio contiene la implementación del Trabajo Final de Máster en Ingeniería (Ciencia de Datos) de la **Universidad Austral**.
 
+---
+
 <img src="informe/josethestoryteller-under-construction-2408061.png" alt="Under Construction" width="15%"/>
 <br/>
 
+**Este proyecto es un TRABAJO EN PROGRESO**
+<br/>
+a la fecha de la última actualización del CHANGELOG. 
 
-Este proyecto es un TRABAJO EN PROGRESO a la fecha de la última actualización del CHANGELOG. 
-
+---
 
 #### Proyecto:
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Activity](https://img.shields.io/badge/Log-2026--0711-teal)](CHANGELOG.md) 
+[![Activity](https://img.shields.io/badge/CHANGELOG-2026--0711-teal)](CHANGELOG.md) 
 [![Plan](https://img.shields.io/badge/Plan-Aprobado_2025--0829-drakgray)](./plan_tesis/plan-tesis.md)
 [![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)](./plan_tesis/plan-tesis.md#objetivo-del-trabajo)
 
