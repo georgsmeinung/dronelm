@@ -1,3 +1,8 @@
+## 2026-0711
+
+* Corrected actitude control form manual control and from orbit in base to Z axis value
+* Remove the old manual control script for terminal controller
+
 ## 2026-0708
 
 * Update tp **YOLO26** model for computer vision segmentation
