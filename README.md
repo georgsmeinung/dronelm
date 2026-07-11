@@ -14,6 +14,13 @@ Alumno:
 
 Este repositorio contiene la implementación del Trabajo Final de Máster en Ingeniería (Ciencia de Datos) de la **Universidad Austral**.
 
+<img src="informe/josethestoryteller-under-construction-2408061.png" alt="Under Construction" width="15%"/>
+<br/>
+
+
+Este proyecto es un TRABAJO EN PROGRESO a la fecha de la última actualización del CHANGELOG. 
+
+
 #### Proyecto:
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
@@ -131,3 +138,5 @@ Uno de los aportes del proyecto es el análisis empírico de la fidelidad físic
 ## 📄 Licencia
 
 Este proyecto está bajo la [Licencia MIT](LICENSE.md).
+
+"Under Construction" Image by <a href="https://pixabay.com/users/josethestoryteller-5100055/?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=2408061">Jose R. Cabello</a> from <a href="https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=2408061">Pixabay</a>
