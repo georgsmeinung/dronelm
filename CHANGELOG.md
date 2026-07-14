@@ -1,4 +1,4 @@
-## 2026-0715
+## 2026-0713
 
 ### Fine tunning de YOLOv8n-seg y optimización de la visualización de máscaras.
 
