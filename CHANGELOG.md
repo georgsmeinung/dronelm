@@ -1,3 +1,143 @@
+## 2026-0715
+
+### Fine tunning de YOLOv8n-seg y optimización de la visualización de máscaras.
+
+#### 1. Cómo funciona la captura y la segmentación en `capture_video.py`
+El proceso de captura y segmentación funciona en un bucle (loop) continuo dentro de la función `main()`:
+
+##### A. Inicialización del modelo y del cliente
+
+1. **Inicialización de YOLO**: En `init_yolo`, el script carga el modelo YOLO desde una ruta personalizada que se pasa como argumento de línea de comandos. Si no se proporciona ninguna ruta, carga por defecto `weights/yolo26n.pt`.
+2. **Conexión con AirSim**: El script instancia y conecta el `AirSimClient`.
+* **Modo simulador real**: Si AirSim se está ejecutando, el cliente se conecta a la API de simulación.
+* **Modo de respaldo (fallback) simulado**: Si el simulador no está disponible, el cliente recurre a la generación de fotogramas de ruido sintético que contienen un rectángulo naranja central para simular un obstáculo.
+
+##### B. El bucle principal 
+
+1. **Captura de fotogramas**: `client.capture()` obtiene el fotograma RGB sin procesar de la cámara del simulador (por defecto la cámara `"0"` / vista de escena).
+
+2. **Conversión del espacio de color**: La matriz de la imagen se convierte de RGB a BGR (`cv2.cvtColor(img, cv2.COLOR_RGB2BGR)`) porque tanto OpenCV (`cv2`) como YOLO esperan que los canales estén en orden BGR.
+
+3. **Segmentación YOLO**:
+* `results = yolo_model(frame_bgr)` ejecuta la inferencia en el fotograma.
+* `annotated = results[0].plot()` dibuja las cajas delimitadoras (bounding boxes) detectadas, las máscaras, las puntuaciones de confianza (confidence scores) y las etiquetas de clase sobre una copia del fotograma.
+
+4. **Mostrar y guardar**: El script muestra el fotograma anotado en una ventana de OpenCV y lo escribe en un archivo `.mp4` si se proporcionó una ruta de guardado.
+
+---
+
+#### 2. Cómo ajustar la segmentación
+
+Se puede ajustar la segmentación de dos formas principales: mediante **parámetros en tiempo de ejecución** (la opción más rápida) y mediante el **entrenamiento del modelo** (la más precisa para objetos personalizados).
+
+##### Opción A: Ajustar los parámetros de inferencia (Ajuste en tiempo de ejecución)
+
+Se puede personalizar el comportamiento de la inferencia pasando parámetros a la llamada del modelo reemplazando la línea `capture_video.py`:
+
+```python
+results = yolo_model(frame_bgr)
+
+```
+
+por:
+
+```python
+results = yolo_model(
+    frame_bgr,
+    conf=0.5,      # Umbral de confianza (de 0.0 a 1.0). Valores más altos reducen los falsos positivos.
+    iou=0.45,      # Umbral IoU para NMS. Valores más bajos ayudan a evitar detecciones duplicadas superpuestas.
+    imgsz=640,     # Tamaño de imagen para inferencia (redimensiona el fotograma). 640 es el estándar; usar el tamaño real de la cámara aumenta la precisión.
+    device='cuda', # Fuerza el uso de la GPU ('cuda' o 0) para obtener FPS en tiempo real, o 'cpu' si no hay GPU disponible.
+    classes=[0, 2] # (Opcional) Filtra los resultados para mostrar solo IDs de clases específicos (ej. barcos, puertas/gates, etc.).
+)
+
+```
+
+También se puede ajustar la **visualización de las anotaciones** (por ejemplo, quitando las etiquetas o las cajas y dejando solo la máscara de segmentación) dentro de la llamada `.plot()`:
+
+```python
+# Mostrar solo las máscaras, ocultar las cajas delimitadoras y los nombres de las clases
+annotated = results[0].plot(boxes=False, labels=False, conf=False)
+
+```
+
+##### Opción B: Entrenar YOLO para elementos específicos del simulador
+
+Si el modelo por defecto no logra segmentar los objetos personalizados de tu simulación (como puertas específicas, drones o el terreno), hay que entrenar un modelo propio:
+
+1. **Recolectar fotogramas**: Ejecutar `capture_frame.py` bajo distintas posiciones de vuelo para guardar imágenes de ejemplo.
+2. **Anotar**: Etiquetar las imágenes con máscaras de polígonos usando una plataforma de anotación (por ejemplo, CVAT o Roboflow) y exportarlas en el formato YOLOv8 de PyTorch.
+3. **Reentrenar el modelo**: Ejecutar un script de entrenamiento para ajustar un modelo de segmentación base:
+```python
+from ultralytics import YOLO
+model = YOLO("yolov8n-seg.pt")
+model.train(data="your_dataset.yaml", epochs=50, imgsz=640, device=0)
+
+```
+
+4. **Desplegar**: Mover los pesos entrenados (`best.pt`) al directorio `weights/` y pasarlos como argumento cuando ejecutes `capture_video.py`.
+
+
+### Opciones de inferencia de YOLO (ajuste fino sin reentrenamiento)
+
+Se pueden pasar varios parámetros directamente a `yolo_model()` para cambiar su sensibilidad de detección, velocidad y precisión sobre la marcha:
+
+| Parámetro | Tipo y por defecto | Descripción | Estrategia de uso/ajuste |
+| --- | --- | --- | --- |
+| **`conf`** | `float` (`0.25`) | Umbral mínimo de puntuación de confianza. | Aumentarlo (por ejemplo, a `0.5` o `0.6`) para eliminar falsos positivos débiles. Reducirlo (por ejemplo, a `0.15`) si YOLO no detecta objetivos debido a una mala iluminación. |
+| **`iou`** | `float` (`0.7`) | Umbral de Intersección sobre Unión (IoU) para la Supresión No Máxima (NMS). | Reducirlo (por ejemplo, a `0.45`) para fusionar cajas delimitadoras superpuestas de la misma clase (elimina detecciones dobles de un mismo objeto). |
+| **`imgsz`** | `int` o `tuple` (`640`) | Redimensiona los fotogramas antes de procesarlos. | Usa una tupla que coincida con la relación de aspecto de la cámara (por ejemplo, `(720, 1280)`) para evitar que se distorsione la imagen. Mayor tamaño = más detalle/detección de objetos más pequeños, pero menor FPS. |
+| **`half`** | `bool` (`False`) | Habilita la inferencia de punto flotante en FP16 (precisión media). | Establécelo en `True` en GPU (`device='cuda'`) para duplicar la velocidad de inferencia casi sin pérdida de precisión. |
+| **`max_det`** | `int` (`300`) | Máximo de detecciones permitidas por fotograma. | Configúralo en un número bajo (por ejemplo, `10`) para acelerar la anotación del fotograma si solo buscas unos pocos objetos. |
+| **`classes`** | `list[int]` (`None`) | Filtra objetos por IDs de clase. | Pasa IDs de clase específicos (por ejemplo, `classes=[0]` para personas) para ignorar por completo objetos no relacionados. |
+| **`retina_masks`** | `bool` (`False`) | Renderiza las máscaras en alta resolución. | Configúralo en `True` para obtener bordes nítidos y de alta precisión en las máscaras de segmentación (disminuye ligeramente los FPS). |
+
+*Ejemplo de llamada para obtener un rendimiento de FPS óptimo en tiempo real:*
+
+```python
+results = yolo_model(
+    frame_bgr,
+    conf=0.45,
+    iou=0.45,
+    imgsz=640,
+    half=True,        # Acelera la inferencia en GPU Nvidia
+    device='cuda',
+    retina_masks=True # Bordes de máscara limpios y nítidos
+)
+
+```
+
+### Personalización de las anotaciones (`results[0].plot()`)
+
+El método `.plot()` dibuja las cajas delimitadoras, etiquetas y máscaras sobre el fotograma. Se puede ajustar su comportamiento con los siguientes argumentos:
+
+* **`boxes`** (`bool`, por defecto `True`): Establecerlo en `False` para ocultar las cajas delimitadoras.
+* **`labels`** (`bool`, por defecto `True`): Establecerlo en `False` para ocultar las etiquetas de clase (por ejemplo, "gate").
+* **`conf`** (`bool`, por defecto `True`): Establecerlo en `False` para ocultar el porcentaje de confianza.
+* **`alpha`** (`float`, por defecto `0.5`): Transparencia de las máscaras de color superpuestas (`0.0` es completamente transparente, `1.0` es color sólido).
+* **`line_width`** (`int`, por defecto `None`): Grosor del contorno de las cajas (por defecto se escala según el ancho de la imagen).
+
+*Ejemplo de una salida limpia que muestra solo las máscaras (ideal para visualizar segmentación semántica):*
+
+```python
+annotated = results[0].plot(
+    boxes=False,    # Sin rectángulos de cajas
+    labels=False,   # Sin etiquetas de texto
+    conf=False     # Sin números de confianza
+)
+
+```
+
+---
+
+* Buscando modelos YOLO mas optimizados para la detección de objetos en tiempo real en entornos urbanos.
+* Probando los disponbilizados por la [ciudad de Montreal](https://github.com/VilledeMontreal/urban-detection/tree/master), concretamente [yolov5s.pt](https://github.com/VilledeMontreal/urban-detection/tree/master/yolov5)
+
+<img src ="https://user-images.githubusercontent.com/26833433/90187293-6773ba00-dd6e-11ea-8f90-cd94afc0427f.png"/>
+
+* Iniciada gestion de cuenta en [Cityscapes Datasets](https://www.cityscapes-dataset.com/) para la descarga de un modelo preentrenado más genérico.
+* Iniciado calculo de distancia en captura segmentada por modelo semántico.
+
 ## 2026-0711
 
 * Corrección de angulo de actitud del drone en base al valor del eje Z en el script de control manual cuando cambia la posición horizontal del drone.

@@ -622,6 +622,20 @@ class SimpleTerminalController:
            [ESC] = end control script and release AirSim control
         """)
 
+    def flush_input_buffer(self):
+        """Flush any pending keyboard inputs from the terminal stdin buffer."""
+        try:
+            if os.name == 'nt':
+                import msvcrt
+                while msvcrt.kbhit():
+                    msvcrt.getch()
+            else:
+                import sys
+                import termios
+                termios.tcflush(sys.stdin, termios.TCIFLUSH)
+        except Exception:
+            pass
+
     def run(self):
         self.show_help()
         try:
@@ -631,6 +645,7 @@ class SimpleTerminalController:
         finally:
             self._stop_listener()
             self.close_connection()
+            self.flush_input_buffer()
             print("Control script ended and AirSim connection released.")
 
 

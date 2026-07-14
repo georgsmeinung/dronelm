@@ -95,27 +95,41 @@ class AirSimClient:
     # ------------------------------------------------------------------ #
     # Paso 1: captura sensorial                                         #
     # ------------------------------------------------------------------ #
-    def capture(self) -> Tuple[Optional[np.ndarray], Dict[str, Any]]:
-        """Devuelve (imagen_rgb, telemetria).
+    def capture(
+        self, return_depth: bool = False
+    ) -> Tuple[Optional[np.ndarray], Dict[str, Any]] | Tuple[Optional[np.ndarray], Optional[np.ndarray], Dict[str, Any]]:
+        """Devuelve (imagen_rgb, telemetria) o (imagen_rgb, imagen_depth, telemetria) si return_depth es True.
 
         La imagen es un ``numpy.ndarray`` con shape ``(H, W, 3)`` o ``None``
         si el simulador no esta disponible. La telemetria siempre trae al
         menos ``position``, ``velocity`` y ``orientation`` en el marco NED.
         """
         if not self._connected or self._client is None:
+            if return_depth:
+                return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
             return self._simulated_frame(), self._simulated_telemetry()
         try:
-            responses = self._client.simGetImages(
-                [
+            camera_id = int(self.camera_name) if self.camera_name.isdigit() else self.camera_name
+            requests = [
+                airsim.ImageRequest(
+                    camera_id,
+                    airsim.ImageType.Scene,
+                    False,
+                    False,
+                )
+            ]
+            if return_depth:
+                depth_type = getattr(airsim.ImageType, "DepthPlanar", getattr(airsim.ImageType, "DepthPlanner", None))
+                requests.append(
                     airsim.ImageRequest(
-                        self.camera_name,
-                        airsim.ImageType.Scene,
-                        False,
+                        camera_id,
+                        depth_type,
+                        True,
                         False,
                     )
-                ],
-                vehicle_name=self.vehicle_name,
-            )
+                )
+
+            responses = self._client.simGetImages(requests, vehicle_name=self.vehicle_name)
             response = responses[0] if responses else None
             image = None
             if response is not None and response.width > 0 and response.height > 0:
@@ -126,11 +140,29 @@ class AirSimClient:
                     or image.shape[0] != self.frame_height
                 ):
                     image = _resize_frame(image, self.frame_width, self.frame_height)
+
+            depth = None
+            if return_depth and len(responses) > 1:
+                depth_response = responses[1]
+                if depth_response is not None and depth_response.width > 0 and depth_response.height > 0:
+                    depth_1d = np.array(depth_response.image_data_float, dtype=np.float32)
+                    depth = depth_1d.reshape(depth_response.height, depth_response.width)
+                    if (
+                        depth.shape[1] != self.frame_width
+                        or depth.shape[0] != self.frame_height
+                    ):
+                        depth = _resize_depth(depth, self.frame_width, self.frame_height)
+
             state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
             telemetry = _state_to_telemetry(state)
+            
+            if return_depth:
+                return image, depth, telemetry
             return image, telemetry
         except Exception as exc:
             print(f"[AirSimClient] Error capturando datos: {exc}")
+            if return_depth:
+                return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
             return self._simulated_frame(), self._simulated_telemetry()
 
     # ------------------------------------------------------------------ #
@@ -188,9 +220,30 @@ class AirSimClient:
             "source": "simulated",
         }
 
+    def _simulated_depth(self) -> np.ndarray:
+        """Devuelve un depth map sintetico de la misma resolucion."""
+        depth = np.full((self.frame_height, self.frame_width), 20.0, dtype=np.float32)
+        central_pad = int(self.frame_width * 0.12)
+        cy = self.frame_height // 2
+        depth[
+            cy - 20 : cy + 20,
+            self.frame_width // 2 - central_pad : self.frame_width // 2 + central_pad,
+        ] = 5.0
+        return depth
+
 
 def _resize_frame(image: np.ndarray, width: int, height: int) -> np.ndarray:
     """Reescala con nearest-neighbor para evitar dependencias de OpenCV."""
+    src_h, src_w = image.shape[:2]
+    if src_h == height and src_w == width:
+        return image
+    y_idx = (np.linspace(0, src_h - 1, height)).astype(int)
+    x_idx = (np.linspace(0, src_w - 1, width)).astype(int)
+    return image[np.ix_(y_idx, x_idx)]
+
+
+def _resize_depth(image: np.ndarray, width: int, height: int) -> np.ndarray:
+    """Reescala con nearest-neighbor."""
     src_h, src_w = image.shape[:2]
     if src_h == height and src_w == width:
         return image
