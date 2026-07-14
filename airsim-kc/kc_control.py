@@ -50,7 +50,6 @@ class SimpleTerminalController:
         # Inline keyboard listener state (was KeyController)
         self._pressed_keys: list = []
         self._listener: Listener = None
-        self.target_z = None
 
     # -------------------------------------------------------------------------
     # Connection / setup
@@ -84,13 +83,11 @@ class SimpleTerminalController:
             self.client.takeoffAsync().join()
         else:
             self.client.hoverAsync().join()
-        self.target_z = None
 
     def land(self):
         print("Landing in place...")
         self.client.landAsync().join()
         self.client.armDisarm(False)
-        self.target_z = None
 
     def arm(self):
         self.client.armDisarm(True)
@@ -146,7 +143,6 @@ class SimpleTerminalController:
     def reset(self):
         print("Resetting simulation")
         self.client.reset()
-        self.target_z = None
 
     def orbit(self, args):
         if len(args) < 3:
@@ -218,8 +214,7 @@ class SimpleTerminalController:
         neg = KeyCode.from_char(neg_key) in self._pressed_keys
         if pos == neg:
             return current_z
-        # In AirSim, Z axis is downwards. Decrease Z to move up, increase to move down.
-        return current_z - HEIGHT_STEP if pos else current_z + HEIGHT_STEP
+        return current_z + (HEIGHT_STEP if pos else -HEIGHT_STEP)
 
     @staticmethod
     def _body_to_world(forward: float, right: float, yaw_rad: float) -> tuple[float, float]:
@@ -280,7 +275,6 @@ class SimpleTerminalController:
         self.show_help()
         self.client.hoverAsync().join()
         self.vx = self.vy = self.yaw = 0.0
-        self.target_z = None
         print("Keyboard control restarted.")
 
     def _process_movement(self):
@@ -294,22 +288,9 @@ class SimpleTerminalController:
         self.yaw = self._axis_yaw('e', 'q')
 
         state = self.client.getMultirotorState()
-        
-        # Initialize target_z if not set
-        if self.target_z is None:
-            self.target_z = state.kinematics_estimated.position.z_val
-
-        # Update target_z via keyboard input (X=up, Z=down)
-        self.target_z = self._axis_height('x', 'z', self.target_z)
-
-        # Convert body velocity command to world frame
         yaw_rad = self._quaternion_to_yaw(state.kinematics_estimated.orientation)
         world_vx, world_vy = self._body_to_world(self.vx, self.vy, yaw_rad)
-
-        # Dynamic tilt compensation to prevent altitude loss during translation
-        h_speed = np.sqrt(world_vx**2 + world_vy**2)
-        compensation = 0.15 * h_speed
-        z_target = self.target_z - compensation
+        z_target = self._axis_height('z', 'x', state.kinematics_estimated.position.z_val)
 
         self.client.moveByVelocityZAsync(
             world_vx, world_vy, z_target, 0.1,
@@ -318,7 +299,10 @@ class SimpleTerminalController:
         ).join()
 
     def enter_keyboard_control(self):
-        self.target_z = None
+        print("Keyboard Control mode active.")
+        print("W/S: forward/back | A/D: left/right | Z/X: z-axis | Q/E: yaw")
+        print("H: hover | T: takeoff | L: land | R: reset | Space: help | ?: telemetry | ESC: exit")
+
         self._start_listener()
         self.client.enableApiControl(True)
         previous_keys: set = set()
@@ -328,8 +312,8 @@ class SimpleTerminalController:
 
             if Key.esc in keys_set:
                 self._stop_listener()
-                self._pressed_keys.clear()  # Flush pressed keys on exit
                 break
+
             self._handle_oneshot_keys(previous_keys)
             self._process_movement()
             previous_keys = keys_set
@@ -352,61 +336,14 @@ class SimpleTerminalController:
                 pass
 
     def print_stats(self):
-        try:
-            state = self.client.getMultirotorState()
-            pos = state.kinematics_estimated.position
-            vel = state.kinematics_estimated.linear_velocity
-            orient = state.kinematics_estimated.orientation
-            gps = state.gps_location
-
-            # Convert quaternion to roll, pitch, yaw (in degrees)
-            sinr_cosp = 2.0 * (orient.w_val * orient.x_val + orient.y_val * orient.z_val)
-            cosr_cosp = 1.0 - 2.0 * (orient.x_val ** 2 + orient.y_val ** 2)
-            roll = np.arctan2(sinr_cosp, cosr_cosp) * 180.0 / np.pi
-
-            sinp = 2.0 * (orient.w_val * orient.y_val - orient.z_val * orient.x_val)
-            pitch = np.arcsin(np.clip(sinp, -1.0, 1.0)) * 180.0 / np.pi
-
-            siny_cosp = 2.0 * (orient.w_val * orient.z_val + orient.x_val * orient.y_val)
-            cosy_cosp = 1.0 - 2.0 * (orient.y_val ** 2 + orient.z_val ** 2)
-            yaw = np.arctan2(siny_cosp, cosy_cosp) * 180.0 / np.pi
-
-            # Map landed state to text
-            landed_val = getattr(state, 'landed_state', 0)
-            if hasattr(airsim, 'LandedState'):
-                if landed_val == airsim.LandedState.Landed:
-                    landed_str = "Landed"
-                elif landed_val == airsim.LandedState.Flying:
-                    landed_str = "Flying"
-                else:
-                    landed_str = f"Unknown ({landed_val})"
-            else:
-                landed_str = "Flying" if landed_val == 1 else "Landed"
-
-            pos_str = f"({pos.x_val:.2f}, {pos.y_val:.2f}, {pos.z_val:.2f}) m"
-            alt_str = f"{-pos.z_val:.2f} m (GPS: {gps.altitude:.2f} m)"
-            vel_str = f"({vel.x_val:.2f}, {vel.y_val:.2f}, {vel.z_val:.2f}) m/s"
-            speed_val = float(np.sqrt(vel.x_val**2 + vel.y_val**2 + vel.z_val**2))
-            speed_str = f"{speed_val:.2f} m/s"
-            rpy_str = f"R:{roll:.1f} P:{pitch:.1f} Y:{yaw:.1f}"
-            gps_str = f"Lat:{gps.latitude:.6f}, Lon:{gps.longitude:.6f}"
-
-            print("\n+-------------------------------------------------------------+")
-            print(f"| {'DRONE TELEMETRY':^59} |")
-            print("+---------------------------+---------------------------------+")
-            print(f"| {'Parameter':<25} | {'Value':<31} |")
-            print("+---------------------------+---------------------------------+")
-            print(f"| {'Position (X, Y, Z)':<25} | {pos_str:<31} |")
-            print(f"| {'Altitude (Z / GPS)':<25} | {alt_str:<31} |")
-            print(f"| {'Velocity (Vx, Vy, Vz)':<25} | {vel_str:<31} |")
-            print(f"| {'Speed (magnitude)':<25} | {speed_str:<31} |")
-            print(f"| {'Roll / Pitch / Yaw':<25} | {rpy_str:<31} |")
-            print(f"| {'Landed State':<25} | {landed_str:<31} |")
-            print(f"| {'GPS Location':<25} | {gps_str:<31} |")
-            print("+---------------------------+---------------------------------+\n")
-
-        except Exception as e:
-            print(f"Error fetching telemetry: {e}")
+        for label, getter in [
+            ("state", self.client.getMultirotorState),
+            ("imu_data", self.client.getImuData),
+            ("barometer_data", self.client.getBarometerData),
+            ("magnetometer_data", self.client.getMagnetometerData),
+            ("gps_data", self.client.getGpsData),
+        ]:
+            print(f"{label}: {pprint.pformat(getter())}")
 
     def clear_terminal(self):
         """Clears the terminal screen."""
@@ -418,13 +355,15 @@ class SimpleTerminalController:
         Keyboard Control:
            [Q] Turn Left    [W] Forward    [E] Turn Right
            [A] Move Left    [S] Backward   [D] Move Right
-           [X] Move Up
-           [Z] Move Down           
+           [Z] Move Up
+           [X] Move Down           
            ----------------------------------------------
-           [H] Hover        [T] Takeoff    [L] Land in place 
-           [R] Reset        [Space] = clear screen, show help
-           [?] = Get drone telemetry     
-           ----------------------------------------------
+           [H]  Hover
+           [T]  Takeoff / hover if already flying
+           [L]  Land in place (current x/y position)
+           [R]  Reset simulation
+           [Space] = clear screen, show this help, and restart keyboard control state
+           [?] = Get drone telemetry
            [ESC] = end control script and release AirSim control
         """)
 
