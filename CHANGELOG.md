@@ -1,3 +1,138 @@
+## 2026-0714
+
+### Porqué La segmentación semantica de imágenes es más rápida que la detección de objetos
+
+#### Segmentación Semántica vs. Segmentación de Instancias
+Cuando se compara la segmentación semántica con YOLO de detección o YOLO de segmentación (YOLOv8-seg), estamos h ablando de Segmentación de Instancias. Este tipo de segmentación tiene que identificar objetos individuales (sabe que hay "Árbol 1", "Árbol 2" y "Árbol 3") y dibujar una máscara para cada uno. Para lograr esto, el modelo primero tiene que detectar el objeto con una caja y luego generar la máscara. Por eso es más pesado y lento que la detección simple.
+Sin embargo, lo que tú mencionas es la Segmentación Semántica (modelos como BiSeNet, Fast-SCNN o DDRNet).
+En la segmentación semántica:
+* No hay cajas de texto ni identidades: Al modelo no le importa si hay uno o diez árboles; solo clasifica los píxeles. Todo lo que parezca árbol se pinta del mismo color en un mapa plano.
+* Sin post-procesamiento pesado: No necesita algoritmos como NMS (Non-Maximum Suppression) para eliminar cajas duplicadas.
+* Arquitecturas ultra-optimizadas: Al saltarse el paso de "detectar objetos individuales", existen redes de segmentación semántica diseñadas específicamente para hardware embebido que son increíblemente pequeñas (de 1 a 3 MB) y corren a más de 100 FPS.
+Si se usa segmentación semántica pura (yolo26n-sem en vez de yolo26-seg), efectivamente se pueden conseguir modelos mucho más rápidos, ligeros y eficientes que un detector de objetos. Por eso se eligió este modelo para "Visual Looming (aproximación visual) o Detección de Obstáculos Basada en la Ocupación de la Imagen"
+
+#### El problemad de la detección de objetos con YOLO: Objetos parciales y cortados
+Los detectores de cajas de objetos sufren muchísimo con objetos parciales, ocluidos o cortados por el borde de la pantalla.
+¿Por qué pasa esto en la detección de objetos?
+Para que un detector como YOLO dibuje una caja delimitadora, la red neuronal necesita predecir con alta confianza el centro del objeto, su ancho y su alto (x, y, w, h).
+* Si un dron se acerca a un árbol y solo ve una rama aislada que entra por el lateral de la cámara, el modelo no tiene suficientes características visuales para identificar el "concepto completo de árbol".
+* Como no puede estimar dónde termina el árbol (porque está fuera de la pantalla), la confianza del modelo cae por debajo de tu umbral (ej. < 0.25) y YOLO simplemente decide no mostrar nada. Para un dron, esto es fatal: una rama invisible en la pantalla se convierte en un choque inminente.
+¿Por qué la segmentación es superior aquí?
+La segmentación (tanto semántica como de instancias) clasifica la imagen píxel a píxel basándose en texturas, colores y patrones locales.
+* A la segmentación no le importa si el árbol está completo o si solo se ve el 5% de una rama en la esquina superior derecha.
+* Si esos píxeles tienen textura de hojas o corteza, el modelo los clasificará como "obstáculo" y los pintará.
+* El algoritmo de Visual Looming (ocupación de imagen) sumará de inmediato esos píxeles en el área de peligro y detendrá el dron, incluso si el objeto está incompleto o pegado al borde.
+
+#### Comparativa para Navegación de Drones
+
+<img src="informe/2026-0714 Segmentantion vs Detection.png"/>
+
+| Característica | Detección de Objetos (YOLO) | Seg. de Instancias (YOLO-seg) | Seg. Semántica Real-Time (BiSeNet/DDRNet) |
+| :--- | :--- | :--- | :--- |
+| **Velocidad** | Alta | Media | Extremadamente Alta |
+| **Consumo de recursos** | Bajo | Alto | Muy Bajo |
+| **¿Detecta objetos parciales?** | No (Suele ignorar objetos cortados) | Sí | Excelente (Pinta cualquier píxel reconocido) |
+| **Ideal para Evitación de Obstáculos** | Regular (Peligroso para ramas/bordes) | Bueno | Excelente (El estándar en robótica móvil) |
+
+Si el objetivo es la evitación de obstáculos en un dron, es mejor usar segmentación semántica.
+Para el caso de uso de detección de obstáculos en un dron, un modelo de segmentación semántica ligera dará lo mejor de ambos mundos: una velocidad y ligereza que superan a la detección de objetos de YOLO, combinada con la capacidad crítica de detectar cualquier obstáculo parcial o rama delgada que se cruce en el camino del dron.
+
+### Visual Looming (aproximación visual) o Detección de Obstáculos Basada en la Ocupación de la Imagen
+
+Este es un enfoque muy común, robusto y elegante en la navegación autónoma de drones llamado Visual Looming (aproximación visual) o Detección de Obstáculos Basada en la Ocupación de la Imagen.
+En lugar de estimar la profundidad en metros (lo que requiere una calibración compleja y es propenso a la ambigüedad de escala), se utiliza la relación entre el área del obstáculo segmentado y el área total del fotograma. A medida que el drone se acerca a un objeto, su proyección en el sensor de la cámara crece de forma exponencial.
+Aquí se muestra cómo se puede implementar esto en el código, junto con el concepto de una "Zona de Peligro" (Central Region of Interest - ROI) para evitar falsas alarmas con objetos que se encuentran a los lados.
+
+<img src="informe/2026-0714 Image Occupagy Obstacle detection.png"/>
+
+### Lógica matemática fundamental
+1. Área total del fotograma: $A_{\text{total}} = W \times H (\text{píxeles totales})$
+2. Área del segmento: $A_{\text{obstáculo}}$ es el número de píxeles que pertenecen al segmento.
+3. Porcentaje de ocupación:  $P_{\text{ocupación}} = \left(\frac{A_{\text{obstáculo}}}{A_{\text{total}}}\right) \times 100\%$
+4. Umbral de colisión: se define un umbral (por ejemplo, el 15%). Si $P_{\text{ocupación}} \ge 15\%$, se activa una advertencia de colisión.
+
+### Implementación en el bucle de segmentación YOLO
+Se muestra cómo puedes modificar el bucle de procesamiento en `capture_video_seg.py` para calcular y mostrar el riesgo de colisión en función del porcentaje de ocupación del fotograma.
+
+Fragmento de código para el Caso 1 (Segmentación de instancias):
+
+```python
+# --- Dentro del bucle de captura, reemplazando/aumentando el Caso 1 ---
+if hasattr(results[0], 'masks') and results[0].masks is not None:
+    classes = results[0].boxes.cls.cpu().numpy()
+    names = results[0].names
+    
+    total_pixels = h * w
+    # Definir los límites de una "Zona de Peligro" central (p. ej., el 40% central de la pantalla)
+    danger_zone_x1 = int(w * 0.3)
+    danger_zone_x2 = int(w * 0.7)
+    danger_zone_y1 = int(h * 0.3)
+    danger_zone_y2 = int(h * 0.7)
+    
+    # Opcional: Dibujar el cuadro de la Zona de Peligro en pantalla para depuración visual
+    cv2.rectangle(annotated, (danger_zone_x1, danger_zone_y1), (danger_zone_x2, danger_zone_y2), (255, 255, 255), 1, cv2.LINE_AA)
+
+    for i, mask_obj in enumerate(results[0].masks.xy):
+        class_id = int(classes[i])
+        class_name = names[class_id]
+        
+        # Solo nos interesan las clases de obstáculos (p. ej., árbol, edificio, poste, pared)
+        # Omitir clases seguras si aplica
+        
+        # Crear una máscara binaria vacía
+        binary_mask = np.zeros((h, w), dtype=np.uint8)
+        pts = np.array(mask_obj, dtype=np.int32)
+        cv2.fillPoly(binary_mask, [pts], 255)
+        
+        # Calcular el área de la máscara en píxeles (usando el momento cero)
+        M = cv2.moments(binary_mask)
+        obstacle_pixels = M["m00"]
+        
+        if obstacle_pixels > 0:
+            # 1. Calcular el porcentaje de la imagen completa
+            occupancy_pct = (obstacle_pixels / total_pixels) * 100
+            
+            # 2. Obtener el centroide para verificar si está directamente frente al dron
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
+            
+            is_in_danger_zone = (danger_zone_x1 <= cx <= danger_zone_x2) and (danger_zone_y1 <= cy <= danger_zone_y2)
+            
+            # Definir los umbrales de ocupación
+            WARNING_THRESHOLD = 5.0   # Ocupa el 5% de la pantalla
+            CRITICAL_THRESHOLD = 15.0 # Ocupa el 15% de la pantalla
+            
+            # Decidir el nivel de alerta
+            color = (0, 255, 255) # Amarillo por defecto
+            alert_text = ""
+            
+            if occupancy_pct >= CRITICAL_THRESHOLD and is_in_danger_zone:
+                color = (0, 0, 255) # Rojo para crítico
+                alert_text = " [¡PELIGRO DE COLISIÓN!]"
+                # Aquí activarías el bucle de control del dron para DETENER/FRENAR
+            elif occupancy_pct >= WARNING_THRESHOLD:
+                color = (0, 165, 255) # Naranja para advertencia
+                alert_text = " [Advertencia]"
+            
+            # Dibujar la superposición de texto en la ventana de OpenCV
+            text = f"{class_name}: {occupancy_pct:.1f}%{alert_text}"
+            
+            # Sombra
+            cv2.putText(annotated, text, (cx - 50, cy + 1), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3, cv2.LINE_AA)
+            # Texto
+            cv2.putText(annotated, text, (cx - 50, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
+```
+
+Por qué esto es sumamente eficaz para el vuelo de drones monoculares:
+1. **Seguridad invariable a la escala**: Ya sea que el obstáculo sea un árbol grande a lo lejos o un poste más pequeño de cerca, si bloquea una parte significativa del sensor de la cámara directamente frente al dron, representa un peligro de colisión.
+2. **Conexión de control directo**: Si cualquier clase objetivo (p. ej., tree, building, person) tiene un occupancy_pct > 15.0 y su centroide está en la región central del fotograma, el código de tu piloto automático o   modelo puede anular inmediatamente los comandos de velocidad: 
+```python
+# Comando de frenado de emergencia 
+client.execute_velocity(vx=0.0, vy=0.0, vz=0.0)
+```
+
+3. **Sin dependencia de sensores adicionales**: Funciona con cámaras RGB estándar de bajo costo sin necesidad de usar sensores mas caros como LiDAR activos o cámaras con sensor de profundidad.
+
 ## 2026-0713
 
 ### Fine tunning de YOLOv8n-seg y optimización de la visualización de máscaras.
@@ -240,7 +375,7 @@ Si se nota retraso (lag) en el stream, se pueden aplicar los siguientes ajustes:
 
 * Generación de script `capture_video.py` para captura manual de fotogramas con cámara del drone para verificar cuál es la entrada de YOLO.
 * Prueba de correcta ejecución del loop de control en ambiente mínimo (`TownSim`)  con el drone Airsim en un entorno con obstáculos en un ambito urbano. Control del dronen en manual
-* Subido video ["AirSim Plugin on UE 5.5 video capture and YOLO in real time"](https://youtu.be/BkV4tYFSrrs) con prueba de captura de video y segmentación con YOLO en tiempo real.
+* Subido video ["AirSim Plugin on UE 5.5 video capture and YOLO in real time"](https://youtu.be/BkV4tYFSrrs) con prueba de captura de video y detección de objetos con YOLO en tiempo real. 
 
 <img src="informe/2026-0706 Captura Video YOLO.png"/>
 
