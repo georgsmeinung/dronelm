@@ -1,8 +1,8 @@
 # 2026-0714
 
-### Porqué La segmentación semantica de imágenes es más rápida que la detección de objetos
+## Porqué La segmentación semantica de imágenes es más rápida que la detección de objetos
 
-#### Segmentación Semántica vs. Segmentación de Instancias
+### Segmentación Semántica vs. Segmentación de Instancias
 Cuando se compara la segmentación semántica con YOLO de detección o YOLO de segmentación (YOLOv8-seg), estamos h ablando de Segmentación de Instancias. Este tipo de segmentación tiene que identificar objetos individuales (sabe que hay "Árbol 1", "Árbol 2" y "Árbol 3") y dibujar una máscara para cada uno. Para lograr esto, el modelo primero tiene que detectar el objeto con una caja y luego generar la máscara. Por eso es más pesado y lento que la detección simple.
 Sin embargo, lo que tú mencionas es la Segmentación Semántica (modelos como BiSeNet, Fast-SCNN o DDRNet).
 En la segmentación semántica:
@@ -11,7 +11,7 @@ En la segmentación semántica:
 * Arquitecturas ultra-optimizadas: Al saltarse el paso de "detectar objetos individuales", existen redes de segmentación semántica diseñadas específicamente para hardware embebido que son increíblemente pequeñas (de 1 a 3 MB) y corren a más de 100 FPS.
 Si se usa segmentación semántica pura (yolo26n-sem en vez de yolo26-seg), efectivamente se pueden conseguir modelos mucho más rápidos, ligeros y eficientes que un detector de objetos. Por eso se eligió este modelo para "Visual Looming (aproximación visual) o Detección de Obstáculos Basada en la Ocupación de la Imagen"
 
-#### El problemad de la detección de objetos con YOLO: Objetos parciales y cortados
+### El problemad de la detección de objetos con YOLO: Objetos parciales y cortados
 Los detectores de cajas de objetos sufren muchísimo con objetos parciales, ocluidos o cortados por el borde de la pantalla.
 ¿Por qué pasa esto en la detección de objetos?
 Para que un detector como YOLO dibuje una caja delimitadora, la red neuronal necesita predecir con alta confianza el centro del objeto, su ancho y su alto (x, y, w, h).
@@ -23,7 +23,7 @@ La segmentación (tanto semántica como de instancias) clasifica la imagen píxe
 * Si esos píxeles tienen textura de hojas o corteza, el modelo los clasificará como "obstáculo" y los pintará.
 * El algoritmo de Visual Looming (ocupación de imagen) sumará de inmediato esos píxeles en el área de peligro y detendrá el dron, incluso si el objeto está incompleto o pegado al borde.
 
-#### Comparativa para Navegación de Drones
+### Comparativa para Navegación de Drones
 
 <img src="informe/2026-0714 Segmentantion vs Detection.png"/>
 
@@ -37,7 +37,7 @@ La segmentación (tanto semántica como de instancias) clasifica la imagen píxe
 Si el objetivo es la evitación de obstáculos en un dron, es mejor usar segmentación semántica.
 Para el caso de uso de detección de obstáculos en un dron, un modelo de segmentación semántica ligera dará lo mejor de ambos mundos: una velocidad y ligereza que superan a la detección de objetos de YOLO, combinada con la capacidad crítica de detectar cualquier obstáculo parcial o rama delgada que se cruce en el camino del dron.
 
-### Visual Looming (aproximación visual) o Detección de Obstáculos Basada en la Ocupación de la Imagen
+## Visual Looming (aproximación visual) o Detección de Obstáculos Basada en la Ocupación de la Imagen
 
 Este es un enfoque muy común, robusto y elegante en la navegación autónoma de drones llamado Visual Looming (aproximación visual) o Detección de Obstáculos Basada en la Ocupación de la Imagen.
 En lugar de estimar la profundidad en metros (lo que requiere una calibración compleja y es propenso a la ambigüedad de escala), se utiliza la relación entre el área del obstáculo segmentado y el área total del fotograma. A medida que el drone se acerca a un objeto, su proyección en el sensor de la cámara crece de forma exponencial.
@@ -133,13 +133,13 @@ client.execute_velocity(vx=0.0, vy=0.0, vz=0.0)
 
 3. **Sin dependencia de sensores adicionales**: Funciona con cámaras RGB estándar de bajo costo sin necesidad de usar sensores mas caros como LiDAR activos o cámaras con sensor de profundidad.
 
-### Falsos positivos con la segmentación semántica de YOLO
+## Falsos positivos con la segmentación semántica de YOLO
 
 En la literatura científica, este concepto se conoce como la **Teoría Tau ($\tau$)** o **Detección del Tiempo de Colisión (TTC - Time-to-Collision)** basada en la tasa de expansión divergente: **un objeto lejano y enorme (como una montaña o el suelo a gran altura) tiene una tasa de expansión visual casi nula, mientras que un objeto cercano y peligroso se expande exponencialmente a medida que nos acercamos.**
 
 <img src="informe/2026-0714 False Collition Detection Avoidance.png"/>
 
-#### La Matemática del Tiempo de Colisión ($TTC$)
+### La Matemática del Tiempo de Colisión ($TTC$)
 
 Si se aproxima a un obstáculo a una velocidad constante, el área de su proyección en la cámara ($A$) crece de forma no lineal. La relación entre el área actual y su velocidad de crecimiento nos da directamente el **Tiempo de Colisión** sin necesidad de conocer la distancia real ni la velocidad del dron.
 
@@ -229,7 +229,7 @@ def process_frame(frame, results, h, w):
 
 ```
 
-#### Ventajas de este enfoque temporal:
+### Ventajas de este enfoque temporal:
 
 1. **Inmunidad a falsos positivos aéreos:** Volar alto sobre bosques, lagos o ciudades generará un área de ocupación alta pero constante ($\Delta A \approx 0$). El algoritmo ignorará estas lecturas al calcular un $TTC$ seguro.
 2. **Independiente de la velocidad del dron:** Si el dron vuela rápido, el $TTC$ se reduce velozmente; si vuela lento, el $TTC$ se mantiene alto. La alarma se adapta dinámicamente a tu velocidad de avance.
@@ -258,17 +258,17 @@ Esto **considera implícitamente todos los fotogramas anteriores**, pero con **p
 
 **El 95% de la señal viene de los últimos ~6 fotogramas.** A 30-60 fps, eso son ~100-200ms de historia. La ventana efectiva es muy corta, lo cual lo hace reactivo a cambios rápidos.
 
-#### ¿Es promedio o fotograma a fotograma?
+### ¿Es promedio o fotograma a fotograma?
 
 Es un **híbrido**:
 1. El **delta** (`occ_pct - prev_occ`) se calcula **fotograma a fotograma** (solo almacena la ocupación del frame anterior en `prev_class_roi_occupancy`)
 2. Pero ese delta se **suaviza con EMA**, lo que actúa como un promedio ponderado que da más peso al presente
 
-Si fuera `EMA_ALPHA = 1.0` sería puramente fotograma-a-fotograma (sin suavizado, ruidoso). Si fuera `EMA_ALPHA = 0.1` sería casi un promedio de muchos frames (lento, poco reactivo). Con `0.4` es un buen balance: **responde rápido (~3 frames para registrar una amenaza real) pero filtra el ruido de un solo frame**.
+Si fuera `EMA_ALPHA = 1.0` sería puramente fotograma-a-fotograma (sin suavizado, ruido). Si fuera `EMA_ALPHA = 0.1` sería casi un promedio de muchos frames (lento, poco reactivo). Con `0.4` es un buen balance: **responde rápido (~3 frames para registrar una amenaza real) pero filtra el ruido de un solo frame**.
 
 ## Reconsideración de la trayectoria con ORB-SLAM
 
-En el mundo de los drones y la robótica terrestre, lo que se necesita es **ORB-SLAM** (un algoritmo famosísimo de SLAM visual que utiliza características llamadas ORB). Separar la **reacción rápida** de la **deliberación inteligente** usando el SLAM como puente es el camino correcto. Así es como funciona esta arquitectura en la práctica.
+Por último, al detectar el peligro queda involucrar la modelo SLM a bordo del dron para que pueda tomar decisiones sobre la trayectoria a seguir. En el mundo de los drones y la robótica terrestre, lo que se necesita es **ORB-SLAM** (un algoritmo famosísimo de SLAM visual que utiliza características llamadas ORB). Así, se separa la **reacción rápida** de la **deliberación inteligente** usando el SLAM como puente es el camino correcto. Así es como funciona esta arquitectura en la práctica.
 
 <img src="informe/2026-0714 ORB-SLAM.png"/>
 
