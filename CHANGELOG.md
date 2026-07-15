@@ -266,6 +266,46 @@ Es un **híbrido**:
 
 Si fuera `EMA_ALPHA = 1.0` sería puramente fotograma-a-fotograma (sin suavizado, ruidoso). Si fuera `EMA_ALPHA = 0.1` sería casi un promedio de muchos frames (lento, poco reactivo). Con `0.4` es un buen balance: **responde rápido (~3 frames para registrar una amenaza real) pero filtra el ruido de un solo frame**.
 
+## Reconsideración de la trayectoria con ORB-SLAM
+
+En el mundo de los drones y la robótica terrestre, lo que se necesita es **ORB-SLAM** (un algoritmo famosísimo de SLAM visual que utiliza características llamadas ORB). Separar la **reacción rápida** de la **deliberación inteligente** usando el SLAM como puente es el camino correcto. Así es como funciona esta arquitectura en la práctica.
+
+<img src="informe/2026-0714 ORB-SLAM.png"/>
+
+### La Arquitectura "Reflejo-Deliberación"
+
+En lugar de que un único modelo intente controlarlo todo (lo cual sería lento y consumiría demasiada batería), se divide el sistema de navegación del drone en dos niveles:
+
+#### 1. El Sistema Reflejo (Bajo Nivel / Grafo de Control)
+
+* **Qué hace:** Corre en tiempo real a alta frecuencia (ej. 50Hz - 100Hz).
+* **Herramientas:** El algoritmo de **TTC** (Tiempo de Colisión) visto antes, o sensores de proximidad simples.
+* **Acción:** Si detecta un peligro inminente, el grafo de control interrumpe inmediatamente el vuelo y **detiene el dron en seco** (vuelo estacionario/hover). Es el equivalente al reflejo de cerrar los ojos cuando algo vuela hacia los ojos.
+
+#### 2. El Sistema Deliberativo (Nivel Alto / El "Cerebro")
+
+Una vez que el drone está detenido y seguro, el grafo de control "despierta" a un modelo de toma de decisiones (que en este caso es un [SLM] probablemente complementado con un Modelo de Lenguaje Visual [VLM] para interpretar la situación ) y le entrega el **contexto del ORB-SLAM**:
+
+* **Nube de puntos 3D:** El SLAM le dice al modelo exactamente dónde están los límites físicos del obstáculo en el espacio tridimensional, no solo en una imagen plana de 2D.
+* **Historial de trayectoria (Odometría):** El modelo sabe con precisión milimétrica de dónde venía el dron, lo que evita que intente retroceder hacia un lugar peligroso por el que acaba de pasar.
+* **Espacio libre (Free Space):** El SLAM puede proporcionar una estimación de qué zonas del entorno *no* tienen obstáculos, permitiendo al modelo calcular una ruta de escape viable.
+
+### ¿Cómo se le pasa esta información al modelo?
+
+Para que el modelo decida el siguiente comando, no le pasas la nube de puntos gigante y cruda del SLAM (eso lo abrumaría). En su lugar, traduces los datos del SLAM en **información de contexto estructurada**:
+
+> **Ejemplo de contexto enviado al modelo:**
+> * *Estado:* Detenido por TTC (Obstáculo al frente).
+> * *Distancia al obstáculo:* 1.1 metros.
+> * *Mapa de ocupación local:* Obstáculo bloqueando el sector delantero ($[-30^\circ, +30^\circ]$). Sector izquierdo ($[-90^\circ, -30^\circ]$) libre de obstáculos hasta 5 metros. Sector derecho bloqueado por una pared detectada por SLAM.
+> * *Meta del viaje:* Norte ($0^\circ$).
+> 
+> 
+
+Con este contexto digerido, el modelo puede tomar una decisión lógica en milisegundos: *"Girar 45 grados a la izquierda, avanzar 2 metros para rodear el obstáculo, y reanudar la ruta hacia el Norte"*.
+
+Esta combinación evita el procesamiento continuo de algoritmos pesados de IA durante el vuelo normal, activándolos únicamente cuando el dron se topa con una situación compleja que el grafo de control básico no sabe resolver.
+
 # 2026-0713
 
 ### Fine tunning de YOLOv8n-seg y optimización de la visualización de máscaras.

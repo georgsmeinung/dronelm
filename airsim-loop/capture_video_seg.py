@@ -48,16 +48,22 @@ def init_yolo(model_path: str = None) -> "YOLO":
 
     Args:
         model_path: Optional path to a custom YOLOv8 model. If ``None`` the
-            default pretrained "yolov8n-seg.pt" (nano‑segment) is loaded.
+            default pretrained "yolo26n-sem.pt" is loaded.
     """
     if model_path and os.path.isfile(model_path):
         print(f"[+] Loading YOLOv8 model from: {model_path}")
         return YOLO(model_path)
     else:
-        # default_model = "weights/yolov8n-seg.pt"
-        default_model = "weights/yolo26n-sem.pt" # Low latency semantic segmentation model, not a detect one
+        # Check if the optimized TensorRT engine exists to avoid exporting every run
+        default_engine = "weights/yolo26n-sem.engine"
+        if os.path.isfile(default_engine):
+            print(f"[+] Loading default TensorRT engine: {default_engine}")
+            return YOLO(default_engine)
+            
+        default_model = "weights/yolo26n-sem.pt"
         print(f"[+] Loading default YOLO segmentation model: {default_model}")
         return YOLO(default_model)
+
 
 
 def init_video_writer(frame_width: int, frame_height: int, output_path: str):
@@ -126,6 +132,20 @@ def main():
 
     # Initialise YOLO model
     yolo_model = init_yolo(model_path)
+    
+    # Export to TensorRT only if a PyTorch model was loaded and no corresponding engine exists yet
+    model_name = getattr(yolo_model, "ckpt_path", "") or ""
+    if isinstance(model_name, str) and model_name.endswith(".pt"):
+        engine_path = model_name.replace(".pt", ".engine")
+        if not os.path.isfile(engine_path):
+            print(f"[+] Exporting model to TensorRT engine: {engine_path} (this may take a few minutes...)")
+            yolo_model.export(format='engine', half=True, imgsz=640, device=0)
+        
+        # Re-initialize the model to use the newly exported engine
+        if os.path.isfile(engine_path):
+            print(f"[+] Loading optimized TensorRT engine: {engine_path}")
+            yolo_model = YOLO(engine_path)
+
 
     # Initialise AirSim client
     client = AirSimClient()
@@ -156,9 +176,11 @@ def main():
 
             results = yolo_model(
                 frame_bgr,
-                conf=0.1,
-                iou=0.9,
-                max_det=400
+                device=0,
+                imgsz=640,      # Resize internally to standard 640px
+                conf=0.25,      # Filter low-confidence noise boxes early
+                iou=0.45,       # Standard NMS threshold to suppress duplicates
+                max_det=100     # Cap the maximum detections to process
             )
 
             annotated = frame_bgr.copy()
