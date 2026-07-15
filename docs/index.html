@@ -75,7 +75,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Actividad: 2026-07-06</span>
+          <span class="badge-pill badge-teal">Actividad: 2026-07-14</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -128,13 +128,10 @@
           telemetría y percepción óptica:
         </p>
         <ul>
-          <li><strong>Percepción Visual:</strong> Un modelo de red convolucional ligera (<strong>YOLOv8n</strong>)
-            extrae en tiempo real los fotogramas del feed de video del dron, localizando obstáculos.</li>
-          <li><strong>Traductor Pixeles a Palabras:</strong> Transforma las bounding boxes en resúmenes lingüísticos
-            textuales (sector del obstáculo: Izquierda/Centro/Derecha, tamaño y proximidad estimada).</li>
-          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si la escena central está libre de
-            peligros, dirige el flujo a una regla reactiva directa de bajo costo computacional. Si se intercepta un
-            obstáculo, delega la evasión al <strong>SLM Local</strong>.</li>
+          <li><strong>Percepción Visual:</strong> Un modelo de red convolucional (<strong>YOLOv8 / YOLO26</strong>)
+            extrae en tiempo real los fotogramas del feed de video del dron, soportando segmentación semántica/instancias y detección tradicional.</li>
+          <li><strong>Traductor Pixeles a Palabras y Análisis de Colisiones:</strong> Transforma los bboxes y máscaras en resúmenes lingüísticos y realiza el análisis temporal de tasa de crecimiento (looming). Registra la velocidad de cambio de ocupación en la Región de Interés (ROI) Central mediante suavizado por Media Móvil Exponencial (EMA con `EMA_ALPHA = 0.4`).</li>
+          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si el análisis de colisión por looming detecta peligro (tasa de crecimiento por encima del umbral por clase), o si se encuentra un obstáculo central tradicional cercano, delega inmediatamente la evasión al <strong>SLM Local</strong>. Si el camino está despejado, dirige el flujo a una regla reactiva rápida.</li>
           <li><strong>Cerebro Deliberativo (SLM):</strong> El modelo local procesa el estado textual y determina
             maniobras de evasión utilizando <strong>decodificación restringida (JSON Schema)</strong> para evitar
             desviaciones estructurales.</li>
@@ -222,8 +219,8 @@
               </tr>
               <tr>
                 <td><strong>Visión Artificial</strong></td>
-                <td>YOLOv8-nano (Ultralytics)</td>
-                <td>Detección de objetos 2D en tiempo real (RGB) para evasión rápida.</td>
+                <td>YOLOv8 / YOLO26 (Ultralytics)</td>
+                <td>Detección, segmentación semántica/instancias y análisis temporal de colisión por looming.</td>
               </tr>
               <tr>
                 <td><strong>Orquestación</strong></td>
@@ -347,8 +344,27 @@
         <h2>Historial de Cambios Destacados</h2>
         <p>Evolución reciente del repositorio y hitos de desarrollo alcanzados:</p>
 
-        <!-- Item 2026-07-06 -->
+        <!-- Item 2026-07-14 -->
         <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-07-14
+              <span class="tag">Colisión</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Algoritmo de Colisión Temporal por Tasa de Crecimiento (Looming)</h4>
+              <p>Se rediseñó la lógica de evasión reemplazando los umbrales espaciales estáticos por un análisis de looming temporal en el ROI central (cambio de ocupación frame a frame ponderado por EMA, con <code>EMA_ALPHA = 0.4</code>). Esto previene falsos positivos con montañas lejanas o edificios a gran altitud y asegura la detección reactiva rápida de postes, semáforos o personas aproximándose.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0714 False Collition Detection Avoidance.png"
+                  alt="Esquema del detector de colisiones por looming temporal" loading="lazy" />
+                <figcaption>Esquema conceptual del análisis de looming y filtrado de colisiones a gran altitud.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-07-06 -->
           <div class="timeline-item">
             <div class="timeline-badge"></div>
             <div class="timeline-date">

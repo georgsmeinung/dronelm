@@ -53,7 +53,7 @@ All commands are case insensitive:
 ## Installation
 
 ```bash
-pip install cosys airsim pynput
+pip install cosys-airsim pynput python-dotenv
 ```
 
 **Library Notes:**

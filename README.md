@@ -55,7 +55,7 @@ La simulación se ejecuta sobre **Unreal Engine 5.5** utilizando el plugin **Cos
 El sistema implementa una arquitectura desacoplada de dos cerebros:
 
 1. **Lazo de Planificación (Ground-Station - `airsim-plan`):** Se ejecuta en tierra antes del despegue. Recibe instrucciones en lenguaje natural y, a través de un LLM local, genera un manifiesto de misión estructurado ([`MissionManifest.json`](./airsim-plan/examples/perimeter_north_01.json)) con waypoints, reglas de empeño y prompts tácticos.
-2. **Lazo de Vuelo Táctico (In-Flight - `airsim-loop`):** Es un bucle continuo de baja latencia basado en **LangGraph**. Procesa frames de cámara RGB con **YOLOv8n** para detectar obstáculos y mapear su distancia/posición. Si el camino está despejado, se navega mediante una regla reactiva rápida. Si detecta un obstáculo inminente, el *Gatekeeper* deriva el control al SLM local para decidir maniobras de evasión utilizando decodificación restringida o esquemas JSON estructurados.
+2. **Lazo de Vuelo Táctico (In-Flight - `airsim-loop`):** Es un bucle continuo de baja latencia basado en **LangGraph**. Procesa frames de cámara RGB utilizando YOLO (soportando segmentación semántica/instancias y cajas tradicionales) para realizar un **análisis temporal de tasa de crecimiento (looming)** en el ROI Central. Si el camino está despejado (tasa de cambio nula o muy baja), se navega mediante una regla reactiva rápida. Si la tasa de crecimiento de un obstáculo supera el umbral temporal por clase (lo que indica aproximación/peligro inminente), el *Gatekeeper* deriva el control al SLM local para decidir maniobras de evasión utilizando esquemas JSON estructurados.
 
 Para ilustrar el flujo completo desde las instrucciones iniciales hasta la ejecución en el simulador:
 
@@ -77,7 +77,7 @@ El código del proyecto se organiza en los siguientes componentes:
 *   **[`airsim-plan`](./airsim-plan):** Planificador de misiones en tierra. Contiene el CLI `airsim-plan` para compilar, validar y ejecutar misiones a partir de lenguaje natural.
 *   **[`airsim-loop`](./airsim-loop):** Lazo de control autónomo del dron. Implementa el grafo de navegación (Percepción, Gatekeeper, SLM Táctico y ejecución motriz).
 *   **[`airsim-mcp`](./airsim-mcp):** Servidor de Model Context Protocol (MCP) que expone herramientas de telemetría y control de AirSim para interactuar con agentes autónomos externos.
-*   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`simple_control.py` y `advanced_control.py`) para volar el dron y configurar segmentación en AirSim.
+*   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`kc_control.py`) para volar el dron y configurar segmentación en AirSim.
 *   **[`airsim-poc`](./airsim-poc):** Pruebas de concepto iniciales de conexión y telemetría rápida (`my_hello_drone.py`).
 *   **[`callibration_flight`](./callibration_flight):** Scripts de automatización de trayectorias (`airsim_commander.py`, `airsim_iterator.py`) y notebooks de análisis estadístico (`telemetry_analysis_*.ipynb`) que comparan la variabilidad física y de actitud (pitch, roll, yaw y velocidad) de vuelos simulados vs. vuelos de drones reales (DJI) para la calibración del simulador.
 *   **[`local-llm-eval`](./local-llm-eval):** Suite de evaluación y benchmarking para comparar la velocidad de generación (tokens/segundo), tiempos de carga y precisión estructural de diferentes SLMs locales (Gemma 2, Llama 3.2, Qwen 2.5, Liquid LFM, Phi) mediante `promptfoo` y `ollama-benchmark`.
@@ -89,7 +89,7 @@ El código del proyecto se organiza en los siguientes componentes:
 
 *   **Simulación:** Unreal Engine 5.5 + Cosys-AirSim.
 *   **Lenguajes y Entorno:** Python 3.10+, Conda.
-*   **Modelos de Visión:** YOLOv8n (Ultralytics) para detección de obstáculos en tiempo real.
+*   **Modelos de Visión:** YOLOv8 / YOLO26 (Ultralytics) para detección de obstáculos, segmentación semántica o de instancias en tiempo real.
 *   **Modelos de Lenguaje (SLM):** Ollama / LM Studio (API local compatible con OpenAI) para inferencia de modelos locales (`llama3.2`, `gemma2:2b`, `qwen3.5:4b`, `phi-3/phi-4`, `Liquid LFM`).
 *   **Control y Orquestación:** LangGraph (para la estructura del lazo de vuelo) y Pydantic (para validación de esquemas).
 *   **Evaluación:** Promptfoo (para prompts y parsing JSON) y Jupyter Notebooks (análisis estadístico de telemetría con SciPy/Matplotlib).
