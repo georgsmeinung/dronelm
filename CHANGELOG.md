@@ -125,7 +125,7 @@ if hasattr(results[0], 'masks') and results[0].masks is not None:
 
 Por qué esto es sumamente eficaz para el vuelo de drones monoculares:
 1. **Seguridad invariable a la escala**: Ya sea que el obstáculo sea un árbol grande a lo lejos o un poste más pequeño de cerca, si bloquea una parte significativa del sensor de la cámara directamente frente al dron, representa un peligro de colisión.
-2. **Conexión de control directo**: Si cualquier clase objetivo (p. ej., tree, building, person) tiene un occupancy_pct > 15.0 y su centroide está en la región central del fotograma, el código de tu piloto automático o   modelo puede anular inmediatamente los comandos de velocidad: 
+2. **Conexión de control directo**: Si cualquier clase objetivo (p. ej., tree, building, person) tiene un occupancy_pct > 15.0 y su centroide está en la región central del fotograma, el código de tu piloto automático o modelo puede anular inmediatamente los comandos de velocidad: 
 ```python
 # Comando de frenado de emergencia 
 client.execute_velocity(vx=0.0, vy=0.0, vz=0.0)
@@ -399,12 +399,8 @@ annotated = results[0].plot(
 ---
 
 * Buscando modelos YOLO mas optimizados para la detección de objetos en tiempo real en entornos urbanos.
-* Probando los disponbilizados por la [ciudad de Montreal](https://github.com/VilledeMontreal/urban-detection/tree/master), concretamente [yolov5s.pt](https://github.com/VilledeMontreal/urban-detection/tree/master/yolov5)
-
-<img src ="https://user-images.githubusercontent.com/26833433/90187293-6773ba00-dd6e-11ea-8f90-cd94afc0427f.png"/>
-
-* Iniciada gestion de cuenta en [Cityscapes Datasets](https://www.cityscapes-dataset.com/) para la descarga de un modelo preentrenado más genérico.
-* Iniciado calculo de distancia en captura segmentada por modelo semántico.
+* Iniciada gestion de cuenta en [Cityscapes Datasets](https://www.cityscapes-dataset.com/) para la descarga de un modelo preentrenado más genérico en detecciónm de objetos urbanos.
+* Iniciado calculo de distancia en captura segmentada con modelo de clasificación semántico.
 
 # 2026-0711
 
