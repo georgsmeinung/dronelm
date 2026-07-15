@@ -1,5 +1,5 @@
 """Modulo de percepcion: detector (YOLO) + traductor pixeles-a-palabras."""
-from .detector import Detection, YoloDetector
+from .detector import Detection, CollisionResult, YoloDetector
 from .translator import (
     Obstacle,
     obstacles_to_dicts,
@@ -9,6 +9,7 @@ from .translator import (
 
 __all__ = [
     "Detection",
+    "CollisionResult",
     "Obstacle",
     "YoloDetector",
     "obstacles_to_dicts",

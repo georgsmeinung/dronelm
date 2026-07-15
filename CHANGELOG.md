@@ -1,4 +1,4 @@
-## 2026-0714
+# 2026-0714
 
 ### Porqué La segmentación semantica de imágenes es más rápida que la detección de objetos
 
@@ -133,7 +133,140 @@ client.execute_velocity(vx=0.0, vy=0.0, vz=0.0)
 
 3. **Sin dependencia de sensores adicionales**: Funciona con cámaras RGB estándar de bajo costo sin necesidad de usar sensores mas caros como LiDAR activos o cámaras con sensor de profundidad.
 
-## 2026-0713
+### Falsos positivos con la segmentación semántica de YOLO
+
+En la literatura científica, este concepto se conoce como la **Teoría Tau ($\tau$)** o **Detección del Tiempo de Colisión (TTC - Time-to-Collision)** basada en la tasa de expansión divergente: **un objeto lejano y enorme (como una montaña o el suelo a gran altura) tiene una tasa de expansión visual casi nula, mientras que un objeto cercano y peligroso se expande exponencialmente a medida que nos acercamos.**
+
+<img src="informe/2026-0714 False Collition Detection Avoidance.png"/>
+
+#### La Matemática del Tiempo de Colisión ($TTC$)
+
+Si se aproxima a un obstáculo a una velocidad constante, el área de su proyección en la cámara ($A$) crece de forma no lineal. La relación entre el área actual y su velocidad de crecimiento nos da directamente el **Tiempo de Colisión** sin necesidad de conocer la distancia real ni la velocidad del dron.
+
+La **Tasa de Expansión Relativa (RER)** se define como:
+
+$$\text{RER} = \frac{1}{A} \frac{dA}{dt}$$
+
+A partir de aquí, el Tiempo de Colisión ($TTC$) se puede aproximar mediante la siguiente fórmula:
+
+$$TTC \approx \frac{2 \cdot A}{\frac{dA}{dt}}$$
+
+* **Caso A (Montaña lejana/Suelo alto):** El área $A$ es grande (ej. 20% del ROI), pero la tasa de cambio $\frac{dA}{dt}$ es prácticamente $0$. El $TTC$ tiende a infinito ($\infty$). **No hay peligro.**
+* **Caso B (Rama cercana):** El área $A$ empieza siendo pequeña pero su tasa de cambio $\frac{dA}{dt}$ se dispara de golpe. El $TTC$ cae rápidamente a valores como $1.5\text{ segundos}$. **¡Frenado de emergencia inmediato!**
+
+### Cómo implementarlo en el código (Control Temporal)
+
+Para calcular esto en el bucle de procesamiento, es necesario guardar el estado del fotograma anterior para calcular la diferencia de área ($\Delta A$) y la diferencia de tiempo ($\Delta t$).
+
+Para evitar la complejidad de tener que "rastrear" individualmente cada objeto (lo cual requeriría un algoritmo de tracking como ByteTrack), una solución muy robusta y elegante es **medir la ocupación global sumada dentro del ROI central (la Zona de Peligro).**
+
+A continuación se muestra un fragmento de código que ilustra cómo estructurar esta lógica en Python:
+
+```python
+import time
+
+# --- Variables globales para mantener la memoria entre fotogramas ---
+prev_roi_area = 0.0
+prev_time = None
+
+# Umbral de tiempo al impacto para disparar la alarma (en segundos)
+TTC_CRITICAL_THRESHOLD = 1.8  # Si el choque es en menos de 1.8 segundos, frena.
+
+# --- Dentro de tu bucle de captura de video ---
+def process_frame(frame, results, h, w):
+    global prev_roi_area, prev_time
+    
+    current_time = time.time()
+    
+    # 1. Definir la Zona de Peligro central (ROI)
+    roi_x1, roi_x2 = int(w * 0.3), int(w * 0.7)
+    roi_y1, roi_y2 = int(h * 0.3), int(h * 0.7)
+    roi_total_pixels = (roi_x2 - roi_x1) * (roi_y2 - roi_y1)
+    
+    # Creamos una máscara vacía para acumular todos los obstáculos detectados DENTRO del ROI
+    accumulated_roi_mask = np.zeros((h, w), dtype=np.uint8)
+    
+    # 2. Acumular máscaras de segmentación en el frame
+    if hasattr(results[0], 'masks') and results[0].masks is not None:
+        for mask_obj in results[0].masks.xy:
+            pts = np.array(mask_obj, dtype=np.int32)
+            cv2.fillPoly(accumulated_roi_mask, [pts], 255)
+            
+    # Cortamos la máscara acumulada para quedarnos solo con el ROI central
+    roi_mask = accumulated_roi_mask[roi_y1:roi_y2, roi_x1:roi_x2]
+    current_roi_area = np.sum(roi_mask == 255) # Número de píxeles ocupados en el ROI
+    
+    # 3. Calcular la dinámica temporal (TTC)
+    if prev_time is not None and prev_roi_area > 0:
+        dt = current_time - prev_time
+        
+        if dt > 0:
+            # Diferencia de área (píxeles ganados/perdidos)
+            delta_area = current_roi_area - prev_roi_area
+            
+            # Solo nos importa si el obstáculo se está expandiendo (acercando)
+            if delta_area > 0:
+                da_dt = delta_area / dt  # Velocidad de crecimiento (píxeles/segundo)
+                
+                # Calcular el Tiempo de Colisión (TTC)
+                ttc = (2.0 * current_roi_area) / da_dt
+                
+                print(f"Área actual ROI: {current_roi_area}px | Crecimiento: {da_dt:.1f}px/s | TTC: {ttc:.2f}s")
+                
+                # CONDICIÓN DE COLISIÓN DINÁMICA
+                # Solo disparamos si el área es mínimamente significativa Y el impacto es inminente
+                min_area_pct = (current_roi_area / roi_total_pixels) * 100
+                if ttc < TTC_CRITICAL_THRESHOLD and min_area_pct > 3.0:
+                    print("¡¡ALERTA DINÁMICA: EVITACIÓN DE COLISIÓN ACTIVADA!!")
+                    # client.execute_velocity(vx=0.0, vy=0.0, vz=0.0) # Frenar dron
+            else:
+                # El obstáculo se aleja o se mantiene estable (TTC infinito)
+                ttc = float('inf')
+                
+    # Guardar estado actual para el siguiente fotograma
+    prev_roi_area = current_roi_area
+    prev_time = current_time
+
+```
+
+#### Ventajas de este enfoque temporal:
+
+1. **Inmunidad a falsos positivos aéreos:** Volar alto sobre bosques, lagos o ciudades generará un área de ocupación alta pero constante ($\Delta A \approx 0$). El algoritmo ignorará estas lecturas al calcular un $TTC$ seguro.
+2. **Independiente de la velocidad del dron:** Si el dron vuela rápido, el $TTC$ se reduce velozmente; si vuela lento, el $TTC$ se mantiene alto. La alarma se adapta dinámicamente a tu velocidad de avance.
+3. **Sin necesidad de Tracking individual:** Al unificar todo en el "área total del ROI central", no hay que preocuparse si YOLO pierde el ID del objeto entre fotogramas. Lo único que importa es la masa de píxeles que bloquea el frente.
+
+### ¿Cuánta historia considera?
+
+El algoritmo usa un **EMA (Exponential Moving Average / Media Móvil Exponencial)** — no es ni fotograma-a-fotograma puro, ni un promedio de ventana fija. Así funciona:
+
+La fórmula es:
+
+```python
+smoothed = 0.4 * delta_actual + 0.6 * ema_anterior
+```
+
+Esto **considera implícitamente todos los fotogramas anteriores**, pero con **pesos exponencialmente decrecientes**:
+
+| Fotograma | Peso | Acumulado |
+|-----------|------|-----------|
+| Actual (t) | 40% | 40% |
+| t−1 | 24% | 64% |
+| t−2 | 14.4% | 78% |
+| t−3 | 8.6% | 87% |
+| t−4 | 5.2% | 92% |
+| t−5 | 3.1% | 95% |
+
+**El 95% de la señal viene de los últimos ~6 fotogramas.** A 30-60 fps, eso son ~100-200ms de historia. La ventana efectiva es muy corta, lo cual lo hace reactivo a cambios rápidos.
+
+#### ¿Es promedio o fotograma a fotograma?
+
+Es un **híbrido**:
+1. El **delta** (`occ_pct - prev_occ`) se calcula **fotograma a fotograma** (solo almacena la ocupación del frame anterior en `prev_class_roi_occupancy`)
+2. Pero ese delta se **suaviza con EMA**, lo que actúa como un promedio ponderado que da más peso al presente
+
+Si fuera `EMA_ALPHA = 1.0` sería puramente fotograma-a-fotograma (sin suavizado, ruidoso). Si fuera `EMA_ALPHA = 0.1` sería casi un promedio de muchos frames (lento, poco reactivo). Con `0.4` es un buen balance: **responde rápido (~3 frames para registrar una amenaza real) pero filtra el ruido de un solo frame**.
+
+# 2026-0713
 
 ### Fine tunning de YOLOv8n-seg y optimización de la visualización de máscaras.
 
@@ -273,17 +406,17 @@ annotated = results[0].plot(
 * Iniciada gestion de cuenta en [Cityscapes Datasets](https://www.cityscapes-dataset.com/) para la descarga de un modelo preentrenado más genérico.
 * Iniciado calculo de distancia en captura segmentada por modelo semántico.
 
-## 2026-0711
+# 2026-0711
 
 * Corrección de angulo de actitud del drone en base al valor del eje Z en el script de control manual cuando cambia la posición horizontal del drone.
 * Eliminación de código muerto en `airsim-kc/main.py`
 
-## 2026-0708
+# 2026-0708
 
 * Modelo de segmentación automática YOLO actualizado a **YOLO26**
 * Implementación de controlador de teclado más simple para experimentos de detección de objetos
 
-## 2026-0706
+# 2026-0706
 
 **YOLOv8** (You Only Look Once, versión 8), lanzado por Ultralytics, es uno de los modelos de visión artificial más avanzados, rápidos y eficientes de la actualidad.
 
@@ -379,7 +512,7 @@ Si se nota retraso (lag) en el stream, se pueden aplicar los siguientes ajustes:
 
 <img src="informe/2026-0706 Captura Video YOLO.png"/>
 
-## 2026-0705
+# 2026-0705
 
 ### Pruebas y ajustes al loop de control autónomo en `airsim-loop`
 
@@ -392,7 +525,7 @@ Si se nota retraso (lag) en el stream, se pueden aplicar los siguientes ajustes:
 * Prueba de correcta ejecución del loop de control en ambiente mínimo (`MiniSim`) sólo con el drone Airsim sin obstáculos ni meteorología. Falta forzar la toma decisión con una manifiesto de vuelo mínimo para verificar el cambio del YOLO al SLM Local. Todavía resta probar la generación asistiada y estructurada del manifiesto de misión.
 * Ajustes a `requirements.txt` con las dependencias necesarias
 
-## 2026-0702
+# 2026-0702
 
 ### Evaluando performance de SLM corriendo localmente con Ollama
 
@@ -478,7 +611,7 @@ promptfoo view
 <img src="informe/2026-0702 prompFoo Results.png"/>
 
 
-## 2026-0627
+# 2026-0627
 
 ### Regeneración de Datos Sintéticos
 
@@ -562,7 +695,7 @@ Además de LoRA para hacer obtener ordenes de navegación estructuras se conside
 * **Compilación simultánea:** La compilación inicial de la gramática requerida se realiza de manera concurrente con los cálculos de pre-llenado (pre-filling) del prompt inicial.  
 * **Optimizaciones avanzadas:** Los sistemas emplean técnicas como el almacenamiento en caché de gramáticas y la decodificación especulativa basada en restricciones para reducir los tiempos de respuesta. Además, marcos como *Guidance* alcanzan una eficiencia sobresaliente al ser capaces de acelerar y saltarse directamente ciertos pasos de generación cuando la gramática los hace predecibles.
 
-## 2026-0626
+# 2026-0626
 
 * Explorando usar [Ollama](https://ollama.com/) directamente en vez de [LMStudio](https://lmstudio.ai/)
 * LMStudio es muy útil explorar modelos, su rendimiento y configuración de inferencia óptima pero Ollama parece tener más eficiencia para construir soluciones. 
@@ -649,7 +782,7 @@ eval rate:            79.05 tokens/s
 * Con esta resolución se puede empezar la prueba del procesamiento YOLO y del SLM del loop del control del drone
 * También fue necesario ajustar el renderizado del escena a `Epic` para tener una imagen monocular utilizable.
 
-## 2026-0625
+# 2026-0625
 
 ### Diseñando solución de Nagevación con SLM y LangGraph para comenzar el prototipado
 <img src="informe/2026-0626 Infografia Drone Autónomo.png"/>
@@ -686,17 +819,17 @@ El operador de vuelo sigue este flujo para la planificación:
 
 
 
-## 2026-0624
+# 2026-0624
 
 * Revisión de documentación actualizad de [Cosys-AirSim](https://cosys-airsim.com/)
 * Revisión de [configuración de Cosys-Airsim](https://cosys-lab.github.io/Cosys-AirSim/settings/)
 * Revisión versiones en [repositorio GitHub de Cosys-Airsim](https://github.com/Cosys-Lab/Cosys-AirSim)
 
-## 2026-0623
+# 2026-0623
 
 * Revisión y ordenamiento de CHANGELOG.MD
 
-## 2026-0622
+# 2026-0622
 
 * Optimización de escena `Small_City_LVL` de ["City Sample"](https://www.fab.com/listings/4898e707-7855-404b-af0e-a505ee690e68), según las recomendaciones para ["lower spec systems"](https://dev.epicgames.com/documentation/unreal-engine/city-sample-project-unreal-engine-demonstration). Optmizado para visualización a distancia media con multitud y tráfico controlado con IA.
 * Subido video ["AirSim Plugin on UE 5.5 running along AI traffic and crowds"](https://www.youtube.com/watch?v=mAna9kyDVSc) a YouTube mostrando vuelo con trafico y multitudes controlados por IA.
@@ -711,7 +844,7 @@ El operador de vuelo sigue este flujo para la planificación:
     - Modo sin renderizado (NoDisplay Mode): Si no se necesita recolectar imágenes de cámaras visuales (No es el caso de la temática de esta tesis) y solo se requiere la telemetría, la física o los datos de sensores puros, se recomienda activar el "ViewMode": "NoDisplay" en el archivo de configuración. Esto anula por completo el esfuerzo de renderizado de la pantalla de Unreal Engine, multiplicando la velocidad del motor de física interno. 
     - Uso de binarios empaquetados (Packages): Cosys-Lab aconseja ejecutar la simulación a través del proyecto ya compilado y empaquetado (Standalone/Executable Binary) en lugar de correrlo directamente desde el Unreal Editor. La ejecución directa en el editor consume recursos masivos de memoria y procesamiento gráfico dedicados a la interfaz del software de desarrollo.
 
-## 2026-0621
+# 2026-0621
 
 * Análisis de [Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis_20260610.ipynb) con nueva telemetría sintética generada el 2026-060, generando reporte en notebook de Jupyter con estadísticas descriptivas y pruebas estadísiticas para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
 * La segregación por trayectorias, imitando la de los drones reales, ha permitido aislar correctamente el comportamiento inercial y de control en dos perfiles distintos. 
@@ -724,7 +857,7 @@ El operador de vuelo sigue este flujo para la planificación:
 * Además durante las fases **rectas**, la telemetría simulada en AirSim es idealizada (varianza de actitud cercana a 0), sin fuerzas externas de viento ni ruido de sensores.
 * El dron real, por otro lado, manifiesta una variabilidad permanente de $\pm 2^\circ - 3^\circ$ en roll y pitch incluso en tramos rectos estables, producto del viento real de la zona y de las correcciones del piloto automático.
 
-## 2026-0619
+# 2026-0619
 
 * Prueba de conexión desde server con servicio LLM a server con servicio AirSim y simulación
 * Comunicación física mediante cable cruzado Ethernet.
@@ -733,13 +866,13 @@ El operador de vuelo sigue este flujo para la planificación:
 
 <img src="informe/2026-0619 Control Airsim desde Host IA.png"/>
 
-## 2026-0612
+# 2026-0612
 
 * Depuración de configuración para tener el cliente de AirSime en un servidor separado
 * Prepararción de entorno para ARM64
 * Modificación de scripts para que tome la información del Host Airsim de un .env
 
-## 2026-0611
+# 2026-0611
 
 * Configuración de servidor de inferencia en Mac mini con LMStudio:
 
@@ -786,7 +919,7 @@ El operador de vuelo sigue este flujo para la planificación:
 
 
 
-## 2026-0610
+# 2026-0610
 
 * Generación de telemetría de los vuelos simulados con las mismas trayectorias que los reales, a la misma altura y la misma velocidad. 
 
@@ -826,36 +959,36 @@ reset
 <img src="informe/2026-0610 AirSim Plugin on UE 5_5 Calibration Flight with Drone 2 trajectory.png"/>
 
 
-## 2026-0605
+# 2026-0605
 
 * Reunión de Avance de Proyecto con Ezequiel para mostrar avances y analizar los resultados de las pruebas realizadas. Acuerdo para poner foco en los experimentos, el sandbox de Airsim con entornos dinámicos parece ser válido para los experimentos a realizar. Objetivo 1 de pipeline reproducible alcanzado, ahora poner foco en experimentos de los objetivo 2 y 3: procesamiento de datos se sensores en tiempo real para tomar decisiones de navegación con la intervención del un SLM; comparar este mecanismo de operación con el de un piloto automático tradicional basad en un FSM.
 * Para mejorar la comparación, acuerdo para generar los vuelos simulados con las mismas trayectorias que los reales. Es necesario ver cuál es la velocidad de los vuelos reales porque no está explícita.
 * Modificación del Notebool para [consolidar datos de telemtría de drones reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/actual_telemetry/consolidate_telemetry.ipynb) para calcular el cambio de velocidad en los tres ejes.
 * Análisis de [Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis_20260610.ipynb) modificando reporte en notebook de Jupyter para analizar los cambios de velocidad en los tres ejes.
 
-## 2026-0604
+# 2026-0604
 
 * Generado Notebook para [consolidar datos de telemtría de drones reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/actual_telemetry/consolidate_telemetry.ipynb)
 * Análisis de [Variabilidad de Telmetría de Vuelos Simulados vs Drones Reales](https://github.com/georgsmeinung/lm-drone/blob/main/callibration_flight/telemetry_analysis_20260413.ipynb) generando reporte en notebook de Jupyter con estadísticas descriptivas y pruebas estadísiticas para determinar si existen diferencias significativas entre las distribuciones de los datos de telemetría simulados y reales. 
 <img src="informe/2026-0413 Trayectorias Comparadas.png"/>
 
-## 2026-0522
+# 2026-0522
 
 * AirSim funcionando en [City Sample](https://fab.com/s/5e8f5eda64d8), ambiente desnamente urbano. Con peatones y tráfico gestionado por IA autónoma de Unreal Engine.
 * Airsim funcionando junto el modelo [liquid/lfm2.5-1.2b](https://lmstudio.ai/models/liquid/lfm2.5-1.2b) corriendo en lmstudio.
 <img src="informe/2026-0522 Drone en Entorno Urbano.png"/>
 
-## 2026-0521
+# 2026-0521
 
 * Generando nuevo ambiente de pruebas con [Downtown West Modular Pack](https://fab.com/s/be5ea9a2cae4) para ambiente semi urbano con más realismo y configurando Cosys Airsim en el nuevo proyecto. Pruebas OK.
 <img src="informe/2026-0521 Drone en Entorno Semi Urbano.png"/>
 * Generando nuevo ambiente de pruebas con [City Sample](https://fab.com/s/5e8f5eda64d8) para ambiente desnamente urbano. Configurando Small_City_LVL para no consumir toda la VRAM.
 
-## 2026-0509
+# 2026-0509
 
 * Generando nuevo ambiente de pruebas con [Dynamic City Creator](https://alidocs.dingtalk.com/i/nodes/jb9Y4gmKWrx9eo4dCqAq361yJGXn6lpz) y configurando Cosys Airsim en el nuevo proyecto. El Plugin de Airsim no detecta la red de colisiòn de la ciudad generada paramétricamente.
 
-## 2026-0508
+# 2026-0508
 
 * Probando modelos Edge en la misma PC que corre Unreal Engine con GPU RTX 5060. Considerando:
   - [LFM2.5‑VL-450M](https://huggingface.co/LiquidAI/LFM2.5-VL-450M): Modelo edge de LiquiAI que soporta visión para el procesado de imágenes del drone. No tiene sentido usar esto sólo, un preprocesamiento con YOLO puede ayudar con una segmentación previa con una CNN más rápida. Este modelo es para la navegación y decisiones en tiempo real.
@@ -865,7 +998,7 @@ reset
 
 * Prueba de concepto con **LiquidAI/LFM2.5-1.2B** de control de drone, todo en memoria.
 
-## 2026-0507
+# 2026-0507
 
 * Implementando servidor de inferencia en `Ubuntu 26.04 LTS`. Tareas implementar el servidor de inferencia ThinkPad T15 Gen 2 con **Kubuntu**.
 * Pruebas con [**google/gemma-4-E4B**](https://huggingface.co/google/gemma-4-E4B) no dan buen rendimiento: menos 7 TPS.
@@ -874,7 +1007,7 @@ reset
   - [LiquidAI/LFM2-1.2B-GGUF](https://huggingface.co/LiquidAI/LFM2-1.2B-GGUF): LFM2-1.2B-Tool: Un modelo de 1.200 millones de parámetros diseñado específicamente para la llamada de funciones (function calling) y flujos de trabajo de agentes. Según los reportes, compite en ejecución de tareas con modelos mucho más grandes, como Qwen-8B y Gemma-12B. Menos velocidad pero todavia aceptable: 45 TPS.
   
 
-## 2026-0506
+# 2026-0506
 
 * Reconsiderando un entorno distribuido entre dos plataformas para descargar trabajo de la RTX 5060 con VRAM limitada a 8GB, dejando la GPU dedicada a Unreal Engine 5.5 con Cosys Airsim.
 * Diseño de Infraestructura de Inferencia de IA Local distribuida con este despliegue
@@ -896,43 +1029,43 @@ reset
 - Framework: OpenClaw o CreoAI para ejecución de herramientas locales y Gemini CLI (MCP) como fallback híbrido para contextos extensos (128k+).
 - Control de Potencia: Configuración de perfil de energía performance en Linux para evitar el throttling térmico del SoC durante la inferencia sostenida.
 
-## 2026-0504
+# 2026-0504
 
 * Intento de desplegar entorno en Linux con Unreal Engine for Linux
 * El entorno es muy inestable
 
-## 2026-0415
+# 2026-0415
 
 * Generado una versión más avanzada de control por teclado
 * Cambiando modo de control por teclado a posición relativa a la orientación del drone
 
-## 2026-0413
+# 2026-0413
 
 * Reunión avance de Tesis con Ezequiel y determinación de próximos pasos.
 * Decargado datos de  telemetría real de drones cuadricópteros en https://zenodo.org/records/15912415
 * Creado script de iteración apara generar telemetría automatizada de al menos 100 vuelos simulados
 * Generados telemetria de 100 vuelos simulados
 
-## 2026-0409
+# 2026-0409
 
 * Generado script de vuelo de calibración y archivo de comandos
 * Ejecutados los 10 primeros vuelos de calibración. Cada vuelo individual tiene la telmetría registrada en un .CSV separado
 
-## 2026-0402
+# 2026-0402
 
 * En preparación para vuelos de calibración, agregada la condicion de reset para detener el `airsim_logger.py` (escritura de telemetría a archivos)
 
-## 2026-0331
+# 2026-0331
 
 * Los modelos Qwen no están interpretando bien los comandos y el Phi 4 no es eficiente. Probando con modelo: [**nvidia/nemotron-3-nano-4b**](https://lmstudio.ai/models/nvidia/nemotron-3-nano-4b)
 * Determinada plataforma para calibración: Drone con nvidia/nemotron-3-nano-4b. Funciona mejor sin el modo thinking, para no llenar la ventana de contexto muy rápidamente.
 
-## 2026-0313
+# 2026-0313
 
 * Probando una versión destilada de Claude 4.6 Opus para evitar consumir muchas VRAM: [**Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF**](https://huggingface.co/Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF) funciona ocupando sólo 1.69 GB con cuantización de 4 bits  y venta de contexto de 8192 tokens.
 * Conectado Claude Code con modelo local `Jackrong/Qwen3.5-2B-Claude-4.6-Opus-Reasoning-Distilled-GGUF` corriendo en LMStudio, pero tuve que subir la ventana de contexto a 32768 por la cantidad de system promps que envia Claude.
 
-## 2026-0312
+# 2026-0312
 
 Buscando opciones para mejorar la capacidad agéntica del despliegue sin consumir muchas VRAM. Dado que se está usando una RTX 5060 (8 GB) y se necesita mantener a Unreal Engine funcionando sin problemas, cada megabyte de VRAM cuenta. 
 [**Qwen2.5‑Coder‑1.5B‑Instruct**](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF) es una buena opción en este escenario. Con cuantización **Q4\_K\_M**, tiene una huella de aproximadamente **\~1.1 GB**.
@@ -961,13 +1094,13 @@ Si Unreal Engine empieza a dar lags en el render, revisar el uso de VRAM en la b
 
 * Modelo Qwen2.5‑Coder‑1.5B‑Instruct funcionando correctamente con MCP server de AirSim
 
-## 2026-0310
+# 2026-0310
 
 * Generada una versión funcional del Airsim Drone MCP server
 * Pruebas de conexión y funcionamiento del loop de eventos de Airsim y el MCP
 
 
-## 2026-0304
+# 2026-0304
 
 * Instalado https://huggingface.co/DevQuasar/HuggingFaceTB.SmolLM2-135M-Instruct-GGUF en lmstudio. 
 * `HuggingFaceTB/SmolLM2-135M` no es muy bueno interpretando comandos.
@@ -982,7 +1115,7 @@ Use Case: Code generation and completion
 ```
 * `Qwen/Qwen2.5-Coder-0.5B-Instruct` funciona bien para procesar comandos simples
 
-## 2026-0303
+# 2026-0303
 
 * Determinando mejor llm local con `llmfit`. 
 Seleccionado:
@@ -1000,7 +1133,7 @@ Runtime: llama.cpp (baseline est. ~1046.7 tok/s)
 Installed: No provider running
 ```
 
-## 2026-0212
+# 2026-0212
 
 ### Small Language Models (SLM)
 
@@ -1088,7 +1221,7 @@ Para MCP en particular:
 - Muchas implementaciones locales de MCP (por ejemplo, clientes y servidores open-source en GitHub) esperan que el LLM genere llamadas a herramientas en un formato fijo (a menudo estilo Anthropic con XML o JSON).  
 - Usa los métodos de restricción anteriores → tu SLM se convierte en un "cerebro MCP" confiable sin divagaciones.
 
-## 2026-0205
+# 2026-0205
 
 * Restaurado configuración para sólo API Python, no se va a implementar STIL por MAVLink hasta calibrar el escenario:
 ```json
@@ -1103,7 +1236,7 @@ Para MCP en particular:
 ```
 * Prueba de captura de logs de telemetría (en pantalla) en simultaneo con navegación controlada por API
 
-## 2026-0204
+# 2026-0204
 
 * Instalado Docker Desktop para ejecutar PX4 Autopilot
 * Instalado container con Autopilot cloando repositorio:
@@ -1164,24 +1297,24 @@ docker-compose up
 2. Unreal Engine + Airsim
 3. QGroundControl
 
-## 2026-0131
+# 2026-0131
 
 * Instalado QGroudControl para control de misión. 
 
-## 2026-0130
+# 2026-0130
 
 * Optimizado proyecto Unreal Engine para reducir el footprint de VRAM que va a compartir con LLM local: reducción de hasta 40% de uso de VRAM dedicada para dejar lugar a capas críticas para la inferencia rápida: próximo paso prueba de eficiencia con arquitectura MCP completa en local.
 Configuración optimizada en [./CityParkSim/Config/DefaultEngine.ini](./CityParkSim/Config/DefaultEngine.ini).
 
-## 2026-0115
+# 2026-0115
 
 * Generado proyecto auxiliar, a partir de un fork, para control de drone desde el teclado https://github.com/georgsmeinung/airsim-drone-kc utilizando la nueva librería `cosysairsim`
 
-## 2026-0109
+# 2026-0109
 
 * Reunión seguimiento con Ezequiel. Acordado calibrar la simulación con un script de vuelo repetido para determinar la varianza usando datos de [telemetría de AirSim en formato PX4/MavLink Logging](https://microsoft.github.io/AirSim/px4_logging/).
 
-## 2026-0108
+# 2026-0108
 
 * Creado servidor MCP para control del drone via prompts
 * Creado este repositorio de proyecto: https://github.com/georgsmeinung/lm-drone 
@@ -1190,21 +1323,21 @@ Configuración optimizada en [./CityParkSim/Config/DefaultEngine.ini](./CityPark
 
 <img src="informe/2026-0108  Airsim Plugin on UE 5_5 controlled through MCP Server PoC.png"/>
 
-## 2025-1202
+# 2025-1202
 
 * Instalación de [text-gen-webui-3.19](https://github.com/oobabooga/text-generation-webui/releases/tag/v3.19) para ejecutar modelos de lenguaje localmente.
 
-## 2025-1203
+# 2025-1203
 
 * Compilación del [Plugin Airsim](https://github.com/Cosys-Lab/Cosys-AirSim). Abandonado el proyecto original [AirSim por Microsoft](https://github.com/microsoft/AirSim), se utiliza la actual versión a partir de un fork mantenido por el [Cosys-Lab](https://www.uantwerpen.be/en/research-groups/cosys-lab/): Laboratorio de Co-Diseño para Sistema Ciber-físicos de la Universidad de Ambéres en Bélgica
 * Incorporación del Plugin al proyecto [CityParkSim](https://drive.google.com/drive/folders/1ImTngQAt0gAlrXNOfOYs5csRWQt3IhS_?usp=sharing) configurado para utilizar [Unreal Engine 5.5](https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-engine-5-5-documentation?application_version=5.5)
 * Subido video ["Airsim Plugin on UE 5.5 controlled by Python PoC video"](https://youtu.be/4ykS1tUelrY) a YouTube mostrando el control del drone desde un script de Phython.
 <img src="informe/2025-1203 Airsim Plugin on UE 5_5 controlled by Python PoC video.png"/>
 
-## 2025-0912
+# 2025-0912
 
 * [Reunión de organización con Ezequiel](./follow_up/2025-0912-objetivo_1.md)
 
-## 2025-0829
+# 2025-0829
 
 * Aprobación de [Plan de Tesis](./plan_tesis/nicolau-plan-aprobado.pdf)

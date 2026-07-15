@@ -13,6 +13,7 @@ try:
 except Exception:  # pragma: no cover
     pass
 
+# pyrefly: ignore [missing-import]
 from langgraph.graph import END, StateGraph
 
 
@@ -43,6 +44,7 @@ class DroneState(TypedDict, total=False):
     velocity_command: Dict[str, Any]
     route: str
     deliberations: List[Dict[str, Any]]
+    collision_result: Dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +72,7 @@ def _build_nodes() -> Dict[str, Any]:
         # Si el orquestador externo no inyecto una imagen/telemetria, las
         # capturamos desde AirSim (modo simulado si no hay conexion).
         if image is None or telemetry is None:
+            # pyrefly: ignore [bad-unpacking]
             image, telemetry = airsim_client.capture()
 
         detections = detector.detect(image)
@@ -88,6 +91,7 @@ def _build_nodes() -> Dict[str, Any]:
         state["detections"] = [d.to_dict() for d in detections]
         state["detected_obstacles"] = obstacle_dicts
         state["scene_summary"] = summarize_scene(obstacles)
+        state["collision_result"] = detector.last_collision_result.to_dict()
         return state
 
     def motor_node(state: DroneState) -> DroneState:
@@ -127,10 +131,16 @@ def gatekeeper_router(state: DroneState) -> str:
     """Decide si el flujo va al reflejo rapido o al cerebro deliberativo.
 
     Reglas:
-        * Si hay algun obstaculo con sector "Centro" y proximidad
+        * Si el análisis temporal de looming (tasa de crecimiento) detecta peligro de colisión -> deliberativo.
+        * Si hay algun obstaculo tradicional con sector "Centro" y proximidad
           ``Inminente`` o ``Cerca`` -> deliberativo.
         * Si no -> reactivo.
     """
+    col_res = state.get("collision_result") or {}
+    if col_res.get("has_collision_danger", False):
+        print(f"[!] Gatekeeper: Peligro de colisión inminente por tasa de crecimiento (clases peligrosas: {col_res.get('dangerous_classes')}) -> Ruta deliberativa activa.")
+        return "deliberative"
+
     obstacles = state.get("detected_obstacles", []) or []
     for obs in obstacles:
         sector = str(obs.get("sector", "")).strip()
