@@ -15,19 +15,18 @@ from .manifest import MissionManifest
 
 
 class PlannerError(RuntimeError):
-    """Raised when the planner cannot produce a valid Manifest."""
+    """Se lanza cuando el planificador no puede producir un :class:`MissionManifest` válido."""
 
 
 class MissionPlanner:
-    """Translates a natural-language instruction into a :class:`MissionManifest`.
+    """Traduce una instrucción en lenguaje natural a un :class:`MissionManifest`.
 
-    The planner owns:
+    El planificador posee:
 
-    * The ground-station system prompt (loaded from
-      ``airsim_plan/prompts/compiler_system.md``).
-    * The :class:`LMStudioClient` used to talk to the model.
-    * The tactical system prompt template + manifest augmentation.
-    * Persistence to disk (``MISSION_DIR``).
+    * El mensaje del sistema de la estación terrestre (cargado desde``airsim_plan/prompts/compiler_system.md``).
+    * El :class:`LMStudioClient` utilizado para comunicarse con el modelo.
+    * La plantilla del mensaje del sistema táctico + la ampliación del manifiesto.
+    * Persistencia en disco (``MISSION_DIR``).
     """
 
     DEFAULT_TACTICAL_PROMPT_PATH = (
@@ -93,13 +92,13 @@ class MissionPlanner:
         return PlannerLLM(system_prompt=self._compiler_prompt, client=self._client)
 
     def compile(self, instruction: str) -> MissionManifest:
-        """Compile ``instruction`` (NL) into a validated :class:`MissionManifest`.
+        """Traduce ``instruction`` (NL) a un :class:`MissionManifest` validado.
 
-        Raises :class:`PlannerError` if the model is unreachable, the response
-        is not parseable, or the payload fails manifest validation.
+        Lanza :class:`PlannerError` si el modelo es inalcanzable, la respuesta
+        no es analizable o la carga falla la validación del manifiesto.
         """
         if not instruction or not instruction.strip():
-            raise PlannerError("Instruction is empty.")
+            raise PlannerError("La instrucción está vacía.")
 
         llm = self._build_llm()
         response = llm.complete(instruction.strip())
@@ -121,7 +120,7 @@ class MissionPlanner:
         *,
         filename: Optional[str] = None,
     ) -> tuple[MissionManifest, Path]:
-        """Convenience: :meth:`compile` then persist under ``MISSION_DIR``."""
+        """Conveniencia: :meth:`compile` luego persiste bajo ``MISSION_DIR``."""
         manifest = self.compile(instruction)
         target_dir = self._settings.mission_dir
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -136,10 +135,10 @@ class MissionPlanner:
     # Tactical prompt builder                                           #
     # ------------------------------------------------------------------ #
     def build_tactical_prompt(self, manifest: MissionManifest) -> str:
-        """Compose the system prompt handed to ``airsim-loop``.
+        """Componer el mensaje del sistema entregado a ``airsim-loop``.
 
-        Step 3 of the pipeline: the Manifest becomes a *pre-prompt* the
-        in-flight SLM receives on every cycle, alongside YOLO/telemetry.
+        El paso 3 del pipeline: el Manifiesto se convierte en un *pre-prompt* que
+        el SLM en vuelo recibe en cada ciclo, junto con YOLO/telemetría.
         """
         roe = manifest.rules_of_engagement
         target_waypoint = manifest.waypoints[-1]

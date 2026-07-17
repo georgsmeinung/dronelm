@@ -18,12 +18,16 @@ from pathlib import Path
 from typing import Optional
 
 try:
+    # pyrefly: ignore [missing-import]
     import typer
 except Exception as exc:  # pragma: no cover
     raise RuntimeError("typer is required: pip install typer") from exc
 
+# pyrefly: ignore [missing-import]
 from rich.console import Console
+# pyrefly: ignore [missing-import]
 from rich.panel import Panel
+# pyrefly: ignore [missing-import]
 from rich.syntax import Syntax
 
 from .. import __version__
@@ -255,6 +259,7 @@ def run_cmd(
     runner = LoopRunner(manifest, loop_path=loop_path, loop_hz=hz)
     try:
         runner.run(takeoff_altitude=altitude)
+    # pyrefly: ignore [unknown-name]
     except LoopRunnerError as exc:
         console.print(f"[red]runner error:[/red] {exc}")
         raise typer.Exit(code=1) from exc

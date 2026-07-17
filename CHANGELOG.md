@@ -1,3 +1,17 @@
+# 2026-0716
+
+* Revisión completa del sistema de planificación de misiones.
+* Creada nueva aplicación para la planificación de misiones webdcs (web based mission planner).
+  - Se agregó la capacidad de cargar y guardar manifiestos.
+  - Se agregó la capacidad de eliminar manifiestos.
+  - Se agregó la capacidad de editar manifiestos.
+  - Se agregó la capacidad de validar manifiestos.
+  - Se agregó la capacidad de planificar rutas.
+  - Se agregó la capacidad de mostrar rutas.
+  - Se agregó la capacidad de mostrar rutas en el mapa.
+
+<img src="informe/2026-0716 WebDCS.png  "/>
+
 # 2026-0714
 
 ## Porqué La segmentación semantica de imágenes es más rápida que la detección de objetos

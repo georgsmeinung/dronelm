@@ -1,5 +1,5 @@
 # Definicion del flujo de LangGraph, el estado del dron y el Gatekeeper.
-# El grafo cablea los pasos 1-5 del pipeline:
+# El grafo implementa los pasos 1-5 del pipeline:
 #   perception -> [gatekeeper] -> reactive | deliberative -> motor -> END
 from __future__ import annotations
 
@@ -57,10 +57,14 @@ def _build_nodes() -> Dict[str, Any]:
     from src.perception import YoloDetector, translate_detections, summarize_scene
     from src.hardware import AirSimClient
 
-    detector = YoloDetector(
+    detector = YoloDetector(        
         weights_path=os.getenv("YOLO_WEIGHTS", "weights/yolov8n.pt"),
-        confidence_threshold=float(os.getenv("YOLO_CONF", "0.35")),
+        confidence_threshold=float(os.getenv("YOLO_CONF", "0.35"))
     )
+    # pyrefly: ignore [unknown-name]
+    print(f"weights_path: {weights_path}")
+    # pyrefly: ignore [unknown-name]
+    print(f"confidence_threshold: {confidence_threshold}")
     airsim_client = AirSimClient()
     airsim_client.connect()
 
@@ -120,12 +124,10 @@ def _build_nodes() -> Dict[str, Any]:
         "_airsim_client": airsim_client,
     }
 
-
 # ---------------------------------------------------------------------------
-# Paso 3: Gatekeeper (arista condicional)
+# Paso 3: Gatekeeper (condicional)
 # ---------------------------------------------------------------------------
 PROXIMITY_BLOCKING = {"Inminente", "Cerca"}
-
 
 def gatekeeper_router(state: DroneState) -> str:
     """Decide si el flujo va al reflejo rapido o al cerebro deliberativo.

@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""End-to-end runner: YOLO + AirSim + the tactical LangGraph loop.
+"""Ejecutor integral: YOLO + AirSim + bucle táctico LangGraph.
 
-Run on the ground station *after* the manifest has been compiled. It owns the
-AirSim hand-off (arm + takeoff) and the tactical state machine, then feeds it
-a fresh observation every tick.
+Se ejecuta en la estación terrestre *después* de compilar el manifiesto. 
+Gestiona la transferencia de AirSim (armado + despegue) y la máquina de 
+estados táctica, y le proporciona una nueva observación en cada ciclo.
 
-Usage:
-    python scripts/fly_with_yolo.py --manifest manifests/perimeter_north_01.json
-    python scripts/fly_with_yolo.py --manifest manifests/perimeter_north_01.json --mock-airsim
-    python scripts/fly_with_yolo.py --manifest manifests/perimeter_north_01.json --headless
+Uso:
 
-Requires ``ultralytics`` (``pip install ultralytics``) and ``cosys-airsim``.
-Both are optional at import time so the script can be tested with --mock-airsim.
+python scripts/fly_with_yolo.py --manifest manifests/perimeter_north_01.json
+python scripts/fly_with_yolo.py --manifest manifests/perimeter_north_01.json --mock-airsim
+python scripts/fly_with_yolo.py --manifest manifests/perimeter_north_01.json --headless
+
+Requiere: ``ultralytics`` (``pip install ultralytics``) y ``cosys-airsim``.
+Ambos son opcionales al importar el script, por lo que se puede probar 
+sin necesidad de configuración adicional con --mock-airsim.
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ except Exception as _exc:  # pragma: no cover
     _NUMPY_CV2_ERR = _exc
 
 try:
+    # pyrefly: ignore [missing-import]
     from ultralytics import YOLO  # noqa: E402
     _YOLO_OK = True
 except Exception:  # pragma: no cover
@@ -144,6 +147,7 @@ def make_airsim_yolo_sensor(
         raise RuntimeError(
             f"numpy/opencv required for the live sensor ({_NUMPY_CV2_ERR})."
         )
+    # pyrefly: ignore [missing-import]
     import airsim  # local import; cosys-airsim only needed when really flying
 
     model = YOLO(model_path)
@@ -198,19 +202,19 @@ def make_airsim_yolo_sensor(
     return sensor
 
 
-# --------------------------------------------------------------------------- #
-# Tactical state machine (local reimplementation that talks airsim-loop)       #
-# --------------------------------------------------------------------------- #
-#
-# ``airsim-loop`` is the package that owns the LangGraph workflow. We import
-# ``compile_workflow`` and ``DroneState`` lazily so this script also works in
-# environments where ``airsim-loop`` isn't installed (use --dry-loop).
-
+# ---------------------------------------------------------------------------- # 
+#  Máquina de estados táctica (reimplementación local que utiliza airsim-loop) #
+# ---------------------------------------------------------------------------- #
+# ``airsim-loop`` es el paquete que gestiona el flujo de trabajo de LangGraph. 
+# Se importa ``compile_workflow`` y ``DroneState`` de forma diferida para que 
+# este script también funcione en entornos donde ``airsim-loop`` no esté 
+# instalado (usar con --dry-loop).
 class TacticalController:
-    """Wrap the LangGraph workflow with helpers the runner needs.
+    """Wrappea el flujo de trabajo de LangGraph con las herramientas que el 
+    ejecutor necesita.
 
-    Falls back to a deterministic state machine when ``airsim_loop`` is not
-    available so the script remains useful for smoke tests.
+    Recurre a una máquina de estados determinista cuando ``airsim_loop`` no 
+    está disponible, para que el script siga siendo útil para pruebas de humo.
     """
 
     def __init__(self, manifest: MissionManifest, *, dry_loop: bool = False) -> None:
@@ -223,7 +227,8 @@ class TacticalController:
         self._initial_state: dict[str, Any] | None = None
         if not dry_loop:
             try:
-                import airsim_loop  # noqa: F401
+                # pyrefly: ignore [missing-import]
+                import airsim_loop 
                 loop = airsim_loop
                 self._graph = loop.compile_workflow()
                 self._initial_state = {

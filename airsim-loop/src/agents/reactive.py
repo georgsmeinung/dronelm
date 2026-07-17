@@ -14,14 +14,12 @@ try:
 except Exception:  # pragma: no cover
     pass
 
-
 # Velocidad por defecto en el eje X (marco NED: positivo = hacia adelante).
 DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
 
 
 def reactive_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """Devuelve una decision de "mantener rumbo" con velocidad por defecto.
-
     No consulta al LLM. Solo inspecciona la telemetria para mantener la
     altitud y proyecta una velocidad horizontal constante hacia adelante.
     """

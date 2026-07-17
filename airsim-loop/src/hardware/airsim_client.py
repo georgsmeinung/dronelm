@@ -57,7 +57,7 @@ class AirSimClient:
     _connected: bool = field(default=False, init=False, repr=False)
 
     # ------------------------------------------------------------------ #
-    # Conexion                                                          #
+    # Conexión                                                           #
     # ------------------------------------------------------------------ #
     def connect(self) -> bool:
         """Inicializa el cliente nativo de AirSim. Devuelve True si conecta."""
@@ -93,7 +93,7 @@ class AirSimClient:
         self._connected = False
 
     # ------------------------------------------------------------------ #
-    # Paso 1: captura sensorial                                         #
+    # Paso 1: captura sensorial                                          #
     # ------------------------------------------------------------------ #
     def capture(
         self, return_depth: bool = False
@@ -166,7 +166,7 @@ class AirSimClient:
             return self._simulated_frame(), self._simulated_telemetry()
 
     # ------------------------------------------------------------------ #
-    # Paso 5: ejecucion motriz                                          #
+    # Paso 5: comando motriz                                             #
     # ------------------------------------------------------------------ #
     def execute_velocity(
         self, vx: float, vy: float, vz: float, yaw_rate: float = 0.0

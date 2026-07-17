@@ -1,4 +1,4 @@
-"""Mission Manifest schema (Pydantic) and persistence helpers."""
+""" Mission Manifest schema (Pydantic) y helpers de persistencia."""
 from __future__ import annotations
 
 import json

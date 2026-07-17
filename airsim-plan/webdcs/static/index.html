@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebDCS - Ground Station Planner</title>
+    <!-- Google Fonts: Outfit (modern sans) & Fira Code (monospaced) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-satellite-dish pulse-icon"></i>
+                <h1>WebDCS (Departure Control System) <span class="badge">Ground Station</span></h1>
+            </div>
+            <div class="header-status">
+                <span class="status-indicator online"></span>
+                <span>AirSim Planner Connected</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="app-dashboard">
+            <!-- Sidebar: NL Compiler & Saved Missions -->
+            <section class="dashboard-sidebar">
+                <!-- Compile Box -->
+                <div class="card glass">
+                    <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Compilador NL</h2>
+                    <p class="card-desc">Redactá la instrucción de vuelo en lenguaje natural para que el LLM genere el manifiesto.</p>
+                    
+                    <div class="input-group">
+                        <textarea id="nl-instruction" placeholder="Ej: Recorrer el perimetro norte a una altitud de -15 metros yendo a 4 m/s. Ignorar personas y autos. Terminar en la posicion x=50, y=80..."></textarea>
+                    </div>
+
+                    <button id="btn-compile" class="btn btn-primary btn-glow">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Compilar Misión</span>
+                        <div class="spinner hidden" id="compile-spinner"></div>
+                    </button>
+                </div>
+
+                <!-- Saved Manifests & Waypoint List Container -->
+                <div class="card glass flex-grow" id="sidebar-missions-card">
+                    <!-- Vista A: Listado de Manifiestos -->
+                    <div id="view-manifests-list">
+                        <div class="sidebar-header-with-action">
+                            <h2><i class="fa-solid fa-folder-open"></i> Manifiestos Guardados</h2>
+                            <button id="btn-new-manifest" class="btn btn-secondary btn-icon btn-new-mission" title="Nueva Misión">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                        <p class="card-desc">Seleccioná un archivo existente o creá uno nuevo.</p>
+                        <div class="manifest-list" id="saved-manifests-list">
+                            <div class="list-placeholder">No hay misiones cargadas.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vista B: Detalle de Waypoints de Misión Activa -->
+                    <div id="view-waypoints-detail" class="hidden">
+                        <div class="sidebar-detail-header">
+                            <button id="btn-back-manifests" class="btn btn-secondary btn-icon" title="Volver al Listado">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
+                            <h2 id="active-mission-title">MISIÓN</h2>
+                        </div>
+                        <p class="card-desc">Gestioná, reordená o eliminá los puntos de la trayectoria.</p>
+                        <div class="waypoint-list" id="active-waypoint-list">
+                            <!-- Los items se inyectan dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Workspace: Map & JSON Editor -->
+            <section class="dashboard-workspace">
+                <!-- Map Card -->
+                <div class="card glass map-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-map-location-dot"></i> Carta de Territorio & Ruta</h2>
+                        <div class="map-controls">
+                            <span class="coord-indicator"><i class="fa-solid fa-crosshairs"></i> X: <span id="hover-x">0</span>, Y: <span id="hover-y">0</span></span>
+                            <button id="btn-reset-map" class="btn btn-secondary btn-icon" title="Centrar Mapa"><i class="fa-solid fa-compress"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="map-wrapper" id="map-container">
+                        <img src="map.png" alt="Carta de Territorio Satelital" id="map-image">
+                        <canvas id="route-canvas"></canvas>
+                        
+                        <!-- Overlay overlaying instructions or details -->
+                        <div class="map-legend">
+                            <div class="legend-item"><span class="legend-dot home"></span> Home (0,0)</div>
+                            <div class="legend-item"><span class="legend-dot waypoint"></span> Waypoint</div>
+                            <div class="legend-item"><span class="legend-dot path"></span> Trayectoria (NED)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Editor Card -->
+                <div class="card glass editor-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-file-code"></i> Manifiesto de Misión (JSON)</h2>
+                        <div class="editor-controls">
+                            <button id="btn-save" class="btn btn-success" disabled>
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar Manifiesto
+                            </button>
+                        </div>
+                    </div>
+                    <div class="editor-container">
+                        <textarea id="json-editor" class="code-editor" spellcheck="false" placeholder="El JSON del manifiesto aparecerá aquí tras compilar o cargar una misión..."></textarea>
+                    </div>
+                    <div class="editor-status" id="validation-status">
+                        <span class="status-text muted">Esperando compilación...</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden">
+        <i class="toast-icon fa-solid fa-circle-info"></i>
+        <span class="toast-message">Mensaje</span>
+    </div>
+
+    <!-- Modal: Confirmación de Guardado -->
+    <div id="modal-save-confirm" class="modal-overlay hidden">
+        <div class="modal-content glass">
+            <h3><i class="fa-solid fa-triangle-exclamation"></i> Cambios sin guardar</h3>
+            <p>La misión actual tiene cambios sin guardar. ¿Deseas guardarlos antes de volver al listado general?</p>
+            <div class="modal-actions">
+                <button id="btn-modal-save" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+                <button id="btn-modal-discard" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> Descartar</button>
+                <button id="btn-modal-cancel-save" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Estrategia de Fusión LLM -->
+    <div id="modal-merge-strategy" class="modal-overlay hidden">
+        <div class="modal-content glass">
+            <h3><i class="fa-solid fa-code-merge"></i> Integrar Nuevos Waypoints</h3>
+            <p>El LLM generó nuevos puntos de trayectoria. ¿Cómo deseas integrarlos con el plan de vuelo actual?</p>
+            <div class="modal-actions-vertical">
+                <button id="btn-merge-overwrite" class="btn btn-primary"><i class="fa-solid fa-rotate"></i> Sobrescribir lista actual</button>
+                <button id="btn-merge-append" class="btn btn-success"><i class="fa-solid fa-arrow-down-long"></i> Agregar al final (Append)</button>
+                <button id="btn-merge-prepend" class="btn btn-glow"><i class="fa-solid fa-arrow-up-long"></i> Agregar al principio (Prepend)</button>
+                <button id="btn-merge-cancel" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmación de Eliminación -->
+    <div id="modal-delete-confirm" class="modal-overlay hidden">
+        <div class="modal-content glass">
+            <h3><i class="fa-solid fa-trash-can"></i> ¿Eliminar manifiesto?</h3>
+            <p>¿Estás seguro de que deseas eliminar permanentemente el manifiesto <strong id="delete-manifest-name"></strong>?</p>
+            <div class="modal-actions">
+                <button id="btn-modal-delete-confirm" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> Eliminar</button>
+                <button id="btn-modal-delete-cancel" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
