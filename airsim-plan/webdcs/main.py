@@ -113,6 +113,22 @@ async def delete_manifest_endpoint(filename: str):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"No se pudo eliminar el archivo: {exc}")
 
+@app.get("/api/maps")
+async def list_maps():
+    maps_dir = Path(__file__).resolve().parent.parent / "missions" / "maps"
+    if not maps_dir.exists():
+        return []
+    allowed_extensions = {".png", ".jpg", ".jpeg", ".webp"}
+    maps = []
+    for p in maps_dir.glob("*"):
+        if p.suffix.lower() in allowed_extensions:
+            maps.append(p.name)
+    return sorted(maps)
+
+# Servir mapas desde missions/maps
+missions_maps_dir = Path(__file__).resolve().parent.parent / "missions" / "maps"
+app.mount("/maps", StaticFiles(directory=str(missions_maps_dir)), name="maps")
+
 # Servir archivos estáticos del frontend
 static_dir = Path(__file__).resolve().parent / "static"
 app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")

@@ -56,6 +56,10 @@
     "tactical_system_prompt": {
       "type": "string",
       "description": "Pre-prompt handed to the LangGraph SLM (Step 3)."
+    },
+    "map": {
+      "type": "string",
+      "description": "The filename of the map image used for the mission."
     }
   }
 }

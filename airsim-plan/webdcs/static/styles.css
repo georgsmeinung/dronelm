@@ -335,6 +335,7 @@ textarea:focus {
     cursor: pointer;
     transition: var(--transition-smooth);
     text-align: left;
+    width: 100%;
 }
 
 .manifest-item:hover {
@@ -356,9 +357,11 @@ textarea:focus {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    flex-grow: 1;
 }
 
 .manifest-item-name {
+    color: #ffffff;
     font-size: 0.85rem;
     font-weight: 600;
     white-space: nowrap;
@@ -369,9 +372,8 @@ textarea:focus {
 .manifest-item-desc {
     font-size: 0.75rem;
     color: var(--text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .list-placeholder {

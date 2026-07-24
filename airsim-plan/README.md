@@ -1,33 +1,20 @@
-# airsim-plan — Ground-Station Mission Planner
+# airsim-plan — Planificador de Misiones de Estación Terrena
 
-> Translates natural-language instructions into a structured **Mission Manifest** that
-> the in-flight tactical SLM (in [`/airsim-loop`](../airsim-loop)) can execute.
+> Traduce instrucciones en lenguaje natural a un **Manifiesto de Misión** estructurado que el SLM táctico en vuelo (en `/airsim-loop`) puede ejecutar.
 
-This package implements the **ground half** of the two-brain architecture: it runs
-**before** the drone takes off, can take 5–10 seconds to think, and produces a JSON
-contract the tactical brain obeys during the flight.
+Este paquete implementa la **mitad terrestre** (estación terrena) de la arquitectura de dos cerebros: se ejecuta **antes** de que el dron despegue, puede tomar de 5 a 10 segundos para pensar y produce un contrato JSON que el cerebro táctico obedece durante el vuelo.
 
-```
-NL instruction  ──►  MissionPlanner  ──►  MissionManifest.json
-                                              │
-                                              ▼
-                              airsim-loop (LangGraph + Phi-3)
-                                              │
-                                              ▼
-                                           AirSim
-```
+<img src="../informe/2026-0625 Planificacion de Mision.png"/>
 
-The package is intentionally framework-light: Pydantic for the schema, the official
-`openai` SDK for talking to LM Studio/Ollama, and Typer + Rich for the CLI.
+El paquete es intencionalmente ligero en cuanto a frameworks: Pydantic para el esquema, el SDK oficial de `openai` para comunicarse con LM Studio/Ollama, y Typer + Rich para la interfaz de línea de comandos (CLI).
 
-## Why a separate planner?
+## ¿Por qué un planificador independiente?
 
-* The flight SLM (Phi-3 on a Jetson Nano) is latency-bound; it cannot afford to
-  design missions.
-* LM Studio can serve the same Llama-3-8B locally without any extra setup.
-* Decoupling lets us validate, persist, and version missions *before* liftoff.
+* El SLM de vuelo (Phi-3 en una Jetson Nano) está limitado por la latencia; no puede permitirse diseñar misiones.
+* LM Studio puede servir el mismo Llama-3-8B localmente sin necesidad de configuración adicional.
+* El desacoplamiento nos permite validar, persistir y versionar misiones *antes* del despegue.
 
-## Layout
+## Estructura del Proyecto
 
 ```
 airsim-plan/
@@ -36,59 +23,68 @@ airsim-plan/
 ├── .env.example
 ├── examples/
 │   └── perimeter_north_01.json
-├── missions/                       # output dir (one .json per compiled mission)
+├── missions/                       # Directorio de salida (un archivo .json por misión compilada)
 ├── src/airsim_plan/
 │   ├── __init__.py
-│   ├── config.py                   # Settings (env-backed)
+│   ├── config.py                   # Ajustes (respaldados por variables de entorno)
 │   ├── llm/
 │   │   ├── client.py               # LMStudioClient + PlannerLLM
-│   │   └── json_extract.py         # JSON coercion for SLM output
+│   │   └── json_extract.py         # Coerción JSON para la salida del SLM
 │   ├── missions/
 │   │   ├── manifest.py             # MissionManifest (Pydantic)
-│   │   └── planner.py              # MissionPlanner (NL -> Manifest)
+│   │   └── planner.py              # Planificador de Misiones (LN -> Manifiesto)
 │   ├── bridge/
-│   │   ├── airsim_bridge.py        # AirSim hand-off (arm + takeoff)
-│   │   └── loop_runner.py          # Injects manifest into airsim-loop
-│   ├── cli/main.py                 # Typer CLI (`airsim-plan …`)
+│   │   ├── airsim_bridge.py        # Enlace con AirSim (armado + despegue)
+│   │   └── loop_runner.py          # Inyecta el manifiesto en airsim-loop
+│   ├── cli/main.py                 # CLI de Typer (`airsim-plan …`)
 │   ├── prompts/
-│   │   ├── compiler_system.md      # Step 2 system prompt
-│   │   └── tactical_system.md      # Step 3 system-prompt template
+│   │   ├── compiler_system.md      # Prompt del sistema para el Paso 2
+│   │   └── tactical_system.md      # Plantilla del prompt del sistema táctico para el Paso 3
 │   └── schemas/manifest_schema.json
-└── tests/                          # pytest, 37 tests
+├── webdcs/                         # Aplicación web FastAPI (Estación Terrena)
+│   ├── main.py                     # Entrypoint del servidor FastAPI
+│   └── static/                     # Archivos estáticos de la interfaz de usuario (HTML/CSS/JS)
+└── tests/                          # pytest, 37 pruebas
 ```
 
-## Installation
+## Instalación
 
 ```bash
 cd airsim-plan
 python -m pip install -r requirements.txt
-# or, in editable mode:
+# o en modo editable:
 python -m pip install -e .
 ```
 
-Copy `.env.example` to `.env` and adjust `LMSTUDIO_*` and `AIRSIM_*` values.
+Copia `.env.example` a `.env` y ajusta los valores de `LMSTUDIO_*` y `AIRSIM_*`.
 
-## CLI
+## WebDCS — Planificador de Estación Terrena (Interfaz Web)
 
-After `pip install -e .` you get the `airsim-plan` entrypoint.
+WebDCS es una aplicación web interactiva basada en FastAPI que sirve como estación terrena de control para planificar y gestionar misiones. Proporciona una interfaz gráfica moderna para interactuar con el planificador sin usar la línea de comandos.
 
-| Command | Purpose |
-| --- | --- |
-| `airsim-plan plan -i "…"` | Compile a manifest from NL and save it under `missions/`. |
-| `airsim-plan validate manifest.json` | Validate a manifest against the Pydantic + JSON Schema. |
-| `airsim-plan show manifest.json` | Pretty-print the manifest and its tactical prompt. |
-| `airsim-plan prompt manifest.json` | Print only the tactical system prompt that would be injected. |
-| `airsim-plan takeoff -a -10` | Just arm + takeoff (no SLM loop). |
-| `airsim-plan run -i "…"` | Full hand-off: compile, takeoff, invoke `airsim-loop`. |
-| `airsim-plan run -m manifest.json --dry-run` | Compile + show without invoking anything. |
-| `airsim-plan interactive` | Tiny REPL: compile, edit, save, launch. |
-| `airsim-plan dump-schema -o schema.json` | Export the JSON Schema. |
+<img src="../informe/2026-0723 New DCS.png"/>
 
-`run` injects the compiled manifest into `airsim-loop` either **in-process** (when
-the package is importable as `airsim_loop`) or as a **subprocess** when you pass
-`--loop-path /path/to/airsim-loop/main.py`.
+### Características Principales
 
-## Mission Manifest shape
+* **Compilador de Lenguaje Natural**: Permite escribir instrucciones de vuelo en lenguaje natural y utilizar el LLM local para generar automáticamente el Manifiesto de Misión en JSON.
+* **Mapa de Ruta Interactivo**: Visualiza la trayectoria planificada y los waypoints (puntos de control) sobre una carta de territorio satelital utilizando un Canvas 2D en coordenadas NED (Norte-Este-Abajo).
+* **Editor JSON con Validación en Vivo**: Permite inspeccionar y editar manualmente el código JSON del manifiesto, con indicadores de estado de validación.
+* **Estrategias de Integración de Waypoints**: Al recibir nuevos puntos de un plano compilado, permite elegir entre sobrescribir la lista actual, agregar al final (Append) o agregar al principio (Prepend).
+* **Gestión de Manifiestos**: Soporte completo para listar, cargar, guardar y eliminar manifiestos de vuelo directamente en el sistema de archivos (`missions/flightplans/`).
+
+### Cómo ejecutar la aplicación web
+
+Para iniciar el servidor de desarrollo de WebDCS, asegúrate de tener instalados `fastapi` y `uvicorn` y ejecuta:
+
+```bash
+cd airsim-plan
+# Iniciar el servidor FastAPI con recarga automática
+python -m uvicorn webdcs.main:app --reload
+```
+
+Una vez iniciado, abre tu navegador e ingresa a `http://127.0.0.1:8000`.
+
+## Estructura del Manifiesto de Misión
 
 ```json
 {
@@ -108,19 +104,17 @@ the package is importable as `airsim_loop`) or as a **subprocess** when you pass
 }
 ```
 
-See [`src/airsim_plan/schemas/manifest_schema.json`](src/airsim_plan/schemas/manifest_schema.json)
-for the formal contract.
+Consulta `src/airsim_plan/schemas/manifest_schema.json` para ver el contrato formal del esquema.
 
-## Tests
+## Pruebas
 
 ```bash
 python -m pytest -q
 ```
 
-37 tests cover schema validation, JSON extraction, planner error paths, the bridge
-dry-run, and CLI smoke tests.
+Las 37 pruebas cubren la validación de esquemas, la extracción de JSON, rutas de error del planificador, la simulación del puente (`dry-run`) y pruebas de humo de la CLI.
 
-## Programmatic API
+## API Programática
 
 ```python
 from airsim_plan import MissionPlanner
@@ -134,7 +128,7 @@ manifest, path = planner.compile_and_save(
 print(manifest.mission_id, path)
 ```
 
-To hand off to AirSim + airsim-loop:
+Para transferir el control a AirSim + airsim-loop:
 
 ```python
 from airsim_plan import MissionPlanner
@@ -143,3 +137,25 @@ from airsim_plan.bridge import LoopRunner
 manifest = MissionPlanner().compile("...")
 LoopRunner(manifest).run(takeoff_altitude=-10.0)
 ```
+
+En el código anterior se hace uso de las clases principales:
+* `MissionPlanner` (en `src/airsim_plan/missions/planner.py`): Se encarga de procesar la instrucción en lenguaje natural para compilar un `MissionManifest`.
+* `LoopRunner` (en `src/airsim_plan/bridge/loop_runner.py`): Facilita el inicio de la simulación enviando el manifiesto a la ejecución del control táctico.
+
+## CLI (Interfaz de Línea de Comandos)
+
+Después de realizar la instalación con `pip install -e .` obtendrás el punto de entrada `airsim-plan`.
+
+| Comando | Propósito |
+| --- | --- |
+| `airsim-plan plan -i "…"` | Compila un manifiesto a partir de una instrucción en lenguaje natural y lo guarda en `missions/`. |
+| `airsim-plan validate manifest.json` | Valida un manifiesto contra el esquema de Pydantic y el JSON Schema. |
+| `airsim-plan show manifest.json` | Muestra el manifiesto formateado y su prompt de sistema táctico. |
+| `airsim-plan prompt manifest.json` | Imprime únicamente el prompt del sistema táctico que se inyectará. |
+| `airsim-plan takeoff -a -10` | Solo realiza el armado y despegue (sin el bucle de control del SLM). |
+| `airsim-plan run -i "…"` | Flujo completo: compila, despega e inicia el control en `airsim-loop`. |
+| `airsim-plan run -m manifest.json --dry-run` | Compila y muestra el manifiesto sin iniciar ninguna ejecución. |
+| `airsim-plan interactive` | Consola interactiva (REPL) para compilar, editar, guardar y lanzar de forma rápida. |
+| `airsim-plan dump-schema -o schema.json` | Exporta el esquema JSON del manifiesto. |
+
+El comando `run` inyecta el manifiesto compilado en `airsim-loop`, ya sea **en el mismo proceso** (cuando el paquete se puede importar como `airsim_loop`) o como un **subproceso** si pasas el argumento `--loop-path /ruta/a/airsim-loop/main.py`.

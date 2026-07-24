@@ -31,7 +31,7 @@
             <!-- Sidebar: NL Compiler & Saved Missions -->
             <section class="dashboard-sidebar">
                 <!-- Compile Box -->
-                <div class="card glass">
+                <div class="card glass hidden">
                     <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Compilador NL</h2>
                     <p class="card-desc">Redactá la instrucción de vuelo en lenguaje natural para que el LLM genere el manifiesto.</p>
                     
@@ -91,7 +91,7 @@
                     </div>
                     
                     <div class="map-wrapper" id="map-container">
-                        <img src="map.png" alt="Carta de Territorio Satelital" id="map-image">
+                        <img src="/maps/map.png" alt="Carta de Territorio Satelital" id="map-image">
                         <canvas id="route-canvas"></canvas>
                         
                         <!-- Overlay overlaying instructions or details -->
@@ -165,6 +165,25 @@
             <div class="modal-actions">
                 <button id="btn-modal-delete-confirm" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> Eliminar</button>
                 <button id="btn-modal-delete-cancel" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal: Nueva Misión -->
+    <div id="modal-new-mission" class="modal-overlay hidden">
+        <div class="modal-content glass">
+            <h3><i class="fa-solid fa-satellite"></i> Nueva Misión</h3>
+            <p>Configurá el ID y seleccioná la carta de territorio (mapa) para iniciar.</p>
+            <div class="input-group">
+                <label for="new-mission-id" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: block;">ID de la Misión:</label>
+                <input type="text" id="new-mission-id" value="NUEVA_MISION" style="width: 100%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-main); outline: none; font-family: inherit; font-size: 0.9rem;" />
+            </div>
+            <div class="input-group">
+                <label for="new-mission-map" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: block;">Seleccionar Mapa:</label>
+                <select id="new-mission-map" style="width: 100%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-main); outline: none; font-family: inherit; font-size: 0.9rem; cursor: pointer;"></select>
+            </div>
+            <div class="modal-actions">
+                <button id="btn-modal-create" class="btn btn-success"><i class="fa-solid fa-circle-check"></i> Crear Misión</button>
+                <button id="btn-modal-cancel-create" class="btn btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>

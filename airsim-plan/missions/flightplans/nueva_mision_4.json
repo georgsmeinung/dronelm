@@ -1,0 +1,78 @@
+{
+  "mission_id": "NUEVA_MISION_4",
+  "summary": "Manifiesto de vuelo vacío creado manualmente.",
+  "waypoints": [
+    {
+      "x": -15.0,
+      "y": -20.0,
+      "z": -10.0,
+      "label": "WP_1"
+    },
+    {
+      "x": 0.2,
+      "y": 62.8,
+      "z": -10.0,
+      "label": "WP_2"
+    },
+    {
+      "x": 100.2,
+      "y": 57.2,
+      "z": -10.0,
+      "label": "WP_3"
+    },
+    {
+      "x": 98.6,
+      "y": -4.4,
+      "z": -10.0,
+      "label": "WP_4"
+    },
+    {
+      "x": 64.2,
+      "y": -46.8,
+      "z": -10.0,
+      "label": "WP_5"
+    },
+    {
+      "x": 7.0,
+      "y": -17.6,
+      "z": -10.0,
+      "label": "WP_6"
+    },
+    {
+      "x": -77.8,
+      "y": -53.2,
+      "z": -10.0,
+      "label": "WP_7"
+    },
+    {
+      "x": -77.4,
+      "y": 16.8,
+      "z": -10.0,
+      "label": "WP_8"
+    },
+    {
+      "x": -39.0,
+      "y": 1.2,
+      "z": -10.0,
+      "label": "WP_9"
+    },
+    {
+      "x": -14.6,
+      "y": -21.6,
+      "z": -10.0,
+      "label": "WP_10"
+    }
+  ],
+  "rules_of_engagement": {
+    "ignore_objects": [
+      "person",
+      "car"
+    ],
+    "return_to_launch_battery_threshold": 20.0,
+    "max_speed_mps": 5.0,
+    "min_altitude_m": -10.0,
+    "notes": null
+  },
+  "tactical_system_prompt": "Sos el navegador tactico de un dron autonomo. Tu objetivo es ejecutar el\nMANIFIESTO DE MISION entregado por la estacion de tierra sin colisionar.\n\nReglas duras:\n1. SIEMPRE respetar la altitud minima (min_altitude_m) y la velocidad maxima\n   (max_speed_mps) declaradas en el manifiesto.\n2. SI la bateria cae por debajo de 20.0%, la UNICA accion\n   permitida es RETURN_TO_LAUNCH.\n3. SI el objetivo coincide con una clase en ignore_objects (person, car),\n   tratarla como ruido: NO esquivar agresivamente, continuar la ruta.\n4. El objetivo global es alcanzar el siguiente waypoint pendiente en la lista.\n5. Cada decision debe ser un objeto JSON con la forma exacta:\n   {\n     \"macro_action\": \"MANTENER_RUMBO|EVADIR_IZQUIERDA|EVADIR_DERECHA|\"\n                     \"GANAR_ALTURA|PERDER_ALTURA|FRENAR|RETURN_TO_LAUNCH\",\n     \"vx\": <float>, \"vy\": <float>, \"vz\": <float>, \"yaw_rate\": <float>,\n     \"rationale\": \"<texto corto>\"\n   }\n6. NO responder en prosa. NO incluir campos fuera del JSON.\n\n\nMISION ACTIVA: NUEVA_MISION_4\nObjetivo final (waypoint #10): [-14.6, -21.6, -10.0] (WP_10)\nWaypoints pendientes (en orden): #1[-15.0,-20.0,-10.0]; #2[0.2,62.8,-10.0]; #3[100.2,57.2,-10.0]; #4[98.6,-4.4,-10.0]; #5[64.2,-46.8,-10.0]; #6[7.0,-17.6,-10.0]; #7[-77.8,-53.2,-10.0]; #8[-77.4,16.8,-10.0]; #9[-39.0,1.2,-10.0]; #10[-14.6,-21.6,-10.0]\n",
+  "map": "map.png"
+}

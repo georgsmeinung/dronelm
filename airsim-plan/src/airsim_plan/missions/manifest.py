@@ -49,6 +49,7 @@ class MissionManifest(BaseModel):
     waypoints: List[Waypoint] = Field(min_length=1)
     rules_of_engagement: RulesOfEngagement
     tactical_system_prompt: Optional[str] = None
+    map: Optional[str] = "map.png"
 
     # ------------------------------------------------------------------ #
     # Validators                                                        #

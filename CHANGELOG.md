@@ -1,3 +1,8 @@
+# 2026-0723
+
+* Se agregan las cartas de territorio a los manifiestos para planificar rutas sobre ellas
+* Modificado WebDCS para poder mostrar el mapa en el cual se está planificando la misión
+
 # 2026-0716
 
 * Revisión completa del sistema de planificación de misiones.
@@ -10,7 +15,7 @@
   - Se agregó la capacidad de mostrar rutas.
   - Se agregó la capacidad de mostrar rutas en el mapa.
 
-<img src="informe/2026-0716 WebDCS.png  "/>
+<img src="informe/2026-0723 New DCS.png"/>
 
 # 2026-0714
 

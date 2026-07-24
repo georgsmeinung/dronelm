@@ -31,6 +31,13 @@ const elActiveWaypointList = document.getElementById('active-waypoint-list');
 const elBtnBackManifests = document.getElementById('btn-back-manifests');
 const elBtnNewManifest = document.getElementById('btn-new-manifest');
 
+// Modales y Nuevo Manifiesto con Mapa
+const elModalNewMission = document.getElementById('modal-new-mission');
+const elNewMissionId = document.getElementById('new-mission-id');
+const elNewMissionMap = document.getElementById('new-mission-map');
+const elBtnModalCreate = document.getElementById('btn-modal-create');
+const elBtnModalCancelCreate = document.getElementById('btn-modal-cancel-create');
+
 // Modales
 const elModalSaveConfirm = document.getElementById('modal-save-confirm');
 const elBtnModalSave = document.getElementById('btn-modal-save');
@@ -59,6 +66,7 @@ const mapImage = document.getElementById('map-image');
 window.addEventListener('load', () => {
     resizeCanvas();
     loadSavedManifests();
+    loadAvailableMaps();
     setupModalListeners();
     setupNewManifestListener();
 });
@@ -398,6 +406,10 @@ function loadActiveManifest(manifest) {
     
     elActiveMissionTitle.textContent = manifest.mission_id;
     
+    // Cargar mapa correspondiente (por defecto map.png si no tiene)
+    const mapFile = manifest.map || "map.png";
+    mapImage.src = `/maps/${mapFile}`;
+    
     elViewManifestsList.classList.add('hidden');
     elViewWaypointsDetail.classList.remove('hidden');
     
@@ -430,26 +442,59 @@ function goBackToManifestsList() {
 }
 
 // ----------------------------------------------------------------------------
-// Creación de Nuevo Manifiesto
-// ----------------------------------------------------------------------------
+let availableMaps = [];
+
+async function loadAvailableMaps() {
+    try {
+        const response = await fetch('/api/maps');
+        if (!response.ok) return;
+        availableMaps = await response.json();
+        
+        // Llenar selector de mapas
+        elNewMissionMap.innerHTML = '';
+        availableMaps.forEach(mapFile => {
+            const opt = document.createElement('option');
+            opt.value = mapFile;
+            opt.textContent = mapFile;
+            elNewMissionMap.appendChild(opt);
+        });
+    } catch (err) {
+        console.error('Error cargando mapas disponibles:', err);
+    }
+}
+
 function setupNewManifestListener() {
     elBtnNewManifest.addEventListener('click', () => {
         if (isDirty()) {
-            // Si hay cambios sin guardar, avisar
             if (!confirm("Tenés cambios sin guardar en la misión actual. ¿Deseás continuar e iniciar una nueva misión vacía?")) {
                 return;
             }
         }
         
-        const newId = prompt("Ingresá el ID para el nuevo manifiesto de vuelo:", "NUEVO_MANIFIESTO");
-        if (!newId || !newId.trim()) {
-            showToast("Creación cancelada: ID inválido.", "warning");
+        // Reiniciar campos y abrir modal
+        elNewMissionId.value = 'NUEVA_MISION_' + (savedManifests.length + 1);
+        elModalNewMission.classList.remove('hidden');
+    });
+
+    elBtnModalCancelCreate.addEventListener('click', () => {
+        elModalNewMission.classList.add('hidden');
+    });
+
+    elBtnModalCreate.addEventListener('click', () => {
+        const newId = elNewMissionId.value.trim();
+        if (!newId) {
+            showToast("ID de misión inválido.", "error");
             return;
         }
 
-        // Crear plantilla vacía de manifiesto
+        const mapFile = elNewMissionMap.value;
+        if (!mapFile) {
+            showToast("Debes seleccionar un mapa.", "error");
+            return;
+        }
+
         const newManifest = {
-            mission_id: newId.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_'),
+            mission_id: newId.toUpperCase().replace(/[^A-Z0-9_]/g, '_'),
             summary: "Manifiesto de vuelo vacío creado manualmente.",
             waypoints: [],
             rules_of_engagement: {
@@ -457,11 +502,13 @@ function setupNewManifestListener() {
                 return_to_launch_battery_threshold: 20.0,
                 max_speed_mps: 5.0,
                 min_altitude_m: -10.0
-            }
+            },
+            map: mapFile
         };
 
+        elModalNewMission.classList.add('hidden');
         loadActiveManifest(newManifest);
-        showToast(`Manifiesto vacío ${newManifest.mission_id} creado. ¡Hacé click en la carta satelital para agregar puntos!`, 'success');
+        showToast(`Manifiesto vacío ${newManifest.mission_id} creado con el mapa ${mapFile}. ¡Hacé click en la carta satelital para agregar puntos!`, 'success');
     });
 }
 
