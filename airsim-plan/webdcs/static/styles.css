@@ -302,12 +302,21 @@ textarea:focus {
 /* ----------------------------------------------------------------------------
    Saved Manifests List
    ---------------------------------------------------------------------------- */
+#view-manifests-list,
+#view-waypoints-detail {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+}
+
 .manifest-list {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
     overflow-y: auto;
-    max-height: 250px;
+    flex-grow: 1;
+    min-height: 0;
     padding-right: 0.3rem;
 }
 
@@ -624,7 +633,8 @@ textarea:focus {
     flex-direction: column;
     gap: 0.5rem;
     overflow-y: auto;
-    max-height: 380px;
+    flex-grow: 1;
+    min-height: 0;
     padding-right: 0.3rem;
 }
 
