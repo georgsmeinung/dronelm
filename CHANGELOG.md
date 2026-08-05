@@ -6,7 +6,6 @@
 <img src="https://ollama.com/assets/library/qwen3.5/1c5d9a27-97b2-4d6d-a1b1-d326259acae5"/>
 * Evaluando con [llmfit](https://www.llmfit.org/) 
 
-
 # 2026-0723
 
 * Se agregan las cartas de territorio a los manifiestos para planificar rutas sobre ellas
