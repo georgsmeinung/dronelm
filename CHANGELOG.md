@@ -1,3 +1,12 @@
+
+# 2026-0804 
+* Haciendo pruebas de rendimiento de inferencia de https://ollama.com/LiquidAI/lfm2.5-1.2b-instruct de 1.2b parametros
+<img src="https://cdn-uploads.huggingface.co/production/uploads/61b8e2ba285851687028d395/dxnYF2fuLpulismtFSGFi.png"/>
+* Haciendo pruebas de rendimiento de inferencia de https://ollama.com/library/qwen3.5 de 0.8b parametros
+<img src="https://ollama.com/assets/library/qwen3.5/1c5d9a27-97b2-4d6d-a1b1-d326259acae5"/>
+* Evaluando con [llmfit](https://www.llmfit.org/) 
+
+
 # 2026-0723
 
 * Se agregan las cartas de territorio a los manifiestos para planificar rutas sobre ellas
