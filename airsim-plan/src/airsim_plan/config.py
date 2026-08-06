@@ -30,27 +30,27 @@ class Settings:
     can be safely shared across modules.
     """
 
-    # LM Studio / OpenAI-compatible ground planner
+    # LM Studio / OpenAI-compatible ground planner (defaulting to Ollama)
     lmstudio_base_url: str = field(
-        default_factory=lambda: os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+        default_factory=lambda: os.getenv("OLLAMA_BASE_URL") or os.getenv("LMSTUDIO_BASE_URL", "http://localhost:11434/v1")
     )
     lmstudio_api_key: str = field(
-        default_factory=lambda: os.getenv("LMSTUDIO_API_KEY", "lm-studio")
+        default_factory=lambda: os.getenv("OLLAMA_API_KEY") or os.getenv("LMSTUDIO_API_KEY", "ollama")
     )
     lmstudio_model: str = field(
-        default_factory=lambda: os.getenv("LMSTUDIO_MODEL", "llama-3-8b-instruct")
+        default_factory=lambda: os.getenv("OLLAMA_MODEL") or os.getenv("LMSTUDIO_MODEL", "llama3")
     )
 
     # Tactical SLM (Phi-3) — only used to compose prompts handed to
     # airsim-loop; the actual call happens there.
     tactical_base_url: str = field(
-        default_factory=lambda: os.getenv("TACTICAL_BASE_URL", "http://localhost:1234/v1")
+        default_factory=lambda: os.getenv("TACTICAL_BASE_URL", "http://localhost:11434/v1")
     )
     tactical_api_key: str = field(
-        default_factory=lambda: os.getenv("TACTICAL_API_KEY", "lm-studio")
+        default_factory=lambda: os.getenv("TACTICAL_API_KEY", "ollama")
     )
     tactical_model: str = field(
-        default_factory=lambda: os.getenv("TACTICAL_MODEL", "phi-3-mini-4k-instruct")
+        default_factory=lambda: os.getenv("TACTICAL_MODEL", "phi3")
     )
 
     # AirSim (used only for the takeoff hand-off)

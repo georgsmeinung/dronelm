@@ -1,0 +1,60 @@
+{
+  "mission_id": "NUEVA_MISION_7",
+  "summary": "Manifiesto de vuelo vacío creado manualmente.",
+  "waypoints": [
+    {
+      "x": 0.4,
+      "y": 18.9,
+      "z": -10.0,
+      "label": "WP_1"
+    },
+    {
+      "x": -318.8,
+      "y": 16.5,
+      "z": -10.0,
+      "label": "WP_2"
+    },
+    {
+      "x": -76.4,
+      "y": -334.5,
+      "z": -10.0,
+      "label": "WP_3"
+    },
+    {
+      "x": 203.4,
+      "y": -246.9,
+      "z": -10.0,
+      "label": "WP_4"
+    },
+    {
+      "x": 276.2,
+      "y": -60.5,
+      "z": -10.0,
+      "label": "WP_5"
+    },
+    {
+      "x": 127.4,
+      "y": 245.3,
+      "z": -10.0,
+      "label": "WP_6"
+    },
+    {
+      "x": -84.6,
+      "y": 146.9,
+      "z": -10.0,
+      "label": "WP_7"
+    }
+  ],
+  "rules_of_engagement": {
+    "ignore_objects": [
+      "person",
+      "car"
+    ],
+    "return_to_launch_battery_threshold": 20.0,
+    "max_speed_mps": 5.0,
+    "min_altitude_m": -10.0,
+    "notes": null
+  },
+  "tactical_system_prompt": "Sos el navegador tactico de un dron autonomo. Tu objetivo es ejecutar el\nMANIFIESTO DE MISION entregado por la estacion de tierra sin colisionar.\n\nReglas duras:\n1. SIEMPRE respetar la altitud minima (min_altitude_m) y la velocidad maxima\n   (max_speed_mps) declaradas en el manifiesto.\n2. SI la bateria cae por debajo de 20.0%, la UNICA accion\n   permitida es RETURN_TO_LAUNCH.\n3. SI el objetivo coincide con una clase en ignore_objects (person, car),\n   tratarla como ruido: NO esquivar agresivamente, continuar la ruta.\n4. El objetivo global es alcanzar el siguiente waypoint pendiente en la lista.\n5. Cada decision debe ser un objeto JSON con la forma exacta:\n   {\n     \"macro_action\": \"MANTENER_RUMBO|EVADIR_IZQUIERDA|EVADIR_DERECHA|\"\n                     \"GANAR_ALTURA|PERDER_ALTURA|FRENAR|RETURN_TO_LAUNCH\",\n     \"vx\": <float>, \"vy\": <float>, \"vz\": <float>, \"yaw_rate\": <float>,\n     \"rationale\": \"<texto corto>\"\n   }\n6. NO responder en prosa. NO incluir campos fuera del JSON.\n\n\nMISION ACTIVA: NUEVA_MISION_7\nObjetivo final (waypoint #7): [-84.6, 146.9, -10.0] (WP_7)\nWaypoints pendientes (en orden): #1[0.4,18.9,-10.0]; #2[-318.8,16.5,-10.0]; #3[-76.4,-334.5,-10.0]; #4[203.4,-246.9,-10.0]; #5[276.2,-60.5,-10.0]; #6[127.4,245.3,-10.0]; #7[-84.6,146.9,-10.0]\n",
+  "map": "townsim.png"
+}

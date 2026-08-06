@@ -25,9 +25,12 @@ GOOD_MANIFEST = {
 }
 
 
+from airsim_plan.bridge import BridgeError
+
 def test_bridge_dry_run_takeoff() -> None:
     bridge = AirSimBridge()
-    assert bridge.hand_off(altitude=-5.0) is True
+    with pytest.raises(BridgeError):
+        bridge.hand_off(altitude=-5.0)
     bridge.disconnect()
 
 

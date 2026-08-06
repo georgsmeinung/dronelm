@@ -96,6 +96,15 @@ class LMStudioClient:
             content = ""
         return PlannerResponse(content=content, raw=completion)
 
+    def check_connection(self) -> bool:
+        if OpenAI is None:
+            return False
+        try:
+            self.client.models.list()
+            return True
+        except Exception:
+            return False
+
 
 class PlannerLLM:
     """High-level helper that exposes :meth:`complete_json` for the planner.

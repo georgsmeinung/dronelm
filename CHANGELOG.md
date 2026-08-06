@@ -1,3 +1,16 @@
+# 2026-0805
+
+* Mejoras en la usabilidad de WebDCS:
+  * Se agregó selector de mapas en el landing page
+  * Se agregó indicador de coordenadas en el cursor
+  * Se agregó indicador de mapa actual en el dashboard
+  * Se agregó botón para lanzar la misión
+
+<img src="informe/2026-0805 New WebDCS.png"/>
+
+* Se realizaron pruebas de conexión con AirSim desde el planner
+* Se realizaron pruebas de generacion de manifiestos con el planner
+
 
 # 2026-0804 
 * Haciendo pruebas de rendimiento de inferencia de https://ollama.com/LiquidAI/lfm2.5-1.2b-instruct de 1.2b parametros

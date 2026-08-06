@@ -9,19 +9,24 @@ let originalManifestString = ''; // Para control de cambios (dirty state)
 let savedManifests = [];
 let compiledManifestTemp = null; // Temp para fusionar waypoints de LLM
 let manifestToDeleteFilename = ''; // Temp para guardar el nombre del archivo a eliminar
-
 // Elementos del DOM
 const elNlInstruction = document.getElementById('nl-instruction');
 const elBtnCompile = document.getElementById('btn-compile');
 const elCompileSpinner = document.getElementById('compile-spinner');
 const elSavedList = document.getElementById('saved-manifests-list');
-const elJsonEditor = document.getElementById('json-editor');
-const elBtnSave = document.getElementById('btn-save');
-const elValidationStatus = document.getElementById('validation-status');
+const elJsonEditor = document.getElementById('json-viewer-textarea'); // Se sincroniza con el visor del modal
+const elBtnSave = document.getElementById('btn-save'); // Botón guardar en el Header
 const elToast = document.getElementById('toast');
 const elHoverX = document.getElementById('hover-x');
 const elHoverY = document.getElementById('hover-y');
 const elBtnResetMap = document.getElementById('btn-reset-map');
+const elMapSelector = document.getElementById('map-selector');
+const elLegendMapName = document.getElementById('legend-map-name');
+
+// Modal Visor JSON
+const elModalJsonViewer = document.getElementById('modal-json-viewer');
+const elJsonViewerTextarea = document.getElementById('json-viewer-textarea');
+const elBtnCloseJsonViewer = document.getElementById('btn-close-json-viewer');
 
 // Elementos de navegación del Sidebar
 const elViewManifestsList = document.getElementById('view-manifests-list');
@@ -30,6 +35,20 @@ const elActiveMissionTitle = document.getElementById('active-mission-title');
 const elActiveWaypointList = document.getElementById('active-waypoint-list');
 const elBtnBackManifests = document.getElementById('btn-back-manifests');
 const elBtnNewManifest = document.getElementById('btn-new-manifest');
+const elBtnLaunchMission = document.getElementById('btn-launch-mission');
+
+// Tabs & Nuevos Botones Manual / AI
+const elTabBtnManual = document.getElementById('tab-btn-manual');
+const elTabBtnAi = document.getElementById('tab-btn-ai');
+const elTabContentManual = document.getElementById('tab-content-manual');
+const elTabContentAi = document.getElementById('tab-content-ai');
+const elBtnClearRoute = document.getElementById('btn-clear-route');
+
+// Toggle JSON
+const elBtnToggleJson = document.getElementById('btn-toggle-json');
+const elDashboardWorkspace = document.getElementById('dashboard-workspace');
+const elPlannerStatusIndicator = document.getElementById('planner-status-indicator');
+const elPlannerStatusText = document.getElementById('planner-status-text');
 
 // Modales y Nuevo Manifiesto con Mapa
 const elModalNewMission = document.getElementById('modal-new-mission');
@@ -69,16 +88,44 @@ window.addEventListener('load', () => {
     loadAvailableMaps();
     setupModalListeners();
     setupNewManifestListener();
+    setupInteractiveControls();
 });
 
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', () => {
+    resizeCanvas();
+    centerMapInViewport();
+});
+
+mapImage.addEventListener('load', () => {
+    resizeCanvas();
+    centerMapInViewport();
+});
 
 function resizeCanvas() {
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
-    mapCenter.x = canvas.width / 2;
-    mapCenter.y = canvas.height / 2;
+    const naturalWidth = mapImage.naturalWidth || 1000;
+    const naturalHeight = mapImage.naturalHeight || 1000;
+    
+    canvas.width = naturalWidth;
+    canvas.height = naturalHeight;
+    canvas.style.width = naturalWidth + 'px';
+    canvas.style.height = naturalHeight + 'px';
+    canvas.style.left = '0px';
+    canvas.style.top = '0px';
+    
+    mapCenter.x = naturalWidth / 2;
+    mapCenter.y = naturalHeight / 2;
     drawRoute();
+}
+
+function centerMapInViewport() {
+    const container = document.getElementById('map-container');
+    if (!container) return;
+    
+    const naturalWidth = mapImage.naturalWidth || 1000;
+    const naturalHeight = mapImage.naturalHeight || 1000;
+    
+    container.scrollLeft = (naturalWidth - container.clientWidth) / 2;
+    container.scrollTop = (naturalHeight - container.clientHeight) / 2;
 }
 
 // ----------------------------------------------------------------------------
@@ -120,8 +167,15 @@ function canvasToNed(canvasX, canvasY) {
 function drawRoute() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 1. Dibujar punto de referencia Home (0,0)
-    const homePos = nedToCanvas(0, 0);
+    if (!activeManifest || !activeManifest.waypoints || activeManifest.waypoints.length === 0) {
+        return;
+    }
+
+    const wps = activeManifest.waypoints;
+
+    // 1. Dibujar punto de inicio / Home (primer waypoint, en amarillo)
+    const homeWp = wps[0];
+    const homePos = nedToCanvas(homeWp.x, homeWp.y);
     ctx.beginPath();
     ctx.arc(homePos.x, homePos.y, 8, 0, 2 * Math.PI);
     ctx.fillStyle = '#f59e0b';
@@ -132,35 +186,31 @@ function drawRoute() {
     
     ctx.font = 'bold 10px Outfit';
     ctx.fillStyle = '#f59e0b';
-    ctx.fillText('HOME (0,0)', homePos.x + 12, homePos.y + 4);
+    ctx.fillText(`${homeWp.label || 'START'} (${homeWp.x.toFixed(1)}, ${homeWp.y.toFixed(1)})`, homePos.x + 12, homePos.y + 4);
 
-    if (!activeManifest || !activeManifest.waypoints || activeManifest.waypoints.length === 0) {
-        return;
+    // 2. Dibujar líneas de trayectoria si hay más de 1 waypoint
+    if (wps.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(homePos.x, homePos.y);
+
+        for (let i = 1; i < wps.length; i++) {
+            const pos = nedToCanvas(wps[i].x, wps[i].y);
+            ctx.lineTo(pos.x, pos.y);
+        }
+        
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 5]); 
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#06b6d4';
+        ctx.stroke();
+        ctx.setLineDash([]); 
+        ctx.shadowBlur = 0;
     }
 
-    const wps = activeManifest.waypoints;
-
-    // 2. Dibujar líneas de trayectoria
-    ctx.beginPath();
-    const firstPos = nedToCanvas(wps[0].x, wps[0].y);
-    ctx.moveTo(firstPos.x, firstPos.y);
-
+    // 3. Dibujar Waypoints restantes (nodos azules, a partir del índice 1)
     for (let i = 1; i < wps.length; i++) {
-        const pos = nedToCanvas(wps[i].x, wps[i].y);
-        ctx.lineTo(pos.x, pos.y);
-    }
-    
-    ctx.strokeStyle = '#06b6d4';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([5, 5]); 
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = '#06b6d4';
-    ctx.stroke();
-    ctx.setLineDash([]); 
-    ctx.shadowBlur = 0;
-
-    // 3. Dibujar Waypoints (nodos)
-    wps.forEach((wp, idx) => {
+        const wp = wps[i];
         const pos = nedToCanvas(wp.x, wp.y);
         
         ctx.beginPath();
@@ -177,13 +227,13 @@ function drawRoute() {
 
         ctx.font = 'bold 11px Outfit';
         ctx.fillStyle = '#ffffff';
-        const label = wp.label ? `${idx + 1}: ${wp.label}` : `WP #${idx + 1}`;
+        const label = wp.label ? `${i + 1}: ${wp.label}` : `WP #${i + 1}`;
         ctx.fillText(label, pos.x + 10, pos.y - 6);
         
         ctx.font = '9px Fira Code';
         ctx.fillStyle = '#a5b4fc';
         ctx.fillText(`[${wp.x.toFixed(1)}, ${wp.y.toFixed(1)}, ${wp.z.toFixed(1)}]`, pos.x + 10, pos.y + 6);
-    });
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -214,30 +264,25 @@ canvas.addEventListener('click', (e) => {
         zVal = activeManifest.rules_of_engagement.min_altitude_m;
     }
     
-    const newWp = {
+    const clickedPt = {
         x: Math.round(ned.x * 10) / 10,
         y: Math.round(ned.y * 10) / 10,
         z: zVal,
-        label: `WP_${activeManifest.waypoints.length + 1}`
+        label: ''
     };
     
-    activeManifest.waypoints.push(newWp);
+    clickedPt.label = `WP_${(activeManifest.waypoints ? activeManifest.waypoints.length : 0) + 1}`;
+    if (!activeManifest.waypoints) {
+        activeManifest.waypoints = [];
+    }
+    activeManifest.waypoints.push(clickedPt);
+    showToast(`Waypoint #${activeManifest.waypoints.length} añadido a la trayectoria.`, 'success');
+    
     syncManifestToEditor();
-    showToast(`Waypoint #${activeManifest.waypoints.length} añadido a la altitud actual: ${zVal}m`, 'success');
 });
 
 elBtnResetMap.addEventListener('click', () => {
-    mapScale = 2.5;
-    if (activeManifest && activeManifest.waypoints && activeManifest.waypoints.length > 0) {
-        let maxDist = 50;
-        activeManifest.waypoints.forEach(wp => {
-            const dist = Math.sqrt(wp.x*wp.x + wp.y*wp.y);
-            if (dist > maxDist) maxDist = dist;
-        });
-        mapScale = (Math.min(canvas.width, canvas.height) / 2) / (maxDist * 1.2);
-        mapScale = Math.min(mapScale, 5.0);
-    }
-    drawRoute();
+    centerMapInViewport();
 });
 
 // ----------------------------------------------------------------------------
@@ -289,39 +334,16 @@ elBtnCompile.addEventListener('click', async () => {
 // ----------------------------------------------------------------------------
 // Gestión del Editor JSON y Sincronización
 // ----------------------------------------------------------------------------
-elJsonEditor.addEventListener('input', () => {
-    validateJson(false); 
-});
-
 function syncManifestToEditor() {
-    elJsonEditor.value = JSON.stringify(activeManifest, null, 2);
-    validateJson(true);
-}
-
-function validateJson(isInternalUpdate = false) {
-    const raw = elJsonEditor.value.trim();
-    if (!raw) {
-        elValidationStatus.innerHTML = `<span class="status-text muted">Editor vacío</span>`;
-        elBtnSave.disabled = true;
-        return;
-    }
-    
-    try {
-        const parsed = JSON.parse(raw);
-        if (!parsed.mission_id || !parsed.waypoints || !Array.isArray(parsed.waypoints)) {
-            throw new Error("Estructura inválida. Debe tener 'mission_id' y lista de 'waypoints'.");
-        }
-        
-        activeManifest = parsed;
-        elValidationStatus.innerHTML = `<span class="status-text success"><i class="fa-solid fa-circle-check"></i> Estructura JSON válida</span>`;
+    if (activeManifest) {
+        elJsonEditor.value = JSON.stringify(activeManifest, null, 2);
         elBtnSave.disabled = false;
-        
-        renderWaypointList();
-        drawRoute();
-    } catch (err) {
-        elValidationStatus.innerHTML = `<span class="status-text error"><i class="fa-solid fa-triangle-exclamation"></i> JSON inválido: ${err.message}</span>`;
+    } else {
+        elJsonEditor.value = '';
         elBtnSave.disabled = true;
     }
+    renderWaypointList();
+    drawRoute();
 }
 
 // ----------------------------------------------------------------------------
@@ -347,7 +369,12 @@ function renderWaypointList() {
         item.innerHTML = `
             <div class="waypoint-item-info">
                 <span class="waypoint-item-title">${wp.label ? `${idx+1}: ${wp.label}` : `WP #${idx+1}`}</span>
-                <span class="waypoint-item-coords">N:${wp.x.toFixed(1)} E:${wp.y.toFixed(1)} Alt:${wp.z.toFixed(1)}m</span>
+                <span class="waypoint-item-coords">N:${wp.x.toFixed(1)} E:${wp.y.toFixed(1)}</span>
+                <div class="waypoint-alt-edit" style="display: flex; align-items: center; gap: 0.2rem; margin-top: 0.2rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">Alt:</label>
+                    <input type="number" class="wp-alt-input" value="${wp.z}" step="0.5" style="width: 55px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px; padding: 0.1rem 0.3rem; font-size: 0.75rem; font-family: inherit;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">m</span>
+                </div>
             </div>
             <div class="waypoint-actions">
                 <button class="btn-mini btn-up" title="Subir" ${idx === 0 ? 'disabled' : ''}>
@@ -361,6 +388,15 @@ function renderWaypointList() {
                 </button>
             </div>
         `;
+
+        const altInput = item.querySelector('.wp-alt-input');
+        altInput.addEventListener('change', (e) => {
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val)) {
+                wp.z = val;
+                syncManifestToEditor();
+            }
+        });
 
         item.querySelector('.btn-up').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -409,6 +445,8 @@ function loadActiveManifest(manifest) {
     // Cargar mapa correspondiente (por defecto map.png si no tiene)
     const mapFile = manifest.map || "map.png";
     mapImage.src = `/maps/${mapFile}`;
+    elMapSelector.value = mapFile;
+    elLegendMapName.textContent = mapFile;
     
     elViewManifestsList.classList.add('hidden');
     elViewWaypointsDetail.classList.remove('hidden');
@@ -434,7 +472,6 @@ function goBackToManifestsList() {
     elViewManifestsList.classList.remove('hidden');
     
     elJsonEditor.value = '';
-    elValidationStatus.innerHTML = `<span class="status-text muted">Esperando compilación...</span>`;
     elBtnSave.disabled = true;
     
     loadSavedManifests();
@@ -450,13 +487,15 @@ async function loadAvailableMaps() {
         if (!response.ok) return;
         availableMaps = await response.json();
         
-        // Llenar selector de mapas
+        // Llenar selectores de mapas (modal y cabecera del mapa)
         elNewMissionMap.innerHTML = '';
+        elMapSelector.innerHTML = '';
         availableMaps.forEach(mapFile => {
             const opt = document.createElement('option');
             opt.value = mapFile;
             opt.textContent = mapFile;
-            elNewMissionMap.appendChild(opt);
+            elNewMissionMap.appendChild(opt.cloneNode(true));
+            elMapSelector.appendChild(opt);
         });
     } catch (err) {
         console.error('Error cargando mapas disponibles:', err);
@@ -724,3 +763,126 @@ function showToast(message, type = 'info') {
         elToast.classList.add('hidden');
     }, 4000);
 }
+
+// ----------------------------------------------------------------------------
+// Rediseño: Inicializar Controles Interactivos de Pestañas y Modos
+// ----------------------------------------------------------------------------
+function setupInteractiveControls() {
+    // 1. Manejo de Pestañas (Manual vs AI)
+    elTabBtnManual.addEventListener('click', () => {
+        elTabBtnManual.classList.add('active');
+        elTabBtnAi.classList.remove('active');
+        elTabContentManual.classList.add('active-content');
+        elTabContentAi.classList.remove('active-content');
+    });
+
+    elTabBtnAi.addEventListener('click', () => {
+        elTabBtnManual.classList.remove('active');
+        elTabBtnAi.classList.add('active');
+        elTabContentManual.classList.remove('active-content');
+        elTabContentAi.classList.add('active-content');
+    });
+
+    // 2. Modos de Diseño Manual (Removidos Inicio y Waypoints)
+
+    // 3. Limpiar Trayectoria
+    elBtnClearRoute.addEventListener('click', () => {
+        if (!activeManifest) return;
+        activeManifest.waypoints = [];
+        syncManifestToEditor();
+        showToast('Se han eliminado todos los puntos de la trayectoria.', 'warning');
+    });
+
+    // 4. Mostrar/Ocultar Editor JSON (Modal Read-only)
+    elBtnToggleJson.addEventListener('click', () => {
+        if (!activeManifest) {
+            showToast('No hay una misión activa para mostrar.', 'error');
+            return;
+        }
+        elJsonViewerTextarea.value = JSON.stringify(activeManifest, null, 2);
+        elModalJsonViewer.classList.remove('hidden');
+    });
+
+    elBtnCloseJsonViewer.addEventListener('click', () => {
+        elModalJsonViewer.classList.add('hidden');
+    });
+
+    // 5. Selector de Mapas Global
+    elMapSelector.addEventListener('change', () => {
+        const selectedMap = elMapSelector.value;
+        mapImage.src = `/maps/${selectedMap}`;
+        elLegendMapName.textContent = selectedMap;
+        if (activeManifest) {
+            activeManifest.map = selectedMap;
+            syncManifestToEditor();
+        } else {
+            // Si no hay misión, redimensionar de todos modos al cargar el nuevo mapa
+            resizeCanvas();
+        }
+        showToast(`Mapa cambiado a: ${selectedMap}`, 'success');
+    });
+
+    // 6. Lanzamiento de Misión
+    elBtnLaunchMission.addEventListener('click', async () => {
+        if (!activeManifest) {
+            showToast('No hay una misión activa para lanzar.', 'error');
+            return;
+        }
+
+        elBtnLaunchMission.disabled = true;
+        showToast('Guardando y lanzando misión en AirSim...', 'info');
+
+        try {
+            const response = await fetch('/api/launch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ manifest: activeManifest })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Error al lanzar la misión.');
+            }
+
+            showToast(data.message, 'success');
+            if (data.manifest) {
+                activeManifest = data.manifest;
+                updateOriginalState();
+            }
+        } catch (err) {
+            console.error(err);
+            showToast(err.message, 'error');
+        } finally {
+            elBtnLaunchMission.disabled = false;
+        }
+    });
+}
+
+// ----------------------------------------------------------------------------
+// Monitoreo del estado del Planificador LLM
+// ----------------------------------------------------------------------------
+async function updatePlannerStatus() {
+    try {
+        const response = await fetch('/api/planner/status');
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        
+        if (data.status === 'online') {
+            elPlannerStatusIndicator.classList.remove('offline');
+            elPlannerStatusIndicator.classList.add('online');
+            elPlannerStatusText.textContent = 'AirSim Planner Connected';
+        } else {
+            elPlannerStatusIndicator.classList.remove('online');
+            elPlannerStatusIndicator.classList.add('offline');
+            elPlannerStatusText.textContent = 'AirSim Planner Disconnected';
+        }
+    } catch (err) {
+        elPlannerStatusIndicator.classList.remove('online');
+        elPlannerStatusIndicator.classList.add('offline');
+        elPlannerStatusText.textContent = 'AirSim Planner Disconnected';
+    }
+}
+
+// Iniciar monitoreo
+updatePlannerStatus();
+setInterval(updatePlannerStatus, 10000);

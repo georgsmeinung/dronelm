@@ -8,14 +8,18 @@ src_path = Path(__file__).resolve().parent.parent / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from fastapi import FastAPI, HTTPException
+# pyrefly: ignore [missing-import]
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from airsim_plan.missions import MissionPlanner, PlannerError, load_manifest
 from airsim_plan.missions.manifest import MissionManifest, save_manifest
 from airsim_plan.config import get_settings
+from airsim_plan.bridge import LoopRunner, BridgeError
 
 app = FastAPI(
     title="WebDCS - Ground Control Station Planner",
@@ -77,6 +81,55 @@ async def save_manifest_endpoint(req: SaveRequest):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error al guardar el manifiesto: {exc}")
 
+@app.post("/api/launch")
+async def launch_mission(req: SaveRequest, background_tasks: BackgroundTasks):
+    settings = get_settings()
+    planner = MissionPlanner()
+    try:
+        manifest = MissionManifest.from_dict(req.manifest)
+        # Re-generar el prompt táctico
+        manifest.tactical_system_prompt = planner.build_tactical_prompt(manifest)
+        
+        # Guardar manifiesto antes de lanzar para persistencia
+        target_dir = planner.settings.mission_dir / "flightplans"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"{manifest.mission_id.lower()}.json"
+        path = target_dir / filename
+        save_manifest(manifest, path)
+
+        # Verificar conexión con AirSim antes de lanzar en segundo plano
+        runner = LoopRunner(manifest)
+        runner.bridge.connect()
+
+        # Lanzar la misión en segundo plano
+        def run_loop():
+            try:
+                runner.run()
+            except Exception as e:
+                print(f"Error ejecutando LoopRunner: {e}")
+
+        background_tasks.add_task(run_loop)
+
+        return {
+            "status": "success",
+            "message": f"Misión {manifest.mission_id} lanzada con éxito.",
+            "manifest": manifest.model_dump()
+        }
+    except BridgeError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Error de conexión con AirSim: {exc}. "
+                f"(Configuración: host={settings.airsim_host}, "
+                f"port={settings.airsim_port}, "
+                f"vehicle={settings.airsim_vehicle_name})"
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Error de validación: {exc}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al lanzar la misión: {exc}")
+
 @app.get("/api/manifests")
 async def list_manifests():
     settings = get_settings()
@@ -124,6 +177,12 @@ async def list_maps():
         if p.suffix.lower() in allowed_extensions:
             maps.append(p.name)
     return sorted(maps)
+
+@app.get("/api/planner/status")
+async def planner_status():
+    planner = MissionPlanner()
+    is_online = planner._client.check_connection()
+    return {"status": "online" if is_online else "offline"}
 
 # Servir mapas desde missions/maps
 missions_maps_dir = Path(__file__).resolve().parent.parent / "missions" / "maps"

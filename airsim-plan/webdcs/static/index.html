@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,14 @@
     <!-- Google Fonts: Outfit (modern sans) & Fira Code (monospaced) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="app-container">
         <!-- Header -->
@@ -21,8 +25,16 @@
                 <h1>WebDCS (Departure Control System) <span class="badge">Ground Station</span></h1>
             </div>
             <div class="header-status">
-                <span class="status-indicator online"></span>
-                <span>AirSim Planner Connected</span>
+                <button id="btn-save" class="btn btn-success" disabled
+                    style="margin-right: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.8rem; height: auto; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fa-solid fa-floppy-disk"></i> <span>Guardar</span>
+                </button>
+                <button id="btn-toggle-json" class="btn btn-secondary btn-icon-with-text" title="Ver Manifiesto JSON"
+                    style="margin-right: 1rem; padding: 0.4rem 0.8rem; font-size: 0.8rem; height: auto; display: flex; align-items: center; gap: 0.4rem;">
+                    <i class="fa-solid fa-code"></i> <span>Ver JSON</span>
+                </button>
+                <span id="planner-status-indicator" class="status-indicator offline"></span>
+                <span id="planner-status-text">Cargando estado...</span>
             </div>
         </header>
 
@@ -30,29 +42,14 @@
         <main class="app-dashboard">
             <!-- Sidebar: NL Compiler & Saved Missions -->
             <section class="dashboard-sidebar">
-                <!-- Compile Box -->
-                <div class="card glass hidden">
-                    <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Compilador NL</h2>
-                    <p class="card-desc">Redactá la instrucción de vuelo en lenguaje natural para que el LLM genere el manifiesto.</p>
-                    
-                    <div class="input-group">
-                        <textarea id="nl-instruction" placeholder="Ej: Recorrer el perimetro norte a una altitud de -15 metros yendo a 4 m/s. Ignorar personas y autos. Terminar en la posicion x=50, y=80..."></textarea>
-                    </div>
-
-                    <button id="btn-compile" class="btn btn-primary btn-glow">
-                        <i class="fa-solid fa-microchip"></i>
-                        <span>Compilar Misión</span>
-                        <div class="spinner hidden" id="compile-spinner"></div>
-                    </button>
-                </div>
-
                 <!-- Saved Manifests & Waypoint List Container -->
                 <div class="card glass flex-grow" id="sidebar-missions-card">
                     <!-- Vista A: Listado de Manifiestos -->
                     <div id="view-manifests-list">
                         <div class="sidebar-header-with-action">
                             <h2><i class="fa-solid fa-folder-open"></i> Manifiestos Guardados</h2>
-                            <button id="btn-new-manifest" class="btn btn-secondary btn-icon btn-new-mission" title="Nueva Misión">
+                            <button id="btn-new-manifest" class="btn btn-secondary btn-icon btn-new-mission"
+                                title="Nueva Misión">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
                         </div>
@@ -61,63 +58,93 @@
                             <div class="list-placeholder">No hay misiones cargadas.</div>
                         </div>
                     </div>
-                    
+
                     <!-- Vista B: Detalle de Waypoints de Misión Activa -->
                     <div id="view-waypoints-detail" class="hidden">
                         <div class="sidebar-detail-header">
-                            <button id="btn-back-manifests" class="btn btn-secondary btn-icon" title="Volver al Listado">
+                            <button id="btn-back-manifests" class="btn btn-secondary btn-icon"
+                                title="Volver al Listado">
                                 <i class="fa-solid fa-arrow-left"></i>
                             </button>
                             <h2 id="active-mission-title">MISIÓN</h2>
                         </div>
-                        <p class="card-desc">Gestioná, reordená o eliminá los puntos de la trayectoria.</p>
-                        <div class="waypoint-list" id="active-waypoint-list">
-                            <!-- Los items se inyectan dinámicamente -->
+
+                        <!-- Botón Lanza Misión -->
+                        <button id="btn-launch-mission" class="btn btn-success btn-glow-green"
+                            style="width: 100%; margin-bottom: 1.2rem; padding: 0.75rem; font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-paper-plane"></i> Lanzar Misión
+                        </button>
+
+                        <!-- Tabs Headers -->
+                        <div class="tabs-header">
+                            <button id="tab-btn-manual" class="tab-btn active"><i class="fa-solid fa-hand-pointer"></i>
+                                Manual</button>
+                            <button id="tab-btn-ai" class="tab-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
+                                Planner</button>
+                        </div>
+
+                        <!-- Tab 1: Manual Design -->
+                        <div id="tab-content-manual" class="tab-content active-content">
+                            <!-- Se removieron los botones de selección de modo (Inicio y Waypoints) -->
+
+                            <div class="action-row" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+                                <button id="btn-clear-route" class="btn btn-danger" style="flex: 1; padding: 0.5rem;"><i
+                                        class="fa-solid fa-trash-can"></i> Limpiar Ruta</button>
+                            </div>
+
+                            <p class="card-desc">Click en el mapa para colocar. Gestioná los puntos abajo:</p>
+                            <div class="waypoint-list" id="active-waypoint-list">
+                                <!-- Los items se inyectan dinámicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: AI Planner -->
+                        <div id="tab-content-ai" class="tab-content">
+                            <p class="card-desc">Redactá la instrucción de vuelo en lenguaje natural para que el LLM
+                                local planifique la ruta.</p>
+                            <div class="input-group">
+                                <textarea id="nl-instruction"
+                                    placeholder="Ej: Recorrer el perimetro norte a una altitud de -15 metros yendo a 4 m/s. Ignorar personas y autos..."></textarea>
+                            </div>
+                            <button id="btn-compile" class="btn btn-primary btn-glow" style="width: 100%;">
+                                <i class="fa-solid fa-microchip"></i>
+                                <span>Planificar con LLM</span>
+                                <div class="spinner hidden" id="compile-spinner"></div>
+                            </button>
                         </div>
                     </div>
                 </div>
             </section>
 
             <!-- Main Workspace: Map & JSON Editor -->
-            <section class="dashboard-workspace">
+            <section class="dashboard-workspace" id="dashboard-workspace">
                 <!-- Map Card -->
-                <div class="card glass map-card">
+                <div class="card glass map-card" style="position: relative;">
                     <div class="card-header">
                         <h2><i class="fa-solid fa-map-location-dot"></i> Carta de Territorio & Ruta</h2>
                         <div class="map-controls">
-                            <span class="coord-indicator"><i class="fa-solid fa-crosshairs"></i> X: <span id="hover-x">0</span>, Y: <span id="hover-y">0</span></span>
-                            <button id="btn-reset-map" class="btn btn-secondary btn-icon" title="Centrar Mapa"><i class="fa-solid fa-compress"></i></button>
+                            <span class="coord-indicator"><i class="fa-solid fa-crosshairs"></i> X: <span
+                                    id="hover-x">0</span>, Y: <span id="hover-y">0</span></span>
+                            <select id="map-selector" class="map-selector" title="Seleccionar Mapa"
+                                style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: var(--text-main); font-family: inherit; font-size: 0.8rem; padding: 0.35rem 0.6rem; border-radius: 6px; cursor: pointer; outline: none;"></select>
+                            <button id="btn-reset-map" class="btn btn-secondary btn-icon" title="Centrar Mapa"><i
+                                    class="fa-solid fa-compress"></i></button>
                         </div>
                     </div>
-                    
+
                     <div class="map-wrapper" id="map-container">
                         <img src="/maps/map.png" alt="Carta de Territorio Satelital" id="map-image">
                         <canvas id="route-canvas"></canvas>
-                        
-                        <!-- Overlay overlaying instructions or details -->
-                        <div class="map-legend">
-                            <div class="legend-item"><span class="legend-dot home"></span> Home (0,0)</div>
-                            <div class="legend-item"><span class="legend-dot waypoint"></span> Waypoint</div>
-                            <div class="legend-item"><span class="legend-dot path"></span> Trayectoria (NED)</div>
-                        </div>
                     </div>
-                </div>
 
-                <!-- Editor Card -->
-                <div class="card glass editor-card">
-                    <div class="card-header">
-                        <h2><i class="fa-solid fa-file-code"></i> Manifiesto de Misión (JSON)</h2>
-                        <div class="editor-controls">
-                            <button id="btn-save" class="btn btn-success" disabled>
-                                <i class="fa-solid fa-floppy-disk"></i> Guardar Manifiesto
-                            </button>
-                        </div>
-                    </div>
-                    <div class="editor-container">
-                        <textarea id="json-editor" class="code-editor" spellcheck="false" placeholder="El JSON del manifiesto aparecerá aquí tras compilar o cargar una misión..."></textarea>
-                    </div>
-                    <div class="editor-status" id="validation-status">
-                        <span class="status-text muted">Esperando compilación...</span>
+                    <!-- Overlay overlaying instructions or details (moved outside scroll wrapper) -->
+                    <div class="map-legend" style="z-index: 10;">
+                        <div class="legend-item"
+                            style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; margin-bottom: 0.4rem; font-weight: 600; color: var(--text-main); font-size: 0.8rem;">
+                            <i class="fa-solid fa-map"></i> <span id="legend-map-name">map.png</span></div>
+                        <div class="legend-item"><span class="legend-dot home"></span> Start/Home</div>
+                        <div class="legend-item"><span class="legend-dot waypoint"></span> Waypoint</div>
+                        <div class="legend-item"><span class="legend-dot path"></span> Trayectoria (NED)</div>
                     </div>
                 </div>
             </section>
@@ -136,8 +163,10 @@
             <h3><i class="fa-solid fa-triangle-exclamation"></i> Cambios sin guardar</h3>
             <p>La misión actual tiene cambios sin guardar. ¿Deseas guardarlos antes de volver al listado general?</p>
             <div class="modal-actions">
-                <button id="btn-modal-save" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-                <button id="btn-modal-discard" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> Descartar</button>
+                <button id="btn-modal-save" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i>
+                    Guardar</button>
+                <button id="btn-modal-discard" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i>
+                    Descartar</button>
                 <button id="btn-modal-cancel-save" class="btn btn-secondary">Cancelar</button>
             </div>
         </div>
@@ -149,9 +178,12 @@
             <h3><i class="fa-solid fa-code-merge"></i> Integrar Nuevos Waypoints</h3>
             <p>El LLM generó nuevos puntos de trayectoria. ¿Cómo deseas integrarlos con el plan de vuelo actual?</p>
             <div class="modal-actions-vertical">
-                <button id="btn-merge-overwrite" class="btn btn-primary"><i class="fa-solid fa-rotate"></i> Sobrescribir lista actual</button>
-                <button id="btn-merge-append" class="btn btn-success"><i class="fa-solid fa-arrow-down-long"></i> Agregar al final (Append)</button>
-                <button id="btn-merge-prepend" class="btn btn-glow"><i class="fa-solid fa-arrow-up-long"></i> Agregar al principio (Prepend)</button>
+                <button id="btn-merge-overwrite" class="btn btn-primary"><i class="fa-solid fa-rotate"></i> Sobrescribir
+                    lista actual</button>
+                <button id="btn-merge-append" class="btn btn-success"><i class="fa-solid fa-arrow-down-long"></i>
+                    Agregar al final (Append)</button>
+                <button id="btn-merge-prepend" class="btn btn-glow"><i class="fa-solid fa-arrow-up-long"></i> Agregar al
+                    principio (Prepend)</button>
                 <button id="btn-merge-cancel" class="btn btn-secondary">Cancelar</button>
             </div>
         </div>
@@ -161,9 +193,11 @@
     <div id="modal-delete-confirm" class="modal-overlay hidden">
         <div class="modal-content glass">
             <h3><i class="fa-solid fa-trash-can"></i> ¿Eliminar manifiesto?</h3>
-            <p>¿Estás seguro de que deseas eliminar permanentemente el manifiesto <strong id="delete-manifest-name"></strong>?</p>
+            <p>¿Estás seguro de que deseas eliminar permanentemente el manifiesto <strong
+                    id="delete-manifest-name"></strong>?</p>
             <div class="modal-actions">
-                <button id="btn-modal-delete-confirm" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> Eliminar</button>
+                <button id="btn-modal-delete-confirm" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i>
+                    Eliminar</button>
                 <button id="btn-modal-delete-cancel" class="btn btn-secondary">Cancelar</button>
             </div>
         </div>
@@ -174,20 +208,46 @@
             <h3><i class="fa-solid fa-satellite"></i> Nueva Misión</h3>
             <p>Configurá el ID y seleccioná la carta de territorio (mapa) para iniciar.</p>
             <div class="input-group">
-                <label for="new-mission-id" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: block;">ID de la Misión:</label>
-                <input type="text" id="new-mission-id" value="NUEVA_MISION" style="width: 100%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-main); outline: none; font-family: inherit; font-size: 0.9rem;" />
+                <label for="new-mission-id"
+                    style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: block;">ID de la
+                    Misión:</label>
+                <input type="text" id="new-mission-id" value="NUEVA_MISION"
+                    style="width: 100%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-main); outline: none; font-family: inherit; font-size: 0.9rem;" />
             </div>
             <div class="input-group">
-                <label for="new-mission-map" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: block;">Seleccionar Mapa:</label>
-                <select id="new-mission-map" style="width: 100%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-main); outline: none; font-family: inherit; font-size: 0.9rem; cursor: pointer;"></select>
+                <label for="new-mission-map"
+                    style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: block;">Seleccionar
+                    Mapa:</label>
+                <select id="new-mission-map"
+                    style="width: 100%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-main); outline: none; font-family: inherit; font-size: 0.9rem; cursor: pointer;"></select>
             </div>
             <div class="modal-actions">
-                <button id="btn-modal-create" class="btn btn-success"><i class="fa-solid fa-circle-check"></i> Crear Misión</button>
+                <button id="btn-modal-create" class="btn btn-success"><i class="fa-solid fa-circle-check"></i> Crear
+                    Misión</button>
                 <button id="btn-modal-cancel-create" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Visor JSON de Manifiesto -->
+    <div id="modal-json-viewer" class="modal-overlay hidden">
+        <div class="modal-content glass"
+            style="max-width: 600px; width: 90%; height: 80vh; display: flex; flex-direction: column; padding: 1.5rem;">
+            <h3><i class="fa-solid fa-file-code"></i> Manifiesto de Misión (JSON)</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Esta es la representación en
+                formato JSON de la misión actual.</p>
+            <div
+                style="flex-grow: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); position: relative; margin-bottom: 1rem;">
+                <textarea id="json-viewer-textarea" readonly
+                    style="position: absolute; top:0; left:0; width:100%; height:100%; background-color: rgba(5,7,12,0.95); color: #34d399; font-family: 'Fira Code', monospace; font-size: 0.8rem; padding: 1rem; border: none; resize: none; outline: none; user-select: text;"></textarea>
+            </div>
+            <div class="modal-actions" style="margin-top: auto; justify-content: flex-end;">
+                <button id="btn-close-json-viewer" class="btn btn-secondary">Cerrar</button>
             </div>
         </div>
     </div>
 
     <script src="app.js"></script>
 </body>
+
 </html>

@@ -38,9 +38,7 @@ class AirSimBridge:
     # ------------------------------------------------------------------ #
     def connect(self) -> bool:
         if airsim is None:
-            print("[AirSimBridge] cosys-airsim not installed; running in dry-run mode.")
-            self._connected = False
-            return False
+            raise BridgeError("cosys-airsim is not installed.")
         try:
             self._client = airsim.MultirotorClient(
                 ip=self._settings.airsim_host,
@@ -51,9 +49,10 @@ class AirSimBridge:
             self._connected = True
             return True
         except Exception as exc:  # pragma: no cover - depends on simulator
-            print(f"[AirSimBridge] connect() failed: {exc}")
             self._connected = False
-            return False
+            raise BridgeError(
+                f"Failed to connect to AirSim at {self._settings.airsim_host}:{self._settings.airsim_port}: {exc}"
+            ) from exc
 
     def disconnect(self) -> None:
         if self._client is None or not self._connected:
@@ -74,11 +73,7 @@ class AirSimBridge:
             altitude if altitude is not None else self._settings.default_takeoff_alt
         )
         if not self._connected or self._client is None:
-            print(
-                f"[AirSimBridge][dry-run] takeoff to z={target_z} on "
-                f"{self._settings.airsim_vehicle_name}."
-            )
-            return True
+            raise BridgeError("Cannot takeoff: AirSim client is not connected.")
         try:
             self._client.armDisarm(True, self._settings.airsim_vehicle_name)
             self._client.takeoffAsync(
@@ -96,8 +91,7 @@ class AirSimBridge:
 
     def land(self) -> bool:
         if not self._connected or self._client is None:
-            print("[AirSimBridge][dry-run] land.")
-            return True
+            raise BridgeError("Cannot land: AirSim client is not connected.")
         try:
             self._client.landAsync(vehicle_name=self._settings.airsim_vehicle_name).join()
             return True

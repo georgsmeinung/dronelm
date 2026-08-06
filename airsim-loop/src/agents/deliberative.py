@@ -22,9 +22,9 @@ except Exception:  # pragma: no cover
     OpenAI = None  # type: ignore
 
 
-LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:1234/v1")
-LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "not-needed-for-local")
-LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi-3")
+LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
+LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "ollama")
+LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi3")
 
 DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
 EVASION_LATERAL_SPEED = float(os.getenv("EVASION_LATERAL_SPEED", "2.5"))

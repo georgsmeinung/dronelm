@@ -3,94 +3,52 @@
   "summary": "Recorre el perimetro norte hasta [50, 100, -10] ignorando personas y vehiculos.",
   "waypoints": [
     {
-      "x": 0.6,
-      "y": -0.5,
+      "x": -7.0,
+      "y": -4.8,
       "z": -10.0,
       "label": "WP_1"
     },
     {
-      "x": 36.2,
-      "y": -30.2,
+      "x": 116.2,
+      "y": 86.8,
       "z": -10.0,
       "label": "WP_2"
     },
     {
-      "x": 49.9,
-      "y": -45.6,
+      "x": 167.4,
+      "y": 86.4,
       "z": -10.0,
       "label": "WP_3"
     },
     {
-      "x": 72.2,
-      "y": -52.5,
+      "x": 145.8,
+      "y": 53.2,
       "z": -10.0,
       "label": "WP_4"
     },
     {
-      "x": 100.9,
-      "y": -49.3,
+      "x": 165.8,
+      "y": 6.8,
       "z": -10.0,
       "label": "WP_5"
     },
     {
-      "x": 100.4,
-      "y": -25.0,
+      "x": 148.6,
+      "y": -41.2,
       "z": -10.0,
       "label": "WP_6"
     },
     {
-      "x": 99.7,
-      "y": 0.2,
+      "x": 165.8,
+      "y": -88.4,
       "z": -10.0,
       "label": "WP_7"
     },
     {
-      "x": 99.9,
-      "y": 29.4,
+      "x": -0.6,
+      "y": -10.4,
       "z": -10.0,
       "label": "WP_8"
-    },
-    {
-      "x": 99.0,
-      "y": 52.3,
-      "z": -10.0,
-      "label": "WP_9"
-    },
-    {
-      "x": 76.4,
-      "y": 50.8,
-      "z": -10.0,
-      "label": "WP_10"
-    },
-    {
-      "x": 63.6,
-      "y": 44.2,
-      "z": -10.0,
-      "label": "WP_11"
-    },
-    {
-      "x": 55.5,
-      "y": 30.9,
-      "z": -10.0,
-      "label": "WP_12"
-    },
-    {
-      "x": 44.7,
-      "y": 23.3,
-      "z": -10.0,
-      "label": "WP_13"
-    },
-    {
-      "x": 21.0,
-      "y": 9.3,
-      "z": -10.0,
-      "label": "WP_14"
-    },
-    {
-      "x": 1.1,
-      "y": -0.2,
-      "z": -10.0,
-      "label": "WP_15"
     }
   ],
   "rules_of_engagement": {
@@ -103,5 +61,6 @@
     "min_altitude_m": -10.0,
     "notes": null
   },
-  "tactical_system_prompt": "Sos el navegador tactico de un dron autonomo. Tu objetivo es ejecutar el\nMANIFIESTO DE MISION entregado por la estacion de tierra sin colisionar.\n\nReglas duras:\n1. SIEMPRE respetar la altitud minima (min_altitude_m) y la velocidad maxima\n   (max_speed_mps) declaradas en el manifiesto.\n2. SI la bateria cae por debajo de 20.0%, la UNICA accion\n   permitida es RETURN_TO_LAUNCH.\n3. SI el objetivo coincide con una clase en ignore_objects (person, car),\n   tratarla como ruido: NO esquivar agresivamente, continuar la ruta.\n4. El objetivo global es alcanzar el siguiente waypoint pendiente en la lista.\n5. Cada decision debe ser un objeto JSON con la forma exacta:\n   {\n     \"macro_action\": \"MANTENER_RUMBO|EVADIR_IZQUIERDA|EVADIR_DERECHA|\"\n                     \"GANAR_ALTURA|PERDER_ALTURA|FRENAR|RETURN_TO_LAUNCH\",\n     \"vx\": <float>, \"vy\": <float>, \"vz\": <float>, \"yaw_rate\": <float>,\n     \"rationale\": \"<texto corto>\"\n   }\n6. NO responder en prosa. NO incluir campos fuera del JSON.\n\n\nMISION ACTIVA: PERIMETER_NORTH_01\nObjetivo final (waypoint #15): [1.1, -0.2, -10.0] (WP_15)\nWaypoints pendientes (en orden): #1[0.6,-0.5,-10.0]; #2[36.2,-30.2,-10.0]; #3[49.9,-45.6,-10.0]; #4[72.2,-52.5,-10.0]; #5[100.9,-49.3,-10.0]; #6[100.4,-25.0,-10.0]; #7[99.7,0.2,-10.0]; #8[99.9,29.4,-10.0]; #9[99.0,52.3,-10.0]; #10[76.4,50.8,-10.0]; #11[63.6,44.2,-10.0]; #12[55.5,30.9,-10.0]; #13[44.7,23.3,-10.0]; #14[21.0,9.3,-10.0]; #15[1.1,-0.2,-10.0]\n"
+  "tactical_system_prompt": "Sos el navegador tactico de un dron autonomo. Tu objetivo es ejecutar el\nMANIFIESTO DE MISION entregado por la estacion de tierra sin colisionar.\n\nReglas duras:\n1. SIEMPRE respetar la altitud minima (min_altitude_m) y la velocidad maxima\n   (max_speed_mps) declaradas en el manifiesto.\n2. SI la bateria cae por debajo de 20.0%, la UNICA accion\n   permitida es RETURN_TO_LAUNCH.\n3. SI el objetivo coincide con una clase en ignore_objects (person, car),\n   tratarla como ruido: NO esquivar agresivamente, continuar la ruta.\n4. El objetivo global es alcanzar el siguiente waypoint pendiente en la lista.\n5. Cada decision debe ser un objeto JSON con la forma exacta:\n   {\n     \"macro_action\": \"MANTENER_RUMBO|EVADIR_IZQUIERDA|EVADIR_DERECHA|\"\n                     \"GANAR_ALTURA|PERDER_ALTURA|FRENAR|RETURN_TO_LAUNCH\",\n     \"vx\": <float>, \"vy\": <float>, \"vz\": <float>, \"yaw_rate\": <float>,\n     \"rationale\": \"<texto corto>\"\n   }\n6. NO responder en prosa. NO incluir campos fuera del JSON.\n\n\nMISION ACTIVA: PERIMETER_NORTH_01\nObjetivo final (waypoint #8): [-0.6, -10.4, -10.0] (WP_8)\nWaypoints pendientes (en orden): #1[-7.0,-4.8,-10.0]; #2[116.2,86.8,-10.0]; #3[167.4,86.4,-10.0]; #4[145.8,53.2,-10.0]; #5[165.8,6.8,-10.0]; #6[148.6,-41.2,-10.0]; #7[165.8,-88.4,-10.0]; #8[-0.6,-10.4,-10.0]\n",
+  "map": "map.png"
 }
