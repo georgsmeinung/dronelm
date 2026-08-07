@@ -695,7 +695,7 @@ promptfoo view
 <img src="informe/2026-0702 prompFoo Results.png"/>
 
 
-# 2026-0627
+# 2026-0628
 
 ### Regeneración de Datos Sintéticos
 
@@ -744,6 +744,8 @@ reset
 3. **Ruido Ambiental y Estocasticidad:**
    - Durante las fases **rectas**, la telemetría simulada en AirSim es idealizada (varianza de actitud cercana a 0), sin fuerzas externas de viento ni ruido de sensores.
    - El dron real, por otro lado, manifiesta una variabilidad permanente de $\pm 2^\circ - 3^\circ$ en roll y pitch incluso en tramos rectos estables, producto del viento real de la zona y de las correcciones del piloto automático.
+
+# 2026-0627
 
 ### La optimización de Modelos de Lenguaje Pequeños (SLM) con LoRA (Low-Rank Adaptation) 
 
