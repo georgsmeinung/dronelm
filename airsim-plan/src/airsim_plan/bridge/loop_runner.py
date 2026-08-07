@@ -41,12 +41,14 @@ class LoopRunner:
         settings: Optional[Settings] = None,
         loop_path: Optional[Path] = None,
         loop_hz: float = 0.5,
+        watch: Optional[bool] = None,
     ) -> None:
         self._manifest = manifest
         self._settings = settings or get_settings()
         self._bridge = bridge or AirSimBridge(settings=self._settings)
         self._loop_path = loop_path  # if None we use in-process import
         self._loop_hz = max(loop_hz, 0.05)
+        self._watch = watch if watch is not None else self._settings.airsim_loop_watch
 
     # ------------------------------------------------------------------ #
     # Properties                                                        #
@@ -58,6 +60,11 @@ class LoopRunner:
     @property
     def bridge(self) -> AirSimBridge:
         return self._bridge
+
+    def stop(self) -> None:
+        """Solicita la detención de la misión en ejecución."""
+        import os
+        os.environ[f"STOP_MISSION_{self._manifest.mission_id}"] = "1"
 
     # ------------------------------------------------------------------ #
     # Pre-prompt injection                                              #
@@ -76,6 +83,8 @@ class LoopRunner:
     # ------------------------------------------------------------------ #
     def run(self, *, takeoff_altitude: Optional[float] = None) -> None:
         """Take off + drive the tactical loop until interrupted."""
+        import os
+        os.environ["AIRSIM_LOOP_WATCH"] = "true" if self._watch else "false"
         try:
             self._bridge.hand_off(altitude=takeoff_altitude)
         except BridgeError as exc:
@@ -152,9 +161,13 @@ class LoopRunner:
         previous = {
             "AIRSIM_PLAN_MANIFEST": str(env_path),
             "AIRSIM_PLAN_TACTICAL_PROMPT": self._manifest.tactical_system_prompt or "",
+            "AIRSIM_LOOP_WATCH": "true" if self._watch else "false",
         }
         try:
             sys.argv = [str(script)]
+            script_dir = str(script.parent)
+            if script_dir not in sys.path:
+                sys.path.insert(0, script_dir)
             with __import__("contextlib").redirect_stdout(sys.stdout):
                 runpy.run_path(str(script), run_name="__main__", init_globals=previous)
         except SystemExit as exc:  # pragma: no cover - delegated

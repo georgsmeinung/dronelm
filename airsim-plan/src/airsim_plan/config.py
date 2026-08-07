@@ -9,8 +9,8 @@ from typing import List, Optional
 
 try:
     from dotenv import load_dotenv
-
-    load_dotenv()
+    env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+    load_dotenv(dotenv_path=env_path)
 except Exception:  # pragma: no cover
     pass
 
@@ -60,6 +60,9 @@ class Settings:
     )
     airsim_port: int = field(
         default_factory=lambda: int(os.getenv("AIRSIM_PORT", "41451"))
+    )
+    airsim_loop_watch: bool = field(
+        default_factory=lambda: os.getenv("AIRSIM_LOOP_WATCH", "false").lower() == "true"
     )
 
     # Mission defaults

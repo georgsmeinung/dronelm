@@ -57,9 +57,11 @@ def _build_nodes() -> Dict[str, Any]:
     from src.perception import YoloDetector, translate_detections, summarize_scene
     from src.hardware import AirSimClient
 
+    weights_path = os.getenv("YOLO_WEIGHTS", "weights/yolov8n.pt")
+    confidence_threshold = float(os.getenv("YOLO_CONF", "0.35"))
     detector = YoloDetector(        
-        weights_path=os.getenv("YOLO_WEIGHTS", "weights/yolov8n.pt"),
-        confidence_threshold=float(os.getenv("YOLO_CONF", "0.35"))
+        weights_path=weights_path,
+        confidence_threshold=confidence_threshold
     )
     # pyrefly: ignore [unknown-name]
     print(f"weights_path: {weights_path}")

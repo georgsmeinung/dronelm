@@ -147,8 +147,11 @@ def make_airsim_yolo_sensor(
         raise RuntimeError(
             f"numpy/opencv required for the live sensor ({_NUMPY_CV2_ERR})."
         )
-    # pyrefly: ignore [missing-import]
-    import airsim  # local import; cosys-airsim only needed when really flying
+    try:
+        # pyrefly: ignore [missing-import]
+        import airsim
+    except ImportError:
+        import cosysairsim as airsim
 
     model = YOLO(model_path)
     ignore_classes = {c.strip().lower() for c in

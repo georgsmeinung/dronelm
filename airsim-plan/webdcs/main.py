@@ -21,6 +21,9 @@ from airsim_plan.missions.manifest import MissionManifest, save_manifest
 from airsim_plan.config import get_settings
 from airsim_plan.bridge import LoopRunner, BridgeError
 
+# Guardar los runners activos para poder detenerlos
+active_runners: dict[str, LoopRunner] = {}
+
 app = FastAPI(
     title="WebDCS - Ground Control Station Planner",
     description="Interfaz web para compilación y visualización de manifiestos de vuelo",
@@ -41,6 +44,7 @@ class CompileRequest(BaseModel):
 
 class SaveRequest(BaseModel):
     manifest: dict
+    watch: bool | None = None
 
 @app.post("/api/compile")
 async def compile_instruction(req: CompileRequest):
@@ -96,10 +100,11 @@ async def launch_mission(req: SaveRequest, background_tasks: BackgroundTasks):
         filename = f"{manifest.mission_id.lower()}.json"
         path = target_dir / filename
         save_manifest(manifest, path)
-
-        # Verificar conexión con AirSim antes de lanzar en segundo plano
-        runner = LoopRunner(manifest)
-        runner.bridge.connect()
+        loop_path = Path(__file__).resolve().parent.parent.parent / "airsim-loop" / "main.py"
+        if not loop_path.exists():
+            loop_path = None
+        runner = LoopRunner(manifest, loop_path=loop_path, watch=req.watch)
+        active_runners[manifest.mission_id] = runner
 
         # Lanzar la misión en segundo plano
         def run_loop():
@@ -108,7 +113,9 @@ async def launch_mission(req: SaveRequest, background_tasks: BackgroundTasks):
             except Exception as e:
                 print(f"Error ejecutando LoopRunner: {e}")
 
-        background_tasks.add_task(run_loop)
+        import threading
+        thread = threading.Thread(target=run_loop, daemon=True)
+        thread.start()
 
         return {
             "status": "success",
@@ -116,19 +123,56 @@ async def launch_mission(req: SaveRequest, background_tasks: BackgroundTasks):
             "manifest": manifest.model_dump()
         }
     except BridgeError as exc:
+        detail=(
+            f"Error de conexión con AirSim: {exc}. "
+            f"(Configuración: host={settings.airsim_host}, "
+            f"port={settings.airsim_port}, "
+            f"vehicle={settings.airsim_vehicle_name})"
+        )
+        print("Detail: ", detail)
         raise HTTPException(
             status_code=400,
-            detail=(
-                f"Error de conexión con AirSim: {exc}. "
-                f"(Configuración: host={settings.airsim_host}, "
-                f"port={settings.airsim_port}, "
-                f"vehicle={settings.airsim_vehicle_name})"
-            )
+            detail=detail
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Error de validación: {exc}")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error al lanzar la misión: {exc}")
+
+
+@app.post("/api/stop")
+async def stop_mission():
+    global active_runners
+    stopped_count = 0
+    # Detener todos los runners activos
+    for mission_id, runner in list(active_runners.items()):
+        try:
+            runner.stop()
+            stopped_count += 1
+            active_runners.pop(mission_id, None)
+        except Exception as e:
+            print(f"Error al detener runner {mission_id}: {e}")
+    
+    # También forzar parada en variables de entorno por si acaso
+    import os
+    for key in list(os.environ.keys()):
+        if key.startswith("STOP_MISSION_"):
+            os.environ[key] = "1"
+            
+    return {"status": "success", "message": f"{stopped_count} misión(es) detenida(s)."}
+
+@app.post("/api/reset")
+async def reset_simulation():
+    settings = get_settings()
+    try:
+        import cosysairsim as airsim
+        client = airsim.MultirotorClient(ip=settings.airsim_host, port=settings.airsim_port)
+        client.confirmConnection()
+        client.reset()
+        client.enableApiControl(False, settings.airsim_vehicle_name)
+        return {"status": "success", "message": "Simulación reseteada con éxito."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al resetear simulación: {e}")
 
 @app.get("/api/manifests")
 async def list_manifests():

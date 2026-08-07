@@ -36,6 +36,7 @@ const elActiveWaypointList = document.getElementById('active-waypoint-list');
 const elBtnBackManifests = document.getElementById('btn-back-manifests');
 const elBtnNewManifest = document.getElementById('btn-new-manifest');
 const elBtnLaunchMission = document.getElementById('btn-launch-mission');
+const elChkWatchLoop = document.getElementById('chk-watch-loop');
 
 // Tabs & Nuevos Botones Manual / AI
 const elTabBtnManual = document.getElementById('tab-btn-manual');
@@ -836,7 +837,10 @@ function setupInteractiveControls() {
             const response = await fetch('/api/launch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ manifest: activeManifest })
+                body: JSON.stringify({ 
+                    manifest: activeManifest,
+                    watch: elChkWatchLoop.checked
+                })
             });
 
             const data = await response.json();

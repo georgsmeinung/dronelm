@@ -13,7 +13,10 @@ from typing import Any, Optional
 try:
     import airsim  # type: ignore
 except Exception:  # pragma: no cover
-    airsim = None  # type: ignore
+    try:
+        import cosysairsim as airsim  # type: ignore
+    except Exception:
+        airsim = None  # type: ignore
 
 from ..config import Settings, get_settings
 

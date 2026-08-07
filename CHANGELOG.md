@@ -1,3 +1,12 @@
+# 2026-0806
+
+* Conexión exitosa entre WebDCS y el LLM en Ollama. Es un avance pero todavía no compila el plan a partir de lenguaje natural, analizando modelos omni para pasar el mapa además de las instrucciones.
+* Handover the misión exitoso de Planner al Loop de Control
+* Agregado visualización de video opcional a airsim-loop
+* Inicio de pruebas del loop de control. Loop en funcionamiento (es un avance), pero el comportamiento no es el esperado, hay que ajustar la lógica de control autónomo.
+
+<img src="informe/2026-0806 Loop en Funcionamiento.png"/>
+
 # 2026-0805
 
 * Mejoras en la usabilidad de WebDCS:
@@ -10,7 +19,6 @@
 
 * Se realizaron pruebas de conexión con AirSim desde el planner
 * Se realizaron pruebas de generacion de manifiestos con el planner
-
 
 # 2026-0804 
 * Haciendo pruebas de rendimiento de inferencia de https://ollama.com/LiquidAI/lfm2.5-1.2b-instruct de 1.2b parametros

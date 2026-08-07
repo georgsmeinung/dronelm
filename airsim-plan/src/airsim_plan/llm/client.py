@@ -1,6 +1,5 @@
 """LM Studio / OpenAI-compatible client used by the planner."""
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -102,10 +101,10 @@ class LMStudioClient:
         try:
             self.client.models.list()
             return True
-        except Exception:
+        except Exception as e:
+            print("Error al conectar a Ollama")
+            print(e)
             return False
-
-
 class PlannerLLM:
     """High-level helper that exposes :meth:`complete_json` for the planner.
 
