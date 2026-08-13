@@ -11,6 +11,8 @@ if str(src_path) not in sys.path:
 # pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 # pyrefly: ignore [missing-import]
+from fastapi.responses import StreamingResponse
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +22,7 @@ from airsim_plan.missions import MissionPlanner, PlannerError, load_manifest
 from airsim_plan.missions.manifest import MissionManifest, save_manifest
 from airsim_plan.config import get_settings
 from airsim_plan.bridge import LoopRunner, BridgeError
+from airsim_plan.bridge.stream_hub import stream_hub
 
 # Guardar los runners activos para poder detenerlos
 active_runners: dict[str, LoopRunner] = {}
@@ -227,6 +230,19 @@ async def planner_status():
     planner = MissionPlanner()
     is_online = planner._client.check_connection()
     return {"status": "online" if is_online else "offline"}
+
+@app.get("/api/stream/video")
+async def stream_video_feed():
+    """Streaming MJPEG en tiempo real con bounding boxes y telemetría."""
+    return StreamingResponse(
+        stream_hub.generate_mjpeg(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
+@app.get("/api/stream/telemetry")
+async def stream_telemetry():
+    """Datos de telemetría, grafo y percepción en vivo."""
+    return stream_hub.get_telemetry()
 
 # Servir mapas desde missions/maps
 missions_maps_dir = Path(__file__).resolve().parent.parent / "missions" / "maps"

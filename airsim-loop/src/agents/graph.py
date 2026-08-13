@@ -133,15 +133,15 @@ def _build_nodes() -> Dict[str, Any]:
 
     # 4. Paso 3: Estimación de Tiempo de Colisión (TTC) No Neuronal
     def ttc_estimate_node(state: DroneState) -> DroneState:
-        roi_detections = [
-            d if isinstance(d, Any) else d for d in state.get("roi_detections", [])
-        ]
+        raw_detections = state.get("roi_detections", [])
         # Reconstruir objetos Detection si venían como dicts
         from src.perception import Detection
         det_objs = []
-        for d in roi_detections:
+        for d in raw_detections:
             if isinstance(d, dict):
-                det_objs.append(Detection(object=d["object"], confidence=d["confidence"], bbox=d["bbox"]))
+                det_objs.append(Detection(object=d.get("object", "objeto"), confidence=float(d.get("confidence", 0.0)), bbox=d.get("bbox", [0, 0, 0, 0])))
+            elif isinstance(d, Detection):
+                det_objs.append(d)
             else:
                 det_objs.append(d)
 

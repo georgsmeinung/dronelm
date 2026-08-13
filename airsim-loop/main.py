@@ -105,44 +105,79 @@ def main() -> None:
 
             _print_state(final_state)
 
-            # 3) Mostrar video localmente si watch_mode está activo
-            if watch_mode:
+            # 3) Anotar imagen y publicar en StreamHub / OpenCV
+            frame = final_state.get("rgb_image")
+            if frame is not None:
                 import cv2
-                frame = final_state.get("rgb_image")
-                if frame is not None:
-                    # Crear copia para anotar sin alterar la imagen original
-                    annotated_frame = frame.copy()
-                    
-                    # 1. Dibujar rectángulos de YOLO y etiquetas de clase/confianza
-                    for det in final_state.get("detections", []):
-                        bbox = det.get("bbox", [0, 0, 0, 0]) if isinstance(det, dict) else getattr(det, "bbox", [0, 0, 0, 0])
-                        obj_name = det.get("object", "objeto") if isinstance(det, dict) else getattr(det, "object", "objeto")
-                        conf = det.get("confidence", 0.0) if isinstance(det, dict) else getattr(det, "confidence", 0.0)
-                        
-                        x_min, y_min, x_max, y_max = map(int, bbox)
-                        cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                        
-                        label_str = f"{obj_name}: {conf:.2f}"
-                        cv2.putText(annotated_frame, label_str, (x_min, max(y_min - 5, 15)),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
-                    
-                    # 2. Dibujar la decisión del grafo y métricas del nuevo pipeline en la parte superior
-                    decision = final_state.get("next_action", "MANTENER_RUMBO")
-                    flight_status = final_state.get("flight_status", "vuelo")
-                    xor_pct = final_state.get("xor_change_ratio", 0.0) * 100.0
-                    ttc_val = final_state.get("estimated_ttc", float("inf"))
-                    ttc_str = f"{ttc_val:.1f}s" if ttc_val != float("inf") else "inf"
+                annotated_frame = frame.copy()
 
-                    h, w = annotated_frame.shape[:2]
-                    cv2.rectangle(annotated_frame, (0, 0), (w, 40), (0, 0, 0), -1)
-                    cv2.putText(annotated_frame, f"DECISION: {decision} | Status: {flight_status}", (10, 25),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2, cv2.LINE_AA)
-                    
-                    # 3. Dibujar métricas XOR y TTC
-                    cv2.putText(annotated_frame, f"XOR: {xor_pct:.1f}% | TTC: {ttc_str}", (w - 240, 25),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+                # 3.1) Dibujar caja de ROI si existe
+                roi_info = final_state.get("roi_info")
+                if roi_info and len(roi_info) == 4 and roi_info[2] > 0 and roi_info[3] > 0:
+                    rx, ry, rw, rh = map(int, roi_info)
+                    cv2.rectangle(annotated_frame, (rx, ry), (rx + rw, ry + rh), (255, 200, 0), 1)
+                    cv2.putText(annotated_frame, "ROI 62%", (rx + 5, ry + 15),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 200, 0), 1, cv2.LINE_AA)
 
-                    
+                # 3.2) Dibujar rectángulos de YOLO y etiquetas
+                for det in final_state.get("detections", []):
+                    bbox = det.get("bbox", [0, 0, 0, 0]) if isinstance(det, dict) else getattr(det, "bbox", [0, 0, 0, 0])
+                    obj_name = det.get("object", "objeto") if isinstance(det, dict) else getattr(det, "object", "objeto")
+                    conf = det.get("confidence", 0.0) if isinstance(det, dict) else getattr(det, "confidence", 0.0)
+
+                    x_min, y_min, x_max, y_max = map(int, bbox)
+                    cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 100), 2)
+
+                    label_str = f"{obj_name}: {conf:.2f}"
+                    cv2.putText(annotated_frame, label_str, (x_min, max(y_min - 5, 15)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 100), 1, cv2.LINE_AA)
+
+                # 3.3) Dibujar banner superior con estado, decisión y métricas
+                decision = final_state.get("next_action", "MANTENER_RUMBO")
+                flight_status = final_state.get("flight_status", "vuelo")
+                xor_pct = final_state.get("xor_change_ratio", 0.0) * 100.0
+                ttc_val = final_state.get("estimated_ttc", float("inf"))
+                ttc_str = f"{ttc_val:.1f}s" if ttc_val != float("inf") else "inf"
+
+                h, w = annotated_frame.shape[:2]
+                cv2.rectangle(annotated_frame, (0, 0), (w, 42), (10, 10, 15), -1)
+
+                # Color de decisión
+                dec_color = (0, 255, 100) if "MANTENER" in decision else (0, 165, 255)
+                if "SLM" in decision or "PARADA" in decision:
+                    dec_color = (255, 100, 200)
+
+                cv2.putText(annotated_frame, f"ACT: {decision}", (10, 26),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.58, dec_color, 2, cv2.LINE_AA)
+
+                cv2.putText(annotated_frame, f"XOR: {xor_pct:.1f}% | TTC: {ttc_str} | {flight_status}", (w - 280, 26),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.48, (220, 220, 220), 1, cv2.LINE_AA)
+
+                # 3.4) Publicar en StreamHub para WebDCS
+                try:
+                    # pyrefly: ignore [missing-import]
+                    from airsim_plan.bridge.stream_hub import stream_hub
+                    stream_hub.publish(
+                        frame=annotated_frame,
+                        telemetry={
+                            "connected": True,
+                            "mission_id": manifest_data.get("mission_id", "MISION_ACTIVA"),
+                            "decision": decision,
+                            "flight_status": flight_status,
+                            "estimated_ttc": ttc_val if ttc_val != float("inf") else None,
+                            "xor_change_ratio": final_state.get("xor_change_ratio", 0.0),
+                            "detections": final_state.get("detections", []),
+                            "detected_obstacles": final_state.get("detected_obstacles", []),
+                            "scene_summary": final_state.get("scene_summary", ""),
+                            "velocity": final_state.get("velocity_command", {}),
+                            "timestamp": time.time(),
+                        }
+                    )
+                except Exception:
+                    pass
+
+                # 3.5) Mostrar en ventana local de OpenCV si watch_mode está activo
+                if watch_mode:
                     cv2.imshow("Drone Camera Feed", annotated_frame)
                     key = cv2.waitKey(1) & 0xFF
                     if key == ord('q') or key == 27:

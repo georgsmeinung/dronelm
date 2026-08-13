@@ -47,6 +47,7 @@ def main():
         print("\n[+] Conexión con AirSim establecida de forma exitosa.")
 
     print("\nCapturando fotograma...")
+    # pyrefly: ignore [bad-unpacking]
     img, telemetry = c.capture()
     
     if img is None:
