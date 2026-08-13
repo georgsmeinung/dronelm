@@ -205,7 +205,9 @@ def _query_slm(prompt: str) -> Optional[Dict[str, Any]]:
 
 
 def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Nodo deliberativo: consulta al SLM y traduce su salida a un comando."""
+    """Nodo deliberativo (Paso 5): Freno de seguridad (Hover) y consulta al SLM."""
+    state["flight_status"] = "hover_slm"
+
     obstacles = state.get("detected_obstacles", []) or []
     telemetry = state.get("telemetry", {}) or {}
 
@@ -222,3 +224,4 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
         }
     )
     return state
+

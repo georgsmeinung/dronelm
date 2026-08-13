@@ -89,8 +89,11 @@ def main() -> None:
                 "tactical_system_prompt": manifest_data.get("tactical_system_prompt") or os.getenv("AIRSIM_PLAN_TACTICAL_PROMPT") or globals().get("AIRSIM_PLAN_TACTICAL_PROMPT") or "",
                 "rgb_image": None,
                 "telemetry": None,
+                "xor_change_ratio": 1.0,
+                "estimated_ttc": float("inf"),
                 "detected_obstacles": [],
                 "next_action": "",
+                "flight_status": "vuelo",
                 "deliberations": [],
             }
             try:
@@ -112,9 +115,9 @@ def main() -> None:
                     
                     # 1. Dibujar rectángulos de YOLO y etiquetas de clase/confianza
                     for det in final_state.get("detections", []):
-                        bbox = det.get("bbox", [0, 0, 0, 0])
-                        obj_name = det.get("object", "objeto")
-                        conf = det.get("confidence", 0.0)
+                        bbox = det.get("bbox", [0, 0, 0, 0]) if isinstance(det, dict) else getattr(det, "bbox", [0, 0, 0, 0])
+                        obj_name = det.get("object", "objeto") if isinstance(det, dict) else getattr(det, "object", "objeto")
+                        conf = det.get("confidence", 0.0) if isinstance(det, dict) else getattr(det, "confidence", 0.0)
                         
                         x_min, y_min, x_max, y_max = map(int, bbox)
                         cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
@@ -123,19 +126,22 @@ def main() -> None:
                         cv2.putText(annotated_frame, label_str, (x_min, max(y_min - 5, 15)),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
                     
-                    # 2. Dibujar la decisión del grafo en la parte superior
+                    # 2. Dibujar la decisión del grafo y métricas del nuevo pipeline en la parte superior
                     decision = final_state.get("next_action", "MANTENER_RUMBO")
+                    flight_status = final_state.get("flight_status", "vuelo")
+                    xor_pct = final_state.get("xor_change_ratio", 0.0) * 100.0
+                    ttc_val = final_state.get("estimated_ttc", float("inf"))
+                    ttc_str = f"{ttc_val:.1f}s" if ttc_val != float("inf") else "inf"
+
                     h, w = annotated_frame.shape[:2]
                     cv2.rectangle(annotated_frame, (0, 0), (w, 40), (0, 0, 0), -1)
-                    cv2.putText(annotated_frame, f"DECISION: {decision}", (10, 25),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
+                    cv2.putText(annotated_frame, f"DECISION: {decision} | Status: {flight_status}", (10, 25),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2, cv2.LINE_AA)
                     
-                    # 3. Dibujar telemetría (altura, velocidad)
-                    tel = final_state.get("telemetry") or {}
-                    alt = abs(tel.get("z", 0.0))
-                    speed = tel.get("speed", 0.0)
-                    cv2.putText(annotated_frame, f"Alt: {alt:.1f}m | Vel: {speed:.1f}m/s", (w - 220, 25),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+                    # 3. Dibujar métricas XOR y TTC
+                    cv2.putText(annotated_frame, f"XOR: {xor_pct:.1f}% | TTC: {ttc_str}", (w - 240, 25),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+
                     
                     cv2.imshow("Drone Camera Feed", annotated_frame)
                     key = cv2.waitKey(1) & 0xFF

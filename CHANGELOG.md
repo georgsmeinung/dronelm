@@ -1,3 +1,117 @@
+# 2026-0813
+
+Dado que el comportamiento no es el esperado, hay que ajustar la lógica de control autónomo. Para esto se analizan algortimos de detección de obstáculos sólo con visión monocular.
+
+Se analizan estos artículos y buscar la solución más conveniente en la simulación con AirSim. A partir de los artículos provistos, se identifican diversos métodos diseñados o adaptados para la evitación de colisiones en vehículos autónomos —incluyendo Unmanned Aerial Vehicles (UAVs) o drones cuadricópteros— empleando únicamente **visión monocular**. 
+
+A continuación, se listan todos los métodos encontrados en las fuentes, se describe su estrategia, se realiza el mapeo correspondiente con sus autores y publicaciones, se ordenan de menor a mayor costo computacional y se detalla cuál de los enfoques de redes neuronales es óptimo para implementarse con **YOLO** (específicamente aplicable a una versión de baja latencia como la hipotética YOLOv26 en el contexto temporal de las publicaciones de 2026).
+
+<img src="informe/2026-0812 Visión_Monocular_para_Drones.png"/>
+
+## 1. Métodos de detección de obstáculos por visión monocular
+
+#### **Método A: Algoritmo de Expansión de Tamaño (Size Expansion Algorithm)**
+*   **Paper:** *"Obstacle Detection and Avoidance System Based on Monocular Camera and Size Expansion Algorithm for UAVs" (2017)*.
+*   **Autores:** Abdulla Al-Kaff, Fernando García, David Martín, Arturo De La Escalera y José María Armingol.
+*   **Estrategia:** Inspirado en el comportamiento visual biológico humano para detectar la expansión de objetos que se aproximan. Para reducir el costo de procesamiento, el algoritmo define una **Región de Interés (ROI) con un campo de visión diagonal de 62°** (en lugar de procesar la imagen completa). Extrae y empareja puntos clave **SIFT** entre fotogramas consecutivos. Filtra los puntos conservando únicamente aquellos cuyo tamaño (diámetro) crece. A partir de estos puntos filtrados, construye un **casco convexo (convex hull)** irregular. Si la relación de escala del tamaño de los puntos es \\(\ge 1.2\\) y la relación del área del casco convexo es \\(\ge 1.7\\), el sistema dictamina que hay un obstáculo frontal en curso de colisión y calcula las zonas libres circundantes para ordenar una maniobra evasiva al cuadricóptero (ej. Parrot AR.Drone 2.0).
+
+#### **Método B: Algoritmo de Relación de Distancia de Puntos Emparejados (Distance-ratio of matched SIFT points)**
+*   **Paper:** *"Monocular vision based obstacle detection" (2017)*.
+*   **Autores:** Samira Badrloo y Masoud Varshosaz.
+*   **Estrategia:** Es una optimización y desarrollo directo sobre el algoritmo de Al-Kaff et al. (2017). Los autores identificaron que el uso global del casco convexo es muy vulnerable a puntos mal emparejados y no distingue con precisión obstáculos lejanos de cercanos. Para solucionarlo, este método **calcula la relación de distancias relativas entre cada punto SIFT emparejado y todos los demás puntos** en dos frames consecutivos. Se descartan los puntos con una relación promedio menor o igual a 1 (no-obstáculos). Luego, calcula la mediana de los promedios de estas relaciones; si la mediana es \\(\ge 1.1\\), los puntos clave individuales cuya relación de distancia promedio supera la mediana se declaran como obstáculos. Esto permite al dron discriminar entre obstáculos cercanos y lejanos en entornos sumamente complejos.
+
+#### **Método C: Flujo Óptico Denso (Gunnar-Farnebäck), FOE y DBSCAN**
+*   **Paper:** *"Optical Flow-Based Obstacle Detection for Mid-Air Collision Avoidance" (2024)*.
+*   **Autores:** Daniel Vera-Yanez, António Pereira, Nuno Rodrigues, José Pascual Molina, Arturo S. García y Antonio Fernández-Caballero.
+*   **Estrategia:** Aunque desarrollado inicialmente para aviación general simulada (Cessna 172), los autores plantean su aplicabilidad directa al campo de los UAVs para evitar colisiones aéreas. Primero, aplica un filtro morfológico **Close-Minus-Open (CMO)** para mitigar el ruido visual provocado por nubes, montañas o reflejos solares. Después, calcula los vectores de movimiento entre fotogramas usando el método de **flujo óptico denso de Gunnar-Farnebäck (GF)**. Determina el **Foco de Expansión (FOE)** y filtra todos aquellos vectores de flujo óptico que estén alineados con el movimiento propio de la cámara (ego-motion). Los vectores no alineados restantes (que indican la presencia de un obstáculo en movimiento independiente o aproximación) se agrupan mediante el algoritmo de clustering espacial **DBSCAN**, localizando así la caja delimitadora del obstáculo entrante.
+
+#### **Otros algoritmos monoculares citados en los textos de UAVs:**
+*   **SURF + Template Matching (Mori & Scherer, 2013):** Utiliza el extractor **SURF** para identificar puntos clave y asume que el objeto se expandirá al acercarse en frente de la cámara del UAV, aplicando emparejamiento de plantillas para su rastreo.
+*   **SIFT + MOPS (Lee et al., 2011):** Combina el descriptor SIFT con **Multi-scale Oriented-Patches (MOPS)** para extraer las esquinas y los contornos internos de los objetos con el fin de proyectar información espacial 3D de los obstáculos.
+*   **Señal de Variación de Apariencia (De Croon et al., 2010):** Basado en los cambios y variaciones de textura y color del entorno para detectar obstáculos en espacios interiores.
+
+---
+
+## 2. Determinación del costo computacional (De menor a mayor costo y rapidez)
+
+De acuerdo con las métricas de rendimiento físico, velocidad de procesamiento e infraestructura matemática detalladas en las investigaciones, los métodos de visión monocular se ordenan de la siguiente manera:
+
+1.  **Detección de Obstáculos Cercanos por IPM y SLIC Superpixels (Kaneko et al., 2017):**
+    *   **Rapidez:** **26.6 ms (37.6 FPS)**.
+    *   **Costo:** **Muy bajo**. Utiliza un mapeo de perspectiva inversa (IPM) simplificado y segmentación de superpíxeles SLIC con distancias geodésicas en texturas semi-locales, evitando cualquier proceso de emparejamiento de puntos densos o cálculo de descriptores complejos.
+2.  **Detección de Obstáculos por Alrededor de Vista y Diferencia IPM (Zhou et al., 2026):**
+    *   **Rapidez:** **46.0 ms**.
+    *   **Costo:** **Bajo**. Al apoyarse en operaciones básicas de procesamiento de imágenes (calibración, binarización y resta directa de mapas de proyección homográfica en plano de tierra), prescinde de procesos de correspondencia de características o cómputos neuronales intensivos.
+3.  **Algoritmo de Expansión de Tamaño (Al-Kaff et al., 2017):**
+    *   **Rapidez:** Ejecución en **Tiempo Real** a bordo de plataformas embebidas básicas ( Parrot AR.Drone 2.0).
+    *   **Costo:** **Bajo-Moderado**. Aunque el extractor SIFT es inherentemente pesado, el costo computacional se minimiza drásticamente al restringir toda la extracción de puntos y emparejamientos SIFT a un **parche diagonal de 62° de ROI** en lugar de toda la imagen.
+4.  **Algoritmo de Relación de Distancia de Puntos Emparejados (Badrloo & Varshosaz, 2017):**
+    *   **Rapidez:** Adecuado para tiempo real, con velocidad ajustable según el intervalo de fotogramas seleccionado.
+    *   **Costo:** **Moderado**. Al igual que el de Al-Kaff, utiliza SIFT; sin embargo, tiene un costo ligeramente superior porque calcula de manera iterativa las relaciones de distancias entre todos los puntos emparejados (un cálculo de complejidad cuadrática respecto al número de puntos correspondientes).
+5.  **Flujo Óptico Gunnar-Farnebäck, FOE y DBSCAN (Vera-Yanez et al., 2024):**
+    *   **Rapidez:** Tiempo real en procesadores estándar monóculos.
+    *   **Costo:** **Moderado-Alto**. El flujo óptico denso de Gunnar-Farnebäck requiere una aproximación polinomial cuadrática global en toda la cuadrícula de la imagen, pero resulta mucho más ligero y viable que los modelos de aprendizaje profundo en procesadores sin aceleración por GPU.
+6.  **Redes Neuronales Convolucionales de un Solo Paso (ej. YOLOv8s en Shi et al., 2024):**
+    *   **Rapidez:** **205 ms (0.205 s)**.
+    *   **Costo:** **Alto**. Aunque es sumamente veloz comparado con arquitecturas segmentadas de dos pasos, requiere obligatoriamente hardware con tarjetas gráficas de alto rendimiento (GPU como la RTX 2080 Ti empleada en las pruebas) que son difíciles de incorporar en micro UAVs.
+7.  **Detección de Obstáculos por Visión Activa Longitudinal con MSER (Shi et al., 2024):**
+    *   **Rapidez:** **317 ms (0.317 s)**.
+    *   **Costo:** **Alto**. Consume tiempo debido al algoritmo de emparejamiento de regiones extremas estables (MSER) multiescala, los modelos trigonométricos de distancia monocular y el control físico de rotación física de la cámara activa.
+8.  **SIFT + MOPS (Lee et al., 2011):**
+    *   **Rapidez:** **577 ms**.
+    *   **Costo:** **Muy Alto**. Considerado no viable para la navegación ágil o en tiempo real debido al costoso tiempo de procesamiento que implica la extracción de esquinas y emparejamientos geométricos duales de descriptores pesados.
+
+---
+
+## 3. Implementación de redes neuronales con YOLO (YOLOv26 con baja latencia)
+
+En el ámbito de la visión por computadora y los sistemas de evitación de colisiones planteados en los textos, la estrategia de red neuronal que se podría implementar de manera óptima utilizando un detector de un solo paso de bajísima latencia como **YOLOv26** (o variantes ultra-ligeras equivalentes) es la **detección y estimación del Tiempo de Colisión (TTC - Time-to-Collision) basada en el ancho de la caja delimitadora del obstáculo frontal**.
+
+*   **¿Cómo funciona la estrategia?** 
+    En lugar de realizar reconstrucciones densas en 3D (que son lentas y computacionalmente inviables en vuelo) o segmentación semántica de píxeles pesada, YOLOv26 puede predecir de forma directa y en una sola pasada de red las cajas delimitadoras (bounding boxes) bidimensionales de los obstáculos enfrente del UAV. 
+    La estrategia clave demostrada en los artículos (ej. Rill & Faragó) demuestra que **el ancho de la caja delimitadora (BB-w) del obstáculo detectado por YOLO se correlaciona de manera directa con la distancia y el TTC**. A medida que el UAV se aproxima al obstáculo, el ancho de la caja delimitadora se expande. Al monitorear la tasa de cambio de este parámetro `BB-w` calculado instantáneamente por YOLOv26, el procesador embebido del dron puede estimar el tiempo restante antes de un impacto con un margen de error mínimo (RMSE cercano a 1 segundo).
+*   **Ventaja de latencia:** 
+    Dado que las subversiones optimizadas para dispositivos móviles o de bajo consumo (como *Tiny-YOLO* o arquitecturas *YOLO-nano*) unifican la detección y regresión en una única evaluación de red, permiten procesar video en tiempo real con una latencia de apenas unos pocos milisegundos, ideal para la autonomía física y las limitaciones de tamaño, peso y energía (SWaP) de los cuadricópteros.
+
+---
+
+La versión orignal del loop de control utilizaba una variante del **Algoritmo de Expansión de Tamaño** junto con un **análisis temporal del flujo óptico**. Dado el análisis de los papers de computer vision citados más arriba se determina este nuevo planteo del loop de control. Para diseñar el bucle de control más eficiente y conveniente en la arquitectura de **Unreal Engine + AirSim + LangGraph**, se debe estructurar un sistema de filtrado o *gating* multinivel. Dado que la inferencia de un SLM (Small Language Model) detiene físicamente el vuelo del dron, el objetivo del bucle es **maximizar el tiempo de vuelo fluido (Keep Going)** y delegar las costosas llamadas de inferencia del SLM únicamente a situaciones de alta incertidumbre o peligro inminente, utilizando los algoritmos de menor costo computacional de las fuentes como filtros previos.
+
+Basado en las estrategias más económicas de las investigaciones (el filtrado de bordes de Kaneko et al., la reducción de campo visual de Al-Kaff et al. y la estimación geométrica de colisión de Rill & Faragó), este es el **bucle de control jerárquico** que se busca implementar en el agente de LangGraph que controla el bucle de control.
+
+## 4. Arquitectura del Bucle de Control en LangGraph
+
+<img src="informe/2026-0812 Bucle_de_control_navegación_autónoma.png"/>
+
+El estado del grafo (`DroneState`) debe mantener variables clave como: `current_frame`, `prev_frame`, `yolo_detections`, `estimated_ttc` (tiempo de colisión), `flight_status` ("vuelo", "hover_slm", "evasión_local") y `action_command`.
+
+<p align="center">
+  <img src="informe/2026-0812 Diagrama Bucle de Control.png" width="50%"/>
+</p>
+
+### **Paso 1: Gating de Bordes Ultra Rápido (XOR de Canny)**
+Antes de ejecutar cualquier red neuronal (YOLO o SLM), el dron ejecuta un nodo de pre-filtrado matemático básico. Inspirado en Kaneko et al. (2017), se extraen los bordes del fotograma actual y del anterior mediante un detector Canny, y se realiza una operación **XOR binaria entre ambos**.
+*   **Lógica de decisión**: Si el cambio en los píxeles del XOR de bordes no supera un umbral dinámico (lo que significa que el dron vuela en un espacio vacío, cielo abierto o textura homogénea sin nuevos obstáculos), el nodo transiciona directamente a **"Sigue Adelante"**. Se salta por completo la inferencia de YOLO y SLM en ese ciclo, reduciendo la latencia de ese fotograma a menos de **3 ms**.
+
+### **Paso 2: Restricción de ROI de 62° + Inferencia YOLO Ligero**
+Si el filtro XOR detecta la aparición de bordes significativos, se activa el detector YOLO (YOLOv26 / Tiny-YOLO). Para economizar recursos de hardware, no proceses la imagen completa de AirSim. Aplica la estrategia de Al-Kaff et al. (2017) recortando la imagen a una **Región de Interés (ROI) con un campo de visión diagonal de 62°**. Cualquier objeto fuera de esta zona no representa un peligro de colisión frontal para el volumen físico del dron cuadricóptero.
+
+### **Paso 3: Estimación de Tiempo de Colisión (TTC) No Neuronal**
+Una vez que YOLO segmenta y detecta un obstáculo dentro de la ROI de 62°, el sistema calcula la distancia y el nivel de riesgo de forma geométrica y ligera. En lugar de usar modelos de profundidad monocular profundos (que son muy lentos), se extrae el **ancho de la caja delimitadora (`BB-w`)** provisto por YOLO. 
+*   La tasa de expansión temporal de `BB-w` sirve como predictor lineal directo para calcular el **Tiempo de Colisión (TTC)** con un margen de precisión de ~1 segundo.
+
+### **Paso 4: Bifurcación de Control (LangGraph Router)**
+Según el TTC estimado por la expansión de la caja delimitadora de YOLO, LangGraph decide el curso de acción a través de bordes condicionales (*conditional edges*):
+
+1.  **Caso A: Sin peligro (TTC > 5.0 segundos)**: El dron continúa su ruta original (*Keep Going*).
+2.  **Caso B: Maniobra Evasiva Local Directa (2.0s < TTC ≤ 5.0s)**: Hay un obstáculo pero está lo suficientemente lejos como para evadirlo de manera reactiva y autónoma. El agente ejecuta una corrección física simple (ej. desplazarse levemente a la derecha o izquierda calculando las zonas libres de la ROI) mediante la API de AirSim, **sin detener el dron ni llamar al SLM**.
+3.  **Caso C: Zona de Incertidumbre o Peligro Inminente (TTC ≤ 2.0 segundos o ambigüedad de YOLO)**: Si YOLO detecta un obstáculo masivo o desconocido de forma repentina (o la tasa de expansión de la bounding box se dispara críticamente), se detiene el avance.
+
+### **Paso 5: Activación del SLM (Freno y Consulta)**
+*   **Parada de seguridad**: El nodo de LangGraph envía un comando de frenado inmediato a AirSim (modo **Hover** para mantener estabilidad en el punto). Esto congela el avance físico del cuadricóptero para evitar colisiones por latencia de inferencia.
+*   **Llamada al SLM**: Se envía el contexto de la escena (la imagen con las cajas de YOLO o una descripción estructurada del entorno) al SLM para que realice el razonamiento semántico complejo (ej. *"Hay una ventana abierta a la izquierda y un obstáculo reflectante a la derecha, decide ruta"*).
+*   **Ejecución y Desbloqueo**: El SLM devuelve el comando de navegación adaptativo, la API de AirSim lo ejecuta, el dron supera el área de conflicto y el grafo transiciona nuevamente al estado de **Vuelo Fluido** (Paso 1).
+
 # 2026-0806
 
 * Conexión exitosa entre WebDCS y el LLM en Ollama. Es un avance pero todavía no compila el plan a partir de lenguaje natural, analizando modelos omni para pasar el mapa además de las instrucciones.

@@ -41,4 +41,6 @@ def reactive_node(state: Dict[str, Any]) -> Dict[str, Any]:
     state["next_action"] = "MANTENER_RUMBO"
     state["velocity_command"] = command
     state["route"] = "reactive"
+    state["flight_status"] = "vuelo"
     return state
+
