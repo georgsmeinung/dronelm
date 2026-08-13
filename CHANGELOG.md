@@ -77,7 +77,7 @@ En el ámbito de la visión por computadora y los sistemas de evitación de coli
 
 La versión orignal del loop de control utilizaba una variante del **Algoritmo de Expansión de Tamaño** junto con un **análisis temporal del flujo óptico**. Dado el análisis de los papers de computer vision citados más arriba se determina este nuevo planteo del loop de control. Para diseñar el bucle de control más eficiente y conveniente en la arquitectura de **Unreal Engine + AirSim + LangGraph**, se debe estructurar un sistema de filtrado o *gating* multinivel. Dado que la inferencia de un SLM (Small Language Model) detiene físicamente el vuelo del dron, el objetivo del bucle es **maximizar el tiempo de vuelo fluido (Keep Going)** y delegar las costosas llamadas de inferencia del SLM únicamente a situaciones de alta incertidumbre o peligro inminente, utilizando los algoritmos de menor costo computacional de las fuentes como filtros previos.
 
-Basado en las estrategias más económicas de las investigaciones (el filtrado de bordes de Kaneko et al., la reducción de campo visual de Al-Kaff et al. y la estimación geométrica de colisión de Rill & Faragó), este es el **bucle de control jerárquico** que se busca implementar en el agente de LangGraph que controla el bucle de control.
+Basado en las estrategias más económicas de las investigaciones (el filtrado de bordes de Kaneko et al., la reducción de campo visual de Al-Kaff et al. y la estimación geométrica de colisión de Rill & Faragó), este es el **bucle de control jerárquico** que se busca implementar en el agente de LangGraph que ejecutar el bucle de control.
 
 ## 4. Arquitectura del Bucle de Control en LangGraph
 

@@ -75,7 +75,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Actividad: 2026-07-14</span>
+          <span class="badge-pill badge-teal">Actividad: 2026-08-13</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -344,8 +344,110 @@
         <h2>Historial de Cambios Destacados</h2>
         <p>Evolución reciente del repositorio y hitos de desarrollo alcanzados:</p>
 
-        <!-- Item 2026-07-14 -->
+        <!-- Item 2026-08-13 -->
         <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-13
+              <span class="tag">LangGraph</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Arquitectura del Bucle de Control Jerárquico en LangGraph</h4>
+              <p>Se definió y estructuró la nueva arquitectura del loop de control en LangGraph basada en un sistema de gating multinivel: pre-filtrado ultra rápido con Canny (XOR binario), recorte ROI de 62°, inferencia con YOLO ligero (YOLOv26/Tiny-YOLO), estimación geométrica de TTC a partir del ancho de bounding box (<code>BB-w</code>) y enrutamiento a evasión local o consulta al SLM en modo hover.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0812 Diagrama Bucle de Control.png"
+                  alt="Diagrama Bucle de Control LangGraph" loading="lazy" style="max-width: 500px;" />
+                <figcaption>Diagrama del bucle de control jerárquico multinivel en LangGraph.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-06 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-06
+              <span class="tag">WebDCS / Loop</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Conexión WebDCS con LLM en Ollama y Pruebas del Loop</h4>
+              <p>Conexión exitosa entre WebDCS y el LLM en Ollama. Transferencia de misión (handover) del Planner al Loop de Control. Incorporación de visualización opcional de video en <code>airsim-loop</code> e inicio de pruebas de funcionamiento del bucle de control.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0806 Loop en Funcionamiento.png"
+                  alt="Loop en Funcionamiento" loading="lazy" />
+                <figcaption>Visualización del loop de control en funcionamiento con AirSim.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-05 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-05
+              <span class="tag">WebDCS</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Mejoras de Usabilidad en WebDCS y Manifiestos</h4>
+              <p>Se rediseñó la interfaz de WebDCS agregando selector de mapas en landing page, indicador de coordenadas en cursor, indicador de mapa actual en dashboard y botón para lanzamiento de misiones. Se validó la generación de manifiestos y conexión con AirSim.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0805 New WebDCS.png"
+                  alt="Nueva interfaz WebDCS" loading="lazy" />
+                <figcaption>Nueva interfaz WebDCS con gestión de manifiestos y mapas.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-04 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-04
+              <span class="tag">Benchmarking</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Evaluación de SLMs de Baja Latencia (LFM 2.5 1.2B & Qwen 3.5 0.8B)</h4>
+              <p>Pruebas de rendimiento e inferencia con <code>llmfit</code> sobre <code>LiquidAI/lfm2.5-1.2b-instruct</code> y <code>Qwen3.5 (0.8B)</code> para seleccionar el modelo ideal embarcado.</p>
+            </div>
+          </div>
+
+          <!-- Item 2026-07-23 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-07-23
+              <span class="tag">Mapas</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Cartas de Territorio en WebDCS</h4>
+              <p>Se integraron las cartas de territorio a los manifiestos de vuelo para permitir la planificación visual de rutas directamente sobre los mapas en la aplicación WebDCS.</p>
+            </div>
+          </div>
+
+          <!-- Item 2026-07-16 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-07-16
+              <span class="tag">WebDCS</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Lanzamiento de la aplicación WebDCS (Web-based Mission Planner)</h4>
+              <p>Revisión completa del sistema de planificación y creación de WebDCS para cargar, guardar, editar, eliminar y validar manifiestos, así como planificar y renderizar rutas sobre mapas.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0723 New DCS.png"
+                  alt="WebDCS Mission Planner" loading="lazy" />
+                <figcaption>Interfaz de planificación de misiones en WebDCS.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-07-14 -->
           <div class="timeline-item">
             <div class="timeline-badge"></div>
             <div class="timeline-date">
