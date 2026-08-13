@@ -85,10 +85,6 @@ Basado en las estrategias más económicas de las investigaciones (el filtrado d
 
 El estado del grafo (`DroneState`) debe mantener variables clave como: `current_frame`, `prev_frame`, `yolo_detections`, `estimated_ttc` (tiempo de colisión), `flight_status` ("vuelo", "hover_slm", "evasión_local") y `action_command`.
 
-<p align="center">
-  <img src="informe/2026-0812 Diagrama Bucle de Control.png" width="50%"/>
-</p>
-
 ### **Paso 1: Gating de Bordes Ultra Rápido (XOR de Canny)**
 Antes de ejecutar cualquier red neuronal (YOLO o SLM), el dron ejecuta un nodo de pre-filtrado matemático básico. Inspirado en Kaneko et al. (2017), se extraen los bordes del fotograma actual y del anterior mediante un detector Canny, y se realiza una operación **XOR binaria entre ambos**. **Lógica de decisión**: Si el cambio en los píxeles del XOR de bordes no supera un umbral dinámico (lo que significa que el dron vuela en un espacio vacío, cielo abierto o textura homogénea sin nuevos obstáculos), el nodo transiciona directamente a **"Sigue Adelante"**. Se salta por completo la inferencia de YOLO y SLM en ese ciclo, reduciendo la latencia de ese fotograma a menos de **3 ms**.
 
@@ -109,6 +105,10 @@ Según el TTC estimado por la expansión de la caja delimitadora de YOLO, LangGr
 *   **Parada de seguridad**: El nodo de LangGraph envía un comando de frenado inmediato a AirSim (modo **Hover** para mantener estabilidad en el punto). Esto congela el avance físico del cuadricóptero para evitar colisiones por latencia de inferencia.
 *   **Llamada al SLM**: Se envía el contexto de la escena (la imagen con las cajas de YOLO o una descripción estructurada del entorno) al SLM para que realice el razonamiento semántico complejo (ej. *"Hay una ventana abierta a la izquierda y un obstáculo reflectante a la derecha, decide ruta"*).
 *   **Ejecución y Desbloqueo**: El SLM devuelve el comando de navegación adaptativo, la API de AirSim lo ejecuta, el dron supera el área de conflicto y el grafo transiciona nuevamente al estado de **Vuelo Fluido** (Paso 1).
+
+<p align="center">
+  <img src="informe/2026-0812 Diagrama Bucle de Control.png" width="50%"/>
+</p>
 
 # 2026-0806
 
