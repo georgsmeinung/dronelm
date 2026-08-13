@@ -129,9 +129,16 @@
         </p>
         <ul>
           <li><strong>Percepción Visual:</strong> Un modelo de red convolucional (<strong>YOLOv8 / YOLO26</strong>)
-            extrae en tiempo real los fotogramas del feed de video del dron, soportando segmentación semántica/instancias y detección tradicional.</li>
-          <li><strong>Traductor Pixeles a Palabras y Análisis de Colisiones:</strong> Transforma los bboxes y máscaras en resúmenes lingüísticos y realiza el análisis temporal de tasa de crecimiento (looming). Registra la velocidad de cambio de ocupación en la Región de Interés (ROI) Central mediante suavizado por Media Móvil Exponencial (EMA con `EMA_ALPHA = 0.4`).</li>
-          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si el análisis de colisión por looming detecta peligro (tasa de crecimiento por encima del umbral por clase), o si se encuentra un obstáculo central tradicional cercano, delega inmediatamente la evasión al <strong>SLM Local</strong>. Si el camino está despejado, dirige el flujo a una regla reactiva rápida.</li>
+            extrae en tiempo real los fotogramas del feed de video del dron, soportando segmentación
+            semántica/instancias y detección tradicional.</li>
+          <li><strong>Traductor Pixeles a Palabras y Análisis de Colisiones:</strong> Transforma los bboxes y máscaras
+            en resúmenes lingüísticos y realiza el análisis temporal de tasa de crecimiento (looming). Registra la
+            velocidad de cambio de ocupación en la Región de Interés (ROI) Central mediante suavizado por Media Móvil
+            Exponencial (EMA con `EMA_ALPHA = 0.4`).</li>
+          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si el análisis de colisión por
+            looming detecta peligro (tasa de crecimiento por encima del umbral por clase), o si se encuentra un
+            obstáculo central tradicional cercano, delega inmediatamente la evasión al <strong>SLM Local</strong>. Si el
+            camino está despejado, dirige el flujo a una regla reactiva rápida.</li>
           <li><strong>Cerebro Deliberativo (SLM):</strong> El modelo local procesa el estado textual y determina
             maniobras de evasión utilizando <strong>decodificación restringida (JSON Schema)</strong> para evitar
             desviaciones estructurales.</li>
@@ -239,7 +246,7 @@
               </tr>
               <tr>
                 <td><strong>Infraestructura de Inferencia</strong></td>
-                <td>GPU NVIDIA RTX 5060 + Iris Xe (Headless Node)</td>
+                <td>GPU NVIDIA RTX 5060 + Apple Mac mini M4 16 GB Unified Memory</td>
                 <td>Configuración distribuida para mitigar cuellos de botella gráficos.</td>
               </tr>
             </tbody>
@@ -354,7 +361,10 @@
             </div>
             <div class="timeline-content">
               <h4>Arquitectura del Bucle de Control Jerárquico en LangGraph</h4>
-              <p>Se definió y estructuró la nueva arquitectura del loop de control en LangGraph basada en un sistema de gating multinivel: pre-filtrado ultra rápido con Canny (XOR binario), recorte ROI de 62°, inferencia con YOLO ligero (YOLOv26/Tiny-YOLO), estimación geométrica de TTC a partir del ancho de bounding box (<code>BB-w</code>) y enrutamiento a evasión local o consulta al SLM en modo hover.</p>
+              <p>Se definió y estructuró la nueva arquitectura del loop de control en LangGraph basada en un sistema de
+                gating multinivel: pre-filtrado ultra rápido con Canny (XOR binario), recorte ROI de 62°, inferencia con
+                YOLO ligero (YOLOv26/Tiny-YOLO), estimación geométrica de TTC a partir del ancho de bounding box
+                (<code>BB-w</code>) y enrutamiento a evasión local o consulta al SLM en modo hover.</p>
               <figure>
                 <img
                   src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0812 Diagrama Bucle de Control.png"
@@ -373,7 +383,9 @@
             </div>
             <div class="timeline-content">
               <h4>Conexión WebDCS con LLM en Ollama y Pruebas del Loop</h4>
-              <p>Conexión exitosa entre WebDCS y el LLM en Ollama. Transferencia de misión (handover) del Planner al Loop de Control. Incorporación de visualización opcional de video en <code>airsim-loop</code> e inicio de pruebas de funcionamiento del bucle de control.</p>
+              <p>Conexión exitosa entre WebDCS y el LLM en Ollama. Transferencia de misión (handover) del Planner al
+                Loop de Control. Incorporación de visualización opcional de video en <code>airsim-loop</code> e inicio
+                de pruebas de funcionamiento del bucle de control.</p>
               <figure>
                 <img
                   src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0806 Loop en Funcionamiento.png"
@@ -392,10 +404,11 @@
             </div>
             <div class="timeline-content">
               <h4>Mejoras de Usabilidad en WebDCS y Manifiestos</h4>
-              <p>Se rediseñó la interfaz de WebDCS agregando selector de mapas en landing page, indicador de coordenadas en cursor, indicador de mapa actual en dashboard y botón para lanzamiento de misiones. Se validó la generación de manifiestos y conexión con AirSim.</p>
+              <p>Se rediseñó la interfaz de WebDCS agregando selector de mapas en landing page, indicador de coordenadas
+                en cursor, indicador de mapa actual en dashboard y botón para lanzamiento de misiones. Se validó la
+                generación de manifiestos y conexión con AirSim.</p>
               <figure>
-                <img
-                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0805 New WebDCS.png"
+                <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0805 New WebDCS.png"
                   alt="Nueva interfaz WebDCS" loading="lazy" />
                 <figcaption>Nueva interfaz WebDCS con gestión de manifiestos y mapas.</figcaption>
               </figure>
@@ -411,7 +424,9 @@
             </div>
             <div class="timeline-content">
               <h4>Evaluación de SLMs de Baja Latencia (LFM 2.5 1.2B & Qwen 3.5 0.8B)</h4>
-              <p>Pruebas de rendimiento e inferencia con <code>llmfit</code> sobre <code>LiquidAI/lfm2.5-1.2b-instruct</code> y <code>Qwen3.5 (0.8B)</code> para seleccionar el modelo ideal embarcado.</p>
+              <p>Pruebas de rendimiento e inferencia con <code>llmfit</code> sobre
+                <code>LiquidAI/lfm2.5-1.2b-instruct</code> y <code>Qwen3.5 (0.8B)</code> para seleccionar el modelo
+                ideal embarcado.</p>
             </div>
           </div>
 
@@ -424,7 +439,8 @@
             </div>
             <div class="timeline-content">
               <h4>Cartas de Territorio en WebDCS</h4>
-              <p>Se integraron las cartas de territorio a los manifiestos de vuelo para permitir la planificación visual de rutas directamente sobre los mapas en la aplicación WebDCS.</p>
+              <p>Se integraron las cartas de territorio a los manifiestos de vuelo para permitir la planificación visual
+                de rutas directamente sobre los mapas en la aplicación WebDCS.</p>
             </div>
           </div>
 
@@ -437,10 +453,10 @@
             </div>
             <div class="timeline-content">
               <h4>Lanzamiento de la aplicación WebDCS (Web-based Mission Planner)</h4>
-              <p>Revisión completa del sistema de planificación y creación de WebDCS para cargar, guardar, editar, eliminar y validar manifiestos, así como planificar y renderizar rutas sobre mapas.</p>
+              <p>Revisión completa del sistema de planificación y creación de WebDCS para cargar, guardar, editar,
+                eliminar y validar manifiestos, así como planificar y renderizar rutas sobre mapas.</p>
               <figure>
-                <img
-                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0723 New DCS.png"
+                <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0723 New DCS.png"
                   alt="WebDCS Mission Planner" loading="lazy" />
                 <figcaption>Interfaz de planificación de misiones en WebDCS.</figcaption>
               </figure>
@@ -456,12 +472,16 @@
             </div>
             <div class="timeline-content">
               <h4>Algoritmo de Colisión Temporal por Tasa de Crecimiento (Looming)</h4>
-              <p>Se rediseñó la lógica de evasión reemplazando los umbrales espaciales estáticos por un análisis de looming temporal en el ROI central (cambio de ocupación frame a frame ponderado por EMA, con <code>EMA_ALPHA = 0.4</code>). Esto previene falsos positivos con montañas lejanas o edificios a gran altitud y asegura la detección reactiva rápida de postes, semáforos o personas aproximándose.</p>
+              <p>Se rediseñó la lógica de evasión reemplazando los umbrales espaciales estáticos por un análisis de
+                looming temporal en el ROI central (cambio de ocupación frame a frame ponderado por EMA, con
+                <code>EMA_ALPHA = 0.4</code>). Esto previene falsos positivos con montañas lejanas o edificios a gran
+                altitud y asegura la detección reactiva rápida de postes, semáforos o personas aproximándose.</p>
               <figure>
                 <img
                   src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0714 False Collition Detection Avoidance.png"
                   alt="Esquema del detector de colisiones por looming temporal" loading="lazy" />
-                <figcaption>Esquema conceptual del análisis de looming y filtrado de colisiones a gran altitud.</figcaption>
+                <figcaption>Esquema conceptual del análisis de looming y filtrado de colisiones a gran altitud.
+                </figcaption>
               </figure>
             </div>
           </div>
