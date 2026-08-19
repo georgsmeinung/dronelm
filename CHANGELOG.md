@@ -328,7 +328,7 @@ Se implementó y validó el sistema de seguimiento y guiado secuencial de waypoi
   - Lee la lista de waypoints `[WP_1, WP_2, ..., WP_N]`.
   - Evalúa la distancia tridimensional $\| \mathbf{P}_{dron} - \mathbf{P}_{wp} \| \le 3.5\text{ m}$. Al alcanzar el radio de aceptación, conmuta al siguiente `WP_{i+1}` y declara fin de misión al completar el último.
 - **Proyección Cinemática en Body Frame con ForwardOnly**:
-  - Calcula el error angular de rumbo respecto a la orientación actual del dron: $\Delta \psi = \text{wrap\_to\_pi}(\psi_{target} - \psi_{dron})$.
+  - Calcula el error angular de rumbo respecto a la orientación actual del dron: $` \Delta \psi = \text{wrap\_to\_pi}(\psi_{target} - \psi_{dron}) `$.
   - Si $|\Delta \psi| \le 90^\circ$:
     $$v_x = \max(0.4, V_{crucero} \cdot \cos(\Delta \psi)), \quad v_y = V_{crucero} \cdot \sin(\Delta \psi)$$
   - Si $|\Delta \psi| > 90^\circ$ (waypoint a espaldas tras esquive):
