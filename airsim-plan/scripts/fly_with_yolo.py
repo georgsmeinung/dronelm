@@ -313,11 +313,11 @@ class TacticalController:
 # --------------------------------------------------------------------------- #
 
 MACRO_TO_VEL = {
-    "MANTENER_RUMBO":   (1.0,  0.0, 0.0, 0.0),
-    "EVADIR_IZQUIERDA": (-1.0,  0.0, 0.0, 0.0),
-    "EVADIR_DERECHA":   ( 1.0,  0.0, 0.0, 0.0),
-    "GANAR_ALTURA":     ( 0.0,  0.0, 1.0, 0.0),
-    "PERDER_ALTURA":    ( 0.0,  0.0,-1.0, 0.0),
+    "MANTENER_RUMBO":   ( 2.0,  0.0, 0.0, 0.0),
+    "EVADIR_IZQUIERDA": ( 1.5, -2.5, 0.0, 0.0),
+    "EVADIR_DERECHA":   ( 1.5,  2.5, 0.0, 0.0),
+    "GANAR_ALTURA":     ( 0.0,  0.0,-1.0, 0.0),
+    "PERDER_ALTURA":    ( 0.0,  0.0, 1.0, 0.0),
     "FRENAR":           ( 0.0,  0.0, 0.0, 0.0),
 }
 
@@ -449,14 +449,25 @@ def _dispatch_action(bridge: AirSimBridge, vehicle: str,
         client.moveToPositionAsync(wp0.x, wp0.y, wp0.z, 6.0, vehicle_name=vehicle).join()
         return
     if name == "EVADIR_IZQUIERDA" or name == "EVADIR_DERECHA":
-        # Quick horizontal shove while the SLM recomputes.
+        # Quick horizontal shove while the SLM recomputes with forward orientation.
         vx, vy, vz, _ = action_to_velocity(decision)
-        client.moveByVelocityAsync(vx * 2.0, vy * 2.0, vz, 0.6,
-                                   vehicle_name=vehicle).join()
+        try:
+            import cosysairsim as airsim
+        except ImportError:
+            import airsim
+        client.moveByVelocityBodyFrameAsync(
+            vx, vy, vz, 0.6,
+            drivetrain=airsim.DrivetrainType.ForwardOnly,
+            yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0.0),
+            vehicle_name=vehicle
+        ).join()
         return
     if name in {"GANAR_ALTURA", "PERDER_ALTURA"}:
         vx, vy, vz, _ = action_to_velocity(decision)
-        client.moveByVelocityAsync(vx, vy, vz, 0.6, vehicle_name=vehicle).join()
+        client.moveByVelocityBodyFrameAsync(
+            vx, vy, vz, 0.6,
+            vehicle_name=vehicle
+        ).join()
         return
     if name == "FRENAR":
         client.hoverAsync(vehicle_name=vehicle).join()

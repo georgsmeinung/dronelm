@@ -72,10 +72,11 @@ Implementa la estrategia de expansión de cajas delimitadoras (Rill & Faragó / 
 
 ### **Paso 5 — Parada de Seguridad y Consulta al SLM (`hover_and_slm_node`)**
 1. **Parada de seguridad**: Llama inmediatamente a `AirSimClient.execute_velocity(vx=0, vy=0, vz=0)` entrando en modo **Hover** para congelar el avance del cuadricóptero y prevenir colisiones por latencia de inferencia.
-2. **Llamada al SLM**: Invoca a [`deliberative_node`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py), que envía el prompt estructurado al servidor de LLM local (`LOCAL_LLM_URL` OpenAI-compatible) con decodificación restringida JSON. Devuelve la macro-acción evasiva compleja.
+2. **Llamada al SLM**: Invoca a [`deliberative_node`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py), que envía el prompt estructurado al servidor de LLM local (`LOCAL_LLM_URL` OpenAI-compatible) para seleccionar la `macro_action` táctica (`EVADIR_DERECHA`, `EVADIR_IZQUIERDA`, etc.).
+3. **Mapeo Cinemático Determinista**: El controlador inyecta automáticamente el perfil vectorial $(v_x, v_y, v_z)$ asociado a la macro-acción (`ACTION_VELOCITY_MAP`), garantizando velocidades de traslación no nulas hacia el corredor despejado.
 
 ### **Paso 6 — Ejecución Motriz (`motor_node`)**
-Toma el comando final de velocidad (`vx`, `vy`, `vz`, `yaw_rate`) generado por el nodo activo y lo envía a la API de AirSim mediante `moveByVelocityAsync`.
+Toma el comando final de velocidad (`vx`, `vy`, `vz`) generado por el nodo activo y lo envía a la API de AirSim en **Body Frame** mediante `moveByVelocityBodyFrameAsync` con `DrivetrainType.ForwardOnly`. Esto hace que el chasis y la cámara giren de forma coordinada hacia la dirección de avance/evasión, eliminando puntos ciegos laterales.
 
 ---
 
@@ -111,8 +112,8 @@ TTC_EVASION_THRESHOLD=2.0
 TTC_SAFE_THRESHOLD=5.0
 REACTIVE_FORWARD_SPEED=2.0
 EVASION_LATERAL_SPEED=2.5
-LOCAL_LLM_URL=http://localhost:11434/v1
-LOCAL_LLM_MODEL_NAME=lfm2.5-1.2b-instruct
+LOCAL_LLM_URL=http://[IP_ADDRESS]/v1
+LOCAL_LLM_MODEL_NAME=qwen/qwen3.5-2b
 ```
 
 ### **2. Ejecución**
@@ -131,4 +132,4 @@ Para validar el grafo y todos los componentes:
 
 ```bash
 pytest
-```
+```

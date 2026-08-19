@@ -1,3 +1,560 @@
+# 2026-0818
+
+* Retomando el uso de LMStudio por la cantidad modelos disponibles
+
+### Problema de Desacople de Movimiento y Puntos Ciegos
+
+Revisando las reacciones en la simulación y los datos de telemetría se encontró un indicio del problema de navegacion: el drone no recibe la orden girar en el sentido en que tiene que moverse y se mueva como un punto geometrico. Esto invalida toda la estrategia de evasion porque recibe una imagen lateral ¿Por qué ocurre esto?
+
+1. **Desacople de movimiento (`MaxDegreeOfFreedom` vs `ForwardOnly`):**
+   En [`airsim_client.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py#L182-L191), el comando de velocidad se envía con:
+   ```python
+   self._client.moveByVelocityAsync(
+       vx, vy, vz,
+       duration=1.0,
+       drivetrain=airsim.DrivetrainType.MaxDegreeOfFreedom,
+       yaw_mode=airsim.YawMode(is_rate=True, yaw_or_rate=yaw_rate),
+       vehicle_name=self.vehicle_name,
+   )
+   ```
+   Al usar `DrivetrainType.MaxDegreeOfFreedom`, AirSim trata al dron como un objeto holonómico libre (un punto geométrico): el dron se desplaza lateralmente (*strafe* o movimiento de cangrejo) manteniendo su orientación casi fija (`yaw_rate ≈ 0` o valores residuales como `0.1`).
+
+2. **Cámara fija al chasis ($X_{body}$):**
+   La cámara RGB y de profundidad está montada en el frente del chasis. Si el dron ejecuta `EVADIR_DERECHA` aplicando velocidad $V_y > 0$:
+   - El dron se desplaza físicamente hacia su derecha.
+   - Pero la cámara sigue apuntando hacia adelante.
+   - **Punto ciego:** El dron se está desplazando hacia un espacio que **la cámara no ve**. No sabe si al desplazarse a la derecha colisionará con otro objeto.
+
+3. **Inconsistencia en el cálculo de TTC y flujo óptico:**
+   Los algoritmos de visión frontal (Canny XOR, expansión de Bounding Boxes para TTC) asumen que el dron avanza a lo largo de su eje óptico (hacia adelante). Al moverse lateralmente:
+   - Las detecciones se desfasan horizontalmente por desplazamiento lateral, no por avance hacia ellas.
+   - Se pierde la correspondencia visual con la trayectoria real de avance.
+
+4. **Marco inercial (World Frame vs Body Frame):**
+   En AirSim, `moveByVelocityAsync` toma las velocidades en el **marco global NED** (Norte, Este, Abajo). Si el dron no tiene `yaw = 0`, aplicar `vy` ni siquiera es "su derecha relativa", sino el "Este global". Para que sea relativo al chasis, debe usarse `moveByVelocityBodyFrameAsync` o proyectarse con la matriz de rotación del `yaw` actual.
+
+<img src="informe/2026-0818 Problema de Desacople de Movimiento y Puntos Ciegos.jpg" />
+
+¿Cómo se corrige esto para que la cámara siempre mire hacia donde se mueve el dron? Usando `DrivetrainType.ForwardOnly` para configurar el drivetrain de AirSim en modo `ForwardOnly` de modo que el dron rote y que la cámara apunte siempre en la dirección del vector de velocidad resultante.
+
+```python
+self._client.moveByVelocityBodyFrameAsync(
+    vx, vy, vz,
+    duration=1.0,
+    drivetrain=airsim.DrivetrainType.ForwardOnly,
+    yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0),
+    vehicle_name=self.vehicle_name,
+)
+```
+AirSim calcula automáticamente $\psi = \text{atan2}(v_y, v_x)$ y hace que la trompa (y la cámara) del dron rote y apunte siempre en la dirección del vector de velocidad resultante.
+
+Se migró el control motriz de `airsim-loop` y scripts de vuelo para utilizar el marco relativo al chasis (**Body Frame**) y `drivetrain=airsim.DrivetrainType.ForwardOnly`. Con esto, el dron rota su morro y su cámara automáticamente hacia el vector resultante de avance y evasión, eliminando los desplazamientos tipo cangrejo y los puntos ciegos laterales.
+
+1. Cambio en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py):
+**Migración a `moveByVelocityBodyFrameAsync`**: Los comandos de velocidad $(v_x, v_y, v_z)$ ahora se interpretan respecto al chasis del dron (+X frontal, +Y lateral derecho, +Z descenso).
+**Drivetrain `ForwardOnly`**: AirSim calcula dinámicamente $\psi = \text{atan2}(v_y, v_x)$ y orienta el morro (y la cámara frontal) a lo largo de la trayectoria.
+**Protección de Parada Limpia (Hover)**: Cuando $v_x, v_y, v_z \approx 0$, se invoca `hoverAsync()` para congelar la aeronave y evitar indeterminaciones angulares.
+
+2. Cambio en [evasive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py):
+**Vectores de Evasión Relativos**:
+- `EVADIR_DERECHA`: $v_x = 0.8 \times \text{DEFAULT\_FORWARD\_SPEED}$, $v_y = +\text{EVASION\_LATERAL\_SPEED}$.
+- `EVADIR_IZQUIERDA`: $v_x = 0.8 \times \text{DEFAULT\_FORWARD\_SPEED}$, $v_y = -\text{EVASION\_LATERAL\_SPEED}$.
+Al combinar avance $v_x$ con desplazamiento lateral $v_y$, el modo `ForwardOnly` gira el chasis suavemente hacia el corredor despejado ($\approx \pm 50^\circ$), permitiendo que la cámara barra e inspeccione el área de escape en tiempo real.
+
+3. Cambio en [deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py):
+**System Prompt Actualizado**: Se explicitó al SLM que las salidas $v_x, v_y, v_z$ son en marco Body Frame con orientación automática de cámara `ForwardOnly`.
+**Heurística de Fallback**: Actualizadas las velocidades de escape con componente frontal para rotación armónica.
+
+4. Cambio en [fly_with_yolo.py](file:///d:/TesisMCD/dronelm/airsim-plan/scripts/fly_with_yolo.py):
+Se actualizó el mapeo `MACRO_TO_VEL` y el despachador de maniobras tácticas (`_dispatch_action`) para utilizar `moveByVelocityBodyFrameAsync` con `ForwardOnly`.
+
+5. Cambio en [README.md (airsim-loop)](file:///d:/TesisMCD/dronelm/airsim-loop/README.md):
+Se documentó el funcionamiento del Paso 6 (Ejecución Motriz) en Body Frame con rotación acoplada al avance.
+
+La implementación del control de movimiento en el bucle de control autónomo (`airsim-loop`) utiliza `moveByVelocityBodyFrameAsync` con el parámetro `drivetrain=airsim.DrivetrainType.ForwardOnly`. Este modo de operación implica que el dron no realiza una rotación pura en el lugar (*in-place yaw* con velocidad cero), sino un **giro coordinado continuo (maniobra en arco)**:
+
+* Al enviar velocidades $v_x$ y $v_y$ en Body Frame, el vector resultante apunta hacia una diagonal ($\approx \pm 57^\circ$ a la derecha o izquierda, dependiendo del signo de $v_y$).
+* El controlador de bajo nivel de AirSim aplica simultáneamente:
+  1. Empuje horizontal en esa diagonal.
+  2. Un par de actitud sobre el eje `yaw` para orientar el morro hacia esa trayectoria.
+* El dron describe una **curva suave en avance** (como un avión virando), por lo que nunca está detenido rotando sobre su propio eje.
+
+Suspender el loop durante el viraje **sería peligroso para la seguridad del dron**:
+
+1. **Pérdida de reactividad de emergencia:** Si mientras el dron vira hacia la derecha se interpone una rama, poste o pared no visible previamente, el dron quedaría "ciego e indefenso" hasta terminar el giro si el loop estuviera congelado.
+2. **Monitoreo continuo:** Mantener el loop activo permite que, mientras la cámara va barriendo el nuevo corredor, YOLO y el Gatekeeper verifiquen en tiempo real si el nuevo rumbo efectivamente está libre o si requiere frenar inmediatamente (`hover_before_slm`).
+
+Pero el giro sí imparta en los algoritmos visuales; en el **procesamiento de imágenes monocular durante una rotación**:
+
+| Componente | Comportamiento durante el viraje | ¿Es deseable? |
+| :--- | :--- | :--- |
+| **Canny XOR Gate** | Al virar, el fondo se desplaza angularmente en el encuadre. Esto genera un `xor_change_ratio` alto ($> 0.02$). | **Sí:** Hace que el sistema evalúe YOLO obligatoriamente para inspeccionar el nuevo corredor que está entrando en el campo visual. |
+| **YOLO ROI 62°** | Detecta inmediatamente los objetos en el nuevo sector hacia donde el dron apunta la nariz. | **Sí:** Permite descubrir si la trayectoria de evasión está despejada. |
+| **Estimación de TTC (Looming)** | El algoritmo de TTC asume expansión radial (*looming*) desde el centro. Durante el instante de rotación angular rápida, las cajas se desplazan lateralmente. | **Cuidado:** Puede producir estimaciones de TTC ruidosas durante la fracción de segundo que dura el viraje angular. |
+
+Por lo tanto no se suspende el loop en el momento de rotar, el bucle de percepción-decisión debe seguir corriendo a su frecuencia nominal (~5-10 Hz) para garantizar la seguridad reactiva para que:
+  1. El dron inicia el arco evasivo hacia la zona libre.
+  2. La cámara barre el nuevo espacio.
+  3. Canny XOR y YOLO se activan para verificar el nuevo corredor.
+  4. Una vez alineado el morro con el nuevo avance, el cálculo de TTC se estabiliza con precisión en la nueva línea de visión.
+
+## Sistema de control determinista que mapea las macro-acciones del SLM a vectores de velocidad en Body Frame
+Además Se implementa un sistema de control determinista que mapea las macro-acciones del SLM a vectores de velocidad en Body Frame. Se implementó el desacople entre el razonamiento semántico del SLM (`macro_action`) y el control cinemático de velocidades ($v_x, v_y, v_z$), resolviendo el problema de congelamiento por velocidades nulas que generaba el modelo de lenguaje local. Cambios Realizados:
+
+1. Cambio en [deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
+**Definición de `ACTION_VELOCITY_MAP`**: Tabla fija de perfiles vectoriales en Body Frame (`ForwardOnly`):
+  ```python
+  ACTION_VELOCITY_MAP = {
+      "MANTENER_RUMBO":   {"vx": 2.0, "vy":  0.0, "vz":  0.0, "yaw_rate": 0.0},
+      "EVADIR_DERECHA":   {"vx": 1.6, "vy":  2.5, "vz":  0.0, "yaw_rate": 0.0},
+      "EVADIR_IZQUIERDA": {"vx": 1.6, "vy": -2.5, "vz":  0.0, "yaw_rate": 0.0},
+      "GANAR_ALTURA":     {"vx": 0.8, "vy":  0.0, "vz": -1.0, "yaw_rate": 0.0},
+      "PERDER_ALTURA":    {"vx": 0.8, "vy":  0.0, "vz":  1.0, "yaw_rate": 0.0},
+      "FRENAR":           {"vx": 0.0, "vy":  0.0, "vz":  0.0, "yaw_rate": 0.0},
+  }
+  ```
+**Prompt Simplificado**: El SLM ya no intenta estimar floats imprecisos; ahora solo devuelve `macro_action` y `rationale`.
+**Inyección Forzada en `_parse_decision` y `_fallback_decision`**: Al extraer la macro-acción, se inyectan las velocidades reales de la tabla, garantizando que el dron reciba magnitudes físicas efectivas para romper el bucle ante obstáculos inminentes.
+
+## Vuelo en Círculo (Corrección de Estrategia de Evasión)
+Después de estos se verificó el vuelo en círculo como única estrategia de evasión. Se resolvieron las tres causas raíz que provocaban que el dron girara indefinidamente en círculos en lugar de avanzar en línea recta:
+
+1. Desbloqueo de `ttc_router` ([graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py))
+**Antes**: Si había cualquier objeto detectado en el fondo (`obstacles` no vacío) y `TTC == inf`, caía a `hover_and_slm` (Paso 5) deteniendo el dron y activando la deliberación innecesariamente.
+**Ahora**: La decisión sigue estrictamente el modelo de Looming:
+  - $\text{TTC} > 5.0\text{ s}$ o $\infty \rightarrow$ `keep_going` (avance directo a velocidad de crucero).
+  - $2.0\text{ s} < \text{TTC} \le 5.0\text{ s} \rightarrow$ `evasive` (corrección lateral reactiva suave).
+  - $\text{TTC} \le 2.0\text{ s} \rightarrow$ `hover_and_slm` (freno de seguridad y deliberación).
+
+2. Calibración de Distancia Monocular ([translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py))
+**Antes**: Bounding boxes altos de edificios o árboles en el horizonte daban una distancia errónea de $1.25\text{ m}$ (Inminente) en cualquier ángulo de visión.
+**Ahora**: Se incorporó `CLASS_DISTANCE_SCALE` ponderando la escala geométrica esperada por clase (`building=3.0`, `vegetation=2.0`, `person=0.8`, etc.), de modo que estructuras lejanas se clasifican correctamente como `Lejos` ($> 10\text{ m}$) y no disparan alarmas falsas.
+
+3. Dinámica de Evasión Suave ([deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py), [evasive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py), [.env](file:///d:/TesisMCD/dronelm/airsim-loop/.env))
+- Se ajustó `EVASION_LATERAL_SPEED` a $0.8\text{ m/s}$ y el avance a $v_x = 1.8\text{ m/s}$ ($0.9 \times \text{DEFAULT\_FORWARD\_SPEED}$), generando un desvío suave de $\approx 24^\circ$ en vez de giros centrípetos cerrados de $57^\circ$.
+- Una vez sorteado el obstáculo y recuperado el $\text{TTC} = \infty$, el router pasa a `keep_going` ($v_x = 2.0, v_y = 0.0$), continuando en línea recta.
+
+## Doble Salvaguarda de Seguridad Frontal (Looming TTC + Proximidad Espacial)
+En la prueba siguiente se detectó que de todas formas el dron podria estrellarse contra un objeto muy grande para la ROI considerada en el algoritmo de evasión. Por eso se agrega una doble salvaguarda de Seguridad Frontal (Looming TTC + Proximidad Espacial). Se implementó y validó la estrategia de doble salvaguarda para evitar colisiones frontales cuando los objetos saturan el campo de visión y el TTC derivativo se indetermina ($\Delta w = 0$).
+
+1. Calibración de Distancia por Cobertura en [translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py)
+**Regla de Saturación**: Si un obstáculo cubre $\ge 65\%$ del alto del encuadre en el sector central, se fuerza a **`Inminente` ($\approx 2.1\text{ m}$)** sin importar la clase geométrica (una pared tapando la cámara frontal indica peligro inmediato).
+- Si cubre entre $40\%$ y $65\%$, se clasifica como **`Cerca` ($\approx 4.4\text{ m}$)**.
+- Si cubre $< 40\%$, se aplica la distancia proporcional de horizonte (`Lejos`).
+
+2. Doble Salvaguarda en `ttc_router` ([graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py))
+- **`hover_and_slm` (Paso 5 - Freno de emergencia)**:
+  Se activa si $\text{TTC} \le 2.0\text{ s}$ **O** si hay un obstáculo en `Centro` con proximidad `Inminente`.
+- **`evasive` (Paso 4B - Evasión reactiva suave)**:
+  Se activa si $2.0\text{ s} < \text{TTC} \le 5.0\text{ s}$ **O** si hay un obstáculo en `Centro` con proximidad `Cerca`.
+- **`keep_going` (Paso 4A - Avance de crucero)**:
+  Se activa si $\text{TTC} > 5.0\text{ s}$ (o $\infty$) **Y** el sector central no presenta obstáculos inminentes ni cercanos.
+
+## Tracking Temporal por IoU y Normalización Global de Percepción
+Luego se detectó otro vuelo en circulo por lo que se implementó un Tracking Temporal por IoU y Normalización Global de Percepción. Se implementó y validó la solución para el cálculo del Tiempo de Colisión ($\text{TTC}$) y la clasificación de proximidad espacial en el entorno de AirSim.
+
+1. Tracking Temporal Robusto en [ttc_estimator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/ttc_estimator.py)
+**Antes**: El identificador de cajas usaba `f"{det.object}_{int(cx / 50)}"`, lo cual perdía el seguimiento del objeto ante cualquier oscilación de $\pm 5\text{ px}$ en $X$, provocando que $\Delta w = 0$ y $\text{TTC} = \infty$ de forma espuria.
+**Ahora**: Se implementó asociación temporal multiobjeto mediante solapamiento $\text{IoU}$ ($\text{IoU} > 0.05$) y distancia euclídea de centroides ($\le 250\text{ px}$):
+  - Rastrea con precisión el crecimiento de cada objeto aproximándose al frente del dron.
+  - Calcula la tasa de expansión real $\Delta w / \Delta t$ y produce el $\text{TTC}$ diferencial exacto.
+
+2. Normalización en Fotograma Completo en [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)
+**Antes**: `translate_detections` recibía las dimensiones del sub-recorte central (60% del ancho y alto), por lo que cualquier árbol o edificio de fondo superaba el 65% del alto del recorte y se rotulaba erróneamente como `Inminente (2.1m)`.
+**Ahora**: Se remapean las coordenadas y se evalúa sobre la resolución nativa completa de la cámara frontal (`1080x720`).
+
+3. Calibración de Distancia Global en [translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py)
+- $\ge 75\%$ de cobertura en el frame completo $\rightarrow$ `Inminente` ($2.1\text{ m}$).
+- $45\% - 75\%$ $\rightarrow$ `Cerca` ($4.4\text{ m}$).
+- $< 45\%$ $\rightarrow$ `Lejos` ($> 10\text{ m}$).
+
+## Desaceleración Frontal Activa en Maniobras Evasivas
+Se implementó y validó la desaceleración frontal activa durante maniobras evasivas para evitar que el dron avance a gran velocidad hacia el obstáculo que intenta esquivar.
+
+1. Variables de Configuración en [.env](file:///d:/TesisMCD/dronelm/airsim-loop/.env)
+- `EVASION_FORWARD_SPEED = 0.5` ($0.5\text{ m/s}$ de avance lento y controlado durante esquives).
+- `EVASION_LATERAL_SPEED = 1.2` ($1.2\text{ m/s}$ de empuje lateral y giro rápido).
+- `EVASION_UP_SPEED = 1.5` ($1.5\text{ m/s}$ de ascenso).
+
+2. Nodo Evasivo Reactivo en [evasive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py)
+**Antes**: Mantenía $v_x = 1.80\text{ m/s}$ hacia adelante y solo $v_y = 0.80\text{ m/s}$ lateralmente, avanzando $3.6\text{ m}$ de frente en 2 segundos e impactando estructuras cercanas.
+**Ahora**: Reduce el avance frontal a $v_x = 0.50\text{ m/s}$ y aplica $v_y = \pm 1.20\text{ m/s}$, produciendo un ángulo de escape rápido y decidido ($\approx 67^\circ$).
+
+3. Cerebro Deliberativo en [deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
+- `ACTION_VELOCITY_MAP` actualizado con $v_x = 0.50\text{ m/s}$ y $v_y = \pm 1.20\text{ m/s}$ para `EVADIR_DERECHA` y `EVADIR_IZQUIERDA`.
+
+## Fallo de Razonamiento del SLM y Optimización
+Al analizar los logs de inferencia de **Qwen 3.5 2B**, se observa un fallo sistemático de razonamiento: **el modelo responde `EVADIR_DERECHA` en el 100% de las ocasiones**, incluso cuando esa decisión contradice la evidencia visual.
+
+### 1. Evidencia de los Fallos Críticos en el Log
+
+#### Caso A: El SLM evadió hacia el sector con un obstáculo inminente
+* **Contexto enviado:**
+  * `Derecha`: 1 vegetación **Inminente a 2.1m** + 8 objetos lejanos.
+  * `Izquierda`: **0 obstáculos (100% despejado)**.
+* **Respuesta del SLM:**
+  ```json
+  {"macro_action": "EVADIR_DERECHA", "rationale": "El obstáculo en el centro es inminente, pero el sector derecho tiene menos obstáculos y más espacio para evadir."}
+  ```
+  *(El SLM alucinó que la derecha tenía menos obstáculos y mandó al dron directo hacia la vegetación inminente de la derecha).*
+
+#### Caso B: Reconoció peligro a la derecha pero giró a la derecha
+* **Contexto enviado:**
+  * `Derecha`: 13 obstáculos (incluyendo vehículos y edificios).
+  * `Izquierda`: solo 2 obstáculos lejanos.
+* **Respuesta del SLM:**
+  ```json
+  {"macro_action": "EVADIR_DERECHA", "rationale": "El obstáculo principal es un vehículo en el sector Derecha, evitando la zona con más obstáculos."}
+  ```
+  *(El SLM detecta el peligro a la derecha, dice que quiere evitarlo, pero su acción elegida es `EVADIR_DERECHA`).*
+
+### 2. ¿Por qué ocurre esto en un modelo pequeño (2B)?
+
+1. **Sobrecarga de Ruido y Pérdida de Atención**:
+   * Se le envían hasta **30 líneas de texto sin procesar** con números de 16 decimales irrelevantes (`distancia 581.5384615384615`, `posicion: {'x': -18.0884361267...}`).
+   * Un modelo de 2B parámetros **no puede contar ni agrupar mentalmente 30 elementos dispersos**.
+2. **Falta de Agregación Espacial Previa**:
+   * El SLM debe deducir por sí mismo cuál sector tiene más obstáculos sumando líneas dispersas en el texto.
+   * Sin un resumen explícito de sectores (*"Izquierda: 0 obstáculos | Derecha: 8 obstáculos"*), el modelo sufre de **sesgo de completitud fija** y repite el primer token disponible (`EVADIR_DERECHA`).
+3. **Contaminación de Telemetría**:
+   * Los diccionarios crudos de posición/rotación inercial en coma flotante aportan ruido sin valor táctico.
+
+### 3. Propuesta de Optimización del Contexto y Prompt
+
+#### A. Agregación Previa por Sectores (Sector Breakdown)
+En lugar de una lista desordenada de 30 detecciones, el prompt debe entregar el balance táctico precalculado en Python:
+```text
+Evaluación de Sectores:
+- IZQUIERDA: DESPEJADO (0 obstáculos cercanos, 1 lejano)
+- CENTRO: BLOQUEADO (1 edificio Inminente a 2.1m)
+- DERECHA: PELIGROSO (1 vegetación Inminente a 2.1m, 8 lejanos)
+
+Obstáculos Críticos (< 25m):
+- building en Centro (Inminente, 2.1m)
+- vegetation en Derecha (Inminente, 2.1m)
+```
+*Con este formato, cualquier SLM de 1B-2B ve al instante que `IZQUIERDA` es la única vía de escape.*
+
+#### B. Telemetría Limpia y Resumida
+```text
+Telemetría:
+- Altitud: 3.7 m | Velocidad de avance: 2.0 m/s
+```
+
+#### C. Prompt de Razonamiento Estructurado (Paso a Paso)
+Indicarle al SLM la regla de decisión jerárquica:
+1. Si `CENTRO` está `BLOQUEADO`, compara `IZQUIERDA` vs `DERECHA`.
+2. Elige el sector con estado `DESPEJADO` o con menor cantidad de obstáculos cercanos.
+3. Si ambos lados están `BLOQUEADOS`, elige `GANAR_ALTURA` o `FRENAR`.
+
+## Optimización del Contexto Situacional y Prompting para el SLM
+Se implementó y validó la optimización de representación del contexto situacional y prompting estructurado para el SLM deliberativo (**Qwen 3.5 2B**), resolviendo el sesgo de decisiones unilaterales erróneas.
+
+1. Resumen Agregado de Sectores en [deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
+- **Antes**: Se enviaba una lista de 30+ detecciones con 16 decimales hasta 500m de distancia, sobrecargando la ventana de atención del modelo de 2B parámetros y provocando que siempre repitiera `EVADIR_DERECHA`.
+- **Ahora**: `_summarize_sectors()` genera un desglose de sectores precalculado:
+  ```text
+  Evaluacion de Sectores:
+  - IZQUIERDA: DESPEJADO (0 obstaculos)
+  - CENTRO: BLOQUEADO (1 inminente, 0 cerca, 2 lejos)
+  - DERECHA: BLOQUEADO (1 inminente, 0 cerca, 5 lejos)
+
+  Obstaculos Criticos (< 25m):
+  - building en sector Centro (Inminente, 2.1m)
+  - vegetation en sector Derecha (Inminente, 2.1m)
+  - person en sector Derecha (Lejos, 17.2m)
+  ```
+
+2. Telemetría Limpia y Humana en [deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
+- Se eliminaron los diccionarios crudos con coordenadas flotantes de 16 decimales.
+- Se presenta únicamente altitud ($z$) y velocidad escalar horizontal ($v_h$).
+
+3. Prompt de Decisión Jerárquica Unívoca
+- Se formularon reglas de decisión explícitas y estrictas:
+  - *"Nunca elijas evadir hacia un sector BLOQUEADO si el otro sector está DESPEJADO."*
+  - *"Si CENTRO está BLOQUEADO y solo un lateral está DESPEJADO, elige ESE lateral."*
+
+## El dron no se dirige a los Waypoints del Manifiesto
+
+1. **`reactive_node` no tenía control de Waypoints**:
+   En [`reactive.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/reactive.py#L33-L40):
+   ```python
+   command = {
+       "macro_action": "MANTENER_RUMBO",
+       "vx": DEFAULT_FORWARD_SPEED,  # 2.0 m/s
+       "vy": 0.0,                    # 0.0 m/s
+       "vz": 0.0,
+   }
+   ```
+   * Cuando el camino está despejado (`keep_going` / `reactive`), el nodo reactivo simplemente enviaba $v_x = 2.0, v_y = 0.0$ en el marco del cuerpo (**Body Frame**).
+   * Al terminar una evasión, el dron queda apuntando hacia la orientación residual del esquive. Como el nodo reactivo no calculaba el rumbo hacia el waypoint objetivo, el dron **seguía volando en línea recta hacia donde quedó mirando**, ignorando las coordenadas de la misión.
+
+2. **Falta de Seguimiento de Progreso de Waypoints**:
+   * El manifiesto `A_TOWN_MISSION` define 5 waypoints (`WP_1` a `WP_5`), pero `airsim-loop` no estaba indexando el waypoint activo ni calculando el vector de rumbo / distancia de llegada ($dist \le 3.5\text{ m}$).
+
+### Arquitectura de Navegación Guiada por Waypoints
+
+Para que el dron recupere y persiga la ruta de la misión tras cada maniobra de evasión:
+
+1. **Gestor de Waypoints Activos (`WaypointTracker`)**:
+   * Lee la lista de waypoints del manifiesto (`WP_1`, `WP_2`, etc.).
+   * Monitorea la posición actual $(x, y, z)$ del dron.
+   * Si $\| \mathbf{P}_{dron} - \mathbf{P}_{wp} \| \le 3.5\text{ m}$, marca el waypoint como alcanzado y conmuta al siguiente `WP_{i+1}`.
+   * Al alcanzar el último waypoint, activa misión cumplida / aterrizaje.
+
+2. **Ley de Guiado Nominal hacia el Waypoint ([`reactive.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/reactive.py))**:
+   * Cuando el camino visual está libre de peligro:
+     * Calcula el vector hacia el waypoint activo: $\Delta x = x_{wp} - x$, $\Delta y = y_{wp} - y$, $\Delta z = z_{wp} - z$.
+     * Calcula el rumbo objetivo global: $\psi_{target} = \text{atan2}(\Delta y, \Delta x)$.
+     * Calcula el error angular relativo al yaw actual del dron: $\Delta \psi = \psi_{target} - \psi_{dron}$.
+     * En `ForwardOnly`, proyecta las velocidades en Body Frame para orientar y acelerar el dron hacia el waypoint:
+       $$v_{x, body} = V_{crucero} \cdot \cos(\Delta \psi)$$
+       $$v_{y, body} = V_{crucero} \cdot \sin(\Delta \psi)$$
+       $$v_{z, body} = \text{clamp}(K_z \cdot \Delta z, -1.5, 1.5)$$
+     *(El dron corrige suavemente su proa hacia el waypoint y avanza directamente hacia él).*
+
+3. **Integración con Evasión**:
+   * **Obstáculo al frente**: La evasión reactiva/deliberativa toma el control temporal ($v_x = 0.5, v_y = \pm 1.2$).
+   * **Camino despejado**: `reactive_node` retoma el control y reorienta automáticamente el dron hacia el waypoint activo.
+
+4. **Contexto para el SLM ([`deliberative.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py))**:
+   * Informar al SLM la dirección del waypoint (ej. `Objetivo: WP_2 a 120m hacia la Izquierda (-45°)`), para que ante un bloqueo frontal elija preferentemente el pasillo lateral que lo acerque a su destino.
+
+## Sistema de Navegación Guiada por Waypoints
+Se implementó y validó el sistema de seguimiento y guiado secuencial de waypoints de misión para `airsim-loop`. El dron ahora recupera automáticamente el rumbo hacia su objetivo tras esquivar obstáculos visuales y avanza secuencialmente a lo largo de todo el manifiesto de vuelo.
+
+1. Módulo `WaypointTracker` en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Seguimiento Secuencial**:
+  - Lee la lista de waypoints `[WP_1, WP_2, ..., WP_N]`.
+  - Evalúa la distancia tridimensional $\| \mathbf{P}_{dron} - \mathbf{P}_{wp} \| \le 3.5\text{ m}$. Al alcanzar el radio de aceptación, conmuta al siguiente `WP_{i+1}` y declara fin de misión al completar el último.
+- **Proyección Cinemática en Body Frame con ForwardOnly**:
+  - Calcula el error angular de rumbo respecto a la orientación actual del dron: $\Delta \psi = \text{wrap\_to\_pi}(\psi_{target} - \psi_{dron})$.
+  - Si $|\Delta \psi| \le 90^\circ$:
+    $$v_x = \max(0.4, V_{crucero} \cdot \cos(\Delta \psi)), \quad v_y = V_{crucero} \cdot \sin(\Delta \psi)$$
+  - Si $|\Delta \psi| > 90^\circ$ (waypoint a espaldas tras esquive):
+    $$v_x = 0.4\text{ m/s}, \quad v_y = \text{sign}(\Delta \psi) \cdot 1.5\text{ m/s}$$
+  - Corrección de altitud: $v_z = \text{clamp}(0.5 \cdot \Delta z, -1.5, 1.5)\text{ m/s}$.
+
+2. Nodo Reactivo de Guiado Nominal en [reactive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/reactive.py)
+- Cuando el camino visual está despejado (`keep_going` / `reactive`), inyecta las velocidades proyectadas hacia el waypoint activo.
+- Al completar la misión, emite `FRENAR` ($v=0$).
+
+3. Contexto Táctico para el SLM Deliberativo en [deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
+- En el prompt de deliberación se informa la dirección relativa y distancia hacia la meta:
+  ```text
+  Objetivo de Navegacion:
+  - Destino: WP_2 [1.6, -137.9, -10.0]
+  - Distancia: 124.5 m | Direccion hacia la meta: Izquierda (-45°)
+  ```
+- Ante bloqueo frontal, el fallback y el SLM eligen preferentemente el lateral que acerque el dron al waypoint.
+
+4. Integración en el Bucle Principal en [main.py](file:///d:/TesisMCD/dronelm/airsim-loop/main.py)
+- Instanciación de `WaypointTracker` con los waypoints cargados de `a_town_mission.json`.
+- Enriquecimiento del banner de video y telemetría de StreamHub con métricas de waypoint activo (`WP 2/5 (dist=45m)`).
+
+## Eliminación del Falso Slalom en `ttc_router`
+Se ajustó la lógica de bifurcación de `ttc_router` para respetar el principio de Looming temporal, eliminando la falsa alarma de proximidad estática que obligaba al dron a zigzaguear continuamente entre edificios lejanos.
+1. Refinamiento de `ttc_router` en [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)
+- **Antes**: `if (2.0 < ttc <= 5.0) or center_near: return "evasive"`. Cualquier edificio normal del entorno que cubriese el 45% del encuadre (incluso a 25-30m de distancia) disparaba `evasive` en casi todos los ciclos, forzando un esquive oscilatorio continuo de lado a lado.
+- **Ahora**:
+  - **Peligro Inminente**: $\text{TTC} \le 2.0\text{ s}$ O `center_imminent` ($\ge 75\%$ del frame completo) $\rightarrow$ `hover_and_slm` (freno inmediato y deliberación).
+  - **Aproximación Real en Curso**: $2.0\text{ s} < \text{TTC} \le 5.0\text{ s}$ O `has_collision_danger` $\rightarrow$ `evasive` (esquive local suave).
+  - **Camino Despejado**: $\text{TTC} > 5.0\text{ s}$ (o $\infty$) $\rightarrow$ `keep_going` (avance recto y guiado nominal hacia el waypoint activo).
+
+## Eliminación del Slalom Recurrente por Falsas Alarmas
+
+Se identificaron y corrigieron las dos causas principales del comportamiento oscilatorio (slalom) del dron: las falsas alarmas de colisión por rotación de cámara (yaw) y la traducción de distancias monoculares en estructuras altas.
+1. Robustez al Giro en `ttc_router` ([graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py))
+- **Problema**: Al girar la proa del dron, nuevos objetos entran lateralmente en la ROI central. Esto generaba incrementos súbitos de ocupación que el detector interpretaba como tasa de crecimiento crítica (`has_collision_danger = True`), forzando desvíos evasivos permanentes en bucle.
+- **Corrección**: Se retiró `has_growth_danger` del router condicional de 3 vías. Ahora la evasión local directa se activa estrictamente bajo **Looming TTC** de seguimiento temporal ($2.0\text{ s} < \text{TTC} \le 5.0\text{ s}$), el cual es inmune a los desplazamientos laterales de la cámara.
+
+2. Exclusión de Estructuras Altas en `_estimate_distance` ([translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py))
+- **Problema**: Los edificios, árboles y postes de la ciudad son físicamente muy altos. A una distancia segura de $25\text{ metros}$ cubrían más del $45\%$ del alto vertical de la cámara, activando la regla genérica de saturación que los traducía falsamente como obstáculos a `4.4m (Cerca)`.
+- **Corrección**: Se excluyeron las clases físicamente altas (`building`, `wall`, `tree`, `vegetation`, `pole`, `fence`) de la regla de cobertura vertical moderada. Ahora estiman su distancia real usando su escala de tamaño físico (`CLASS_DISTANCE_SCALE`), reportando distancias nominales seguras y permitiendo el vuelo fluido por calles estrechas.
+
+## Solución de la Órbita en Waypoints (Guiado con Rumbo Absoluto)
+Se identificó y corrigió la causa por la cual el dron orbitaba y daba vueltas en círculos cerca de los waypoints (entre 4m y 9m de distancia) sin llegar a alcanzarlos.
+
+1. Actuación con Rumbo Absoluto (`MaxDegreeOfFreedom`) en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
+- **Problema**: El modo por defecto `ForwardOnly` calcula la rotación del chasis a partir del vector de velocidad $(v_x, v_y)$. Si el dron tiene inercia o desvío lateral y el ciclo de control tiene latencia, el dron derrapa y pasa de largo el waypoint lateralmente, quedando atrapado en una órbita circular alrededor del objetivo sin lograr entrar en el radio de aceptación de $3.5\text{ m}$.
+- **Corrección**: Se extendió `execute_velocity` para aceptar un parámetro opcional `target_yaw` (rumbo absoluto en grados). Si está definido, se usa el modo `drivetrain = airsim.DrivetrainType.MaxDegreeOfFreedom` y se fuerza la proa a encarar exactamente el objetivo.
+
+2. Integración en Guiado Secuencial y Nodo Reactivo
+- **En [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)**: Se agregó la clave `target_yaw_deg` (rumbo absoluto global en grados hacia el objetivo activo) al diccionario de retorno de `compute_guidance`.
+- **En [reactive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/reactive.py)**: En vuelo nominal despejado, se inyecta `target_yaw` en el comando de velocidad.
+- **En [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)**: El nodo `motor_node` lee `target_yaw` del comando y lo transmite a `execute_velocity` en el cliente.
+
+## Navegación Car-like con Control Proporcional de Guiñada
+Se implementó y verificó la siguiente estrategia: Avance Frontal + Control de Guiñada (Car-like o como en un auto):
+- El dron siempre avanza hacia adelante ($v_x = V_{crucero}, v_y = 0$).
+- El alineamiento hacia el waypoint se hace exclusivamente girando la proa con un controlador proporcional de guiñada: $$\dot{\psi} = K_p \cdot \Delta \psi$$
+
+De esta manera el dron siempre viaja en la dirección hacia donde apunta su cámara, garantizando que el sistema de visión y YOLO siempre vean los obstáculos de frente, así eliminando por completo el vuelo lateral ("cangrejeo") en navegación nominal y garantizando que el dron avance siempre hacia donde apunta su cámara frontal mientras se alinea con los waypoints mediante velocidad angular de guiñada.
+
+1. Control de Guiñada Proporcional en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Cero Vuelo Lateral**: $v_y = 0.0$ en vuelo nominal.
+- **Control de Guiñada ($\dot{\psi}$)**:
+  $$\dot{\psi} = \text{clamp}(1.2 \cdot \Delta \psi_{deg}, -45.0^\circ/\text{s}, +45.0^\circ/\text{s})$$
+- **Modulación de Avance Frontal Adaptativo ($v_x$)**:
+  - Desvío leve ($|\Delta \psi| \le 30^\circ$): Avance pleno de crucero ($v_x = 2.0\text{ m/s}$).
+  - Desvío moderado ($30^\circ < |\Delta \psi| \le 60^\circ$): Desaceleración a $v_x = 1.0\text{ m/s}$ para negociar la curva.
+  - Desvío pronunciado ($|\Delta \psi| > 60^\circ$): Reducción a $v_x = 0.4\text{ m/s}$ para girar casi sobre su propio eje.
+
+2. Actuación en Body Frame con `YawMode(is_rate=True)` en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
+- Cuando $\text{yaw\_rate} \neq 0$, AirSim utiliza `drivetrain = MaxDegreeOfFreedom` y aplica la velocidad angular $\dot{\psi}$ en grados por segundo directamente al modelo multirotor.
+- Durante maniobras evasivas puras (`evasive`), si $\text{yaw\_rate} = 0$, se mantiene `ForwardOnly` para apuntar la cámara en la dirección de evasión lateral.
+
+3. Integración en Nodos de Grafo
+- **En [reactive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/reactive.py)**: El comando reactivo transporta `vx`, `vy=0.0`, `vz` y `yaw_rate`.
+- **En [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)**: `motor_node` lee `yaw_rate` y lo transmite a `execute_velocity`.
+
+## Control Adaptativo Multirrotor (Pivot Turn y Cero Órbita)
+Se implementó y validó la solución que aprovecha la naturaleza holónoma del quadricóptero (capacidad de frenar y girar en el lugar $v_x = 0, \dot{\psi} \neq 0$), eliminando cualquier órbita circular alrededor de los waypoints.
+
+1. Giro sobre el Eje (*Pivot Turn*) en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Frenado para reorientación**: Si el desvío es mayor a $25^\circ$ (o mayor a $15^\circ$ cuando la distancia al objetivo es menor a $8\text{ metros}$), el dron frena su avance ($v_x = 0.0$) y gira en el lugar a alta velocidad ($\dot{\psi} = \text{clamp}(1.5 \cdot \Delta \psi, -60^\circ/\text{s}, +60^\circ/\text{s})$) hasta apuntar su cámara frontal hacia el waypoint.
+- **Avance Rectilíneo una vez alineado**:
+  - Desalineación $> 25^\circ$: $v_x = 0.0\text{ m/s}$ (Pivot turn, radio de giro $R = 0$).
+  - Desalineación $15^\circ \sim 25^\circ$: $v_x = 0.8\text{ m/s}$ (Avance cauto mientras termina de enfilar).
+  - Alineado ($< 15^\circ$) en proximidad ($< 6\text{m}$): $v_x = 1.4\text{ m/s}$ (Aproximación suave).
+  - Alineado ($< 15^\circ$) a distancia ($> 6\text{m}$): $v_x = 2.0\text{ m/s}$ (Crucero pleno).
+
+2. Continuidad Motriz en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
+- Se extendió la duración de los comandos en AirSim a `duration = 2.0s`.
+- Esto elimina el tiempo muerto de $0.5\text{s}$ entre ciclos donde el dron perdía el control activo de guiñada y avanzaba por inercia tangencial.
+
+## Eliminación de Oscilación en 180° (Anti-Chattering Hysteresis Lock)
+Se implementó y verificó la solución definitiva para la oscilación biestable (*efecto péndulo*) que atrapaba al dron invirtiendo el sentido de giro indefinidamente en la frontera de $\pm 180^\circ$.
+
+1. Memoria de Sentido de Giro (*Hysteresis Direction Lock*) en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Bloqueo en Giros Profundos**: Si el error angular inicial es mayor a $60^\circ$ (o cercano a $\pm 180^\circ$), el sistema selecciona el sentido de rotación más corto ($+1$ horario o $-1$ antihorario) y lo bloquea (`self._locked_turn_dir`).
+- **Inmunidad a la Discontinuidad de $\pm 180^\circ$**: Aunque el dron rote y cruce la frontera entre $+180^\circ$ y $-180^\circ$, el sentido de rotación **no se invierte**. El dron continúa girando en la misma dirección sin titubear.
+- **Liberación en Zona Segura**: Cuando el error angular desciende a $|\Delta \psi| \le 30^\circ$, el bloqueo se libera automáticamente y se retoma el control proporcional fino ($K_p = 1.5$) para alinear la proa con precisión hacia el objetivo.
+
+## Control Críticamente Amortiguado de Guiñada y Altitud
+Se implementó y verificó el control dinámico amortiguado en **guiñada** (orientación angular) y **altitud** ($v_z$), eliminando las piruetas continuas de $360^\circ$ y el rebote vertical senoidal.
+
+1. Control Proporcional Suave de Guiñada en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Eliminación del bloqueo estático rígido**: Se retiró el `_locked_turn_dir` que impedía detectar la convergencia cuando el giro saltaba la ventana fija.
+- **Tasa Angular Amortiguada ($K_p = 0.8$, saturación $\pm 35.0^\circ/\text{s}$)**:
+  $$\dot{\psi} = \text{clamp}(0.8 \cdot \Delta \psi_{deg}, -35.0^\circ/\text{s}, +35.0^\circ/\text{s})$$
+- A una tasa máxima de $35^\circ/\text{s}$, el dron avanza angularmente $\approx 50^\circ$ por ciclo y desacelera progresivamente conforme el error se reduce a cero ($20^\circ \to 16^\circ/\text{s}$, $10^\circ \to 8^\circ/\text{s}$), logrando una convergencia sin sobrepaso (*anti-overshoot*).
+
+2. Altitud Críticamente Amortiguada con Zona Muerta en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Zona muerta**: Si el error vertical $|dz| < 0.3\text{ metros}$, $v_z = 0.0\text{ m/s}$.
+- **Ganancia vertical suave**:
+  $$v_z = \text{clamp}(0.35 \cdot dz, -0.8\text{ m/s}, +0.8\text{ m/s})$$
+- Elimina los rebotes verticales de $\pm 3\text{m}$, estabilizando la altitud a la cota meta ($-10.0\text{m}$) suavemente.
+
+3. Avance Adaptativo
+- Desalineación $> 30^\circ$: $v_x = 0.0\text{ m/s}$ (Reorientación en el lugar).
+- Transición $15^\circ \sim 30^\circ$: $v_x = 0.8\text{ m/s}$ (Avance cauto).
+- Encarado $\le 15^\circ$: $v_x = 2.0\text{ m/s}$ (Crucero pleno en línea recta hacia el waypoint).
+
+## Navegación Continua por Waypoints y Filtrado de Falsas Evasiones
+Se implementó y verificó la navegación continua sin estancamiento mediante modulación por coseno de rumbo y el filtrado de falsas alarmas de evasión en espacio despejado.
+
+1. Avance Continuo sin Estancamiento en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Eliminación de la parada forzada por desalineación**: Se reemplazó el umbral rígido $v_x = 0$ por una modulación continua proporcional a la proyección de avance:
+  $$v_x = V_{crucero} \cdot \max(0.25, \cos(\Delta \psi)) \quad \text{para } |\Delta \psi| \le 90^\circ$$
+  $$v_x = 0.0 \quad \text{únicamente si } |\Delta \psi| > 90^\circ \text{ (waypoint a espaldas)}$$
+- **Control de Guiñada Asintótico ($K_p = 0.6$, saturado a $\pm 25.0^\circ/\text{s}$)**:
+  $$\dot{\psi} = \text{clamp}(0.6 \cdot \Delta \psi_{deg}, -25.0^\circ/\text{s}, +25.0^\circ/\text{s})$$
+- El dron avanza de inmediato hacia el objetivo ($1.36\text{ m/s}$ a $47^\circ$, $1.93\text{ m/s}$ a $15^\circ$) mientras alinea suavemente su proa sin detenerse.
+
+2. Filtrado de Falsas Evasiones en [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)
+- Se condicionaron las rutas `evasive` y `hover_and_slm` a la presencia real de obstáculos en proximidad `Cerca` ($< 8.0\text{m}$) o `Inminente` ($< 2.5\text{m}$) en el sector central (`Centro`).
+- Si todos los objetos detectados están `Lejos` ($> 10\text{m}$), el router selecciona `keep_going`, permitiendo que el dron avance en línea recta por el centro de la calle sin volantazos laterales.
+
+3. Sincronización de Duración Motriz en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
+- Duración fijada en `1.5s`, adaptada al ciclo de inferencia y streaming.
+
+## Eliminación de Chattering en 180°, Pivot Turn y Duración 2.0s
+Se implementó y verificó la solución para el chattering en $180^\circ$ mediante bloqueo de sentido de giro con histéresis amplia, pivot turn para desvíos superiores a $35^\circ$ y el restablecimiento de la duración de comandos en AirSim a `2.0s`.
+
+1. Memoria de Sentido de Giro en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Activación en Giros Posteriores**: Si el error angular inicial es $|\Delta \psi| > 110^\circ$, se bloquea el sentido de giro (`+1` o `-1`) a una tasa constante de $30.0^\circ/\text{s}$.
+- **Inmunidad al Salto de $\pm 180^\circ$**: Aunque el ángulo salte de $+178^\circ$ a $-178^\circ$, la rotación **no se invierte**.
+- **Liberación en Cono Frontal**: El bloqueo se libera cuando el error desciende al cono seguro $|\Delta \psi| \le 45.0^\circ$.
+- **Alineación Asintótica**: En la zona frontal ($|\Delta \psi| \le 45^\circ$), el control proporcional $\dot{\psi} = \text{clamp}(0.8 \cdot \Delta \psi, -25, +25)$ alinea suavemente la proa hacia $0^\circ$.
+
+2. Pivot Turn en Cuadricóptero en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- Si $|\Delta \psi| > 35^\circ$ o el bloqueo está activo: $v_x = 0.0\text{ m/s}$ (el dron rota en el lugar sobre su eje).
+- Si $|\Delta \psi| \le 35^\circ$: $v_x = V_{crucero} \cdot \cos(\Delta \psi)$ (inicia avance directo hacia el waypoint).
+
+3. Continuidad Motriz en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
+- Restablecida la duración a `duration = 2.0s` para máxima suavidad de vuelo.
+
+## Corrección de Telemetría de Orientación y Guiado Directo
+Se resolvió la causa raíz fundamental de los giros circulares y bloqueos del dron: la conversión matemática de cuaternión a ángulos de Euler en la telemetría de AirSim, implementando un control proporcional monótono y limpio.
+
+1. Conversión Cuaternión $\to$ Euler en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
+- **Problema previo**: La telemetría leía `orient.w_val` como si fuera el ángulo de guiñada, lo que confinaba el rumbo medido de forma no lineal en $[-1.0, +1.0]\text{ rad}$ ($[-57^\circ, +57^\circ]$).
+- **Corrección**: Se implementó la conversión exacta mediante `airsim.to_eularian_angles(orient)` (con fallback trigonométrico estándar), extrayendo el verdadero rumbo angular $\psi \in [-\pi, +\pi]$ en radianes.
+
+2. Guiado Monótono y Limpio en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- Con la orientación física real:
+  - Se eliminaron todos los bloqueos artificiales de giro (`_locked_turn_dir`).
+  - **Control proporcional monótono ($K_p = 0.8$, saturado a $\pm 30.0^\circ/\text{s}$)**:
+    $$\dot{\psi} = \text{clamp}(0.8 \cdot \Delta \psi_{deg}, -30.0^\circ/\text{s}, +30.0^\circ/\text{s})$$
+  - **Pivot Turn**: Si el desvío es $|\Delta \psi| > 25^\circ$, $v_x = 0.0\text{ m/s}$ (gira en el lugar apuntando hacia el waypoint).
+  - **Avance de Crucero**: Si $|\Delta \psi| \le 25^\circ$, acelera linealmente hacia el objetivo ($v_x = 2.0 \cdot \cos(\Delta \psi)$).
+
+<img src="informe/2026-0818 Cambios en Grafo de Control Autonomo.jpg"/>
+
+## Walkthrough: Control Discreto Amortiguado de Guiñada (Anti-Hunting)
+Se implementó y validó el control de guiñada en tiempo discreto críticamente amortiguado ($K_p = 0.30$), zona muerta de $4.0^\circ$ y avance continuo de crucero para eliminar por completo el zig-zag oscilatorio (*yaw hunting*) y los frenazos intermitentes.
+
+1. Ganancia Discreta Amortiguada en [waypoint_tracker.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/navigation/waypoint_tracker.py)
+- **Ajuste de lazo para $\Delta t = 2.0\text{s}$**: Se configuró $K_p = 0.30$, logrando un factor de lazo cerrado $K_p \cdot \Delta t = 0.60 < 1.0$.
+- **Eliminación del Rebase**: Cada ciclo reduce el error angular de forma monótona y asintótica sin sobrepasar el cero ni invertir el sentido de giro.
+- **Zona Muerta de $4.0^\circ$**: Si $|\Delta \psi| < 4.0^\circ$, la tasa angular se fija en $\dot{\psi} = 0.0^\circ/\text{s}$, volando en línea recta pura hacia el waypoint.
+
+2. Avance Continuo de Crucero sin Frenados Bruscos
+- Se extendió el avance continuo con modulación por coseno para todos los ángulos frontales ($|\Delta \psi| \le 60^\circ$):
+  - Desvío $15^\circ$: $v_x = 1.93\text{ m/s}$.
+  - Desvío $35^\circ$: $v_x = 1.64\text{ m/s}$.
+  - Desvío $50^\circ$: $v_x = 1.29\text{ m/s}$.
+  - Desvío $> 60^\circ$: $v_x = 0.0\text{ m/s}$ (pivot turn solo ante giros grandes).
+- Esto elimina el patrón de paradas a cero cada 3 metros y permite volar fluidamente a $\approx 2.0\text{ m/s}$ por la calle.
+
+## Calibración de Distancia Monocular por Looming y Detección Anti-Colisión
+Se calibró la estimación de proximidad monocular y la lógica de enrutamiento para eliminar el piso de $16.8\text{m}$ en clases volumétricas (`building`, `wall`, `vegetation`), permitiendo una respuesta reactiva y deliberativa oportuna ante obstáculos frontales.
+
+ 1. Estimación de Distancia por Looming Óptico en [translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py)
+- **Eliminación del Piso Artificial**: Se normalizaron los factores de escala (`CLASS_DISTANCE_SCALE`) a valores acotados ($0.8 \sim 1.2$).
+- **Mapeo de Ocupación Vertical**:
+  - $\text{coverage} \ge 0.65$ ($\ge 65\%$ del lente vertical) $\to$ Distancia $\le 2.5\text{m}$ (**`Inminente`**).
+  - $0.35 \le \text{coverage} < 0.65$ ($35\% \sim 65\%$ del lente) $\to$ Distancia $3.0\text{m} \sim 8.0\text{m}$ (**`Cerca`**).
+  - $\text{coverage} < 0.35$ ($< 35\%$ del lente) $\to$ Distancia $> 8.0\text{m}$ (**`Lejos`**).
+
+2. Enrutamiento Anti-Colisión en [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)
+- Se actualizó `ttc_router` para garantizar que:
+  - Obstáculos en sector `Centro` con proximidad `Inminente` O con $\text{TTC} \le 2.0\text{s} \to$ `hover_and_slm` (parada inmediata de seguridad y deliberación).
+  - Obstáculos en sector `Centro` con proximidad `Cerca` $\to$ `evasive` (maniobra reactiva de evasión).
+  - Objetos en `Lejos` $\to$ `keep_going` (navegación nominal continua a Waypoint).
+
+## Integración de Guiado de Misión en Evasión y Gating Dinámico por TTC
+Se calibraron los umbrales de cobertura estática para eliminar falsos positivos de fondo, se restauró el filtrado dinámico por Tiempo de Colisión ($\text{TTC} \le 5.0\text{s}$) en el enrutador y se integró el guiado a waypoint dentro del nodo de evasión reactiva.
+
+ 1. Calibración de Cobertura en [translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py)
+- **Umbral de Inminencia**: $\text{coverage} \ge 0.70$ ($\ge 70\%$ del lente) $\to$ Distancia $\le 2.5\text{m}$ (**`Inminente`**).
+- **Umbral de Maniobra**: $0.50 \le \text{coverage} < 0.70$ ($50\% \sim 70\%$ del lente) $\to$ Distancia $3.0\text{m} \sim 8.0\text{m}$ (**`Cerca`**).
+- **Fondo / Lejos**: $\text{coverage} < 0.50$ ($< 50\%$ del lente) $\to$ Distancia $> 8.0\text{m}$ (**`Lejos`**).
+- Elimina al $100\%$ las alarmas falsas generadas por copas de árboles y fachadas en el horizonte.
+
+2. Gating Dinámico por TTC en [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)
+- `ttc_router` ahora evalúa:
+  - Peligro Inminente: Obstáculo en `Inminente` O $\text{TTC} \le 2.0\text{s} \to$ `hover_and_slm`.
+  - Evasión Local: Obstáculo en `Cerca` **CON** aproximación dinámica activa ($\text{TTC} \le 5.0\text{s}$) $\to$ `evasive`.
+  - Escenario despejado o estático ($\text{TTC} = \infty$ o $> 5.0\text{s}$) $\to$ `keep_going` (navegación nominal).
+
+3. Guiado Activo a Waypoint en [evasive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py)
+- `evasive_node` preserva la tasa de giro $\dot{\psi}$ (`yaw_rate`) y el control vertical $v_z$ del `waypoint_tracker`.
+- Si el dron está desalineado ($|\Delta \psi| > 60^\circ$), rota hacia el waypoint antes de aplicar empuje lateral, evitando derivas descontroladas.
+
+<img src="informe/2026-0818 Cambios finos en Grafo de Control Autonomo.jpg"/>
+
 # 2026-0813
 
 Dado que el comportamiento no es el esperado, hay que ajustar la lógica de control autónomo. Para esto se analizan algortimos de detección de obstáculos sólo con visión monocular.

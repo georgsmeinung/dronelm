@@ -73,26 +73,52 @@ def _classify_proximity(distance_m: Optional[float]) -> str:
     return "Lejos"
 
 
+# Escala de tamaño físico nominal relativo por clase para estimación monocular
+CLASS_DISTANCE_SCALE = {
+    "building": 1.2,
+    "wall": 1.1,
+    "fence": 1.0,
+    "vegetation": 1.1,
+    "tree": 1.1,
+    "truck": 1.1,
+    "bus": 1.1,
+    "train": 1.2,
+    "car": 1.0,
+    "person": 0.8,
+    "pole": 0.9,
+    "traffic light": 0.8,
+    "traffic sign": 0.8,
+}
+
+
 def _estimate_distance(
     detection: Detection, frame_height: int, threshold_m: float
 ) -> Optional[float]:
-    """Heuristica simple: cuanto mayor es la caja, mas cerca esta el objeto.
-
-    La altura del bounding box se normaliza por la altura del frame y se
-    proyecta sobre ``threshold_m`` (la distancia a la que un objeto ocupa
-    aproximadamente la mitad del frame). Es una estimacion grosera, util
-    para clasificar cualitativamente, no para navegacion de precision.
-    """
+    """Heuristica de distancia monocular basada en Looming optico y ocupacion vertical."""
     if frame_height <= 0:
         return None
     _, y_min, _, y_max = detection.bbox
     box_height = max(1.0, float(y_max - y_min))
     coverage = min(1.0, box_height / float(frame_height))
-    # coverage==1 -> distance ~ threshold_m * 0.25, coverage~0 -> >> threshold
     if coverage <= 0.0:
         return None
-    distance = (threshold_m * 0.25) / coverage
-    return float(distance)
+
+    # 1. Looming Optico Critico: Obstaculo dominando el campo visual frontal
+    if coverage >= 0.70:
+        # Cobertura masiva (>= 70% del lente vertical): peligro inminente (<= 2.5m)
+        return float(NEAR_THRESHOLD * 0.7)  # ~2.1m -> Inminente
+    elif coverage >= 0.50:
+        # Cobertura moderada (50% a 70% del lente vertical): zona de maniobra (Cerca: 3m a 8m)
+        t = (coverage - 0.50) / (0.70 - 0.50)
+        # Interpolacion suave entre FAR_THRESHOLD (8.0m) y NEAR_THRESHOLD (3.0m)
+        dist = FAR_THRESHOLD - t * (FAR_THRESHOLD - NEAR_THRESHOLD)
+        return float(dist)
+
+    # 2. Objetos lejanos de fondo (< 50% de cobertura vertical)
+    obj_type = str(detection.object).lower()
+    scale = CLASS_DISTANCE_SCALE.get(obj_type, 1.0)
+    distance = (threshold_m * 0.45 * scale) / max(0.05, coverage)
+    return float(max(FAR_THRESHOLD + 0.5, distance))
 
 
 def translate_detections(

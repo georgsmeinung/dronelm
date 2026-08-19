@@ -40,7 +40,7 @@ class StreamHub:
             "timestamp": 0.0,
         }
         self._last_update = 0.0
-        self._placeholder_jpeg = self._create_placeholder_frame("WebDCS - Esperando señal de video...")
+        self._placeholder_jpeg = self._create_placeholder_frame("WebDCS - Esperando video...")
 
     def _create_placeholder_frame(self, text: str) -> bytes:
         img = np.zeros((480, 640, 3), dtype=np.uint8)

@@ -36,9 +36,14 @@ class DroneState(TypedDict, total=False):
     next_action: str
     velocity_command: Dict[str, Any]
     route: str
-    flight_status: str  # "vuelo" | "hover_slm" | "evasion_local"
+    flight_status: str  # "vuelo" | "hover_slm" | "evasion_local" | "vuelo_waypoint" | "mision_completada"
     deliberations: List[Dict[str, Any]]
     collision_result: Dict[str, Any]
+    waypoints: List[Dict[str, Any]]
+    current_wp_index: int
+    target_waypoint: Optional[Dict[str, Any]]
+    waypoint_guidance: Dict[str, Any]
+    mission_completed: bool
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +109,8 @@ def _build_nodes() -> Dict[str, Any]:
         # Remapar bboxes al marco global para la visualización y compatibilidad
         x_off, y_off, _, _ = roi_info
         global_detections = []
+        global_det_objs = []
+        from src.perception import Detection
         for det in roi_detections:
             if det.bbox and len(det.bbox) == 4:
                 g_bbox = [
@@ -115,11 +122,14 @@ def _build_nodes() -> Dict[str, Any]:
                 det_dict = det.to_dict()
                 det_dict["bbox"] = g_bbox
                 global_detections.append(det_dict)
+                global_det_objs.append(
+                    Detection(object=det.object, confidence=float(det.confidence), bbox=g_bbox)
+                )
 
         obstacles = translate_detections(
-            roi_detections,
-            frame_width=roi_info[2] if roi_info[2] > 0 else airsim_client.frame_width,
-            frame_height=roi_info[3] if roi_info[3] > 0 else airsim_client.frame_height,
+            global_det_objs if global_det_objs else roi_detections,
+            frame_width=airsim_client.frame_width,
+            frame_height=airsim_client.frame_height,
         )
 
         state["roi_image"] = roi_image
@@ -165,11 +175,16 @@ def _build_nodes() -> Dict[str, Any]:
             "vz": 0.0,
             "yaw_rate": 0.0,
         }
+        target_yaw = cmd.get("target_yaw")
+        if target_yaw is not None:
+            target_yaw = float(target_yaw)
+
         airsim_client.execute_velocity(
             vx=float(cmd.get("vx", 0.0)),
             vy=float(cmd.get("vy", 0.0)),
             vz=float(cmd.get("vz", 0.0)),
             yaw_rate=float(cmd.get("yaw_rate", 0.0)),
+            target_yaw=target_yaw,
         )
         state["velocity_command"] = cmd
         return state
@@ -204,20 +219,30 @@ def xor_router(state: DroneState) -> str:
 
 
 def ttc_router(state: DroneState) -> str:
-    """Decisión de Paso 4: Router de 3 Vías según el TTC estimado."""
+    """Decisión de Paso 4: Router de 3 Vías basado en Looming TTC y Salvaguarda Inminente."""
     ttc = state.get("estimated_ttc", float("inf"))
     obstacles = state.get("detected_obstacles", []) or []
 
-    # Caso A: Sin peligro (TTC > 5.0 segundos)
-    if ttc > TTC_SAFE_THRESHOLD and not obstacles:
-        return "keep_going"
+    # 1. Salvaguarda de Emergencia: Pared u obstáculo masivo pegado a la proa (< 2.5m)
+    center_imminent = any(
+        o.get("sector") == "Centro" and o.get("proximity") == "Inminente"
+        for o in obstacles
+    )
+    center_near = any(
+        o.get("sector") == "Centro" and o.get("proximity") == "Cerca"
+        for o in obstacles
+    )
 
-    # Caso B: Maniobra Evasiva Local Directa (2.0s < TTC <= 5.0s)
-    if TTC_EVASION_THRESHOLD < ttc <= TTC_SAFE_THRESHOLD:
+    # Caso C: Peligro Inminente (Bloqueo inminente O TTC <= 2.0s con objeto cercano)
+    if center_imminent or (center_near and ttc <= TTC_EVASION_THRESHOLD):
+        return "hover_and_slm"
+
+    # Caso B: Maniobra Evasiva Local Directa (Objeto central en proximidad Cerca CON Looming dinamico TTC <= 5.0s)
+    if center_near and (ttc <= TTC_SAFE_THRESHOLD):
         return "evasive"
 
-    # Caso C: Zona de Incertidumbre o Peligro Inminente (TTC <= 2.0s)
-    return "hover_and_slm"
+    # Caso A: Camino despejado / obstaculos estaticos de fondo -> Navegacion nominal a Waypoint
+    return "keep_going"
 
 
 # ---------------------------------------------------------------------------

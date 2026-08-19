@@ -5,6 +5,7 @@
 # "simulado" para que el grafo pueda ejecutarse en entornos de prueba.
 from __future__ import annotations
 
+import math
 import os
 import time
 from dataclasses import dataclass, field
@@ -165,27 +166,64 @@ class AirSimClient:
                 return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
             return self._simulated_frame(), self._simulated_telemetry()
 
+    def get_telemetry(self) -> Dict[str, Any]:
+        """Obtiene la telemetria de posicion, velocidad y orientacion actual del dron."""
+        if not self._connected or self._client is None:
+            return self._simulated_telemetry()
+        try:
+            state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
+            return _state_to_telemetry(state)
+        except Exception as exc:
+            print(f"[AirSimClient] Error obteniendo telemetria: {exc}")
+            return self._simulated_telemetry()
+
     # ------------------------------------------------------------------ #
     # Paso 5: comando motriz                                             #
     # ------------------------------------------------------------------ #
     def execute_velocity(
-        self, vx: float, vy: float, vz: float, yaw_rate: float = 0.0
+        self,
+        vx: float,
+        vy: float,
+        vz: float,
+        yaw_rate: float = 0.0,
+        target_yaw: Optional[float] = None,
     ) -> bool:
-        """Envia un comando de velocidad al dron (marco NED)."""
+        """Envia un comando de velocidad al dron en marco Body Frame.
+
+        Si yaw_rate != 0.0, usa MaxDegreeOfFreedom con YawMode(is_rate=True) para girar la
+        proa proporcionalmente mientras avanza de frente (Estrategia Car-like).
+        Si vy != 0.0 y yaw_rate == 0.0 (evasión lateral), usa ForwardOnly para orientar la cámara a la maniobra.
+        """
         if not self._connected or self._client is None:
+            mode_str = f"yaw_rate={yaw_rate:+.1f}°/s" if abs(yaw_rate) > 0.01 else "ForwardOnly"
             print(
                 f"[AirSimClient][simulado] vx={vx:.2f} vy={vy:.2f} vz={vz:.2f} "
-                f"yaw={yaw_rate:.2f}"
+                f"({mode_str})"
             )
             return True
         try:
-            self._client.moveByVelocityAsync(
+            # Si todas las velocidades y giro son nulos, activar hover de seguridad
+            if abs(vx) < 0.05 and abs(vy) < 0.05 and abs(vz) < 0.05 and abs(yaw_rate) < 0.01:
+                self._client.hoverAsync(vehicle_name=self.vehicle_name)
+                return True
+
+            if abs(yaw_rate) > 0.01:
+                drivetrain = airsim.DrivetrainType.MaxDegreeOfFreedom
+                yaw_mode = airsim.YawMode(is_rate=True, yaw_or_rate=float(yaw_rate))
+            elif target_yaw is not None:
+                drivetrain = airsim.DrivetrainType.MaxDegreeOfFreedom
+                yaw_mode = airsim.YawMode(is_rate=False, yaw_or_rate=float(target_yaw))
+            else:
+                drivetrain = airsim.DrivetrainType.ForwardOnly
+                yaw_mode = airsim.YawMode(is_rate=False, yaw_or_rate=0.0)
+
+            self._client.moveByVelocityBodyFrameAsync(
                 vx,
                 vy,
                 vz,
-                duration=1.0,
-                drivetrain=airsim.DrivetrainType.MaxDegreeOfFreedom,
-                yaw_mode=airsim.YawMode(is_rate=True, yaw_or_rate=yaw_rate),
+                duration=2.0,
+                drivetrain=drivetrain,
+                yaw_mode=yaw_mode,
                 vehicle_name=self.vehicle_name,
             )
             return True
@@ -258,6 +296,30 @@ def _state_to_telemetry(state: Any) -> Dict[str, Any]:
     pos = getattr(kin, "position", None)
     vel = getattr(kin, "linear_velocity", None)
     orient = getattr(kin, "orientation", None)
+
+    # Conversión exacta de Cuaternión a ángulos de Euler (pitch, roll, yaw) en radianes
+    pitch, roll, yaw = 0.0, 0.0, 0.0
+    if orient is not None:
+        try:
+            if airsim is not None and hasattr(airsim, "to_eularian_angles"):
+                pitch, roll, yaw = airsim.to_eularian_angles(orient)
+            else:
+                w = getattr(orient, "w_val", 1.0)
+                x = getattr(orient, "x_val", 0.0)
+                y = getattr(orient, "y_val", 0.0)
+                z = getattr(orient, "z_val", 0.0)
+                siny_cosp = 2.0 * (w * z + x * y)
+                cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+                yaw = math.atan2(siny_cosp, cosy_cosp)
+        except Exception:
+            w = getattr(orient, "w_val", 1.0)
+            x = getattr(orient, "x_val", 0.0)
+            y = getattr(orient, "y_val", 0.0)
+            z = getattr(orient, "z_val", 0.0)
+            siny_cosp = 2.0 * (w * z + x * y)
+            cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+            yaw = math.atan2(siny_cosp, cosy_cosp)
+
     return {
         "position": {
             "x": getattr(pos, "x_val", 0.0),
@@ -270,9 +332,9 @@ def _state_to_telemetry(state: Any) -> Dict[str, Any]:
             "vz": getattr(vel, "z_val", 0.0),
         },
         "orientation": {
-            "pitch": getattr(orient, "x_val", 0.0),
-            "roll": getattr(orient, "y_val", 0.0),
-            "yaw": getattr(orient, "w_val", 0.0),
+            "pitch": float(pitch),
+            "roll": float(roll),
+            "yaw": float(yaw),
         },
         "timestamp": time.time(),
         "source": "airsim",

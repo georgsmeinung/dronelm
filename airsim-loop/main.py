@@ -66,9 +66,17 @@ def main() -> None:
         cv2.resizeWindow("Drone Camera Feed", 640, 480)
         print("[Watch] Modo visualización activado. Mostrando señal de video nativa.")
 
+    from src.navigation import WaypointTracker
+
     graph = compile_workflow()
     airsim_client = get_airsim_client()
     sleep_s = 1.0 / max(DEFAULT_LOOP_HZ, 0.01)
+
+    # 3) Inicializar el gestor de waypoints con la misión
+    waypoints_list = manifest_data.get("waypoints", [])
+    waypoint_tracker = WaypointTracker(waypoints_list)
+    if waypoints_list:
+        print(f"[Navegación] Cargados {len(waypoints_list)} waypoints de misión. Iniciando hacia WP_1.")
 
     try:
         while True:
@@ -80,20 +88,41 @@ def main() -> None:
 
             t0 = time.time()
             print("\n[Ciclo] Capturando sensores y ejecutando grafo...")
-            
-            # Inyectamos el estado inicial poblado con datos del manifiesto si existen
+
+            # 4) Calcular progreso y vector de guiado hacia el waypoint activo
+            telem_now = airsim_client.get_telemetry()
+            pos_now = telem_now.get("position", {}) if telem_now else {}
+            orient_now = telem_now.get("orientation", {}) if telem_now else {}
+            yaw_now = float(orient_now.get("yaw", 0.0)) if isinstance(orient_now, dict) else 0.0
+
+            target_wp = waypoint_tracker.update(pos_now)
+            guidance = waypoint_tracker.compute_guidance(pos_now, yaw_now)
+
+            if target_wp:
+                label = target_wp.get("label", f"WP_{waypoint_tracker.current_index + 1}")
+                dist = guidance.get("distance", 0.0)
+                err = guidance.get("bearing_err_deg", 0.0)
+                print(f"  [Waypoint] Objetivo activo: {label} [{target_wp.get('x')}, {target_wp.get('y')}, {target_wp.get('z')}] | Dist: {dist:.1f}m | Desvío: {err:+.0f}°")
+            elif waypoint_tracker.is_completed and waypoints_list:
+                print("  [Waypoint] ¡Misión completada! Todos los waypoints alcanzados.")
+
+            # Inyectamos el estado inicial poblado con datos del manifiesto y guiado
             initial_state: DroneState = {
                 "mission_id": manifest_data.get("mission_id", "MOCK_MISSION"),
-                "waypoints": manifest_data.get("waypoints", []),
+                "waypoints": waypoints_list,
+                "current_wp_index": waypoint_tracker.current_index,
+                "target_waypoint": target_wp,
+                "waypoint_guidance": guidance,
+                "mission_completed": waypoint_tracker.is_completed,
                 "rules_of_engagement": manifest_data.get("rules_of_engagement", {}),
                 "tactical_system_prompt": manifest_data.get("tactical_system_prompt") or os.getenv("AIRSIM_PLAN_TACTICAL_PROMPT") or globals().get("AIRSIM_PLAN_TACTICAL_PROMPT") or "",
                 "rgb_image": None,
-                "telemetry": None,
+                "telemetry": telem_now,
                 "xor_change_ratio": 1.0,
                 "estimated_ttc": float("inf"),
                 "detected_obstacles": [],
                 "next_action": "",
-                "flight_status": "vuelo",
+                "flight_status": "mision_completada" if waypoint_tracker.is_completed else "vuelo",
                 "deliberations": [],
             }
             try:
@@ -147,11 +176,12 @@ def main() -> None:
                 if "SLM" in decision or "PARADA" in decision:
                     dec_color = (255, 100, 200)
 
-                cv2.putText(annotated_frame, f"ACT: {decision}", (10, 26),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.58, dec_color, 2, cv2.LINE_AA)
+                wp_str = f"WP {waypoint_tracker.current_index + 1}/{len(waypoints_list)} ({guidance.get('distance', 0.0):.0f}m)" if waypoints_list else ""
+                cv2.putText(annotated_frame, f"ACT: {decision} {wp_str}", (10, 26),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.52, dec_color, 2, cv2.LINE_AA)
 
                 cv2.putText(annotated_frame, f"XOR: {xor_pct:.1f}% | TTC: {ttc_str} | {flight_status}", (w - 280, 26),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.48, (220, 220, 220), 1, cv2.LINE_AA)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
 
                 # 3.4) Publicar en StreamHub para WebDCS
                 try:
@@ -170,6 +200,10 @@ def main() -> None:
                             "detected_obstacles": final_state.get("detected_obstacles", []),
                             "scene_summary": final_state.get("scene_summary", ""),
                             "velocity": final_state.get("velocity_command", {}),
+                            "target_waypoint": target_wp,
+                            "waypoint_index": waypoint_tracker.current_index,
+                            "waypoint_total": len(waypoints_list),
+                            "waypoint_distance": guidance.get("distance", 0.0),
                             "timestamp": time.time(),
                         }
                     )
