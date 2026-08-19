@@ -57,8 +57,8 @@ Se migró el control motriz de `airsim-loop` y scripts de vuelo para utilizar el
 
 2. Cambio en [evasive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py):
 **Vectores de Evasión Relativos**:
-- `EVADIR_DERECHA`: $v_x = 0.8 \times \text{DEFAULT\_FORWARD\_SPEED}$, $v_y = +\text{EVASION\_LATERAL\_SPEED}$.
-- `EVADIR_IZQUIERDA`: $v_x = 0.8 \times \text{DEFAULT\_FORWARD\_SPEED}$, $v_y = -\text{EVASION\_LATERAL\_SPEED}$.
+- `EVADIR_DERECHA`: $` v_x = 0.8 \times \text{DEFAULT\_FORWARD\_SPEED} `$, $` v_y = +\text{EVASION\_LATERAL\_SPEED} `$.
+- `EVADIR_IZQUIERDA`: $` v_x = 0.8 \times \text{DEFAULT\_FORWARD\_SPEED} `$, $` v_y = -\text{EVASION\_LATERAL\_SPEED} `$.
 Al combinar avance $v_x$ con desplazamiento lateral $v_y$, el modo `ForwardOnly` gira el chasis suavemente hacia el corredor despejado ($\approx \pm 50^\circ$), permitiendo que la cámara barra e inspeccione el área de escape en tiempo real.
 
 3. Cambio en [deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py):
@@ -126,13 +126,13 @@ Después de estos se verificó el vuelo en círculo como única estrategia de ev
   - $2.0\text{ s} < \text{TTC} \le 5.0\text{ s} \rightarrow$ `evasive` (corrección lateral reactiva suave).
   - $\text{TTC} \le 2.0\text{ s} \rightarrow$ `hover_and_slm` (freno de seguridad y deliberación).
 
-2. Calibración de Distancia Monocular ([translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py))
+2. Calibración de Distancia Monocular ([translator.py](file:///d:/TesisMCO/dronelm/airsim-loop/src/perception/translator.py))
 **Antes**: Bounding boxes altos de edificios o árboles en el horizonte daban una distancia errónea de $1.25\text{ m}$ (Inminente) en cualquier ángulo de visión.
 **Ahora**: Se incorporó `CLASS_DISTANCE_SCALE` ponderando la escala geométrica esperada por clase (`building=3.0`, `vegetation=2.0`, `person=0.8`, etc.), de modo que estructuras lejanas se clasifican correctamente como `Lejos` ($> 10\text{ m}$) y no disparan alarmas falsas.
 
 3. Dinámica de Evasión Suave ([deliberative.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py), [evasive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py), [.env](file:///d:/TesisMCD/dronelm/airsim-loop/.env))
-- Se ajustó `EVASION_LATERAL_SPEED` a $0.8\text{ m/s}$ y el avance a $v_x = 1.8\text{ m/s}$ ($0.9 \times \text{DEFAULT\_FORWARD\_SPEED}$), generando un desvío suave de $\approx 24^\circ$ en vez de giros centrípetos cerrados de $57^\circ$.
-- Una vez sorteado el obstáculo y recuperado el $\text{TTC} = \infty$, el router pasa a `keep_going` ($v_x = 2.0, v_y = 0.0$), continuando en línea recta.
+- Se ajustó `EVASION_LATERAL_SPEED` a $` 0.8\text{ m/s} `$ y el avance a $` v_x = 1.8\text{ m/s} `$ ($` 0.9 \times \text{DEFAULT\_FORWARD\_SPEED} `$), generando un desvío suave de $\approx 24^\circ$ en vez de giros centrípetos cerrados de $57^\circ$.
+- Una vez sorteado el obstáculo y recuperado el $\text{TTC} = \infty$, el router pasa a `keep_going` ($` v_x = 2.0 `$, $` v_y = 0.0 `$), continuando en línea recta.
 
 ## Doble Salvaguarda de Seguridad Frontal (Looming TTC + Proximidad Espacial)
 En la prueba siguiente se detectó que de todas formas el dron podria estrellarse contra un objeto muy grande para la ROI considerada en el algoritmo de evasión. Por eso se agrega una doble salvaguarda de Seguridad Frontal (Looming TTC + Proximidad Espacial). Se implementó y validó la estrategia de doble salvaguarda para evitar colisiones frontales cuando los objetos saturan el campo de visión y el TTC derivativo se indetermina ($\Delta w = 0$).
@@ -401,8 +401,8 @@ De esta manera el dron siempre viaja en la dirección hacia donde apunta su cám
   - Desvío pronunciado ($|\Delta \psi| > 60^\circ$): Reducción a $v_x = 0.4\text{ m/s}$ para girar casi sobre su propio eje.
 
 2. Actuación en Body Frame con `YawMode(is_rate=True)` en [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
-- Cuando $\text{yaw\_rate} \neq 0$, AirSim utiliza `drivetrain = MaxDegreeOfFreedom` y aplica la velocidad angular $\dot{\psi}$ en grados por segundo directamente al modelo multirotor.
-- Durante maniobras evasivas puras (`evasive`), si $\text{yaw\_rate} = 0$, se mantiene `ForwardOnly` para apuntar la cámara en la dirección de evasión lateral.
+- Cuando $` \text{yaw\_rate} \neq 0 `$, AirSim utiliza `drivetrain = MaxDegreeOfFreedom` y aplica la velocidad angular $\dot{\psi}$ en grados por segundo directamente al modelo multirotor.
+- Durante maniobras evasivas puras (`evasive`), si $` \text{yaw\_rate} = 0 `$, se mantiene `ForwardOnly` para apuntar la cámara en la dirección de evasión lateral.
 
 3. Integración en Nodos de Grafo
 - **En [reactive.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/reactive.py)**: El comando reactivo transporta `vx`, `vy=0.0`, `vz` y `yaw_rate`.
