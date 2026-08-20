@@ -1,3 +1,71 @@
+# 2026-0820
+
+# Análisis: Inestabilidad del SLM Deliberativo
+
+## Diagnóstico del Problema
+
+Después de analizar el CHANGELOG (2026-0813, 2026-0818, 2026-0819) y todo el código fuente del grafo de control, el problema de estabilidad **no es solo de calibración de umbrales** — es un problema **arquitectónico en la interfaz entre percepción y deliberación**.
+
+### La Cadena Actual de Pérdida de Información
+
+```mermaid
+graph LR
+    A["Fotograma RGB<br/>1080×720 = 777,600 px"] --> B["YOLO Detect<br/>~5-15 bboxes"]
+    B --> C["translator.py<br/>Heurística monocular"]
+    C --> D["3 Sectores<br/>DESPEJADO/BLOQUEADO"]
+    D --> E["~80 tokens texto<br/>al SLM"]
+    E --> F["macro_action<br/>1 de 5 opciones"]
+```
+
+Cada etapa es un **cuello de botella de información**:
+
+| Etapa | Información | Pérdida |
+|:------|:-----------|:--------|
+| Fotograma → YOLO | 777,600 px → 5-15 bboxes | ~99.99% de la escena visual |
+| YOLO → Translator | bboxes → sector + proximity | Pierde geometría, profundidad relativa, contexto espacial |
+| Translator → Prompt | Obstáculos → 3 líneas "DESPEJADO/BLOQUEADO" | Pierde distribución, huecos, pasillos entre objetos |
+| Prompt → SLM | ~80 tokens → 1 macro_action | El SLM decide a ciegas sobre una descripción empobrecida |
+
+### Los 3 Modos de Fallo Documentados
+
+#### 1. Vuelo Cortado y Errático (SLM se invoca demasiado)
+- **Causa**: Los umbrales de `ttc_router` en [graph.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py#L221-L273) son demasiado sensibles, enviando al nodo `hover_and_slm` con demasiada frecuencia.
+- **Efecto**: Cada invocación del SLM ejecuta `hover` (frenado total en [graph.py L166](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py#L164-L167)), creando un patrón de arranque-parada constante.
+- **Agravante**: La heurística monocular en [translator.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception/translator.py#L111-L179) clasifica edificios de fondo como "Cerca" cuando solo cubren el 20% del frame, disparando la ruta deliberativa innecesariamente.
+
+#### 2. Vuelo Kamikaze (SLM se invoca poco o mal)
+- **Causa**: Cuando se suben los umbrales para evitar el modo errático, el dron ignora obstáculos reales hasta que es demasiado tarde.
+- **Efecto**: El TTC llega a ≤2.0s y el SLM recibe un prompt que dice `CENTRO: BLOQUEADO POR ESTRUCTURA (2.2m)` — pero a esa distancia a 2.5 m/s, no hay tiempo de maniobra útil.
+- **Agravante**: El `_summarize_sectors()` en [deliberative.py L110-L142](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py#L110-L142) reduce TODO el contexto visual a solo 3 líneas de texto. El SLM no sabe si hay un hueco de 3 metros entre dos edificios o si la pared es continua.
+
+#### 3. Oscilación de Decisiones (Flip-Flop)
+- **Causa**: El SLM recibe descripciones textuales sin memoria visual. Ciclo N dice "EVADIR_DERECHA", pero en el ciclo N+1 la nueva descripción textual (ligeramente diferente por jitter de YOLO) sugiere lo contrario.
+- **Efecto**: El `maneuver_cycles_left` en [deliberative.py L474-L482](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py#L474-L482) intenta prevenir esto con persistencia de 5 ciclos, pero es un parche heurístico que no resuelve la causa raíz.
+
+# Migración del Nodo Deliberativo a VLM con Visión Directa
+Se migró el cerebro deliberativo del dron de un **SLM textual** (Qwen3.5-2B, que recibía 3 líneas de texto describiendo sectores) a un **VLM multimodal** (Qwen2.5-VL-3B) que recibe el fotograma completo con las bboxes de YOLO superpuestas. Archivos Modificados>
+
+1. [`deliberative.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
+**El cambio más grande.** 6 modificaciones puntuales:
+- **`base64` import** + variables `VLM_VISION_ENABLED` y `VLM_IMAGE_MAX_SIZE` para control por `.env`
+- **Dual system prompt**: `SYSTEM_PROMPT_TEXT` (original, para modo texto) y `SYSTEM_PROMPT_VISION` (nuevo, instruye al VLM a analizar la imagen)
+- **`_encode_frame_base64()`**: Redimensiona el frame a 512px max y lo codifica como JPEG base64 con calidad 75
+- **`_query_slm()` refactorizado**: Acepta `image_b64` opcional. Si visión está activa, construye un mensaje multimodal OpenAI-compatible con `image_url` tipo `data:image/jpeg;base64,...`
+- **`deliberative_node()`**: Extrae `annotated_image` (o `rgb_image` como fallback) del estado, lo codifica, y lo pasa a `_query_slm()`
+- **Auditoría**: Campo `vision_enabled` en cada entrada de deliberación
+
+2. [`graph.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)
+- **`annotated_image`** agregado a `DroneState`
+- **`roi_yolo_detect_node`** ahora genera una copia del frame con rectángulos verdes de YOLO dibujados y la almacena en `state["annotated_image"]`
+
+3. [`.env`](file:///d:/TesisMCD/dronelm/airsim-loop/.env)
+- Modelo: `qwen/qwen3.5-2b` → `qwen2.5-vl-3b-instruct`
+- Nuevas variables: `VLM_VISION_ENABLED=true`, `VLM_IMAGE_MAX_SIZE=512`
+- Umbrales relajados: `TTC_EVASION_THRESHOLD` 2.0→3.0, `TTC_SAFE_THRESHOLD` 5.0→6.0, `CANNY_XOR_THRESHOLD` 0.02→0.03, `YOLO_CONF` 0.15→0.20
+
+4. [`main.py`](file:///d:/TesisMCD/dronelm/airsim-loop/main.py)
+- Auditoría en consola distingue: **VLM VISIÓN DIRECTA**, **SLM TEXTO**, o **FALLBACK DETERMINISTA**
+
 # 2026-0819
 
 ## Aterrizaje Autónomo al Completar Misión y Devolución de Control a WebDCS

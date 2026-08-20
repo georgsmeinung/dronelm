@@ -63,7 +63,13 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
         model = delib.get("model", "SLM")
         lat = delib.get("latency_ms", 0.0)
         is_fb = delib.get("is_fallback", False)
-        type_str = "FALLBACK DETERMINISTA" if is_fb else "SLM LOCAL"
+        has_vision = delib.get("vision_enabled", False)
+        if is_fb:
+            type_str = "FALLBACK DETERMINISTA"
+        elif has_vision:
+            type_str = "VLM VISIÓN DIRECTA"
+        else:
+            type_str = "SLM TEXTO"
         prompt = delib.get("prompt", "").strip()
         raw = delib.get("raw_response", "").strip()
 
@@ -300,6 +306,7 @@ def main() -> None:
             if waypoint_tracker.is_completed and waypoints_list:
                 print("\n[Misión] ¡Misión completada exitosamente! Iniciando secuencia de aterrizaje autónomo...")
                 try:
+                    # pyrefly: ignore [missing-import]
                     from airsim_plan.bridge.stream_hub import stream_hub
                     stream_hub.publish(
                         frame=annotated_frame if frame is not None else None,
@@ -328,6 +335,7 @@ def main() -> None:
                 print("[Misión] Aterrizaje completado y motores desarmados. Devolviendo control a WebDCS.\n")
 
                 try:
+                    # pyrefly: ignore [missing-import]
                     from airsim_plan.bridge.stream_hub import stream_hub
                     stream_hub.publish(
                         frame=None,

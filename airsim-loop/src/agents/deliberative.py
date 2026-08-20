@@ -1,9 +1,11 @@
-# Paso 4B: Cerebro Deliberativo (SLM local).
+# Paso 4B: Cerebro Deliberativo (VLM / SLM local).
 # Esta ruta se activa cuando el Gatekeeper detecta un obstaculo inminente
-# en el sector central. El SLM local recibe un resumen textual de la
-# escena y devuelve un macro-comando ("esquivar por la derecha", etc.).
+# en el sector central. El VLM local recibe el fotograma anotado junto con
+# un resumen textual de la escena y devuelve un macro-comando.
+# Si VLM_VISION_ENABLED es False, se degrada a modo texto puro (SLM).
 from __future__ import annotations
 
+import base64
 import json
 import math
 import os
@@ -27,6 +29,8 @@ except Exception:  # pragma: no cover
 LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
 LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "ollama")
 LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi3")
+VLM_VISION_ENABLED = os.getenv("VLM_VISION_ENABLED", "true").lower() == "true"
+VLM_IMAGE_MAX_SIZE = int(os.getenv("VLM_IMAGE_MAX_SIZE", "512"))
 
 DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
 EVASION_FORWARD_SPEED = float(os.getenv("EVASION_FORWARD_SPEED", "0.8"))
@@ -86,7 +90,10 @@ ACTION_VELOCITY_MAP: Dict[str, Dict[str, float]] = {
 }
 
 
-SYSTEM_PROMPT = (
+# --------------------------------------------------------------------------- #
+# System Prompts: Texto Puro (SLM) y Visión Directa (VLM)                    #
+# --------------------------------------------------------------------------- #
+SYSTEM_PROMPT_TEXT = (
     "Sos el cerebro deliberativo táctico de un dron autónomo en una CUADRÍCULA URBANA (Manhattan Grid). "
     "Tu misión es rodear manzanas y estructuras bloqueantes navegando por las calles y pasajes transversales libres.\n\n"
     "Estrategia Urbana en Cuadrícula:\n"
@@ -105,6 +112,31 @@ SYSTEM_PROMPT = (
     "1. Prefiere la calle lateral que coincida con la dirección general de la meta siempre que no tenga edificios bloqueantes.\n"
     "2. Salida estrictamente JSON sin texto adicional."
 )
+
+SYSTEM_PROMPT_VISION = (
+    "Sos el cerebro deliberativo táctico de un dron autónomo en una CUADRÍCULA URBANA.\n"
+    "Recibís una imagen de la cámara frontal del dron con las detecciones de obstáculos marcadas con rectángulos verdes.\n\n"
+    "Tu tarea: MIRÁ LA IMAGEN y decidí la mejor maniobra para evitar colisiones y avanzar hacia el objetivo.\n\n"
+    "Analizá visualmente:\n"
+    "- ¿Hay una pared/edificio bloqueando el frente? ¿Cuánto del campo visual ocupa?\n"
+    "- ¿Hay un pasillo o calle transversal libre a la izquierda o derecha?\n"
+    "- ¿Los obstáculos marcados están realmente cerca o son de fondo/horizonte?\n\n"
+    "Responde UNICAMENTE con un objeto JSON valido:\n"
+    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en lo que ves>"}\n\n'
+    "Valores permitidos para macro_action:\n"
+    "- MANTENER_RUMBO: El frente está despejado, se ve calle abierta.\n"
+    "- EVADIR_IZQUIERDA: Desvío 90° a la izquierda porque hay calle transversal visible.\n"
+    "- EVADIR_DERECHA: Desvío 90° a la derecha porque hay calle transversal visible.\n"
+    "- GANAR_ALTURA: Frente y laterales cerrados, elevarse sobre la estructura.\n"
+    "- FRENAR: Peligro inminente insalvable en todas direcciones.\n\n"
+    "Reglas estrictas:\n"
+    "1. Basá tu decisión en lo que VES en la imagen, no solo en el texto.\n"
+    "2. Preferí la calle lateral que coincida con la dirección al objetivo.\n"
+    "3. Salida estrictamente JSON sin texto adicional."
+)
+
+# Alias de compatibilidad: se selecciona según la configuración
+SYSTEM_PROMPT = SYSTEM_PROMPT_VISION if VLM_VISION_ENABLED else SYSTEM_PROMPT_TEXT
 
 
 def _summarize_sectors(obstacles: List[Dict[str, Any]]) -> str:
@@ -327,8 +359,40 @@ def _parse_decision(raw: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _query_slm(prompt: str) -> Tuple[Optional[Dict[str, Any]], str, float, Optional[str]]:
+def _encode_frame_base64(frame: Any, max_size: int = VLM_IMAGE_MAX_SIZE) -> Optional[str]:
+    """Codifica un frame numpy (H,W,3 BGR) a base64 JPEG para la API multimodal.
+
+    Redimensiona a max_size en el lado mayor para reducir tokens visuales
+    y latencia sin perder información espacial crítica.
+    """
+    if frame is None:
+        return None
+    try:
+        import cv2
+        h, w = frame.shape[:2]
+        if max(h, w) > max_size:
+            scale = max_size / max(h, w)
+            new_w, new_h = int(w * scale), int(h * scale)
+            frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+        # Codificar como JPEG con calidad moderada (reduce tamaño ~5x vs PNG)
+        success, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+        if not success:
+            return None
+        return base64.b64encode(buffer).decode("utf-8")
+    except Exception as exc:
+        print(f"[deliberative] Error codificando frame a base64: {exc}")
+        return None
+
+
+def _query_slm(
+    prompt: str,
+    image_b64: Optional[str] = None,
+) -> Tuple[Optional[Dict[str, Any]], str, float, Optional[str]]:
     """Consulta al servidor compatible con OpenAI (LM Studio u Ollama).
+
+    Si image_b64 está presente y VLM_VISION_ENABLED es True, envía un mensaje
+    multimodal con la imagen codificada en base64 junto al prompt textual.
 
     Retorna: (parsed_decision, raw_response, latency_ms, error_message)
     """
@@ -337,11 +401,28 @@ def _query_slm(prompt: str) -> Tuple[Optional[Dict[str, Any]], str, float, Optio
     t0 = time.time()
     try:
         client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_LLM_API_KEY)
+
+        # Construir mensaje del usuario: multimodal o solo texto
+        if VLM_VISION_ENABLED and image_b64:
+            user_content = [
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_b64}",
+                    },
+                },
+            ]
+            system_prompt = SYSTEM_PROMPT_VISION
+        else:
+            user_content = prompt
+            system_prompt = SYSTEM_PROMPT_TEXT
+
         completion = client.chat.completions.create(
             model=LOCAL_LLM_MODEL_NAME,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
             ],
             temperature=0.2,
             max_tokens=200,
@@ -369,7 +450,16 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
     vz = float(guidance.get("vz", 0.0))
 
     prompt = _build_user_prompt(obstacles, telemetry, guidance)
-    parsed_decision, raw_response, latency_ms, err = _query_slm(prompt)
+
+    # Codificar el fotograma anotado (con bboxes de YOLO) para el VLM
+    image_b64 = None
+    if VLM_VISION_ENABLED:
+        annotated = state.get("annotated_image")  # Frame con bboxes dibujados
+        if annotated is None:
+            annotated = state.get("rgb_image")     # Fallback al frame crudo
+        image_b64 = _encode_frame_base64(annotated)
+
+    parsed_decision, raw_response, latency_ms, err = _query_slm(prompt, image_b64=image_b64)
     is_fallback = parsed_decision is None
     decision = parsed_decision or _fallback_decision(obstacles, guidance)
 
@@ -457,6 +547,7 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
         "id": entry_id,
         "timestamp": time.time(),
         "model": LOCAL_LLM_MODEL_NAME,
+        "vision_enabled": VLM_VISION_ENABLED and image_b64 is not None,
         "system_prompt": SYSTEM_PROMPT,
         "prompt": prompt,
         "raw_response": raw_response if not is_fallback else f"Fallback activado: {err or 'Formato JSON inválido'}",

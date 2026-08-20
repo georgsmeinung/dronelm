@@ -23,6 +23,7 @@ class DroneState(TypedDict, total=False):
     """Estado que circula entre los nodos del grafo en el nuevo pipeline jerárquico."""
 
     rgb_image: Any
+    annotated_image: Any  # Frame con bboxes de YOLO superpuestos para el VLM
     prev_canny_edges: Any
     xor_change_ratio: float
     telemetry: Dict[str, Any]
@@ -139,6 +140,25 @@ def _build_nodes() -> Dict[str, Any]:
         state["detected_obstacles"] = [o.to_dict() for o in obstacles]
         state["scene_summary"] = summarize_scene(obstacles)
         state["collision_result"] = detector.last_collision_result.to_dict()
+
+        # Generar frame anotado con bboxes para el VLM deliberativo
+        annotated = None
+        if image is not None:
+            try:
+                import cv2
+                annotated = image.copy()
+                for det in global_detections:
+                    bbox = det.get("bbox", [0, 0, 0, 0])
+                    obj_name = det.get("object", "")
+                    if len(bbox) == 4:
+                        x1, y1, x2, y2 = map(int, bbox)
+                        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 100), 2)
+                        cv2.putText(annotated, obj_name, (x1, max(y1 - 5, 15)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 100), 1)
+            except Exception:
+                annotated = image  # Si falla cv2, usar el frame crudo
+        state["annotated_image"] = annotated
+
         return state
 
     # 4. Paso 3: Estimación de Tiempo de Colisión (TTC) No Neuronal
