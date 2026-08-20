@@ -83,6 +83,21 @@ class AirSimClient:
             self._connected = False
             return False
 
+    def land(self) -> bool:
+        """Ejecuta el aterrizaje autónomo y desarma los motores."""
+        if not self._connected or self._client is None:
+            print("[AirSimClient][simulado] Aterrizando dron y desarmando motores...")
+            return True
+        try:
+            print(f"[AirSimClient] Aterrizando vehículo '{self.vehicle_name}'...")
+            self._client.landAsync(vehicle_name=self.vehicle_name).join()
+            self._client.armDisarm(False, vehicle_name=self.vehicle_name)
+            print(f"[AirSimClient] Vehículo '{self.vehicle_name}' aterrizado y desarmado con éxito.")
+            return True
+        except Exception as exc:
+            print(f"[AirSimClient] Error durante el aterrizaje: {exc}")
+            return False
+
     def disconnect(self) -> None:
         if self._client is None:
             return

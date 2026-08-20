@@ -961,7 +961,19 @@ async function pollLiveTelemetry() {
             const xorPct = ((tel.xor_change_ratio || 0) * 100).toFixed(1);
             elValXor.textContent = `${xorPct}%`;
         }
-        if (elFlightStatus) elFlightStatus.textContent = tel.flight_status || 'En espera';
+        if (elFlightStatus) {
+            let statusText = tel.flight_status || 'En espera';
+            if (statusText === 'completada_en_tierra') {
+                statusText = 'Completada (En Tierra)';
+            } else if (statusText === 'aterrizando') {
+                statusText = 'Aterrizando...';
+            } else if (statusText === 'vuelo_waypoint') {
+                statusText = 'En Vuelo (Waypoint)';
+            } else if (statusText === 'mision_completada') {
+                statusText = 'Misión Completada';
+            }
+            elFlightStatus.textContent = statusText;
+        }
         if (elVel && tel.velocity) {
             const vx = Number(tel.velocity.vx || 0).toFixed(1);
             const vy = Number(tel.velocity.vy || 0).toFixed(1);

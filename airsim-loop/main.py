@@ -218,6 +218,64 @@ def main() -> None:
                         print("[Watch] Bucle detenido desde la ventana de video.")
                         break
 
+            # 4) Si la misión fue completada, ejecutar secuencia de aterrizaje y devolver control
+            if waypoint_tracker.is_completed and waypoints_list:
+                print("\n[Misión] ¡Misión completada exitosamente! Iniciando secuencia de aterrizaje autónomo...")
+                try:
+                    from airsim_plan.bridge.stream_hub import stream_hub
+                    stream_hub.publish(
+                        frame=annotated_frame if frame is not None else None,
+                        telemetry={
+                            "connected": True,
+                            "mission_id": manifest_data.get("mission_id", "MISION_ACTIVA"),
+                            "decision": "ATERRIZANDO",
+                            "flight_status": "aterrizando",
+                            "estimated_ttc": None,
+                            "xor_change_ratio": 0.0,
+                            "detections": [],
+                            "detected_obstacles": [],
+                            "scene_summary": "Misión completada con éxito. Aterrizando...",
+                            "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
+                            "target_waypoint": None,
+                            "waypoint_index": len(waypoints_list),
+                            "waypoint_total": len(waypoints_list),
+                            "waypoint_distance": 0.0,
+                            "timestamp": time.time(),
+                        },
+                    )
+                except Exception:
+                    pass
+
+                airsim_client.land()
+                print("[Misión] Aterrizaje completado y motores desarmados. Devolviendo control a WebDCS.\n")
+
+                try:
+                    from airsim_plan.bridge.stream_hub import stream_hub
+                    stream_hub.publish(
+                        frame=None,
+                        telemetry={
+                            "connected": False,
+                            "mission_id": manifest_data.get("mission_id", "MISION_ACTIVA"),
+                            "decision": "MISIÓN_COMPLETADA",
+                            "flight_status": "completada_en_tierra",
+                            "estimated_ttc": None,
+                            "xor_change_ratio": 0.0,
+                            "detections": [],
+                            "detected_obstacles": [],
+                            "scene_summary": "Dron en tierra. Control disponible en WebDCS.",
+                            "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
+                            "target_waypoint": None,
+                            "waypoint_index": len(waypoints_list),
+                            "waypoint_total": len(waypoints_list),
+                            "waypoint_distance": 0.0,
+                            "timestamp": time.time(),
+                        },
+                    )
+                except Exception:
+                    pass
+
+                break
+
             elapsed = time.time() - t0
             wait = max(0.0, sleep_s - elapsed)
             time.sleep(wait)

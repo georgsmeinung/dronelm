@@ -115,6 +115,9 @@ async def launch_mission(req: SaveRequest, background_tasks: BackgroundTasks):
                 runner.run()
             except Exception as e:
                 print(f"Error ejecutando LoopRunner: {e}")
+            finally:
+                active_runners.pop(manifest.mission_id, None)
+                print(f"[WebDCS] Runner de misión {manifest.mission_id} liberado.")
 
         import threading
         thread = threading.Thread(target=run_loop, daemon=True)

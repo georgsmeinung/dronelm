@@ -1,3 +1,34 @@
+# 2026-0819
+
+## Aterrizaje Autónomo al Completar Misión y Devolución de Control a WebDCS
+
+Se implementó el ciclo de finalización autónoma para misiones en `airsim-loop`, permitiendo que el dron aterrice de forma segura al alcanzar todos los waypoints, desarme motores, libere el control de la API y devuelva el control a WebDCS.
+
+1. Hardware y Control: [airsim_client.py](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py)
+* Se implementó el método [`land()`](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py#L86-L99) en `AirSimClient`:
+  * Ejecuta la llamada bloqueante `landAsync().join()` para posar el dron en tierra de forma controlada.
+  * Desarma los motores (`armDisarm(False)`).
+  * Admite modo simulado con registro en consola cuando no hay conexión física con el simulador.
+
+2. Bucle Principal Autónomo: [main.py](file:///d:/TesisMCD/dronelm/airsim-loop/main.py)
+* Al detectarse `waypoint_tracker.is_completed and waypoints_list`:
+  1. Notifica a `StreamHub` el cambio de estado a `flight_status = "aterrizando"` y `decision = "ATERRIZANDO"`.
+  2. Ejecuta `airsim_client.land()` para descender y desarmar el vehículo.
+  3. Notifica a `StreamHub` el estado final `flight_status = "completada_en_tierra"` y `decision = "MISIÓN_COMPLETADA"`.
+  4. Realiza un `break` limpio del bucle `while True`.
+* En el bloque `finally:` garantiza la desconexión y liberación del control de la API de AirSim (`airsim_client.disconnect()`).
+
+3. Servidor WebDCS Backend: [main.py](file:///d:/TesisMCD/dronelm/airsim-plan/webdcs/main.py)
+* En la función `run_loop()` que ejecuta `runner.run()` en segundo plano, se añadió un bloque `finally:` para desasociar la misión de `active_runners` (`active_runners.pop(manifest.mission_id, None)`), dejando el DCS listo para recibir y lanzar nuevas misiones sin requerir reinicio del servidor.
+
+4. Interfaz y HUD WebDCS: [app.js](file:///d:/TesisMCD/dronelm/airsim-plan/webdcs/static/app.js)
+* Se actualizó la función `pollLiveTelemetry()` para mapear los estados de vuelo a etiquetas amigables:
+  * `completada_en_tierra` $\rightarrow$ **Completada (En Tierra)**
+  * `aterrizando` $\rightarrow$ **Aterrizando...**
+  * `vuelo_waypoint` $\rightarrow$ **En Vuelo (Waypoint)**
+
+<img src="informe/2026-0819 Aterrizaje al finalizar la mision.jpg"/>
+
 # 2026-0818
 
 * Retomando el uso de LMStudio por la cantidad modelos disponibles
