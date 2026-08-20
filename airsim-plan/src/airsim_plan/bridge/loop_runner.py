@@ -84,6 +84,7 @@ class LoopRunner:
     def run(self, *, takeoff_altitude: Optional[float] = None) -> None:
         """Take off + drive the tactical loop until interrupted."""
         import os
+        os.environ.pop(f"STOP_MISSION_{self._manifest.mission_id}", None)
         os.environ["AIRSIM_LOOP_WATCH"] = "true" if self._watch else "false"
         try:
             self._bridge.hand_off(altitude=takeoff_altitude)

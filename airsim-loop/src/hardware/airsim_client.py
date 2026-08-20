@@ -98,6 +98,24 @@ class AirSimClient:
             print(f"[AirSimClient] Error durante el aterrizaje: {exc}")
             return False
 
+    def set_vehicle_pose(self, x: float, y: float, z: float, yaw_deg: float = 0.0) -> bool:
+        """Posiciona / teletransporta el vehículo en coordenadas NED ignorando colisiones."""
+        if not self._connected or self._client is None:
+            return True
+        try:
+            yaw_rad = math.radians(yaw_deg)
+            qz = math.sin(yaw_rad * 0.5)
+            qw = math.cos(yaw_rad * 0.5)
+            orientation = airsim.Quaternionr(0.0, 0.0, float(qz), float(qw))
+            pos = airsim.Vector3r(float(x), float(y), float(z))
+            pose = airsim.Pose(pos, orientation)
+            self._client.simSetVehiclePose(pose, ignore_collision=True, vehicle_name=self.vehicle_name)
+            time.sleep(0.2)
+            return True
+        except Exception as exc:
+            print(f"[AirSimClient] Error al posicionar vehículo: {exc}")
+            return False
+
     def disconnect(self) -> None:
         if self._client is None:
             return

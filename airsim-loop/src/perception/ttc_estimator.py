@@ -112,7 +112,9 @@ class TTCEstimator:
                 prev_w = prev_match["bb_w"]
                 delta_w = bb_w - prev_w
 
-                if delta_w > 0.5:
+                # Solo considerar objetos en expansión física relativa (>= 4% por ciclo)
+                rel_expansion = delta_w / max(1.0, prev_w)
+                if delta_w > 0.5 and rel_expansion >= 0.04:
                     rate_w = delta_w / dt
                     # Fórmula de aproximación lineal del TTC basándose en expansión de BB-w
                     ttc = (2.0 * bb_w) / rate_w
@@ -124,20 +126,27 @@ class TTCEstimator:
                             "bb_w": bb_w,
                             "delta_w": delta_w,
                             "rate_w": rate_w,
+                            "rel_expansion": rel_expansion,
                             "ttc": ttc,
                         }
                     )
 
-        # Suavizado EMA del TTC si existe un valor válido
+        # Suavizado EMA del TTC
         if min_ttc != float("inf"):
             if self.ema_ttc is None or self.ema_ttc == float("inf"):
                 self.ema_ttc = min_ttc
             else:
-                self.ema_ttc = EMA_ALPHA * min_ttc + (1 - EMA_ALPHA) * self.ema_ttc
+                self.ema_ttc = EMA_ALPHA * min_ttc + (1.0 - EMA_ALPHA) * self.ema_ttc
             final_ttc = float(self.ema_ttc)
         else:
-            self.ema_ttc = float("inf")
-            final_ttc = float("inf")
+            # Decaimiento progresivo si temporalmente una caja no se expande
+            if self.ema_ttc is not None and self.ema_ttc < 25.0:
+                self.ema_ttc = self.ema_ttc * 1.4
+                if self.ema_ttc > 25.0:
+                    self.ema_ttc = float("inf")
+            else:
+                self.ema_ttc = float("inf")
+            final_ttc = float(self.ema_ttc)
 
         self.prev_tracks = current_tracks
         self.prev_timestamp = now

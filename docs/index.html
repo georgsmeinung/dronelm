@@ -75,10 +75,12 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Actividad: 2026-08-13</span>
+          <span class="badge-pill badge-teal">Actividad: 2026-08-20</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
+          <span class="badge-pill badge-green" style="background: rgba(118, 185, 0, 0.2); color: #76B900; border: 1px solid #76B900;">NVIDIA TensorRT 2ms</span>
+          <span class="badge-pill badge-teal" style="background: rgba(0, 150, 136, 0.2); color: #009688; border: 1px solid #009688;">FastAPI WebDCS</span>
         </div>
       </header>
 
@@ -225,29 +227,29 @@
                 <td>Simulación física y visual del espacio aéreo urbano.</td>
               </tr>
               <tr>
-                <td><strong>Visión Artificial</strong></td>
-                <td>YOLOv8 / YOLO26 (Ultralytics)</td>
-                <td>Detección, segmentación semántica/instancias y análisis temporal de colisión por looming.</td>
+                <td><strong>Visión por Computadora</strong></td>
+                <td>YOLOv8 / YOLO26 + <strong>NVIDIA TensorRT Engine</strong></td>
+                <td>Inferencia ultra-rápida (2ms por frame) para detección y segmentación semántica continua.</td>
               </tr>
               <tr>
-                <td><strong>Orquestación</strong></td>
+                <td><strong>Ground Control Station</strong></td>
+                <td>FastAPI + WebDCS (HTML5 / Vanilla JS / CSS)</td>
+                <td>Streaming de video en vivo, telemetría, gestión de misiones y panel de auditoría interactivo SLM.</td>
+              </tr>
+              <tr>
+                <td><strong>Orquestación Táctica</strong></td>
                 <td>LangGraph & Pydantic</td>
-                <td>Implementación del grafo táctico en vuelo de baja latencia.</td>
+                <td>Implementación del grafo cíclico de navegación en vuelo de baja latencia.</td>
               </tr>
               <tr>
                 <td><strong>Inferencia Local</strong></td>
-                <td>Ollama / LM Studio (API OpenAI compatible)</td>
-                <td>Ejecución abordo de SLMs ligeros en la CPU/iGPU del sistema.</td>
-              </tr>
-              <tr>
-                <td><strong>Modelos Evaluados</strong></td>
-                <td>Llama 3.2 (3B), Gemma 2 (2B), Liquid LFM (1.2B / 350M), Phi-4</td>
-                <td>Modelos de razonamiento táctico evaluados para el desvío deliberativo.</td>
+                <td>LM Studio / Ollama (API OpenAI compatible)</td>
+                <td>Ejecución local de SLMs de razonamiento táctico (Qwen 2.5, Phi-3, Llama 3.2).</td>
               </tr>
               <tr>
                 <td><strong>Infraestructura de Inferencia</strong></td>
-                <td>GPU NVIDIA RTX 5060 + Apple Mac mini M4 16 GB Unified Memory</td>
-                <td>Configuración distribuida para mitigar cuellos de botella gráficos.</td>
+                <td>GPU NVIDIA RTX 5060 + AMD Ryzen 7 5700</td>
+                <td>Plataforma para simulación en tiempo real e inferencia concurrente de visión y lenguaje.</td>
               </tr>
             </tbody>
           </table>
@@ -351,8 +353,65 @@
         <h2>Historial de Cambios Destacados</h2>
         <p>Evolución reciente del repositorio y hitos de desarrollo alcanzados:</p>
 
-        <!-- Item 2026-08-13 -->
+        <!-- Item 2026-08-20 -->
         <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-20
+              <span class="tag">Manhattan Navigation</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Navegación Urbana en Cuadrícula (Manhattan Cornering) y Visión Monocular</h4>
+              <p>Se implementó la inyección automática de sub-waypoints de esquina (<code>CORNER_WP</code>) al detectar bloqueos masivos frontales en bocacalles. El dron gira a 90° alineado con la cuadrícula de la ciudad (Grid Snap), detiene el giro exactamente en el eje de la calle transversal (<code>yaw_rate = 0.0°/s</code>) y recorre la calle lateral a 2.5 m/s hasta la esquina de la manzana antes de virar hacia la avenida principal de la misión, erradicando el efecto de rebote contra paredes.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0819 Cambios al Grafo de Navegacion.jpg"
+                  alt="Manhattan Detour y Grafo de Control" loading="lazy" />
+                <figcaption>Esquema de evasión en cuadrícula urbana y control de orientación acotado.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-19 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-19
+              <span class="tag">WebDCS / SLM Audit</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Panel de Auditoría e Inspección SLM en Tiempo Real en WebDCS</h4>
+              <p>Despliegue del panel de inspección interactivo en WebDCS para auditar las decisiones del SLM en vivo. Incluye telemetría en tiempo real, latencias en milisegundos, visualización del prompt contextual (3 sectores) y respuesta JSON cruda, además de guiado geométrico de corredor para estabilizar vuelos en línea recta.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0819 Aterrizaje al finalizar la mision.jpg"
+                  alt="Aterrizaje y Navegación Autónoma" loading="lazy" />
+                <figcaption>Aterrizaje y cumplimiento autónomo de misión urbana en WebDCS.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-18 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-18
+              <span class="tag">TensorRT & Control</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Inferencia YOLO TensorRT a 2ms y Desacople en Body Frame</h4>
+              <p>Compilación del modelo YOLO a motor NVIDIA TensorRT (<code>yolo26n-sem.engine</code>) logrando 2ms de latencia en GPU RTX. Migración completa de comandos a coordenadas de chasis (Body Frame) con corrección matemática de ángulos de Euler para eliminar puntos ciegos y giros en trompo.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0818 Cambios en Grafo de Control Autonomo.jpg"
+                  alt="Cambios en Grafo de Control" loading="lazy" />
+                <figcaption>Grafo de control táctico autónomo optimizado con TensorRT.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-13 -->
           <div class="timeline-item">
             <div class="timeline-badge"></div>
             <div class="timeline-date">

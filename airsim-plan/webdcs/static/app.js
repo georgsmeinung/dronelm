@@ -823,6 +823,21 @@ function setupInteractiveControls() {
         showToast(`Mapa cambiado a: ${selectedMap}`, 'success');
     });
 
+    // Helpers para controlar tamaño de Live Perception & Video Feed
+    function minimizeLiveFeed() {
+        if (!elLiveFeedPanel) return;
+        elLiveFeedPanel.classList.add('minimized');
+        if (elIconFeedSize) elIconFeedSize.className = 'fa-solid fa-expand';
+        if (elBtnToggleFeedSize) elBtnToggleFeedSize.title = 'Maximizar';
+    }
+
+    function maximizeLiveFeed() {
+        if (!elLiveFeedPanel) return;
+        elLiveFeedPanel.classList.remove('minimized');
+        if (elIconFeedSize) elIconFeedSize.className = 'fa-solid fa-compress';
+        if (elBtnToggleFeedSize) elBtnToggleFeedSize.title = 'Minimizar';
+    }
+
     // 6. Lanzamiento de Misión
     elBtnLaunchMission.addEventListener('click', async () => {
         if (!activeManifest) {
@@ -849,6 +864,9 @@ function setupInteractiveControls() {
             }
 
             showToast(data.message, 'success');
+            // Auto-maximizar el panel de video en vivo al lanzar la misión
+            maximizeLiveFeed();
+
             if (data.manifest) {
                 activeManifest = data.manifest;
                 updateOriginalState();
@@ -868,21 +886,11 @@ function setupInteractiveControls() {
     const elBtnEmergencyStop = document.getElementById('btn-emergency-stop');
 
     if (elBtnToggleFeedSize && elLiveFeedPanel) {
-        let feedState = 0; // 0: normal, 1: expanded, 2: minimized
         elBtnToggleFeedSize.addEventListener('click', () => {
-            feedState = (feedState + 1) % 3;
-            if (feedState === 1) {
-                elLiveFeedPanel.classList.add('expanded');
-                elLiveFeedPanel.classList.remove('minimized');
-                elIconFeedSize.className = 'fa-solid fa-compress';
-            } else if (feedState === 2) {
-                elLiveFeedPanel.classList.remove('expanded');
-                elLiveFeedPanel.classList.add('minimized');
-                elIconFeedSize.className = 'fa-solid fa-window-maximize';
+            if (elLiveFeedPanel.classList.contains('minimized')) {
+                maximizeLiveFeed();
             } else {
-                elLiveFeedPanel.classList.remove('expanded');
-                elLiveFeedPanel.classList.remove('minimized');
-                elIconFeedSize.className = 'fa-solid fa-expand';
+                minimizeLiveFeed();
             }
         });
     }

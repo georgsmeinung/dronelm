@@ -15,7 +15,7 @@ except Exception:  # pragma: no cover
     pass
 
 # Velocidad por defecto en el eje X (marco NED: positivo = hacia adelante).
-DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
+DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "5.0"))
 
 
 def reactive_node(state: Dict[str, Any]) -> Dict[str, Any]:

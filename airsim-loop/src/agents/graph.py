@@ -1,6 +1,7 @@
 # Definición del flujo de LangGraph y el Bucle de Control Jerárquico (5 Pasos).
 from __future__ import annotations
 
+import math
 import os
 from typing import Any, Dict, List, Optional, TypedDict
 
@@ -38,12 +39,16 @@ class DroneState(TypedDict, total=False):
     route: str
     flight_status: str  # "vuelo" | "hover_slm" | "evasion_local" | "vuelo_waypoint" | "mision_completada"
     deliberations: List[Dict[str, Any]]
+    last_deliberation: Optional[Dict[str, Any]]
     collision_result: Dict[str, Any]
     waypoints: List[Dict[str, Any]]
     current_wp_index: int
     target_waypoint: Optional[Dict[str, Any]]
     waypoint_guidance: Dict[str, Any]
     mission_completed: bool
+    active_maneuver: Optional[str]
+    maneuver_cycles_left: int
+    maneuver_command: Optional[Dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
@@ -77,15 +82,10 @@ def _build_nodes() -> Dict[str, Any]:
     airsim_client = AirSimClient()
     airsim_client.connect()
 
-    # 1. Nodo de captura de cámara
+    # 1. Nodo de captura de cámara en tiempo real
     def capture_node(state: DroneState) -> DroneState:
-        image = state.get("rgb_image")
-        telemetry = state.get("telemetry")
-
-        if image is None or telemetry is None:
-            # pyrefly: ignore [bad-unpacking]
-            image, telemetry = airsim_client.capture()
-
+        # pyrefly: ignore [bad-unpacking]
+        image, telemetry = airsim_client.capture()
         state["rgb_image"] = image
         state["telemetry"] = telemetry
         return state
@@ -219,29 +219,57 @@ def xor_router(state: DroneState) -> str:
 
 
 def ttc_router(state: DroneState) -> str:
-    """Decisión de Paso 4: Router de 3 Vías basado en Looming TTC y Salvaguarda Inminente."""
+    """Decisión de Paso 4: Router Táctico Jerárquico con Priorización de Estructuras Urbanas.
+
+    - Caso C (hover_and_slm): Estructura frontal (edificio/muro) en Cerca/Inminente,
+      o cualquier objeto Inminente (<2.5m), o Looming dinámico crítico (TTC <= 2.0s).
+    - Caso B (evasive): Obstáculo central en Cerca (postes, árboles, tráfico) o TTC <= 5.0s.
+    - Caso A (keep_going): Sector central totalmente libre de obstáculos cercanos/inminentes.
+    """
     ttc = state.get("estimated_ttc", float("inf"))
     obstacles = state.get("detected_obstacles", []) or []
 
-    # 1. Salvaguarda de Emergencia: Pared u obstáculo masivo pegado a la proa (< 2.5m)
-    center_imminent = any(
-        o.get("sector") == "Centro" and o.get("proximity") == "Inminente"
-        for o in obstacles
-    )
-    center_near = any(
-        o.get("sector") == "Centro" and o.get("proximity") == "Cerca"
+    # Categorías críticas
+    structural_names = {"building", "wall", "house", "roof", "tower", "bridge", "structure"}
+
+    # 1. Peligro Inminente Masivo en sector Centro (Looming crítico <= 2.5s o proximidad inminente)
+    center_imminent = (ttc <= 2.5) or any(
+        o.get("sector") == "Centro"
+        and o.get("proximity") == "Inminente"
         for o in obstacles
     )
 
-    # Caso C: Peligro Inminente (Bloqueo inminente O TTC <= 2.0s con objeto cercano)
-    if center_imminent or (center_near and ttc <= TTC_EVASION_THRESHOLD):
+    # 2. Estructura Crítica Frontal en sector Centro (Edificios/Muros en Inminente o Cerca <6.0m)
+    center_structural_blocking = any(
+        o.get("sector") == "Centro"
+        and (str(o.get("object", "")).lower() in structural_names or o.get("category") == "structural")
+        and o.get("proximity") in ("Inminente", "Cerca")
+        for o in obstacles
+    )
+
+    # 3. Obstáculos generales en sector central en proximidad Cerca
+    center_near = any(
+        o.get("sector") == "Centro" and o.get("proximity") in ("Inminente", "Cerca")
+        for o in obstacles
+    )
+
+    # 4. Persistencia Táctica de Maniobra (Ejecución comprometida anti-oscilación)
+    maneuver_cycles = int(state.get("maneuver_cycles_left", 0))
+    active_man = state.get("active_maneuver")
+    if active_man and maneuver_cycles > 0:
+        # Durante la maniobra de escape, si hay riesgo inminente de impacto (<2.0s), re-deliberar; sino continuar
+        if ttc > 2.0:
+            return "evasive"
+
+    # Caso C: Peligro Crítico / Estructura bloqueando el pasillo
+    if center_imminent or center_structural_blocking or (center_near and ttc <= TTC_EVASION_THRESHOLD):
         return "hover_and_slm"
 
-    # Caso B: Maniobra Evasiva Local Directa (Objeto central en proximidad Cerca CON Looming dinamico TTC <= 5.0s)
-    if center_near and (ttc <= TTC_SAFE_THRESHOLD):
+    # Caso B: Maniobra Evasiva Local Rápida (TTC dinámico en ventana de advertencia <= 3.5s)
+    if (center_near and ttc <= TTC_SAFE_THRESHOLD) or (ttc <= 3.5):
         return "evasive"
 
-    # Caso A: Camino despejado / obstaculos estaticos de fondo -> Navegacion nominal a Waypoint
+    # Caso A: Camino despejado / Corredor abierto -> Navegación nominal hacia el Waypoint activo
     return "keep_going"
 
 
@@ -265,20 +293,10 @@ def build_workflow() -> Any:
     # Flujo y conexiones
     workflow.set_entry_point("capture")
     workflow.add_edge("capture", "canny_xor_gate")
-
-    # Router 1: Canny XOR
-    workflow.add_conditional_edges(
-        "canny_xor_gate",
-        xor_router,
-        {
-            "keep_going": "keep_going",
-            "roi_yolo_detect": "roi_yolo_detect",
-        },
-    )
-
+    workflow.add_edge("canny_xor_gate", "roi_yolo_detect")
     workflow.add_edge("roi_yolo_detect", "ttc_estimate")
 
-    # Router 2: TTC 3 Vías
+    # Router Táctico Jerárquico: TTC + Proximidad + Estructuras + Persistencia
     workflow.add_conditional_edges(
         "ttc_estimate",
         ttc_router,

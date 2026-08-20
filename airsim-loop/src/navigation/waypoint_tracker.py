@@ -5,7 +5,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 DEFAULT_ACCEPTANCE_RADIUS = float(os.getenv("WAYPOINT_ACCEPTANCE_RADIUS", "3.5"))
-DEFAULT_CRUISE_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
+DEFAULT_CRUISE_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "5.0"))
 
 
 class WaypointTracker:
@@ -38,6 +38,30 @@ class WaypointTracker:
         if self.is_completed or self.current_index >= len(self.waypoints):
             return None
         return self.waypoints[self.current_index]
+
+    def inject_corner_waypoint(self, x: float, y: float, z: float, label: str = "CORNER_WP") -> bool:
+        """Inserta un sub-waypoint temporal de esquina en la ruta para rodear una manzana."""
+        if self.is_completed or self.current_index >= len(self.waypoints):
+            return False
+
+        # Evitar inyecciones duplicadas consecutivas
+        current_wp = self.current_waypoint
+        if current_wp and str(current_wp.get("label", "")).startswith("CORNER_"):
+            dx = float(current_wp.get("x", 0.0)) - x
+            dy = float(current_wp.get("y", 0.0)) - y
+            if math.hypot(dx, dy) < 10.0:
+                return False
+
+        corner_wp = {
+            "x": round(float(x), 2),
+            "y": round(float(y), 2),
+            "z": round(float(z), 2),
+            "label": label,
+            "is_temporary": True,
+        }
+        self.waypoints.insert(self.current_index, corner_wp)
+        print(f"[Manhattan] Sub-waypoint de esquina inyectado: {label} (X: {corner_wp['x']}, Y: {corner_wp['y']}, Z: {corner_wp['z']})")
+        return True
 
     def update(self, current_pos: Dict[str, float]) -> Optional[Dict[str, Any]]:
         """Verifica la posición del dron y avanza al siguiente waypoint si se alcanzó
@@ -113,21 +137,44 @@ class WaypointTracker:
         dist_xy = math.hypot(dx, dy)
         dist_3d = math.sqrt(dx**2 + dy**2 + dz**2)
 
-        # Rumbo global deseado en el plano horizontal (World NED)
-        target_yaw = math.atan2(dy, dx)
+        # Identificar el waypoint de partida del segmento actual
+        prev_idx = max(0, self.current_index - 1)
+        prev_wp = self.waypoints[prev_idx] if prev_idx < len(self.waypoints) else wp
+
+        # Vector del tramo de calle (Segmento A -> B)
+        seg_x = wx - float(prev_wp.get("x", wx))
+        seg_y = wy - float(prev_wp.get("y", wy))
+        seg_len = math.hypot(seg_x, seg_y)
+
+        if seg_len > 1.0 and dist_xy > 3.0:
+            # Ángulo del corredor de la calle
+            street_yaw = math.atan2(seg_y, seg_x)
+            
+            # Cross-track error (desviación lateral perpendicular al eje de la calle)
+            cte = (-(x - float(prev_wp.get("x", 0.0))) * seg_y + (y - float(prev_wp.get("y", 0.0))) * seg_x) / seg_len
+            
+            # Corrección angular suave para reincorporarse al centro de la calle (máximo ±20°)
+            k_cte = 0.15
+            cte_correction_rad = -math.atan(k_cte * cte)
+            cte_correction_rad = max(-math.radians(20.0), min(math.radians(20.0), cte_correction_rad))
+            
+            # Rumbo deseado proyectado a lo largo del corredor
+            target_yaw = street_yaw + cte_correction_rad
+        else:
+            # Aproximación final directa al waypoint
+            target_yaw = math.atan2(dy, dx)
 
         # Error angular relativo respecto a la orientación actual del dron (-180° a +180°)
         delta_yaw = (target_yaw - current_yaw + math.pi) % (2.0 * math.pi) - math.pi
         delta_yaw_deg = math.degrees(delta_yaw)
         abs_err = abs(delta_yaw_deg)
 
-        # Control proporcional críticamente amortiguado para ciclo discreto de 2.0s
-        # Kp = 0.30 -> Kp * dt = 0.30 * 2.0 = 0.60 (convergencia suave sin sobrepaso ni hunting)
-        if abs_err < 4.0:
-            yaw_rate = 0.0  # Zona muerta: apuntando recto hacia el waypoint
+        # Zona muerta de 2.5° para vuelo rectilíneo perfecto sin micro-correcciones continuas
+        if abs_err <= 2.5:
+            yaw_rate = 0.0
         else:
-            kp_yaw = 0.30
-            yaw_rate = max(-20.0, min(20.0, kp_yaw * delta_yaw_deg))
+            kp_yaw = 0.35
+            yaw_rate = max(-15.0, min(15.0, kp_yaw * delta_yaw_deg))
 
         # Avance continuo fluido de crucero sin frenazos intermitentes
         if abs_err > 60.0:

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import logging
+import os
 import sys
 from pathlib import Path
+
+# Desactivar logs de acceso HTTP repetitivos de uvicorn
+logging.getLogger("uvicorn.access").disabled = True
 
 # Agregar el directorio 'src' al path para poder importar airsim_plan
 src_path = Path(__file__).resolve().parent.parent / "src"
@@ -103,6 +108,9 @@ async def launch_mission(req: SaveRequest, background_tasks: BackgroundTasks):
         filename = f"{manifest.mission_id.lower()}.json"
         path = target_dir / filename
         save_manifest(manifest, path)
+        # Purgar cualquier señal de detención residual previa para esta misión
+        os.environ.pop(f"STOP_MISSION_{manifest.mission_id}", None)
+
         loop_path = Path(__file__).resolve().parent.parent.parent / "airsim-loop" / "main.py"
         if not loop_path.exists():
             loop_path = None

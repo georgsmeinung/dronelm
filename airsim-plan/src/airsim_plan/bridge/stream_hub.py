@@ -37,6 +37,8 @@ class StreamHub:
             "detected_obstacles": [],
             "scene_summary": "",
             "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
+            "last_deliberation": None,
+            "deliberations": [],
             "timestamp": 0.0,
         }
         self._last_update = 0.0

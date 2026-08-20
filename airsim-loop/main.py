@@ -1,5 +1,6 @@
 # Paso 6: Bucle continuo de control autonomo.
 # Captura -> percepcion -> gatekeeper -> (reflejo | cerebro) -> motor -> ...
+import math
 import os
 import time
 
@@ -17,30 +18,77 @@ from src.agents.graph import DroneState
 DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "0.5"))
 
 
-def _print_state(state: DroneState) -> None:
-    obstacles = state.get("detected_obstacles") or []
-    if not obstacles:
-        print("  detecciones: ninguna")
-    else:
-        for obs in obstacles[:5]:
-            print(
-                f"  - {obs.get('object', '?')} sector={obs.get('sector', '?')} "
-                f"proximidad={obs.get('proximity', '?')} "
-                f"dist={obs.get('distance_m', '?')}m"
-            )
-    summary = state.get("scene_summary")
-    if summary:
-        print(f"  resumen: {summary}")
-    print(f"  ruta   : {state.get('route', '')}")
-    print(f"  accion : {state.get('next_action', '')}")
+def _print_state(state: DroneState, cycle_num: int = 0) -> None:
+    route = state.get("route", "")
+    delib = state.get("last_deliberation")
     cmd = state.get("velocity_command") or {}
+    guidance = state.get("waypoint_guidance") or {}
+    target_wp = state.get("target_waypoint") or {}
+    ttc = state.get("estimated_ttc", float("inf"))
+    ttc_str = f"{ttc:.1f}s" if ttc != float("inf") else "inf"
+    obstacles = state.get("detected_obstacles") or []
+
+    # 1. Cabecera estructurada del ciclo
+    wp_idx = state.get("current_wp_index", 0) + 1
+    wp_total = len(state.get("waypoints") or [])
+    wp_label = target_wp.get("label", f"WP_{wp_idx}")
+    dist = guidance.get("distance", 0.0)
+    err = guidance.get("bearing_err_deg", 0.0)
+    telem = state.get("telemetry") or {}
+    pos = telem.get("position") or {}
+    alt = abs(float(pos.get("z", 0.0)))
+
+    wp_info = f"WP {wp_idx}/{wp_total} ({wp_label}) | Dist: {dist:.1f}m | Desvío: {err:+.0f}°" if target_wp else "Misión sin WP activo"
+    print(f"\n[Ciclo #{cycle_num}] {wp_info} | Alt: {alt:.1f}m | TTC: {ttc_str}")
+
+    # 2. Línea de percepción concisa
+    if not obstacles:
+        print("  Percepción : Camino despejado.")
+    else:
+        obs_descs = []
+        for o in obstacles[:3]:
+            obj_name = o.get("object", "?")
+            sec = o.get("sector", "?")
+            prox = o.get("proximity", "?")
+            dist_o = o.get("distance_m")
+            dist_str = f"{dist_o:.1f}m" if isinstance(dist_o, (int, float)) else "N/A"
+            obs_descs.append(f"{obj_name} {sec.lower()} ({prox}, {dist_str})")
+        total_obs = len(obstacles)
+        extra_str = f" [Total: {total_obs}]" if total_obs > 3 else ""
+        print(f"  Percepción : {'; '.join(obs_descs)}{extra_str}")
+
+    # 3. Bloque de auditoría SLM (con líneas simples y limpias)
+    if route == "deliberative" and delib:
+        delib_id = delib.get("id", 1)
+        model = delib.get("model", "SLM")
+        lat = delib.get("latency_ms", 0.0)
+        is_fb = delib.get("is_fallback", False)
+        type_str = "FALLBACK DETERMINISTA" if is_fb else "SLM LOCAL"
+        prompt = delib.get("prompt", "").strip()
+        raw = delib.get("raw_response", "").strip()
+
+        print("  ----------------------------------------------------------------------")
+        print(f"  [AUDITORÍA SLM #{delib_id}] Modelo: {model} | Latencia: {lat:.0f}ms | Tipo: {type_str}")
+        print("  Prompt enviado:")
+        for line in prompt.split("\n"):
+            print(f"    {line}")
+        print("  Respuesta SLM:")
+        for line in raw.split("\n"):
+            print(f"    {line}")
+        print(f"  Decisión: {delib.get('macro_action', '')} | {delib.get('rationale', '')}")
+        print("  ----------------------------------------------------------------------")
+
+    # 4. Línea de control consolidada
+    route_tag = route.upper() if route else "DIRECT"
+    action = state.get("next_action", "MANTENER_RUMBO")
     if cmd:
-        print(
-            "  motor  : "
-            f"vx={cmd.get('vx', 0):+.2f} vy={cmd.get('vy', 0):+.2f} "
-            f"vz={cmd.get('vz', 0):+.2f} yaw={cmd.get('yaw_rate', 0):+.2f} "
-            f"({cmd.get('rationale', '')})"
-        )
+        vx = cmd.get("vx", 0.0)
+        vy = cmd.get("vy", 0.0)
+        vz = cmd.get("vz", 0.0)
+        yaw = cmd.get("yaw_rate", 0.0)
+        rat = cmd.get("rationale", "")
+        rat_str = f" | {rat}" if rat and route != "deliberative" else ""
+        print(f"  Control    : [{route_tag}] {action} -> vx={vx:+.2f} vy={vy:+.2f} vz={vz:+.2f} yaw={yaw:+.1f}°/s{rat_str}")
 
 
 def main() -> None:
@@ -57,6 +105,10 @@ def main() -> None:
             print(f"Manifiesto de misión cargado con éxito: {manifest_path}")
         except Exception as e:
             print(f"Error al cargar manifiesto: {e}")
+
+    # Purgar cualquier señal de detención residual previa para esta misión
+    mission_id = manifest_data.get("mission_id", "MOCK_MISSION")
+    os.environ.pop(f"STOP_MISSION_{mission_id}", None)
 
     # 2) Verificar si se solicitó ver el video
     watch_mode = (os.getenv("AIRSIM_LOOP_WATCH") or globals().get("AIRSIM_LOOP_WATCH", "false")).lower() == "true"
@@ -76,7 +128,32 @@ def main() -> None:
     waypoints_list = manifest_data.get("waypoints", [])
     waypoint_tracker = WaypointTracker(waypoints_list)
     if waypoints_list:
-        print(f"[Navegación] Cargados {len(waypoints_list)} waypoints de misión. Iniciando hacia WP_1.")
+        print(f"[Navegación] Cargados {len(waypoints_list)} waypoints de misión. Iniciando hacia {waypoints_list[0].get('label', 'WP_1')}.")
+
+    cycle_count = 0
+
+    # Estado persistente del dron que preserva memoria táctica entre ciclos
+    drone_state: DroneState = {
+        "mission_id": manifest_data.get("mission_id", "MOCK_MISSION"),
+        "waypoints": waypoints_list,
+        "current_wp_index": waypoint_tracker.current_index,
+        "target_waypoint": None,
+        "waypoint_guidance": {},
+        "mission_completed": False,
+        "rules_of_engagement": manifest_data.get("rules_of_engagement", {}),
+        "tactical_system_prompt": manifest_data.get("tactical_system_prompt") or os.getenv("AIRSIM_PLAN_TACTICAL_PROMPT") or globals().get("AIRSIM_PLAN_TACTICAL_PROMPT") or "",
+        "rgb_image": None,
+        "telemetry": {},
+        "xor_change_ratio": 1.0,
+        "estimated_ttc": float("inf"),
+        "detected_obstacles": [],
+        "next_action": "",
+        "flight_status": "vuelo",
+        "deliberations": [],
+        "active_maneuver": None,
+        "maneuver_cycles_left": 0,
+        "maneuver_command": None,
+    }
 
     try:
         while True:
@@ -86,8 +163,8 @@ def main() -> None:
                 print(f"[Ciclo] Detención solicitada para misión {mission_id}. Saliendo del bucle.")
                 break
 
+            cycle_count += 1
             t0 = time.time()
-            print("\n[Ciclo] Capturando sensores y ejecutando grafo...")
 
             # 4) Calcular progreso y vector de guiado hacia el waypoint activo
             telem_now = airsim_client.get_telemetry()
@@ -98,41 +175,40 @@ def main() -> None:
             target_wp = waypoint_tracker.update(pos_now)
             guidance = waypoint_tracker.compute_guidance(pos_now, yaw_now)
 
-            if target_wp:
-                label = target_wp.get("label", f"WP_{waypoint_tracker.current_index + 1}")
-                dist = guidance.get("distance", 0.0)
-                err = guidance.get("bearing_err_deg", 0.0)
-                print(f"  [Waypoint] Objetivo activo: {label} [{target_wp.get('x')}, {target_wp.get('y')}, {target_wp.get('z')}] | Dist: {dist:.1f}m | Desvío: {err:+.0f}°")
-            elif waypoint_tracker.is_completed and waypoints_list:
-                print("  [Waypoint] ¡Misión completada! Todos los waypoints alcanzados.")
+            # Actualizar entradas dinámicas del ciclo en el estado persistente con los waypoints del tracker
+            drone_state["waypoints"] = waypoint_tracker.waypoints
+            drone_state["current_wp_index"] = waypoint_tracker.current_index
+            drone_state["target_waypoint"] = target_wp
+            drone_state["waypoint_guidance"] = guidance
+            drone_state["mission_completed"] = waypoint_tracker.is_completed
+            drone_state["telemetry"] = telem_now
+            drone_state["rgb_image"] = None
+            if waypoint_tracker.is_completed:
+                drone_state["flight_status"] = "mision_completada"
 
-            # Inyectamos el estado inicial poblado con datos del manifiesto y guiado
-            initial_state: DroneState = {
-                "mission_id": manifest_data.get("mission_id", "MOCK_MISSION"),
-                "waypoints": waypoints_list,
-                "current_wp_index": waypoint_tracker.current_index,
-                "target_waypoint": target_wp,
-                "waypoint_guidance": guidance,
-                "mission_completed": waypoint_tracker.is_completed,
-                "rules_of_engagement": manifest_data.get("rules_of_engagement", {}),
-                "tactical_system_prompt": manifest_data.get("tactical_system_prompt") or os.getenv("AIRSIM_PLAN_TACTICAL_PROMPT") or globals().get("AIRSIM_PLAN_TACTICAL_PROMPT") or "",
-                "rgb_image": None,
-                "telemetry": telem_now,
-                "xor_change_ratio": 1.0,
-                "estimated_ttc": float("inf"),
-                "detected_obstacles": [],
-                "next_action": "",
-                "flight_status": "mision_completada" if waypoint_tracker.is_completed else "vuelo",
-                "deliberations": [],
-            }
             try:
-                final_state = graph.invoke(initial_state)
+                final_state = graph.invoke(drone_state)
+                drone_state = final_state  # Heredar toda la memoria táctica y persistencia
             except Exception as exc:
-                print(f"[Ciclo] Error en el grafo: {exc}")
+                print(f"[Ciclo #{cycle_count}] Error en el grafo: {exc}")
                 time.sleep(sleep_s)
                 continue
 
-            _print_state(final_state)
+            # Inyección de Sub-Waypoint Manhattan si el deliberador planificó una esquina
+            corner = final_state.get("inject_corner")
+            if corner and isinstance(corner, dict):
+                injected = waypoint_tracker.inject_corner_waypoint(
+                    corner.get("x", 0.0),
+                    corner.get("y", 0.0),
+                    corner.get("z", -10.0),
+                    label=corner.get("label", "CORNER_WP"),
+                )
+                final_state["inject_corner"] = None
+                if injected:
+                    drone_state["waypoints"] = waypoint_tracker.waypoints
+                    drone_state["target_waypoint"] = waypoint_tracker.current_waypoint
+
+            _print_state(final_state, cycle_count)
 
             # 3) Anotar imagen y publicar en StreamHub / OpenCV
             frame = final_state.get("rgb_image")
@@ -204,6 +280,8 @@ def main() -> None:
                             "waypoint_index": waypoint_tracker.current_index,
                             "waypoint_total": len(waypoints_list),
                             "waypoint_distance": guidance.get("distance", 0.0),
+                            "last_deliberation": final_state.get("last_deliberation"),
+                            "deliberations": final_state.get("deliberations", []),
                             "timestamp": time.time(),
                         }
                     )

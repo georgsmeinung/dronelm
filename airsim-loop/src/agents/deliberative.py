@@ -8,7 +8,8 @@ import json
 import math
 import os
 import re
-from typing import Any, Dict, List, Optional
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from dotenv import load_dotenv
@@ -28,8 +29,8 @@ LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "ollama")
 LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi3")
 
 DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
-EVASION_FORWARD_SPEED = float(os.getenv("EVASION_FORWARD_SPEED", "0.5"))
-EVASION_LATERAL_SPEED = float(os.getenv("EVASION_LATERAL_SPEED", "1.2"))
+EVASION_FORWARD_SPEED = float(os.getenv("EVASION_FORWARD_SPEED", "0.8"))
+EVASION_LATERAL_SPEED = float(os.getenv("EVASION_LATERAL_SPEED", "0.8"))
 EVASION_BACK_SPEED = float(os.getenv("EVASION_BACK_SPEED", "1.0"))
 EVASION_UP_SPEED = float(os.getenv("EVASION_UP_SPEED", "1.5"))
 
@@ -53,25 +54,25 @@ ACTION_VELOCITY_MAP: Dict[str, Dict[str, float]] = {
         "yaw_rate": 0.0,
     },
     "EVADIR_DERECHA": {
-        "vx": EVASION_FORWARD_SPEED,
-        "vy": EVASION_LATERAL_SPEED,
+        "vx": 2.5,
+        "vy": 0.0,
         "vz": 0.0,
-        "yaw_rate": 0.0,
+        "yaw_rate": 20.0,
     },
     "EVADIR_IZQUIERDA": {
-        "vx": EVASION_FORWARD_SPEED,
-        "vy": -EVASION_LATERAL_SPEED,
+        "vx": 2.5,
+        "vy": 0.0,
         "vz": 0.0,
-        "yaw_rate": 0.0,
+        "yaw_rate": -20.0,
     },
     "GANAR_ALTURA": {
-        "vx": 0.4,
+        "vx": 1.0,
         "vy": 0.0,
         "vz": -EVASION_UP_SPEED,
         "yaw_rate": 0.0,
     },
     "PERDER_ALTURA": {
-        "vx": 0.4,
+        "vx": 1.0,
         "vy": 0.0,
         "vz": EVASION_UP_SPEED,
         "yaw_rate": 0.0,
@@ -86,81 +87,58 @@ ACTION_VELOCITY_MAP: Dict[str, Dict[str, float]] = {
 
 
 SYSTEM_PROMPT = (
-    "Sos el cerebro deliberativo de un dron autonomo. Tu mision es seleccionar UNA macro-accion segura "
-    "analizando la Evaluacion de Sectores (IZQUIERDA, CENTRO, DERECHA) y los obstaculos criticos.\n\n"
+    "Sos el cerebro deliberativo táctico de un dron autónomo en una CUADRÍCULA URBANA (Manhattan Grid). "
+    "Tu misión es rodear manzanas y estructuras bloqueantes navegando por las calles y pasajes transversales libres.\n\n"
+    "Estrategia Urbana en Cuadrícula:\n"
+    "- Si el frente está bloqueado por una manzana/edificio, tu objetivo es desviarte 90° hacia la calle transversal despejada (EVADIR_IZQUIERDA o EVADIR_DERECHA).\n"
+    "- El dron avanzará por la calle lateral a velocidad continua para superar la fachada del edificio.\n"
+    "- Si ambos laterales están bloqueados en un callejón sin salida, selecciona GANAR_ALTURA para sobrevolar la estructura.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido con este formato exacto:\n"
     '{"macro_action": "<ACCION>", "rationale": "<explicacion breve de 1 linea>"}\n\n'
     "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: Si el sector CENTRO esta DESPEJADO.\n"
-    "- EVADIR_IZQUIERDA: Si CENTRO esta BLOQUEADO o PARCIAL y el sector IZQUIERDA tiene menos peligro que DERECHA.\n"
-    "- EVADIR_DERECHA: Si CENTRO esta BLOQUEADO o PARCIAL y el sector DERECHA tiene menos peligro que IZQUIERDA.\n"
-    "- GANAR_ALTURA: Si todo el frente (IZQUIERDA, CENTRO, DERECHA) esta BLOQUEADO.\n"
-    "- FRENAR: Si el peligro es critico en todas las direcciones y no hay espacio de maniobra.\n"
-    "- PERDER_ALTURA: Solo si es seguro y necesario para la mision.\n\n"
+    "- MANTENER_RUMBO: Si el sector CENTRO esta DESPEJADO de estructuras en la calle.\n"
+    "- EVADIR_IZQUIERDA: Desvío ortogonal a la izquierda por la calle transversal abierta.\n"
+    "- EVADIR_DERECHA: Desvío ortogonal a la derecha por la calle transversal abierta.\n"
+    "- GANAR_ALTURA: Si frente y laterales están cerrados, elevarse para sobrevolar la estructura.\n"
+    "- FRENAR: Solo en peligro inminente insalvable en todas direcciones.\n\n"
     "Reglas estrictas:\n"
-    "1. Nunca elijas evadir hacia un sector BLOQUEADO si el otro sector esta DESPEJADO.\n"
-    "2. Si CENTRO esta BLOQUEADO y solo un lateral esta DESPEJADO, elige ESE lateral.\n"
-    "3. Salida estrictamente JSON sin texto adicional."
+    "1. Prefiere la calle lateral que coincida con la dirección general de la meta siempre que no tenga edificios bloqueantes.\n"
+    "2. Salida estrictamente JSON sin texto adicional."
 )
 
 
 def _summarize_sectors(obstacles: List[Dict[str, Any]]) -> str:
-    """Genera una evaluacion agregada y limpia de los sectores espaciales."""
-    sectors = {
-        "Izquierda": {"Inminente": 0, "Cerca": 0, "Lejos": 0},
-        "Centro": {"Inminente": 0, "Cerca": 0, "Lejos": 0},
-        "Derecha": {"Inminente": 0, "Cerca": 0, "Lejos": 0},
+    structural_names = {"building", "wall", "house", "roof", "tower", "bridge", "structure"}
+
+    sec_data = {
+        "Izquierda": {"status": "DESPEJADO", "dist": 999.0},
+        "Centro": {"status": "DESPEJADO", "dist": 999.0},
+        "Derecha": {"status": "DESPEJADO", "dist": 999.0},
     }
 
-    critical_obstacles = []
-
     for o in obstacles:
-        sec = o.get("sector", "Centro")
-        if sec not in sectors:
-            sec = "Centro"
+        sec = o.get("sector")
+        if sec not in sec_data:
+            continue
         prox = o.get("proximity", "Lejos")
-        if prox in sectors[sec]:
-            sectors[sec][prox] += 1
-        else:
-            sectors[sec]["Lejos"] += 1
+        dist = o.get("distance_m", 999.0)
+        dist_val = float(dist) if dist is not None else 999.0
+        obj = str(o.get("object", "")).lower()
+        is_struct = obj in structural_names or o.get("category") == "structural"
 
-        dist = o.get("distance_m")
-        if dist is not None and (dist < 25.0 or prox in ("Inminente", "Cerca")):
-            critical_obstacles.append(o)
-
-    def sector_status(counts: Dict[str, int]) -> str:
-        if counts["Inminente"] > 0:
-            return f"BLOQUEADO ({counts['Inminente']} inminente, {counts['Cerca']} cerca, {counts['Lejos']} lejos)"
-        elif counts["Cerca"] > 0:
-            return f"PARCIAL ({counts['Cerca']} cerca, {counts['Lejos']} lejos)"
-        elif counts["Lejos"] > 0:
-            return f"DESPEJADO (0 cercanos, {counts['Lejos']} lejanos)"
-        else:
-            return "DESPEJADO (0 obstaculos)"
+        if prox in ("Inminente", "Cerca") or dist_val < 8.0:
+            if is_struct:
+                sec_data[sec]["status"] = f"BLOQUEADO POR ESTRUCTURA ({dist_val:.1f}m)"
+            else:
+                sec_data[sec]["status"] = f"OBSTACULO CERCANO ({dist_val:.1f}m)"
+            sec_data[sec]["dist"] = min(sec_data[sec]["dist"], dist_val)
 
     lines = [
-        "Evaluacion de Sectores:",
-        f"- IZQUIERDA: {sector_status(sectors['Izquierda'])}",
-        f"- CENTRO: {sector_status(sectors['Centro'])}",
-        f"- DERECHA: {sector_status(sectors['Derecha'])}",
+        "SECTORES VISUALES:",
+        f"- IZQUIERDA: {sec_data['Izquierda']['status']}",
+        f"- CENTRO: {sec_data['Centro']['status']}",
+        f"- DERECHA: {sec_data['Derecha']['status']}",
     ]
-
-    if critical_obstacles:
-        lines.append("\nObstaculos Criticos (< 25m):")
-        critical_sorted = sorted(
-            critical_obstacles,
-            key=lambda x: (
-                0 if x.get("proximity") == "Inminente" else 1 if x.get("proximity") == "Cerca" else 2,
-                float(x.get("distance_m") if x.get("distance_m") is not None else 999.0),
-            ),
-        )
-        for co in critical_sorted[:8]:
-            dist_val = co.get("distance_m")
-            dist_str = f"{dist_val:.1f}m" if isinstance(dist_val, (int, float)) else "N/A"
-            lines.append(f"- {co.get('object', 'objeto')} en sector {co.get('sector', '?')} ({co.get('proximity', '?')}, {dist_str})")
-    else:
-        lines.append("\nObstaculos Criticos (< 25m): Ninguno.")
-
     return "\n".join(lines)
 
 
@@ -172,33 +150,26 @@ def _build_user_prompt(
     sector_summary = _summarize_sectors(obstacles)
 
     pos = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
-    vel = telemetry.get("velocity", {}) if isinstance(telemetry, dict) else {}
-
     altitude = abs(float(pos.get("z", 0.0))) if isinstance(pos, dict) and "z" in pos else 0.0
-    vx = float(vel.get("vx", 0.0)) if isinstance(vel, dict) and "vx" in vel else 0.0
-    vy = float(vel.get("vy", 0.0)) if isinstance(vel, dict) and "vy" in vel else 0.0
-    speed = math.hypot(vx, vy)
 
-    wp_info = ""
+    wp_str = "Meta: Frente (0m)"
     if guidance and guidance.get("target_wp"):
         wp = guidance["target_wp"]
         label = wp.get("label", "WP")
         dist = guidance.get("distance", 0.0)
         err = guidance.get("bearing_err_deg", 0.0)
         direction = "Izquierda" if err < -10.0 else "Derecha" if err > 10.0 else "Frente"
-        wp_info = (
-            "\nObjetivo de Navegacion:\n"
-            f"- Destino: {label} [{wp.get('x',0):.1f}, {wp.get('y',0):.1f}, {wp.get('z',0):.1f}]\n"
-            f"- Distancia: {dist:.1f} m | Direccion hacia la meta: {direction} ({err:+.0f}°)\n"
-        )
+        wp_str = f"Meta ({label}): {dist:.1f}m hacia {direction} ({err:+.0f}°)"
 
     return (
         f"{sector_summary}\n\n"
-        "Telemetria:\n"
-        f"- Altitud: {altitude:.1f} m\n"
-        f"- Velocidad horizontal: {speed:.1f} m/s\n"
-        f"{wp_info}\n"
-        "Selecciona la macro-accion correspondiente. Devuelve SOLO el JSON."
+        f"OBJETIVO Y ALTITUD:\n"
+        f"- {wp_str}\n"
+        f"- Altitud actual: {altitude:.1f}m (Cota segura: 10.0m)\n\n"
+        "INSTRUCCION:\n"
+        "Elige la macro_action ('EVADIR_IZQUIERDA', 'EVADIR_DERECHA', 'GANAR_ALTURA' o 'MANTENER_RUMBO').\n"
+        "Responde SOLO con este JSON:\n"
+        '{"macro_action": "<ACCION>", "rationale": "<motivo corto>"}'
     )
 
 
@@ -206,7 +177,7 @@ def _fallback_decision(
     obstacles: List[Dict[str, Any]],
     guidance: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Heuristica determinista orientada al waypoint cuando el SLM no esta disponible."""
+    """Heuristica determinista priorizando la evasión de edificios cuando el SLM no responde."""
     if not obstacles:
         vels = ACTION_VELOCITY_MAP["MANTENER_RUMBO"]
         return {
@@ -218,40 +189,67 @@ def _fallback_decision(
             "rationale": "Fallback: sin obstaculos.",
         }
 
+    structural_names = {"building", "wall", "house", "roof", "tower", "bridge", "structure"}
+
+    def calc_danger(obs_list: List[Dict[str, Any]]) -> float:
+        score = 0.0
+        for o in obs_list:
+            is_struct = str(o.get("object", "")).lower() in structural_names or o.get("category") == "structural"
+            mult = 4.0 if is_struct else 1.0
+            prox = o.get("proximity", "Lejos")
+            if prox == "Inminente":
+                score += 10.0 * mult
+            elif prox == "Cerca":
+                score += 4.0 * mult
+            else:
+                score += 1.0 * mult
+        return score
+
     front = [o for o in obstacles if o.get("sector") == "Centro"]
     left = [o for o in obstacles if o.get("sector") == "Izquierda"]
     right = [o for o in obstacles if o.get("sector") == "Derecha"]
 
-    if front:
-        # Preferir evadir hacia el lado donde queda el waypoint si no está bloqueado
-        target_dir = (guidance.get("bearing_err_deg") or 0.0) if guidance else 0.0
-        left_imminent = any(o.get("proximity") == "Inminente" for o in left)
-        right_imminent = any(o.get("proximity") == "Inminente" for o in right)
+    front_danger = calc_danger(front)
+    left_danger = calc_danger(left)
+    right_danger = calc_danger(right)
 
-        if target_dir < -10.0 and not left_imminent:
+    target_dir = (guidance.get("bearing_err_deg") or 0.0) if guidance else 0.0
+
+    if front_danger > 0:
+        # Hay peligro frontal: elegir el lateral con menor peligro de estructuras
+        left_has_struct = any(str(o.get("object", "")).lower() in structural_names for o in left)
+        right_has_struct = any(str(o.get("object", "")).lower() in structural_names for o in right)
+
+        if left_danger < right_danger and not left_has_struct:
             macro = "EVADIR_IZQUIERDA"
-            rationale = "Fallback: bloqueo central, evadiendo hacia la izquierda (rumbo al waypoint)."
-        elif target_dir > 10.0 and not right_imminent:
+            rationale = f"Fallback: bloqueo frontal, lateral izquierdo despejado de estructuras (peligro izq={left_danger:.0f} vs der={right_danger:.0f})."
+        elif right_danger < left_danger and not right_has_struct:
             macro = "EVADIR_DERECHA"
-            rationale = "Fallback: bloqueo central, evadiendo hacia la derecha (rumbo al waypoint)."
-        elif len(left) <= len(right) and not left_imminent:
+            rationale = f"Fallback: bloqueo frontal, lateral derecho despejado de estructuras (peligro der={right_danger:.0f} vs izq={left_danger:.0f})."
+        elif target_dir < -10.0 and left_danger <= right_danger:
             macro = "EVADIR_IZQUIERDA"
-            rationale = "Fallback: bloqueo central, lateral izquierdo con menor densidad."
-        elif not right_imminent:
+            rationale = "Fallback: bloqueo frontal, evadiendo a la izquierda rumbo al waypoint."
+        elif target_dir > 10.0 and right_danger <= left_danger:
             macro = "EVADIR_DERECHA"
-            rationale = "Fallback: bloqueo central, lateral derecho con menor densidad."
+            rationale = "Fallback: bloqueo frontal, evadiendo a la derecha rumbo al waypoint."
+        elif left_danger <= right_danger:
+            macro = "EVADIR_IZQUIERDA"
+            rationale = f"Fallback: evasión izquierda (densidad izq={left_danger:.0f} vs der={right_danger:.0f})."
+        elif right_danger < left_danger:
+            macro = "EVADIR_DERECHA"
+            rationale = f"Fallback: evasión derecha (densidad der={right_danger:.0f} vs izq={left_danger:.0f})."
         else:
             macro = "GANAR_ALTURA"
-            rationale = "Fallback: ambos laterales bloqueados, ganando altura de seguridad."
-    elif left and not right:
+            rationale = "Fallback: ambos laterales comprometidos por estructuras, ganando altura de seguridad."
+    elif left_danger > right_danger and left_danger >= 4.0:
         macro = "EVADIR_DERECHA"
-        rationale = "Fallback: obstaculos a la izquierda, derivando a la derecha."
-    elif right and not left:
+        rationale = "Fallback: estructuras a la izquierda, abriendo a la derecha."
+    elif right_danger > left_danger and right_danger >= 4.0:
         macro = "EVADIR_IZQUIERDA"
-        rationale = "Fallback: obstaculo derecho, abrir a la izquierda."
+        rationale = "Fallback: estructuras a la derecha, abriendo a la izquierda."
     else:
         macro = "MANTENER_RUMBO"
-        rationale = "Fallback: sin bloqueo central."
+        rationale = "Fallback: camino frontal despejado de estructuras."
 
     vels = ACTION_VELOCITY_MAP[macro]
     return {
@@ -264,30 +262,61 @@ def _fallback_decision(
     }
 
 
-_JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
-
-
 def _parse_decision(raw: str) -> Optional[Dict[str, Any]]:
-    """Extrae el primer objeto JSON valido del texto del SLM y aplica el mapeo cinematico."""
+    """Extrae la decisión del texto del SLM de manera ultratolerante a Markdown o texto conversacional."""
     if not raw:
         return None
-    match = _JSON_RE.search(raw)
-    if not match:
+
+    cleaned = raw.strip()
+    # 1. Remover bloques markdown ```json o ```
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+    cleaned = cleaned.strip()
+
+    # 2. Intentar buscar el bloque {...}
+    match = re.search(r"\{[\s\S]*\}", cleaned)
+    data = None
+    if match:
+        candidate = match.group(0)
+        try:
+            data = json.loads(candidate)
+        except Exception:
+            try:
+                fixed = candidate.replace("'", '"')
+                data = json.loads(fixed)
+            except Exception:
+                data = None
+
+    # 3. Si json.loads falló, extraer directamente con Regex
+    macro = ""
+    rationale = ""
+    if isinstance(data, dict):
+        macro = str(data.get("macro_action", "")).upper().strip()
+        rationale = str(data.get("rationale", "")).strip()
+
+    if not macro or macro not in VALID_ACTIONS:
+        m_action = re.search(r'["\']?macro_action["\']?\s*:\s*["\']([A-Z_]+)["\']', raw, re.IGNORECASE)
+        if m_action:
+            cand_macro = m_action.group(1).upper().strip()
+            if cand_macro in VALID_ACTIONS:
+                macro = cand_macro
+        else:
+            for act in VALID_ACTIONS:
+                if act in raw.upper():
+                    macro = act
+                    break
+
+    if not macro or macro not in VALID_ACTIONS:
         return None
-    candidate = match.group(0)
-    try:
-        data = json.loads(candidate)
-    except Exception:
-        return None
-    if not isinstance(data, dict):
-        return None
-    macro = str(data.get("macro_action", "")).upper().strip()
-    if macro not in VALID_ACTIONS:
-        return None
+
+    if not rationale:
+        m_rat = re.search(r'["\']?rationale["\']?\s*:\s*["\']([^"\'\n\r]+)["\']', raw, re.IGNORECASE)
+        if m_rat:
+            rationale = m_rat.group(1).strip()
+        else:
+            rationale = f"Decisión SLM: {macro}."
 
     vels = ACTION_VELOCITY_MAP.get(macro, ACTION_VELOCITY_MAP["MANTENER_RUMBO"])
-    rationale = str(data.get("rationale", "")).strip() or f"Decision SLM: {macro}."
-
     return {
         "macro_action": macro,
         "vx": vels["vx"],
@@ -298,10 +327,14 @@ def _parse_decision(raw: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _query_slm(prompt: str) -> Optional[Dict[str, Any]]:
-    """Consulta al servidor compatible con OpenAI (LM Studio u Ollama)."""
+def _query_slm(prompt: str) -> Tuple[Optional[Dict[str, Any]], str, float, Optional[str]]:
+    """Consulta al servidor compatible con OpenAI (LM Studio u Ollama).
+
+    Retorna: (parsed_decision, raw_response, latency_ms, error_message)
+    """
     if OpenAI is None:
-        return None
+        return None, "", 0.0, "Libreria openai no instalada"
+    t0 = time.time()
     try:
         client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_LLM_API_KEY)
         completion = client.chat.completions.create(
@@ -313,32 +346,140 @@ def _query_slm(prompt: str) -> Optional[Dict[str, Any]]:
             temperature=0.2,
             max_tokens=200,
         )
+        latency_ms = (time.time() - t0) * 1000.0
         raw = completion.choices[0].message.content or ""
-        return _parse_decision(raw)
+        parsed = _parse_decision(raw)
+        return parsed, raw, latency_ms, None
     except Exception as exc:
-        print(f"[deliberative] SLM no disponible ({exc}). Usando fallback.")
-        return None
+        latency_ms = (time.time() - t0) * 1000.0
+        err_msg = str(exc)
+        print(f"[deliberative] SLM no disponible ({err_msg}). Usando fallback.")
+        return None, "", latency_ms, err_msg
 
 
 def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Nodo deliberativo (Paso 5): Freno de seguridad (Hover) y consulta al SLM."""
+    """Nodo deliberativo (Paso 5): Freno de seguridad (Hover), consulta al SLM y guiado motriz."""
     state["flight_status"] = "hover_slm"
 
     obstacles = state.get("detected_obstacles", []) or []
     telemetry = state.get("telemetry", {}) or {}
-    guidance = state.get("waypoint_guidance")
+    guidance = state.get("waypoint_guidance") or {}
+
+    yaw_rate = float(guidance.get("yaw_rate", 0.0))
+    vz = float(guidance.get("vz", 0.0))
 
     prompt = _build_user_prompt(obstacles, telemetry, guidance)
-    decision = _query_slm(prompt) or _fallback_decision(obstacles, guidance)
+    parsed_decision, raw_response, latency_ms, err = _query_slm(prompt)
+    is_fallback = parsed_decision is None
+    decision = parsed_decision or _fallback_decision(obstacles, guidance)
 
-    state["next_action"] = decision["macro_action"]
-    state["velocity_command"] = decision
-    state["route"] = "deliberative"
-    state.setdefault("deliberations", []).append(
-        {
-            "prompt": prompt,
-            "decision": decision,
+    # Inyección de guiado al waypoint y control de curvatura anti-cangrejeo
+    macro = decision.get("macro_action", "MANTENER_RUMBO")
+
+    target_wp = guidance.get("target_wp") or {}
+    target_z = float(target_wp.get("z", -10.0))
+    pos_data = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
+    current_z = float(pos_data.get("z", 0.0)) if isinstance(pos_data, dict) else 0.0
+
+    # Ascenso continuo hacia la cota objetivo de la misión (z negativo en NED = altitud positiva)
+    vz_cmd = vz
+    if current_z > target_z + 1.0:
+        vz_cmd = -0.8
+
+    orient_data = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+    yaw_raw = float(orient_data.get("yaw", 0.0)) if isinstance(orient_data, dict) else 0.0
+    current_yaw_deg = math.degrees(yaw_raw)
+
+    pos_data = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
+    curr_x = float(pos_data.get("x", 0.0))
+    curr_y = float(pos_data.get("y", 0.0))
+    curr_z = float(pos_data.get("z", -10.0))
+
+    if macro == "EVADIR_DERECHA":
+        # Desvío ortogonal a +90° alineado con la cuadrícula de la ciudad (Manhattan Grid Snap)
+        raw_yaw = current_yaw_deg + 90.0
+        snapped_yaw = round(raw_yaw / 90.0) * 90.0
+        target_yaw_deg = (snapped_yaw + 180.0) % 360.0 - 180.0
+        yaw_rad = math.radians(target_yaw_deg)
+        decision["target_yaw"] = target_yaw_deg
+        decision["target_yaw_deg"] = target_yaw_deg
+        decision["vx"] = 2.5
+        decision["vy"] = 0.0
+        decision["vz"] = vz_cmd
+        decision["yaw_rate"] = 15.0
+        state["inject_corner"] = {
+            "x": round(curr_x + 25.0 * math.cos(yaw_rad), 2),
+            "y": round(curr_y + 25.0 * math.sin(yaw_rad), 2),
+            "z": curr_z,
+            "label": "CORNER_DER",
         }
-    )
+    elif macro == "EVADIR_IZQUIERDA":
+        # Desvío ortogonal a -90° alineado con la cuadrícula de la ciudad (Manhattan Grid Snap)
+        raw_yaw = current_yaw_deg - 90.0
+        snapped_yaw = round(raw_yaw / 90.0) * 90.0
+        target_yaw_deg = (snapped_yaw + 180.0) % 360.0 - 180.0
+        yaw_rad = math.radians(target_yaw_deg)
+        decision["target_yaw"] = target_yaw_deg
+        decision["target_yaw_deg"] = target_yaw_deg
+        decision["vx"] = 2.5
+        decision["vy"] = 0.0
+        decision["vz"] = vz_cmd
+        decision["yaw_rate"] = -15.0
+        state["inject_corner"] = {
+            "x": round(curr_x + 25.0 * math.cos(yaw_rad), 2),
+            "y": round(curr_y + 25.0 * math.sin(yaw_rad), 2),
+            "z": curr_z,
+            "label": "CORNER_IZQ",
+        }
+    elif macro == "GANAR_ALTURA":
+        decision["target_yaw"] = None
+        decision["vx"] = 1.0
+        decision["vy"] = 0.0
+        decision["vz"] = -1.5
+        decision["yaw_rate"] = yaw_rate
+    elif macro == "PERDER_ALTURA":
+        decision["target_yaw"] = None
+        decision["vx"] = 1.0
+        decision["vy"] = 0.0
+        decision["vz"] = 0.8
+        decision["yaw_rate"] = yaw_rate
+    elif macro == "MANTENER_RUMBO":
+        decision["target_yaw"] = None
+        decision["vx"] = DEFAULT_FORWARD_SPEED
+        decision["vy"] = 0.0
+        decision["vz"] = vz_cmd
+        decision["yaw_rate"] = yaw_rate
+
+    deliberations_list = state.setdefault("deliberations", [])
+    entry_id = len(deliberations_list) + 1
+
+    deliberation_entry = {
+        "id": entry_id,
+        "timestamp": time.time(),
+        "model": LOCAL_LLM_MODEL_NAME,
+        "system_prompt": SYSTEM_PROMPT,
+        "prompt": prompt,
+        "raw_response": raw_response if not is_fallback else f"Fallback activado: {err or 'Formato JSON inválido'}",
+        "macro_action": decision.get("macro_action", "FRENAR"),
+        "rationale": decision.get("rationale", ""),
+        "decision": decision,
+        "is_fallback": is_fallback,
+        "latency_ms": round(latency_ms, 1),
+    }
+    deliberations_list.append(deliberation_entry)
+    state["route"] = "deliberative"
+    state["next_action"] = macro
+    state["velocity_command"] = decision
+
+    # Persistencia Táctica de Maniobra en Cuadrícula (5 ciclos para recorrer la calle transversal)
+    if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA"):
+        state["active_maneuver"] = macro
+        state["maneuver_cycles_left"] = 5
+        state["maneuver_command"] = decision
+    else:
+        state["active_maneuver"] = None
+        state["maneuver_cycles_left"] = 0
+        state["maneuver_command"] = None
+
     return state
 
