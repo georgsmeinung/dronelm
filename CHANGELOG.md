@@ -1,10 +1,7 @@
 # 2026-0820
 
-# Análisis: Inestabilidad del SLM Deliberativo
-
-## Diagnóstico del Problema
-
-Después de analizar el CHANGELOG (2026-0813, 2026-0818, 2026-0819) y todo el código fuente del grafo de control, el problema de estabilidad **no es solo de calibración de umbrales** — es un problema **arquitectónico en la interfaz entre percepción y deliberación**.
+## Análisis: Inestabilidad del SLM Deliberativo
+Después de analizar ver el compartimiento descrito en CHANGELOG (2026-0813, 2026-0818, 2026-0819) y todo el código fuente del grafo de control, el problema de estabilidad **no es solo de calibración de umbrales**: es un problema **arquitectónico en la interfaz entre percepción y deliberación**.
 
 ### La Cadena Actual de Pérdida de Información
 
@@ -42,7 +39,9 @@ Cada etapa es un **cuello de botella de información**:
 - **Causa**: El SLM recibe descripciones textuales sin memoria visual. Ciclo N dice "EVADIR_DERECHA", pero en el ciclo N+1 la nueva descripción textual (ligeramente diferente por jitter de YOLO) sugiere lo contrario.
 - **Efecto**: El `maneuver_cycles_left` en [deliberative.py L474-L482](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py#L474-L482) intenta prevenir esto con persistencia de 5 ciclos, pero es un parche heurístico que no resuelve la causa raíz.
 
-# Migración del Nodo Deliberativo a VLM con Visión Directa
+<img src="informe/2026-0820 Problema del Algortimo de Vuelo.jpg"/>
+
+## Migración del Nodo Deliberativo a VLM con Visión Directa
 Se migró el cerebro deliberativo del dron de un **SLM textual** (Qwen3.5-2B, que recibía 3 líneas de texto describiendo sectores) a un **VLM multimodal** (Qwen2.5-VL-3B) que recibe el fotograma completo con las bboxes de YOLO superpuestas. Archivos Modificados>
 
 1. [`deliberative.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
@@ -59,12 +58,34 @@ Se migró el cerebro deliberativo del dron de un **SLM textual** (Qwen3.5-2B, qu
 - **`roi_yolo_detect_node`** ahora genera una copia del frame con rectángulos verdes de YOLO dibujados y la almacena en `state["annotated_image"]`
 
 3. [`.env`](file:///d:/TesisMCD/dronelm/airsim-loop/.env)
-- Modelo: `qwen/qwen3.5-2b` → `qwen2.5-vl-3b-instruct`
+- Modelo: `qwen/qwen3.5-2b` → [`qwen/qwen2.5-vl-3b`](https://lmstudio.ai/models/qwen/qwen2.5-vl-3b)
 - Nuevas variables: `VLM_VISION_ENABLED=true`, `VLM_IMAGE_MAX_SIZE=512`
 - Umbrales relajados: `TTC_EVASION_THRESHOLD` 2.0→3.0, `TTC_SAFE_THRESHOLD` 5.0→6.0, `CANNY_XOR_THRESHOLD` 0.02→0.03, `YOLO_CONF` 0.15→0.20
 
 4. [`main.py`](file:///d:/TesisMCD/dronelm/airsim-loop/main.py)
 - Auditoría en consola distingue: **VLM VISIÓN DIRECTA**, **SLM TEXTO**, o **FALLBACK DETERMINISTA**
+
+## Integración de Secuencia Temporal de 4 Fotogramas al VLM
+Se extendió el pipeline deliberativo multimodal para enviar al VLM una secuencia temporal de hasta 4 fotogramas ordenados cronológicamente ($t-3, t-2, t-1, t$) con bounding boxes superpuestas de YOLO, permitiendo al modelo inferir **expansión visual (looming)**, movimiento relativo de obstáculos y pasillos libres entre maniobras. Archivos Modificados:
+
+1. [`graph.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py)
+- **Ring Buffer Temporal**: Se añadió el campo `frame_history: List[Any]` a `DroneState`.
+- **Rotación FIFO**: En `roi_yolo_detect_node`, cada fotograma anotado con bboxes se añade a `frame_history`, manteniendo los últimos $N$ fotogramas según `VLM_FRAME_HISTORY_SIZE`.
+
+2. [`deliberative.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py)
+- **Configuración**: Se introdujo `VLM_FRAME_HISTORY_SIZE` (default 4) y se ajustó `VLM_IMAGE_MAX_SIZE` a 384px.
+- **Prompt Temporal (`SYSTEM_PROMPT_VISION`)**: Se adaptó el system prompt para guiar al VLM a comparar la secuencia temporal buscando agrandamiento progresivo de bboxes (looming/peligro de colisión real) frente a obstáculos estáticos lejanos.
+- **Payload Multimodal Labeled**: `_query_slm()` recibe la lista de imágenes base64 y etiqueta cada bloque en el mensaje del usuario como `[Fotograma t-3]:`, `[Fotograma t-2]:`, `[Fotograma t-1]:`, `[Fotograma t (actual)]:`.
+- **Auditoría**: Se registra `vision_frames` indicando cuántos fotogramas se enviaron en cada deliberación.
+
+3. [`.env`](file:///d:/TesisMCD/dronelm/airsim-loop/.env)
+- `VLM_IMAGE_MAX_SIZE = 384`
+- `VLM_FRAME_HISTORY_SIZE = 4`
+
+4. [`main.py`](file:///d:/TesisMCD/dronelm/airsim-loop/main.py)
+- La consola del bucle principal muestra el tipo de deliberación incluyendo la cantidad de fotogramas (ej: `VLM VISIÓN DIRECTA (4 frames)`).
+
+<img src="informe/2026-0820 Mejoras con VLM.jpg"/>
 
 # 2026-0819
 

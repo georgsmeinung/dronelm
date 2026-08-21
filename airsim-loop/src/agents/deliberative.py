@@ -30,7 +30,8 @@ LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
 LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "ollama")
 LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi3")
 VLM_VISION_ENABLED = os.getenv("VLM_VISION_ENABLED", "true").lower() == "true"
-VLM_IMAGE_MAX_SIZE = int(os.getenv("VLM_IMAGE_MAX_SIZE", "512"))
+VLM_IMAGE_MAX_SIZE = int(os.getenv("VLM_IMAGE_MAX_SIZE", "384"))
+VLM_FRAME_HISTORY_SIZE = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "4"))
 
 DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
 EVASION_FORWARD_SPEED = float(os.getenv("EVASION_FORWARD_SPEED", "0.8"))
@@ -115,22 +116,29 @@ SYSTEM_PROMPT_TEXT = (
 
 SYSTEM_PROMPT_VISION = (
     "Sos el cerebro deliberativo táctico de un dron autónomo en una CUADRÍCULA URBANA.\n"
-    "Recibís una imagen de la cámara frontal del dron con las detecciones de obstáculos marcadas con rectángulos verdes.\n\n"
-    "Tu tarea: MIRÁ LA IMAGEN y decidí la mejor maniobra para evitar colisiones y avanzar hacia el objetivo.\n\n"
-    "Analizá visualmente:\n"
+    "Recibís una SECUENCIA TEMPORAL de fotogramas de la cámara frontal del dron, "
+    "ordenados del más antiguo al más reciente (t-3 → t-2 → t-1 → t actual).\n"
+    "Las detecciones de obstáculos están marcadas con rectángulos verdes.\n\n"
+    "ANÁLISIS TEMPORAL OBLIGATORIO:\n"
+    "1. Compará los fotogramas en secuencia: ¿los obstáculos marcados CRECEN entre frames?\n"
+    "   - Si un rectángulo verde se AGRANDA progresivamente → el dron se acerca → PELIGRO REAL.\n"
+    "   - Si mantiene el mismo tamaño → está lejos o el dron no avanza hacia él → MENOR RIESGO.\n"
+    "2. ¿El frente se está cerrando o abriendo entre el primer y último frame?\n"
+    "3. ¿Aparecen pasillos o calles transversales libres en algún lateral?\n\n"
+    "ANÁLISIS ESPACIAL del frame actual (t):\n"
     "- ¿Hay una pared/edificio bloqueando el frente? ¿Cuánto del campo visual ocupa?\n"
     "- ¿Hay un pasillo o calle transversal libre a la izquierda o derecha?\n"
     "- ¿Los obstáculos marcados están realmente cerca o son de fondo/horizonte?\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
     '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en lo que ves>"}\n\n'
     "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: El frente está despejado, se ve calle abierta.\n"
+    "- MANTENER_RUMBO: El frente está despejado, los obstáculos no crecen o la vía está abierta.\n"
     "- EVADIR_IZQUIERDA: Desvío 90° a la izquierda porque hay calle transversal visible.\n"
     "- EVADIR_DERECHA: Desvío 90° a la derecha porque hay calle transversal visible.\n"
     "- GANAR_ALTURA: Frente y laterales cerrados, elevarse sobre la estructura.\n"
     "- FRENAR: Peligro inminente insalvable en todas direcciones.\n\n"
     "Reglas estrictas:\n"
-    "1. Basá tu decisión en lo que VES en la imagen, no solo en el texto.\n"
+    "1. Basá tu decisión en la TENDENCIA TEMPORAL (¿los obstáculos crecen?) y en lo que ves en el frame actual.\n"
     "2. Preferí la calle lateral que coincida con la dirección al objetivo.\n"
     "3. Salida estrictamente JSON sin texto adicional."
 )
@@ -387,12 +395,13 @@ def _encode_frame_base64(frame: Any, max_size: int = VLM_IMAGE_MAX_SIZE) -> Opti
 
 def _query_slm(
     prompt: str,
-    image_b64: Optional[str] = None,
+    images_b64: Optional[List[str]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str, float, Optional[str]]:
     """Consulta al servidor compatible con OpenAI (LM Studio u Ollama).
 
-    Si image_b64 está presente y VLM_VISION_ENABLED es True, envía un mensaje
-    multimodal con la imagen codificada en base64 junto al prompt textual.
+    Si images_b64 contiene imágenes y VLM_VISION_ENABLED es True, envía un
+    mensaje multimodal con la secuencia temporal de fotogramas (t-3...t)
+    junto al prompt textual.
 
     Retorna: (parsed_decision, raw_response, latency_ms, error_message)
     """
@@ -403,16 +412,22 @@ def _query_slm(
         client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_LLM_API_KEY)
 
         # Construir mensaje del usuario: multimodal o solo texto
-        if VLM_VISION_ENABLED and image_b64:
-            user_content = [
-                {"type": "text", "text": prompt},
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{image_b64}",
-                    },
-                },
-            ]
+        if VLM_VISION_ENABLED and images_b64:
+            total_frames = len(images_b64)
+            user_content: List[Dict[str, Any]] = [{"type": "text", "text": prompt}]
+
+            for i, img_b64 in enumerate(images_b64):
+                delta = total_frames - 1 - i
+                frame_label = f"t-{delta}" if delta > 0 else "t (actual)"
+                user_content.append({"type": "text", "text": f"[Fotograma {frame_label}]:"})
+                user_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{img_b64}",
+                        },
+                    }
+                )
             system_prompt = SYSTEM_PROMPT_VISION
         else:
             user_content = prompt
@@ -451,15 +466,23 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     prompt = _build_user_prompt(obstacles, telemetry, guidance)
 
-    # Codificar el fotograma anotado (con bboxes de YOLO) para el VLM
-    image_b64 = None
+    # Codificar la secuencia temporal de fotogramas anotados para el VLM
+    images_b64: Optional[List[str]] = None
     if VLM_VISION_ENABLED:
-        annotated = state.get("annotated_image")  # Frame con bboxes dibujados
-        if annotated is None:
-            annotated = state.get("rgb_image")     # Fallback al frame crudo
-        image_b64 = _encode_frame_base64(annotated)
+        frame_history = state.get("frame_history") or []
+        if not frame_history:
+            current = state.get("annotated_image") if state.get("annotated_image") is not None else state.get("rgb_image")
+            frame_history = [current] if current is not None else []
 
-    parsed_decision, raw_response, latency_ms, err = _query_slm(prompt, image_b64=image_b64)
+        encoded_list = []
+        for frame in frame_history:
+            enc = _encode_frame_base64(frame)
+            if enc:
+                encoded_list.append(enc)
+        if encoded_list:
+            images_b64 = encoded_list
+
+    parsed_decision, raw_response, latency_ms, err = _query_slm(prompt, images_b64=images_b64)
     is_fallback = parsed_decision is None
     decision = parsed_decision or _fallback_decision(obstacles, guidance)
 
@@ -547,7 +570,8 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
         "id": entry_id,
         "timestamp": time.time(),
         "model": LOCAL_LLM_MODEL_NAME,
-        "vision_enabled": VLM_VISION_ENABLED and image_b64 is not None,
+        "vision_enabled": VLM_VISION_ENABLED and images_b64 is not None,
+        "vision_frames": len(images_b64) if images_b64 else 0,
         "system_prompt": SYSTEM_PROMPT,
         "prompt": prompt,
         "raw_response": raw_response if not is_fallback else f"Fallback activado: {err or 'Formato JSON inválido'}",

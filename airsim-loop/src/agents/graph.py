@@ -24,6 +24,7 @@ class DroneState(TypedDict, total=False):
 
     rgb_image: Any
     annotated_image: Any  # Frame con bboxes de YOLO superpuestos para el VLM
+    frame_history: List[Any]  # Ring buffer de los últimos N frames anotados [t-3, t-2, t-1, t]
     prev_canny_edges: Any
     xor_change_ratio: float
     telemetry: Dict[str, Any]
@@ -158,6 +159,16 @@ def _build_nodes() -> Dict[str, Any]:
             except Exception:
                 annotated = image  # Si falla cv2, usar el frame crudo
         state["annotated_image"] = annotated
+
+        # Mantener ring buffer de frames anotados para contexto temporal del VLM
+        history = list(state.get("frame_history") or [])
+        if annotated is not None:
+            history.append(annotated)
+        # Retener solo los últimos N frames (configurable vía VLM_FRAME_HISTORY_SIZE)
+        max_history = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "4"))
+        if len(history) > max_history:
+            history = history[-max_history:]
+        state["frame_history"] = history
 
         return state
 

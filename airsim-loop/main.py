@@ -64,10 +64,11 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
         lat = delib.get("latency_ms", 0.0)
         is_fb = delib.get("is_fallback", False)
         has_vision = delib.get("vision_enabled", False)
+        v_frames = delib.get("vision_frames", 1)
         if is_fb:
             type_str = "FALLBACK DETERMINISTA"
         elif has_vision:
-            type_str = "VLM VISIÓN DIRECTA"
+            type_str = f"VLM VISIÓN DIRECTA ({v_frames} frames)"
         else:
             type_str = "SLM TEXTO"
         prompt = delib.get("prompt", "").strip()
