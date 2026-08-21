@@ -149,28 +149,45 @@ class LoopRunner:
     # Subprocess fallback                                               #
     # ------------------------------------------------------------------ #
     def _run_as_subprocess(self, initial_state: Dict[str, Any]) -> None:
+        import os
+        import subprocess
+        import sys
+        
         script = Path(self._loop_path).resolve()
         if not script.exists():
             raise LoopRunnerError(f"loop script not found: {script}")
-        # We piggy-back on runpy so the user can run their existing
-        # `python airsim-loop/main.py` flow but with env vars set.
+            
         env_path = self._settings.mission_dir / f"{self._manifest.mission_id}.preloop.json"
         env_path.parent.mkdir(parents=True, exist_ok=True)
         env_path.write_text(
             self._manifest.to_json(indent=2), encoding="utf-8"
         )
-        previous = {
-            "AIRSIM_PLAN_MANIFEST": str(env_path),
-            "AIRSIM_PLAN_TACTICAL_PROMPT": self._manifest.tactical_system_prompt or "",
-            "AIRSIM_LOOP_WATCH": "true" if self._watch else "false",
-        }
+        
+        # Prepare environment variables for the new process
+        env = os.environ.copy()
+        env["AIRSIM_PLAN_MANIFEST"] = str(env_path)
+        env["AIRSIM_PLAN_TACTICAL_PROMPT"] = self._manifest.tactical_system_prompt or ""
+        env["AIRSIM_LOOP_WATCH"] = "true" if self._watch else "false"
+        
         try:
-            sys.argv = [str(script)]
-            script_dir = str(script.parent)
-            if script_dir not in sys.path:
-                sys.path.insert(0, script_dir)
-            with __import__("contextlib").redirect_stdout(sys.stdout):
-                runpy.run_path(str(script), run_name="__main__", init_globals=previous)
-        except SystemExit as exc:  # pragma: no cover - delegated
-            if exc.code not in (None, 0):
-                raise LoopRunnerError(f"loop exited with code {exc.code}") from exc
+            # Launch loop script in a completely isolated OS process with unbuffered output (-u)
+            process = subprocess.Popen(
+                [sys.executable, "-u", str(script)],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1  # line buffered
+            )
+            
+            # Print output in real-time directly to sys.stdout
+            if process.stdout:
+                for line in process.stdout:
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                    
+            process.wait()
+            if process.returncode not in (None, 0):
+                raise LoopRunnerError(f"loop process exited with code {process.returncode}")
+        except Exception as exc:
+            raise LoopRunnerError(f"Failed to execute loop subprocess: {exc}") from exc

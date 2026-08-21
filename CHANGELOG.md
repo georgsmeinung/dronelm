@@ -87,6 +87,24 @@ Se extendió el pipeline deliberativo multimodal para enviar al VLM una secuenci
 
 <img src="informe/2026-0820 Mejoras con VLM.jpg"/>
 
+## Resolución de Bloqueos y Colisiones del Dron
+Se han completado las implementaciones necesarias para corregir los cuelgues del sistema de control y el comportamiento de colisión e inestabilidad del dron durante su navegación urbana. Cambios Realizados:
+
+1. Aislamiento en un Subproceso del OS
+* **Archivo modificado:** [`loop_runner.py`](file:///Users/jenic/Documents/dronelm/airsim-plan/src/airsim_plan/bridge/loop_runner.py)
+* **Descripción:** Se migró la ejecución de `airsim-loop/main.py` desde el hilo interno de FastAPI (con `runpy.run_path`) a un subproceso del sistema operativo real usando `subprocess.Popen` con salida en tiempo real no buferizada (`-u`). Esto aísla por completo los puertos y sockets MsgPack-RPC de AirSim, eliminando los deadlocks y congelamientos recurrentes en `capture_node`.
+
+2. Actualización de Reglas en Prompts (SLM & VLM)
+* **Archivo modificado:** [`deliberative.py`](file:///Users/jenic/Documents/dronelm/airsim-loop/src/agents/deliberative.py)
+* **Descripción:** Se rediseñaron [`SYSTEM_PROMPT_TEXT`](file:///Users/jenic/Documents/dronelm/airsim-loop/src/agents/deliberative.py#L97) y [`SYSTEM_PROMPT_VISION`](file:///Users/jenic/Documents/dronelm/airsim-loop/src/agents/deliberative.py#L117) de acuerdo a las directrices:
+  * **Trayectoria Libre Obligatoria:** El modelo solo puede elegir `MANTENER_RUMBO` si la trayectoria frontal hacia la meta está totalmente despejada.
+  * **Evasión Proactiva por Laterales Libres:** Solo se permite girar a los lados si hay una vía transversal despejada.
+  * **Detección de Callejón sin Salida (Girar en Círculos):** Si tanto el frente como los lados están obstruidos por edificios de cerca, el modelo debe seleccionar `GANAR_ALTURA` inmediatamente para sobrevolar el obstáculo, lo cual evita que el dron quede dando vueltas en círculos sobre el mismo eje (hesitación continua).
+
+3. Trazas de Telemetría de Colisión
+* **Archivos modificados:** [`airsim_client.py`](file:///Users/jenic/Documents/dronelm/airsim-loop/src/hardware/airsim_client.py) y [`main.py`](file:///Users/jenic/Documents/dronelm/airsim-loop/main.py)
+* **Descripción:** Se extrajeron los datos físicos de colisión (`has_collided` y `object_name`) de la telemetría nativa de AirSim y se agregaron junto con la orientación `Yaw` en grados a los logs de consola de cada ciclo. Esto permite auditar con total transparencia si el dron hace contacto físico con una estructura.
+
 # 2026-0819
 
 ## Aterrizaje Autónomo al Completar Misión y Devolución de Control a WebDCS

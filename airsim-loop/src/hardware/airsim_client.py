@@ -26,6 +26,7 @@ except Exception:
     except Exception:  # pragma: no cover - dependencia opcional en tiempo de import
         airsim = None  # type: ignore
 
+# pyrefly: ignore [missing-import]
 import numpy as np
 
 
@@ -53,9 +54,13 @@ class AirSimClient:
     camera_name: str = DEFAULT_CAMERA
     frame_width: int = DEFAULT_FRAME_WIDTH
     frame_height: int = DEFAULT_FRAME_HEIGHT
-    timeout_seconds: float = 5.0
+    # Timeout en segundos para las llamadas RPC al servidor de AirSim.
+    # Configurable vía AIRSIM_RPC_TIMEOUT para evitar bloqueos silenciosos de simGetImages.
+    timeout_seconds: float = float(os.getenv("AIRSIM_RPC_TIMEOUT", "8"))
     _client: Any = field(default=None, init=False, repr=False)
     _connected: bool = field(default=False, init=False, repr=False)
+    # Último Future de movimiento activo; se guarda para detectar acumulación de comandos async.
+    _last_move_future: Any = field(default=None, init=False, repr=False)
 
     # ------------------------------------------------------------------ #
     # Conexión                                                           #
@@ -67,7 +72,11 @@ class AirSimClient:
             self._connected = False
             return False
         try:
-            self._client = airsim.MultirotorClient(ip=self.ip, port=self.port)
+            # timeout_value limita cada llamada RPC individual (simGetImages, getMultirotorState, etc.)
+            # a timeout_seconds segundos; si AirSim no responde, lanza excepción en lugar de bloquearse.
+            self._client = airsim.MultirotorClient(
+                ip=self.ip, port=self.port, timeout_value=int(self.timeout_seconds)
+            )
             self._client.confirmConnection()
             try:
                 self._client.enableApiControl(True, vehicle_name=self.vehicle_name)
@@ -165,6 +174,9 @@ class AirSimClient:
                 )
 
             t_before_images = time.time()
+            # Log previo: si el proceso muere aquí sin imprimir el timing posterior,
+            # es señal inequívoca de que simGetImages bloqueó el hilo.
+            print(f"[AirSimClient] simGetImages: solicitando {len(requests)} imagen(es)...")
             responses = self._client.simGetImages(requests, vehicle_name=self.vehicle_name)
             t_after_images = time.time()
             
@@ -180,6 +192,7 @@ class AirSimClient:
                 ):
                     # Usar OpenCV si está disponible para máxima velocidad, si no fallback a numpy
                     try:
+                        # pyrefly: ignore [missing-import]
                         import cv2
                         image = cv2.resize(image, (self.frame_width, self.frame_height), interpolation=cv2.INTER_NEAREST)
                     except Exception:
@@ -197,6 +210,7 @@ class AirSimClient:
                         or depth.shape[0] != self.frame_height
                     ):
                         try:
+                            # pyrefly: ignore [missing-import]
                             import cv2
                             depth = cv2.resize(depth, (self.frame_width, self.frame_height), interpolation=cv2.INTER_NEAREST)
                         except Exception:
@@ -260,7 +274,8 @@ class AirSimClient:
         try:
             # Si todas las velocidades y giro son nulos, activar hover de seguridad
             if abs(vx) < 0.05 and abs(vy) < 0.05 and abs(vz) < 0.05 and abs(yaw_rate) < 0.01:
-                self._client.hoverAsync(vehicle_name=self.vehicle_name)
+                self._client.hoverAsync(vehicle_name=self.vehicle_name).join()
+                self._last_move_future = None
                 return True
 
             if abs(yaw_rate) > 0.01:
@@ -273,7 +288,16 @@ class AirSimClient:
                 drivetrain = airsim.DrivetrainType.ForwardOnly
                 yaw_mode = airsim.YawMode(is_rate=False, yaw_or_rate=0.0)
 
-            self._client.moveByVelocityBodyFrameAsync(
+            # Descartar el Future anterior si todavía está pendiente para no acumular
+            # comandos async en la cola RPC del servidor de AirSim.
+            if self._last_move_future is not None:
+                try:
+                    self._last_move_future.join()
+                except Exception:
+                    pass
+                self._last_move_future = None
+
+            self._last_move_future = self._client.moveByVelocityBodyFrameAsync(
                 vx,
                 vy,
                 vz,
@@ -376,6 +400,13 @@ def _state_to_telemetry(state: Any) -> Dict[str, Any]:
             cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
             yaw = math.atan2(siny_cosp, cosy_cosp)
 
+    collision_info = getattr(state, "collision", None)
+    has_collided = False
+    collision_object = ""
+    if collision_info is not None:
+        has_collided = getattr(collision_info, "has_collided", False)
+        collision_object = getattr(collision_info, "object_name", "")
+
     return {
         "position": {
             "x": getattr(pos, "x_val", 0.0),
@@ -391,6 +422,10 @@ def _state_to_telemetry(state: Any) -> Dict[str, Any]:
             "pitch": float(pitch),
             "roll": float(roll),
             "yaw": float(yaw),
+        },
+        "collision": {
+            "has_collided": bool(has_collided),
+            "object_name": str(collision_object),
         },
         "timestamp": time.time(),
         "source": "airsim",

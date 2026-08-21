@@ -39,6 +39,11 @@ def evasive_node(state: Dict[str, Any]) -> Dict[str, Any]:
             yaw_diff = (float(target_yaw_deg) - current_yaw_deg + 180.0) % 360.0 - 180.0
             if abs(yaw_diff) <= 3.0:
                 maneuver_cmd["yaw_rate"] = 0.0
+                # Alineado con la calle lateral: impulsar avance para recorrerla.
+                # Si el vx sigue siendo el mínimo de seguridad (0.3) o menos, aumentar
+                # ahora que el frente ya no apunta al edificio.
+                if float(maneuver_cmd.get("vx", 0.0)) < 0.5:
+                    maneuver_cmd["vx"] = 0.8
             else:
                 maneuver_cmd["yaw_rate"] = max(-15.0, min(15.0, 0.6 * yaw_diff))
 

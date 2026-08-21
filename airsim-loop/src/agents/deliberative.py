@@ -59,20 +59,20 @@ ACTION_VELOCITY_MAP: Dict[str, Dict[str, float]] = {
         "yaw_rate": 0.0,
     },
     "EVADIR_DERECHA": {
-        "vx": 2.5,
+        "vx": 0.5,
         "vy": 0.0,
         "vz": 0.0,
         "yaw_rate": 20.0,
     },
     "EVADIR_IZQUIERDA": {
-        "vx": 2.5,
+        "vx": 0.5,
         "vy": 0.0,
         "vz": 0.0,
         "yaw_rate": -20.0,
     },
     "GANAR_ALTURA": {
-        "vx": 1.0,
-        "vy": 0.0,
+        "vx": 0.0,   # No avanzar hacia la pared durante la subida
+        "vy": 0.5,   # Deslizamiento lateral suave para alejarse del obstáculo
         "vz": -EVASION_UP_SPEED,
         "yaw_rate": 0.0,
     },
@@ -91,58 +91,58 @@ ACTION_VELOCITY_MAP: Dict[str, Dict[str, float]] = {
 }
 
 
+SAFE_MARGIN_METERS = float(os.getenv("SAFE_MARGIN_METERS", "1.0"))
+
 # --------------------------------------------------------------------------- #
 # System Prompts: Texto Puro (SLM) y Visión Directa (VLM)                    #
 # --------------------------------------------------------------------------- #
 SYSTEM_PROMPT_TEXT = (
-    "Sos el cerebro deliberativo táctico de un dron autónomo en una CUADRÍCULA URBANA (Manhattan Grid). "
-    "Tu misión es rodear manzanas y estructuras bloqueantes navegando por las calles y pasajes transversales libres.\n\n"
-    "Estrategia Urbana en Cuadrícula:\n"
-    "- Si el frente está bloqueado por una manzana/edificio, tu objetivo es desviarte 90° hacia la calle transversal despejada (EVADIR_IZQUIERDA o EVADIR_DERECHA).\n"
-    "- El dron avanzará por la calle lateral a velocidad continua para superar la fachada del edificio.\n"
-    "- Si ambos laterales están bloqueados en un callejón sin salida, selecciona GANAR_ALTURA para sobrevolar la estructura.\n\n"
-    "Responde UNICAMENTE con un objeto JSON valido con este formato exacto:\n"
-    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve de 1 linea>"}\n\n'
+    "Sos el cerebro deliberativo táctico de un dron autónomo en una cuadrícula urbana (Manhattan Grid).\n"
+    "Tu objetivo principal es lograr un vuelo suave, fluido y seguro hacia el waypoint general.\n\n"
+    "Reglas de navegación:\n"
+    "1. Trayectoria Libre y Dirección al Waypoint: Elige MANTENER_RUMBO únicamente si la trayectoria hacia el frente en la dirección general del waypoint deseado está libre de estructuras.\n"
+    "2. Evasión Proactiva por Calles Libres: Si el frente está bloqueado por una estructura, evalúa los laterales. "
+    "Elige EVADIR_IZQUIERDA o EVADIR_DERECHA únicamente si hay una calle transversal o pasaje despejado en esa dirección.\n"
+    "3. Bloqueo Total (Callejón sin salida): Si el frente está bloqueado y ambos laterales también están cerrados por estructuras (edificios/paredes), "
+    "debes elegir GANAR_ALTURA para sobrevolar el obstáculo de manera suave, en lugar de intentar girar lateralmente contra las paredes.\n"
+    "4. Peligro Inminente: Si estás en peligro crítico inminente en todas las direcciones, elige FRENAR.\n\n"
+    "Responde UNICAMENTE con un objeto JSON valido:\n"
+    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en la trayectoria y suavidad>"}\n\n'
     "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: Si el sector CENTRO esta DESPEJADO de estructuras en la calle.\n"
-    "- EVADIR_IZQUIERDA: Desvío ortogonal a la izquierda por la calle transversal abierta.\n"
-    "- EVADIR_DERECHA: Desvío ortogonal a la derecha por la calle transversal abierta.\n"
-    "- GANAR_ALTURA: Si frente y laterales están cerrados, elevarse para sobrevolar la estructura.\n"
-    "- FRENAR: Solo en peligro inminente insalvable en todas direcciones.\n\n"
+    "- MANTENER_RUMBO: Frente y rumbo al waypoint despejados.\n"
+    "- EVADIR_IZQUIERDA: Calle transversal libre a la izquierda.\n"
+    "- EVADIR_DERECHA: Calle transversal libre a la derecha.\n"
+    "- GANAR_ALTURA: Frente y laterales bloqueados por estructuras (subir).\n"
+    "- FRENAR: Peligro crítico en todas direcciones.\n\n"
     "Reglas estrictas:\n"
-    "1. Prefiere la calle lateral que coincida con la dirección general de la meta siempre que no tenga edificios bloqueantes.\n"
-    "2. PROHIBIDO MANTENER_RUMBO si hay una estructura (building, wall, etc.) a menos de 3.0 metros en el frente (sector CENTRO). En su lugar, debes elegir EVADIR_IZQUIERDA, EVADIR_DERECHA o GANAR_ALTURA.\n"
+    f"1. No elijas MANTENER_RUMBO si hay una estructura a menos de {SAFE_MARGIN_METERS} metros al frente.\n"
+    "2. Si estás rodeado de estructuras de cerca, prioriza GANAR_ALTURA para sobrevolarlas.\n"
     "3. Salida estrictamente JSON sin texto adicional."
 )
 
 SYSTEM_PROMPT_VISION = (
-    "Sos el cerebro deliberativo táctico de un dron autónomo en una CUADRÍCULA URBANA.\n"
-    "Recibís una SECUENCIA TEMPORAL de fotogramas de la cámara frontal del dron, "
-    "ordenados del más antiguo al más reciente (t-3 → t-2 → t-1 → t actual).\n"
-    "Las detecciones de obstáculos están marcadas con rectángulos verdes.\n\n"
-    "ANÁLISIS TEMPORAL OBLIGATORIO:\n"
-    "1. Compará los fotogramas en secuencia: ¿los obstáculos marcados CRECEN entre frames?\n"
-    "   - Si un rectángulo verde se AGRANDA progresivamente → el dron se acerca → PELIGRO REAL.\n"
-    "   - Si mantiene el mismo tamaño → está lejos o el dron no avanza hacia él → MENOR RIESGO.\n"
-    "2. ¿El frente se está cerrando o abriendo entre el primer y último frame?\n"
-    "3. ¿Aparecen pasillos o calles transversales libres en algún lateral?\n\n"
-    "ANÁLISIS ESPACIAL del frame actual (t):\n"
-    "- ¿Hay una pared/edificio bloqueando el frente? ¿Cuánto del campo visual ocupa?\n"
-    "- ¿Hay un pasillo o calle transversal libre a la izquierda o derecha?\n"
-    "- ¿Los obstáculos marcados están realmente cerca o son de fondo/horizonte?\n\n"
+    "Sos el cerebro deliberativo táctico de un dron autónomo en una cuadrícula urbana (Manhattan Grid).\n"
+    "Tu objetivo principal es lograr un vuelo suave, fluido y seguro hacia el waypoint general.\n\n"
+    "Reglas de navegación y suavidad:\n"
+    "1. Trayectoria Libre y Dirección al Waypoint: Prioriza trazar un rumbo (MANTENER_RUMBO) "
+    "únicamente si ves una trayectoria libre hacia el frente y en la dirección general del waypoint deseado.\n"
+    "2. Evasión Proactiva por Calles Libres: Si el frente está obstruido por una estructura, evalúa los laterales. "
+    "Solo elige EVADIR_IZQUIERDA o EVADIR_DERECHA si ves claramente una calle transversal o pasillo libre y abierto en esa dirección.\n"
+    "3. Bloqueo Total (Callejón sin salida): Si el frente está bloqueado y no hay una calle transversal visiblemente despejada a los lados "
+    "(ambos laterales cerrados por paredes/edificios), debes elegir GANAR_ALTURA de inmediato para sobrevolar la estructura en lugar de girar en círculos contra las paredes.\n"
+    "4. Peligro Inminente: Si estás en una situación de peligro inminente y necesitas detenerte a evaluar, elige FRENAR.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
-    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en lo que ves>"}\n\n'
+    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en la trayectoria y suavidad>"}\n\n'
     "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: El frente está despejado, los obstáculos no crecen o la vía está abierta.\n"
-    "- EVADIR_IZQUIERDA: Desvío 90° a la izquierda porque hay calle transversal visible.\n"
-    "- EVADIR_DERECHA: Desvío 90° a la derecha porque hay calle transversal visible.\n"
-    "- GANAR_ALTURA: Frente y laterales cerrados, elevarse sobre la estructura.\n"
-    "- FRENAR: Peligro inminente insalvable en todas direcciones.\n\n"
+    "- MANTENER_RUMBO: Frente y rumbo al waypoint despejados.\n"
+    "- EVADIR_IZQUIERDA: Calle transversal libre visible a la izquierda.\n"
+    "- EVADIR_DERECHA: Calle transversal libre visible a la derecha.\n"
+    "- GANAR_ALTURA: Frente y ambos lados bloqueados por estructuras (callejón sin salida).\n"
+    "- FRENAR: Peligro crítico inmediato en todas las direcciones.\n\n"
     "Reglas estrictas:\n"
-    "1. Basá tu decisión en la TENDENCIA TEMPORAL (¿los obstáculos crecen?) y en lo que ves en el frame actual.\n"
-    "2. Preferí la calle lateral que coincida con la dirección al objetivo.\n"
-    "3. PROHIBIDO MANTENER_RUMBO si hay una estructura (building, wall, etc.) a menos de 3.0 metros en el frente (sector CENTRO). En su lugar, debes elegir EVADIR_IZQUIERDA, EVADIR_DERECHA o GANAR_ALTURA.\n"
-    "4. Salida estrictamente JSON sin texto adicional."
+    f"1. No elijas MANTENER_RUMBO si hay una estructura a menos de {SAFE_MARGIN_METERS} metros al frente.\n"
+    "2. Evita giros innecesarios o alternantes si no hay una vía de escape abierta. Si estás rodeado, gana altura.\n"
+    "3. Salida estrictamente JSON sin texto adicional."
 )
 
 # Alias de compatibilidad: se selecciona según la configuración
@@ -188,6 +188,7 @@ def _build_user_prompt(
     obstacles: List[Dict[str, Any]],
     telemetry: Dict[str, Any],
     guidance: Optional[Dict[str, Any]] = None,
+    stuck_cycles: int = 0,
 ) -> str:
     sector_summary = _summarize_sectors(obstacles)
 
@@ -203,11 +204,19 @@ def _build_user_prompt(
         direction = "Izquierda" if err < -10.0 else "Derecha" if err > 10.0 else "Frente"
         wp_str = f"Meta ({label}): {dist:.1f}m hacia {direction} ({err:+.0f}°)"
 
+    # Contexto de estado de evasión para que el LLM tome mejores decisiones
+    stuck_note = ""
+    if stuck_cycles >= 5:
+        stuck_note = (
+            f"\n- AVISO: el dron lleva {stuck_cycles} ciclos evasivos sin progresar. "
+            "Si los 3 sectores están bloqueados, elige GANAR_ALTURA en lugar de seguir girando."
+        )
+
     return (
         f"{sector_summary}\n\n"
         f"OBJETIVO Y ALTITUD:\n"
         f"- {wp_str}\n"
-        f"- Altitud actual: {altitude:.1f}m (Cota segura: 10.0m)\n\n"
+        f"- Altitud actual: {altitude:.1f}m (Cota segura: 10.0m){stuck_note}\n\n"
         "INSTRUCCION:\n"
         "Elige la macro_action ('EVADIR_IZQUIERDA', 'EVADIR_DERECHA', 'GANAR_ALTURA' o 'MANTENER_RUMBO').\n"
         "Responde SOLO con este JSON:\n"
@@ -261,8 +270,13 @@ def _fallback_decision(
         # Hay peligro frontal: elegir el lateral con menor peligro de estructuras
         left_has_struct = any(str(o.get("object", "")).lower() in structural_names for o in left)
         right_has_struct = any(str(o.get("object", "")).lower() in structural_names for o in right)
+        front_has_struct = any(str(o.get("object", "")).lower() in structural_names for o in front)
 
-        if left_danger < right_danger and not left_has_struct:
+        # Callejón sin salida: estructuras en los 3 sectores → ganar altura directamente
+        if front_has_struct and left_has_struct and right_has_struct:
+            macro = "GANAR_ALTURA"
+            rationale = "Fallback: estructuras en frente, izquierda Y derecha. Callejón sin salida. Ganando altura."
+        elif left_danger < right_danger and not left_has_struct:
             macro = "EVADIR_IZQUIERDA"
             rationale = f"Fallback: bloqueo frontal, lateral izquierdo despejado de estructuras (peligro izq={left_danger:.0f} vs der={right_danger:.0f})."
         elif right_danger < left_danger and not right_has_struct:
@@ -462,6 +476,35 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
     print("[Deliberativo] -> Iniciando nodo deliberativo...")
     state["flight_status"] = "hover_slm"
 
+    # --- ESCAPE DE DEADLOCK POR ALTURA ---
+    # Si el drone lleva N ciclos consecutivos en modo evasivo/deliberativo sin progresar
+    # (building omnidireccional), subir directamente sin consultar al LLM.
+    STUCK_THRESHOLD = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
+    stuck_cycles = int(state.get("evasion_stuck_cycles", 0))
+    if stuck_cycles >= STUCK_THRESHOLD:
+        print(
+            f"[Deliberativo] -> ESCAPE POR ALTURA: drone atascado {stuck_cycles} ciclos "
+            "sin progresar. Forzando GANAR_ALTURA sin consultar al LLM."
+        )
+        climb_decision = {
+            "macro_action": "GANAR_ALTURA",
+            "vx": 0.0,   # No avanzar hacia la pared durante la subida
+            "vy": 0.5,   # Deslizamiento lateral para alejarse del obstáculo
+            "vz": -1.5,
+            "yaw_rate": 0.0,
+            "rationale": f"Escape de deadlock: {stuck_cycles} ciclos bloqueado. Subiendo para superar el obstáculo.",
+        }
+        state["next_action"] = "GANAR_ALTURA"
+        state["velocity_command"] = climb_decision
+        state["route"] = "deliberative"
+        state["flight_status"] = "escape_altura"
+        state["active_maneuver"] = "GANAR_ALTURA"
+        state["maneuver_cycles_left"] = 8  # Ciclos extra para ganar altura suficiente
+        state["maneuver_command"] = climb_decision
+        state["evasion_stuck_cycles"] = 0  # Resetear el contador
+        state["_escape_reset"] = True       # Flag para main.py: no re-incrementar
+        return state
+
     obstacles = state.get("detected_obstacles", []) or []
     telemetry = state.get("telemetry", {}) or {}
     guidance = state.get("waypoint_guidance") or {}
@@ -469,7 +512,7 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
     yaw_rate = float(guidance.get("yaw_rate", 0.0))
     vz = float(guidance.get("vz", 0.0))
 
-    prompt = _build_user_prompt(obstacles, telemetry, guidance)
+    prompt = _build_user_prompt(obstacles, telemetry, guidance, stuck_cycles=stuck_cycles)
 
     # Codificar la secuencia temporal de fotogramas anotados para el VLM
     images_b64: Optional[List[str]] = None
@@ -496,31 +539,42 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
     is_fallback = parsed_decision is None
     decision = parsed_decision or _fallback_decision(obstacles, guidance)
 
-    # Override programático de seguridad: Prohibir MANTENER_RUMBO si hay una estructura a menos de 3.0 metros en frente
+    # Determinar si hay una estructura críticamente cercana en el centro
+    structural_names = {"building", "wall", "house", "roof", "tower", "bridge", "structure"}
+    close_structural = any(
+        o.get("sector") == "Centro"
+        and (str(o.get("object", "")).lower() in structural_names or o.get("category") == "structural")
+        and o.get("distance_m") is not None
+        and float(o.get("distance_m")) < SAFE_MARGIN_METERS
+        for o in obstacles
+    )
+
+    # Override programático de seguridad: Prohibir MANTENER_RUMBO si hay una estructura
+    # a menos de SAFE_MARGIN_METERS en frente, PERO solo cuando hay riesgo real:
+    # - TTC < infinito (el drone se acerca a la estructura), O
+    # - altitud < SAFE_ALT_FOR_OVERRIDE (todavía dentro del rango de colisión vertical).
+    # A alta altitud con TTC=inf el drone ya está sobre el peligro real y el LLM puede decidir libremente.
+    SAFE_ALT_FOR_OVERRIDE = float(os.getenv("SAFE_ALT_FOR_OVERRIDE", "20.0"))
+    pos_data_ov = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
+    altitude_now = abs(float(pos_data_ov.get("z", 0.0))) if isinstance(pos_data_ov, dict) else 0.0
+    ttc_now = float(state.get("estimated_ttc", float("inf")))
+    override_active = close_structural and (ttc_now < float("inf") or altitude_now < SAFE_ALT_FOR_OVERRIDE)
+
     macro_candidate = decision.get("macro_action", "MANTENER_RUMBO")
-    if macro_candidate == "MANTENER_RUMBO":
-        structural_names = {"building", "wall", "house", "roof", "tower", "bridge", "structure"}
-        close_structural = any(
-            o.get("sector") == "Centro"
-            and (str(o.get("object", "")).lower() in structural_names or o.get("category") == "structural")
-            and o.get("distance_m") is not None
-            and float(o.get("distance_m")) < 3.0
-            for o in obstacles
-        )
-        if close_structural:
-            print("[Deliberativo] -> OVERRIDE DE SEGURIDAD: Estructura a menos de 3.0m en CENTRO. Forzando evasión.")
-            fallback = _fallback_decision(obstacles, guidance)
-            if fallback.get("macro_action") == "MANTENER_RUMBO":
-                fallback = {
-                    "macro_action": "EVADIR_IZQUIERDA",
-                    "vx": 2.5,
-                    "vy": 0.0,
-                    "vz": -0.8,
-                    "yaw_rate": -15.0,
-                    "rationale": "Override crítico: evasión por defecto.",
-                }
-            decision = fallback
-            is_fallback = True
+    if macro_candidate == "MANTENER_RUMBO" and override_active:
+        print("[Deliberativo] -> OVERRIDE DE SEGURIDAD: Estructura a menos de 5.5m en CENTRO. Forzando evasión.")
+        fallback = _fallback_decision(obstacles, guidance)
+        if fallback.get("macro_action") == "MANTENER_RUMBO":
+            fallback = {
+                "macro_action": "EVADIR_IZQUIERDA",
+                "vx": 0.0,
+                "vy": 0.0,
+                "vz": -0.8,
+                "yaw_rate": -15.0,
+                "rationale": "Override crítico: evasión por defecto.",
+            }
+        decision = fallback
+        is_fallback = True
 
     # Inyección de guiado al waypoint y control de curvatura anti-cangrejeo
     macro = decision.get("macro_action", "MANTENER_RUMBO")
@@ -552,7 +606,7 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
         yaw_rad = math.radians(target_yaw_deg)
         decision["target_yaw"] = target_yaw_deg
         decision["target_yaw_deg"] = target_yaw_deg
-        decision["vx"] = 2.5
+        decision["vx"] = 0.3 if close_structural else 0.8  # Avanza lentamente incluso con estructura cerca
         decision["vy"] = 0.0
         decision["vz"] = vz_cmd
         decision["yaw_rate"] = 15.0
@@ -570,7 +624,7 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
         yaw_rad = math.radians(target_yaw_deg)
         decision["target_yaw"] = target_yaw_deg
         decision["target_yaw_deg"] = target_yaw_deg
-        decision["vx"] = 2.5
+        decision["vx"] = 0.3 if close_structural else 0.8  # Avanza lentamente incluso con estructura cerca
         decision["vy"] = 0.0
         decision["vz"] = vz_cmd
         decision["yaw_rate"] = -15.0

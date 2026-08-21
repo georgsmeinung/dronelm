@@ -178,11 +178,13 @@ class WaypointTracker:
 
         # Avance continuo fluido de crucero sin frenazos intermitentes
         if abs_err > 60.0:
-            vx = 0.0  # Pivot turn puro en el lugar solo ante desvíos grandes
+            # Curva pronunciada en lugar de giro sobre su eje (pivot turn) para no detenerse.
+            vx = max(0.5, cruise_speed * 0.4)
         elif dist_3d < 4.0:
             vx = 1.2 * math.cos(delta_yaw)  # Aproximación suave en metros finales
         else:
-            vx = cruise_speed * math.cos(delta_yaw)  # Crucero lineal continuo
+            # Crucero lineal continuo: nunca bajar de 0.5 para que no parezca atascado
+            vx = max(0.5, cruise_speed * math.cos(delta_yaw))
 
         # Cero vuelo lateral (Avance frontal en el eje de la cámara)
         vy = 0.0

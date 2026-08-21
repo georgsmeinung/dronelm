@@ -38,8 +38,16 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
     pos = telem.get("position") or {}
     alt = abs(float(pos.get("z", 0.0)))
 
+    orient = telem.get("orientation") or {}
+    yaw_deg = math.degrees(float(orient.get("yaw", 0.0)))
+
+    collision = telem.get("collision") or {}
+    has_collided = collision.get("has_collided", False)
+    coll_obj = collision.get("object_name", "")
+    coll_str = f" | Colisión: SÍ ({coll_obj})" if has_collided else " | Colisión: No"
+
     wp_info = f"WP {wp_idx}/{wp_total} ({wp_label}) | Dist: {dist:.1f}m | Desvío: {err:+.0f}°" if target_wp else "Misión sin WP activo"
-    print(f"\n[Ciclo #{cycle_num}] {wp_info} | Alt: {alt:.1f}m | TTC: {ttc_str}")
+    print(f"\n[Ciclo #{cycle_num}] {wp_info} | Alt: {alt:.1f}m | Yaw: {yaw_deg:.1f}°{coll_str} | TTC: {ttc_str}")
 
     # 2. Línea de percepción concisa
     if not obstacles:
@@ -120,6 +128,7 @@ def main() -> None:
     # 2) Verificar si se solicitó ver el video
     watch_mode = (os.getenv("AIRSIM_LOOP_WATCH") or globals().get("AIRSIM_LOOP_WATCH", "false")).lower() == "true"
     if watch_mode:
+        # pyrefly: ignore [missing-import]
         import cv2
         cv2.namedWindow("Drone Camera Feed", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Drone Camera Feed", 640, 480)
@@ -130,6 +139,10 @@ def main() -> None:
     graph = compile_workflow()
     airsim_client = get_airsim_client()
     sleep_s = 1.0 / max(DEFAULT_LOOP_HZ, 0.01)
+
+    # El grafo corre en el main thread para compatibilidad con msgpackrpc/cosys-airsim,
+    # que requiere el event loop de asyncio del hilo principal. El timeout de bloqueo
+    # está garantizado por AIRSIM_RPC_TIMEOUT en el socket RPC del MultirotorClient.
 
     # 3) Inicializar el gestor de waypoints con la misión
     waypoints_list = manifest_data.get("waypoints", [])
@@ -160,7 +173,12 @@ def main() -> None:
         "active_maneuver": None,
         "maneuver_cycles_left": 0,
         "maneuver_command": None,
+        "evasion_stuck_cycles": 0,
     }
+
+    # Última telemetría real conocida (source='airsim').
+    # Usada como fallback cuando AirSim no responde y devuelve datos simulados falsos.
+    _last_good_telem: dict = {}
 
     try:
         while True:
@@ -175,6 +193,13 @@ def main() -> None:
 
             # 4) Calcular progreso y vector de guiado hacia el waypoint activo
             telem_now = airsim_client.get_telemetry()
+            # Si AirSim no respondió y devuelvió telemetría simulada (posición falsa 0,0,0),
+            # usar la última real conocida para no corromper el cálculo de waypoint guidance.
+            if telem_now.get("source") == "airsim":
+                _last_good_telem = telem_now
+            elif _last_good_telem:
+                print(f"[Ciclo #{cycle_count}] ⚠️  Telemetría AirSim no disponible. Usando último dato conocido.")
+                telem_now = _last_good_telem
             pos_now = telem_now.get("position", {}) if telem_now else {}
             orient_now = telem_now.get("orientation", {}) if telem_now else {}
             yaw_now = float(orient_now.get("yaw", 0.0)) if isinstance(orient_now, dict) else 0.0
@@ -201,6 +226,21 @@ def main() -> None:
                 time.sleep(sleep_s)
                 continue
 
+            # Actualizar contador de ciclos atascados en modo evasivo/deliberativo.
+            # deliberative_node pone _escape_reset=True cuando fuerza GANAR_ALTURA;
+            # en ese caso respetamos el reset y no re-incrementamos (bug fix).
+            just_escaped = drone_state.pop("_escape_reset", False)
+            route_taken = drone_state.get("route", "")
+            if just_escaped:
+                drone_state["evasion_stuck_cycles"] = 0   # reset intencional: respetarlo
+            elif drone_state.get("active_maneuver") is not None:
+                # Mientras ejecuta una maniobra prolongada (ej. GANAR_ALTURA), no sumamos atasco
+                pass
+            elif route_taken in ("evasive", "deliberative"):
+                drone_state["evasion_stuck_cycles"] = int(drone_state.get("evasion_stuck_cycles", 0)) + 1
+            else:
+                drone_state["evasion_stuck_cycles"] = 0
+
             # Inyección de Sub-Waypoint Manhattan si el deliberador planificó una esquina
             corner = final_state.get("inject_corner")
             if corner and isinstance(corner, dict):
@@ -220,6 +260,7 @@ def main() -> None:
             # 3) Anotar imagen y publicar en StreamHub / OpenCV
             frame = final_state.get("rgb_image")
             if frame is not None:
+                # pyrefly: ignore [missing-import]
                 import cv2
                 annotated_frame = frame.copy()
 
@@ -370,6 +411,7 @@ def main() -> None:
         print("\nApagando sistema de navegacion.")
     finally:
         if watch_mode:
+            # pyrefly: ignore [missing-import]
             import cv2
             cv2.destroyAllWindows()
         if airsim_client is not None:

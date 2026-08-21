@@ -51,6 +51,10 @@ class DroneState(TypedDict, total=False):
     active_maneuver: Optional[str]
     maneuver_cycles_left: int
     maneuver_command: Optional[Dict[str, Any]]
+    # Número de ciclos consecutivos en ruta evasiva/deliberativa sin reducir distancia al waypoint.
+    # Cuando alcanza EVASION_STUCK_THRESHOLD, el ttc_router fuerza hover_and_slm para
+    # que deliberative_node aplique el escape por GANAR_ALTURA sin consultar al LLM.
+    evasion_stuck_cycles: int
 
 
 # ---------------------------------------------------------------------------
@@ -259,11 +263,21 @@ def xor_router(state: DroneState) -> str:
 def ttc_router(state: DroneState) -> str:
     """Decisión de Paso 4: Router Táctico Jerárquico con Priorización de Estructuras Urbanas.
 
+    - Caso 0 (hover_and_slm): Drone atascado N ciclos sin progresar → escape por GANAR_ALTURA.
     - Caso C (hover_and_slm): Estructura frontal (edificio/muro) en Cerca/Inminente,
       o cualquier objeto Inminente (<2.5m), o Looming dinámico crítico (TTC <= 2.0s).
     - Caso B (evasive): Obstáculo central en Cerca (postes, árboles, tráfico) o TTC <= 5.0s.
     - Caso A (keep_going): Sector central totalmente libre de obstáculos cercanos/inminentes.
     """
+    # PRIORIDAD 0: Escape de deadlock si el drone lleva N ciclos en modo evasivo
+    # sin progresar hacia el waypoint (building omnidireccional u otros bloqueos persistentes).
+    STUCK_THRESHOLD = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
+    stuck = int(state.get("evasion_stuck_cycles", 0))
+    if stuck >= STUCK_THRESHOLD:
+        # Forzar deliberación: deliberative_node detectará el contador y aplicará
+        # GANAR_ALTURA sin consultar al LLM para escapar del bloqueo.
+        return "hover_and_slm"
+
     ttc = state.get("estimated_ttc", float("inf"))
     obstacles = state.get("detected_obstacles", []) or []
 
