@@ -111,7 +111,8 @@ SYSTEM_PROMPT_TEXT = (
     "- FRENAR: Solo en peligro inminente insalvable en todas direcciones.\n\n"
     "Reglas estrictas:\n"
     "1. Prefiere la calle lateral que coincida con la dirección general de la meta siempre que no tenga edificios bloqueantes.\n"
-    "2. Salida estrictamente JSON sin texto adicional."
+    "2. PROHIBIDO MANTENER_RUMBO si hay una estructura (building, wall, etc.) a menos de 3.0 metros en el frente (sector CENTRO). En su lugar, debes elegir EVADIR_IZQUIERDA, EVADIR_DERECHA o GANAR_ALTURA.\n"
+    "3. Salida estrictamente JSON sin texto adicional."
 )
 
 SYSTEM_PROMPT_VISION = (
@@ -140,7 +141,8 @@ SYSTEM_PROMPT_VISION = (
     "Reglas estrictas:\n"
     "1. Basá tu decisión en la TENDENCIA TEMPORAL (¿los obstáculos crecen?) y en lo que ves en el frame actual.\n"
     "2. Preferí la calle lateral que coincida con la dirección al objetivo.\n"
-    "3. Salida estrictamente JSON sin texto adicional."
+    "3. PROHIBIDO MANTENER_RUMBO si hay una estructura (building, wall, etc.) a menos de 3.0 metros en el frente (sector CENTRO). En su lugar, debes elegir EVADIR_IZQUIERDA, EVADIR_DERECHA o GANAR_ALTURA.\n"
+    "4. Salida estrictamente JSON sin texto adicional."
 )
 
 # Alias de compatibilidad: se selecciona según la configuración
@@ -376,6 +378,7 @@ def _encode_frame_base64(frame: Any, max_size: int = VLM_IMAGE_MAX_SIZE) -> Opti
     if frame is None:
         return None
     try:
+        # pyrefly: ignore [missing-import]
         import cv2
         h, w = frame.shape[:2]
         if max(h, w) > max_size:
@@ -441,6 +444,7 @@ def _query_slm(
             ],
             temperature=0.2,
             max_tokens=200,
+            timeout=8.0,
         )
         latency_ms = (time.time() - t0) * 1000.0
         raw = completion.choices[0].message.content or ""
@@ -455,6 +459,7 @@ def _query_slm(
 
 def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """Nodo deliberativo (Paso 5): Freno de seguridad (Hover), consulta al SLM y guiado motriz."""
+    print("[Deliberativo] -> Iniciando nodo deliberativo...")
     state["flight_status"] = "hover_slm"
 
     obstacles = state.get("detected_obstacles", []) or []
@@ -469,22 +474,53 @@ def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # Codificar la secuencia temporal de fotogramas anotados para el VLM
     images_b64: Optional[List[str]] = None
     if VLM_VISION_ENABLED:
+        print("[Deliberativo] -> Preparando codificación de frames para VLM...")
         frame_history = state.get("frame_history") or []
         if not frame_history:
             current = state.get("annotated_image") if state.get("annotated_image") is not None else state.get("rgb_image")
             frame_history = [current] if current is not None else []
 
+        print(f"[Deliberativo] -> Codificando historial de {len(frame_history)} frames a base64...")
         encoded_list = []
-        for frame in frame_history:
+        for idx, frame in enumerate(frame_history):
             enc = _encode_frame_base64(frame)
             if enc:
                 encoded_list.append(enc)
         if encoded_list:
             images_b64 = encoded_list
+        print(f"[Deliberativo] -> Codificación terminada. {len(encoded_list)} frames listos.")
 
+    print(f"[Deliberativo] -> Enviando petición al LLM (Url: {LOCAL_LLM_URL}, Modelo: {LOCAL_LLM_MODEL_NAME})...")
     parsed_decision, raw_response, latency_ms, err = _query_slm(prompt, images_b64=images_b64)
+    print(f"[Deliberativo] -> Petición al LLM terminada. Latencia: {latency_ms:.1f}ms | Error: {err}")
     is_fallback = parsed_decision is None
     decision = parsed_decision or _fallback_decision(obstacles, guidance)
+
+    # Override programático de seguridad: Prohibir MANTENER_RUMBO si hay una estructura a menos de 3.0 metros en frente
+    macro_candidate = decision.get("macro_action", "MANTENER_RUMBO")
+    if macro_candidate == "MANTENER_RUMBO":
+        structural_names = {"building", "wall", "house", "roof", "tower", "bridge", "structure"}
+        close_structural = any(
+            o.get("sector") == "Centro"
+            and (str(o.get("object", "")).lower() in structural_names or o.get("category") == "structural")
+            and o.get("distance_m") is not None
+            and float(o.get("distance_m")) < 3.0
+            for o in obstacles
+        )
+        if close_structural:
+            print("[Deliberativo] -> OVERRIDE DE SEGURIDAD: Estructura a menos de 3.0m en CENTRO. Forzando evasión.")
+            fallback = _fallback_decision(obstacles, guidance)
+            if fallback.get("macro_action") == "MANTENER_RUMBO":
+                fallback = {
+                    "macro_action": "EVADIR_IZQUIERDA",
+                    "vx": 2.5,
+                    "vy": 0.0,
+                    "vz": -0.8,
+                    "yaw_rate": -15.0,
+                    "rationale": "Override crítico: evasión por defecto.",
+                }
+            decision = fallback
+            is_fallback = True
 
     # Inyección de guiado al waypoint y control de curvatura anti-cangrejeo
     macro = decision.get("macro_action", "MANTENER_RUMBO")

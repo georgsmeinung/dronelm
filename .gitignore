@@ -13,4 +13,3 @@ airsim-settings/.tmp.driveupload
 .venv/
 venv/
 venv.bak/
-.env

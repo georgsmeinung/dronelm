@@ -143,6 +143,7 @@ class AirSimClient:
                 return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
             return self._simulated_frame(), self._simulated_telemetry()
         try:
+            t_start = time.time()
             camera_id = int(self.camera_name) if self.camera_name.isdigit() else self.camera_name
             requests = [
                 airsim.ImageRequest(
@@ -163,9 +164,13 @@ class AirSimClient:
                     )
                 )
 
+            t_before_images = time.time()
             responses = self._client.simGetImages(requests, vehicle_name=self.vehicle_name)
+            t_after_images = time.time()
+            
             response = responses[0] if responses else None
             image = None
+            t_before_resize = time.time()
             if response is not None and response.width > 0 and response.height > 0:
                 img_1d = np.frombuffer(response.image_data_uint8, dtype=np.uint8)
                 image = img_1d.reshape(response.height, response.width, 3)
@@ -173,7 +178,13 @@ class AirSimClient:
                     image.shape[1] != self.frame_width
                     or image.shape[0] != self.frame_height
                 ):
-                    image = _resize_frame(image, self.frame_width, self.frame_height)
+                    # Usar OpenCV si está disponible para máxima velocidad, si no fallback a numpy
+                    try:
+                        import cv2
+                        image = cv2.resize(image, (self.frame_width, self.frame_height), interpolation=cv2.INTER_NEAREST)
+                    except Exception:
+                        image = _resize_frame(image, self.frame_width, self.frame_height)
+            t_after_resize = time.time()
 
             depth = None
             if return_depth and len(responses) > 1:
@@ -185,10 +196,22 @@ class AirSimClient:
                         depth.shape[1] != self.frame_width
                         or depth.shape[0] != self.frame_height
                     ):
-                        depth = _resize_depth(depth, self.frame_width, self.frame_height)
+                        try:
+                            import cv2
+                            depth = cv2.resize(depth, (self.frame_width, self.frame_height), interpolation=cv2.INTER_NEAREST)
+                        except Exception:
+                            depth = _resize_depth(depth, self.frame_width, self.frame_height)
 
+            t_before_state = time.time()
             state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
+            t_after_state = time.time()
             telemetry = _state_to_telemetry(state)
+            
+            t_total = time.time() - t_start
+            dt_images = (t_after_images - t_before_images) * 1000.0
+            dt_resize = (t_after_resize - t_before_resize) * 1000.0
+            dt_state = (t_after_state - t_before_state) * 1000.0
+            print(f"[AirSimClient] Capture timing: total={t_total*1000.0:.1f}ms (simGetImages={dt_images:.1f}ms, resize={dt_resize:.1f}ms, getMultirotorState={dt_state:.1f}ms)")
             
             if return_depth:
                 return image, depth, telemetry

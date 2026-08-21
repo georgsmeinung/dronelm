@@ -86,6 +86,7 @@ def _build_nodes() -> Dict[str, Any]:
 
     # 1. Nodo de captura de cámara en tiempo real
     def capture_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a capture_node")
         # pyrefly: ignore [bad-unpacking]
         image, telemetry = airsim_client.capture()
         state["rgb_image"] = image
@@ -94,6 +95,7 @@ def _build_nodes() -> Dict[str, Any]:
 
     # 2. Paso 1: Gating de Bordes XOR (Canny)
     def canny_xor_gate_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a canny_xor_gate_node")
         image = state.get("rgb_image")
         change_ratio, edges, _ = canny_gate.evaluate(image)
         state["xor_change_ratio"] = change_ratio
@@ -102,6 +104,7 @@ def _build_nodes() -> Dict[str, Any]:
 
     # 3. Paso 2: Restricción de ROI de 62° + Inferencia YOLO
     def roi_yolo_detect_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a roi_yolo_detect_node")
         image = state.get("rgb_image")
         roi_image, roi_info = crop_roi_62(image)
 
@@ -146,6 +149,7 @@ def _build_nodes() -> Dict[str, Any]:
         annotated = None
         if image is not None:
             try:
+                # pyrefly: ignore [missing-import]
                 import cv2
                 annotated = image.copy()
                 for det in global_detections:
@@ -174,6 +178,7 @@ def _build_nodes() -> Dict[str, Any]:
 
     # 4. Paso 3: Estimación de Tiempo de Colisión (TTC) No Neuronal
     def ttc_estimate_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a ttc_estimate_node")
         raw_detections = state.get("roi_detections", [])
         # Reconstruir objetos Detection si venían como dicts
         from src.perception import Detection
@@ -193,12 +198,14 @@ def _build_nodes() -> Dict[str, Any]:
 
     # 5. Paso 5: Parada de seguridad previa al SLM
     def hover_before_slm_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a hover_before_slm_node (Freno de seguridad)")
         # Enviar comando de frenado inmediato para evitar colisión durante inferencia
         airsim_client.execute_velocity(vx=0.0, vy=0.0, vz=0.0, yaw_rate=0.0)
         return deliberative_node(state)
 
     # 6. Nodo de actuación motriz
     def motor_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a motor_node")
         cmd = state.get("velocity_command") or {
             "macro_action": state.get("next_action", "MANTENER_RUMBO"),
             "vx": 0.0,

@@ -24,6 +24,6 @@ htmlcov/
 .idea/
 
 # Local config + compiled manifests (we keep examples/ under VCS)
-.env
+
 missions/*.json
 !missions/.gitkeep
