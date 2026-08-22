@@ -1,3 +1,36 @@
+# 2026-0822
+
+## Evaluando alternativas a YOLO para segmentación más rápida
+
+La segmentación y detección monocular de obstáculos sin redes neuronales es totalmente viable mediante transformaciones geométricas proyectivas, abstracción por superpíxeles y modelos de optimización sobre grafos.
+Segmentación por IPM y Superpíxeles Geodésicos
+Este método clásico de dos etapas ("detectar y segmentar") permite aislar obstáculos del suelo con alta velocidad computacional (26.6 ms):
+- Detección de Semillas por Homografía (IPM): Conociendo los parámetros intrínsecos de la cámara, su altura y la odometría del robot, se calcula la matriz de homografía del suelo H para alinear geométricamente dos fotogramas temporales consecutivos. Al restar el fotograma proyectado del actual mediante diferencia absoluta ($c_{IPM} = \vert{}c_{t2} - H \cdot c_{t1}\vert{}$), los píxeles del plano del suelo se anulan. Los elementos con altura tridimensional violan la proyección plana y generan un residuo no nulo que sirve como semilla inicial y caja delimitadora del obstáculo.
+- Abstracción mediante Superpíxeles SLIC: Para que las texturas o el polvo del suelo no fragmenten el resultado, la imagen se descompone en agrupaciones compactas usando el algoritmo SLIC (Simple Linear Iterative Clustering). SLIC agrupa los píxeles en un espacio de 5 dimensiones (color CIELab y posición espacial 2D), preservando los bordes estructurales y descartando detalles irrelevantes.
+- Grafo y Distancia Geodésica: Cada superpíxel pasa a ser un nodo en un grafo conectado con sus vecinos adyacentes, con pesos basados en la similitud de color. Mediante análisis de textura semilocal, se fijan los nodos semilla de referencia para el obstáculo y para el suelo. Posteriormente, se calcula la distancia geodésica más corta hacia la semilla del obstáculo ($d_G(x_O)$) y hacia la del suelo ($d_G(x_F)$). La máscara de segmentación final se genera umbralizando la puntuación relativa:
+
+$$S(x) = d_G(x_F) - d_G(x_O)$$
+
+Otras Alternativas Clásicas sin Redes Neuronales
+- Visión Activa Longitudinal con MSER: Extrae regiones extremas estables (MSER) antes y después de ejecutar una rotación de cabeceo vertical controlada en la cámara monocular. Los elementos planos mantienen una correlación geométrica predecible, mientras que las regiones con altura física real muestran una discrepancia métrica ($\Delta l > k$) que las segmenta como obstáculos.
+- Flujo Óptico Denso, FOE y DBSCAN: Aplica un filtro morfológico Close-Minus-Open (CMO) para eliminar ruido ambiental y calcula el flujo óptico denso de Gunnar–Farnebäck. Tras estimar el Foco de Expansión (FOE) correspondiente al movimiento propio, los vectores de movimiento divergentes se agrupan mediante clustering DBSCAN para delimitar el obstáculo entrante.
+- Flujo Residual en Vista Cenital (BEV): Proyecta la imagen a una vista superior (Bird's-Eye View) y calcula el movimiento del suelo plano. Al restar el vector de movimiento del suelo al mapa de flujo óptico proyectado, queda un residuo que aísla de forma directa los objetos que no pertenecen al suelo.
+
+## Resumen de principales Métodos de Segmentación y Detección sin YOLO
+
+<img src="informe/2026-0822 Segmentación y Detección sin YOLO.png"/>
+
+- IPM con Superpíxeles SLIC y Distancias Geodésicas: Calcula la homografía del suelo H para proyectar fotogramas temporales consecutivos; al restarlos, el suelo se anula y los obstáculos con volumen 3D generan residuos. La imagen se descompone en superpíxeles mediante el algoritmo SLIC (agrupación en espacio 5D de color CIELab y coordenadas 2D) y∫ se resuelve un grafo de distancias geodésicas para generar la máscara exacta del obstáculo en solo 26.6 ms (37.6 FPS) sin aceleración por GPU.
+- Flujo Óptico Residual en Vista Cenital (BEV): Transforma la perspectiva a una vista superior (Bird's-Eye View) y registra el movimiento del plano del suelo mediante árboles de expansión mínima (MST). Al restar el vector de movimiento del suelo del flujo óptico denso proyectado, se aísla una máscara binaria directa de los objetos tridimensionales o en movimiento.
+- Diferencia de Proyecciones IPM Multicámara: Proyecta las capturas de cámaras adyacentes sobre el plano del suelo mediante matrices de homografía. La resta directa de intensidades entre vistas elimina los elementos a nivel de suelo y segmenta los obstáculos elevados aplicando únicamente operaciones morfológicas y umbralizado clásico en 46 ms.
+- Flujo Óptico Denso (Gunnar–Farnebäck) + FOE + DBSCAN: Filtra el ruido visual con morfología matemática Close-Minus-Open (CMO) y extrae los vectores de velocidad. Tras calcular el Foco de Expansión (FOE), descarta los vectores alineados con el movimiento propio del vehículo y agrupa los vectores anómalos mediante clustering DBSCAN para delimitar la presencia de obstáculos en aproximación.
+- Visión Activa Longitudinal con MSER: Extrae regiones extremas estables (MSER) antes y después de inclinar físicamente la cámara un ángulo controlado. Los elementos del suelo cumplen la relación trigonométrica plana esperada, mientras que las regiones con altura física muestran una discrepancia de distancia ($\Delta l > k$) que las clasifica como obstáculos.
+
+Ventajas Frente a Modelos Basados en Redes Neuronales (como YOLO)
+- Detección Agnóstica a la Clase: YOLO solo reconoce objetos predefinidos en su dataset de entrenamiento (ej. personas, coches); si aparece un objeto anómalo o desconocido, puede ignorarlo. Los métodos geométricos (IPM, flujo óptico) detectan cualquier elemento por el simple hecho de tener volumen físico 3D o movimiento relativo.
+- Sin Dependencia de Datos de Entrenamiento: No requieren recolección, anotación ni etiquetado masivo de miles de imágenes de colisiones o escenarios de peligro.
+- Consumo de Recursos Reducido (SWaP): Mientras que redes como YOLOv8s demandan hardware pesado con tarjetas gráficas dedicadas (como GPU RTX) para alcanzar tiempos de ~205 ms, algoritmos basados en IPM y SLIC procesan la escena en 26.6 ms en procesadores ligeros aptos para robótica móvil y micro UAVs.
+
 # 2026-0820
 
 ## Análisis: Inestabilidad del SLM Deliberativo
