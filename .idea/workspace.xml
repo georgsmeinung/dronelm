@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="618805ba-a30e-4878-be6c-9f30e2016136" name="Changes" comment="LOG.md update" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;georgsmeinung&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/georgsmeinung/lm-drone.git&quot;,
+    &quot;accountId&quot;: &quot;76ec8fbd-4159-4b64-a2e2-57d3cb901451&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="384Xnwze52n3GCmE9LhrbDeXvbG" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.airsim_logger.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "D:/TesisMCD/lm-drone",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-0978a7220b69-9867c7d4c0a4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.28294.336" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="618805ba-a30e-4878-be6c-9f30e2016136" name="Changes" comment="" />
+      <created>1768059988667</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1768059988667</updated>
+    </task>
+    <task id="LOCAL-00001" summary="Updated README.md and MCP command">
+      <option name="closed" value="true" />
+      <created>1768061238371</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1768061238371</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Updated README.md and LOG.md">
+      <option name="closed" value="true" />
+      <created>1768063278364</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1768063278364</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Uploaded follow_up">
+      <option name="closed" value="true" />
+      <created>1768063929492</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1768063929492</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Updated Log and README.md">
+      <option name="closed" value="true" />
+      <created>1768088862872</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1768088862872</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Updated LOG.md">
+      <option name="closed" value="true" />
+      <created>1768089568025</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1768089568025</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Updated README.md">
+      <option name="closed" value="true" />
+      <created>1768091693398</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1768091693398</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Updated README.md">
+      <option name="closed" value="true" />
+      <created>1768091903916</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1768091903916</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Updated LOG.md">
+      <option name="closed" value="true" />
+      <created>1768582695858</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1768582695858</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Updated LOG.md">
+      <option name="closed" value="true" />
+      <created>1769834790232</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1769834790232</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Updated LOG.md">
+      <option name="closed" value="true" />
+      <created>1769834890259</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1769834890259</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Updated LOG.md">
+      <option name="closed" value="true" />
+      <created>1772594881357</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1772594881357</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Updated LOG.md">
+      <option name="closed" value="true" />
+      <created>1772680623792</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1772680623792</updated>
+    </task>
+    <task id="LOCAL-00013" summary="New drone mcp server">
+      <option name="closed" value="true" />
+      <created>1773359550588</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1773359550588</updated>
+    </task>
+    <task id="LOCAL-00014" summary="New local LLM to run Claude Code">
+      <option name="closed" value="true" />
+      <created>1773436573494</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1773436573494</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Log from MCP server for controlling the drone">
+      <option name="closed" value="true" />
+      <created>1774996672230</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1774996672230</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Excluded MCP server Log from repository">
+      <option name="closed" value="true" />
+      <created>1774996856226</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1774996856226</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Added to log new stack for flying calibration">
+      <option name="closed" value="true" />
+      <created>1775003147566</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1775003147566</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Added to log new stack for flying calibration">
+      <option name="closed" value="true" />
+      <created>1775006924653</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1775006924653</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Added reset condition stop to logger">
+      <option name="closed" value="true" />
+      <created>1775143468526</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1775143468526</updated>
+    </task>
+    <task id="LOCAL-00020" summary="LOG.md update">
+      <option name="closed" value="true" />
+      <created>1775143592432</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1775143592432</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
+    <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Updated README.md and MCP command" />
+    <MESSAGE value="Updated README.md and LOG.md" />
+    <MESSAGE value="Uploaded follow_up" />
+    <MESSAGE value="Updated Log and README.md" />
+    <MESSAGE value="Updated README.md" />
+    <MESSAGE value="Updated LOG.md" />
+    <MESSAGE value="New drone mcp server" />
+    <MESSAGE value="New local LLM to run Claude Code" />
+    <MESSAGE value="Log from MCP server for controlling the drone" />
+    <MESSAGE value="Excluded MCP server Log from repository" />
+    <MESSAGE value="Added to log new stack for flying calibration" />
+    <MESSAGE value="Added reset condition stop to logger" />
+    <MESSAGE value="LOG.md update" />
+    <option name="LAST_COMMIT_MESSAGE" value="LOG.md update" />
+  </component>
+</project>
