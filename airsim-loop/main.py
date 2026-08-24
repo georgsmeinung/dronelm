@@ -214,7 +214,6 @@ def main() -> None:
             drone_state["waypoint_guidance"] = guidance
             drone_state["mission_completed"] = waypoint_tracker.is_completed
             drone_state["telemetry"] = telem_now
-            drone_state["rgb_image"] = None
             if waypoint_tracker.is_completed:
                 drone_state["flight_status"] = "mision_completada"
 
@@ -401,7 +400,6 @@ def main() -> None:
         try:
             # pyrefly: ignore [missing-import]
             from airsim_plan.bridge.stream_hub import stream_hub
-            import time
             stream_hub.publish(
                 frame=None,
                 telemetry={

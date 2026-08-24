@@ -25,6 +25,7 @@ class DroneState(TypedDict, total=False):
     """Estado que circula entre los nodos del grafo en el nuevo pipeline jerárquico."""
 
     rgb_image: Any
+    prev_image: Any  # Memoria del fotograma anterior para el flujo óptico
     annotated_image: Any  # Frame con bboxes de YOLO superpuestos para el VLM
     frame_history: List[Any]  # Ring buffer de los últimos N frames anotados [t-3, t-2, t-1, t]
     prev_canny_edges: Any
@@ -114,7 +115,7 @@ def _build_nodes() -> Dict[str, Any]:
             # Not enough data yet, skip processing
             state["optical_flow_map"] = None
             return state
-        flow = OpticalFlowEstimator().estimate(prev_image, curr_image)
+        ttc, flow = OpticalFlowEstimator().estimate(curr_image, prev_image)
         state["optical_flow_map"] = flow
         return state
 
@@ -126,12 +127,11 @@ def _build_nodes() -> Dict[str, Any]:
             state["occlusion_ratio"] = 0.0
             state["fov_blocked"] = False
             return state
-        mask = IPMSegmentator().segment(image)
+        prev_image = state.get("prev_image")
+        telemetry = state.get("telemetry", {})
+        mask, occ_pct, annotated = IPMSegmentator().segment(image, prev_image, telemetry)
         state["obstacle_mask"] = mask
-        # Simple occlusion ratio: proportion of masked pixels
-        total_pixels = mask.size if hasattr(mask, "size") else (mask.shape[0] * mask.shape[1])
-        blocked_pixels = mask.sum() if hasattr(mask, "sum") else int(mask.astype(bool).sum())
-        occlusion = blocked_pixels / total_pixels if total_pixels else 0.0
+        occlusion = occ_pct / 100.0
         state["occlusion_ratio"] = occlusion
         threshold = float(os.getenv("FOV_BLOCKED_THRESHOLD", "0.6"))
         state["fov_blocked"] = occlusion > threshold
