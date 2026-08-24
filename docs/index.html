@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM) en Unreal Engine." />
-  <title>Navegación Autónoma de Drones con SLM - Tesis Maestría Ciencia de Datos</title>
+    content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Modelos de Lenguaje y Visión (SLM/VLM) en Unreal Engine." />
+  <title>Navegación Autónoma de Drones con SLM/VLM - Tesis Maestría Ciencia de Datos</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,12 +70,12 @@
         <p class="lead-subtitle">
           Esta documentación reúne el trabajo final de posgrado de la <strong>Maestría en Ciencia de Datos</strong> de
           la <strong>Universidad Austral</strong>. Explora el comportamiento deliberativo de modelos de lenguaje
-          pequeños frente a aproximaciones estándar en la simulación de vuelo en tres dimensiones.
+          pequeños y visión multimodal frente a aproximaciones geométricas y reactivas estándar en la simulación de vuelo en tres dimensiones.
         </p>
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Actividad: 2026-08-20</span>
+          <span class="badge-pill badge-teal">Actividad: 2026-08-24</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -90,20 +90,16 @@
         <p>
           Este proyecto de tesis consiste en el diseño, implementación y evaluación experimental de un sistema de
           <strong>navegación autónoma para drones cuadricópteros (eVTOL)</strong> operando en entornos urbanos simulados
-          de alta fidelidad.
+          de alta fidelidad mediante <strong>visión monocular pura (RGB)</strong>.
         </p>
         <p>
-          El núcleo científico es el contraste entre la toma de decisiones basada en <strong>Modelos de Lenguaje
-            Pequeños (SLMs)</strong> locales y aproximaciones de control convencionales como <strong>Máquinas de Estados
-            Finitos (FSM)</strong> y pilotaje manual. Se examinan dimensiones clave como la latencia de respuesta, el
-          uso de memoria/VRAM, la robustez ante colisiones y el comportamiento inercial en dinámicas tridimensionales.
+          El núcleo científico es el contraste entre la toma de decisiones basada en <strong>Modelos de Lenguaje Pequeños y de Visión (SLMs / VLMs)</strong> locales y aproximaciones clásicas deterministas como <strong>segmentación geométrica por IPM</strong> (Inverse Perspective Mapping), <strong>Flujo Óptico con Time-To-Collision (TTC)</strong> y control en cuadrícula urbana (Manhattan Navigation). Se examinan dimensiones clave como latencia de respuesta, consumo computacional (SWaP), robustez ante colisiones y comportamiento cinemático tridimensional.
         </p>
         <div class="alert-box">
           <p>
             <strong>Paradigma de Operación:</strong> La simulación se ejecuta de manera fotorrealista sobre
             <strong>Unreal Engine 5.5</strong> usando el plugin avanzado <strong>Cosys-AirSim</strong>, lo que permite
-            evaluar el rendimiento óptico y de control en tiempo real en entornos dinámicos con tráfico urbano y
-            peatones.
+            evaluar el rendimiento óptico, geométrico y deliberativo en tiempo real en cañones urbanos dinámicos con tráfico y peatones.
           </p>
         </div>
       </section>
@@ -112,54 +108,45 @@
       <section id="arquitectura">
         <h2>Arquitectura del Sistema</h2>
         <p>
-          El sistema implementa una arquitectura desacoplada de dos niveles (Lazo de Planificación y Lazo de Vuelo
-          Táctico) que interactúan para mantener el vuelo guiado e inteligente del dron.
+          El sistema implementa una arquitectura desacoplada de dos niveles (Lazo de Planificación en Tierra y Lazo Táctico Autónomo en Vuelo) que interactúan para mantener el vuelo seguro e inteligente:
         </p>
 
-        <h3>1. Lazo de Planificación (Ground-Station - <code>airsim-plan</code>)</h3>
+        <h3>1. Lazo de Planificación y Estación de Tierra (<code>airsim-plan</code> / WebDCS)</h3>
         <p>
-          Se ejecuta en la estación de tierra antes del vuelo. El operador introduce instrucciones en lenguaje natural
-          (ej. <em>"Recorre el perímetro norte a 10m de altitud..."</em>). Un LLM local procesa esta directiva y genera
-          un <strong>Contrato de Vuelo estructurado</strong> en formato JSON (<code>MissionManifest.json</code>), el
-          cual predefine waypoints, límites de seguridad y parámetros operativos.
+          Se ejecuta en la estación de control en tierra. El operador introduce instrucciones en lenguaje natural
+          (ej. <em>"Recorre el perímetro norte a 10m de altitud..."</em>). Un LLM procesa esta directiva y genera
+          un <strong>Contrato de Vuelo estructurado</strong> en formato JSON (<code>MissionManifest.json</code>) con waypoints georreferenciados en la cuadrícula urbana.
+        </p>
+        <p>
+          La suite incluye <strong>WebDCS (Ground Control Station Web)</strong> sobre FastAPI, que proporciona visualización de mapas, gestión integral de manifiestos, streaming de video en vivo con compensación de latencia de inferencia y un <strong>Panel de Auditoría SLM interactivo</strong> para inspeccionar prompts contextuales, respuestas crudas y tiempos de ejecución paso a paso.
         </p>
 
-        <h3>2. Lazo de Vuelo Táctico (In-Flight - <code>airsim-loop</code>)</h3>
+        <h3>2. Lazo de Vuelo Táctico Autónomo (In-Flight - <code>airsim-loop</code>)</h3>
         <p>
           Es un bucle autónomo continuo de alta frecuencia implementado sobre <strong>LangGraph</strong> que coordina la
-          telemetría y percepción óptica:
+          percepción monocular, la detección geométrica de obstáculos y la deliberación inteligente:
         </p>
         <ul>
-          <li><strong>Percepción Visual:</strong> Un modelo de red convolucional (<strong>YOLOv8 / YOLO26</strong>)
-            extrae en tiempo real los fotogramas del feed de video del dron, soportando segmentación
-            semántica/instancias y detección tradicional.</li>
-          <li><strong>Traductor Pixeles a Palabras y Análisis de Colisiones:</strong> Transforma los bboxes y máscaras
-            en resúmenes lingüísticos y realiza el análisis temporal de tasa de crecimiento (looming). Registra la
-            velocidad de cambio de ocupación en la Región de Interés (ROI) Central mediante suavizado por Media Móvil
-            Exponencial (EMA con `EMA_ALPHA = 0.4`).</li>
-          <li><strong>El Gatekeeper:</strong> Funciona como un enrutador condicional. Si el análisis de colisión por
-            looming detecta peligro (tasa de crecimiento por encima del umbral por clase), o si se encuentra un
-            obstáculo central tradicional cercano, delega inmediatamente la evasión al <strong>SLM Local</strong>. Si el
-            camino está despejado, dirige el flujo a una regla reactiva rápida.</li>
-          <li><strong>Cerebro Deliberativo (SLM):</strong> El modelo local procesa el estado textual y determina
-            maniobras de evasión utilizando <strong>decodificación restringida (JSON Schema)</strong> para evitar
-            desviaciones estructurales.</li>
+          <li><strong>Flujo Óptico y Estimación de TTC (<code>optical_flow_node</code> / <code>ttc_router</code>):</strong> Monitorea el foco de expansión (FOE) y la divergencia radial entre fotogramas consecutivos. Si el Tiempo de Colisión estimado cae por debajo del umbral crítico (TTC &lt; 2.5s), activa de inmediato el frenado preventivo del dron.</li>
+          <li><strong>Segmentación Geométrica IPM y Cálculo de Oclusión (<code>ipm_segmentation_node</code>):</strong> Mediante matrices de homografía de suelo (IPM) y superpíxeles compactos (SLIC), aísla estructuras tridimensionales en solo 26.6ms sin redes neuronales y calcula el <em>Ratio de Oclusión</em> porcentual del campo visual.</li>
+          <li><strong>Enrutador de Muros Ciegos (<code>blind_wall_router</code>):</strong> Si el obstáculo cubre el campo visual masivamente (Ratio &ge; 90%, e.g., pared sólida de rascacielos), activa un <em>Bypass Determinista</em> (<code>GIRAR_90</code>) para orientar la cámara al corredor lateral sin despertar al VLM, evitando parálisis y alucinaciones.</li>
+          <li><strong>Cerebro Deliberativo Multimodal (VLM / SLM - <code>hover_and_slm</code>):</strong> Para oclusiones parciales (&lt; 90%), el dron envía una secuencia temporal FIFO de hasta 4 fotogramas anotados ($t-3, t-2, t-1, t$) en base64 a un VLM local (Qwen2.5-VL-3B) para evaluar pasillos libres y determinar macro-acciones (<code>AVANZAR</code>, <code>EVADIR_IZQUIERDA</code>, <code>EVADIR_DERECHA</code>, <code>GANAR_ALTURA</code>).</li>
+          <li><strong>Navegación Urbana en Cuadrícula (Manhattan Detour & Cornering):</strong> Inyección dinámica de sub-waypoints de esquina (<code>CORNER_WP</code>) con alineación ortogonal estricta ($0^\circ, \pm 90^\circ, 180^\circ$), eliminando oscilaciones en zigzag y el efecto imán contra fachadas.</li>
+          <li><strong>Aterrizaje Autónomo:</strong> Detección de fin de ruta, descenso controlado con <code>landAsync()</code>, desarme de motores y desasociación limpia del runner en WebDCS.</li>
         </ul>
 
         <figure>
           <img
-            src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/Infografia README Fondo Blanco.png"
-            alt="Arquitectura del Doble Lazo del Sistema DronELM" loading="lazy" />
-          <figcaption>Figura 1 — Flujo conceptual y comunicación entre la estación de tierra y el bucle de vuelo en el
-            dron.</figcaption>
+            src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0823 Refinamiento Algoritmo de Navegacion.png"
+            alt="Refinamiento del Algoritmo de Navegación con Blind Wall Avoidance e IPM" loading="lazy" />
+          <figcaption>Figura 1 — Flujo del nuevo algoritmo de navegación: Flujo Óptico &rarr; IPM &rarr; Blind Wall Router &rarr; VLM / Bypass.</figcaption>
         </figure>
 
         <figure>
           <img
-            src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0626 Navegación con SLM - Fondo Blanco.png"
-            alt="Detalle del Lazo Táctico en LangGraph" loading="lazy" />
-          <figcaption>Figura 2 — Grafo de ejecución en vuelo (airsim-loop) con el Gatekeeper controlando el paso
-            deliberativo.</figcaption>
+            src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0823 Nuevo Grafo de Navegacion.png"
+            alt="Grafo de Navegación en LangGraph con Enrutador de Muros Ciegos" loading="lazy" />
+          <figcaption>Figura 2 — Grafo de ejecución en LangGraph integrando el enrutador de muros ciegos y deliberación VLM.</figcaption>
         </figure>
       </section>
 
@@ -174,33 +161,27 @@
         <div class="card-grid">
           <div class="card">
             <h4><code>airsim-plan</code></h4>
-            <p>Planificador e interfaz de comando en tierra. Traduce peticiones en lenguaje natural a manifiestos de
-              vuelo estructurados.</p>
+            <p>Planificador e interfaz de comando en tierra. Contiene el compilador de misiones y la plataforma web <strong>WebDCS</strong> con streaming de video e inspector de auditoría SLM.</p>
           </div>
           <div class="card">
             <h4><code>airsim-loop</code></h4>
-            <p>El lazo táctico. Orquesta el procesamiento de imágenes YOLO, la lógica del Gatekeeper de LangGraph y la
-              inferencia con el SLM local.</p>
+            <p>El lazo táctico autónomo. Orquesta el flujo óptico, segmentación IPM, el <code>blind_wall_router</code> en LangGraph y la inferencia deliberativa con el VLM/SLM local.</p>
           </div>
           <div class="card">
             <h4><code>airsim-mcp</code></h4>
-            <p>Servidor bajo el Model Context Protocol para exponer control de vuelo y telemetría como herramientas
-              (tools) para agentes externos.</p>
+            <p>Servidor bajo el Model Context Protocol para exponer control de vuelo y telemetría como herramientas (tools) para agentes autónomos externos.</p>
           </div>
           <div class="card">
             <h4><code>callibration_flight</code></h4>
-            <p>Planillas, comandos y notebooks estadísticos para comparar la fidelidad inercial y física del simulador
-              contra telemetría de drones reales.</p>
+            <p>Planillas, comandos y notebooks estadísticos para comparar la fidelidad inercial y física del simulador contra telemetría de drones reales (DJI).</p>
           </div>
           <div class="card">
             <h4><code>local-llm-eval</code></h4>
-            <p>Suite de benchmarking local para medir tokens por segundo y latencias de carga de modelos mediante
-              promptfoo y ollama-benchmark.</p>
+            <p>Suite de benchmarking local para medir tokens por segundo, latencias de carga y estructuración JSON mediante promptfoo y ollama-benchmark.</p>
           </div>
           <div class="card">
             <h4><code>airsim-kc</code> y <code>poc</code></h4>
-            <p>Scripts de control manual por teclado y pruebas de concepto rápidas de conexión con la API de simulación.
-            </p>
+            <p>Scripts de control manual por teclado y pruebas de concepto rápidas de conexión con la API de simulación y telemetría de colisión.</p>
           </div>
         </div>
       </section>
@@ -208,8 +189,7 @@
       <!-- Stack Tecnológico -->
       <section id="stack">
         <h2>Stack Tecnológico</h2>
-        <p>El ecosistema tecnológico combina motores gráficos industriales con las últimas técnicas de inferencia de IA
-          local:</p>
+        <p>El ecosistema tecnológico combina motores gráficos industriales con las últimas técnicas de visión monocular e IA local:</p>
 
         <div class="table-container">
           <table>
@@ -224,32 +204,37 @@
               <tr>
                 <td><strong>Entorno & Física</strong></td>
                 <td>Unreal Engine 5.5 + Cosys-AirSim</td>
-                <td>Simulación física y visual del espacio aéreo urbano.</td>
+                <td>Simulación física y visual del espacio aéreo urbano fotorrealista.</td>
               </tr>
               <tr>
-                <td><strong>Visión por Computadora</strong></td>
+                <td><strong>Segmentación & Flujo Óptico</strong></td>
+                <td>IPM + Superpíxeles SLIC / Farnebäck FOE</td>
+                <td>Segmentación geométrica ultra-rápida (26.6ms en CPU) agnóstica a clases y detección de TTC por looming.</td>
+              </tr>
+              <tr>
+                <td><strong>Visión por Computadora (YOLO)</strong></td>
                 <td>YOLOv8 / YOLO26 + <strong>NVIDIA TensorRT Engine</strong></td>
-                <td>Inferencia ultra-rápida (2ms por frame) para detección y segmentación semántica continua.</td>
+                <td>Inferencia ultra-rápida (2ms por frame en GPU RTX) para detección y segmentación semántica complementaria.</td>
+              </tr>
+              <tr>
+                <td><strong>Cerebro Deliberativo (VLM / SLM)</strong></td>
+                <td>Qwen2.5-VL (3B) / Qwen 2.5 / Phi-3 / Llama 3.2 / Liquid LFM</td>
+                <td>Modelos de lenguaje y visión multimodales ejecutados localmente en LM Studio / Ollama (API OpenAI compatible).</td>
               </tr>
               <tr>
                 <td><strong>Ground Control Station</strong></td>
                 <td>FastAPI + WebDCS (HTML5 / Vanilla JS / CSS)</td>
-                <td>Streaming de video en vivo, telemetría, gestión de misiones y panel de auditoría interactivo SLM.</td>
+                <td>Streaming de video continuo, telemetría en tiempo real, gestión de mapas y panel de auditoría interactivo VLM/SLM.</td>
               </tr>
               <tr>
                 <td><strong>Orquestación Táctica</strong></td>
-                <td>LangGraph & Pydantic</td>
-                <td>Implementación del grafo cíclico de navegación en vuelo de baja latencia.</td>
-              </tr>
-              <tr>
-                <td><strong>Inferencia Local</strong></td>
-                <td>LM Studio / Ollama (API OpenAI compatible)</td>
-                <td>Ejecución local de SLMs de razonamiento táctico (Qwen 2.5, Phi-3, Llama 3.2).</td>
+                <td>LangGraph, Pydantic & Subproceso Aislado OS</td>
+                <td>Grafo cíclico de navegación en vuelo ejecutado en subproceso no buferizado para eliminar deadlocks RPC.</td>
               </tr>
               <tr>
                 <td><strong>Infraestructura de Inferencia</strong></td>
                 <td>GPU NVIDIA RTX 5060 + AMD Ryzen 7 5700</td>
-                <td>Plataforma para simulación en tiempo real e inferencia concurrente de visión y lenguaje.</td>
+                <td>Plataforma para simulación en tiempo real e inferencia concurrente de visión monocular y modelos de lenguaje.</td>
               </tr>
             </tbody>
           </table>
@@ -261,7 +246,7 @@
         <h2>Evaluación y Calibración</h2>
         <p>
           Un pilar fundamental de la tesis es garantizar la representatividad física del simulador y medir
-          cuantitativamente el comportamiento de los modelos de lenguaje locales.
+          cuantitativamente el comportamiento de los modelos de lenguaje y visión locales.
         </p>
 
         <h3>1. Calibración del Simulador vs. Telemetría Real</h3>
@@ -281,7 +266,7 @@
 
         <h3>2. Benchmark de Inferencia de SLMs Locales</h3>
         <p>
-          Utilizando <code>ollama-benchmark</code>, se analizó el rendimiento de tokens por segundo (T/s) y la velocidad
+          Utilizando <code>ollama-benchmark</code> y <code>promptfoo</code>, se analizó el rendimiento de tokens por segundo (T/s) y la velocidad
           de carga de diversos modelos ligeros candidatos para la companion computer:
         </p>
 
@@ -344,7 +329,7 @@
         </div>
         <p class="muted">
           * Los modelos de LiquidAI (arquitectura LFM) destacan de manera abrumadora en tasa de generación,
-          convirtiéndose en fuertes candidatos para el procesamiento táctico en vuelo de baja latencia.
+          mientras que los modelos de la familia Qwen2.5-VL permiten una percepción multimodal directa de alta precisión.
         </p>
       </section>
 
@@ -353,8 +338,80 @@
         <h2>Historial de Cambios Destacados</h2>
         <p>Evolución reciente del repositorio y hitos de desarrollo alcanzados:</p>
 
-        <!-- Item 2026-08-20 -->
         <div class="timeline">
+          <!-- Item 2026-08-23 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-23
+              <span class="tag">Blind Wall Avoidance</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Algoritmo de Evasión de Muros Ciegos, Oclusión IPM y Streaming Continuo</h4>
+              <p>Se implementó una solución integral para evitar que el cerebro deliberativo del dron (VLM) se congele o alucine salidas en cañones urbanos frente a paredes u obstáculos masivos que cubren por completo su campo de visión:</p>
+              <ul>
+                <li><strong>Flujo Óptico y TTC Crítico:</strong> Detección de divergencia masiva (FOE) y activación del freno de emergencia cuando TTC &lt; 2.5s.</li>
+                <li><strong>Cálculo del Ratio de Oclusión (IPM + SLIC):</strong> Segmentación geométrica y cálculo del porcentaje de ocupación visual ($Ratio = \frac{Pixeles\_Obstaculo}{Total\_Pixeles\_Imagen} \times 100$).</li>
+                <li><strong>Enrutador de Muros Ciegos (<code>blind_wall_router</code>):</strong> Si el ratio &ge; 90% (FOV Bloqueado), se aplica un <em>Bypass Determinista</em> ejecutando un giro ortogonal de $90^\circ$ sin consultar a la IA. Para ratios &lt; 90% (con pasillos visibles), la imagen se envía al VLM.</li>
+                <li><strong>WebDCS Streaming Estable:</strong> Eliminación de bounding boxes obsoletas de YOLO en el visor de video, retención del último frame mediante bandera lógica (<code>connected</code>) ante demoras de inferencia y desconexión limpia proactiva al oprimir Detener.</li>
+              </ul>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0823 Refinamiento Algoritmo de Navegacion.png"
+                  alt="Refinamiento del Algoritmo de Navegación" loading="lazy" />
+                <figcaption>Esquema de refinamiento algorítmico con enrutador de muros ciegos y bypass determinista.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-22 -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-22
+              <span class="tag">Segmentación sin YOLO</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Segmentación Geométrica y Detección de Obstáculos sin Redes Neuronales</h4>
+              <p>Evaluación e implementación de métodos clásicos de visión artificial para aislar obstáculos con mínimo consumo computacional (SWaP) y detección agnóstica de clases:</p>
+              <ul>
+                <li><strong>IPM con Superpíxeles SLIC y Distancias Geodésicas:</strong> Homografía del suelo $H$ para cancelar el plano terrestre mediante diferencia absoluta. Agrupación en superpíxeles SLIC (espacio 5D CIELab + XY) y cálculo de distancias geodésicas sobre grafos en solo 26.6 ms (37.6 FPS en CPU).</li>
+                <li><strong>Flujo Óptico Residual en Vista Cenital (BEV) y FOE + DBSCAN:</strong> Agrupación de vectores divergentes de movimiento propio para delimitar obstáculos sin depender de modelos preentrenados.</li>
+              </ul>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0822 Segmentación y Detección sin YOLO.png"
+                  alt="Segmentación y Detección sin YOLO" loading="lazy" />
+                <figcaption>Comparativa de métodos geométricos y clásicos de segmentación y detección monocular.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-20 (VLM Multimodal) -->
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-20
+              <span class="tag">VLM Multimodal</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Migración a VLM Multimodal (Visión Directa y Secuencia Temporal de 4 Frames)</h4>
+              <p>Para solucionar el cuello de botella de información (donde 777,600 píxeles se reducían a 3 líneas de texto), se migró el cerebro deliberativo a un <strong>VLM multimodal (Qwen2.5-VL-3B)</strong>:</p>
+              <ul>
+                <li><strong>Visión Directa Base64:</strong> Envío de fotogramas completos codificados en JPEG base64 a través de la API multimodal.</li>
+                <li><strong>Ring Buffer Temporal (4 Frames):</strong> Envío de secuencia cronológica ($t-3, t-2, t-1, t$) para permitir que el modelo razone sobre la tasa de expansión visual (looming) y pasillos transitables.</li>
+                <li><strong>Aislamiento en Subproceso OS:</strong> Ejecución de <code>airsim-loop</code> mediante <code>subprocess.Popen</code> no buferizado (`-u`), eliminando deadlocks en sockets MsgPack-RPC de AirSim y agregando trazas de telemetría física de colisión.</li>
+              </ul>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0820 Mejoras con VLM.jpg"
+                  alt="Mejoras de Visión Multimodal con VLM" loading="lazy" />
+                <figcaption>Arquitectura del nodo deliberativo con visión directa multimodal y secuencia temporal.</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Item 2026-08-20 (Manhattan) -->
           <div class="timeline-item">
             <div class="timeline-badge"></div>
             <div class="timeline-date">
@@ -378,11 +435,11 @@
             <div class="timeline-badge"></div>
             <div class="timeline-date">
               2026-08-19
-              <span class="tag">WebDCS / SLM Audit</span>
+              <span class="tag">WebDCS / Aterrizaje</span>
             </div>
             <div class="timeline-content">
-              <h4>Panel de Auditoría e Inspección SLM en Tiempo Real en WebDCS</h4>
-              <p>Despliegue del panel de inspección interactivo en WebDCS para auditar las decisiones del SLM en vivo. Incluye telemetría en tiempo real, latencias en milisegundos, visualización del prompt contextual (3 sectores) y respuesta JSON cruda, además de guiado geométrico de corredor para estabilizar vuelos en línea recta.</p>
+              <h4>Aterrizaje Autónomo de Misión y Panel de Auditoría SLM en WebDCS</h4>
+              <p>Despliegue del panel de inspección interactivo en WebDCS para auditar las decisiones del SLM en vivo. Incluye telemetría en tiempo real, latencias en milisegundos, visualización del prompt contextual (3 sectores) y respuesta JSON cruda, además del ciclo completo de fin de misión con descenso controlado (<code>landAsync()</code>), desarme de motores y devolución limpia del control.</p>
               <figure>
                 <img
                   src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0819 Aterrizaje al finalizar la mision.jpg"
@@ -676,14 +733,11 @@ conda activate airsimenv</code></pre>
   }
 }</code></pre>
 
-        <h3>3. Lanzar la misión</h3>
-        <p>Inicie la simulación en Unreal Engine en modo <strong>Play</strong>. A continuación, ejecute el planificador
-          desde la terminal de comandos:</p>
+        <h3>3. Lanzar la Ground Control Station (WebDCS)</h3>
+        <p>Inicie la estación de control web basada en FastAPI para planificar misiones, supervisar el vuelo y auditar decisiones del VLM/SLM:</p>
         <pre><code>cd airsim-plan
-pip install -e .
-airsim-plan run -i "Recorre el perímetro norte a 10 metros de altitud y a velocidad máxima de 5 m/s, esquiva obstáculos"</code></pre>
-        <p>El planificador generará el manifiesto y lanzará el bucle táctico reactivo/deliberativo
-          (<code>airsim-loop</code>).</p>
+python -m airsim_plan.webdcs.server</code></pre>
+        <p>Acceda a <code>http://localhost:8000</code> en su navegador para cargar el mapa, trazar la ruta y lanzar el lazo de control táctico autónomo (<code>airsim-loop</code>).</p>
       </section>
 
       <footer>
