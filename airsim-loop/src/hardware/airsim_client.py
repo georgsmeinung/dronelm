@@ -36,6 +36,14 @@ DEFAULT_VEHICLE = os.getenv("AIRSIM_VEHICLE_NAME", "Drone1")
 DEFAULT_CAMERA = os.getenv("AIRSIM_CAMERA_NAME", "0")
 DEFAULT_FRAME_WIDTH = int(os.getenv("DEFAULT_FRAME_WIDTH", "1080"))
 DEFAULT_FRAME_HEIGHT = int(os.getenv("DEFAULT_FRAME_HEIGHT", "720"))
+# F0.6: en modo estricto (default en vuelo), si AirSim no responde, capture()
+# devuelve None en lugar de un frame sintetico. Los frames simulados quedan
+# disponibles solo para tests (AIRSIM_STRICT=false).
+AIRSIM_STRICT = os.getenv("AIRSIM_STRICT", "true").lower() == "true"
+# F0.1: duracion del comando de velocidad como multiplo del periodo del lazo,
+# para que el comando siga vigente aunque el ciclo siguiente se demore un
+# poco, sin bloquear esperando a que termine (last-command-wins en AirSim).
+MOVE_DURATION_LOOP_MULTIPLIER = float(os.getenv("MOVE_DURATION_LOOP_MULTIPLIER", "2.5"))
 
 
 @dataclass
@@ -57,9 +65,15 @@ class AirSimClient:
     # Timeout en segundos para las llamadas RPC al servidor de AirSim.
     # Configurable vía AIRSIM_RPC_TIMEOUT para evitar bloqueos silenciosos de simGetImages.
     timeout_seconds: float = float(os.getenv("AIRSIM_RPC_TIMEOUT", "8"))
+    # Frecuencia del lazo de control: determina la duración de cada comando de
+    # velocidad emitido (ver execute_velocity). Configurable para que main.py
+    # pueda propagar LOOP_HZ sin tocar código.
+    loop_hz: float = float(os.getenv("LOOP_HZ", "5.0"))
     _client: Any = field(default=None, init=False, repr=False)
     _connected: bool = field(default=False, init=False, repr=False)
-    # Último Future de movimiento activo; se guarda para detectar acumulación de comandos async.
+    # Último Future de movimiento activo; se guarda solo para poder cancelarlo
+    # en el apagado (disconnect/land), nunca se espera (.join()) en el ciclo
+    # de control: eso es lo que fijaba el período del lazo en 2s.
     _last_move_future: Any = field(default=None, init=False, repr=False)
 
     # ------------------------------------------------------------------ #
@@ -148,9 +162,7 @@ class AirSimClient:
         menos ``position``, ``velocity`` y ``orientation`` en el marco NED.
         """
         if not self._connected or self._client is None:
-            if return_depth:
-                return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
-            return self._simulated_frame(), self._simulated_telemetry()
+            return self._unavailable_capture(return_depth)
         try:
             t_start = time.time()
             camera_id = int(self.camera_name) if self.camera_name.isdigit() else self.camera_name
@@ -232,9 +244,26 @@ class AirSimClient:
             return image, telemetry
         except Exception as exc:
             print(f"[AirSimClient] Error capturando datos: {exc}")
+            return self._unavailable_capture(return_depth)
+
+    def _unavailable_capture(
+        self, return_depth: bool
+    ) -> Tuple[Optional[np.ndarray], Dict[str, Any]] | Tuple[Optional[np.ndarray], Optional[np.ndarray], Dict[str, Any]]:
+        """Respuesta cuando AirSim no está disponible.
+
+        En modo estricto (default en vuelo) NO se inventa un frame: el
+        pipeline de percepción y deliberación debe degradarse explícitamente
+        (ver main.py) en lugar de "volar" sobre datos ficticios. Los frames
+        simulados solo se usan en tests con AIRSIM_STRICT=false.
+        """
+        if AIRSIM_STRICT:
+            telem = self._simulated_telemetry()
             if return_depth:
-                return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
-            return self._simulated_frame(), self._simulated_telemetry()
+                return None, None, telem
+            return None, telem
+        if return_depth:
+            return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
+        return self._simulated_frame(), self._simulated_telemetry()
 
     def get_telemetry(self) -> Dict[str, Any]:
         """Obtiene la telemetria de posicion, velocidad y orientacion actual del dron."""
@@ -272,10 +301,31 @@ class AirSimClient:
             )
             return True
         try:
-            # Si todas las velocidades y giro son nulos, activar hover de seguridad
-            if abs(vx) < 0.05 and abs(vy) < 0.05 and abs(vz) < 0.05 and abs(yaw_rate) < 0.01:
-                self._client.hoverAsync(vehicle_name=self.vehicle_name).join()
-                self._last_move_future = None
+            # moveByVelocityBodyFrameAsync es "last-command-wins" en el servidor
+            # de AirSim: no hace falta esperar (join) al comando anterior para
+            # emitir el siguiente. Antes, cada ciclo bloqueaba hasta 2s
+            # esperando ese join, lo cual fijaba el período del lazo en vez de
+            # ser su consecuencia. cancelLastTask() descarta cualquier
+            # comando en curso sin bloquear, permitiendo abortar una maniobra
+            # a mitad de ejecución.
+            try:
+                self._client.cancelLastTask(vehicle_name=self.vehicle_name)
+            except Exception:
+                pass
+
+            duration = MOVE_DURATION_LOOP_MULTIPLIER / max(self.loop_hz, 0.1)
+
+            # Si todas las velocidades y giro son nulos, mantener el mismo
+            # comando de velocidad-cero (no usar hoverAsync().join(), que
+            # bloquea): un vx=vy=vz=0 con duration acotada logra el mismo
+            # efecto sin detener el lazo.
+            if abs(vx) < 0.05 and abs(vy) < 0.05 and abs(vz) < 0.05 and abs(yaw_rate) < 0.01 and target_yaw is None:
+                self._last_move_future = self._client.moveByVelocityBodyFrameAsync(
+                    0.0, 0.0, 0.0, duration=duration,
+                    drivetrain=airsim.DrivetrainType.ForwardOnly,
+                    yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0.0),
+                    vehicle_name=self.vehicle_name,
+                )
                 return True
 
             if abs(yaw_rate) > 0.01:
@@ -288,20 +338,11 @@ class AirSimClient:
                 drivetrain = airsim.DrivetrainType.ForwardOnly
                 yaw_mode = airsim.YawMode(is_rate=False, yaw_or_rate=0.0)
 
-            # Descartar el Future anterior si todavía está pendiente para no acumular
-            # comandos async en la cola RPC del servidor de AirSim.
-            if self._last_move_future is not None:
-                try:
-                    self._last_move_future.join()
-                except Exception:
-                    pass
-                self._last_move_future = None
-
             self._last_move_future = self._client.moveByVelocityBodyFrameAsync(
                 vx,
                 vy,
                 vz,
-                duration=2.0,
+                duration=duration,
                 drivetrain=drivetrain,
                 yaw_mode=yaw_mode,
                 vehicle_name=self.vehicle_name,

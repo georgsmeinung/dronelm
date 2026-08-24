@@ -37,7 +37,6 @@ a la fecha de la última actualización del CHANGELOG.
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![UnrealEngine](https://img.shields.io/badge/Simulator-Unreal_Engine_5.5-green)](https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-engine-5-5-documentation?application_version=5.5)
 [![AirSim](https://img.shields.io/badge/Plug_in-Cosys_AirSim-critical)](https://github.com/Cosys-Lab/Cosys-AirSim/)
-[![TensorRT](https://img.shields.io/badge/Inference-NVIDIA_TensorRT_2ms-76B900?logo=nvidia)](https://developer.nvidia.com/tensorrt)
 [![FastAPI](https://img.shields.io/badge/GCS-FastAPI_WebDCS-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 
 ---
@@ -61,13 +60,13 @@ El sistema implementa una arquitectura desacoplada de dos cerebros:
    * **Compilador de Misiones:** Procesa instrucciones en lenguaje natural mediante LLMs locales/remotos para generar un manifiesto estructurado (`MissionManifest.json`) con waypoints georreferenciados en la cuadrícula urbana y reglas de comportamiento.
 
 2. **Lazo Táctico Autónomo en Vuelo (`airsim-loop`):**
-   * **Orquestación con LangGraph:** Bucle continuo de percepción-decisión-actuación de baja latencia estructurado como un grafo de estados (`StateGraph`).
-   * **Percepción Monocular con YOLO TensorRT:** Inferencia ultra-rápida ($2\text{ms}$ por frame en GPU NVIDIA) para detección y segmentación semántica de estructuras (`building`, `wall`, `house`), obstáculos dinámicos y mobiliario urbano.
-   * **Estimación Geométrica Continua y Time-To-Collision (TTC):** Cálculo de ocupación visual bidimensional ($\text{area\_ratio}$, $\text{width\_ratio}$, $\text{height\_ratio}$) y seguimiento multiobjeto por solapamiento ($\text{IoU}$) y centroides para calcular la tasa de expansión radial (*looming*) $\Delta w/\Delta t$.
-   * **Enrutador Táctico Jerárquico:**
-     * **Crucero Nominal (`keep_going`):** Avance fluido a velocidad de crucero ($5.0\text{ m/s}$) guiado por el corredor central de las calles mediante `WaypointTracker`.
+   * **Orquestación con LangGraph:** Bucle continuo de percepción-decisión-actuación estructurado como un grafo de estados (`StateGraph`); la ciclicidad la da el `while True` de `main.py` (el grafo llega a `END` en cada tick — es un grafo de decisión por tick, no un grafo cíclico en sí mismo).
+   * **Percepción Monocular por Flujo Óptico:** estimación de `ObstacleField` (grilla sector × banda) por flujo óptico derotado con la telemetría de actitud, FOE (Focus of Expansion) por mínimos cuadrados ponderados y TTC en segundos reales — sin red neuronal de detección. Es el único contrato de percepción que consumen el router, la evasión rápida, el SLM y el brazo FSM.
+   * **Enrutador Táctico (`policy_router`), seleccionable por brazo (`AGENT_ARM`):**
+     * **Crucero Nominal (`keep_going`):** Avance fluido a velocidad de crucero guiado por el corredor central de las calles mediante `WaypointTracker`.
      * **Evasión Reactiva (`evasive`):** Desvíos suaves con persistencia táctica (*Maneuver Lock*) ante proximidad moderada.
-     * **Cerebro Deliberativo SLM (`hover_and_slm`):** Ante un bloqueo frontal masivo (por ejemplo, una manzana en una bocacalle), el dron estabiliza el vuelo y consulta al SLM local para decidir maniobras de escape en cuadrícula urbana.
+     * **Cerebro Deliberativo SLM (`deliberative`, brazo `slm`):** Ante un bloqueo frontal masivo, el dron estabiliza el vuelo y consulta al SLM local (de forma asíncrona, sin bloquear el lazo) para decidir maniobras de escape en cuadrícula urbana.
+     * **Brazo FSM determinista (`fsm`)** y **brazo puramente reactivo (`reactive`, cota inferior sin evasión):** mismo espacio de macro-acciones y misma cinemática que el brazo SLM, para comparar los tres arms sobre el objetivo específico de la tesis (tasa de éxito, tiempo de reacción, consumo computacional).
    * **Navegación Urbana en Cuadrícula (Manhattan Detour & Cornering):** Inyección dinámica de sub-waypoints de esquina (`CORNER_WP`) con alineación ortogonal estricta ($0^\circ, \pm 90^\circ, 180^\circ$), permitiendo rodear manzanas completas sin "efecto imán" ni giros en círculos.
 
 Para ilustrar el flujo completo:
@@ -76,7 +75,7 @@ Para ilustrar el flujo completo:
 
 1. **Ground Station (WebDCS):** Planificación en lenguaje natural y compilación del `MissionManifest.json`.
 2. **Inyección al Lazo Táctico:** Transferencia del manifiesto al bucle autónomo en vuelo (`airsim-loop`).
-3. **Percepción Monocular TensorRT:** Inferencia YOLO a $2\text{ms}$ y traducción continua de píxeles a descripción contextual estructurada.
+3. **Percepción Monocular por Flujo Óptico:** estimación continua del `ObstacleField` (ocupación, TTC, confianza por sector) sin red de detección.
 4. **Enrutamiento (Gatekeeper / TTC Router):**
    - **Camino Despejado:** Guiado nominal por corredor hacia waypoints.
    - **Bloqueo Estructural:** Activación del SLM deliberativo para planificar desvíos ortogonales y esquinas de escape.
@@ -89,7 +88,7 @@ Para ilustrar el flujo completo:
 El código del proyecto se organiza en los siguientes componentes:
 
 *   **[`airsim-plan`](./airsim-plan):** Planificador de misiones y Ground Control Station. Contiene el CLI `airsim-plan` y el servidor web **WebDCS** con streaming de video, telemetría e inspector de auditoría SLM.
-*   **[`airsim-loop`](./airsim-loop):** Lazo de control táctico autónomo del dron. Implementa el grafo de navegación en LangGraph (Captura, YOLO TensorRT, Estimador de TTC, Router Táctico, SLM Deliberativo y Control de Waypoints).
+*   **[`airsim-loop`](./airsim-loop):** Lazo de control táctico autónomo del dron. Implementa el grafo de navegación en LangGraph (Captura, Percepción por Flujo Óptico/TTC, Router Táctico, brazos SLM/FSM/Reactivo y Control de Waypoints).
 *   **[`airsim-mcp`](./airsim-mcp):** Servidor de Model Context Protocol (MCP) que expone herramientas de telemetría y control de AirSim para interactuar con agentes autónomos externos.
 *   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`kc_control.py`) para pilotaje directo y configuración de segmentación en AirSim.
 *   **[`airsim-poc`](./airsim-poc):** Pruebas de concepto iniciales de conexión, telemetría y maniobras básicas.
@@ -103,7 +102,7 @@ El código del proyecto se organiza en los siguientes componentes:
 
 *   **Simulación:** Unreal Engine 5.5 + Cosys-AirSim.
 *   **Lenguajes y Entorno:** Python 3.10+, Conda / Miniconda.
-*   **Visión por Computadora:** YOLOv8 / YOLO26 (Ultralytics) compilados a **NVIDIA TensorRT Engine** para inferencia ultra-rápida ($2\text{ms}$ en GPU RTX).
+*   **Visión por Computadora:** OpenCV (flujo óptico denso Farnebäck/DIS) para estimación de `ObstacleField` y TTC; sin red de detección.
 *   **Modelos de Lenguaje (SLM):** LM Studio / Ollama (API local compatible con OpenAI) para inferencia local de `qwen2.5`, `phi-3/phi-4`, `llama3.2`, `gemma2`.
 *   **Control y Orquestación:** LangGraph (grafo de navegación cíclica), Pydantic (validación de esquemas JSON).
 *   **Ground Control Station:** FastAPI, WebSockets / SSE, HTML5, Vanilla CSS / JS.
@@ -114,7 +113,7 @@ El código del proyecto se organiza en los siguientes componentes:
 ## 🚀 Instalación y Uso
 
 ### Prerrequisitos
-*   GPU NVIDIA con soporte CUDA (ej. RTX 4060 / 5060 o superior) para simulación fluida e inferencia simultánea de TensorRT y SLM local.
+*   GPU NVIDIA con soporte CUDA (ej. RTX 4060 / 5060 o superior) para simulación fluida y para acelerar la inferencia del SLM local.
 *   Unreal Engine 5.5 con el entorno de simulación compilado (ej. `CitySim` / `A_CITY`).
 *   LM Studio o Ollama corriendo localmente en el puerto `1234` o `11434`.
 
@@ -147,7 +146,7 @@ Abre en tu navegador `http://localhost:8000` para acceder a la interfaz WebDCS, 
 En [`callibration_flight`](./callibration_flight) y [`CHANGELOG.md`](CHANGELOG.md) se documentan:
 *   **Fidelidad Cinemática:** Calibración de la rigidez inercial en giros de actitud y control de guiñada amortiguado para replicar límites de aeronaves reales.
 *   **Robustez de Visión Monocular Pura:** Desacople del Time-To-Collision de la distancia estática, eliminando oscilaciones en zigzag (*slalom*) y adaptando el crucero al ancho de calle.
-*   **Benchmark de Inferencia Local:** Tiempos de respuesta de modelos compactos de 2B-4B parámetros corriendo en paralelo con YOLO TensorRT.
+*   **Benchmark de Inferencia Local:** Tiempos de respuesta de modelos compactos de 2B-4B parámetros corriendo en paralelo con el lazo de percepción por flujo óptico.
 
 ---
 

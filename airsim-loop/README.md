@@ -1,99 +1,97 @@
 # Mapeo de Código a Grafo de Loop de Control Autónomo Jerárquico
 
-Este submódulo (`airsim-loop`) implementa el bucle de control reactivo/deliberativo de navegación autónoma para drones cuadricópteros usando **LangGraph**, **YOLO** (visión monocular), estimación no neuronal de **TTC (Time-To-Collision)** y un **SLM Local** (Small Language Model).
+Este submódulo (`airsim-loop`) implementa el bucle de control reactivo/deliberativo de navegación autónoma para drones cuadricópteros usando **LangGraph**, estimación de **TTC (Time-To-Collision) por flujo óptico** con derotación y estimación del FOE, y un **SLM/VLM Local** (Small/Vision Language Model) que corre de forma asíncrona respecto del lazo de control.
+
+> **Nota de arquitectura (2026-08):** este README fue reescrito para reflejar el estado real del código tras la implementación de `PLAN-MEJORAS.md`. La versión anterior describía YOLO + ROI 62° + IoU/area_ratio, que fueron retirados (ver [`legacy/README.md`](legacy/README.md) para la justificación medida de cada retiro) y reemplazados por el contrato único de percepción `ObstacleField`.
 
 ## Arquitectura del Bucle de Control Jerárquico
 
-El pipeline de vuelo sigue un gating multinivel diseñado para economizar recursos computacionales y maximizar el vuelo fluido (*Keep Going*), reservando las llamadas al SLM únicamente para situaciones de alta incertidumbre o peligro inminente.
+El pipeline sigue un gating multinivel para economizar recursos y maximizar el vuelo fluido (*Keep Going*), reservando la deliberación del SLM para situaciones de alta incertidumbre o peligro inminente. La decisión de qué "cerebro" resuelve una situación de riesgo (SLM / FSM determinista / puramente reactivo) es seleccionable vía `AGENT_ARM`, para poder comparar los tres brazos sobre el mismo pipeline de percepción.
 
 ```
-                  ┌─────────────────┐
-                  │  capture_node   │ (Captura RGB + Telemetría NED)
-                  └────────┬────────┘
-                           │
-                  ┌────────▼────────┐
-                  │ canny_xor_gate  │ (Paso 1: XOR Canny < 2% cambio?)
-                  └────────┬────────┘
-                           │
-                 ┌─────────┴─────────┐
-       (Si < 2%) │                   │ (Si ≥ 2%)
-                 ▼                   ▼
-         ┌──────────────┐   ┌──────────────────┐
-         │  keep_going  │   │ roi_yolo_detect  │ (Paso 2: Crop ROI 62° + YOLO)
-         └───────┬──────┘   └────────┬─────────┘
-                 │                   │
-                 │          ┌────────▼─────────┐
-                 │          │   ttc_estimate   │ (Paso 3: Estimación TTC BB-w)
-                 │          └────────┬─────────┘
-                 │                   │
-                 │          ┌────────┴────────────────────────┐
-                 │          │ Router de 3 Vías (TTC Router)   │
-                 │          └────────┬──────────────┬─────────┘
-                 │                   │              │
-                 │   (TTC > 5.0s)    │ (2.0s < TTC  │ (TTC ≤ 2.0s)
-                 │   Sin Peligro     │    ≤ 5.0s)   │ Peligro Inminente
-                 │                   ▼              ▼
-                 │            ┌───────────┐   ┌────────────────┐
-                 │            │  evasive  │   │ hover_and_slm  │ (Hover + SLM)
-                 │            └─────┬─────┘   └───────┬────────┘
-                 │                  │                 │
-                 └──────────────────┼─────────────────┘
-                                    │
-                           ┌────────▼────────┐
-                           │   motor_node    │ (Ejecución Motriz AirSim API)
-                           └────────┬────────┘
-                                    │
-                                   END
+              ┌──────────────┐
+              │ capture_node │ (RGB + telemetría; degradado si AirSim no responde)
+              └──────┬───────┘
+                     │
+            ┌────────▼─────────┐
+            │  degraded_router │──(degradado)──► degraded_hover ──► motor ──► END
+            └────────┬─────────┘
+                (ok)  │
+            ┌─────────▼────────┐
+            │  canny_xor_gate  │
+            └─────────┬────────┘
+                       │
+              ┌────────▼─────────┐
+              │    xor_router    │
+              └───┬──────────┬───┘
+        (< umbral)│          │(≥ umbral)
+                   ▼          ▼
+            keep_going   ┌──────────────┐
+                         │  perception  │ (flujo óptico + derotación + FOE → ObstacleField)
+                         └──────┬───────┘
+                                │
+                       ┌────────▼─────────┐
+                       │  policy_router   │ (arma: slm | fsm | reactive)
+                       └─┬────┬────┬────┬─┘
+                keep_going  evasive  girar_90  deliberative / fsm
+                         \    |      |      /
+                          \   |      |     /
+                           ▼  ▼      ▼    ▼
+                          ┌────────────────┐
+                          │   motor_node   │
+                          └───────┬────────┘
+                                 END
 ```
 
 ---
 
-## Detalle de Pasos Nodos del Grafo (`DroneState`)
+## `ObstacleField`: el único contrato de percepción
 
-El estado [`DroneState`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py#L21) circula entre los nodos del grafo en [`src/agents/graph.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py).
+`src/perception/obstacle_field.py` reemplaza a `detected_obstacles` (que desde el retiro de YOLO quedaba siempre en `[]`, dejando ciegos al router, al fallback determinista y al override de seguridad — ver `legacy/README.md`). Es una grilla de 3×3 celdas (sector `izquierda|centro|derecha` × banda `superior|medio|inferior`), cada una con `occupancy`, `ttc_s`, `divergence` y `confidence`. Router, `evasive_node`, `deliberative_node`, `fsm_node` y el logger de vuelo leen **únicamente** su API (`is_blocked`, `sector_ttc`, `blocked_fraction`, `summary_text`, `to_dict`); ninguno accede a campos crudos de flujo óptico.
 
-### **Paso 0 — Captura Sensorial (`capture_node`)**
-Llama a [`AirSimClient.capture`](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py) para obtener el fotograma RGB de la cámara frontal (`"0"`) y la telemetría del cuadricóptero (posición/velocidad/orientación). Si el simulador no está conectado, genera un fotograma de prueba sintético (modo simulado).
+`src/perception/flow_ttc.py` la produce: deroto el flujo óptico con la telemetría de actitud (pitch/roll/yaw), estimo el FOE (Focus of Expansion) por mínimos cuadrados ponderados con un paso de recorte de outliers, y calculo TTC en **segundos reales** (`dt` de telemetría, no el período nominal del lazo). Sin evidencia suficiente (hover, giro puro), el campo resultante tiene `confidence=0` y `ttc=inf`: no hay clamp cosmético que esconda la falta de señal.
 
-### **Paso 1 — Gating de Bordes Ultra Rápido (`canny_xor_gate_node`)**
-Inspirado en el filtrado de bordes de Kaneko et al. (2017), se extraen los bordes Canny del fotograma actual y se realiza una operación **XOR binaria entre el frame actual y el anterior**.
-* **Router XOR (`xor_router`)**: Si la tasa de cambio (`xor_change_ratio`) es menor a `CANNY_XOR_THRESHOLD` (`0.02` por defecto, indicando cielo abierto o textura homogénea), se transiciona directamente a `keep_going` salteando YOLO y SLM en **< 3 ms**.
+## Nodos del Grafo (`DroneState`, `src/agents/graph.py`)
 
-### **Paso 2 — Recorte ROI de 62° e Inferencia YOLO (`roi_yolo_detect_node`)**
-Siguiendo a Al-Kaff et al. (2017), la imagen se recorta a una **Región de Interés (ROI) con campo visual diagonal de 62°**. YOLO (ej. `yolov8n.pt` o `yolo26n`) procesa únicamente dicho recorte para ahorrar hardware y reducir latencia. Traduce las detecciones a sectores (`Izquierda`/`Centro`/`Derecha`) y genera un resumen cualitativo de escena.
+### `capture_node`
+Llama a `AirSimClient.capture()`. En modo estricto (`AIRSIM_STRICT=true`, default en vuelo) si AirSim no responde, **no** genera un frame sintético: marca `state["degraded"]=True` y el ciclo va directo a `degraded_hover` (hover de seguridad, sin percepción ni deliberación).
 
-### **Paso 3 — Estimación de Tiempo de Colisión No Neuronal (`ttc_estimate_node`)**
-Implementa la estrategia de expansión de cajas delimitadoras (Rill & Faragó / Looming). Extrae el ancho de la bounding box (`BB-w`) de cada obstáculo en la ROI y monitorea su tasa de expansión temporal para calcular el **TTC (Time-To-Collision)** estimado en segundos.
+### `canny_xor_gate` → `xor_router`
+Filtro de bordes Canny + XOR binario entre frames. Si `xor_change_ratio < CANNY_XOR_THRESHOLD`, salta directo a `keep_going`. **Nota:** el umbral (`0.02`–`0.03`) es el valor histórico; queda pendiente de recalibrar con el histograma de `xor_change_ratio` medido en vuelo real a la frecuencia actual del lazo (no fue posible medirlo durante la implementación por falta de acceso al simulador — ver `PLAN-MEJORAS.md` F0.4).
 
-### **Paso 4 — Bifurcación de Control (Router de 3 Vías `ttc_router`)**
-1. **Caso A: Sin Peligro (`TTC > 5.0s` o sin obstáculos)**: Transiciona a `keep_going` (Reflejo Rápido con velocidad frontal constante `REACTIVE_FORWARD_SPEED`).
-2. **Caso B: Maniobra Evasiva Local Directa (`2.0s < TTC ≤ 5.0s`)**: Transiciona al nodo [`evasive_node`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py). Calcula si hay mayor masa de obstáculos a la izquierda o derecha en la ROI y ejecuta una corrección física simple lateral (`EVADIR_IZQUIERDA` / `EVADIR_DERECHA`) **sin detener el dron ni llamar al SLM**.
-3. **Caso C: Peligro Inminente o Zona de Incertidumbre (`TTC ≤ 2.0s`)**: Transiciona a `hover_and_slm`.
+### `perception`
+Único nodo de percepción pesada: `FlowTTCEstimator` (instanciado una vez, no por frame) produce el `ObstacleField` completo del ciclo.
 
-### **Paso 5 — Parada de Seguridad y Consulta al SLM (`hover_and_slm_node`)**
-1. **Parada de seguridad**: Llama inmediatamente a `AirSimClient.execute_velocity(vx=0, vy=0, vz=0)` entrando en modo **Hover** para congelar el avance del cuadricóptero y prevenir colisiones por latencia de inferencia.
-2. **Llamada al SLM**: Invoca a [`deliberative_node`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py), que envía el prompt estructurado al servidor de LLM local (`LOCAL_LLM_URL` OpenAI-compatible) para seleccionar la `macro_action` táctica (`EVADIR_DERECHA`, `EVADIR_IZQUIERDA`, etc.).
-3. **Mapeo Cinemático Determinista**: El controlador inyecta automáticamente el perfil vectorial $(v_x, v_y, v_z)$ asociado a la macro-acción (`ACTION_VELOCITY_MAP`), garantizando velocidades de traslación no nulas hacia el corredor despejado.
+### `policy_router`
+Router único de política. Reemplaza a la combinación `ttc_router` + `hover_before_slm_node` + `blind_wall_router_node` de la versión original, que por invocar un nodo dentro del cuerpo de otro más una arista adicional hacia el mismo destino, podía consultar al SLM **dos veces por ciclo**. Selecciona primero el brazo (`AGENT_ARM`):
+- **`reactive`** (cota inferior): siempre `keep_going`, guiado a waypoint sin evasión.
+- **`fsm`**: siempre `fsm_node`, máquina de estados determinista sobre el mismo `ObstacleField` y el mismo `action_to_command()` que usa el brazo SLM — para que la comparación SLM vs FSM sea limpia.
+- **`slm`** (default): la lógica táctica jerárquica original (TTC + bloqueo por sector + persistencia de maniobra + escape de deadlock), resolviendo hacia `keep_going` / `evasive` / `girar_90` (bypass determinista si el FOV está mayormente bloqueado) / `deliberative`.
 
-### **Paso 6 — Ejecución Motriz (`motor_node`)**
-Toma el comando final de velocidad (`vx`, `vy`, `vz`) generado por el nodo activo y lo envía a la API de AirSim en **Body Frame** mediante `moveByVelocityBodyFrameAsync` con `DrivetrainType.ForwardOnly`. Esto hace que el chasis y la cámara giren de forma coordinada hacia la dirección de avance/evasión, eliminando puntos ciegos laterales.
+### `deliberative` (brazo `slm`)
+Corre en un hilo aparte (`DeliberationService`, `src/agents/deliberation_service.py`): el nodo **nunca bloquea** el lazo de control. El ciclo en que se encola el pedido (o mientras se espera respuesta) el comando es `FRENAR`; si el SLM no responde dentro de `SLM_WATCHDOG_MS` (default 1500 ms), se aplica el fallback determinista y se marca `timeout=True` en `deliberations[]`. Usa decodificación restringida (`response_format=json_schema`) cuando el servidor la soporta, con el parser tolerante como red de seguridad.
+
+### `evasive`, `fsm`, `girar_90`, `motor`
+`evasive_node` y `fsm_node` comparten `action_to_command()` (`src/agents/action_map.py`) con `deliberative_node`: es la única fuente de verdad de la cinemática por macro-acción, para que ninguna tenga dos definiciones distintas según quién la ejecute. `motor_node` envía el comando final a `AirSimClient.execute_velocity()`, que ya no bloquea (`moveByVelocityBodyFrameAsync` es last-command-wins; antes un `.join()` fijaba el período del lazo en 2 s).
 
 ---
 
 ## Estructura del Código
 
-- [`main.py`](file:///d:/TesisMCD/dronelm/airsim-loop/main.py): Punto de entrada que ejecuta el bucle `while True` invocando el grafo compilado.
-- [`src/agents/graph.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/graph.py): Define `DroneState`, nodos del pipeline jerárquico y los routers condicionales `xor_router` y `ttc_router`.
-- [`src/agents/reactive.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/reactive.py): Lógica del estado "Sigue Adelante" (`keep_going`).
-- [`src/agents/evasive.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/evasive.py): Lógica de maniobra evasiva local rápida sin SLM.
-- [`src/agents/deliberative.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/agents/deliberative.py): Inferencia deliberativa del SLM local con fallback determinista.
-- [`src/perception/`](file:///d:/TesisMCD/dronelm/airsim-loop/src/perception):
-  - `canny_gate.py`: Operaciones de bordes Canny y XOR binario entre frames.
-  - `roi.py`: Recorte geométrico de la ROI de 62°.
-  - `ttc.py`: Estimación geométrica no neuronal del Time-To-Collision a partir del ancho `BB-w`.
-  - `detector.py`: Wrapper de inferencia YOLOv8 / YOLO26.
-  - `translator.py`: Traductor de cajas/máscaras a lenguaje natural.
-- [`src/hardware/airsim_client.py`](file:///d:/TesisMCD/dronelm/airsim-loop/src/hardware/airsim_client.py): Cliente de API AirSim con soporte para fallback simulado.
+- [`main.py`](main.py): punto de entrada. Crea el único `AirSimClient` del proceso y lo inyecta en `compile_workflow()`.
+- [`src/agents/graph.py`](src/agents/graph.py): `DroneState`, nodos, `xor_router`, `policy_router`, `degraded_router`.
+- [`src/agents/action_map.py`](src/agents/action_map.py): cinemática única por macro-acción.
+- [`src/agents/deliberation_service.py`](src/agents/deliberation_service.py): worker asíncrono para la consulta al SLM.
+- [`src/agents/deliberative.py`](src/agents/deliberative.py), [`evasive.py`](src/agents/evasive.py), [`fsm.py`](src/agents/fsm.py), [`reactive.py`](src/agents/reactive.py): los tres brazos de política + el guiado nominal.
+- [`src/perception/obstacle_field.py`](src/perception/obstacle_field.py): contrato único de percepción.
+- [`src/perception/flow_ttc.py`](src/perception/flow_ttc.py): derotación + FOE + TTC.
+- [`src/perception/canny_gate.py`](src/perception/canny_gate.py): gate de bordes XOR.
+- [`src/hardware/airsim_client.py`](src/hardware/airsim_client.py): cliente AirSim, actuador no bloqueante, modo estricto.
+- [`src/navigation/waypoint_tracker.py`](src/navigation/waypoint_tracker.py): guiado a waypoint + seguimiento de progreso real (`progress_stall_cycles`).
+- [`src/logging/flight_logger.py`](src/logging/flight_logger.py): JSONL estructurado por ciclo, para `experiments/`.
+- [`legacy/`](legacy/): módulos retirados (YOLO, IPM, estimador de TTC anterior), con la justificación medida de cada retiro.
+- [`experiments/`](experiments/): `runner.py` + `analyze.py` (comparación batch SLM/FSM/reactivo), `collect_ttc_dataset.py` + `analyze_ttc.py` (validación de TTC contra el canal depth).
+- [`scripts/bench_capture.py`](scripts/bench_capture.py): mide el techo real de `simGetImages` sobre la conexión al simulador, para elegir `LOOP_HZ` con evidencia.
 
 ---
 
@@ -105,31 +103,43 @@ Toma el comando final de velocidad (`vx`, `vy`, `vz`) generado por el nodo activ
 AIRSIM_MODE=Drone
 AIRSIM_IP=127.0.0.1
 AIRSIM_PORT=41451
-YOLO_WEIGHTS=weights/yolov8n.pt
-YOLO_CONF=0.35
+AIRSIM_STRICT=true          # false solo para tests: permite frames sinteticos si AirSim no responde
+LOOP_HZ=5.0                 # ajustar con scripts/bench_capture.py
+AGENT_ARM=slm                # slm | fsm | reactive
+
 CANNY_XOR_THRESHOLD=0.02
-TTC_EVASION_THRESHOLD=2.0
-TTC_SAFE_THRESHOLD=5.0
+TTC_EVASION_THRESHOLD=2.0    # provisorio hasta calibrar con experiments/analyze_ttc.py
+TTC_SAFE_THRESHOLD=5.0       # idem
+FOV_BLOCKED_THRESHOLD=0.6
+
 REACTIVE_FORWARD_SPEED=2.0
-EVASION_LATERAL_SPEED=2.5
+SLM_WATCHDOG_MS=1500
+
 LOCAL_LLM_URL=http://[IP_ADDRESS]/v1
-LOCAL_LLM_MODEL_NAME=qwen/qwen3.5-2b
+LOCAL_LLM_MODEL_NAME=qwen/qwen2.5-vl-3b
+VLM_VISION_ENABLED=true
+VLM_FRAME_HISTORY_SIZE=1
+VLM_USE_JSON_SCHEMA=true
 ```
 
 ### **2. Ejecución**
 
 ```bash
-# Activar entorno
-conda activate airsimenv
-
-# Iniciar el bucle de control
+conda activate airsim
 python main.py
 ```
 
-### **3. Ejecución de Tests**
-
-Para validar el grafo y todos los componentes:
+### **3. Tests**
 
 ```bash
-pytest
+pytest tests/ -q
+```
+
+No requieren AirSim: usan un `AirSimClient` stub con la misma interfaz (`capture`/`execute_velocity`/`get_telemetry`).
+
+### **4. Experimentos (requieren AirSim corriendo)**
+
+```bash
+python experiments/runner.py --scenarios missions/*.json --arms slm fsm reactive --seeds 1 2 3
+python experiments/analyze.py runs/
 ```

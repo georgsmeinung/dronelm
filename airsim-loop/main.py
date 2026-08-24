@@ -1,5 +1,9 @@
 # Paso 6: Bucle continuo de control autonomo.
 # Captura -> percepcion -> gatekeeper -> (reflejo | cerebro) -> motor -> ...
+#
+# F0.3: un unico AirSimClient se crea y conecta aca, y se inyecta en
+# compile_workflow(). F0.5: compile_workflow() devuelve tambien el
+# DeliberationService para poder apagarlo prolijamente al salir.
 import math
 import os
 import time
@@ -11,11 +15,13 @@ try:
 except Exception:  # pragma: no cover
     pass
 
-from src.agents import compile_workflow, get_airsim_client
-from src.agents.graph import DroneState
+from src.agents.graph import DroneState, compile_workflow
+from src.hardware import AirSimClient
+from src.navigation import WaypointTracker
 
-
-DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "0.5"))
+DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "5.0"))
+AGENT_ARM = os.getenv("AGENT_ARM", "slm")
+FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # F3.2: si se setea, se escribe un JSONL
 
 
 def _print_state(state: DroneState, cycle_num: int = 0) -> None:
@@ -26,9 +32,8 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
     target_wp = state.get("target_waypoint") or {}
     ttc = state.get("estimated_ttc", float("inf"))
     ttc_str = f"{ttc:.1f}s" if ttc != float("inf") else "inf"
-    obstacles = state.get("detected_obstacles") or []
+    field = state.get("obstacle_field")
 
-    # 1. Cabecera estructurada del ciclo
     wp_idx = state.get("current_wp_index", 0) + 1
     wp_total = len(state.get("waypoints") or [])
     wp_label = target_wp.get("label", f"WP_{wp_idx}")
@@ -45,55 +50,44 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
     has_collided = collision.get("has_collided", False)
     coll_obj = collision.get("object_name", "")
     coll_str = f" | Colisión: SÍ ({coll_obj})" if has_collided else " | Colisión: No"
+    degraded_str = " | ⚠️ DEGRADADO" if state.get("degraded") else ""
 
     wp_info = f"WP {wp_idx}/{wp_total} ({wp_label}) | Dist: {dist:.1f}m | Desvío: {err:+.0f}°" if target_wp else "Misión sin WP activo"
-    print(f"\n[Ciclo #{cycle_num}] {wp_info} | Alt: {alt:.1f}m | Yaw: {yaw_deg:.1f}°{coll_str} | TTC: {ttc_str}")
+    print(f"\n[Ciclo #{cycle_num}][{AGENT_ARM}] {wp_info} | Alt: {alt:.1f}m | Yaw: {yaw_deg:.1f}°{coll_str} | TTC: {ttc_str}{degraded_str}")
 
-    # 2. Línea de percepción concisa
-    if not obstacles:
-        print("  Percepción : Camino despejado.")
+    # Línea de percepción: resumen por sector del ObstacleField (F1.1).
+    if field is not None and hasattr(field, "summary_text"):
+        for line in field.summary_text().split("\n")[1:]:
+            print(f"  {line}")
     else:
-        obs_descs = []
-        for o in obstacles[:3]:
-            obj_name = o.get("object", "?")
-            sec = o.get("sector", "?")
-            prox = o.get("proximity", "?")
-            dist_o = o.get("distance_m")
-            dist_str = f"{dist_o:.1f}m" if isinstance(dist_o, (int, float)) else "N/A"
-            obs_descs.append(f"{obj_name} {sec.lower()} ({prox}, {dist_str})")
-        total_obs = len(obstacles)
-        extra_str = f" [Total: {total_obs}]" if total_obs > 3 else ""
-        print(f"  Percepción : {'; '.join(obs_descs)}{extra_str}")
+        print("  Percepción : sin datos.")
 
-    # 3. Bloque de auditoría SLM (con líneas simples y limpias)
+    # Bloque de auditoría SLM
     if route == "deliberative" and delib:
         delib_id = delib.get("id", 1)
         model = delib.get("model", "SLM")
         lat = delib.get("latency_ms", 0.0)
         is_fb = delib.get("is_fallback", False)
+        timed_out = delib.get("timeout", False)
         has_vision = delib.get("vision_enabled", False)
-        v_frames = delib.get("vision_frames", 1)
-        if is_fb:
+        if timed_out:
+            type_str = "FALLBACK (TIMEOUT/WATCHDOG)"
+        elif is_fb:
             type_str = "FALLBACK DETERMINISTA"
         elif has_vision:
-            type_str = f"VLM VISIÓN DIRECTA ({v_frames} frames)"
+            type_str = "VLM VISIÓN DIRECTA"
         else:
             type_str = "SLM TEXTO"
-        prompt = delib.get("prompt", "").strip()
         raw = delib.get("raw_response", "").strip()
 
         print("  ----------------------------------------------------------------------")
         print(f"  [AUDITORÍA SLM #{delib_id}] Modelo: {model} | Latencia: {lat:.0f}ms | Tipo: {type_str}")
-        print("  Prompt enviado:")
-        for line in prompt.split("\n"):
-            print(f"    {line}")
         print("  Respuesta SLM:")
         for line in raw.split("\n"):
             print(f"    {line}")
         print(f"  Decisión: {delib.get('macro_action', '')} | {delib.get('rationale', '')}")
         print("  ----------------------------------------------------------------------")
 
-    # 4. Línea de control consolidada
     route_tag = route.upper() if route else "DIRECT"
     action = state.get("next_action", "MANTENER_RUMBO")
     if cmd:
@@ -106,11 +100,49 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
         print(f"  Control    : [{route_tag}] {action} -> vx={vx:+.2f} vy={vy:+.2f} vz={vz:+.2f} yaw={yaw:+.1f}°/s{rat_str}")
 
 
+def _update_delib_outcomes(drone_state: DroneState, guidance: dict) -> None:
+    """F2.2: memoria corta de resultados de deliberaciones previas para el prompt.
+
+    Compara la distancia al waypoint y el TTC minimo entre el momento en que
+    se tomo la ultima decision deliberativa y el ciclo actual, para que el
+    prompt del SLM incluya el efecto medido de su decision anterior en lugar
+    de re-decidir en el vacio.
+    """
+    baseline = drone_state.get("_delib_baseline")
+    current_dist = guidance.get("distance", 0.0)
+    current_ttc = drone_state.get("estimated_ttc", float("inf"))
+
+    if baseline is not None:
+        outcomes = list(drone_state.get("_delib_outcomes") or [])
+        delta_ttc = None
+        if baseline["min_ttc"] != float("inf") and current_ttc != float("inf"):
+            delta_ttc = current_ttc - baseline["min_ttc"]
+        outcomes.append({
+            "macro_action": baseline["macro_action"],
+            "delta_dist_wp": baseline["dist"] - current_dist,
+            "delta_min_ttc": delta_ttc,
+        })
+        drone_state["_delib_outcomes"] = outcomes[-5:]
+        drone_state["_delib_baseline"] = None
+
+    deliberations = drone_state.get("deliberations") or []
+    if deliberations and drone_state.get("route") == "deliberative" and drone_state.get("next_action") != "FRENAR":
+        last = deliberations[-1]
+        # Solo fijar nueva baseline si esta deliberacion todavia no genero una
+        # (evita sobreescribir con el mismo id en ciclos de espera consecutivos).
+        if drone_state.get("_delib_last_baselined_id") != last.get("id"):
+            drone_state["_delib_baseline"] = {
+                "macro_action": last.get("macro_action", ""),
+                "dist": current_dist,
+                "min_ttc": current_ttc,
+            }
+            drone_state["_delib_last_baselined_id"] = last.get("id")
+
+
 def main() -> None:
-    print("Inicializando drone autonomo con LangGraph + AirSim...")
+    print(f"Inicializando drone autonomo con LangGraph + AirSim... [AGENT_ARM={AGENT_ARM}]")
     import json
-    
-    # 1) Cargar manifiesto si existe (cuando se lanza desde el GCS)
+
     manifest_path = os.getenv("AIRSIM_PLAN_MANIFEST") or globals().get("AIRSIM_PLAN_MANIFEST")
     manifest_data = {}
     if manifest_path and os.path.exists(manifest_path):
@@ -121,11 +153,9 @@ def main() -> None:
         except Exception as e:
             print(f"Error al cargar manifiesto: {e}")
 
-    # Purgar cualquier señal de detención residual previa para esta misión
     mission_id = manifest_data.get("mission_id", "MOCK_MISSION")
     os.environ.pop(f"STOP_MISSION_{mission_id}", None)
 
-    # 2) Verificar si se solicitó ver el video
     watch_mode = (os.getenv("AIRSIM_LOOP_WATCH") or globals().get("AIRSIM_LOOP_WATCH", "false")).lower() == "true"
     if watch_mode:
         # pyrefly: ignore [missing-import]
@@ -134,39 +164,42 @@ def main() -> None:
         cv2.resizeWindow("Drone Camera Feed", 640, 480)
         print("[Watch] Modo visualización activado. Mostrando señal de video nativa.")
 
-    from src.navigation import WaypointTracker
+    # F0.3: un unico cliente de AirSim para todo el proceso.
+    airsim_client = AirSimClient(loop_hz=DEFAULT_LOOP_HZ)
+    airsim_client.connect()
 
-    graph = compile_workflow()
-    airsim_client = get_airsim_client()
+    graph, deliberation_service = compile_workflow(airsim_client)
     sleep_s = 1.0 / max(DEFAULT_LOOP_HZ, 0.01)
 
-    # El grafo corre en el main thread para compatibilidad con msgpackrpc/cosys-airsim,
-    # que requiere el event loop de asyncio del hilo principal. El timeout de bloqueo
-    # está garantizado por AIRSIM_RPC_TIMEOUT en el socket RPC del MultirotorClient.
-
-    # 3) Inicializar el gestor de waypoints con la misión
     waypoints_list = manifest_data.get("waypoints", [])
     waypoint_tracker = WaypointTracker(waypoints_list)
     if waypoints_list:
         print(f"[Navegación] Cargados {len(waypoints_list)} waypoints de misión. Iniciando hacia {waypoints_list[0].get('label', 'WP_1')}.")
 
+    flight_logger = None
+    if FLIGHT_LOG_PATH:
+        from src.logging import FlightLogger
+
+        flight_logger = FlightLogger(
+            FLIGHT_LOG_PATH,
+            scenario=manifest_data.get("mission_id", "default"),
+            seed=int(os.getenv("AIRSIM_SEED", "0")),
+            arm=AGENT_ARM,
+        )
+
     cycle_count = 0
 
-    # Estado persistente del dron que preserva memoria táctica entre ciclos
     drone_state: DroneState = {
-        "mission_id": manifest_data.get("mission_id", "MOCK_MISSION"),
         "waypoints": waypoints_list,
         "current_wp_index": waypoint_tracker.current_index,
         "target_waypoint": None,
         "waypoint_guidance": {},
         "mission_completed": False,
-        "rules_of_engagement": manifest_data.get("rules_of_engagement", {}),
-        "tactical_system_prompt": manifest_data.get("tactical_system_prompt") or os.getenv("AIRSIM_PLAN_TACTICAL_PROMPT") or globals().get("AIRSIM_PLAN_TACTICAL_PROMPT") or "",
         "rgb_image": None,
         "telemetry": {},
+        "frame_history": [],
         "xor_change_ratio": 1.0,
         "estimated_ttc": float("inf"),
-        "detected_obstacles": [],
         "next_action": "",
         "flight_status": "vuelo",
         "deliberations": [],
@@ -174,15 +207,11 @@ def main() -> None:
         "maneuver_cycles_left": 0,
         "maneuver_command": None,
         "evasion_stuck_cycles": 0,
+        "slm_request_id": None,
     }
-
-    # Última telemetría real conocida (source='airsim').
-    # Usada como fallback cuando AirSim no responde y devuelve datos simulados falsos.
-    _last_good_telem: dict = {}
 
     try:
         while True:
-            # Verificar si se solicitó detener la misión
             mission_id = manifest_data.get("mission_id", "MOCK_MISSION")
             if os.getenv(f"STOP_MISSION_{mission_id}") == "1":
                 print(f"[Ciclo] Detención solicitada para misión {mission_id}. Saliendo del bucle.")
@@ -191,62 +220,50 @@ def main() -> None:
             cycle_count += 1
             t0 = time.time()
 
-            # 4) Calcular progreso y vector de guiado hacia el waypoint activo
+            t_telem = time.time()
             telem_now = airsim_client.get_telemetry()
-            # Si AirSim no respondió y devuelvió telemetría simulada (posición falsa 0,0,0),
-            # usar la última real conocida para no corromper el cálculo de waypoint guidance.
-            if telem_now.get("source") == "airsim":
-                _last_good_telem = telem_now
-            elif _last_good_telem:
-                print(f"[Ciclo #{cycle_count}] ⚠️  Telemetría AirSim no disponible. Usando último dato conocido.")
-                telem_now = _last_good_telem
             pos_now = telem_now.get("position", {}) if telem_now else {}
             orient_now = telem_now.get("orientation", {}) if telem_now else {}
             yaw_now = float(orient_now.get("yaw", 0.0)) if isinstance(orient_now, dict) else 0.0
+            latency_telem_ms = (time.time() - t_telem) * 1000.0
 
             target_wp = waypoint_tracker.update(pos_now)
             guidance = waypoint_tracker.compute_guidance(pos_now, yaw_now)
+            # F2.5: progreso real (no ciclos-en-ruta-evasiva) para decidir el escape de deadlock.
+            waypoint_tracker.record_progress(guidance.get("distance", 0.0))
 
-            # Actualizar entradas dinámicas del ciclo en el estado persistente con los waypoints del tracker
             drone_state["waypoints"] = waypoint_tracker.waypoints
             drone_state["current_wp_index"] = waypoint_tracker.current_index
             drone_state["target_waypoint"] = target_wp
             drone_state["waypoint_guidance"] = guidance
             drone_state["mission_completed"] = waypoint_tracker.is_completed
             drone_state["telemetry"] = telem_now
+            drone_state["evasion_stuck_cycles"] = waypoint_tracker.progress_stall_cycles
             if waypoint_tracker.is_completed:
                 drone_state["flight_status"] = "mision_completada"
 
+            t_graph = time.time()
             try:
                 final_state = graph.invoke(drone_state)
-                drone_state = final_state  # Heredar toda la memoria táctica y persistencia
+                drone_state = final_state
             except Exception as exc:
                 print(f"[Ciclo #{cycle_count}] Error en el grafo: {exc}")
                 time.sleep(sleep_s)
                 continue
+            latency_graph_ms = (time.time() - t_graph) * 1000.0
 
-            # Actualizar contador de ciclos atascados en modo evasivo/deliberativo.
-            # deliberative_node pone _escape_reset=True cuando fuerza GANAR_ALTURA;
-            # en ese caso respetamos el reset y no re-incrementamos (bug fix).
-            just_escaped = drone_state.pop("_escape_reset", False)
-            route_taken = drone_state.get("route", "")
-            if just_escaped:
-                drone_state["evasion_stuck_cycles"] = 0   # reset intencional: respetarlo
-            elif drone_state.get("active_maneuver") is not None:
-                # Mientras ejecuta una maniobra prolongada (ej. GANAR_ALTURA), no sumamos atasco
-                pass
-            elif route_taken in ("evasive", "deliberative"):
-                drone_state["evasion_stuck_cycles"] = int(drone_state.get("evasion_stuck_cycles", 0)) + 1
-            else:
-                drone_state["evasion_stuck_cycles"] = 0
+            if drone_state.pop("_escape_reset", False):
+                # Escape de deadlock forzado: el progreso medido (xy) puede no
+                # reflejar la subida vertical, asi que se resetea manualmente
+                # el contador de atasco de la ruta para no re-disparar de inmediato.
+                waypoint_tracker.reset_progress()
 
-            # Inyección de Sub-Waypoint Manhattan si el deliberador planificó una esquina
+            _update_delib_outcomes(drone_state, guidance)
+
             corner = final_state.get("inject_corner")
             if corner and isinstance(corner, dict):
                 injected = waypoint_tracker.inject_corner_waypoint(
-                    corner.get("x", 0.0),
-                    corner.get("y", 0.0),
-                    corner.get("z", -10.0),
+                    corner.get("x", 0.0), corner.get("y", 0.0), corner.get("z", -10.0),
                     label=corner.get("label", "CORNER_WP"),
                 )
                 final_state["inject_corner"] = None
@@ -256,23 +273,19 @@ def main() -> None:
 
             _print_state(final_state, cycle_count)
 
-            # 3) Anotar imagen y publicar en StreamHub / OpenCV
+            if flight_logger is not None:
+                flight_logger.log_cycle(
+                    final_state,
+                    latency_ms={"telemetry": round(latency_telem_ms, 1), "graph": round(latency_graph_ms, 1)},
+                )
+
             frame = final_state.get("rgb_image")
+            annotated_frame = None
             if frame is not None:
                 # pyrefly: ignore [missing-import]
                 import cv2
                 annotated_frame = frame.copy()
 
-                # 3.1) Dibujar caja de ROI si existe
-                roi_info = final_state.get("roi_info")
-                if roi_info and len(roi_info) == 4 and roi_info[2] > 0 and roi_info[3] > 0:
-                    rx, ry, rw, rh = map(int, roi_info)
-                    cv2.rectangle(annotated_frame, (rx, ry), (rx + rw, ry + rh), (255, 200, 0), 1)
-                    cv2.putText(annotated_frame, "ROI 62%", (rx + 5, ry + 15),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 200, 0), 1, cv2.LINE_AA)
-
-                # (Código de YOLO eliminado)
-                # 3.3) Dibujar banner superior con estado, decisión y métricas
                 decision = final_state.get("next_action", "MANTENER_RUMBO")
                 flight_status = final_state.get("flight_status", "vuelo")
                 xor_pct = final_state.get("xor_change_ratio", 0.0) * 100.0
@@ -282,9 +295,8 @@ def main() -> None:
                 h, w = annotated_frame.shape[:2]
                 cv2.rectangle(annotated_frame, (0, 0), (w, 42), (10, 10, 15), -1)
 
-                # Color de decisión
                 dec_color = (0, 255, 100) if "MANTENER" in decision else (0, 165, 255)
-                if "SLM" in decision or "PARADA" in decision:
+                if "SLM" in decision or "PARADA" in decision or "FRENAR" in decision:
                     dec_color = (255, 100, 200)
 
                 wp_str = f"WP {waypoint_tracker.current_index + 1}/{len(waypoints_list)} ({guidance.get('distance', 0.0):.0f}m)" if waypoints_list else ""
@@ -294,10 +306,10 @@ def main() -> None:
                 cv2.putText(annotated_frame, f"XOR: {xor_pct:.1f}% | TTC: {ttc_str} | {flight_status}", (w - 280, 26),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
 
-                # 3.4) Publicar en StreamHub para WebDCS
                 try:
                     # pyrefly: ignore [missing-import]
                     from airsim_plan.bridge.stream_hub import stream_hub
+                    field = final_state.get("obstacle_field")
                     stream_hub.publish(
                         frame=annotated_frame,
                         telemetry={
@@ -307,8 +319,7 @@ def main() -> None:
                             "flight_status": flight_status,
                             "estimated_ttc": ttc_val if ttc_val != float("inf") else None,
                             "xor_change_ratio": final_state.get("xor_change_ratio", 0.0),
-                            "detections": final_state.get("detections", []),
-                            "detected_obstacles": final_state.get("detected_obstacles", []),
+                            "obstacle_field": field.to_dict() if field is not None else None,
                             "scene_summary": final_state.get("scene_summary", ""),
                             "velocity": final_state.get("velocity_command", {}),
                             "target_waypoint": target_wp,
@@ -323,7 +334,6 @@ def main() -> None:
                 except Exception:
                     pass
 
-                # 3.5) Mostrar en ventana local de OpenCV si watch_mode está activo
                 if watch_mode:
                     cv2.imshow("Drone Camera Feed", annotated_frame)
                     key = cv2.waitKey(1) & 0xFF
@@ -331,14 +341,15 @@ def main() -> None:
                         print("[Watch] Bucle detenido desde la ventana de video.")
                         break
 
-            # 4) Si la misión fue completada, ejecutar secuencia de aterrizaje y devolver control
             if waypoint_tracker.is_completed and waypoints_list:
                 print("\n[Misión] ¡Misión completada exitosamente! Iniciando secuencia de aterrizaje autónomo...")
+                if flight_logger is not None:
+                    flight_logger.mark_success(True)
                 try:
                     # pyrefly: ignore [missing-import]
                     from airsim_plan.bridge.stream_hub import stream_hub
                     stream_hub.publish(
-                        frame=annotated_frame if frame is not None else None,
+                        frame=annotated_frame,
                         telemetry={
                             "connected": True,
                             "mission_id": manifest_data.get("mission_id", "MISION_ACTIVA"),
@@ -346,8 +357,7 @@ def main() -> None:
                             "flight_status": "aterrizando",
                             "estimated_ttc": None,
                             "xor_change_ratio": 0.0,
-                            "detections": [],
-                            "detected_obstacles": [],
+                            "obstacle_field": None,
                             "scene_summary": "Misión completada con éxito. Aterrizando...",
                             "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
                             "target_waypoint": None,
@@ -375,8 +385,7 @@ def main() -> None:
                             "flight_status": "completada_en_tierra",
                             "estimated_ttc": None,
                             "xor_change_ratio": 0.0,
-                            "detections": [],
-                            "detected_obstacles": [],
+                            "obstacle_field": None,
                             "scene_summary": "Dron en tierra. Control disponible en WebDCS.",
                             "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
                             "target_waypoint": None,
@@ -402,15 +411,15 @@ def main() -> None:
             from airsim_plan.bridge.stream_hub import stream_hub
             stream_hub.publish(
                 frame=None,
-                telemetry={
-                    "connected": False,
-                    "status": "idle",
-                    "flight_status": "detenido",
-                    "timestamp": time.time(),
-                }
+                telemetry={"connected": False, "status": "idle", "flight_status": "detenido", "timestamp": time.time()},
             )
         except Exception:
             pass
+
+        if flight_logger is not None:
+            flight_logger.close()
+
+        deliberation_service.stop()
 
         if watch_mode:
             # pyrefly: ignore [missing-import]

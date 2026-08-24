@@ -1,3 +1,76 @@
+# 2026-0824
+
+## Implementación de `PLAN-MEJORAS.md`: reconstrucción del lazo táctico
+
+Implementación de las fases F0–F4 del plan de mejoras derivado de la revisión crítica del lazo (`airsim-loop`), cuyo hallazgo central era que el contrato de percepción quedó roto al retirar YOLO: `detected_obstacles` quedaba siempre en `[]`, dejando ciegos al router, al fallback determinista y al override de seguridad, mientras el resto del sistema (prompt del SLM, evasión, documentación) seguía escrito como si existiera. Ver `PLAN-MEJORAS.md` para el detalle completo por fase.
+
+### F0 — Desbloqueo del lazo
+- **Actuador no bloqueante:** `execute_velocity()` ya no hace `.join()` sobre el comando anterior (`src/hardware/airsim_client.py`). Ese `.join()` con `duration=2.0` era la causa raíz de `LOOP_HZ=0.5`, no su consecuencia. Ahora la duración del comando se deriva de `LOOP_HZ` (last-command-wins).
+- **Una sola ruta hacia el SLM:** `hover_before_slm_node` + `blind_wall_router_node` (un nodo que invocaba a otro dentro de su propio cuerpo, más una arista adicional hacia el mismo destino) se reemplazaron por un único router (`policy_router`), eliminando estructuralmente la posibilidad de invocar al SLM dos veces por ciclo.
+- **Cliente AirSim único:** el grafo ya no reconstruye su propio `AirSimClient` (`get_airsim_client()` reconectaba y volvía a despegar). `main.py` crea un único cliente y lo inyecta en `compile_workflow(client)`. `get_airsim_client()` queda como shim deprecado.
+- **SLM asíncrono:** nuevo `DeliberationService` (`src/agents/deliberation_service.py`) corre la consulta al SLM en un hilo aparte con watchdog configurable (`SLM_WATCHDOG_MS`); el nodo deliberativo nunca bloquea el lazo de percepción.
+- **Modo estricto:** con `AIRSIM_STRICT=true` (default), si AirSim no responde, `capture()` ya no devuelve un frame sintético — el lazo comanda hover explícito y salta percepción/deliberación en vez de "volar" sobre datos ficticios.
+- **`xor_router` cableado** (antes definido pero con arista incondicional). Umbral marcado como provisorio: no fue posible recalibrarlo con datos de vuelo real en este entorno de implementación (sin acceso al simulador).
+
+### F1 — Contrato de percepción (`ObstacleField`)
+- Nuevo `src/perception/obstacle_field.py`: grilla 3×3 (sector × banda) con `occupancy`, `ttc_s`, `divergence`, `confidence` por celda. Único objeto que consumen `policy_router`, `evasive_node`, `deliberative_node` y `fsm_node`.
+- Nuevo `src/perception/flow_ttc.py`: TTC en segundos reales (`dt` de telemetría), con derotación del flujo óptico por pitch/roll/yaw y estimación del FOE por mínimos cuadrados ponderados con recorte de outliers. Reemplaza a `1/mean(|flow|)`, que no tenía unidades, confundía magnitud con divergencia (cada giro de yaw disparaba el freno espuriamente — la causa del "vuelo cortado y errático" reportado el 2026-0820) y usaba un FOE fijo en el centro de la imagen.
+- **IPM retirado, no reparado:** la hipótesis de plano de suelo dominante no se cumple con cámara frontal a ~10 m de altura en cañón urbano, y la implementación existente aplicaba la misma homografía a ambos frames (equivalente a un frame-difference bajo ego-movimiento). Ver `legacy/README.md` para el detalle completo y la alternativa considerada y rechazada.
+- `detector.py`, `translator.py`, `roi_cropper.py`, `ttc_estimator.py`, `ipm_segmentator.py`, `optical_flow_estimator.py` movidos a `legacy/perception/`.
+
+### F2 — Deliberación honesta
+- `frame_history` pasa a ser un ring buffer real; las etiquetas `[Fotograma t-N]` del prompt solo se emiten cuando efectivamente hay más de un frame (antes se afirmaba una historia temporal de 4 frames que nunca se poblaba).
+- Prompt reconstruido sobre `ObstacleField.summary_text()` en lugar de `_summarize_sectors(detected_obstacles)` (que siempre veía la lista vacía).
+- Decodificación restringida (`response_format=json_schema`) con el parser tolerante como red de seguridad; se registra `used_json_schema` y `adherent` por deliberación.
+- `action_to_command()` (`src/agents/action_map.py`) como única fuente de verdad de la cinemática por macro-acción, compartida por `deliberative`, `evasive` y `fsm` (antes `ACTION_VELOCITY_MAP` definía valores que el nodo deliberativo pisaba quince líneas después).
+- `WaypointTracker.progress_stall_cycles` reemplaza el conteo de ciclos-en-ruta-evasiva de `main.py`: mide progreso real (distancia mínima vista al waypoint), así que un desvío Manhattan largo pero correcto ya no se clasifica como atasco.
+
+### F3 — Instrumentación experimental
+- Nuevo brazo FSM determinista (`src/agents/fsm.py`) y brazo puramente reactivo, seleccionables vía `AGENT_ARM=slm|fsm|reactive`, sobre el mismo `ObstacleField` y la misma cinemática que el brazo SLM — habilita la comparación que pide el objetivo específico de la tesis.
+- Nuevo `src/logging/flight_logger.py`: JSONL estructurado por ciclo + `summary.json` por corrida.
+- Nuevos `experiments/runner.py` y `experiments/analyze.py` (comparación batch N misiones × M escenarios × K semillas) y `experiments/collect_ttc_dataset.py` + `experiments/analyze_ttc.py` (validación de TTC contra el canal depth, curva ROC para calibrar `TTC_EVASION_THRESHOLD`/`TTC_SAFE_THRESHOLD`).
+- Nuevo `scripts/bench_capture.py` para medir el techo real de `simGetImages` y elegir `LOOP_HZ` con evidencia.
+- 73 tests nuevos en `airsim-loop/tests/` (antes no había ninguno): incluyen una regresión directa del bug de doble invocación del SLM (`test_graph_integration.py`), del freno espurio por yaw (`test_flow_ttc.py`), del modo degradado (`test_degraded_mode.py`) y de las etiquetas de fotograma inventadas (`test_prompt_invariants.py`).
+
+### F0.0 — Resultado del benchmark de captura contra AirSim remoto (192.168.110.110)
+
+Con el simulador habilitado, se corrió `scripts/bench_capture.py --samples 20` contra la topología de red original (Mac ejecutando `airsim-loop`, Windows ejecutando Unreal Engine + AirSim en la misma LAN). Resultado, con `AIRSIM_RPC_TIMEOUT=8s`:
+
+| Resolución | Depth | p50 | p95 | Hz sostenible (p95) |
+|---|---|---|---|---|
+| 1080×720 | No | 8999.8ms | 9000.1ms | ~0.11 |
+| 1080×720 | Sí | 9000.0ms | 9000.4ms | ~0.11 |
+| 640×480 | No | 9000.0ms | 9000.3ms | ~0.11 |
+| 640×480 | Sí | 2336.0ms | 8999.7ms | ~0.11 |
+| 320×240 | No | 9000.0ms | 9000.4ms | ~0.11 |
+| 320×240 | Sí | 9000.0ms | 9000.8ms | ~0.11 |
+
+**Hallazgo:** prácticamente todas las llamadas a `simGetImages` agotaron el timeout de 8s, **sin importar la resolución** — 320×240 falló igual que 1080×720. Si el cuello de botella fuera ancho de banda, bajar resolución debería haber mejorado notablemente el p50; no lo hizo. Esto descarta el tamaño del payload como causa y apunta a un problema sistémico del socket msgpack-RPC sobre esa LAN específica (latencia/pérdida de paquetes intermitente — la única combinación con éxito parcial, 640×480+depth, tuvo mediana de 2.3s pero igual tocó el techo del timeout en el p95).
+
+**Conclusión:** no existe una resolución ni un `LOOP_HZ` que resuelva esto manteniendo AirSim remoto sobre esta red. Se decidió (con el usuario) migrar a **AirSim + `airsim-loop` co-localizados en la misma máquina Windows** (loopback `127.0.0.1`), y mover el servidor del SLM (`LOCAL_LLM_URL`) a la Mac M4 por red — la latencia hacia el LLM ya está absorbida por diseño (`DeliberationService` asíncrono, F0.5), la latencia hacia la cámara no lo estaba. Este split además es más representativo del hardware final del proyecto (Jetson Nano + cámara a bordo, compute y sensor co-localizados) que la topología de desarrollo dividida por red.
+CSV completo: `airsim-loop/scripts/bench_capture_results.csv`.
+
+### Migración de `airsim-loop/.env` a la topología local (consecuencia directa del hallazgo de F0.0)
+
+Con la decisión tomada, se actualizó `airsim-loop/.env` (versionado en git) para reflejar el escenario A:
+
+- `AIRSIM_IP`: `192.168.110.110` → `127.0.0.1`, con el razonamiento del cambio documentado inline (referencia a la tabla de arriba).
+- Agregados explícitos que antes dependían del default del código, ahora versionados: `LOOP_HZ=5.0` (a re-medir una vez corriendo local — ver pendientes), `AIRSIM_STRICT=true`, `AGENT_ARM=slm`, `VLM_USE_JSON_SCHEMA=true`.
+- `TTC_SAFE_THRESHOLD`/`TTC_EVASION_THRESHOLD` marcados inline como provisorios, pendientes de F1.3.
+- Removida la configuración muerta de YOLO (`YOLO_WEIGHTS`, `YOLO_CONF`) — sin uso desde el retiro del detector.
+- `LOCAL_LLM_URL` (`192.168.110.101:1234`) se mantiene sin cambios: se confirmó que esa IP ya es la Mac M4 (verificado con `ifconfig` en la sesión), o sea que el servidor del SLM ya apuntaba donde tiene que apuntar para el escenario A — no fue necesario tocarlo.
+- `airsim-loop/.env.copy` (plantilla desactualizada, no se carga en runtime) quedó sin tocar; sigue teniendo config de YOLO y sin las variables nuevas. Pendiente decidir si se actualiza o se elimina.
+- Suite de 73 tests re-corrida tras el cambio: sigue en verde (los valores nuevos coinciden con los defaults que el código ya usaba, así que no hay cambio de comportamiento en la Mac).
+
+Pendiente de este lado: el código vive en un repo Git compartido; falta el `git pull` en la máquina Windows y correr `python main.py` ahí con AirSim ya iniciado localmente para que el cambio de `AIRSIM_IP` tenga efecto real.
+
+### Pendiente
+- F0.0: re-correr `scripts/bench_capture.py` una vez migrado a la topología local (Windows) para fijar `LOOP_HZ` real de esa configuración.
+- F0.4: recalibrar `CANNY_XOR_THRESHOLD` con el histograma de `xor_change_ratio` en vuelo real, una vez resuelto el cuello de botella de captura.
+- F1.3: correr `experiments/collect_ttc_dataset.py` + `experiments/analyze_ttc.py` para calibrar `TTC_EVASION_THRESHOLD`/`TTC_SAFE_THRESHOLD` contra el canal depth (quedan marcados como provisorios en `.env`/código).
+- F3.3: correr `experiments/runner.py` sobre escenarios reales para producir los resultados SLM vs FSM vs reactivo.
+- F4.1: regenerar el `.mmd` del grafo de control desde el grafo compilado.
+
 # 2026-0823
 
 ## Nuevo Algoritmo de Evasión de Colisiones para Drones Urbanos

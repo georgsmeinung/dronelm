@@ -13,3 +13,5 @@ airsim-settings/.tmp.driveupload
 .venv/
 venv/
 venv.bak/
+
+.claude/settings.local.json

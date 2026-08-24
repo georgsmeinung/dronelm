@@ -1,10 +1,13 @@
 langgraph>=0.2.0
 cosysairsim>=1.8.0
-ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
 openai>=1.0.0
 python-dotenv>=1.0.0
-numpy>=1.24.0
-ultralytics>=3.0.3
-gymnasium[box2d]>=0.30.0
-pygame>=2.5.2
-keyboard>=0.13.5
+pytest>=8.0.0
+
+# rllander/manual-lander.py (sub-experimento independiente, no forma parte
+# del lazo principal): descomentar solo si se va a correr ese script.
+# gymnasium[box2d]>=0.30.0
+# pygame>=2.5.2
+# keyboard>=0.13.5

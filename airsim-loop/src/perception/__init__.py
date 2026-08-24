@@ -1,13 +1,14 @@
-"""Modulo de percepcion: detector (YOLO) + traductor pixeles-a-palabras + filtros geometricos/TTC."""
+"""Modulo de percepcion: gating de bordes, flujo optico + TTC, contrato de escena."""
 from .canny_gate import CannyGate
-from .optical_flow_estimator import OpticalFlowEstimator
-from .ipm_segmentator import IPMSegmentator
-from .ttc_estimator import TTCEstimator
+from .flow_ttc import FlowTTCEstimator
+from .obstacle_field import BANDS, SECTORS, Cell, ObstacleField, empty_field
 
 __all__ = [
     "CannyGate",
-    "OpticalFlowEstimator",
-    "IPMSegmentator",
-    "TTCEstimator",
+    "FlowTTCEstimator",
+    "ObstacleField",
+    "Cell",
+    "SECTORS",
+    "BANDS",
+    "empty_field",
 ]
-

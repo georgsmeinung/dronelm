@@ -6,6 +6,10 @@ from typing import Any, Dict, List, Optional
 
 DEFAULT_ACCEPTANCE_RADIUS = float(os.getenv("WAYPOINT_ACCEPTANCE_RADIUS", "3.5"))
 DEFAULT_CRUISE_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "5.0"))
+# F2.5: margen (metros) para considerar que hubo progreso real hacia el
+# waypoint activo. Un desvio Manhattan largo pero que reduce distancia no
+# cuenta como atasco; solo cuenta la falta de progreso sostenida.
+PROGRESS_EPS_M = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
 
 
 class WaypointTracker:
@@ -24,6 +28,10 @@ class WaypointTracker:
         self.current_index: int = 0
         self.is_completed: bool = len(self.waypoints) == 0
         self._locked_turn_dir: Optional[int] = None
+        # F2.5: seguimiento de progreso real (distancia minima vista al WP
+        # activo) en lugar de contar ciclos en rutas evasivas/deliberativas.
+        self._min_dist_seen: Optional[float] = None
+        self.progress_stall_cycles: int = 0
 
     def set_waypoints(self, waypoints: List[Dict[str, Any]]) -> None:
         """Inicializa o reemplaza la lista de waypoints."""
@@ -31,6 +39,27 @@ class WaypointTracker:
         self.current_index = 0
         self.is_completed = len(self.waypoints) == 0
         self._locked_turn_dir = None
+        self._min_dist_seen = None
+        self.progress_stall_cycles = 0
+
+    def record_progress(self, dist_to_wp: float) -> int:
+        """Registra la distancia actual al waypoint activo y actualiza el
+
+        contador de ciclos sin progreso real (F2.5). Devuelve el contador
+        actualizado. Un desvío correcto que sigue reduciendo la distancia
+        mínima vista nunca incrementa el contador, aunque tome muchos ciclos.
+        """
+        if self._min_dist_seen is None or dist_to_wp < self._min_dist_seen - PROGRESS_EPS_M:
+            self._min_dist_seen = dist_to_wp
+            self.progress_stall_cycles = 0
+        else:
+            self.progress_stall_cycles += 1
+        return self.progress_stall_cycles
+
+    def reset_progress(self) -> None:
+        """Reinicio manual del contador de atasco (p. ej. tras un escape forzado)."""
+        self._min_dist_seen = None
+        self.progress_stall_cycles = 0
 
     @property
     def current_waypoint(self) -> Optional[Dict[str, Any]]:
@@ -88,6 +117,7 @@ class WaypointTracker:
             print(f"[WaypointTracker] ¡Waypoint {label} alcanzado ({dist_3d:.2f}m)! Avanzando...")
             self.current_index += 1
             self._locked_turn_dir = None
+            self.reset_progress()
             if self.current_index >= len(self.waypoints):
                 self.is_completed = True
                 print("[WaypointTracker] ¡Misión completada! Todos los waypoints alcanzados.")

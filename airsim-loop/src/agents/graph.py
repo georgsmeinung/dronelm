@@ -1,11 +1,24 @@
-# Definición del flujo de LangGraph y el Bucle de Control Jerárquico (5 Pasos).
+# Definición del flujo de LangGraph y el Bucle de Control Jerárquico.
+#
+# Cambios de fondo respecto de la version original (ver PLAN-MEJORAS.md):
+#   - El cliente de AirSim se inyecta (F0.3): un solo cliente conectado por
+#     proceso, en vez de que get_airsim_client() reconstruyera el grafo entero.
+#   - La ruta hacia el SLM es unica (F0.2): policy_router decide en un solo
+#     paso hacia donde va el ciclo (antes habia un nodo + un router encadenado
+#     que terminaba invocando al SLM dos veces por ciclo).
+#   - El SLM corre en un hilo aparte (F0.5): el nodo deliberativo nunca
+#     bloquea el lazo, ver deliberation_service.py.
+#   - La percepcion produce un unico ObstacleField (F1.1): reemplaza a
+#     detected_obstacles (que quedaba siempre en [] desde que se retiro YOLO)
+#     y a la mascara del IPM retirado.
+#   - Router de arma (F3.1): AGENT_ARM selecciona entre el brazo SLM (default,
+#     comportamiento historico), un brazo FSM determinista, y un brazo
+#     puramente reactivo (guiado a waypoint sin evasion, cota inferior).
 from __future__ import annotations
 
 import math
 import os
 from typing import Any, Dict, List, Optional, TypedDict
-# pyrefly: ignore [missing-import]
-import numpy as np
 
 try:
     from dotenv import load_dotenv
@@ -17,36 +30,35 @@ except Exception:  # pragma: no cover
 # pyrefly: ignore [missing-import]
 from langgraph.graph import END, StateGraph
 
+from src.perception.obstacle_field import ObstacleField, empty_field
+
+AGENT_ARM = os.getenv("AGENT_ARM", "slm")  # "slm" | "fsm" | "reactive"
+
 
 # ---------------------------------------------------------------------------
 # Estado del grafo (DroneState)
 # ---------------------------------------------------------------------------
 class DroneState(TypedDict, total=False):
-    """Estado que circula entre los nodos del grafo en el nuevo pipeline jerárquico."""
+    """Estado que circula entre los nodos del grafo."""
 
     rgb_image: Any
-    prev_image: Any  # Memoria del fotograma anterior para el flujo óptico
-    annotated_image: Any  # Frame con bboxes de YOLO superpuestos para el VLM
-    frame_history: List[Any]  # Ring buffer de los últimos N frames anotados [t-3, t-2, t-1, t]
+    prev_image: Any
+    prev_telemetry: Dict[str, Any]
+    frame_history: List[Any]  # Ring buffer real de los ultimos N frames para el VLM (F2.1)
     prev_canny_edges: Any
     xor_change_ratio: float
     telemetry: Dict[str, Any]
-    # Deprecated YOLO fields removed
-    optical_flow_map: Any        # Campo denso de vectores (H×W×2)
-    obstacle_mask: Any           # Máscara binaria del IPM/SLIC
-    occlusion_ratio: float       # % de pantalla bloqueada
-    fov_blocked: bool            # True si occlusion_ratio > threshold
-    estimated_ttc: float
-    ttc_details: Dict[str, Any]
-    detected_obstacles: List[Dict[str, Any]]
+    degraded: bool  # True si AirSim no respondio este ciclo (F0.6)
+    obstacle_field: ObstacleField  # F1.1: unico contrato de percepcion
+    estimated_ttc: float  # derivado de obstacle_field.min_ttc(), para display/logging
     scene_summary: str
     next_action: str
     velocity_command: Dict[str, Any]
     route: str
-    flight_status: str  # "vuelo" | "hover_slm" | "evasion_local" | "vuelo_waypoint" | "mision_completada"
+    flight_status: str
     deliberations: List[Dict[str, Any]]
     last_deliberation: Optional[Dict[str, Any]]
-    collision_result: Dict[str, Any]
+    slm_request_id: Optional[int]
     waypoints: List[Dict[str, Any]]
     current_wp_index: int
     target_waypoint: Optional[Dict[str, Any]]
@@ -55,325 +67,279 @@ class DroneState(TypedDict, total=False):
     active_maneuver: Optional[str]
     maneuver_cycles_left: int
     maneuver_command: Optional[Dict[str, Any]]
-    # Número de ciclos consecutivos en ruta evasiva/deliberativa sin reducir distancia al waypoint.
-    # Cuando alcanza EVASION_STUCK_THRESHOLD, el ttc_router fuerza hover_and_slm para
-    # que deliberative_node aplique el escape por GANAR_ALTURA sin consultar al LLM.
     evasion_stuck_cycles: int
+    _delib_outcomes: List[Dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
 # Lazy imports y construcción de nodos
 # ---------------------------------------------------------------------------
-def _build_nodes() -> Dict[str, Any]:
-    """Construye los callables de los nodos y los componentes persistentes."""
-    from .reactive import reactive_node
-    from .deliberative import deliberative_node
-    from .evasive import evasive_node
-    from src.perception import (
-        TTCEstimator,
-        CannyGate,
-        OpticalFlowEstimator,
-        IPMSegmentator,
-    )
-    from src.hardware import AirSimClient
+def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
+    """Construye los callables de los nodos a partir de un AirSimClient YA
 
-    # YOLO detector removed – not used in new pipeline
-    # detector = None    )
+    conectado (F0.3: inyeccion de dependencia, un solo cliente por proceso).
+    """
+    from .reactive import reactive_node
+    from .deliberative import make_deliberation_service, make_deliberative_node
+    from .evasive import evasive_node
+    from .fsm import fsm_node
+    from .action_map import action_to_command
+    from src.perception import CannyGate, FlowTTCEstimator
 
     canny_gate = CannyGate()
-    ttc_estimator = TTCEstimator()
+    flow_ttc_estimator = FlowTTCEstimator()
+    deliberation_service = make_deliberation_service()
+    deliberative_node = make_deliberative_node(deliberation_service)
 
-    airsim_client = AirSimClient()
-    airsim_client.connect()
+    frame_history_size = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "1"))
+    girar90_duration_s = float(os.getenv("GIRAR90_DURATION_S", "1.0"))
 
-    # 1. Nodo de captura de cámara en tiempo real
+    # 1. Captura sensorial
     def capture_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a capture_node")
-        # Store previous frame for optical flow
-        prev_image = state.get("rgb_image")
-        state["prev_image"] = prev_image
-        # pyrefly: ignore [bad-unpacking]
+        state["prev_image"] = state.get("rgb_image")
+        state["prev_telemetry"] = state.get("telemetry", {}) or {}
         image, telemetry = airsim_client.capture()
         state["rgb_image"] = image
         state["telemetry"] = telemetry
+        degraded = image is None or telemetry.get("source") != "airsim"
+        state["degraded"] = degraded
+        if not degraded:
+            history = list(state.get("frame_history") or [])
+            history.append(image)
+            state["frame_history"] = history[-frame_history_size:]
         return state
 
-    # 2. Paso 1: Gating de Bordes XOR (Canny)
+    def degraded_hover_node(state: DroneState) -> DroneState:
+        telemetry = state.get("telemetry", {}) or {}
+        cmd = action_to_command("FRENAR", telemetry=telemetry)
+        cmd["rationale"] = "AirSim no disponible: hover de seguridad, sin percepcion ni deliberacion (F0.6)."
+        state["next_action"] = "FRENAR"
+        state["velocity_command"] = cmd
+        state["route"] = "degraded"
+        state["flight_status"] = "degradado"
+        return state
+
     def canny_xor_gate_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a canny_xor_gate_node")
         image = state.get("rgb_image")
         change_ratio, edges, _ = canny_gate.evaluate(image)
         state["xor_change_ratio"] = change_ratio
         state["prev_canny_edges"] = edges
         return state
 
-    def optical_flow_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a optical_flow_node")
+    # Percepcion (F1.1): un unico nodo que produce el ObstacleField completo.
+    def perception_node(state: DroneState) -> DroneState:
         prev_image = state.get("prev_image")
         curr_image = state.get("rgb_image")
-        if prev_image is None or curr_image is None:
-            # Not enough data yet, skip processing
-            state["optical_flow_map"] = None
-            return state
-        ttc, flow = OpticalFlowEstimator().estimate(curr_image, prev_image)
-        state["optical_flow_map"] = flow
+        prev_telemetry = state.get("prev_telemetry") or {}
+        telemetry = state.get("telemetry") or {}
+        field = flow_ttc_estimator.estimate(curr_image, prev_image, telemetry, prev_telemetry)
+        state["obstacle_field"] = field
+        state["estimated_ttc"] = field.min_ttc()
+        state["scene_summary"] = field.summary_text()
         return state
 
-    def ipm_segmentation_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a ipm_segmentation_node")
-        image = state.get("rgb_image")
-        if image is None:
-            state["obstacle_mask"] = None
-            state["occlusion_ratio"] = 0.0
-            state["fov_blocked"] = False
-            return state
-        prev_image = state.get("prev_image")
-        telemetry = state.get("telemetry", {})
-        mask, occ_pct, annotated = IPMSegmentator().segment(image, prev_image, telemetry)
-        state["obstacle_mask"] = mask
-        occlusion = occ_pct / 100.0
-        state["occlusion_ratio"] = occlusion
-        threshold = float(os.getenv("FOV_BLOCKED_THRESHOLD", "0.6"))
-        state["fov_blocked"] = occlusion > threshold
+    def girar_90_node(state: DroneState) -> DroneState:
+        telemetry = state.get("telemetry", {}) or {}
+        field: ObstacleField = state.get("obstacle_field") or empty_field()
+        cmd = action_to_command("GIRAR_90", telemetry=telemetry)
+        cmd["rationale"] = f"FOV bloqueado ({field.blocked_fraction()*100:.0f}%). Girando 90° para buscar corredor."
+        state["next_action"] = "GIRAR_90"
+        state["velocity_command"] = cmd
+        state["route"] = "girar_90"
+        state["flight_status"] = "exploracion_yaw"
+        loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
+        state["active_maneuver"] = "GIRAR_90"
+        state["maneuver_cycles_left"] = max(1, round(girar90_duration_s * loop_hz))
+        state["maneuver_command"] = cmd
         return state
 
-    # 4. Paso 3: Estimación de Tiempo de Colisión (TTC) No Neuronal
-    def ttc_estimate_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a ttc_estimate_node")
-        # Intentar usar el mapa de flujo óptico ya calculado
-        flow = state.get("optical_flow_map")
-        if flow is None:
-            # Calcular si no está disponible
-            prev_image = state.get("prev_image")
-            curr_image = state.get("rgb_image")
-            if prev_image is None or curr_image is None:
-                state["estimated_ttc"] = float('inf')
-                state["ttc_details"] = {"method": "none"}
-                return state
-            ttc, flow = OpticalFlowEstimator().estimate(curr_image, prev_image)
-            state["optical_flow_map"] = flow
-        else:
-            # Calcular TTC a partir del flujo existente (divergencia media en ROI central)
-            mag = np.linalg.norm(flow, axis=2)
-            h, w = mag.shape
-            cx, cy = w // 2, h // 2
-            roi_sz = int(min(w, h) * 0.4)
-            x0, y0 = cx - roi_sz // 2, cy - roi_sz // 2
-            roi_mag = mag[y0:y0 + roi_sz, x0:x0 + roi_sz]
-            mean_div = np.mean(roi_mag) + 1e-6
-            ttc = max(0.1, min(10.0, 1.0 / mean_div))
-        state["estimated_ttc"] = float(ttc)
-        state["ttc_details"] = {"method": "optical_flow"}
-        return state
-
-    # 5. Paso 5: Parada de seguridad previa al SLM
-    def hover_before_slm_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a hover_before_slm_node (Freno de seguridad)")
-        # Enviar comando de frenado inmediato para evitar colisión durante inferencia
-        airsim_client.execute_velocity(vx=0.0, vy=0.0, vz=0.0, yaw_rate=0.0)
-        # Ejecutar segmentación IPM para obtener máscara y ratio de oclusión
-        state = ipm_segmentation_node(state)
-        # Decidir acción: girar 90° si el FOV está bloqueado, de lo contrario usar VLM
-        return blind_wall_router_node(state)
-
-    def blind_wall_router_node(state: DroneState) -> DroneState:
-        if state.get("fov_blocked", False):
-            telemetry = state.get("telemetry", {})
-            current_yaw = math.degrees(telemetry.get("orientation", {}).get("yaw", 0.0))
-            target_yaw = (current_yaw + 90.0) % 360.0
-            cmd = {
-                "macro_action": "GIRAR_90",
-                "vx": 0.0,
-                "vy": 0.0,
-                "vz": 0.0,
-                "yaw_rate": 20.0,
-                "target_yaw": target_yaw,
-                "rationale": f"FOV bloqueado ({state['occlusion_ratio']:.0f}%). Girando 90° para buscar corredor.",
-            }
-            state["next_action"] = "GIRAR_90"
-            state["velocity_command"] = cmd
-            state["active_maneuver"] = "GIRAR_90"
-            state["maneuver_cycles_left"] = 15  # ~1.5s a 10Hz
-            state["flight_status"] = "exploracion_yaw"
-            return state
-        else:
-            return deliberative_node(state)
-
-    # 6. Nodo de actuación motriz
     def motor_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a motor_node")
         cmd = state.get("velocity_command") or {
             "macro_action": state.get("next_action", "MANTENER_RUMBO"),
-            "vx": 0.0,
-            "vy": 0.0,
-            "vz": 0.0,
-            "yaw_rate": 0.0,
+            "vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0,
         }
         target_yaw = cmd.get("target_yaw")
-        if target_yaw is not None:
-            target_yaw = float(target_yaw)
-
         airsim_client.execute_velocity(
             vx=float(cmd.get("vx", 0.0)),
             vy=float(cmd.get("vy", 0.0)),
             vz=float(cmd.get("vz", 0.0)),
             yaw_rate=float(cmd.get("yaw_rate", 0.0)),
-            target_yaw=target_yaw,
+            target_yaw=float(target_yaw) if target_yaw is not None else None,
         )
         state["velocity_command"] = cmd
+        deliberations = state.get("deliberations") or []
+        if deliberations:
+            state["last_deliberation"] = deliberations[-1]
         return state
 
     return {
         "capture": capture_node,
+        "degraded_hover": degraded_hover_node,
         "canny_xor_gate": canny_xor_gate_node,
-        "optical_flow": optical_flow_node,
-        "ipm_segmentation": ipm_segmentation_node,
-        "ttc_estimate": ttc_estimate_node,
+        "perception": perception_node,
         "keep_going": reactive_node,
         "evasive": evasive_node,
-        "hover_and_slm": hover_before_slm_node,
-        "blind_wall_router": blind_wall_router_node,
+        "deliberative": deliberative_node,
+        "girar_90": girar_90_node,
+        "fsm": fsm_node,
         "motor": motor_node,
         "_airsim_client": airsim_client,
+        "_deliberation_service": deliberation_service,
     }
 
 
 # ---------------------------------------------------------------------------
 # Routers Condicionales del Grafo
 # ---------------------------------------------------------------------------
+# NOTA sobre umbrales: siguen siendo valores por defecto provisorios hasta
+# que F1.3 (validacion de TTC contra el canal depth, curva ROC) los
+# reemplace por parametros calibrados. Ver PLAN-MEJORAS.md.
 XOR_THRESHOLD = float(os.getenv("CANNY_XOR_THRESHOLD", "0.02"))
 TTC_EVASION_THRESHOLD = float(os.getenv("TTC_EVASION_THRESHOLD", "2.0"))
 TTC_SAFE_THRESHOLD = float(os.getenv("TTC_SAFE_THRESHOLD", "5.0"))
+FOV_BLOCKED_THRESHOLD = float(os.getenv("FOV_BLOCKED_THRESHOLD", "0.6"))
+
+
+def degraded_router(state: DroneState) -> str:
+    return "degraded_hover" if state.get("degraded") else "canny_xor_gate"
 
 
 def xor_router(state: DroneState) -> str:
-    """Decisión de Paso 1: Si el cambio de bordes es menor al umbral, sigue adelante directo."""
+    """Paso 1: si el cambio de bordes es menor al umbral, seguir directo sin percepcion pesada.
+
+    F0.4: cableado (a diferencia de la version original, donde estaba
+    definido pero la arista era incondicional). El umbral sigue siendo el
+    default historico (0.02-0.03); queda pendiente de recalibrar con el
+    histograma de xor_change_ratio medido en vuelo real a la frecuencia
+    nueva del lazo (no fue posible medirlo en este entorno de implementacion,
+    sin acceso al simulador).
+    """
     change_ratio = state.get("xor_change_ratio", 1.0)
     if change_ratio < XOR_THRESHOLD:
         return "keep_going"
-    return "optical_flow"
+    return "perception"
 
 
-def ttc_router(state: DroneState) -> str:
-    """Decisión de Paso 4: Router Táctico Jerárquico con Priorización de Estructuras Urbanas.
+def policy_router(state: DroneState) -> str:
+    """Router unico de politica (F0.2 + F1.1 + F3.1).
 
-    - Caso 0 (hover_and_slm): Drone atascado N ciclos sin progresar → escape por GANAR_ALTURA.
-    - Caso C (hover_and_slm): Estructura frontal (edificio/muro) en Cerca/Inminente,
-      o cualquier objeto Inminente (<2.5m), o Looming dinámico crítico (TTC <= 2.0s).
-    - Caso B (evasive): Obstáculo central en Cerca (postes, árboles, tráfico) o TTC <= 5.0s.
-    - Caso A (keep_going): Sector central totalmente libre de obstáculos cercanos/inminentes.
+    Reemplaza a ttc_router + hover_before_slm_node + blind_wall_router_node
+    de la version original: antes esos tres pasos (uno de ellos con una
+    llamada directa a otro nodo dentro del cuerpo de la funcion) hacian que
+    un mismo ciclo pudiera invocar al SLM dos veces. Aca la decision de arma
+    (slm/fsm/reactive) y la decision tactica (keep_going/evasive/deliberative/
+    girar_90) se resuelven en un unico paso, con un unico router condicional.
     """
-    # PRIORIDAD 0: Escape de deadlock si el drone lleva N ciclos en modo evasivo
-    # sin progresar hacia el waypoint (building omnidireccional u otros bloqueos persistentes).
-    STUCK_THRESHOLD = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
+    if AGENT_ARM == "reactive":
+        return "keep_going"
+    if AGENT_ARM == "fsm":
+        return "fsm"
+
+    stuck_threshold = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
     stuck = int(state.get("evasion_stuck_cycles", 0))
-    if stuck >= STUCK_THRESHOLD:
-        # Forzar deliberación: deliberative_node detectará el contador y aplicará
-        # GANAR_ALTURA sin consultar al LLM para escapar del bloqueo.
-        return "hover_and_slm"
+    if stuck >= stuck_threshold:
+        return "deliberative"
 
-    ttc = state.get("estimated_ttc", float("inf"))
-    obstacles = state.get("detected_obstacles", []) or []
+    field: ObstacleField = state.get("obstacle_field") or empty_field()
+    ttc = field.min_ttc()
+    center_blocked = field.is_blocked("centro")
+    center_ttc = field.sector_ttc("centro")
 
-    # Categorías críticas
-    structural_names = {"building", "wall", "house", "roof", "tower", "bridge", "structure"}
-
-    # 1. Peligro Inminente Masivo en sector Centro (Looming crítico <= 2.5s o proximidad inminente)
-    center_imminent = (ttc <= 2.5) or any(
-        o.get("sector") == "Centro"
-        and o.get("proximity") == "Inminente"
-        for o in obstacles
-    )
-
-    # 2. Estructura Crítica Frontal en sector Centro (Edificios/Muros en Inminente o Cerca <6.0m)
-    center_structural_blocking = any(
-        o.get("sector") == "Centro"
-        and (str(o.get("object", "")).lower() in structural_names or o.get("category") == "structural")
-        and o.get("proximity") in ("Inminente", "Cerca")
-        for o in obstacles
-    )
-
-    # 3. Obstáculos generales en sector central en proximidad Cerca
-    center_near = any(
-        o.get("sector") == "Centro" and o.get("proximity") in ("Inminente", "Cerca")
-        for o in obstacles
-    )
-
-    # 4. Persistencia Táctica de Maniobra (Ejecución comprometida anti-oscilación)
-    maneuver_cycles = int(state.get("maneuver_cycles_left", 0))
     active_man = state.get("active_maneuver")
-    if active_man and maneuver_cycles > 0:
-        # Durante la maniobra de escape, si hay riesgo inminente de impacto (<2.0s), re-deliberar; sino continuar
-        if ttc > 2.0:
-            return "evasive"
-
-    # Caso C: Peligro Crítico / Estructura bloqueando el pasillo
-    if center_imminent or center_structural_blocking or (center_near and ttc <= TTC_EVASION_THRESHOLD):
-        return "hover_and_slm"
-
-    # Caso B: Maniobra Evasiva Local Rápida (TTC dinámico en ventana de advertencia <= 3.5s)
-    if (center_near and ttc <= TTC_SAFE_THRESHOLD) or (ttc <= 3.5):
+    cycles_left = int(state.get("maneuver_cycles_left", 0))
+    if active_man and cycles_left > 0 and ttc > TTC_EVASION_THRESHOLD:
         return "evasive"
 
-    # Caso A: Camino despejado / Corredor abierto -> Navegación nominal hacia el Waypoint activo
+    center_imminent = center_ttc <= TTC_EVASION_THRESHOLD
+    if center_imminent or (center_blocked and center_ttc <= TTC_SAFE_THRESHOLD):
+        if field.blocked_fraction() > FOV_BLOCKED_THRESHOLD:
+            return "girar_90"
+        return "deliberative"
+
+    if center_blocked or ttc <= TTC_SAFE_THRESHOLD:
+        return "evasive"
+
     return "keep_going"
 
 
 # ---------------------------------------------------------------------------
 # Construcción e Integración del Grafo
 # ---------------------------------------------------------------------------
-def build_workflow() -> Any:
-    """Construye el StateGraph de 7 nodos y 2 routers condicionales."""
-    nodes = _build_nodes()
+def build_workflow(airsim_client: Any) -> Any:
+    """Construye el StateGraph. Requiere un AirSimClient ya conectado (F0.3)."""
+    nodes = _build_nodes(airsim_client)
     workflow = StateGraph(DroneState)
 
     workflow.add_node("capture", nodes["capture"])
+    workflow.add_node("degraded_hover", nodes["degraded_hover"])
     workflow.add_node("canny_xor_gate", nodes["canny_xor_gate"])
-    workflow.add_node("optical_flow", nodes["optical_flow"])
-    workflow.add_node("ipm_segmentation", nodes["ipm_segmentation"])
-    workflow.add_node("ttc_estimate", nodes["ttc_estimate"])
+    workflow.add_node("perception", nodes["perception"])
     workflow.add_node("keep_going", nodes["keep_going"])
     workflow.add_node("evasive", nodes["evasive"])
-    workflow.add_node("hover_and_slm", nodes["hover_and_slm"])
-    workflow.add_node("blind_wall_router", nodes["blind_wall_router"])
+    workflow.add_node("deliberative", nodes["deliberative"])
+    workflow.add_node("girar_90", nodes["girar_90"])
+    workflow.add_node("fsm", nodes["fsm"])
     workflow.add_node("motor", nodes["motor"])
 
-    # Flujo y conexiones
     workflow.set_entry_point("capture")
-    workflow.add_edge("capture", "canny_xor_gate")
-    workflow.add_edge("canny_xor_gate", "optical_flow")
-    workflow.add_edge("optical_flow", "ipm_segmentation")
-    workflow.add_edge("ipm_segmentation", "ttc_estimate")
+    workflow.add_conditional_edges("capture", degraded_router, {
+        "degraded_hover": "degraded_hover",
+        "canny_xor_gate": "canny_xor_gate",
+    })
+    workflow.add_conditional_edges("canny_xor_gate", xor_router, {
+        "keep_going": "keep_going",
+        "perception": "perception",
+    })
+    workflow.add_conditional_edges("perception", policy_router, {
+        "keep_going": "keep_going",
+        "evasive": "evasive",
+        "deliberative": "deliberative",
+        "girar_90": "girar_90",
+        "fsm": "fsm",
+    })
 
-    # Router Táctico Jerárquico: TTC + Proximidad + Estructuras + Persistencia
-    workflow.add_conditional_edges(
-        "ttc_estimate",
-        ttc_router,
-        {
-            "keep_going": "keep_going",
-            "evasive": "evasive",
-            "hover_and_slm": "hover_and_slm",
-        },
-    )
-
+    workflow.add_edge("degraded_hover", "motor")
     workflow.add_edge("keep_going", "motor")
     workflow.add_edge("evasive", "motor")
-    workflow.add_edge("hover_and_slm", "blind_wall_router")
-    workflow.add_edge("blind_wall_router", "motor")
+    workflow.add_edge("deliberative", "motor")
+    workflow.add_edge("girar_90", "motor")
+    workflow.add_edge("fsm", "motor")
     workflow.add_edge("motor", END)
 
+    workflow._nodes_extra = nodes  # acceso a _airsim_client / _deliberation_service desde main.py
     return workflow
 
 
-def compile_workflow():
-    """Atajo para compilar el StateGraph."""
-    workflow = build_workflow()
-    return workflow.compile()
+def compile_workflow(airsim_client: Any):
+    """Compila el StateGraph. Devuelve (app_compilada, deliberation_service)."""
+    workflow = build_workflow(airsim_client)
+    app = workflow.compile()
+    return app, workflow._nodes_extra["_deliberation_service"]
 
 
 def get_airsim_client() -> Optional[Any]:
-    """Obtiene el cliente de AirSim asociado al grafo."""
+    """Deprecado (F0.3): antes reconstruia el grafo entero y creaba un
+
+    SEGUNDO cliente de AirSim (con su propio takeoffAsync), mientras el grafo
+    seguia usando el primero. main.py ahora crea un unico AirSimClient y lo
+    inyecta en compile_workflow(). Esta funcion queda solo por compatibilidad
+    hacia atras para llamadores externos; construye un cliente propio,
+    desconectado del grafo real.
+    """
+    import warnings
+
+    warnings.warn(
+        "get_airsim_client() esta deprecado: crea un cliente AirSim "
+        "independiente del que usa el grafo. Usar AirSimClient() + "
+        "compile_workflow(client) directamente.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
-        return _build_nodes()["_airsim_client"]
+        from src.hardware import AirSimClient
+
+        client = AirSimClient()
+        client.connect()
+        return client
     except Exception:
         return None
