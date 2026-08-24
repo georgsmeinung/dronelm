@@ -4,6 +4,8 @@ from __future__ import annotations
 import math
 import os
 from typing import Any, Dict, List, Optional, TypedDict
+# pyrefly: ignore [missing-import]
+import numpy as np
 
 try:
     from dotenv import load_dotenv
@@ -28,10 +30,11 @@ class DroneState(TypedDict, total=False):
     prev_canny_edges: Any
     xor_change_ratio: float
     telemetry: Dict[str, Any]
-    roi_image: Any
-    roi_info: Any  # (x_offset, y_offset, roi_w, roi_h)
-    detections: List[Any]
-    roi_detections: List[Any]
+    # Deprecated YOLO fields removed
+    optical_flow_map: Any        # Campo denso de vectores (H×W×2)
+    obstacle_mask: Any           # Máscara binaria del IPM/SLIC
+    occlusion_ratio: float       # % de pantalla bloqueada
+    fov_blocked: bool            # True si occlusion_ratio > threshold
     estimated_ttc: float
     ttc_details: Dict[str, Any]
     detected_obstacles: List[Dict[str, Any]]
@@ -66,21 +69,15 @@ def _build_nodes() -> Dict[str, Any]:
     from .deliberative import deliberative_node
     from .evasive import evasive_node
     from src.perception import (
-        CannyGate,
-        YoloDetector,
-        crop_roi_62,
         TTCEstimator,
-        translate_detections,
-        summarize_scene,
+        CannyGate,
+        OpticalFlowEstimator,
+        IPMSegmentator,
     )
     from src.hardware import AirSimClient
 
-    weights_path = os.getenv("YOLO_WEIGHTS", "weights/yolov8n.pt")
-    confidence_threshold = float(os.getenv("YOLO_CONF", "0.35"))
-    detector = YoloDetector(
-        weights_path=weights_path,
-        confidence_threshold=confidence_threshold,
-    )
+    # YOLO detector removed – not used in new pipeline
+    # detector = None    )
 
     canny_gate = CannyGate()
     ttc_estimator = TTCEstimator()
@@ -91,6 +88,9 @@ def _build_nodes() -> Dict[str, Any]:
     # 1. Nodo de captura de cámara en tiempo real
     def capture_node(state: DroneState) -> DroneState:
         print("[Grafo] -> Entrando a capture_node")
+        # Store previous frame for optical flow
+        prev_image = state.get("rgb_image")
+        state["prev_image"] = prev_image
         # pyrefly: ignore [bad-unpacking]
         image, telemetry = airsim_client.capture()
         state["rgb_image"] = image
@@ -106,98 +106,64 @@ def _build_nodes() -> Dict[str, Any]:
         state["prev_canny_edges"] = edges
         return state
 
-    # 3. Paso 2: Restricción de ROI de 62° + Inferencia YOLO
-    def roi_yolo_detect_node(state: DroneState) -> DroneState:
-        print("[Grafo] -> Entrando a roi_yolo_detect_node")
+    def optical_flow_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a optical_flow_node")
+        prev_image = state.get("prev_image")
+        curr_image = state.get("rgb_image")
+        if prev_image is None or curr_image is None:
+            # Not enough data yet, skip processing
+            state["optical_flow_map"] = None
+            return state
+        flow = OpticalFlowEstimator().estimate(prev_image, curr_image)
+        state["optical_flow_map"] = flow
+        return state
+
+    def ipm_segmentation_node(state: DroneState) -> DroneState:
+        print("[Grafo] -> Entrando a ipm_segmentation_node")
         image = state.get("rgb_image")
-        roi_image, roi_info = crop_roi_62(image)
-
-        # Ejecutamos YOLO sobre el recorte ROI para ahorrar hardware
-        roi_detections = detector.detect(roi_image)
-
-        # Remapar bboxes al marco global para la visualización y compatibilidad
-        x_off, y_off, _, _ = roi_info
-        global_detections = []
-        global_det_objs = []
-        from src.perception import Detection
-        for det in roi_detections:
-            if det.bbox and len(det.bbox) == 4:
-                g_bbox = [
-                    det.bbox[0] + x_off,
-                    det.bbox[1] + y_off,
-                    det.bbox[2] + x_off,
-                    det.bbox[3] + y_off,
-                ]
-                det_dict = det.to_dict()
-                det_dict["bbox"] = g_bbox
-                global_detections.append(det_dict)
-                global_det_objs.append(
-                    Detection(object=det.object, confidence=float(det.confidence), bbox=g_bbox)
-                )
-
-        obstacles = translate_detections(
-            global_det_objs if global_det_objs else roi_detections,
-            frame_width=airsim_client.frame_width,
-            frame_height=airsim_client.frame_height,
-        )
-
-        state["roi_image"] = roi_image
-        state["roi_info"] = roi_info
-        state["roi_detections"] = [d.to_dict() for d in roi_detections]
-        state["detections"] = global_detections
-        state["detected_obstacles"] = [o.to_dict() for o in obstacles]
-        state["scene_summary"] = summarize_scene(obstacles)
-        state["collision_result"] = detector.last_collision_result.to_dict()
-
-        # Generar frame anotado con bboxes para el VLM deliberativo
-        annotated = None
-        if image is not None:
-            try:
-                # pyrefly: ignore [missing-import]
-                import cv2
-                annotated = image.copy()
-                for det in global_detections:
-                    bbox = det.get("bbox", [0, 0, 0, 0])
-                    obj_name = det.get("object", "")
-                    if len(bbox) == 4:
-                        x1, y1, x2, y2 = map(int, bbox)
-                        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 100), 2)
-                        cv2.putText(annotated, obj_name, (x1, max(y1 - 5, 15)),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 100), 1)
-            except Exception:
-                annotated = image  # Si falla cv2, usar el frame crudo
-        state["annotated_image"] = annotated
-
-        # Mantener ring buffer de frames anotados para contexto temporal del VLM
-        history = list(state.get("frame_history") or [])
-        if annotated is not None:
-            history.append(annotated)
-        # Retener solo los últimos N frames (configurable vía VLM_FRAME_HISTORY_SIZE)
-        max_history = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "4"))
-        if len(history) > max_history:
-            history = history[-max_history:]
-        state["frame_history"] = history
-
+        if image is None:
+            state["obstacle_mask"] = None
+            state["occlusion_ratio"] = 0.0
+            state["fov_blocked"] = False
+            return state
+        mask = IPMSegmentator().segment(image)
+        state["obstacle_mask"] = mask
+        # Simple occlusion ratio: proportion of masked pixels
+        total_pixels = mask.size if hasattr(mask, "size") else (mask.shape[0] * mask.shape[1])
+        blocked_pixels = mask.sum() if hasattr(mask, "sum") else int(mask.astype(bool).sum())
+        occlusion = blocked_pixels / total_pixels if total_pixels else 0.0
+        state["occlusion_ratio"] = occlusion
+        threshold = float(os.getenv("FOV_BLOCKED_THRESHOLD", "0.6"))
+        state["fov_blocked"] = occlusion > threshold
         return state
 
     # 4. Paso 3: Estimación de Tiempo de Colisión (TTC) No Neuronal
     def ttc_estimate_node(state: DroneState) -> DroneState:
         print("[Grafo] -> Entrando a ttc_estimate_node")
-        raw_detections = state.get("roi_detections", [])
-        # Reconstruir objetos Detection si venían como dicts
-        from src.perception import Detection
-        det_objs = []
-        for d in raw_detections:
-            if isinstance(d, dict):
-                det_objs.append(Detection(object=d.get("object", "objeto"), confidence=float(d.get("confidence", 0.0)), bbox=d.get("bbox", [0, 0, 0, 0])))
-            elif isinstance(d, Detection):
-                det_objs.append(d)
-            else:
-                det_objs.append(d)
-
-        estimated_ttc, details = ttc_estimator.estimate(det_objs)
-        state["estimated_ttc"] = estimated_ttc
-        state["ttc_details"] = details
+        # Intentar usar el mapa de flujo óptico ya calculado
+        flow = state.get("optical_flow_map")
+        if flow is None:
+            # Calcular si no está disponible
+            prev_image = state.get("prev_image")
+            curr_image = state.get("rgb_image")
+            if prev_image is None or curr_image is None:
+                state["estimated_ttc"] = float('inf')
+                state["ttc_details"] = {"method": "none"}
+                return state
+            ttc, flow = OpticalFlowEstimator().estimate(curr_image, prev_image)
+            state["optical_flow_map"] = flow
+        else:
+            # Calcular TTC a partir del flujo existente (divergencia media en ROI central)
+            mag = np.linalg.norm(flow, axis=2)
+            h, w = mag.shape
+            cx, cy = w // 2, h // 2
+            roi_sz = int(min(w, h) * 0.4)
+            x0, y0 = cx - roi_sz // 2, cy - roi_sz // 2
+            roi_mag = mag[y0:y0 + roi_sz, x0:x0 + roi_sz]
+            mean_div = np.mean(roi_mag) + 1e-6
+            ttc = max(0.1, min(10.0, 1.0 / mean_div))
+        state["estimated_ttc"] = float(ttc)
+        state["ttc_details"] = {"method": "optical_flow"}
         return state
 
     # 5. Paso 5: Parada de seguridad previa al SLM
@@ -205,7 +171,33 @@ def _build_nodes() -> Dict[str, Any]:
         print("[Grafo] -> Entrando a hover_before_slm_node (Freno de seguridad)")
         # Enviar comando de frenado inmediato para evitar colisión durante inferencia
         airsim_client.execute_velocity(vx=0.0, vy=0.0, vz=0.0, yaw_rate=0.0)
-        return deliberative_node(state)
+        # Ejecutar segmentación IPM para obtener máscara y ratio de oclusión
+        state = ipm_segmentation_node(state)
+        # Decidir acción: girar 90° si el FOV está bloqueado, de lo contrario usar VLM
+        return blind_wall_router_node(state)
+
+    def blind_wall_router_node(state: DroneState) -> DroneState:
+        if state.get("fov_blocked", False):
+            telemetry = state.get("telemetry", {})
+            current_yaw = math.degrees(telemetry.get("orientation", {}).get("yaw", 0.0))
+            target_yaw = (current_yaw + 90.0) % 360.0
+            cmd = {
+                "macro_action": "GIRAR_90",
+                "vx": 0.0,
+                "vy": 0.0,
+                "vz": 0.0,
+                "yaw_rate": 20.0,
+                "target_yaw": target_yaw,
+                "rationale": f"FOV bloqueado ({state['occlusion_ratio']:.0f}%). Girando 90° para buscar corredor.",
+            }
+            state["next_action"] = "GIRAR_90"
+            state["velocity_command"] = cmd
+            state["active_maneuver"] = "GIRAR_90"
+            state["maneuver_cycles_left"] = 15  # ~1.5s a 10Hz
+            state["flight_status"] = "exploracion_yaw"
+            return state
+        else:
+            return deliberative_node(state)
 
     # 6. Nodo de actuación motriz
     def motor_node(state: DroneState) -> DroneState:
@@ -234,11 +226,13 @@ def _build_nodes() -> Dict[str, Any]:
     return {
         "capture": capture_node,
         "canny_xor_gate": canny_xor_gate_node,
-        "roi_yolo_detect": roi_yolo_detect_node,
+        "optical_flow": optical_flow_node,
+        "ipm_segmentation": ipm_segmentation_node,
         "ttc_estimate": ttc_estimate_node,
         "keep_going": reactive_node,
         "evasive": evasive_node,
         "hover_and_slm": hover_before_slm_node,
+        "blind_wall_router": blind_wall_router_node,
         "motor": motor_node,
         "_airsim_client": airsim_client,
     }
@@ -257,7 +251,7 @@ def xor_router(state: DroneState) -> str:
     change_ratio = state.get("xor_change_ratio", 1.0)
     if change_ratio < XOR_THRESHOLD:
         return "keep_going"
-    return "roi_yolo_detect"
+    return "optical_flow"
 
 
 def ttc_router(state: DroneState) -> str:
@@ -335,18 +329,21 @@ def build_workflow() -> Any:
 
     workflow.add_node("capture", nodes["capture"])
     workflow.add_node("canny_xor_gate", nodes["canny_xor_gate"])
-    workflow.add_node("roi_yolo_detect", nodes["roi_yolo_detect"])
+    workflow.add_node("optical_flow", nodes["optical_flow"])
+    workflow.add_node("ipm_segmentation", nodes["ipm_segmentation"])
     workflow.add_node("ttc_estimate", nodes["ttc_estimate"])
     workflow.add_node("keep_going", nodes["keep_going"])
     workflow.add_node("evasive", nodes["evasive"])
     workflow.add_node("hover_and_slm", nodes["hover_and_slm"])
+    workflow.add_node("blind_wall_router", nodes["blind_wall_router"])
     workflow.add_node("motor", nodes["motor"])
 
     # Flujo y conexiones
     workflow.set_entry_point("capture")
     workflow.add_edge("capture", "canny_xor_gate")
-    workflow.add_edge("canny_xor_gate", "roi_yolo_detect")
-    workflow.add_edge("roi_yolo_detect", "ttc_estimate")
+    workflow.add_edge("canny_xor_gate", "optical_flow")
+    workflow.add_edge("optical_flow", "ipm_segmentation")
+    workflow.add_edge("ipm_segmentation", "ttc_estimate")
 
     # Router Táctico Jerárquico: TTC + Proximidad + Estructuras + Persistencia
     workflow.add_conditional_edges(
@@ -361,7 +358,8 @@ def build_workflow() -> Any:
 
     workflow.add_edge("keep_going", "motor")
     workflow.add_edge("evasive", "motor")
-    workflow.add_edge("hover_and_slm", "motor")
+    workflow.add_edge("hover_and_slm", "blind_wall_router")
+    workflow.add_edge("blind_wall_router", "motor")
     workflow.add_edge("motor", END)
 
     return workflow

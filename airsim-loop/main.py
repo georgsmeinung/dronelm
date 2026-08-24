@@ -272,19 +272,7 @@ def main() -> None:
                     cv2.putText(annotated_frame, "ROI 62%", (rx + 5, ry + 15),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 200, 0), 1, cv2.LINE_AA)
 
-                # 3.2) Dibujar rectángulos de YOLO y etiquetas
-                for det in final_state.get("detections", []):
-                    bbox = det.get("bbox", [0, 0, 0, 0]) if isinstance(det, dict) else getattr(det, "bbox", [0, 0, 0, 0])
-                    obj_name = det.get("object", "objeto") if isinstance(det, dict) else getattr(det, "object", "objeto")
-                    conf = det.get("confidence", 0.0) if isinstance(det, dict) else getattr(det, "confidence", 0.0)
-
-                    x_min, y_min, x_max, y_max = map(int, bbox)
-                    cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 100), 2)
-
-                    label_str = f"{obj_name}: {conf:.2f}"
-                    cv2.putText(annotated_frame, label_str, (x_min, max(y_min - 5, 15)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 100), 1, cv2.LINE_AA)
-
+                # (Código de YOLO eliminado)
                 # 3.3) Dibujar banner superior con estado, decisión y métricas
                 decision = final_state.get("next_action", "MANTENER_RUMBO")
                 flight_status = final_state.get("flight_status", "vuelo")
@@ -410,6 +398,22 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nApagando sistema de navegacion.")
     finally:
+        try:
+            # pyrefly: ignore [missing-import]
+            from airsim_plan.bridge.stream_hub import stream_hub
+            import time
+            stream_hub.publish(
+                frame=None,
+                telemetry={
+                    "connected": False,
+                    "status": "idle",
+                    "flight_status": "detenido",
+                    "timestamp": time.time(),
+                }
+            )
+        except Exception:
+            pass
+
         if watch_mode:
             # pyrefly: ignore [missing-import]
             import cv2

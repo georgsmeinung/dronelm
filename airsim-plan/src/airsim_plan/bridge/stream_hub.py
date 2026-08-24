@@ -3,7 +3,9 @@ from __future__ import annotations
 import threading
 import time
 from typing import Any, Dict, Optional, Generator
+# pyrefly: ignore [missing-import]
 import cv2
+# pyrefly: ignore [missing-import]
 import numpy as np
 
 
@@ -98,7 +100,7 @@ class StreamHub:
     def get_telemetry(self) -> Dict[str, Any]:
         with self._frame_lock:
             data = dict(self._latest_telemetry)
-            data["active"] = (time.time() - self._last_update) < 3.0
+            data["active"] = data.get("connected", False)
             return data
 
     def generate_mjpeg(self) -> Generator[bytes, None, None]:
@@ -107,9 +109,9 @@ class StreamHub:
             with self._frame_lock:
                 # Esperar hasta 0.5s por un nuevo frame
                 self._frame_lock.wait(timeout=0.5)
-                # Si el feed está inactivo hace más de 3 segundos, enviar placeholder
-                is_active = (time.time() - self._last_update) < 3.0
-                frame_bytes = self._latest_jpeg if (is_active and self._latest_jpeg is not None) else self._placeholder_jpeg
+                # Mostrar el frame mientras la misión esté conectada, ignorando retrasos por deliberación
+                is_connected = self._latest_telemetry.get("connected", False)
+                frame_bytes = self._latest_jpeg if (is_connected and self._latest_jpeg is not None) else self._placeholder_jpeg
 
             yield (
                 b"--frame\r\n"

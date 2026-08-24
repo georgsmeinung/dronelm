@@ -1,3 +1,58 @@
+# 2026-0823
+
+## Nuevo Algoritmo de Evasión de Colisiones para Drones Urbanos
+Esta solución está diseñada específicamente para evitar que el cerebro del dron (el VLM) se "congele" o alucine salidas cuando el dron vuela en un cañón urbano y queda encajonado frente a un obstáculo masivo (como la pared de un edificio) que cubre por completo su campo de visión.
+
+<img src="informe/2026-0823 Refinamiento Algoritmo de Navegacion.png"/>
+
+### 1. El Evento Gatillo: Aproximación Peligrosa
+Todo comienza con el **Flujo Óptico (`optical_flow_node`)**. Mientras el dron vuela hacia adelante en la ciudad, el algoritmo de flujo óptico vigila la expansión de los píxeles (FOE).
+*   Si de repente te acercas a un edificio que tapa toda la vista, la matemática del flujo óptico detectará una divergencia masiva y violenta.
+*   El **`ttc_router`** calculará que el Tiempo de Colisión (TTC) es crítico (menor a 2.5 segundos) y activará el freno de emergencia del dron.
+
+### 2. Generación de Máscara y Cálculo de Oclusión
+Con el dron frenado, el flujo del grafo no va directamente al modelo de lenguaje. Primero entra al **`ipm_segmentation_node`**.
+*   Este nodo usa las matemáticas de proyección de cámara (IPM) y superpíxeles (SLIC) para intentar aislar los obstáculos del fondo.
+*   Dado que el edificio ocupa todo el marco, no hay fondo ni suelo visible. El resultado será una máscara donde casi la totalidad de la imagen está teñida de rojo (marcada como obstáculo sólido).
+*   **La Nueva Lógica Core:** Aquí el nodo calcula matemáticamente el **Ratio de Oclusión**, es decir, qué porcentaje de la pantalla es rojo.
+    $$ Ratio = \frac{Pixeles\_Obstaculo}{Total\_Pixeles\_Imagen} \times 100 $$
+
+### 3. El Enrutador de Muros Ciegos (`blind_wall_router`)
+Esta es la pieza clave de la nueva arquitectura. Es un pequeño semáforo algorítmico que decide si vale la pena o no "despertar" a la Inteligencia Artificial (VLM).
+
+*   **Ruta A (Ratio < 90%):** Si la oclusión es menor al 90%, significa que el dron está viendo la esquina del edificio, un pasillo, o cielo. Hay "salidas" visuales. El grafo envía la imagen limpia y enmascarada al **`hover_and_slm` (VLM)** para que elija la mejor macro-acción inteligente.
+*   **Ruta B (Ratio > 90%):** Si la máscara es prácticamente un bloque rojo sólido, se activa la flag de **FOV Bloqueado**. El router bloquea el paso hacia el VLM porque sabe que el modelo fallará al intentar buscar huecos donde no los hay.
+
+### 4. El Modo de Exploración (Bypass)
+Al tomar la Ruta B, el grafo inyecta inmediatamente una macro-acción pre-programada y determinista: **`GIRAR_90`** (por ejemplo, a la derecha), sin consultar al VLM.
+
+*   El **`motor_node`** recibe la orden. El dron se mantiene en el mismo sitio (coordenadas X, Y, Z idénticas) pero rota su guiñada (Yaw) 90 grados.
+*   **El resultado cinemático:** Al terminar de girar, la cámara ya no apunta contra la pared, sino hacia el corredor lateral (paralelo a la calle transversal o al muro).
+
+### 5. Re-evaluación (El siguiente ciclo)
+En la siguiente fracción de segundo, el grafo vuelve a iniciar:
+*   El **Flujo Óptico** ya no detecta una pared inminente acercándose.
+*   El **IPM** vuelve a segmentar la imagen, pero esta vez la cámara apunta hacia un corredor abierto. El **Ratio de Oclusión** cae drásticamente (ej. 30%).
+*   El **`blind_wall_router`** ve que el ratio es menor al 90% y esta vez **sí envía la imagen al VLM**.
+*   El **VLM** recibe una vista clara del cañón urbano, libre de bloqueos, y dictamina la orden `AVANZAR` para continuar el viaje.
+
+<img src="informe/2026-0823 Nuevo Grafo de Navegacion.png"/>
+
+## Modificaciones en WebDCS y Video Stream
+Se han implementado y verificado las siguientes modificaciones:
+
+### 1. Eliminación de YOLO en el visor de video
+Se eliminó la porción de código en `airsim-loop/main.py` que iteraba sobre las detecciones de YOLO y dibujaba cajas (bounding boxes) verdes en el `annotated_frame`. Ya no se enviará esa información visual sobre la transmisión del dron, dado que el modelo YOLO está obsoleto en este flujo.
+
+### 2. Flujo de video continuo e ininterrumpido
+Anteriormente, el streaming hacia WebDCS tenía una regla estricta: si pasaban más de 3 segundos sin que el dron enviara un nuevo fotograma, WebDCS asumía que el feed estaba muerto y volvía a poner la pantalla negra de *"WebDCS - Esperando video..."*. 
+Como algunos procesos (ej. la inferencia de un modelo SLM) pueden tomar más de 3 segundos bloqueando el hilo de control, la transmisión se cortaba momentáneamente.
+
+Se ha modificado `airsim-plan/src/airsim_plan/bridge/stream_hub.py` para reemplazar ese temporizador por una bandera lógica (`connected`). Mientras la misión esté en curso, el último fotograma válido se mantendrá fijo en pantalla hasta que llegue el siguiente fotograma, ignorando las demoras de procesamiento, dando la sensación de que el video simplemente está en pausa mientras el dron procesa.
+
+### 3. Desconexión al oprimir Detener
+Para manejar correctamente el final de la misión o cuando el usuario oprime el botón **Detener** de manera abrupta, se ha modificado el bloque `finally:` de `airsim-loop/main.py`. Ahora, cuando el script se finaliza, se hace una publicación al `stream_hub` con estado `"connected": False` y con `frame=None`. Esto asegura que la transmisión de video no se quede permanentemente congelada y vuelva correctamente a la pantalla de espera de *"WebDCS - Esperando video..."* de forma proactiva.
+∫
 # 2026-0822
 
 ## Evaluando alternativas a YOLO para segmentación más rápida
