@@ -1,0 +1,25 @@
+flowchart TD
+    capture_node["capture_node"] --> canny_xor_gate["canny_xor_gate"]
+
+    canny_xor_gate -->|"Sin cambio Ratio < XOR_THRESHOLD"| keep_going["keep_going"]
+    canny_xor_gate -->|"Con cambio"| optical_flow_node["optical_flow_node<br/>Farnebäck + FOE + TTC"]
+
+    optical_flow_node --> ttc_router{"ttc_router"}
+
+    ttc_router -->|"TTC > 5s Ruta Segura"| keep_going
+    ttc_router -->|"TTC ≤ 5s Riesgo Menor"| evasive["evasive<br/>heurística de flujo óptico"]
+    ttc_router -->|"TTC ≤ 2.5s Peligro Crítico"| hover_before_slm_node["hover_before_slm_node<br/>Freno inmediato"]
+
+    hover_before_slm_node --> ipm_segmentation_node["ipm_segmentation_node<br/>IPM + SLIC + Ratio Oclusión"]
+
+    ipm_segmentation_node --> blind_wall_router{"blind_wall_router"}
+
+    blind_wall_router -->|"Ratio < 90% FOV con salidas"| deliberative_node["deliberative_node<br/>VLM Qwen2.5-VL<br/>Frame + Overlay Rojo"]
+    blind_wall_router -->|"Ratio ≥ 90% FOV ciego"| girar_90["GIRAR_90<br/>Bypass Determinista"]
+
+    keep_going --> motor_node["motor_node"]
+    evasive --> motor_node
+    deliberative_node --> motor_node
+    girar_90 --> motor_node
+
+    motor_node --> END["END"]

@@ -52,7 +52,7 @@ Se ha modificado `airsim-plan/src/airsim_plan/bridge/stream_hub.py` para reempla
 
 ### 3. Desconexión al oprimir Detener
 Para manejar correctamente el final de la misión o cuando el usuario oprime el botón **Detener** de manera abrupta, se ha modificado el bloque `finally:` de `airsim-loop/main.py`. Ahora, cuando el script se finaliza, se hace una publicación al `stream_hub` con estado `"connected": False` y con `frame=None`. Esto asegura que la transmisión de video no se quede permanentemente congelada y vuelva correctamente a la pantalla de espera de *"WebDCS - Esperando video..."* de forma proactiva.
-∫
+
 # 2026-0822
 
 ## Evaluando alternativas a YOLO para segmentación más rápida
@@ -93,14 +93,7 @@ Después de analizar ver el compartimiento descrito en CHANGELOG (2026-0813, 202
 
 ### La Cadena Actual de Pérdida de Información
 
-```mermaid
-graph LR
-    A["Fotograma RGB<br/>1080×720 = 777,600 px"] --> B["YOLO Detect<br/>~5-15 bboxes"]
-    B --> C["translator.py<br/>Heurística monocular"]
-    C --> D["3 Sectores<br/>DESPEJADO/BLOQUEADO"]
-    D --> E["~80 tokens texto<br/>al SLM"]
-    E --> F["macro_action<br/>1 de 5 opciones"]
-```
+<img src="informe/2026-0820 Cadena de Perdida de la Información.png"/>
 
 Cada etapa es un **cuello de botella de información**:
 
