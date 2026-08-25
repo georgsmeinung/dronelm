@@ -77,7 +77,8 @@ def roc_for_threshold(records, tau_values=(1.0, 2.0, 3.0)):
             tprs.append(tp / (tp + fn) if (tp + fn) else 0.0)
             fprs.append(fp / (fp + tn) if (fp + tn) else 0.0)
         order = np.argsort(fprs)
-        auc = np.trapz(np.array(tprs)[order], np.array(fprs)[order])
+        trapz = getattr(np, "trapezoid", None) or np.trapz  # np 2.0 renamed trapz -> trapezoid
+        auc = trapz(np.array(tprs)[order], np.array(fprs)[order])
         # Indice de Youden: umbral que maximiza TPR - FPR.
         youden = np.array(tprs) - np.array(fprs)
         best_idx = int(np.argmax(youden))

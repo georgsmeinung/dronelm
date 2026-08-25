@@ -17,31 +17,25 @@ El pipeline sigue un gating multinivel para economizar recursos y maximizar el v
             │  degraded_router │──(degradado)──► degraded_hover ──► motor ──► END
             └────────┬─────────┘
                 (ok)  │
-            ┌─────────▼────────┐
-            │  canny_xor_gate  │
-            └─────────┬────────┘
-                       │
-              ┌────────▼─────────┐
-              │    xor_router    │
-              └───┬──────────┬───┘
-        (< umbral)│          │(≥ umbral)
-                   ▼          ▼
-            keep_going   ┌──────────────┐
-                         │  perception  │ (flujo óptico + derotación + FOE → ObstacleField)
-                         └──────┬───────┘
-                                │
-                       ┌────────▼─────────┐
-                       │  policy_router   │ (arma: slm | fsm | reactive)
-                       └─┬────┬────┬────┬─┘
-                keep_going  evasive  girar_90  deliberative / fsm
-                         \    |      |      /
-                          \   |      |     /
-                           ▼  ▼      ▼    ▼
-                          ┌────────────────┐
-                          │   motor_node   │
-                          └───────┬────────┘
-                                 END
+                      ▼
+              ┌──────────────┐
+              │  perception  │ (flujo óptico + derotación + FOE → ObstacleField)
+              └──────┬───────┘
+                     │
+            ┌────────▼─────────┐
+            │  policy_router   │ (arma: slm | fsm | reactive)
+            └─┬────┬────┬────┬─┘
+       keep_going  evasive  girar_90  deliberative / fsm
+                \    |      |      /
+                 \   |      |     /
+                  ▼  ▼      ▼    ▼
+                 ┌────────────────┐
+                 │   motor_node   │
+                 └───────┬────────┘
+                        END
 ```
+
+> **Nodo retirado (F0.4, 2026-0824):** `canny_xor_gate` + `xor_router` (gate de bordes Canny+XOR que bypaseaba `perception` cuando la escena no cambiaba visualmente) se sacaron del grafo con evidencia medida en vuelo real — ver [`legacy/README.md`](legacy/README.md) y `CHANGELOG.md` 2026-0824. Resumen: a la frecuencia de vuelo el bypass casi nunca disparaba, y en el puñado de ciclos donde sí disparaba (hover post-`FRENAR`) saltaba `policy_router` entero, evitando re-evaluar el campo de obstáculos justo en el momento donde más importaba hacerlo.
 
 ---
 
@@ -55,9 +49,6 @@ El pipeline sigue un gating multinivel para economizar recursos y maximizar el v
 
 ### `capture_node`
 Llama a `AirSimClient.capture()`. En modo estricto (`AIRSIM_STRICT=true`, default en vuelo) si AirSim no responde, **no** genera un frame sintético: marca `state["degraded"]=True` y el ciclo va directo a `degraded_hover` (hover de seguridad, sin percepción ni deliberación).
-
-### `canny_xor_gate` → `xor_router`
-Filtro de bordes Canny + XOR binario entre frames. Si `xor_change_ratio < CANNY_XOR_THRESHOLD`, salta directo a `keep_going`. **Nota:** el umbral (`0.02`–`0.03`) es el valor histórico; queda pendiente de recalibrar con el histograma de `xor_change_ratio` medido en vuelo real a la frecuencia actual del lazo (no fue posible medirlo durante la implementación por falta de acceso al simulador — ver `PLAN-MEJORAS.md` F0.4).
 
 ### `perception`
 Único nodo de percepción pesada: `FlowTTCEstimator` (instanciado una vez, no por frame) produce el `ObstacleField` completo del ciclo.
@@ -79,17 +70,16 @@ Corre en un hilo aparte (`DeliberationService`, `src/agents/deliberation_service
 ## Estructura del Código
 
 - [`main.py`](main.py): punto de entrada. Crea el único `AirSimClient` del proceso y lo inyecta en `compile_workflow()`.
-- [`src/agents/graph.py`](src/agents/graph.py): `DroneState`, nodos, `xor_router`, `policy_router`, `degraded_router`.
+- [`src/agents/graph.py`](src/agents/graph.py): `DroneState`, nodos, `policy_router`, `degraded_router`.
 - [`src/agents/action_map.py`](src/agents/action_map.py): cinemática única por macro-acción.
 - [`src/agents/deliberation_service.py`](src/agents/deliberation_service.py): worker asíncrono para la consulta al SLM.
 - [`src/agents/deliberative.py`](src/agents/deliberative.py), [`evasive.py`](src/agents/evasive.py), [`fsm.py`](src/agents/fsm.py), [`reactive.py`](src/agents/reactive.py): los tres brazos de política + el guiado nominal.
 - [`src/perception/obstacle_field.py`](src/perception/obstacle_field.py): contrato único de percepción.
 - [`src/perception/flow_ttc.py`](src/perception/flow_ttc.py): derotación + FOE + TTC.
-- [`src/perception/canny_gate.py`](src/perception/canny_gate.py): gate de bordes XOR.
 - [`src/hardware/airsim_client.py`](src/hardware/airsim_client.py): cliente AirSim, actuador no bloqueante, modo estricto.
 - [`src/navigation/waypoint_tracker.py`](src/navigation/waypoint_tracker.py): guiado a waypoint + seguimiento de progreso real (`progress_stall_cycles`).
 - [`src/logging/flight_logger.py`](src/logging/flight_logger.py): JSONL estructurado por ciclo, para `experiments/`.
-- [`legacy/`](legacy/): módulos retirados (YOLO, IPM, estimador de TTC anterior), con la justificación medida de cada retiro.
+- [`legacy/`](legacy/): módulos retirados (YOLO, IPM, estimador de TTC anterior, gate de bordes XOR), con la justificación medida de cada retiro.
 - [`experiments/`](experiments/): `runner.py` + `analyze.py` (comparación batch SLM/FSM/reactivo), `collect_ttc_dataset.py` + `analyze_ttc.py` (validación de TTC contra el canal depth).
 - [`scripts/bench_capture.py`](scripts/bench_capture.py): mide el techo real de `simGetImages` sobre la conexión al simulador, para elegir `LOOP_HZ` con evidencia.
 
@@ -107,9 +97,8 @@ AIRSIM_STRICT=true          # false solo para tests: permite frames sinteticos s
 LOOP_HZ=5.0                 # ajustar con scripts/bench_capture.py
 AGENT_ARM=slm                # slm | fsm | reactive
 
-CANNY_XOR_THRESHOLD=0.02
-TTC_EVASION_THRESHOLD=2.0    # provisorio hasta calibrar con experiments/analyze_ttc.py
-TTC_SAFE_THRESHOLD=5.0       # idem
+TTC_EVASION_THRESHOLD=3.2    # calibrado F1.3 (umbral de Youden, ROC vs. canal depth)
+TTC_SAFE_THRESHOLD=4.6       # idem
 FOV_BLOCKED_THRESHOLD=0.6
 
 REACTIVE_FORWARD_SPEED=2.0

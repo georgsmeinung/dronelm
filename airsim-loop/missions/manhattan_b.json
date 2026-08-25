@@ -1,0 +1,14 @@
+{
+  "mission_id": "manhattan_b",
+  "summary": "F3.3: escenario con mas giros (7 waypoints, tipo grilla urbana), waypoints reutilizados de airsim-plan/missions/A_BASIC_CITY.preloop.json (mismo mapa CityParkSim).",
+  "start_pose": { "x": 26.1, "y": -78.2, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 26.1, "y": -78.2, "z": -10.0, "label": "WP_1" },
+    { "x": 68.9, "y": -78.6, "z": -10.0, "label": "WP_2" },
+    { "x": 67.7, "y": -145.0, "z": -10.0, "label": "WP_3" },
+    { "x": 26.5, "y": -145.0, "z": -10.0, "label": "WP_4" },
+    { "x": -16.3, "y": -145.0, "z": -10.0, "label": "WP_5" },
+    { "x": -17.9, "y": -78.6, "z": -10.0, "label": "WP_6" },
+    { "x": 12.5, "y": -78.6, "z": -10.0, "label": "WP_7" }
+  ]
+}

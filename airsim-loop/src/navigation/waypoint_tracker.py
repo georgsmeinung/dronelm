@@ -10,6 +10,14 @@ DEFAULT_CRUISE_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "5.0"))
 # waypoint activo. Un desvio Manhattan largo pero que reduce distancia no
 # cuenta como atasco; solo cuenta la falta de progreso sostenida.
 PROGRESS_EPS_M = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
+# Suavizado exponencial (EMA) de vx/yaw_rate entre ciclos: alpha=1.0 desactiva
+# el filtro (usa el valor crudo cada vez); valores mas bajos = mas suave pero
+# mas lento en reaccionar a un cambio real de rumbo/velocidad. Con alpha=0.5
+# a LOOP_HZ=5.0 el filtro converge a ~94% de un cambio escalon en ~4 ciclos
+# (~0.8s). Ataca el ruido residual que la histeresis de umbrales (arriba) no
+# cubre: incluso dentro de un mismo regimen, vx/yaw_rate se recalculan desde
+# cero cada ciclo sin memoria del valor anterior.
+GUIDANCE_SMOOTHING_ALPHA = float(os.getenv("GUIDANCE_SMOOTHING_ALPHA", "0.5"))
 
 
 class WaypointTracker:
@@ -32,6 +40,17 @@ class WaypointTracker:
         # activo) en lugar de contar ciclos en rutas evasivas/deliberativas.
         self._min_dist_seen: Optional[float] = None
         self.progress_stall_cycles: int = 0
+        # Histeresis de compute_guidance() (banda de entrada != banda de
+        # salida) para que abs_err/dist_3d oscilando justo en el borde de un
+        # umbral no haga alternar vx/yaw_rate entre formulas cada ciclo --
+        # esa alternancia es lo que se ve como cabeceo (pitch) en vuelo real.
+        self._sharp_turn_active: bool = False
+        self._final_approach_active: bool = False
+        self._yaw_correcting: bool = False
+        # Estado del filtro EMA (ver GUIDANCE_SMOOTHING_ALPHA); None = sin
+        # historia todavia, el primer valor calculado se usa tal cual.
+        self._smoothed_vx: Optional[float] = None
+        self._smoothed_yaw_rate: Optional[float] = None
 
     def set_waypoints(self, waypoints: List[Dict[str, Any]]) -> None:
         """Inicializa o reemplaza la lista de waypoints."""
@@ -41,6 +60,11 @@ class WaypointTracker:
         self._locked_turn_dir = None
         self._min_dist_seen = None
         self.progress_stall_cycles = 0
+        self._sharp_turn_active = False
+        self._final_approach_active = False
+        self._yaw_correcting = False
+        self._smoothed_vx = None
+        self._smoothed_yaw_rate = None
 
     def record_progress(self, dist_to_wp: float) -> int:
         """Registra la distancia actual al waypoint activo y actualiza el
@@ -117,6 +141,14 @@ class WaypointTracker:
             print(f"[WaypointTracker] ¡Waypoint {label} alcanzado ({dist_3d:.2f}m)! Avanzando...")
             self.current_index += 1
             self._locked_turn_dir = None
+            self._sharp_turn_active = False
+            self._final_approach_active = False
+            self._yaw_correcting = False
+            # _smoothed_vx/_smoothed_yaw_rate NO se resetean aqui a proposito:
+            # aproximan la velocidad real del dron, que es continua a traves
+            # del cambio de waypoint activo (a diferencia de los flags de
+            # histeresis, que son propiedades del segmento hacia el WP
+            # anterior y no tiene sentido que sobrevivan al avance).
             self.reset_progress()
             if self.current_index >= len(self.waypoints):
                 self.is_completed = True
@@ -139,6 +171,9 @@ class WaypointTracker:
         """
         if self.is_completed or not self.waypoints:
             self._locked_turn_dir = None
+            self._sharp_turn_active = False
+            self._final_approach_active = False
+            self._yaw_correcting = False
             return {
                 "vx": 0.0,
                 "vy": 0.0,
@@ -199,22 +234,62 @@ class WaypointTracker:
         delta_yaw_deg = math.degrees(delta_yaw)
         abs_err = abs(delta_yaw_deg)
 
-        # Zona muerta de 2.5° para vuelo rectilíneo perfecto sin micro-correcciones continuas
-        if abs_err <= 2.5:
+        # Histeresis (banda de entrada != banda de salida) para que abs_err/
+        # dist_3d oscilando justo en el borde no alterne la formula de vx/
+        # yaw_rate cada ciclo -- esa alternancia es la causa del cabeceo
+        # (pitch) observado en vuelo real: cada cambio de formula es un
+        # salto discontinuo de velocidad que el controlador debe perseguir.
+        if not self._yaw_correcting and abs_err > 2.5:
+            self._yaw_correcting = True
+        elif self._yaw_correcting and abs_err < 1.5:
+            self._yaw_correcting = False
+
+        if not self._sharp_turn_active and abs_err > 60.0:
+            self._sharp_turn_active = True
+        elif self._sharp_turn_active and abs_err < 50.0:
+            self._sharp_turn_active = False
+
+        if not self._final_approach_active and dist_3d < 4.0:
+            self._final_approach_active = True
+        elif self._final_approach_active and dist_3d > 4.5:
+            self._final_approach_active = False
+
+        # Zona muerta para vuelo rectilíneo perfecto sin micro-correcciones continuas
+        if not self._yaw_correcting:
             yaw_rate = 0.0
         else:
             kp_yaw = 0.35
             yaw_rate = max(-15.0, min(15.0, kp_yaw * delta_yaw_deg))
 
         # Avance continuo fluido de crucero sin frenazos intermitentes
-        if abs_err > 60.0:
+        if self._sharp_turn_active:
             # Curva pronunciada en lugar de giro sobre su eje (pivot turn) para no detenerse.
             vx = max(0.5, cruise_speed * 0.4)
-        elif dist_3d < 4.0:
+        elif self._final_approach_active:
             vx = 1.2 * math.cos(delta_yaw)  # Aproximación suave en metros finales
         else:
             # Crucero lineal continuo: nunca bajar de 0.5 para que no parezca atascado
             vx = max(0.5, cruise_speed * math.cos(delta_yaw))
+
+        # Suavizado exponencial (EMA): vx/yaw_rate se recalculan desde cero
+        # cada ciclo a partir de la geometria instantanea, sin memoria del
+        # valor anterior. Incluso dentro de un mismo regimen (sin cruzar
+        # ningun umbral de histeresis), eso produce pequenos saltos ciclo a
+        # ciclo que el controlador de AirSim persigue como cabeceo. El EMA
+        # los convierte en una rampa.
+        if self._smoothed_vx is None:
+            self._smoothed_vx = vx
+        else:
+            self._smoothed_vx = GUIDANCE_SMOOTHING_ALPHA * vx + (1.0 - GUIDANCE_SMOOTHING_ALPHA) * self._smoothed_vx
+        vx = self._smoothed_vx
+
+        if self._smoothed_yaw_rate is None:
+            self._smoothed_yaw_rate = yaw_rate
+        else:
+            self._smoothed_yaw_rate = (
+                GUIDANCE_SMOOTHING_ALPHA * yaw_rate + (1.0 - GUIDANCE_SMOOTHING_ALPHA) * self._smoothed_yaw_rate
+            )
+        yaw_rate = self._smoothed_yaw_rate
 
         # Cero vuelo lateral (Avance frontal en el eje de la cámara)
         vy = 0.0

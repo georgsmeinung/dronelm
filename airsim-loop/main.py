@@ -198,7 +198,6 @@ def main() -> None:
         "rgb_image": None,
         "telemetry": {},
         "frame_history": [],
-        "xor_change_ratio": 1.0,
         "estimated_ttc": float("inf"),
         "next_action": "",
         "flight_status": "vuelo",
@@ -230,7 +229,12 @@ def main() -> None:
             target_wp = waypoint_tracker.update(pos_now)
             guidance = waypoint_tracker.compute_guidance(pos_now, yaw_now)
             # F2.5: progreso real (no ciclos-en-ruta-evasiva) para decidir el escape de deadlock.
-            waypoint_tracker.record_progress(guidance.get("distance", 0.0))
+            # Fix 1 (2026-0824): esperar al SLM dentro del watchdog no cuenta
+            # como "sin progresar" (ver _deliberation_pending en deliberative.py).
+            # Fix 2: distancia HORIZONTAL, no 3D -- subir para escapar de un
+            # atasco no debe empeorar la metrica que decide si se resolvio.
+            if not drone_state.get("_deliberation_pending", False):
+                waypoint_tracker.record_progress(guidance.get("dist_xy", guidance.get("distance", 0.0)))
 
             drone_state["waypoints"] = waypoint_tracker.waypoints
             drone_state["current_wp_index"] = waypoint_tracker.current_index
@@ -288,7 +292,6 @@ def main() -> None:
 
                 decision = final_state.get("next_action", "MANTENER_RUMBO")
                 flight_status = final_state.get("flight_status", "vuelo")
-                xor_pct = final_state.get("xor_change_ratio", 0.0) * 100.0
                 ttc_val = final_state.get("estimated_ttc", float("inf"))
                 ttc_str = f"{ttc_val:.1f}s" if ttc_val != float("inf") else "inf"
 
@@ -303,7 +306,7 @@ def main() -> None:
                 cv2.putText(annotated_frame, f"ACT: {decision} {wp_str}", (10, 26),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.52, dec_color, 2, cv2.LINE_AA)
 
-                cv2.putText(annotated_frame, f"XOR: {xor_pct:.1f}% | TTC: {ttc_str} | {flight_status}", (w - 280, 26),
+                cv2.putText(annotated_frame, f"TTC: {ttc_str} | {flight_status}", (w - 280, 26),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
 
                 try:
@@ -318,7 +321,6 @@ def main() -> None:
                             "decision": decision,
                             "flight_status": flight_status,
                             "estimated_ttc": ttc_val if ttc_val != float("inf") else None,
-                            "xor_change_ratio": final_state.get("xor_change_ratio", 0.0),
                             "obstacle_field": field.to_dict() if field is not None else None,
                             "scene_summary": final_state.get("scene_summary", ""),
                             "velocity": final_state.get("velocity_command", {}),
@@ -356,7 +358,6 @@ def main() -> None:
                             "decision": "ATERRIZANDO",
                             "flight_status": "aterrizando",
                             "estimated_ttc": None,
-                            "xor_change_ratio": 0.0,
                             "obstacle_field": None,
                             "scene_summary": "Misión completada con éxito. Aterrizando...",
                             "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
@@ -384,7 +385,6 @@ def main() -> None:
                             "decision": "MISIÓN_COMPLETADA",
                             "flight_status": "completada_en_tierra",
                             "estimated_ttc": None,
-                            "xor_change_ratio": 0.0,
                             "obstacle_field": None,
                             "scene_summary": "Dron en tierra. Control disponible en WebDCS.",
                             "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},

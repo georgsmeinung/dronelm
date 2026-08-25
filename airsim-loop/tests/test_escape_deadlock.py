@@ -1,0 +1,129 @@
+"""Regresion del bug de escape por altura descontrolado (CHANGELOG 2026-0824).
+
+Diagnostico original: `deliberative.py` y `fsm.py` comparten un escape
+sincrono ("GANAR_ALTURA"/CLIMB) cuando `evasion_stuck_cycles` supera
+`EVASION_STUCK_THRESHOLD`. Dos bugs compuestos:
+
+- Fix 1: frenar a proposito mientras se espera al SLM (dentro del watchdog)
+  contaba como "sin progresar" -- con `EVASION_STUCK_THRESHOLD=10` ciclos
+  (~2s a `LOOP_HZ=5.0`) y latencia real del SLM de 2-8s medida, el escape
+  descartaba el pedido pendiente casi siempre antes de que pudiera resolverse.
+- Fix 3 (red de seguridad): sin un tope de intentos, subir para escapar de
+  un atasco puede no resolverlo nunca (los waypoints estan a altitud
+  constante, asi que subir empeora la metrica de distancia usada para medir
+  progreso) y el dron queda ascendiendo sin techo -- 356m medidos en una
+  corrida real de 5 minutos.
+
+Fix 2 (distancia horizontal en vez de 3D) se prueba en test_waypoint_tracker.py.
+"""
+from __future__ import annotations
+
+import time
+
+from src.agents import deliberative as deliberative_mod
+from src.agents import fsm as fsm_mod
+from src.perception.obstacle_field import BANDS, SECTORS, Cell, ObstacleField, empty_field
+
+
+def _base_state():
+    return {
+        "waypoints": [], "current_wp_index": 0, "target_waypoint": None,
+        "waypoint_guidance": {}, "mission_completed": False, "rgb_image": None,
+        "telemetry": {}, "frame_history": [],
+        "estimated_ttc": float("inf"), "next_action": "", "flight_status": "vuelo",
+        "deliberations": [], "active_maneuver": None, "maneuver_cycles_left": 0,
+        "maneuver_command": None, "evasion_stuck_cycles": 0, "slm_request_id": None,
+    }
+
+
+def _slow_query(payload):
+    # Simula un SLM real que tarda mas que EVASION_STUCK_THRESHOLD a 5Hz
+    # (~2s) -- nunca deberia resolverse durante la ventana del test.
+    time.sleep(1.0)
+    return None, "", 1000.0, None
+
+
+def test_waiting_for_slm_does_not_trigger_altitude_escape(monkeypatch):
+    """Fix 1: reproduce el loop de runner.py/main.py (record_progress() se
+
+    salta mientras _deliberation_pending este activo). Sin el fix, 15 ciclos
+    de espera (mas que EVASION_STUCK_THRESHOLD=10) dispararian GANAR_ALTURA
+    antes de que el SLM (simulado con 1s de latencia) pudiera responder.
+    """
+    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _slow_query)
+
+    from src.agents.deliberative import make_deliberation_service, make_deliberative_node
+    from src.navigation.waypoint_tracker import WaypointTracker
+
+    service = make_deliberation_service()
+    node = make_deliberative_node(service)
+    try:
+        cells = {(s, b): Cell(sector=s, band=b, occupancy=0.9, ttc_s=1.0, confidence=0.9) for s in SECTORS for b in BANDS}
+        field = ObstacleField(cells=cells, source="flow", foe=(0.0, 0.0), foe_confidence=1.0)
+
+        tracker = WaypointTracker([{"x": 100, "y": 0, "z": -10, "label": "WP1"}])
+        state = _base_state()
+        state["obstacle_field"] = field
+
+        for _ in range(15):
+            guidance = tracker.compute_guidance({"x": 0.0, "y": 0.0, "z": -10.0}, current_yaw=0.0)
+            if not state.get("_deliberation_pending", False):
+                tracker.record_progress(guidance["dist_xy"])
+            state["waypoint_guidance"] = guidance
+            state["evasion_stuck_cycles"] = tracker.progress_stall_cycles
+            state = node(state)
+            assert state["next_action"] != "GANAR_ALTURA"
+    finally:
+        service.stop()
+
+
+def test_max_consecutive_escapes_switches_to_brake(monkeypatch):
+    """Fix 3 (deliberative.py): tras MAX_CONSECUTIVE_ESCAPES disparos
+
+    seguidos del escape sincrono, deja de comandar GANAR_ALTURA y frena en
+    el lugar en vez de seguir subiendo sin techo.
+    """
+    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", lambda payload: (None, "", 5.0, "no deberia llamarse"))
+    monkeypatch.setenv("MAX_CONSECUTIVE_ESCAPES", "3")
+
+    from src.agents.deliberative import make_deliberation_service, make_deliberative_node
+
+    service = make_deliberation_service()
+    node = make_deliberative_node(service)
+    try:
+        state = _base_state()
+        state["obstacle_field"] = empty_field()
+
+        actions = []
+        for _ in range(5):
+            state["evasion_stuck_cycles"] = 999  # simula atasco persistente
+            state = node(state)
+            actions.append(state["next_action"])
+
+        assert actions[:3] == ["GANAR_ALTURA"] * 3
+        assert actions[3] == "FRENAR"
+        assert state["flight_status"] == "escape_agotado"
+    finally:
+        service.stop()
+
+
+def test_fsm_max_consecutive_escapes_switches_to_brake(monkeypatch):
+    """Fix 3 (fsm.py): mismo tope, aplicado al estado CLIMB de la FSM."""
+    monkeypatch.setenv("MAX_CONSECUTIVE_ESCAPES", "3")
+
+    state = _base_state()
+    state["obstacle_field"] = empty_field()
+
+    actions = []
+    for _ in range(5):
+        state["evasion_stuck_cycles"] = 999
+        # Evita que la persistencia de maniobra de fsm_node tape el resultado:
+        # cada iteracion simula una evaluacion nueva, no la continuacion de
+        # la anterior (esa continuacion ya esta cubierta por otro test).
+        state["active_maneuver"] = None
+        state["maneuver_cycles_left"] = 0
+        state = fsm_mod.fsm_node(state)
+        actions.append(state["next_action"])
+
+    assert actions[:3] == ["GANAR_ALTURA"] * 3
+    assert actions[3] == "FRENAR"

@@ -4,12 +4,14 @@ comparativa SLM vs FSM vs reactivo (objetivo especifico del plan de tesis).
 
 Uso:
     python experiments/analyze.py runs/
+    python experiments/analyze.py runs/ --missions-dir missions/
 """
 from __future__ import annotations
 
+import argparse
 import glob
 import json
-import sys
+import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -27,6 +29,46 @@ def load_summaries(runs_dir: str):
         with open(path, "r", encoding="utf-8") as f:
             rows.append(json.load(f))
     return rows
+
+
+def load_optimal_lengths(missions_dir: str) -> dict:
+    """Longitud optima por escenario: suma de distancias entre waypoints
+
+    consecutivos del manifiesto (sin obstaculos, no es un camino real
+    volable, pero es la referencia estandar para SPL). Clave = stem del
+    archivo del manifiesto, que es el mismo "scenario" que usa runner.py.
+    """
+    lengths = {}
+    for path in glob.glob(str(Path(missions_dir) / "*.json")):
+        with open(path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        wps = manifest.get("waypoints", [])
+        total = 0.0
+        for i in range(1, len(wps)):
+            a, b = wps[i - 1], wps[i]
+            total += math.dist(
+                (a.get("x", 0.0), a.get("y", 0.0), a.get("z", 0.0)),
+                (b.get("x", 0.0), b.get("y", 0.0), b.get("z", 0.0)),
+            )
+        lengths[Path(path).stem] = total
+    return lengths
+
+
+def spl(run: dict, optimal_lengths: dict) -> float:
+    """Success weighted by Path Length (SPL), definicion estandar de
+
+    navegacion (Anderson et al. 2018): 0 si la corrida no tuvo exito;
+    L_optima / max(L_recorrida, L_optima) si lo tuvo. Penaliza tanto no
+    llegar como llegar dando vueltas de mas. NaN si no hay manifiesto para
+    el escenario de esta corrida.
+    """
+    l_opt = optimal_lengths.get(run.get("scenario"))
+    if not l_opt:
+        return float("nan")
+    if not run.get("success"):
+        return 0.0
+    l_actual = max(float(run.get("path_length_m", 0.0)), 1e-6)
+    return l_opt / max(l_actual, l_opt)
 
 
 def load_cycles_for_latency(runs_dir: str):
@@ -49,33 +91,41 @@ def load_cycles_for_latency(runs_dir: str):
 
 
 def main():
-    runs_dir = sys.argv[1] if len(sys.argv) > 1 else "runs"
-    rows = load_summaries(runs_dir)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("runs_dir", nargs="?", default="runs")
+    parser.add_argument("--missions-dir", default="missions", help="para calcular SPL (F3.3)")
+    args = parser.parse_args()
+
+    rows = load_summaries(args.runs_dir)
     if not rows:
-        print(f"Sin resumenes en {runs_dir}. Correr antes experiments/runner.py.")
+        print(f"Sin resumenes en {args.runs_dir}. Correr antes experiments/runner.py.")
         return
+
+    optimal_lengths = load_optimal_lengths(args.missions_dir)
 
     by_arm = defaultdict(list)
     for r in rows:
         by_arm[r["arm"]].append(r)
 
-    print(f"{'Arm':<10} {'N':<4} {'Exito':<8} {'Colisiones/mision':<18} {'DistMin p5 (m)':<16} {'Long/Óptima':<12} {'SLM inv/mision':<14} {'Fallback%':<10} {'Timeout%':<10}")
+    print(f"{'Arm':<10} {'N':<4} {'Exito':<8} {'Colisiones/mision':<18} {'DistMin p5 (m)':<16} {'SPL':<8} {'SLM inv/mision':<14} {'Fallback%':<10} {'Timeout%':<10}")
     for arm, runs in sorted(by_arm.items()):
         n = len(runs)
         success_rate = sum(1 for r in runs if r.get("success")) / n
         collisions = np.mean([r.get("collisions", 0) for r in runs])
         min_dists = [r["min_obstacle_dist_m"] for r in runs if r.get("min_obstacle_dist_m") is not None]
         dist_p5 = np.percentile(min_dists, 5) if min_dists else float("nan")
-        path_lengths = [r.get("path_length_m", 0.0) for r in runs]
+        spl_values = [spl(r, optimal_lengths) for r in runs]
+        spl_values = [v for v in spl_values if v == v]  # descarta NaN (escenario sin manifiesto)
+        spl_str = f"{np.mean(spl_values):.2f}" if spl_values else "N/D"
         slm_inv = np.mean([r.get("slm_invocations") or 0 for r in runs])
         fb_rates = [r["slm_fallback_rate"] for r in runs if r.get("slm_fallback_rate") is not None]
         to_rates = [r["slm_timeout_rate"] for r in runs if r.get("slm_timeout_rate") is not None]
         fb_pct = f"{np.mean(fb_rates)*100:.0f}%" if fb_rates else "N/D"
         to_pct = f"{np.mean(to_rates)*100:.0f}%" if to_rates else "N/D"
-        print(f"{arm:<10} {n:<4} {success_rate*100:>6.0f}% {collisions:<18.2f} {dist_p5:<16.2f} {'N/D':<12} {slm_inv:<14.1f} {fb_pct:<10} {to_pct:<10}")
+        print(f"{arm:<10} {n:<4} {success_rate*100:>6.0f}% {collisions:<18.2f} {dist_p5:<16.2f} {spl_str:<8} {slm_inv:<14.1f} {fb_pct:<10} {to_pct:<10}")
 
     print("\nLatencia total por ciclo (ms), p50/p95, por (arma, ruta):")
-    by_arm_route = load_cycles_for_latency(runs_dir)
+    by_arm_route = load_cycles_for_latency(args.runs_dir)
     for (arm, route), lats in sorted(by_arm_route.items()):
         if not lats:
             continue

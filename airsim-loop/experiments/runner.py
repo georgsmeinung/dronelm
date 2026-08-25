@@ -16,9 +16,18 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import sys
 import time
 from pathlib import Path
+
+# Jitter reproducible del start_pose por semilla (2026-0824): AIRSIM_SEED no
+# perturbaba nada -- se pasaba a FlightLogger solo como etiqueta del archivo.
+# Sin una fuente de variacion real, "seed 1" y "seed 2" con brazos
+# deterministas (fsm/reactive) producian trayectorias practicamente
+# identicas, y Mann-Whitney U no tenia con que comparar entre semillas.
+SEED_JITTER_XY_M = 1.5
+SEED_JITTER_YAW_DEG = 10.0
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -53,12 +62,20 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
     client = AirSimClient(loop_hz=loop_hz)
     client.connect()
+    # Limpia colision/velocidad/estado del controlador interno que pudiera
+    # haber quedado de una corrida anterior en el mismo proceso de AirSim
+    # (ver PLAN-MEJORAS.md F3.3: "client.reset()" antes de reposicionar).
+    client.reset()
 
     start_pose = manifest.get("start_pose")
     if start_pose:
+        rng = random.Random(seed)
+        jitter_x = rng.uniform(-SEED_JITTER_XY_M, SEED_JITTER_XY_M)
+        jitter_y = rng.uniform(-SEED_JITTER_XY_M, SEED_JITTER_XY_M)
+        jitter_yaw = rng.uniform(-SEED_JITTER_YAW_DEG, SEED_JITTER_YAW_DEG)
         client.set_vehicle_pose(
-            start_pose.get("x", 0.0), start_pose.get("y", 0.0), start_pose.get("z", -10.0),
-            yaw_deg=start_pose.get("yaw_deg", 0.0),
+            start_pose.get("x", 0.0) + jitter_x, start_pose.get("y", 0.0) + jitter_y, start_pose.get("z", -10.0),
+            yaw_deg=start_pose.get("yaw_deg", 0.0) + jitter_yaw,
         )
 
     graph, service = compile_workflow(client)
@@ -69,7 +86,7 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
     state = {
         "waypoints": waypoints_list, "current_wp_index": 0, "target_waypoint": None,
         "waypoint_guidance": {}, "mission_completed": False, "rgb_image": None,
-        "telemetry": {}, "frame_history": [], "xor_change_ratio": 1.0,
+        "telemetry": {}, "frame_history": [],
         "estimated_ttc": float("inf"), "next_action": "", "flight_status": "vuelo",
         "deliberations": [], "active_maneuver": None, "maneuver_cycles_left": 0,
         "maneuver_command": None, "evasion_stuck_cycles": 0, "slm_request_id": None,
@@ -88,7 +105,14 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
             yaw = telem.get("orientation", {}).get("yaw", 0.0)
             target_wp = tracker.update(pos)
             guidance = tracker.compute_guidance(pos, yaw)
-            tracker.record_progress(guidance.get("distance", 0.0))
+            # Fix 1 (2026-0824): frenar a proposito mientras se espera al SLM
+            # (dentro del watchdog) no cuenta como "sin progresar" -- ver
+            # _deliberation_pending en deliberative.py. Fix 2: distancia
+            # HORIZONTAL, no 3D -- subir para escapar de un atasco no debe
+            # empeorar mecanicamente la metrica que decide si el atasco se
+            # resolvio (los waypoints estan a altitud constante).
+            if not state.get("_deliberation_pending", False):
+                tracker.record_progress(guidance.get("dist_xy", guidance.get("distance", 0.0)))
 
             state["target_waypoint"] = target_wp
             state["waypoint_guidance"] = guidance

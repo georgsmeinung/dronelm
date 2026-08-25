@@ -62,14 +62,134 @@ Con la decisión tomada, se actualizó `airsim-loop/.env` (versionado en git) pa
 - `airsim-loop/.env.copy` (plantilla desactualizada, no se carga en runtime) quedó sin tocar; sigue teniendo config de YOLO y sin las variables nuevas. Pendiente decidir si se actualiza o se elimina.
 - Suite de 73 tests re-corrida tras el cambio: sigue en verde (los valores nuevos coinciden con los defaults que el código ya usaba, así que no hay cambio de comportamiento en la Mac).
 
-Pendiente de este lado: el código vive en un repo Git compartido; falta el `git pull` en la máquina Windows y correr `python main.py` ahí con AirSim ya iniciado localmente para que el cambio de `AIRSIM_IP` tenga efecto real.
+### Sesión de calibración con simulador en vivo (2026-0824, AirSim local co-localizado, puerto 41451)
 
-### Pendiente
-- F0.0: re-correr `scripts/bench_capture.py` una vez migrado a la topología local (Windows) para fijar `LOOP_HZ` real de esa configuración.
-- F0.4: recalibrar `CANNY_XOR_THRESHOLD` con el histograma de `xor_change_ratio` en vuelo real, una vez resuelto el cuello de botella de captura.
-- F1.3: correr `experiments/collect_ttc_dataset.py` + `experiments/analyze_ttc.py` para calibrar `TTC_EVASION_THRESHOLD`/`TTC_SAFE_THRESHOLD` contra el canal depth (quedan marcados como provisorios en `.env`/código).
-- F3.3: correr `experiments/runner.py` sobre escenarios reales para producir los resultados SLM vs FSM vs reactivo.
-- F4.1: regenerar el `.mmd` del grafo de control desde el grafo compilado.
+Con el simulador corriendo en la misma máquina Windows (ver migración de topología arriba), se pudo por fin ejecutar en vuelo real lo que quedaba pendiente de F0.4/F1.3/F3.3/F4.1.
+
+**F0.4 — histograma de `xor_change_ratio` medido, y el nodo terminó retirado (no solo recalibrado).**
+Se corrió un vuelo real de 446 ciclos a `LOOP_HZ=5.0` (`experiments/runner.py`, brazo `reactive`, `runs/xor_calibration/manhattan_b/reactive/seed_1.jsonl`). Resultado: en crucero activo `xor_change_ratio` **nunca bajó de 0.071** (p1=0.158, p50=0.247, muy por encima del umbral histórico de 0.02–0.03). Confirma exactamente la hipótesis del plan original.
+
+Primer intento: subir el umbral al percentil 1 medido (`0.16`) para que el gate conservara su propósito (bypasear percepción solo en pausas genuinamente estáticas: hover post-`FRENAR`, espera de deliberación). Pero al auditar qué hace exactamente ese bypass en el grafo (`src/agents/graph.py`), apareció un problema más serio que "casi nunca dispara":
+
+- El bypass del `xor_router` iba **directo a `keep_going`**, sin pasar por `perception` **ni por `policy_router`**. `reactive_node` (destino del bypass) nunca lee `obstacle_field`, así que para el brazo `reactive` el bypass no cambiaba nada. Pero para los brazos `slm`/`fsm`, saltarse `policy_router` significa saltarse **toda** la lógica de seguridad (TTC, `center_blocked`, evasión) para ese ciclo.
+- El único modo de disparo frecuente del gate recalibrado (`~1%` de los ciclos) correspondía a momentos de hover — es decir, **justo después de que el propio `policy_router` mandó `FRENAR`** por TTC bajo o `center_blocked`. En ese momento, "la escena no cambió visualmente" no significa "es seguro seguir": significa que el dron está parado y el obstáculo que causó el freno probablemente sigue en el mismo lugar. El gate resumía `MANTENER_RUMBO` sin volver a evaluar el campo de obstáculos, exactamente cuando más importaba volver a evaluarlo.
+- Costo pagado sin contrapartida: Canny + XOR corría en el 100% de los ciclos (el gate mismo tiene costo), mientras que el ahorro de cómputo que debía justificarlo (saltar flujo óptico/TTC) casi nunca se materializaba en la fase de vuelo donde más ciclos se ejecutan.
+
+**Decisión: se retiró el nodo**, aplicando el criterio del propio `PLAN-MEJORAS.md` F0.4 ("si nunca dispara útilmente, se retira") de forma más estricta de lo previsto — no es solo que disparara poco, es que su único patrón de disparo frecuente era contrario a la seguridad. Cambios:
+- `src/agents/graph.py`: se eliminaron `canny_xor_gate_node`, `xor_router`, `XOR_THRESHOLD`, los campos `xor_change_ratio`/`prev_canny_edges` de `DroneState`, y las aristas correspondientes. `degraded_router` ahora rutea directo `capture → perception` (antes `capture → canny_xor_gate → perception`).
+- `src/perception/canny_gate.py` → movido a `legacy/perception/canny_gate.py` (`git mv`), con la justificación completa en `legacy/README.md`.
+- `CANNY_XOR_THRESHOLD`/`CANNY_LOW`/`CANNY_HIGH` removidos de `.env`/`.env.copy` (mismo patrón que el retiro de YOLO).
+- `xor_change_ratio` removido de `flight_logger.py`, `main.py` (overlay de video y payload de `stream_hub`) y del estado inicial de `experiments/runner.py`. *Nota: `airsim-plan/webdcs` (WebDCS, subproyecto separado) tiene un tile "XOR %" en el dashboard que leía este campo del payload de `stream_hub`; con el campo ausente cae a `0%` vía `tel.xor_change_ratio || 0` en `app.js` (no rompe, pero el tile queda muerto) — no se tocó por estar fuera del alcance de `airsim-loop`. Pendiente de decidir si se remueve el tile en el frontend.*
+- 2 tests de `xor_router`/bypass eliminados de `tests/test_policy_router.py`; el resto de la suite (71 tests, antes 73) sigue en verde.
+- `README.md`, `legacy/README.md` y el `.mmd` (ver F4.1 abajo) actualizados para que graph/código/documentación digan lo mismo.
+
+**F1.3 — TTC calibrado contra el canal depth.**
+Se corrieron los 3 escenarios que pide el plan con `experiments/collect_ttc_dataset.py` (se le agregó piloteo scripteado — antes requería mover el dron manualmente — con freno de seguridad si la profundidad central cae bajo 4 m, para no chocar durante la recolección): aproximación frontal, cañón recto, giros de yaw puros. 3735 registros (`runs/ttc/*.jsonl`).
+
+Se encontró y corrigió un bug real en `experiments/analyze_ttc.py`: `np.trapz` fue renombrado a `np.trapezoid` en NumPy 2.x, rompía el cálculo de AUC/ROC. Con el fix:
+- Correlación puntual (`ttc_est` vs `ttc_gt`) floja: r=-0.034, error relativo mediano 66%.
+- Pero AUC=0.96–0.97 para el evento binario "colisión dentro de τ s" (τ∈{1,2,3}) — el *ranking* de riesgo separa bien las clases aunque el valor puntual de TTC sea ruidoso.
+- Umbrales de Youden: τ=2s → TTC=3.18s, τ=3s → TTC=4.58s.
+
+`TTC_EVASION_THRESHOLD` pasó de 3.0 (provisorio) a **3.2**, `TTC_SAFE_THRESHOLD` de 6.0 a **4.6** (redondeados de los valores de Youden). Caveat documentado en `.env`: una sola sesión de vuelo en simulador, sin variación real de `|yaw_rate|` fuerte (el escenario `yaw_only` quedó casi todo en el bin `[0, 0.05)` rad/s de la estratificación) — valida detección frontal, no valida aún la derotación en giros agresivos con datos reales.
+
+**F4.1 — `.mmd` regenerado desde el grafo compilado.**
+Nuevo `scripts/export_graph_mmd.py`: compila el `StateGraph` con un cliente AirSim *dummy* (nunca se invoca durante `build_workflow()`/`compile_workflow()`, solo se referencia dentro de closures de nodo) y llama a `app.get_graph().draw_mermaid()`. No conecta a AirSim, no dispara despegue, sin efectos secundarios. `informe/2006-0823 Nuevo  Grafo de Control.mmd` ahora sale del grafo real (incluye el retiro de `canny_xor_gate` de este mismo commit); re-correrlo tras cualquier cambio de topología del grafo evita que la divergencia doc/código se repita.
+
+**F3.3 — primer batch SLM vs FSM vs reactivo, pipeline validado de punta a punta (no es aún la corrida de tesis).**
+Se agregaron dos manifiestos nuevos en `airsim-loop/missions/` (`manhattan_a.json`, `manhattan_b.json`), reutilizando waypoints ya existentes en `airsim-plan/missions/A_SIMPLE_MISSION.preloop.json` y `A_BASIC_CITY.preloop.json` (mismo mapa CityParkSim) — antes no existía ningún manifiesto de escenario en el formato que espera `experiments/runner.py`. Se corrió `experiments/runner.py --scenarios manhattan_a manhattan_b --arms slm fsm reactive --seeds 1 2 --max-cycles 400 --max-seconds 60` (12 corridas) y `experiments/analyze.py` sobre el resultado (`runs/f33_batch/`):
+
+| Brazo | N | Éxito | Colisiones/misión | SLM inv/misión | Fallback % | Timeout % |
+|---|---|---|---|---|---|---|
+| `slm` | 4 | 0% | 0.00 | 68.8 | 100% | 100% |
+| `fsm` | 4 | 0% | 0.00 | 0.0 | N/D | N/D |
+| `reactive` | 4 | 0% | 0.00 | 0.0 | N/D | N/D |
+
+Latencia total por ciclo (p50/p95, por arma+ruta): `fsm` 88.5/112.8ms, `reactive` 85.3/110.9ms, `slm` (ruta `deliberative`) 94.6/128.5ms — los tres muy por debajo del presupuesto de ciclo a `LOOP_HZ=5.0` (200ms).
+
+- **0% de éxito en los tres brazos no es una falla del sistema:** ninguna corrida colisionó ni crasheó; el tope de 60s/400 ciclos de este primer pase (elegido para validar el pipeline rápido, no para completar misiones de ~150m+ a velocidad de crucero) fue insuficiente para llegar al último waypoint en ningún caso. `experiments/analyze.py` omitió el test de Mann-Whitney U porque `success` fue constante (0) en las cuatro semillas de cada brazo — no hay varianza que comparar todavía.
+- **El brazo `slm` tuvo 100% fallback y 100% timeout**, dato real y esperado: no hay ningún servidor respondiendo en `LOCAL_LLM_URL` (`http://192.168.110.101:1234/v1`) en esta sesión. El `DeliberationService`/watchdog (F0.5) funcionó como está diseñado — cada deliberación cayó al fallback determinista sin bloquear el lazo — pero esto significa que la comparación SLM vs FSM **todavía no compara un SLM real**, compara FSM/reactivo contra la política de fallback determinista del brazo `slm`.
+- `min_obstacle_dist_m` sale `null`/`nan` en las cuatro filas: `runner.py::run_one()` lo omite a propósito ("requiere canal depth, omitido para no duplicar `simGetImages` en el hot path" — comentario ya existente en el código), así que esa columna no va a poblarse sin tocar el runner.
+- La columna "Long/Óptima" es un placeholder (`'N/D'` hardcodeado en `experiments/analyze.py`): la razón tipo SPL que pide el plan F3.3 no está implementada todavía.
+
+### Vuelo más fluido: histéresis + suavizado exponencial en `WaypointTracker`
+
+Reportado por el usuario mirando las misiones de recolección de datos en vivo: el dron mostraba cabeceos (pitch) rápidos y visibles. Diagnóstico con el código en mano: `WaypointTracker.compute_guidance()` recalculaba `vx`/`yaw_rate` desde cero cada ciclo (200ms a `LOOP_HZ=5.0`), con 3 saltos de fórmula en umbrales de una sola cota (giro brusco a 60°, aproximación final a 4.0m, zona muerta de yaw a 2.5°) y sin ninguna memoria del valor anterior — cada cambio de fórmula, o cada micro-recálculo dentro del mismo régimen, es un salto discontinuo de velocidad que el controlador de AirSim persigue inclinando el morro.
+
+- **Histéresis** (banda de entrada ≠ banda de salida: 60°/50°, 4.0m/4.5m, 2.5°/1.5°) en los 3 umbrales, con el estado persistido en la instancia (mismo patrón que `progress_stall_cycles`, F2.5). 3 tests de regresión nuevos que oscilan `abs_err`/`dist_3d` justo en el borde y comprueban que la fórmula no alterna mientras la oscilación se mantenga dentro de la banda.
+- **Suavizado exponencial (EMA)** de `vx`/`yaw_rate` (`GUIDANCE_SMOOTHING_ALPHA=0.5`, configurable), aplicado también en `ScriptedPilot` de `collect_ttc_dataset.py` (el freno de seguridad ahí también era bang-bang). 1 test nuevo verifica la matemática exacta del filtro.
+- **Verificación honesta:** medir esto contra telemetría real fue más ambiguo de lo esperado — `std(Δvx)` quedó prácticamente plano antes/después (0.033→0.037→0.036) y la tasa de cambios de signo no mejoró monótonamente (20.9%→13.4% con histéresis sola→16.9% con EMA agregado). La causa probable: se está midiendo la velocidad *medida* en NED (filtrada además por el controlador interno de AirSim), no la velocidad *comandada* en body frame que es lo que efectivamente se suaviza, con N=1 corrida por condición (sin resetear el simulador entre corridas). El mecanismo está verificado matemáticamente por los tests unitarios; la mejora visual/de vuelo queda para juicio del usuario, no reclamada aquí como medida.
+
+### Prueba de modos de vuelo comparados
+
+**Batch:** `--scenarios manhattan_a manhattan_b --arms slm fsm reactive --seeds 1 2 3 --max-seconds 300` (18 corridas, `runs/f33_batch_v2/`, ~90 min de pared). Las 18 corridas terminaron sin crashear (`exit code 0`), pero el resultado expone un bug estructural real que invalida la mayoría de los números como medida de navegación — se documenta abajo con prioridad sobre la tabla, porque es el hallazgo importante de esta corrida.
+
+#### Tabla agregada (`experiments/analyze.py runs/f33_batch_v2 --missions-dir missions`)
+
+| Arm | N | Éxito | Colisiones/misión | SPL | SLM inv/misión | Fallback % | Timeout % |
+|---|---|---|---|---|---|---|---|
+| `fsm` | 6 | 0% | 0.00 | 0.00 | 0.0 | N/D | N/D |
+| `reactive` | 6 | 0% | 0.00 | 0.00 | 0.0 | N/D | N/D |
+| `slm` | 6 | 0% | 0.00 | 0.00 | **0.0** | N/D | N/D |
+
+Latencia total por ciclo (p50/p95, por arma+ruta): `fsm` 100.0/359.8ms, `reactive` 89.6/367.2ms, `slm` (ruta `deliberative`) 88.2/122.3ms. `slm_invocations=0` en las 6 corridas del brazo `slm` — pese a que `route="deliberative"` fue la ruta activa en más del 99% de los ciclos de esas corridas. Esa contradicción es la pista del bug.
+
+#### Bug encontrado: el escape "subir para superar el obstáculo" es un deadlock que atrapa al dron en ascenso infinito
+
+Diagnóstico, no una interpretación de la tabla — con los datos de vuelo (posición por ciclo) en la mano:
+
+- `src/agents/deliberative.py:382-399` (brazo `slm`) y `src/agents/fsm.py:47-48` (brazo `fsm`) comparten el mismo mecanismo: si `evasion_stuck_cycles >= EVASION_STUCK_THRESHOLD` (10), se fuerza `GANAR_ALTURA` **de forma síncrona, sin consultar nada** — ni al LLM (por eso `slm_invocations` quedó en 0: la rama de deliberación real nunca llega a ejecutarse), ni a la lógica normal de la FSM.
+- `evasion_stuck_cycles` es `WaypointTracker.progress_stall_cycles`, que se incrementa cuando `dist_to_wp` (distancia **3D**, incluye Z) no mejora. Los dos manifiestos (`manhattan_a.json`, `manhattan_b.json`) tienen **todos los waypoints a la misma altitud** (`z=-10.0`). `GANAR_ALTURA` comanda `vz=-EVASION_UP_SPEED` (subir, F: NED negativo = arriba) — es decir, alejarse en Z de un objetivo que está siempre a `z=-10.0`. Cada ciclo de ascenso **empeora mecánicamente** `dist_to_wp`, así que la condición de "sin progreso" nunca se puede satisfacer mientras se sube. El contador de atasco no vuelve a bajar de 10, así que el escape se re-dispara cada vez que se libera (`_escape_reset`) y el dron nunca sale del ciclo: sube, sube, sube.
+- Evidencia directa (altitud NED por ciclo, `z_start`/`z_end` en metros):
+
+  | Corrida | z inicial | z final | Δaltitud |
+  |---|---|---|---|
+  | `manhattan_a/slm/seed_{1,2,3}` | -10.0 | -366 a -368 | **~357m de ascenso**, las 3 semillas |
+  | `manhattan_a/fsm/seed_{1,3}` | -10.0 | -364 / -371 | ~355-361m |
+  | `manhattan_a/fsm/seed_2` | -10.0 | -190 | ~180m |
+  | `manhattan_b/slm/seed_1` | -10.0 | -343.5 | ~334m |
+  | `manhattan_b/slm/seed_{2,3}` | -10.0 | -77 | ~67m |
+  | `manhattan_b/fsm/seed_{1,2}` | -10.0 | -53.7 | ~44m (idénticas entre sí, esperable: brazo determinista) |
+  | `manhattan_b/fsm/seed_3` | -10.0 | -417.7 | ~408m |
+  | `reactive` (las 6 corridas) | -10.0 | -9.7 a -10.2 | **prácticamente 0** |
+
+  `reactive` nunca sube porque `reactive_node` no tiene ninguna lógica de evasión/escape — nunca ejecuta este camino de código. `slm` y `fsm` suben en **10 de las 12 corridas donde el mecanismo puede dispararse**, con magnitud variable según cuánto tiempo pasaron atascados antes de quedar atrapados en el bucle.
+  Ejemplo concreto (`manhattan_a/slm/seed_1`, inspeccionado ciclo a ciclo): de 1485 ciclos totales, 1475 (99.3%) tuvieron `action="GANAR_ALTURA"`; la posición fue de `(3.8, 18.2, -9.98)` a `(-3.2, 113.2, -366.4)` — 356m de ascenso recto, con deriva lateral en Y por el `vy=0.5` que trae la cinemática de `GANAR_ALTURA` (`action_map.py`), nunca una decisión real de navegación.
+
+- **Esto no es una regresión introducida en esta sesión.** El mecanismo es preexistente; simplemente nunca se había expuesto porque todas las corridas anteriores usaban presupuestos de 60s (insuficientes para que el dron llegara a quedar realmente atascado contra un obstáculo). Al subir el presupuesto a 300s (punto (b) de esta misma sesión) el dron tuvo tiempo de encontrarse con un obstáculo real, quedar atascado, y entrar al bucle — que después nunca lo suelta porque el propio mecanismo de escape es el que impide la condición de salida.
+- **Consecuencia sobre los números de la tabla:** `path_length_m`/SPL de las 10 corridas afectadas no miden navegación — miden metros de ascenso vertical + deriva lateral incidental. `collisions=0` en todas las corridas es consistente con el bug (volar derecho hacia arriba evita cualquier obstáculo del mapa, no es evidencia de vuelo seguro). Las únicas 6 corridas con datos de navegación real y no contaminados son las de `reactive` (que, dicho sea de paso, muestran su propia limitación ya conocida: sin evasión, se estanca contra un obstáculo real en `manhattan_a` — ver Δ tan bajo).
+- **Arreglo recomendado (implementado, ver más abajo):** que `WaypointTracker.record_progress()`/el chequeo de atasco use distancia **horizontal** (`dist_xy`) en vez de `dist_3d`, más un techo de intentos de escape.
+
+**Estado de los 4 pendientes tras esta corrida:** (a) el watchdog/servidor SLM nunca llegó a ejercitarse de verdad — el brazo `slm` quedó atrapado en el escape síncrono antes de poder consultar al LLM en el 99%+ de sus ciclos; (b) el presupuesto de 300s sí alcanzó para exponer el problema real (quedarse atascado), aunque ninguna misión llegó a completarse; (c) el jitter de semilla funciona (seeds ya no son idénticas — ver la variación entre `manhattan_b/fsm/seed_3` y sus hermanas); (d) SPL implementado y correcto (reporta 0.00 porque, correctamente, nada tuvo éxito). La corrida de tesis real sigue pendiente hasta corregir el bug de arriba.
+
+### Fix del escape por altura descontrolado
+
+Investigando el mecanismo exacto (no solo "subir empeora la métrica") apareció una segunda causa, más grave que la primera: el escape también interrumpe deliberaciones legítimas antes de que el SLM pueda responder. Son dos bugs compuestos, no uno:
+
+1. **Esperar al SLM contaba como "atascado".** `evasion_stuck_cycles` (`WaypointTracker.progress_stall_cycles`) se incrementaba en cualquier ciclo sin progreso hacia el waypoint — incluido el `FRENAR` intencional mientras `deliberative_node` espera la respuesta del LLM. `EVASION_STUCK_THRESHOLD=10` ciclos a `LOOP_HZ=5.0` son 2 segundos; la latencia real del SLM medida es 2-8s. El escape se disparaba casi siempre antes de que el SLM pudiera responder, descartando el pedido pendiente (`slm_request_id = None`) — por eso `SLM_WATCHDOG_MS=6000` recién configurado no tenía efecto: este segundo mecanismo, mucho más corto, actuaba primero.
+2. **La métrica de progreso usaba distancia 3D**, y `GANAR_ALTURA` aleja al dron en Z de un waypoint a altitud constante — la causa original ya documentada arriba.
+
+**Fix 1 — esperar al SLM ya no cuenta como atasco.** `deliberative_node` (`src/agents/deliberative.py`) setea `state["_deliberation_pending"]=True` mientras hay un pedido en curso dentro del watchdog (y `False` en cualquier resolución: éxito, fallback o timeout). `experiments/runner.py` y `main.py` se saltan `record_progress()` mientras esa flag esté activa.
+
+**Fix 2 — distancia horizontal, no 3D.** Los mismos dos call sites cambiaron `guidance.get("distance", ...)` (3D) por `guidance.get("dist_xy", ...)` (horizontal, ya calculada en `WaypointTracker.compute_guidance()`). Subir para superar un obstáculo deja de empeorar mecánicamente la métrica que decide si el atasco se resolvió.
+
+**Fix 3 — techo de intentos de escape (red de seguridad, independiente de que 1+2 funcionen).** Nuevo contador `state["_consecutive_escapes"]` en `deliberative.py` y `fsm.py` (comparten el mismo mecanismo raíz — `fsm.py:47-48` tiene el mismo `if stuck_cycles >= stuck_threshold: return STATE_CLIMB`). Nuevo env var `MAX_CONSECUTIVE_ESCAPES` (default 3): al superarlo, en vez de otro `GANAR_ALTURA`/`CLIMB` se comanda `FRENAR` con `flight_status="escape_agotado"` — un fallo visible y acotado en altura, no uno invisible y sin límite.
+
+**Tests nuevos:** `tests/test_escape_deadlock.py` (3 tests: esperar al SLM 15 ciclos sin disparar el escape; tope de 3 escapes consecutivos en `deliberative.py`; mismo tope en `fsm.py`) + `test_dist_xy_ignores_altitude_unlike_distance` en `test_waypoint_tracker.py`. Suite completa: 79/79 en verde (75 + 4 nuevos).
+
+**Verificación en vivo, mismo escenario que produjo los 356m de ascenso:** `manhattan_a`, brazo `slm`, 120s. Resultado — `slm_invocations=555/593` ciclos (antes: 0/1485 en 300s), `slm_fallback_rate=1.0`/`slm_timeout_rate=1.0` (el LLM siguió sin responder dentro de los 6s del watchdog en esta corrida puntual, pero **ahora se lo consulta de verdad**, que es lo que estaba roto), y altitud acotada a `z ∈ [-10.01, -0.65]` — un excursión máxima de ~10m (3 intentos de `GANAR_ALTURA` capados), no una rampa sin techo.
+
+**Hallazgo secundario (corregido, ver más abajo):** durante los períodos de `FRENAR` prolongado (una vez agotado el escape), la altitud derivó lentamente hacia abajo de forma sostenida (`z`: -9.98 → -0.65 a lo largo de los 120s, ~0.08 m/s) en vez de mantenerse constante.
+
+### Fix de la deriva de altitud durante FRENAR prolongado
+
+Diagnóstico: `execute_velocity()` reemite `moveByVelocityBodyFrameAsync(vz=0, ...)` cada ciclo (~200ms) durante un `FRENAR` sostenido — es un controlador de **velocidad**, no de altitud. Pedirle "velocidad cero" repetidamente nunca corrige una desviación acumulada: si hay cualquier sesgo pequeño y sistemático (posible error de estado estacionario de SimpleFlight, o una micro-ventana sin comando activo entre `cancelLastTask()` y el reemitido), se acumula sin límite durante cientos de ciclos porque no hay ninguna referencia de posición contra la cual corregir.
+
+Se evaluaron 3 opciones (usar `hoverAsync()` en vez de velocidad-cero; estirar la duración del comando cuando es cero; corrección activa de altitud). Se implementó la opción 3, a pedido del usuario — más código, pero corrige el síntoma sea cual sea la causa real (no depende de diagnosticar si es SimpleFlight o el patrón cancelar/reemitir):
+
+- `motor_node` (`src/agents/graph.py`) ancla la altitud (`state["_hover_alt_anchor"]`) en el primer ciclo de un `FRENAR` sostenido, y mientras el `macro_action` siga siendo `FRENAR`, corrige `vz` hacia esa ancla si la desviación supera `HOVER_ALT_DEADZONE_M` (0.3m) — mismo patrón (ganancia proporcional + zona muerta + clamp) que ya usa `WaypointTracker.compute_guidance()` para el guiado normal. Nuevos env vars: `HOVER_ALT_DEADZONE_M`, `HOVER_ALT_KP` (0.35), `HOVER_ALT_MAX_VZ` (0.8). El ancla se limpia (`None`) en cualquier ciclo que no sea `FRENAR`.
+- 3 tests nuevos en `tests/test_hover_altitude.py`: corrige la deriva fuera de la zona muerta, no corrige dentro de ella, y limpia el ancla al salir de `FRENAR`. Suite completa: 82/82 (79 + 3 nuevos).
+- **Verificación en vivo, mismo escenario y misma duración (`manhattan_a`, brazo `slm`, 120s):** antes, `z` derivaba sin parar (-9.98 → -0.65, 9.3m en 120s). Después, `z` se estabiliza en ~-8.8 desde el ciclo 200 en adelante (`z_min=-9.98, z_max=-8.80`) — una desviación acotada de ~1.2m, no una deriva sostenida.
 
 # 2026-0823
 

@@ -5,6 +5,7 @@ numpy>=1.24.0
 openai>=1.0.0
 python-dotenv>=1.0.0
 pytest>=8.0.0
+scipy>=1.11.0  # experiments/analyze.py: Mann-Whitney U entre brazos (F3.3)
 
 # rllander/manual-lander.py (sub-experimento independiente, no forma parte
 # del lazo principal): descomentar solo si se va a correr ese script.

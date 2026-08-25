@@ -65,7 +65,6 @@ def _base_state():
         "rgb_image": None,
         "telemetry": {},
         "frame_history": [],
-        "xor_change_ratio": 1.0,
         "estimated_ttc": float("inf"),
         "next_action": "",
         "flight_status": "vuelo",

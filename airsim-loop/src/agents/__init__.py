@@ -9,7 +9,6 @@ from .graph import (
     compile_workflow,
     get_airsim_client,
     policy_router,
-    xor_router,
 )
 from .reactive import reactive_node
 
@@ -25,5 +24,4 @@ __all__ = [
     "make_deliberative_node",
     "policy_router",
     "reactive_node",
-    "xor_router",
 ]

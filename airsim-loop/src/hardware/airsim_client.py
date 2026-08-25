@@ -106,6 +106,33 @@ class AirSimClient:
             self._connected = False
             return False
 
+    def reset(self) -> bool:
+        """Reinicia el vehiculo a su pose original y limpia estado fisico
+
+        residual (colision, velocidad, integradores del controlador interno
+        de SimpleFlight) antes de una nueva corrida. Necesario para que
+        corridas sucesivas en el mismo proceso de AirSim (experiments/
+        runner.py, N corridas por semilla/escenario/brazo) no arrastren
+        estado de la corrida anterior -- simSetVehiclePose() por si solo
+        solo teletransporta posicion/orientacion, no reinicia esto.
+
+        client.reset() de AirSim desarma el vehiculo y deshabilita el
+        control por API como efecto secundario (comportamiento documentado);
+        por eso se re-habilitan y se despega de nuevo antes de devolver.
+        """
+        if not self._connected or self._client is None:
+            print("[AirSimClient][simulado] Reiniciando vehículo...")
+            return True
+        try:
+            self._client.reset()
+            self._client.enableApiControl(True, vehicle_name=self.vehicle_name)
+            self._client.armDisarm(True, vehicle_name=self.vehicle_name)
+            self._client.takeoffAsync(vehicle_name=self.vehicle_name).join()
+            return True
+        except Exception as exc:
+            print(f"[AirSimClient] Error al reiniciar el vehículo: {exc}")
+            return False
+
     def land(self) -> bool:
         """Ejecuta el aterrizaje autónomo y desarma los motores."""
         if not self._connected or self._client is None:

@@ -34,6 +34,18 @@ from src.perception.obstacle_field import ObstacleField, empty_field
 
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")  # "slm" | "fsm" | "reactive"
 
+# Correccion activa de altitud durante FRENAR prolongado (2026-0824, opcion 3
+# de CHANGELOG.md): moveByVelocityBodyFrameAsync(vz=0,...) reemitido cada
+# ciclo no sostiene la altitud perfectamente durante ventanas largas (~9m de
+# deriva medidos en 120s durante un FRENAR sostenido) -- es un controlador de
+# VELOCIDAD, no de altitud, y pedir "velocidad cero" repetidamente no es lo
+# mismo que pedir "quedate en esta altura". motor_node ancla la altitud al
+# primer ciclo de FRENAR y corrige vz (mismo patron que la correccion de
+# altitud de WaypointTracker.compute_guidance()) mientras dure el freno.
+HOVER_ALT_DEADZONE_M = float(os.getenv("HOVER_ALT_DEADZONE_M", "0.3"))
+HOVER_ALT_KP = float(os.getenv("HOVER_ALT_KP", "0.35"))
+HOVER_ALT_MAX_VZ = float(os.getenv("HOVER_ALT_MAX_VZ", "0.8"))
+
 
 # ---------------------------------------------------------------------------
 # Estado del grafo (DroneState)
@@ -45,8 +57,6 @@ class DroneState(TypedDict, total=False):
     prev_image: Any
     prev_telemetry: Dict[str, Any]
     frame_history: List[Any]  # Ring buffer real de los ultimos N frames para el VLM (F2.1)
-    prev_canny_edges: Any
-    xor_change_ratio: float
     telemetry: Dict[str, Any]
     degraded: bool  # True si AirSim no respondio este ciclo (F0.6)
     obstacle_field: ObstacleField  # F1.1: unico contrato de percepcion
@@ -69,6 +79,16 @@ class DroneState(TypedDict, total=False):
     maneuver_command: Optional[Dict[str, Any]]
     evasion_stuck_cycles: int
     _delib_outcomes: List[Dict[str, Any]]
+    # Corrigen el bug de escape por altura descontrolado (ver CHANGELOG.md
+    # 2026-0824). _deliberation_pending: True mientras se espera al SLM
+    # dentro del watchdog -- el caller se salta record_progress() para que
+    # esperar una respuesta no cuente como "atascado". _consecutive_escapes:
+    # cuenta disparos seguidos del escape sincrono (GANAR_ALTURA/CLIMB); al
+    # superar MAX_CONSECUTIVE_ESCAPES se frena en el lugar en vez de seguir
+    # subiendo sin techo.
+    _deliberation_pending: bool
+    _consecutive_escapes: int
+    _hover_alt_anchor: Optional[float]  # altitud anclada durante FRENAR prolongado (corrige deriva, ver motor_node)
 
 
 # ---------------------------------------------------------------------------
@@ -84,9 +104,8 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     from .evasive import evasive_node
     from .fsm import fsm_node
     from .action_map import action_to_command
-    from src.perception import CannyGate, FlowTTCEstimator
+    from src.perception import FlowTTCEstimator
 
-    canny_gate = CannyGate()
     flow_ttc_estimator = FlowTTCEstimator()
     deliberation_service = make_deliberation_service()
     deliberative_node = make_deliberative_node(deliberation_service)
@@ -117,13 +136,6 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         state["velocity_command"] = cmd
         state["route"] = "degraded"
         state["flight_status"] = "degradado"
-        return state
-
-    def canny_xor_gate_node(state: DroneState) -> DroneState:
-        image = state.get("rgb_image")
-        change_ratio, edges, _ = canny_gate.evaluate(image)
-        state["xor_change_ratio"] = change_ratio
-        state["prev_canny_edges"] = edges
         return state
 
     # Percepcion (F1.1): un unico nodo que produce el ObstacleField completo.
@@ -158,6 +170,21 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             "macro_action": state.get("next_action", "MANTENER_RUMBO"),
             "vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0,
         }
+
+        telemetry = state.get("telemetry") or {}
+        current_z = float((telemetry.get("position") or {}).get("z", 0.0))
+        if cmd.get("macro_action") == "FRENAR":
+            anchor = state.get("_hover_alt_anchor")
+            if anchor is None:
+                anchor = current_z
+            dz = anchor - current_z  # NED: negativo si hay que subir para volver al ancla
+            if abs(dz) > HOVER_ALT_DEADZONE_M:
+                cmd = dict(cmd)
+                cmd["vz"] = max(-HOVER_ALT_MAX_VZ, min(HOVER_ALT_MAX_VZ, HOVER_ALT_KP * dz))
+            state["_hover_alt_anchor"] = anchor
+        else:
+            state["_hover_alt_anchor"] = None
+
         target_yaw = cmd.get("target_yaw")
         airsim_client.execute_velocity(
             vx=float(cmd.get("vx", 0.0)),
@@ -175,7 +202,6 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     return {
         "capture": capture_node,
         "degraded_hover": degraded_hover_node,
-        "canny_xor_gate": canny_xor_gate_node,
         "perception": perception_node,
         "keep_going": reactive_node,
         "evasive": evasive_node,
@@ -191,33 +217,16 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Routers Condicionales del Grafo
 # ---------------------------------------------------------------------------
-# NOTA sobre umbrales: siguen siendo valores por defecto provisorios hasta
-# que F1.3 (validacion de TTC contra el canal depth, curva ROC) los
-# reemplace por parametros calibrados. Ver PLAN-MEJORAS.md.
-XOR_THRESHOLD = float(os.getenv("CANNY_XOR_THRESHOLD", "0.02"))
-TTC_EVASION_THRESHOLD = float(os.getenv("TTC_EVASION_THRESHOLD", "2.0"))
-TTC_SAFE_THRESHOLD = float(os.getenv("TTC_SAFE_THRESHOLD", "5.0"))
+# NOTA sobre umbrales: calibrados con datos de vuelo real (F1.3, ver
+# CHANGELOG.md 2026-0824). Los defaults de abajo solo aplican si .env no
+# define la variable; los valores versionados en .env son los medidos.
+TTC_EVASION_THRESHOLD = float(os.getenv("TTC_EVASION_THRESHOLD", "3.2"))
+TTC_SAFE_THRESHOLD = float(os.getenv("TTC_SAFE_THRESHOLD", "4.6"))
 FOV_BLOCKED_THRESHOLD = float(os.getenv("FOV_BLOCKED_THRESHOLD", "0.6"))
 
 
 def degraded_router(state: DroneState) -> str:
-    return "degraded_hover" if state.get("degraded") else "canny_xor_gate"
-
-
-def xor_router(state: DroneState) -> str:
-    """Paso 1: si el cambio de bordes es menor al umbral, seguir directo sin percepcion pesada.
-
-    F0.4: cableado (a diferencia de la version original, donde estaba
-    definido pero la arista era incondicional). El umbral sigue siendo el
-    default historico (0.02-0.03); queda pendiente de recalibrar con el
-    histograma de xor_change_ratio medido en vuelo real a la frecuencia
-    nueva del lazo (no fue posible medirlo en este entorno de implementacion,
-    sin acceso al simulador).
-    """
-    change_ratio = state.get("xor_change_ratio", 1.0)
-    if change_ratio < XOR_THRESHOLD:
-        return "keep_going"
-    return "perception"
+    return "degraded_hover" if state.get("degraded") else "perception"
 
 
 def policy_router(state: DroneState) -> str:
@@ -272,7 +281,6 @@ def build_workflow(airsim_client: Any) -> Any:
 
     workflow.add_node("capture", nodes["capture"])
     workflow.add_node("degraded_hover", nodes["degraded_hover"])
-    workflow.add_node("canny_xor_gate", nodes["canny_xor_gate"])
     workflow.add_node("perception", nodes["perception"])
     workflow.add_node("keep_going", nodes["keep_going"])
     workflow.add_node("evasive", nodes["evasive"])
@@ -284,10 +292,6 @@ def build_workflow(airsim_client: Any) -> Any:
     workflow.set_entry_point("capture")
     workflow.add_conditional_edges("capture", degraded_router, {
         "degraded_hover": "degraded_hover",
-        "canny_xor_gate": "canny_xor_gate",
-    })
-    workflow.add_conditional_edges("canny_xor_gate", xor_router, {
-        "keep_going": "keep_going",
         "perception": "perception",
     })
     workflow.add_conditional_edges("perception", policy_router, {

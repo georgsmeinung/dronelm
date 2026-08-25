@@ -40,7 +40,7 @@ def _base_state():
     return {
         "waypoints": [], "current_wp_index": 0, "target_waypoint": None,
         "waypoint_guidance": {}, "mission_completed": False, "rgb_image": None,
-        "telemetry": {}, "frame_history": [], "xor_change_ratio": 1.0,
+        "telemetry": {}, "frame_history": [],
         "estimated_ttc": float("inf"), "next_action": "", "flight_status": "vuelo",
         "deliberations": [], "active_maneuver": None, "maneuver_cycles_left": 0,
         "maneuver_command": None, "evasion_stuck_cycles": 0, "slm_request_id": None,

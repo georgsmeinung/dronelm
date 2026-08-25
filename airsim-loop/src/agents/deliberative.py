@@ -380,12 +380,44 @@ def make_deliberative_node(service: DeliberationService):
         guidance = state.get("waypoint_guidance") or {}
 
         # --- ESCAPE DE DEADLOCK POR ALTURA (sincronico, no consulta al LLM) ---
+        # evasion_stuck_cycles ya NO cuenta los ciclos en que se frena a
+        # proposito esperando al SLM (ver _deliberation_pending mas abajo y
+        # el call site de record_progress en runner.py/main.py) -- antes,
+        # esperar una respuesta del LLM (2-8s medidos) contaba como "sin
+        # progresar" y disparaba este escape en ~2s (EVASION_STUCK_THRESHOLD
+        # a LOOP_HZ=5.0), descartando el pedido pendiente antes de que
+        # pudiera resolverse.
         stuck_threshold = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
         stuck_cycles = int(state.get("evasion_stuck_cycles", 0))
         if stuck_cycles >= stuck_threshold:
-            print(f"[Deliberativo] -> ESCAPE POR ALTURA: {stuck_cycles} ciclos sin progresar. Forzando GANAR_ALTURA sin consultar al LLM.")
+            max_escapes = int(os.getenv("MAX_CONSECUTIVE_ESCAPES", "3"))
+            consecutive_escapes = int(state.get("_consecutive_escapes", 0)) + 1
+            state["_consecutive_escapes"] = consecutive_escapes
+            state["_deliberation_pending"] = False
+            state["evasion_stuck_cycles"] = 0
+            state["_escape_reset"] = True
+            state["slm_request_id"] = None
+
+            if consecutive_escapes > max_escapes:
+                # Red de seguridad: subir tampoco resolvio el atasco despues
+                # de varios intentos (ver dist_xy en Fix 2 -- si esto sigue
+                # disparando incluso con esa correccion, el atasco es real y
+                # no un artefacto de la metrica). Frenar en el lugar en vez
+                # de seguir subiendo sin techo.
+                print(f"[Deliberativo] -> ESCAPE AGOTADO: {consecutive_escapes} intentos de GANAR_ALTURA consecutivos sin resolver el atasco. Frenando en el lugar.")
+                cmd = action_to_command("FRENAR", guidance=guidance, telemetry=telemetry)
+                cmd["rationale"] = f"Escape agotado tras {consecutive_escapes - 1} intentos de GANAR_ALTURA sin resolver el atasco."
+                state["next_action"] = "FRENAR"
+                state["velocity_command"] = cmd
+                state["flight_status"] = "escape_agotado"
+                state["active_maneuver"] = None
+                state["maneuver_cycles_left"] = 0
+                state["maneuver_command"] = None
+                return state
+
+            print(f"[Deliberativo] -> ESCAPE POR ALTURA ({consecutive_escapes}/{max_escapes}): {stuck_cycles} ciclos sin progresar. Forzando GANAR_ALTURA sin consultar al LLM.")
             cmd = action_to_command("GANAR_ALTURA", guidance=guidance, telemetry=telemetry)
-            cmd["rationale"] = f"Escape de deadlock: {stuck_cycles} ciclos bloqueado. Subiendo para superar el obstáculo."
+            cmd["rationale"] = f"Escape de deadlock ({consecutive_escapes}/{max_escapes}): {stuck_cycles} ciclos bloqueado. Subiendo para superar el obstáculo."
             state["next_action"] = "GANAR_ALTURA"
             state["velocity_command"] = cmd
             state["flight_status"] = "escape_altura"
@@ -393,11 +425,9 @@ def make_deliberative_node(service: DeliberationService):
             state["active_maneuver"] = "GANAR_ALTURA"
             state["maneuver_cycles_left"] = max(1, round(ESCAPE_MANEUVER_DURATION_S * loop_hz))
             state["maneuver_command"] = cmd
-            state["evasion_stuck_cycles"] = 0
-            state["_escape_reset"] = True
-            state["slm_request_id"] = None
             return state
 
+        state["_consecutive_escapes"] = 0
         close_structural = field.is_blocked("centro") and field.sector_ttc("centro") <= SAFE_MARGIN_TTC_S
 
         pending_id = state.get("slm_request_id")
@@ -439,6 +469,7 @@ def make_deliberative_node(service: DeliberationService):
             state["velocity_command"] = cmd
             state["route"] = "deliberative"
             state["slm_request_id"] = None
+            state["_deliberation_pending"] = False
 
             if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA"):
                 loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
@@ -470,6 +501,12 @@ def make_deliberative_node(service: DeliberationService):
             state["velocity_command"] = cmd
             state["route"] = "deliberative"
             state["flight_status"] = "hover_slm"
+            # Fix 1: frenar a proposito mientras se espera al SLM (dentro del
+            # watchdog) NO es "sin progresar" -- el caller (runner.py/main.py)
+            # se salta record_progress() mientras esta flag este activa, para
+            # que el escape sincrono de arriba no descarte un pedido legitimo
+            # antes de que el SLM tenga tiempo de responder.
+            state["_deliberation_pending"] = True
             return state
 
         # No hay pedido pendiente: construir el prompt/imagenes y encolar uno nuevo.
@@ -490,6 +527,7 @@ def make_deliberative_node(service: DeliberationService):
         state["velocity_command"] = cmd
         state["route"] = "deliberative"
         state["flight_status"] = "hover_slm"
+        state["_deliberation_pending"] = True
         return state
 
     return deliberative_node

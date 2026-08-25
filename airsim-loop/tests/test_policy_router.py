@@ -87,14 +87,4 @@ def test_fsm_arm_routes_to_fsm_node(monkeypatch):
 
 def test_degraded_router_routes_to_hover():
     assert graph_mod.degraded_router({"degraded": True}) == "degraded_hover"
-    assert graph_mod.degraded_router({"degraded": False}) == "canny_xor_gate"
-
-
-def test_xor_router_below_threshold_skips_perception():
-    state = {"xor_change_ratio": 0.0}
-    assert graph_mod.xor_router(state) == "keep_going"
-
-
-def test_xor_router_above_threshold_runs_perception():
-    state = {"xor_change_ratio": 1.0}
-    assert graph_mod.xor_router(state) == "perception"
+    assert graph_mod.degraded_router({"degraded": False}) == "perception"

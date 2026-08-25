@@ -69,3 +69,43 @@ geodesico de distancias). Es correcto en abstracto pero resuelve un problema
 que este caso de uso (cuadricoptero urbano, camara frontal) no tiene, y
 agrega el costo del grafo geodesico. Se documenta como decision, no como
 trabajo pendiente.
+
+## `perception/canny_gate.py` (`CannyGate`, nodo `canny_xor_gate`, `xor_router`)
+
+Retirado con evidencia medida (F0.4, CHANGELOG 2026-0824). El gate comparaba
+bordes Canny entre frames consecutivos (`xor_change_ratio`) y, si el cambio
+era menor al umbral, saltaba directo a `keep_going` sin pasar por
+`perception` **ni por `policy_router`** — el bypass no solo evitaba el flujo
+optico/TTC, evitaba toda la logica de seguridad de los brazos `slm`/`fsm`.
+
+- **Medido en vuelo real** (446 ciclos a `LOOP_HZ=5.0`,
+  `runs/xor_calibration/manhattan_b/reactive/seed_1.jsonl`): en crucero activo
+  `xor_change_ratio` nunca bajo de 0.071 (p1=0.158, p50=0.247). El umbral
+  historico (0.02-0.03) jamas disparaba. Recalibrarlo al percentil 1 medido
+  (0.16) tampoco resolvia el problema de fondo: seguia sin disparar durante
+  >99% del vuelo activo, y el ~1% donde si disparaba correspondia a momentos
+  de hover (post-`FRENAR`, esperando deliberacion) — no a "ahorro de computo
+  en crucero", que era el proposito original del gate.
+- **Por que ese ~1% es peor que inutil, no solo inutil:** `reactive_node`
+  (destino del bypass) nunca lee `obstacle_field`, asi que el bypass no
+  cambiaba nada para el brazo `reactive`. Para `slm`/`fsm`, el bypass ocurria
+  justo cuando la escena estaba visualmente estatica — que es exactamente lo
+  que pasa durante un hover de seguridad, cuando el dron ya freno porque
+  `policy_router` detecto TTC bajo o `center_blocked` en un ciclo anterior.
+  En ese momento, "nada cambio visualmente" no significa "es seguro seguir":
+  significa que el obstaculo que causo el freno probablemente sigue ahi. El
+  gate resumia `MANTENER_RUMBO` sin volver a evaluar el campo de obstaculos,
+  justo en el escenario donde mas importaba volver a evaluarlo.
+- **Costo pagado sin contrapartida:** Canny + XOR corria en el 100% de los
+  ciclos (el gate mismo cuesta computo), mientras que el ahorro que deberia
+  justificar ese costo (saltar el flujo optico/TTC) casi nunca se
+  materializaba en la fase de vuelo donde mas ciclos se ejecutan.
+
+**Conclusion:** con datos de vuelo real, el gate no cumplia su proposito de
+diseno (ahorro de computo en crucero) y su unico modo de disparo frecuente
+introducia una regresion de seguridad. Aplica el criterio del propio
+`PLAN-MEJORAS.md` F0.4 ("si nunca dispara utilmente, se retira") mas fuerte
+de lo previsto: no es que nunca disparara, es que su patron de disparo era
+contrario a la seguridad. `degraded_router` ahora rutea directo a
+`perception`; el nodo `canny_xor_gate` y `xor_router` se eliminaron del
+grafo (`src/agents/graph.py`).
