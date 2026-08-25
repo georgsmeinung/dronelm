@@ -256,7 +256,8 @@ Una vez configurados Conda, AirSim y Unreal Engine:
 3. **Iniciar la Ground Control Station (WebDCS):**
    ```bash
    cd airsim-plan
-   python -m airsim_plan.webdcs.server
+   # Iniciar el servidor FastAPI con recarga automática
+   python -m uvicorn webdcs.main:app --reload
    ```
    Accede a `http://localhost:8000`.
 4. **Ejecutar el lazo táctico autónomo:**
