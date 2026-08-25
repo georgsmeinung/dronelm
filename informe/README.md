@@ -9,25 +9,25 @@ reescribir la estructura cada vez.
 
 | # | Archivo | Estado | Depende de |
 |---|---|---|---|
-| 0 | `00-COVER.md` | Redactado — Carátula, resumen ejecutivo y palabras clave | — |
-| 1 | `01-INTRODUCCION.md` | Redactado — Introducción, motivación, objetivos y desvíos | — |
-| 2 | `02-ESTADO-DEL-ARTE.md` | Redactado — Estado del arte y trabajos relacionados | — |
-| 3 | `03-ENTORNO-SIMULACION.md` | Redactado — Unreal Engine 5.5 + Cosys-AirSim, CitySim y telemetría Zenodo | — |
-| 4 | `04-PLANIFICACION-MISION-GCS.md` | Redactado — Planificación en tierra antes del vuelo y GCS WebDCS | — |
-| 5 | `05-ARQUITECTURA-LAZO-TACTICO.md` | Redactado — Grafo de decisión por tick (`airsim-loop`) | — |
-| 6 | `06-PERCEPCION-MONOCULAR.md` | Redactado — Percepción monocular sin redes neuronales (flujo óptico y TTC) | — |
-| 7 | `07-ESTIMACION-TTC.md` | Redactado (parcial: §7.3–7.4 pendientes de datos) | validación de calibración de ocupación, giros agresivos |
-| 8 | `08-DECISIONES-SLM.md` | Redactado — Ingeniería de decisiones del SLM, `json_schema` y macro-acciones | — |
-| 9 | `09-MODOS-DE-FALLA-LLM.md` | Redactado — Modos de falla de lazos de control híbridos con LLM | — |
-| 10 | `10-METODOLOGIA-EXPERIMENTAL.md` | Redactado — Metodología experimental (SLM vs FSM vs Reactivo) | — |
-| 11 | `11-RESULTADOS.md` | ⏳ Pendiente — corrida experimental completa | corrida con servidor LLM activo |
-| 12 | `12-CONCLUSIONES.md` | ⏳ Pendiente | capítulo 11 |
-| 13 | `13-REFERENCIAS.md` | Compilado — pendiente de depuración manual (duplicados, entradas no citadas en el texto final) | — |
-| — | `anexos/A1-EXPLORACION-SLM-GGUF.md` | Material de referencia (no es capítulo) | — |
-| — | `anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md` | Material de referencia (no es capítulo) | — |
-| — | `anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md` | Material de referencia (no es capítulo) | — |
-| — | `anexos/A4-OPTIMIZACION-LORA.md` | Material de referencia — alternativa no adoptada | — |
-| — | `anexos/A5-DECODIFICACION-RESTRINGIDA.md` | Material de referencia (no es capítulo) | — |
+| 0 | [`00-COVER.md`](00-COVER.md) | Redactado — Carátula, resumen ejecutivo y palabras clave | — |
+| 1 | [`01-INTRODUCCION.md`](01-INTRODUCCION.md) | Redactado — Introducción, motivación, objetivos y desvíos | — |
+| 2 | [`02-ESTADO-DEL-ARTE.md`](02-ESTADO-DEL-ARTE.md) | Redactado — Estado del arte y trabajos relacionados | — |
+| 3 | [`03-ENTORNO-SIMULACION.md`](03-ENTORNO-SIMULACION.md) | Redactado — Unreal Engine 5.5 + Cosys-AirSim, CitySim y telemetría Zenodo | — |
+| 4 | [`04-PLANIFICACION-MISION-GCS.md`](04-PLANIFICACION-MISION-GCS.md) | Redactado — Planificación en tierra antes del vuelo y GCS WebDCS | — |
+| 5 | [`05-ARQUITECTURA-LAZO-TACTICO.md`](05-ARQUITECTURA-LAZO-TACTICO.md) | Redactado — Grafo de decisión por tick (`airsim-loop`) | — |
+| 6 | [`06-PERCEPCION-MONOCULAR.md`](06-PERCEPCION-MONOCULAR.md) | Redactado — Percepción monocular sin redes neuronales (flujo óptico y TTC) | — |
+| 7 | [`07-ESTIMACION-TTC.md`](07-ESTIMACION-TTC.md) | Redactado (parcial: §7.3–7.4 pendientes de datos) | validación de calibración de ocupación, giros agresivos |
+| 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Ingeniería de decisiones del SLM, `json_schema` y macro-acciones | — |
+| 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — Modos de falla de lazos de control híbridos con LLM | — |
+| 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo) | — |
+| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Pendiente — corrida experimental completa | corrida con servidor LLM activo |
+| 12 | [`12-CONCLUSIONES.md`](12-CONCLUSIONES.md) | ⏳ Pendiente | capítulo 11 |
+| 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado — pendiente de depuración manual (duplicados, entradas no citadas en el texto final) | — |
+| — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia (no es capítulo) | — |
+| — | [`anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md`](anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md) | Material de referencia (no es capítulo) | — |
+| — | [`anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md`](anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md) | Material de referencia (no es capítulo) | — |
+| — | [`anexos/A4-OPTIMIZACION-LORA.md`](anexos/A4-OPTIMIZACION-LORA.md) | Material de referencia — alternativa no adoptada | — |
+| — | [`anexos/A5-DECODIFICACION-RESTRINGIDA.md`](anexos/A5-DECODIFICACION-RESTRINGIDA.md) | Material de referencia (no es capítulo) | — |
 
 ## Convenciones
 

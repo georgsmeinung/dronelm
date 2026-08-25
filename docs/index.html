@@ -70,7 +70,9 @@
         <h1>Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM)</h1>
         <p class="lead-subtitle">
           Documentación técnica y resumen de la tesis de posgrado de la <strong>Maestría en Ciencia de Datos</strong> de
-          la <strong>Universidad Austral</strong>. El trabajo presenta un sistema integral de planificación previa, percepción geométrica monocular y control táctico asistido por modelos de lenguaje pequeños (SLM) en simulación urbana de alta fidelidad.
+          la <strong>Universidad Austral</strong>. El trabajo presenta un sistema integral de planificación previa,
+          percepción geométrica monocular y control táctico asistido por modelos de lenguaje pequeños (SLM) en
+          simulación urbana de alta fidelidad.
         </p>
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
@@ -88,14 +90,31 @@
       <section id="introduccion">
         <h2>Resumen Ejecutivo</h2>
         <p>
-          La navegación autónoma de cuadricópteros eVTOL en entornos urbanos densos —como el de Buenos Aires— enfrenta severos desafíos derivados de la alta densidad de obstáculos, la degradación de señales satelitales (GNSS) en cañones urbanos y las restricciones presupuestarias que descartan sensores de alto costo como LiDAR. Para abordar esta problemática bajo estrictas restricciones de hardware y en conformidad con las normativas locales (ANAC Res. 880/2019), esta tesis presenta un sistema integral de navegación basado exclusivamente en <strong>visión monocular</strong> y <strong>modelos de lenguaje pequeños (SLM)</strong> locales.
+          La navegación autónoma de cuadricópteros eVTOL en entornos urbanos densos —como el de Buenos Aires— enfrenta
+          severos desafíos derivados de la alta densidad de obstáculos, la degradación de señales satelitales (GNSS) en
+          cañones urbanos y las restricciones presupuestarias que descartan sensores de alto costo como LiDAR. Para
+          abordar esta problemática bajo estrictas restricciones de hardware y en conformidad con las normativas locales
+          (ANAC Res. 880/2019), esta tesis presenta un sistema integral de navegación basado exclusivamente en
+          <strong>visión monocular</strong> y <strong>modelos de lenguaje pequeños (SLM)</strong> locales.
         </p>
         <p>
-          La arquitectura desacopla un módulo de planificación deliberativa en tierra (estación de control <strong>WebDCS</strong>, que compila directivas en lenguaje natural a un manifiesto inmutable de navegación) de un lazo táctico a bordo de alta frecuencia. El módulo de percepción implementa un pipeline ligero de <strong>flujo óptico denso derotado</strong> mediante telemetría de actitud, mapeo de ocupación espacial (<code>ObstacleField</code>) y estimación de <strong>Tiempo-a-Colisión (TTC)</strong> a partir de la divergencia del campo de flujo, alcanzando un área bajo la curva ROC de <strong>0.96–0.97</strong> en su validación frente a canales de profundidad de referencia. En la capa de decisión a bordo, se implementa una arquitectura híbrida de decisión por ciclo gobernada por un SLM (modelos de 2B–4B parámetros ejecutados localmente con decodificación estructurada <code>json_schema</code>) y orquestada mediante grafos de estados con salvaguardas deterministas.
+          La arquitectura desacopla un módulo de planificación deliberativa en tierra (estación de control
+          <strong>WebDCS</strong>, que compila directivas en lenguaje natural a un manifiesto inmutable de navegación)
+          de un lazo táctico a bordo de alta frecuencia. El módulo de percepción implementa un pipeline ligero de
+          <strong>flujo óptico denso derotado</strong> mediante telemetría de actitud, mapeo de ocupación espacial
+          (<code>ObstacleField</code>) y estimación de <strong>Tiempo-a-Colisión (TTC)</strong> a partir de la
+          divergencia del campo de flujo, alcanzando un área bajo la curva ROC de <strong>0.96–0.97</strong> en su
+          validación frente a canales de profundidad de referencia. En la capa de decisión a bordo, se implementa una
+          arquitectura híbrida de decisión por ciclo gobernada por un SLM (modelos de 2B–4B parámetros ejecutados
+          localmente con decodificación estructurada <code>json_schema</code>) y orquestada mediante grafos de estados
+          con salvaguardas deterministas.
         </p>
         <div class="alert-box">
           <p>
-            <strong>Entorno de Validación y Benchmarking:</strong> La experimentación se realiza sobre <strong>Cosys-AirSim</strong> en <strong>Unreal Engine 5.5</strong>, empleando el entorno urbano <strong><code>CitySim</code></strong> como plataforma principal de benchmark y calibrando la cinemática de vuelo contra conjuntos de datos de telemetría de drones comerciales reales (DJI / Zenodo).
+            <strong>Entorno de Validación y Benchmarking:</strong> La experimentación se realiza sobre
+            <strong>Cosys-AirSim</strong> en <strong>Unreal Engine 5.5</strong>, empleando el entorno urbano
+            <strong><code>CitySim</code></strong> como plataforma principal de benchmark y calibrando la cinemática de
+            vuelo contra conjuntos de datos de telemetría de drones comerciales reales (DJI / Zenodo).
           </p>
         </div>
       </section>
@@ -104,34 +123,59 @@
       <section id="arquitectura">
         <h2>Arquitectura del Sistema: Dos Cerebros Desacoplados</h2>
         <p>
-          El sistema resuelve el compromiso entre razonamiento deliberativo de alto nivel y control reactivo de alta frecuencia dividiendo la inteligencia en dos dominios estrictamente desacoplados:
+          El sistema resuelve el compromiso entre razonamiento deliberativo de alto nivel y control reactivo de alta
+          frecuencia dividiendo la inteligencia en dos dominios estrictamente desacoplados:
         </p>
 
         <h3>1. Lazo Deliberativo de Tierra y GCS (<code>airsim-plan</code> / WebDCS)</h3>
         <p>
-          Opera antes de que los motores se armen. El operador humano define la misión en lenguaje natural en la consola de la estación terrena. Un modelo de lenguaje local compila estas directivas en un <strong>Manifiesto de Vuelo Inmutable</strong> (<code>MissionManifest.json</code>), validado mediante esquemas Pydantic para garantizar que todos los waypoints se encuentren dentro del polígono georreferenciado del mapa y en coordenadas locales NED seguras ($z &lt; 0$).
+          Opera antes de que los motores se armen. El operador humano define la misión en lenguaje natural en la consola
+          de la estación terrena. Un modelo de lenguaje local compila estas directivas en un <strong>Manifiesto de Vuelo
+            Inmutable</strong> (<code>MissionManifest.json</code>), validado mediante esquemas Pydantic para garantizar
+          que todos los waypoints se encuentren dentro del polígono georreferenciado del mapa y en coordenadas locales
+          NED seguras ($z &lt; 0$).
         </p>
         <p>
-          La suite incluye <strong>WebDCS (Ground Control Station Web)</strong> sobre FastAPI, que provee renderizado de cartas 2D en Canvas interactivo, streaming de video en vivo de la cámara frontal, gestión de manifiestos y un <strong>Panel de Auditoría de Decisiones SLM en tiempo real</strong> para supervisar prompts, respuestas estructuradas crudas y latencias de inferencia.
+          La suite incluye <strong>WebDCS (Ground Control Station Web)</strong> sobre FastAPI, que provee renderizado de
+          cartas 2D en Canvas interactivo, streaming de video en vivo de la cámara frontal, gestión de manifiestos y un
+          <strong>Panel de Auditoría de Decisiones SLM en tiempo real</strong> para supervisar prompts, respuestas
+          estructuradas crudas y latencias de inferencia.
         </p>
 
         <h3>2. Lazo Táctico Autónomo en Vuelo (<code>airsim-loop</code>)</h3>
         <p>
-          Es un grafo de decisión por ciclo (<strong>LangGraph <code>StateGraph</code></strong>) ejecutado a 5–10 Hz que procesa cada fotograma y telemetría de vuelo para emitir comandos cinemáticos seguros en coordenadas de cuerpo (<em>body frame</em>):
+          Es un grafo de decisión por ciclo (<strong>LangGraph <code>StateGraph</code></strong>) ejecutado a 5–10 Hz que
+          procesa cada fotograma y telemetría de vuelo para emitir comandos cinemáticos seguros en coordenadas de cuerpo
+          (<em>body frame</em>):
         </p>
         <ul>
-          <li><strong>Contrato único de percepción (<code>ObstacleField</code>):</strong> Grilla de 3×3 celdas (3 sectores horizontales × 3 bandas verticales) con ocupación, TTC, divergencia y confianza. Ningún nodo del grafo accede a datos crudos de imagen o flujo óptico.</li>
-          <li><strong>Enrutador de Política Único (<code>policy_router</code>):</strong> Resuelve en un solo paso hacia cuál de los nodos de acción dirigir el ciclo: crucero (<code>keep_going</code>), evasión reactiva (<code>evasive</code>), bypass determinista ante bloqueo severo (<code>girar_90</code>), máquina de estados (<code>fsm</code>) o consulta al modelo de lenguaje (<code>deliberative</code>).</li>
-          <li><strong>Deliberación Asíncrona por Excepción:</strong> La consulta al SLM es la excepción y no la regla. Antes de invocar al modelo, el nodo deliberativo emite frenado inmediato (<code>FRENAR</code>) y delega la consulta a un hilo desacoplado con watchdog temporal. Si la inferencia excede el límite de tiempo, decide la política de respaldo determinista.</li>
-          <li><strong>Decodificación Estructurada y Parser Tolerante:</strong> El modelo responde mediante gramáticas restringidas (<code>json_schema</code>), respaldado por un parser tolerante capaz de extraer JSON válido ante anomalías de formato.</li>
-          <li><strong>Fuente Única de Verdad Cinemática (<code>action_to_command</code>):</strong> Centraliza la conversión de macro-acciones simbólicas a velocidades lineales y tasa de guiñada, asegurando simetría e invariancia física en todos los brazos de control.</li>
-          <li><strong>Tres Brazos Experimentales Comparables:</strong> Evaluación estandarizada entre el brazo <code>slm</code>, la máquina de estados <code>fsm</code> y el control reactivo <code>reactive</code> bajo idéntico espacio de acciones y percepción.</li>
+          <li><strong>Contrato único de percepción (<code>ObstacleField</code>):</strong> Grilla de 3×3 celdas (3
+            sectores horizontales × 3 bandas verticales) con ocupación, TTC, divergencia y confianza. Ningún nodo del
+            grafo accede a datos crudos de imagen o flujo óptico.</li>
+          <li><strong>Enrutador de Política Único (<code>policy_router</code>):</strong> Resuelve en un solo paso hacia
+            cuál de los nodos de acción dirigir el ciclo: crucero (<code>keep_going</code>), evasión reactiva
+            (<code>evasive</code>), bypass determinista ante bloqueo severo (<code>girar_90</code>), máquina de estados
+            (<code>fsm</code>) o consulta al modelo de lenguaje (<code>deliberative</code>).</li>
+          <li><strong>Deliberación Asíncrona por Excepción:</strong> La consulta al SLM es la excepción y no la regla.
+            Antes de invocar al modelo, el nodo deliberativo emite frenado inmediato (<code>FRENAR</code>) y delega la
+            consulta a un hilo desacoplado con watchdog temporal. Si la inferencia excede el límite de tiempo, decide la
+            política de respaldo determinista.</li>
+          <li><strong>Decodificación Estructurada y Parser Tolerante:</strong> El modelo responde mediante gramáticas
+            restringidas (<code>json_schema</code>), respaldado por un parser tolerante capaz de extraer JSON válido
+            ante anomalías de formato.</li>
+          <li><strong>Fuente Única de Verdad Cinemática (<code>action_to_command</code>):</strong> Centraliza la
+            conversión de macro-acciones simbólicas a velocidades lineales y tasa de guiñada, asegurando simetría e
+            invariancia física en todos los brazos de control.</li>
+          <li><strong>Tres Brazos Experimentales Comparables:</strong> Evaluación estandarizada entre el brazo
+            <code>slm</code>, la máquina de estados <code>fsm</code> y el control reactivo <code>reactive</code> bajo
+            idéntico espacio de acciones y percepción.</li>
         </ul>
 
         <div class="alert-box">
           <span class="tag">Referencia técnica</span>
           <p>
-            El diagrama de flujo exportado directamente del código compilado y el detalle de cada nodo se encuentran disponibles en
+            El diagrama de flujo exportado directamente del código compilado y el detalle de cada nodo se encuentran
+            disponibles en
             <strong><a href="grafo-de-control.html">Grafo de Control Táctico</a></strong>.
           </p>
         </div>
@@ -141,25 +185,30 @@
       <section id="percepcion">
         <h2>Percepción Monocular y Estimación de Tiempo-a-Colisión (TTC)</h2>
         <p>
-          El pipeline de percepción prescinde de detectores de objetos neuronales pesados y fundamenta su robustez en la física del campo de movimiento visual:
+          El pipeline de percepción prescinde de detectores de objetos neuronales pesados y fundamenta su robustez en la
+          física del campo de movimiento visual:
         </p>
-        
+
         <div class="card-grid">
           <div class="card">
             <h4>Flujo Óptico Denso (DIS)</h4>
-            <p>Calcula el desplazamiento aparente píxel a píxel mediante algoritmos variacionales ultrarrápidos (<code>cv2.DISOpticalFlow</code>) sobre imágenes escaladas.</p>
+            <p>Calcula el desplazamiento aparente píxel a píxel mediante algoritmos variacionales ultrarrápidos
+              (<code>cv2.DISOpticalFlow</code>) sobre imágenes escaladas.</p>
           </div>
           <div class="card">
             <h4>Derotación Analítica</h4>
-            <p>Proyecta los deltas de actitud (IMU: $\Delta\phi, \Delta\theta, \Delta\psi$) sobre el plano focal y resta el flujo angular, aislando el componente traslacional puro.</p>
+            <p>Proyecta los deltas de actitud (IMU: $\Delta\phi, \Delta\theta, \Delta\psi$) sobre el plano focal y resta
+              el flujo angular, aislando el componente traslacional puro.</p>
           </div>
           <div class="card">
             <h4>Foco de Expansión (FOE)</h4>
-            <p>Estima el punto de fuga del vector de avance mediante mínimos cuadrados ponderados con recorte recursivo de valores atípicos.</p>
+            <p>Estima el punto de fuga del vector de avance mediante mínimos cuadrados ponderados con recorte recursivo
+              de valores atípicos.</p>
           </div>
           <div class="card">
             <h4>TTC Calibrado por ROC</h4>
-            <p>Calcula $TTC(p) = \frac{\|p - \mathbf{FOE}\| \cdot \Delta t}{\|\mathbf{v}_{\text{trans}}(p)\|}$ en segundos reales, alcanzando un AUC de 0.96–0.97 contra profundidad de referencia.</p>
+            <p>Calcula $TTC(p) = \frac{\|p - \mathbf{FOE}\| \cdot \Delta t}{\|\mathbf{v}_{\text{trans}}(p)\|}$ en
+              segundos reales, alcanzando un AUC de 0.96–0.97 contra profundidad de referencia.</p>
           </div>
         </div>
 
@@ -201,140 +250,39 @@
       <section id="modos-falla">
         <h2>Taxonomía de Modos de Falla en Lazos Híbridos con LLM</h2>
         <p>
-          Uno de los principales aportes metodológicos del trabajo es la documentación sistemática de los modos de falla propios de la integración de modelos de lenguaje en lazos robóticos de control en tiempo real:
+          Uno de los principales aportes metodológicos del trabajo es la documentación sistemática de los modos de falla
+          propios de la integración de modelos de lenguaje en lazos robóticos de control en tiempo real:
         </p>
 
         <div class="card-grid">
           <div class="card">
             <h4>1. Desincronización de Esquemas (Schema Drift)</h4>
-            <p>Campos nulos por defecto (ej. listas vacías) interpretados como "espacio despejado" causan que el SLM razone coherentemente sobre premisas falsas y avance hacia colisiones sin generar excepciones.</p>
+            <p>Campos nulos por defecto (ej. listas vacías) interpretados como "espacio despejado" causan que el SLM
+              razone coherentemente sobre premisas falsas y avance hacia colisiones sin generar excepciones.</p>
           </div>
           <div class="card">
             <h4>2. Desalineación Temporal en Prompts</h4>
-            <p>Etiquetar secuencias históricas sin un buffer sincrónico real inyecta fotogramas estáticos con etiquetas de avance temporal, distorsionando el razonamiento causal del modelo.</p>
+            <p>Etiquetar secuencias históricas sin un buffer sincrónico real inyecta fotogramas estáticos con etiquetas
+              de avance temporal, distorsionando el razonamiento causal del modelo.</p>
           </div>
           <div class="card">
             <h4>3. Descalibración de Escala en Operadores</h4>
-            <p>Kernels de gradiente diferencial sin normalizar sobreestiman la divergencia, provocando que compuertas lógicas OR saturen y anulen la señal métrica del canal de TTC.</p>
+            <p>Kernels de gradiente diferencial sin normalizar sobreestiman la divergencia, provocando que compuertas
+              lógicas OR saturen y anulen la señal métrica del canal de TTC.</p>
           </div>
           <div class="card">
             <h4>4. Descarte Silencioso en Grafos de Estado</h4>
-            <p>Variables de control no tipadas en el esquema del orquestador son descartadas silenciosamente, originando ciclos límite y bucles absorbentes de ascenso indefinido.</p>
+            <p>Variables de control no tipadas en el esquema del orquestador son descartadas silenciosamente, originando
+              ciclos límite y bucles absorbentes de ascenso indefinido.</p>
           </div>
-        </div>
-      </section>
-
-      <!-- Índice del Informe -->
-      <section id="capitulos">
-        <h2>Estructura del Informe de Tesis (13 Capítulos)</h2>
-        <p>
-          El informe formal de tesis está organizado en 13 capítulos modulares redactados en Markdown, listos para su compilación integral a PDF:
-        </p>
-
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Cap.</th>
-                <th>Documento</th>
-                <th>Contenido Principal</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>00</strong></td>
-                <td><code>00-COVER.md</code></td>
-                <td>Carátula institucional, resumen ejecutivo y palabras clave.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>01</strong></td>
-                <td><code>01-INTRODUCCION.md</code></td>
-                <td>Motivación, objetivos generales/específicos, alcance y diseño.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>02</strong></td>
-                <td><code>02-ESTADO-DEL-ARTE.md</code></td>
-                <td>Revisión bibliográfica: navegación de UAVs, visión monocular y LLMs en robótica.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>03</strong></td>
-                <td><code>03-ENTORNO-SIMULACION.md</code></td>
-                <td>Unreal Engine 5.5, Cosys-AirSim, <code>CitySim</code> y validación con telemetría Zenodo.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>04</strong></td>
-                <td><code>04-PLANIFICACION-MISION-GCS.md</code></td>
-                <td>Planificación en tierra previa al vuelo, manifiestos JSON y estación WebDCS.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>05</strong></td>
-                <td><code>05-ARQUITECTURA-LAZO-TACTICO.md</code></td>
-                <td>Grafo de decisión por tick en LangGraph, router de política y salvaguardas.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>06</strong></td>
-                <td><code>06-PERCEPCION-MONOCULAR.md</code></td>
-                <td>Flujo óptico denso DIS, derotación analítica y contrato <code>ObstacleField</code> 3×3.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>07</strong></td>
-                <td><code>07-ESTIMACION-TTC.md</code></td>
-                <td>Estimación de Tiempo-a-Colisión, curvas ROC (AUC 0.96–0.97) y calibración Youden.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>08</strong></td>
-                <td><code>08-DECISIONES-SLM.md</code></td>
-                <td>Selección de modelos compactos, decodificación <code>json_schema</code> y <code>action_to_command</code>.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>09</strong></td>
-                <td><code>09-MODOS-DE-FALLA-LLM.md</code></td>
-                <td>Taxonomía de modos de falla estructurales de interfaz en lazos híbridos con LLM.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>10</strong></td>
-                <td><code>10-METODOLOGIA-EXPERIMENTAL.md</code></td>
-                <td>Diseño experimental comparativo (SLM vs FSM vs Reactivo), métricas SPL y protocolo.</td>
-                <td>Redactado</td>
-              </tr>
-              <tr>
-                <td><strong>11</strong></td>
-                <td><code>11-RESULTADOS.md</code></td>
-                <td>Tablas de resultados experimentales, histogramas de rutas y significancia estadística.</td>
-                <td>Pendiente corrida final</td>
-              </tr>
-              <tr>
-                <td><strong>12</strong></td>
-                <td><code>12-CONCLUSIONES.md</code></td>
-                <td>Síntesis de hallazgos, respuestas a preguntas de investigación y trabajo futuro.</td>
-                <td>Pendiente cap. 11</td>
-              </tr>
-              <tr>
-                <td><strong>13</strong></td>
-                <td><code>13-REFERENCIAS.md</code></td>
-                <td>Compilación bibliográfica estructurada bajo normas APA.</td>
-                <td>Compilado</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </section>
 
       <!-- Stack Tecnológico -->
       <section id="stack">
         <h2>Stack Tecnológico</h2>
-        <p>El ecosistema tecnológico combina simulación gráfica fotorrealista con procesamiento óptico clásico e inferencia de modelos de lenguaje locales:</p>
+        <p>El ecosistema tecnológico combina simulación gráfica fotorrealista con procesamiento óptico clásico e
+          inferencia de modelos de lenguaje locales:</p>
 
         <div class="table-container">
           <table>
@@ -349,7 +297,8 @@
               <tr>
                 <td><strong>Entorno & Física</strong></td>
                 <td>Unreal Engine 5.5 + Cosys-AirSim</td>
-                <td>Simulación física y visual del espacio aéreo urbano (escenarios <code>CitySim</code> / <code>CityParkSim</code>).</td>
+                <td>Simulación física y visual del espacio aéreo urbano (escenarios <code>CitySim</code> /
+                  <code>CityParkSim</code>).</td>
               </tr>
               <tr>
                 <td><strong>Percepción Monocular</strong></td>
@@ -364,7 +313,8 @@
               <tr>
                 <td><strong>Cerebro Deliberativo (SLM)</strong></td>
                 <td>Phi-4-mini / Qwen2.5 / Liquid LFM en GGUF</td>
-                <td>Modelos de lenguaje locales ejecutados en LM Studio / Ollama con salida restringida <code>json_schema</code>.</td>
+                <td>Modelos de lenguaje locales ejecutados en LM Studio / Ollama con salida restringida
+                  <code>json_schema</code>.</td>
               </tr>
               <tr>
                 <td><strong>Ground Control Station</strong></td>
@@ -390,16 +340,22 @@
       <section id="evaluacion">
         <h2>Evaluación y Calibración Experimental</h2>
         <p>
-          Un pilar central del trabajo es garantizar la fidelidad de la simulación frente a dinámicas físicas reales y calibrar cuantitativamente los estimadores de riesgo:
+          Un pilar central del trabajo es garantizar la fidelidad de la simulación frente a dinámicas físicas reales y
+          calibrar cuantitativamente los estimadores de riesgo:
         </p>
 
         <h3>1. Calibración del Simulador vs. Telemetría Real (Zenodo / DJI)</h3>
         <p>
-          Se contrastó la cinemática del simulador frente a trayectorias de drones comerciales reales (DJI) mediante pruebas estadísticas de Levene:
+          Se contrastó la cinemática del simulador frente a trayectorias de drones comerciales reales (DJI) mediante
+          pruebas estadísticas de Levene:
         </p>
         <ul>
-          <li><strong>Varianza de Actitud en Giros:</strong> En simulación, el dron ejecuta inclinaciones instantáneas de pitch/roll para seguir la ruta ($p \ll 0.05$), mientras que el dron físico está acotado electrónicamente a $\pm 30^\circ$ por su controlador PID.</li>
-          <li><strong>Comportamiento en Crucero Recto:</strong> La simulación exhibe varianza nula en tramos rectos sin viento, mientras que el dron real mantiene una oscilación permanente de $\pm 2^\circ$ a $\pm 3^\circ$ por turbulencia atmosférica y estabilización.</li>
+          <li><strong>Varianza de Actitud en Giros:</strong> En simulación, el dron ejecuta inclinaciones instantáneas
+            de pitch/roll para seguir la ruta ($p \ll 0.05$), mientras que el dron físico está acotado electrónicamente
+            a $\pm 30^\circ$ por su controlador PID.</li>
+          <li><strong>Comportamiento en Crucero Recto:</strong> La simulación exhibe varianza nula en tramos rectos sin
+            viento, mientras que el dron real mantiene una oscilación permanente de $\pm 2^\circ$ a $\pm 3^\circ$ por
+            turbulencia atmosférica y estabilización.</li>
         </ul>
 
         <h3>2. Benchmark de Rendimiento de SLMs Locales</h3>
@@ -467,8 +423,10 @@ conda env create -f environment.yml
 conda activate airsimenv</code></pre>
 
         <h3>2. Descargar e Iniciar el Entorno de Simulación (CitySim)</h3>
-        <p>Descargue el binario empaquetado del entorno <strong><code>CitySim</code></strong> desde el repositorio compartido de Google Drive:</p>
-        <p><a href="https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7" target="_blank" class="badge-pill badge-blue">Descargar Entornos UE5 (Google Drive)</a></p>
+        <p>Descargue el binario empaquetado del entorno <strong><code>CitySim</code></strong> desde el repositorio
+          compartido de Google Drive:</p>
+        <p><a href="https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7" target="_blank"
+            class="badge-pill badge-blue">Descargar Entornos UE5 (Google Drive)</a></p>
         <p>Asegúrese de configurar su archivo <code>Settings.json</code> de AirSim:</p>
         <pre><code>{
   "SettingsVersion": 2.0,
@@ -490,7 +448,8 @@ conda activate airsimenv</code></pre>
         <p>Inicie el servidor web FastAPI de WebDCS para planificar misiones y supervisar el vuelo:</p>
         <pre><code>cd airsim-plan
 python -m uvicorn webdcs.main:app --reload</code></pre>
-        <p>Acceda a <code>http://localhost:8000</code> en su navegador para interactuar con la plataforma de vuelo y auditar en tiempo real las decisiones del SLM.</p>
+        <p>Acceda a <code>http://localhost:8000</code> en su navegador para interactuar con la plataforma de vuelo y
+          auditar en tiempo real las decisiones del SLM.</p>
       </section>
 
       <footer>
@@ -525,20 +484,20 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
   </script>
 </body>
 
-</html>     if (a.getAttribute('href') === `#${id}`) {
-                a.classList.add('active');
-              }
-            });
-          }
-        });
-      }, { threshold: [0.1, 0.2, 0.3], rootMargin: "0px 0px -70% 0px" });
+</html> if (a.getAttribute('href') === `#${id}`) {
+a.classList.add('active');
+}
+});
+}
+});
+}, { threshold: [0.1, 0.2, 0.3], rootMargin: "0px 0px -70% 0px" });
 
-      // Track all sections that have an id and are direct children of main
-      document.querySelectorAll('main > section').forEach((section) => {
-        observer.observe(section);
-      });
-    });
-  </script>
+// Track all sections that have an id and are direct children of main
+document.querySelectorAll('main > section').forEach((section) => {
+observer.observe(section);
+});
+});
+</script>
 </body>
 
 </html>

@@ -60,26 +60,32 @@ El sistema implementa una arquitectura desacoplada de dos cerebros:
    * **Compilador de Misiones:** Procesa instrucciones en lenguaje natural mediante LLMs locales/remotos para generar un manifiesto estructurado (`MissionManifest.json`) con waypoints georreferenciados en la cuadrícula urbana y reglas de comportamiento.
 
 2. **Lazo Táctico Autónomo en Vuelo (`airsim-loop`):**
-   * **Orquestación con LangGraph:** Bucle continuo de percepción-decisión-actuación estructurado como un grafo de estados (`StateGraph`); la ciclicidad la da el `while True` de `main.py` (el grafo llega a `END` en cada tick — es un grafo de decisión por tick, no un grafo cíclico en sí mismo).
-   * **Percepción Monocular por Flujo Óptico:** estimación de `ObstacleField` (grilla sector × banda) por flujo óptico derotado con la telemetría de actitud, FOE (Focus of Expansion) por mínimos cuadrados ponderados y TTC en segundos reales — sin red neuronal de detección. Es el único contrato de percepción que consumen el router, la evasión rápida, el SLM y el brazo FSM.
-   * **Enrutador Táctico (`policy_router`), seleccionable por brazo (`AGENT_ARM`):**
-     * **Crucero Nominal (`keep_going`):** Avance fluido a velocidad de crucero guiado por el corredor central de las calles mediante `WaypointTracker`.
-     * **Evasión Reactiva (`evasive`):** Desvíos suaves con persistencia táctica (*Maneuver Lock*) ante proximidad moderada.
-     * **Cerebro Deliberativo SLM (`deliberative`, brazo `slm`):** Ante un bloqueo frontal masivo, el dron estabiliza el vuelo y consulta al SLM local (de forma asíncrona, sin bloquear el lazo) para decidir maniobras de escape en cuadrícula urbana.
-     * **Brazo FSM determinista (`fsm`)** y **brazo puramente reactivo (`reactive`, cota inferior sin evasión):** mismo espacio de macro-acciones y misma cinemática que el brazo SLM, para comparar los tres arms sobre el objetivo específico de la tesis (tasa de éxito, tiempo de reacción, consumo computacional).
+   * **Grafo de Decisión por Tick (LangGraph):** Bucle continuo de percepción-decisión-actuación estructurado como un `StateGraph` ejecutado a `LOOP_HZ` (5–10 Hz). Cada ciclo recorre el grafo desde `capture` hasta `motor` y termina en `__end__`; la ciclicidad es aportada por el bucle externo (`main.py`), ya que el grafo se recompila y evalúa desde cero en cada tick sin aristas de retorno internas.
+   * **Modo Degradado (`degraded_hover`):** Si la fuente de telemetría o imagen no proviene de AirSim (`source != "airsim"`), el ciclo salta directamente a `degraded_hover` comandando hover preventivo, evitando la inyección de datos sintéticos plausibles y omitiendo percepción y deliberación.
+   * **Percepción Monocular por Flujo Óptico (`perception`):** Estimación continua del `ObstacleField` (grilla sector × banda, FOE por mínimos cuadrados ponderados y TTC en segundos) mediante flujo óptico derotado con la actitud inercial — sin red neuronal de detección. Es el único contrato de percepción consumido por las políticas de control.
+   * **Enrutador de Política (`policy_router`), seleccionable por brazo (`AGENT_ARM`):**
+     * **Crucero Nominal (`keep_going`):** Avance fluido guiado por `WaypointTracker` (con corrección de rumbo por *cross-track error*, zona muerta angular y suavizado EMA).
+     * **Evasión Reactiva (`evasive`):** Desvíos suaves de corto plazo con persistencia táctica (*Maneuver Lock*) ante proximidad moderada de obstáculos.
+     * **Bypass Determinista (`girar_90`):** Maniobra ortogonal de escape rápido ante bloqueo severo o esquinas de cuadrícula urbana.
+     * **Brazo FSM Determinista (`fsm`):** Política de máquina de estados finitos que comparte el mismo espacio de macro-acciones y cinemática para benchmarking.
+     * **Deliberación por Excepción (`deliberative`, brazo `slm`):** La consulta al SLM es la excepción, no la regla. Ante bloqueo estructural aplica **freno previo (`FRENAR`)**, consulta asíncrona en hilo desacoplado (`DeliberationService`), watchdog (`SLM_WATCHDOG_MS`), decodificación restringida (`response_format=json_schema`) con parser tolerante como red de seguridad, persistencia de maniobra y fallback determinista.
    * **Navegación Urbana en Cuadrícula (Manhattan Detour & Cornering):** Inyección dinámica de sub-waypoints de esquina (`CORNER_WP`) con alineación ortogonal estricta ($0^\circ, \pm 90^\circ, 180^\circ$), permitiendo rodear manzanas completas sin "efecto imán" ni giros en círculos.
+   * **Actuación Motriz (`motor`):** Traducción unificada de la macro-acción a comandos cinemáticos en coordenadas de chasis (Body Frame) con saturación de guiñada y emisión hacia `Cosys-AirSim`.
 
 Para ilustrar el flujo completo:
 
-<img src="informe/Infografia README Fondo Blanco.png"/>
+<img src="informe/2026-0825 Inforgrafia Nuevo Grafo de Control Autonomo.jpg"/>
 
-1. **Ground Station (WebDCS):** Planificación en lenguaje natural y compilación del `MissionManifest.json`.
-2. **Inyección al Lazo Táctico:** Transferencia del manifiesto al bucle autónomo en vuelo (`airsim-loop`).
-3. **Percepción Monocular por Flujo Óptico:** estimación continua del `ObstacleField` (ocupación, TTC, confianza por sector) sin red de detección.
-4. **Enrutamiento (Gatekeeper / TTC Router):**
-   - **Camino Despejado:** Guiado nominal por corredor hacia waypoints.
-   - **Bloqueo Estructural:** Activación del SLM deliberativo para planificar desvíos ortogonales y esquinas de escape.
-5. **Actuación Motriz:** Control en coordenadas de chasis (Body Frame) con giros amortiguados y ejecución sobre `Cosys-AirSim`.
+1. **Ground Station (WebDCS):** Planificación en lenguaje natural y compilación del manifiesto inmutable `MissionManifest.json`.
+2. **Captura y Modo Degradado (`capture`):** Adquisición de fotograma y telemetría; desvío inmediato a `degraded_hover` si la fuente no es AirSim.
+3. **Percepción Monocular (`perception`):** Generación del contrato `ObstacleField` (ocupación por sector, TTC real y foco de expansión) derotado por la actitud del dron.
+4. **Enrutamiento de Política (`policy_router`):**
+   - **Camino Despejado:** Ejecución de `keep_going` guiado por `WaypointTracker`.
+   - **Proximidad Moderada:** Desvío con `evasive` y persistencia táctica (*Maneuver Lock*).
+   - **Bloqueo Severo / Bypass:** Giro ortogonal rápido con `girar_90`.
+   - **Brazo de Referencia FSM:** Enrutamiento a la política determinista `fsm`.
+   - **Bloqueo Estructural (Brazo SLM):** Freno preventivo (`FRENAR`) y activación asíncrona del nodo `deliberative` bajo watchdog.
+5. **Actuación Motriz (`motor`):** Conversión de la macro-acción a comando cinemático en Body Frame sobre `Cosys-AirSim` y cierre de tick hacia `__end__`.
 
 ---
 
@@ -105,7 +111,7 @@ El código del proyecto se organiza en los siguientes componentes:
 *   **Lenguajes y Entorno:** Python 3.10+, Conda / Miniconda.
 *   **Visión por Computadora:** OpenCV (flujo óptico denso Farnebäck/DIS) para estimación de `ObstacleField` y TTC; sin red de detección.
 *   **Modelos de Lenguaje (SLM):** LM Studio / Ollama (API local compatible con OpenAI) para inferencia local de `qwen2.5`, `phi-3/phi-4`, `llama3.2`, `gemma2`.
-*   **Control y Orquestación:** LangGraph (grafo de navegación cíclica), Pydantic (validación de esquemas JSON).
+*   **Control y Orquestación:** LangGraph (grafo de decisión por tick), Pydantic (validación de esquemas JSON).
 *   **Ground Control Station:** FastAPI, WebSockets / SSE, HTML5, Vanilla CSS / JS.
 *   **Evaluación y Calibración:** Promptfoo (benchmarking de prompts) y Jupyter Notebooks (SciPy / NumPy / Matplotlib).
 
