@@ -60,6 +60,7 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
     out_path = Path(out_dir) / scenario_name / arm / f"seed_{seed}.jsonl"
 
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
+    depth_metric_every_n = int(os.getenv("DEPTH_METRIC_EVERY_N", "5"))  # G3.1: capturar depth cada N ciclos
     client = AirSimClient(loop_hz=loop_hz)
     client.connect()
     # Limpia colision/velocidad/estado del controlador interno que pudiera
@@ -137,7 +138,21 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
                 tracker.reset_progress()
 
             field = state.get("obstacle_field")
-            min_obstacle_dist_m = None  # opcional: requiere canal depth, omitido para no duplicar simGetImages en el hot path
+
+            # G3.1: Capturar profundidad cada N ciclos para métrica min_obstacle_dist_m.
+            # Solo para observabilidad (no realimenta control). Captura adicional sin
+            # impactar hot path si depth_metric_every_n es suficientemente grande (default 5).
+            min_obstacle_dist_m = None
+            if depth_metric_every_n > 0 and cycles % depth_metric_every_n == 0:
+                try:
+                    _, depth, _ = client.capture(return_depth=True)
+                    if depth is not None:
+                        h, w = depth.shape[:2]
+                        center = depth[h // 3: 2 * h // 3, w // 3: 2 * w // 3]
+                        if center.size > 0:
+                            min_obstacle_dist_m = float(__import__("numpy").percentile(center, 5))
+                except Exception:
+                    pass  # Si falla la captura de depth, solo no registramos la métrica
 
             logger.log_cycle(state, latency_ms={"graph": (time.time() - t0) * 1000.0}, min_obstacle_dist_m=min_obstacle_dist_m)
 
