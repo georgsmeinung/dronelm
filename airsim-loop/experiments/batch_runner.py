@@ -39,9 +39,18 @@ def run_experiment(
     Returns:
         (success, summary_dict)
     """
+    # Detectar si estamos en Windows y usar el ejecutable del venv correctamente
+    import platform
+    project_root = Path(__file__).resolve().parent.parent
+    if platform.system() == "Windows":
+        python_exe = str(project_root / ".venv" / "Scripts" / "python.exe")
+    else:
+        python_exe = str(project_root / ".venv" / "bin" / "python")
+
+    runner_path = str(Path(__file__).resolve().parent / "runner.py")
     cmd = [
-        sys.executable,
-        str(Path(__file__).resolve().parent / "runner.py"),
+        python_exe,
+        runner_path,
         "--_single",
         "--scenario", scenario_path,
         "--arm", arm,
