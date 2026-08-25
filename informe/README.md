@@ -69,11 +69,3 @@ publicable.
   de ese cambio (actas de reunión, otra fuente), conviene incorporarla ahí.
 - Revisar el resumen de `00-COVER.md` cuando se decida actualizarlo (es lo último que se
   toca del informe).
-
-## Nota sobre `anexos/A6`
-
-El anexo `A6-GRAFO-CONTROL-OBSOLETO-PRE-REFACTOR.md` (grafo de control previo al
-refactor, con `canny_xor_gate` y detección YOLO) se movió a `_to_delete/` dentro de esta
-carpeta: esta sesión no tiene permiso para borrar archivos en el filesystem conectado.
-Podés borrar `informe/_to_delete/` manualmente cuando quieras. El capítulo 4 ya muestra y
-explica solo el grafo vigente.
