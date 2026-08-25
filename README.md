@@ -92,6 +92,7 @@ El código del proyecto se organiza en los siguientes componentes:
 *   **[`airsim-mcp`](./airsim-mcp):** Servidor de Model Context Protocol (MCP) que expone herramientas de telemetría y control de AirSim para interactuar con agentes autónomos externos.
 *   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`kc_control.py`) para pilotaje directo y configuración de segmentación en AirSim.
 *   **[`airsim-poc`](./airsim-poc):** Pruebas de concepto iniciales de conexión, telemetría y maniobras básicas.
+*   **[`airsim-settings`](./airsim-settings):** Archivos de configuración de AirSim / Cosys-AirSim (`settings.json`, perfiles predefinidos y guía de enlaces).
 *   **[`callibration_flight`](./callibration_flight):** Scripts de calibración y notebooks estadísticos que comparan la variabilidad inercial y física del simulador vs. drones reales (DJI).
 *   **[`local-llm-eval`](./local-llm-eval):** Suite de benchmarking para evaluar latencias (ms), tokens/segundo y adherencia a esquemas JSON de modelos locales (Phi-3, Qwen 2.5, Gemma 2, Llama 3.2, Liquid LFM).
 *   **[`plan_tesis`](./plan_tesis), [`docs`](./docs) e [`informe`](./informe):** Documentación del plan de tesis, objetivos aprobados, changelogs e informes gráficos de resultados.
@@ -112,31 +113,38 @@ El código del proyecto se organiza en los siguientes componentes:
 
 ## 🚀 Instalación y Uso
 
+> [!TIP]
+> **Guía detallada de instalación y entornos:** Para instrucciones exhaustivas paso a paso sobre la creación del entorno Conda, la preparación de entornos en Unreal Engine 5.5 (`CitySim` / `CityParkSim`, `City Sample`), la integración del plugin Cosys-AirSim y las opciones avanzadas de `settings.json`, consulta el archivo **[`CREATEENV.md`](CREATEENV.md)**.
+>
+> 🔗 **Descarga de Entornos Precompilados:** Los binarios y proyectos de simulación (incluyendo **`CitySim`**, el entorno principal de validación experimental y benchmark) se encuentran disponibles en la carpeta compartida de **[Google Drive](https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7)**.
+
 ### Prerrequisitos
 *   GPU NVIDIA con soporte CUDA (ej. RTX 4060 / 5060 o superior) para simulación fluida y para acelerar la inferencia del SLM local.
-*   Unreal Engine 5.5 con el entorno de simulación compilado (ej. `CitySim` / `A_CITY`).
+*   Unreal Engine 5.5 con el entorno de simulación compilado o binario precompilado (ej. **`CitySim` / `CityParkSim`** para validación, o `City Sample`).
 *   LM Studio o Ollama sirviendo el SLM en `LOCAL_LLM_URL` (puerto `1234` o `11434`); puede correr en la misma máquina o en otra de la LAN, ya que la consulta es asíncrona y no bloquea el lazo de percepción.
 
 > **Nota de topología (2026-08):** AirSim y `airsim-loop` deben ejecutarse en la **misma máquina** (loopback `127.0.0.1`). Un benchmark de `simGetImages` sobre AirSim remoto en LAN mostró que prácticamente todas las capturas agotaban un timeout de 8s independientemente de la resolución (ver `CHANGELOG.md`, sección F0.0), por lo que solo el servidor del SLM puede quedar en otra máquina de la red.
 
 ### 1. Configuración del Entorno Python
-Crea y activa el entorno de Conda utilizando el archivo `environment.yml`:
+Crea y activa el entorno de Conda utilizando el archivo `environment.yml` (o `environment-arm64.yml` para ARM):
 
 ```bash
 conda env create -f environment.yml
 conda activate airsimenv
 ```
 
-### 2. Preparar el Simulador (Cosys-AirSim)
-*   Abre y ejecuta el proyecto de Unreal Engine en modo **Play**.
-*   Asegúrate de que la configuración en `Settings.json` de AirSim apunte a la IP y puertos correctos (`41451`).
+### 2. Preparar el Simulador (Cosys-AirSim en Unreal Engine 5.5)
+*   Abre y ejecuta el proyecto de Unreal Engine o el binario precompilado (ej. `CitySim` / `CityParkSim`, disponible en [Google Drive](https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7)) en modo **Play**.
+*   Asegúrate de que la configuración en `%USERPROFILE%\Documents\AirSim\settings.json` (ver [`airsim-settings/settings.json`](airsim-settings/settings.json)) apunte a la IP y puertos correctos (`41451`) con `SimMode: "Multirotor"`.
+*   Detalles de instalación del plugin y ajustes de UE en [CREATEENV.md](CREATEENV.md).
 
 ### 3. Lanzar la Ground Control Station (WebDCS)
 Inicia la estación de control web:
 
 ```bash
 cd airsim-plan
-python -m airsim_plan.webdcs.server
+# Iniciar el servidor FastAPI con recarga automática
+python -m uvicorn webdcs.main:app --reload
 ```
 
 Abre en tu navegador `http://localhost:8000` para acceder a la interfaz WebDCS, cargar misiones, visualizar el feed de video y telemetría en tiempo real, e interactuar con el inspector de decisiones SLM.

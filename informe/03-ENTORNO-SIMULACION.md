@@ -10,8 +10,8 @@ no usa la distribución original de AirSim de Microsoft: desde el inicio del pro
 Ciber-Físicos de la Universidad de Amberes, Bélgica). El propio historial del proyecto documenta la
 decisión: *"Abandonado el proyecto original AirSim por Microsoft, se utiliza la actual versión a
 partir de un fork mantenido por el Cosys-Lab"* (`CHANGELOG.md`, 2025-12-03), compilado e integrado
-sobre un primer proyecto de Unreal Engine 5.5 (`CityParkSim`) que sirvió de entorno inicial de
-desarrollo y pruebas.
+sobre un proyecto de Unreal Engine 5.5 (**`CitySim`** / `CityParkSim`) que sirvió de entorno de
+desarrollo y validación experimental de las pruebas.
 
 Cosys-AirSim, a diferencia del AirSim clásico de Microsoft —enfocado principalmente en cámaras RGB y
 visión por computadora—, agrega sensores adicionales basados en GPU y CPU (LiDAR, sonar, radar),
@@ -37,17 +37,18 @@ optimizados en Blender para reducir su complejidad computacional antes de import
 La implementación efectivamente construida sustituyó ese pipeline de fotogrametría por activos
 urbanos genéricos ya disponibles para Unreal Engine (marketplace de Fab/Epic Games y paquetes de
 terceros), configurados con el plugin de Cosys-AirSim en lugar de reconstruidos a partir de video real
-de Buenos Aires:
+de Buenos Aires (disponibles en el repositorio compartido de Google Drive: <https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7>):
 
-- **`CityParkSim`** (2025-12-03): el proyecto inicial sobre el que se integró y probó el plugin de
-  Cosys-AirSim, usado como entorno de desarrollo durante buena parte del proyecto (incluye los
-  manifiestos de misión reutilizados para los escenarios `manhattan_a`/`manhattan_b` del capítulo 9).
+- **`CitySim` / `CityParkSim`** (2025-12-03): el proyecto y mapa urbano principal sobre el que se integró
+  el plugin de Cosys-AirSim, constituyendo el **entorno de validación experimental y benchmark** del
+  sistema (incluye los manifiestos de misión para los escenarios de prueba `manhattan_a` y `manhattan_b`
+  analizados en el capítulo 9).
 - **"City Sample"** (Epic Games, vía Fab): entorno dedicadamente urbano denso, con peatones y tráfico
   gestionado por IA autónoma de Unreal Engine, confirmado funcionando con Cosys-AirSim el 2026-0522 y
   optimizado el 2026-0622 (escena `Small_City_LVL`) siguiendo las recomendaciones oficiales de Epic
   para sistemas de especificación más baja.
 - **"Downtown West Modular Pack"**: entorno semi-urbano con mayor nivel de detalle arquitectónico,
-  configurado el 2026-0521 como alternativa de mayor realismo visual al `CityParkSim` inicial.
+  configurado el 2026-0521 como alternativa de mayor realismo visual al entorno base.
 - **"Dynamic City Creator"** (2026-0509): un intento de generar un entorno urbano paramétricamente en
   lugar de usar un activo fijo, **abandonado**: el plugin de Cosys-AirSim no detectaba correctamente
   la malla de colisión de la ciudad generada de esta forma (`CHANGELOG.md`, 2026-0509), lo que la

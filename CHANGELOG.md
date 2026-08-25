@@ -1,3 +1,8 @@
+# 2026-0825
+
+* Primera versión del [Informe de Tesis](informe/README.md)
+* Seleccionado mejor modo de simulación para Unreal Engine: todos los parametros de Scalability en LOW, excepto para Effects, que va en EPIC para poder tener captura del drone utilizable en la cámara frontal
+
 # 2026-0824
 
 ## Deadlock del escape por altura: el estado absorbente del grafo de control
