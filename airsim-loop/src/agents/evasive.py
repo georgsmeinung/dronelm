@@ -69,9 +69,8 @@ def evasive_node(state: Dict[str, Any]) -> Dict[str, Any]:
         action = "EVADIR_DERECHA"
         rationale = f"Evasion rapida: derecha mas despejada (ocup der={right_occ:.2f} vs izq={left_occ:.2f})."
 
-    command = action_to_command(action, guidance=guidance, telemetry=telemetry, close_structural=False)
-    command["vx"] = 1.2  # avance moderado durante la correccion, mas rapido que el bypass GIRAR_90
-    command["yaw_rate"] = 15.0 if action == "EVADIR_DERECHA" else -15.0
+    # Evasión rápida: usa velocidades agresivas para corregir lateralmente de forma rápida.
+    command = action_to_command(action, guidance=guidance, telemetry=telemetry, close_structural=False, aggressive=True)
     command["rationale"] = rationale
 
     state["next_action"] = action

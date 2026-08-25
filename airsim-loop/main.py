@@ -22,6 +22,8 @@ from src.navigation import WaypointTracker
 DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "5.0"))
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")
 FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # F3.2: si se setea, se escribe un JSONL
+MISSION_MAX_SECONDS = float(os.getenv("MISSION_MAX_SECONDS", "0.0"))  # 0 = sin límite de tiempo
+MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límite de ciclos
 
 
 def _print_state(state: DroneState, cycle_num: int = 0) -> None:
@@ -188,6 +190,8 @@ def main() -> None:
         )
 
     cycle_count = 0
+    mission_start_time = time.time()
+    mission_termination_reason = None
 
     drone_state: DroneState = {
         "waypoints": waypoints_list,
@@ -214,6 +218,18 @@ def main() -> None:
             mission_id = manifest_data.get("mission_id", "MOCK_MISSION")
             if os.getenv(f"STOP_MISSION_{mission_id}") == "1":
                 print(f"[Ciclo] Detención solicitada para misión {mission_id}. Saliendo del bucle.")
+                mission_termination_reason = "stopped"
+                break
+
+            # Verificar límites de tiempo y ciclos (G3.2).
+            if MISSION_MAX_CYCLES > 0 and cycle_count >= MISSION_MAX_CYCLES:
+                print(f"[Ciclo] Límite de ciclos alcanzado ({cycle_count} >= {MISSION_MAX_CYCLES}). Abortando misión.")
+                mission_termination_reason = "max_cycles"
+                break
+
+            if MISSION_MAX_SECONDS > 0 and (time.time() - mission_start_time) >= MISSION_MAX_SECONDS:
+                print(f"[Ciclo] Límite de tiempo alcanzado ({time.time() - mission_start_time:.1f}s >= {MISSION_MAX_SECONDS}s). Abortando misión.")
+                mission_termination_reason = "timeout"
                 break
 
             cycle_count += 1
@@ -345,6 +361,7 @@ def main() -> None:
 
             if waypoint_tracker.is_completed and waypoints_list:
                 print("\n[Misión] ¡Misión completada exitosamente! Iniciando secuencia de aterrizaje autónomo...")
+                mission_termination_reason = "completed"
                 if flight_logger is not None:
                     flight_logger.mark_success(True)
                 try:
@@ -405,6 +422,7 @@ def main() -> None:
             time.sleep(wait)
     except KeyboardInterrupt:
         print("\nApagando sistema de navegacion.")
+        mission_termination_reason = "interrupted"
     finally:
         try:
             # pyrefly: ignore [missing-import]
@@ -416,8 +434,20 @@ def main() -> None:
         except Exception:
             pass
 
+        # Detectar colisión si no se documentó otra razón (G3.2).
+        if mission_termination_reason is None:
+            collision = drone_state.get("telemetry", {}).get("collision", {})
+            if collision.get("has_collided"):
+                mission_termination_reason = "collision"
+            else:
+                mission_termination_reason = "unknown"
+
         if flight_logger is not None:
-            flight_logger.close()
+            flight_logger.mark_success(waypoint_tracker.is_completed)
+            summary = flight_logger.close()
+            if mission_termination_reason and mission_termination_reason != "completed":
+                summary["termination_reason"] = mission_termination_reason
+                print(f"[Misión] Terminada: {mission_termination_reason}")
 
         deliberation_service.stop()
 

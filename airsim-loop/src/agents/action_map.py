@@ -37,11 +37,15 @@ def action_to_command(
     guidance: Optional[Dict[str, Any]] = None,
     telemetry: Optional[Dict[str, Any]] = None,
     close_structural: bool = False,
+    aggressive: bool = False,
 ) -> Dict[str, Any]:
     """Traduce una macro-accion discreta a un comando de velocidad Body Frame.
 
     Es la unica funcion que decide vx/vy/vz/yaw_rate por macro-accion; todos los
     nodos de politica (deliberative, evasive, fsm, reactive) la comparten.
+
+    Args:
+        aggressive: Si True, usa velocidades mayores para evasion rapida (vx=1.2).
     """
     guidance = guidance or {}
     telemetry = telemetry or {}
@@ -64,9 +68,10 @@ def action_to_command(
 
     if action == "EVADIR_DERECHA":
         target_yaw_deg = _manhattan_snap_yaw(current_yaw_deg, 90.0)
+        vx_evasion = 1.2 if aggressive else (0.3 if close_structural else 0.8)
         return {
             "macro_action": action,
-            "vx": 0.3 if close_structural else 0.8,
+            "vx": vx_evasion,
             "vy": 0.0,
             "vz": vz_guidance,
             "yaw_rate": EVASION_LATERAL_YAW_RATE,
@@ -75,9 +80,10 @@ def action_to_command(
 
     if action == "EVADIR_IZQUIERDA":
         target_yaw_deg = _manhattan_snap_yaw(current_yaw_deg, -90.0)
+        vx_evasion = 1.2 if aggressive else (0.3 if close_structural else 0.8)
         return {
             "macro_action": action,
-            "vx": 0.3 if close_structural else 0.8,
+            "vx": vx_evasion,
             "vy": 0.0,
             "vz": vz_guidance,
             "yaw_rate": -EVASION_LATERAL_YAW_RATE,

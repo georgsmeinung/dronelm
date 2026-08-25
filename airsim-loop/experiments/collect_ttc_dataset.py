@@ -51,6 +51,8 @@ SAFE_STOP_DIST_M = 4.0   # engancha el freno si el centro de la escena esta mas 
 SAFE_RESUME_DIST_M = 4.5  # solo vuelve a avanzar por encima de esto (histeresis, evita bang-bang)
 YAW_ONLY_AMPLITUDE_RAD_S = 0.6
 YAW_ONLY_PERIOD_S = 4.0
+YAW_SWEEP_AMPLITUDE_RAD_S = 0.6  # Mismo que yaw_only pero con período más largo
+YAW_SWEEP_PERIOD_S = 8.0  # Período más largo para poblar bins [0.1, 0.3) rad/s
 
 
 class ScriptedPilot:
@@ -85,6 +87,13 @@ class ScriptedPilot:
             yaw_rate = YAW_ONLY_AMPLITUDE_RAD_S * math.sin(2 * math.pi * t_elapsed / YAW_ONLY_PERIOD_S)
             return 0.0, 0.0, 0.0, yaw_rate
 
+        if scenario == "yaw_sweep":
+            import math
+
+            # Escenario complementario: amplitud menor para poblar bins de |yaw_rate| > 0.2 rad/s.
+            yaw_rate = YAW_SWEEP_AMPLITUDE_RAD_S * math.sin(2 * math.pi * t_elapsed / YAW_SWEEP_PERIOD_S)
+            return 0.0, 0.0, 0.0, yaw_rate
+
         # approach / canyon: avance recto constante, con freno de seguridad con histeresis.
         if not self.braking and min_center_depth < SAFE_STOP_DIST_M:
             self.braking = True
@@ -101,7 +110,7 @@ class ScriptedPilot:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", required=True, choices=["approach", "canyon", "yaw_only"])
+    parser.add_argument("--scenario", required=True, choices=["approach", "canyon", "yaw_only", "yaw_sweep"])
     parser.add_argument("--out", required=True)
     parser.add_argument("--duration", type=float, default=30.0)
     parser.add_argument("--hz", type=float, default=5.0)

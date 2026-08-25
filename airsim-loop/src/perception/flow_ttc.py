@@ -171,6 +171,8 @@ class FlowTTCEstimator:
         inliers = angle < FOE_OUTLIER_ANGLE_RAD
 
         if np.count_nonzero(inliers) < 30:
+            # Pocos inliers: FOE poco confiable. Clipa a 0.3 para evitar decisiones
+            # basadas en FOE débil. Constante sin calibrar: heurística conservadora.
             confidence = float(np.count_nonzero(valid)) / float(h * w)
             return foe, min(confidence, 0.3)
 
@@ -178,6 +180,9 @@ class FlowTTCEstimator:
         if foe_refined is None:
             foe_refined = foe
 
+        # Suficientes inliers (>= 30): FOE robusto. Boost de confianza (x3.0) porque
+        # la mayoría del flujo es consistente con el FOE. Constante heurística sin
+        # calibración física, pero refleja la fracción de inliers esperada (~1/3).
         confidence = float(np.count_nonzero(inliers)) / float(h * w)
         return foe_refined, min(confidence * 3.0, 1.0)
 
