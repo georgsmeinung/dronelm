@@ -83,6 +83,18 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
     tracker = WaypointTracker(waypoints_list)
     logger = FlightLogger(str(out_path), scenario=scenario_name, seed=seed, arm=arm)
 
+    # Healthcheck del SLM antes de empezar (G1.2).
+    if arm == "slm":
+        local_llm_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
+        try:
+            import httpx
+            with httpx.Client(timeout=5.0) as http_client:
+                resp = http_client.get(f"{local_llm_url.rstrip('/')}/models")
+                if resp.status_code != 200:
+                    raise RuntimeError(f"SLM retornó {resp.status_code}")
+        except Exception as exc:
+            raise RuntimeError(f"SLM healthcheck falló: {exc}. Verificar LOCAL_LLM_URL={local_llm_url}")
+
     state = {
         "waypoints": waypoints_list, "current_wp_index": 0, "target_waypoint": None,
         "waypoint_guidance": {}, "mission_completed": False, "rgb_image": None,

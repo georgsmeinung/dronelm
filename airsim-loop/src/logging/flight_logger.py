@@ -34,6 +34,7 @@ class FlightLogger:
         self._slm_fallbacks = 0
         self._slm_timeouts = 0
         self._success = False
+        self._route_histogram: Dict[str, int] = {}  # Contar por tipo de ruta
 
     def log_cycle(
         self,
@@ -49,6 +50,10 @@ class FlightLogger:
         collision = telemetry.get("collision", {}) or {}
         guidance = state.get("waypoint_guidance") or {}
         field = state.get("obstacle_field")
+
+        # Contar ruta (keep_going, evasive, deliberative, etc.).
+        route = state.get("route", "unknown")
+        self._route_histogram[route] = self._route_histogram.get(route, 0) + 1
 
         if collision.get("has_collided"):
             self._collisions += 1
@@ -120,8 +125,10 @@ class FlightLogger:
             "min_obstacle_dist_m": self._min_obstacle_dist,
             "path_length_m": round(self._path_length_m, 2),
             "slm_invocations": self._slm_invocations,
+            "deliberation_rate": (self._slm_invocations / self._cycle) if self._cycle else 0.0,
             "slm_fallback_rate": (self._slm_fallbacks / self._slm_invocations) if self._slm_invocations else None,
             "slm_timeout_rate": (self._slm_timeouts / self._slm_invocations) if self._slm_invocations else None,
+            "route_histogram": self._route_histogram,
         }
         summary_path = self.out_path.with_name(self.out_path.stem + ".summary.json")
         with open(summary_path, "w", encoding="utf-8") as f:
