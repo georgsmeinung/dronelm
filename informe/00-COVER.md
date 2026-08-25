@@ -23,3 +23,10 @@ La navegación autónoma de drones en entornos urbanos complejos, como Buenos Ai
 
 ### Palabras claves
 Navegación Autónoma de Drones | Entornos Urbanos | Visión Monocular | Hardware de Bajo Costo | Modelo deAprendizaje Ligero (SLM) | Simulación en AirSim
+
+
+<!-- TODO(G6.1): el resumen de arriba describe la arquitectura original del plan aprobado
+     (YOLOv8n + MobileNetV3/U-Net para segmentación + ORB-SLAM2). Desde PLAN-MEJORAS.md,
+     YOLO e IPM fueron retirados y la percepción pasó a flujo óptico monocular sin redes
+     neuronales (ver 04-PERCEPCION-MONOCULAR.md). Revisar y reescribir este resumen cuando
+     cierre G6.3 (post-G4), para reflejar la arquitectura final defendida en la tesis. -->

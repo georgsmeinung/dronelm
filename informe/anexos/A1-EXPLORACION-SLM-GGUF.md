@@ -1,3 +1,7 @@
+> **Nota de ubicación:** este documento es material exploratorio de la etapa de planificación (selección de modelos SLM en formato GGUF, técnicas de gramática restringida, evaluación del nivel de innovación de la arquitectura). No es un capítulo de la tesis; se conserva como anexo de referencia para la sección de selección de modelo en `07-DECISIONES-SLM.md`. Reubicado desde `informe/01-INTRO.md` el 2026-08-25.
+
+---
+
 ## Limitaciones de hardware
 
 Para una configuración compuesta por una RTX 5060 con 8 GB de VRAM, en la que es necesario compartir recursos de GPU con una simulación de Unreal Engine 5.5, la opción más realista consiste en emplear un *Small Language Model (SLM)*. Se requiere un modelo *instruct‑tuned*, capaz de seguir instrucciones de manera fiable y, al mismo tiempo, producir una salida con **gramática muy restringida o limitada**; es decir, un modelo que genere texto estrictamente conforme a un formato, esquema o gramática predefinida (por ejemplo, JSON siempre válido, pares clave‑valor específicos o una sintaxis personalizada mínima sin variación libre).

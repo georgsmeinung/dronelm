@@ -1,3 +1,7 @@
+> **Nota de ubicación:** notas de investigación sobre el concepto y las ventajas de los Small Language Models (SLM). Material de referencia para `07-DECISIONES-SLM.md` §7.1. Reubicado desde `informe/SLM Concepto y Ventajas.md` el 2026-08-25.
+
+---
+
 Un **Modelo de Lenguaje Pequeño (SLM)** es una versión ligera de un modelo de lenguaje tradicional, diseñada para operar de manera eficiente en entornos con recursos limitados, como teléfonos inteligentes, sistemas embebidos o computadoras de bajo consumo energético 1-5.  
 Aquí hay una descripción más detallada de lo que son los SLMs:
 

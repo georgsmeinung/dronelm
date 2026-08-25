@@ -1,3 +1,7 @@
+> **Nota de ubicación:** notas de investigación sobre LoRA (Low-Rank Adaptation) aplicado a SLM. No hay evidencia en el código actual de que LoRA se haya implementado en el pipeline final; tratar como exploración de alternativas, no como decisión adoptada, salvo que `07-DECISIONES-SLM.md` documente lo contrario. Reubicado desde `informe/Optimización de Modelos de Lenguaje Pequeños mediante LoRA.md` el 2026-08-25.
+
+---
+
 La optimización de Modelos de Lenguaje Pequeños (SLM) con **LoRA (Low-Rank Adaptation)** es una estrategia altamente eficiente que forma parte de las técnicas de **Ajuste Fino Eficiente en Parámetros (PEFT)** 1, 2\.  
 LoRA optimiza los modelos funcionando mediante una **descomposición de bajo rango**: actualiza solo un subconjunto muy pequeño de parámetros (o afina unas pocas capas específicas) mientras mantiene fijos la mayor parte de los parámetros del modelo preentrenado original 2, 3\.  
 La aplicación de LoRA en SLMs aporta las siguientes ventajas y características fundamentales:

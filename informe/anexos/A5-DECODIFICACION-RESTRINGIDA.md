@@ -1,3 +1,7 @@
+> **Nota de ubicación:** notas de investigación sobre decodificación restringida (constrained decoding / gramáticas GBNF / `json_schema`). Material de referencia directo para `07-DECISIONES-SLM.md` §7.2 ("Decodificación restringida vs. parser tolerante"). Reubicado desde `informe/Optimización de Modelos mediante Decodificación Restringida.md` el 2026-08-25.
+
+---
+
 Según las fuentes, la generación de salidas estructuradas y la mejora en la eficiencia de la inferencia se logra principalmente a través de una técnica conocida como **decodificación restringida (constrained decoding)** 1, 2\.  
 **Generación de salidas estructuradas:**
 

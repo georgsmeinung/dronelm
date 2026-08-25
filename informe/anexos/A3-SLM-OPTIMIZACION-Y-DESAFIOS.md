@@ -1,3 +1,7 @@
+> **Nota de ubicación:** notas de investigación sobre optimización y desafíos de los SLM. Material de referencia para `07-DECISIONES-SLM.md` §7.1. Reubicado desde `informe/SLM Optimización y Desafíos.md` el 2026-08-25.
+
+---
+
 Un **Modelo de Lenguaje Pequeño (SLM)** busca ser una versión eficiente y de bajo consumo de un modelo de lenguaje, diseñada para operar en entornos con recursos limitados 1, 2\. La meta es mantener la precisión y/o adaptabilidad de los modelos de lenguaje grandes (LLMs) bajo ciertas restricciones, como hardware de entrenamiento o inferencia, disponibilidad de datos, ancho de banda o tiempo de generación 3\.  
 Para reducir la cantidad de parámetros de un SLM sin perder la precisión de un LLM, se emplean varias técnicas clave:
 
