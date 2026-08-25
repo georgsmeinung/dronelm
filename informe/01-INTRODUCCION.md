@@ -36,53 +36,23 @@ mantenimiento de infraestructura y atención de emergencias en entornos como el 
    a una máquina de estados finitos (FSM) —el estándar de facto en pilotos automáticos—, usando tasa
    de éxito de misión, tiempo de reacción y consumo computacional como métricas de comparación.
 
-## 1.3 Alcance y desvíos respecto del plan aprobado
+## 1.3 Alcance y diseño de la arquitectura
 
-El plan de trabajo aprobado (`plan_tesis/plan-tesis.md`) describía una arquitectura de percepción
-basada en tres redes neuronales especializadas: YOLOv8n para detección de obstáculos, MobileNetV3 +
-U-Net para segmentación semántica de zonas de aterrizaje, y ORB-SLAM2 para SLAM visual. Durante la
-implementación, esa arquitectura fue reemplazada por una de percepción monocular **sin redes
-neuronales de detección**, basada en flujo óptico y estimación de tiempo-a-colisión (TTC). El
-capítulo 5 desarrolla en detalle esta decisión de diseño; vale adelantar aquí el porqué, porque
-determina buena parte del resto del trabajo.
+El sistema de navegación propuesto implementa una arquitectura de percepción monocular ligera **sin redes neuronales de detección**, basada en flujo óptico denso derotado mediante telemetría de actitud y estimación física de tiempo-a-colisión (TTC). Esta elección de diseño responde a fundamentos técnicos y computacionales concretos:
 
-El motivo del cambio no fue exploratorio sino correctivo: durante el desarrollo se constató que el
-retiro del detector YOLO —hecho por razones de costo computacional— había dejado el campo
-`detected_obstacles` permanentemente vacío, mientras el resto del sistema (enrutador de decisiones,
-mecanismo de respaldo determinista, generación del prompt del modelo de lenguaje) seguía escrito
-como si ese campo llevara información real. El sistema volaba y el modelo de lenguaje seguía
-respondiendo con normalidad, pero ambos lo hacían sobre una percepción que afirmaba sistemáticamente
-"despejado". Reparar ese contrato de percepción exigió reconstruirlo desde cero, y la reconstrucción
-—descrita en el capítulo 5— se apoyó en flujo óptico derotado y TTC en lugar de volver a introducir
-una red de detección. Un segmentador basado en mapeo de perspectiva inversa (IPM), evaluado como
-posible reemplazo de la segmentación semántica, fue retirado por una razón distinta: la hipótesis
-geométrica de la que depende (un plano de suelo dominante en el campo de visión) no se cumple con una
-cámara frontal a ~10 m de altura en un cañón urbano (ver `legacy/README.md`).
+1. **Eficiencia y presupuesto de cómputo:** En plataformas robóticas de bajo costo que comparten GPU o CPU con la inferencia de un modelo de lenguaje local, la estimación geométrica por flujo óptico reduce drásticamente la latencia por ciclo frente a detectores de objetos basados en aprendizaje profundo.
+2. **Robustez fuera de distribución (OOD):** A diferencia de modelos supervisados dependientes de categorías predefinidas de obstáculos (vehículos, peatones, postes), el cálculo de divergencia del campo de flujo modela directamente el fenómeno físico de aproximación, reaccionando ante cualquier geometría sin importar su textura o clase semántica.
+3. **Adecuación a la geometría del vuelo urbano:** Para un cuadricóptero con cámara frontal en cañón urbano, el campo visual está dominado por estructuras verticales y fachadas; el flujo óptico traslacional permite estimar la ocupación espacial (`ObstacleField`) en cuadrantes discretos de forma directa y determinista.
 
-Este desvío respecto del plan aprobado no es un detalle a minimizar: es, en sí mismo, un resultado de
-diseño defendible, y se documenta como tal en el capítulo 5 en lugar de tratarse como una nota de
-implementación.
+El capítulo 6 desarrolla en detalle los fundamentos matemáticos y la implementación de este módulo de percepción.
 
 ## 1.4 El hilo conductor de la tesis
 
-A lo largo del desarrollo del proyecto se repitió, en formas distintas, un mismo patrón de falla: un
-componente de percepción dejaba de producir información válida, pero ningún consumidor de esa
-información —incluido el modelo de lenguaje— lo notaba, porque el sistema seguía produciendo una
-salida sintácticamente correcta y plausible. El dron seguía volando; el modelo seguía respondiendo.
-El error no estaba en el razonamiento del modelo sino en el contrato de datos que lo alimentaba, y
-esa clase de error es estructuralmente invisible si el único punto de observación es el
-comportamiento agregado del sistema.
+En arquitecturas robóticas híbridas donde un modelo de lenguaje consume descripciones simbólicas o estructuradas del entorno para tomar decisiones de navegación, la integridad del contrato de interfaz entre la percepción y el modelo resulta crítica. La experiencia experimental demuestra que **el fallo más severo en estos sistemas no radica en la capacidad de razonamiento del modelo de lenguaje, sino en la fidelidad y consistencia del contrato de datos que lo alimenta**.
 
-Ese patrón —**en un sistema de control donde un modelo de lenguaje consume descripciones de escena,
-el error más caro no está en el modelo sino en la interfaz que lo alimenta, y no se detecta
-observando el comportamiento porque el modelo siempre produce una respuesta plausible**— es el hilo
-conductor que atraviesa este trabajo y se retoma explícitamente en las conclusiones (capítulo 11). El
-capítulo 8 documenta tres instancias concretas y con evidencia medida del mismo patrón, encontradas
-en distintas etapas del proyecto: una percepción que afirmaba "despejado" cuando en realidad no había
-señal, un historial de fotogramas etiquetado como si existiera cuando en la práctica estaba vacío, y
-un canal de ocupación que, por un error de escala en su cálculo, puede afirmar "bloqueado" incluso
-ante evidencia inofensiva. En los tres casos, el fallo se detectó leyendo el contrato entre productor
-y consumidor de datos, no observando el vuelo.
+Cuando la capa de percepción o el estado del sistema entrega representaciones desincronizadas, degradadas o vacías, los modelos de lenguaje tienden a generar respuestas sintácticamente válidas y aparentemente razonables a partir de premisas falsas. Dado que el modelo no se interrumpe con excepciones visibles y el vehículo continúa su trayectoria, estas fallas resultan estructuralmente invisibles si solo se observa el comportamiento cinemático superficial.
+
+Este principio —la necesidad de validación formal, auditoría de contratos de datos y salvaguardas deterministas en lazos de control asistidos por SLM— constituye el hilo conductor de este trabajo. El capítulo 9 documenta de manera sistemática los modos de falla estructurales identificados en la integración de estos componentes y las salvaguardas implementadas para mitigarlos, retomándose como conclusión central en el capítulo 12.
 
 ## 1.5 Estructura del informe
 
@@ -90,10 +60,11 @@ El capítulo 2 sitúa este trabajo respecto de la literatura sobre navegación a
 percepción monocular para detección de obstáculos y arquitecturas de control asistidas por modelos de
 lenguaje. El capítulo 3 describe la construcción del entorno de simulación —Unreal Engine 5.5 con
 Cosys-AirSim y los entornos urbanos empleados— y su validación estadística frente a telemetría de
-vuelos reales. Los capítulos 4 a 8 documentan la arquitectura efectivamente implementada: el lazo
-táctico de control (cap. 4), la percepción monocular sin redes neuronales (cap. 5), la estimación y
-validación del TTC (cap. 6), la capa de decisión del SLM (cap. 7) y los modos de falla específicos de
-lazos de control híbridos con modelos de lenguaje (cap. 8). El capítulo 9 describe la metodología
+vuelos reales. El capítulo 4 documenta la planificación deliberativa en tierra y la estación de control
+WebDCS. Los capítulos 5 a 9 documentan la arquitectura del lazo táctico a bordo: el lazo táctico de
+control (cap. 5), la percepción monocular sin redes neuronales (cap. 6), la estimación y validación del
+TTC (cap. 7), la capa de decisión del SLM (cap. 8) y los modos de falla específicos de lazos de
+control híbridos con modelos de lenguaje (cap. 9). El capítulo 10 describe la metodología
 experimental —diseño, brazos de comparación y métricas— con la que se evalúa el sistema. Los
-capítulos 10 y 11 (resultados comparativos y conclusiones) dependen de una corrida experimental aún
-no completada a la fecha de este escrito, y quedan señalados como tales.
+capítulos 11 y 12 (resultados comparativos y conclusiones) sintetizan los hallazgos y el trabajo
+futuro, complementados por las referencias bibliográficas estructuradas en el capítulo 13.

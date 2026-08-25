@@ -1,6 +1,6 @@
-# 7. Ingeniería de decisiones del SLM
+# 8. Ingeniería de decisiones del SLM
 
-## 7.1 Selección del modelo
+## 8.1 Selección del modelo
 
 La restricción de hardware determina buena parte de las decisiones de este capítulo: compartir GPU
 con una simulación de Unreal Engine 5.5 deja un presupuesto de VRAM acotado para la inferencia del
@@ -11,16 +11,16 @@ modelos evaluados (Phi-4-mini-instruct, Qwen3-4B/7B-Instruct, entre otros), su h
 y el procedimiento de configuración quedan documentados en `informe/anexos/A1-EXPLORACION-SLM-GGUF.md`
 y `informe/anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md`; este capítulo se limita a señalar el criterio de
 selección y a remitir a ese material para el detalle, que debe actualizarse con el modelo
-efectivamente usado en la corrida experimental final (cap. 9–10).
+efectivamente usado en la corrida experimental final (cap. 10–11).
 
 Es relevante señalar, para el posicionamiento de este trabajo frente al estado del arte (cap. 2), que
 la arquitectura de lazo cerrado estado→SLM→comando→ejecución no es, hacia 2025-2026, especialmente
 novedosa: es uno de los patrones ya estandarizados en investigación y prototipos aplicados de UAVs
 controlados por modelos de lenguaje (ver `informe/anexos/A1-EXPLORACION-SLM-GGUF.md`). El aporte de
 este trabajo no está en la novedad de esa arquitectura general, sino en la ingeniería de su interfaz
-con la percepción (cap. 5) y en la documentación medida de sus modos de falla (cap. 8).
+con la percepción (cap. 6) y en la documentación medida de sus modos de falla (cap. 9).
 
-## 7.2 Decodificación restringida vs. parser tolerante
+## 8.2 Decodificación restringida vs. parser tolerante
 
 La respuesta del modelo se solicita con `response_format={"type": "json_schema", ...}` —soportado
 tanto por LM Studio como por Ollama— en lugar de depender únicamente de un parser por expresiones
@@ -32,35 +32,28 @@ efectivamente desplegada, algo que no puede darse por sentado sin verificarlo en
 
 La métrica que resume esta capa es `adherence_rate`: la fracción de respuestas parseables al primer
 intento, medida con y sin decodificación restringida. Es, en sí misma, una fila de la tabla de
-resultados (cap. 10) y no solo una decisión de ingeniería: cuantifica cuánto aporta, en la práctica, la
+resultados (cap. 11) y no solo una decisión de ingeniería: cuantifica cuánto aporta, en la práctica, la
 gramática restringida por sobre el parser tolerante como única defensa.
 
-## 7.3 Espacio de acción discreto
+## 8.3 Espacio de acción discreto
 
-El modelo de lenguaje —al igual que la FSM y el brazo puramente reactivo (cap. 9)— no produce
+El modelo de lenguaje —al igual que la FSM y el brazo puramente reactivo (cap. 10)— no produce
 comandos cinemáticos directamente: elige entre un conjunto acotado y auditable de macro-acciones
 (`keep_going`, `evasive`, `girar_90`, y las que resuelve el nodo deliberativo o la FSM según el brazo
 activo, incluida una ruta `fsm` cuando ese es el brazo seleccionado, y un estado `degraded` para modo
 degradado). Restringir la salida a una lista blanca de acciones válidas — en lugar de permitir que el
 modelo produzca parámetros cinemáticos libres — es la decisión de diseño que hace posible, a la vez,
-la decodificación restringida de la sección 7.2 y la comparación limpia entre brazos del capítulo 9:
-los tres brazos comparten el mismo espacio de acciones y el mismo traductor a comandos (sección 7.4),
+la decodificación restringida de la sección 8.2 y la comparación limpia entre brazos del capítulo 10:
+los tres brazos comparten el mismo espacio de acciones y el mismo traductor a comandos (sección 8.4),
 de modo que lo único que difiere entre ellos es **quién** elige la etiqueta, no **qué puede** elegir.
 
-## 7.4 `action_to_command`: la frontera entre lenguaje y cinemática
+## 8.4 `action_to_command`: la frontera entre lenguaje y cinemática
 
-Cada macro-acción se traduce a un comando cinemático concreto (velocidades y tasa de guiñada) a través
-de una única función (`action_to_command`, `src/agents/action_map.py`), compartida por los nodos
-deliberativo, de evasión y de FSM. Esta frontera existe para proteger un invariante concreto: que
-ninguna macro-acción tenga más de una definición cinemática en el código. La necesidad de esa garantía
-no es teórica — antes de introducirse `action_to_command` como fuente única, el mapa de velocidades
-por acción era, en la práctica, decorativo: una macro-acción definía una velocidad lateral y, quince
-líneas más adelante en el nodo que la ejecutaba, esa misma velocidad quedaba pisada por otro valor. Es
-exactamente la clase de defecto que produjo, más adelante, uno de los mecanismos de falla documentados
-en el capítulo 8 (la macro-acción de ganancia de altura con una deriva lateral no justificada,
-corregida junto con el resto de esa cadena de fallas).
+Cada macro-acción se traduce a un comando cinemático concreto (velocidades lineales en los tres ejes y tasa de guiñada) a través de una única función centralizada (`action_to_command`, `src/agents/action_map.py`), compartida de forma estricta por los nodos deliberativo, de evasión y de FSM. 
 
-## 7.5 Nota: LoRA como alternativa no adoptada
+Esta frontera desacopla la semántica de alto nivel del control de bajo nivel y garantiza un invariante crítico de diseño: **ninguna macro-acción puede poseer definiciones cinemáticas dispares o no coordinadas en el sistema**. Al centralizar la traducción, se previene la introducción de derivas asimétricas no deseadas en maniobras de evasión o ascenso (capítulo 9), asegurando que tanto las decisiones generadas por el modelo de lenguaje como las derivadas por la máquina de estados o el control reactivo se ejecuten bajo idénticas restricciones y perfiles de velocidad.
+
+## 8.5 Nota: LoRA como alternativa no adoptada
 
 El pipeline final usa el SLM tal como se distribuye en formato GGUF cuantizado, sin ajuste fino. LoRA
 (*Low-Rank Adaptation*) se evaluó en la etapa de planificación como una posible vía de especialización

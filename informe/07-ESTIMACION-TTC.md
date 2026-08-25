@@ -1,6 +1,6 @@
-# 6. Estimación de TTC y su validación
+# 7. Estimación de TTC y su validación
 
-## 6.1 Protocolo de validación
+## 7.1 Protocolo de validación
 
 El canal de profundidad de AirSim (`DepthPlanar`, en metros) permite construir una referencia (*ground
 truth*) del tiempo-a-colisión sin necesidad de instrumentación adicional, y sin costo de vuelo extra:
@@ -18,11 +18,10 @@ eje óptico de la cámara.
 
 El conjunto de datos recolectado (3735 registros, `runs/ttc/*.jsonl`) cubre tres escenarios
 scripteados: aproximación frontal a un edificio, vuelo recto por un cañón urbano, y giros de guiñada
-sin componente de aproximación — este último pensado específicamente para ejercitar la derotación
-descrita en el capítulo 5, que es el mecanismo que debía resolver el patrón de "vuelo cortado y
-errático" observado en pruebas tempranas del proyecto.
+sin componente de aproximación — diseñado específicamente para ejercitar la derotación de guiñada
+descrita en el capítulo 6, desacoplando el giro propio de la señal de aproximación frontal.
 
-## 6.2 Resultado y su interpretación correcta
+## 7.2 Resultado y su interpretación correcta
 
 El análisis (`experiments/analyze_ttc.py`) reporta dos resultados que, leídos por separado, parecen
 contradictorios: la correlación puntual entre el TTC estimado y el TTC de referencia es floja
@@ -45,13 +44,13 @@ Una limitación queda explícitamente documentada: la validación proviene de un
 en simulador, y el escenario de giros de guiñada quedó, en la práctica, casi enteramente concentrado
 en el rango `|yaw_rate| ∈ [0, 0.05)` rad/s. Eso valida bien la detección frontal, pero **no** valida
 todavía la derotación en giros agresivos con datos reales — es precisamente el caso de uso para el que
-se diseñó la derotación (cap. 5), y su validación con un rango más amplio de tasas de guiñada queda
+se diseñó la derotación (cap. 6), y su validación con un rango más amplio de tasas de guiñada queda
 como trabajo pendiente.
 
-## 6.3 Calibración del canal de ocupación (pendiente)
+## 7.3 Calibración del canal de ocupación (pendiente)
 
 A diferencia del TTC, el canal de ocupación de `ObstacleField` no pasó todavía por este mismo
-protocolo de validación contra profundidad. Como se documenta en el capítulo 5 (sección 5.3), el
+protocolo de validación contra profundidad. Como se documenta en el capítulo 6 (sección 6.3), el
 cálculo actual de la divergencia tiene un error de escala conocido (kernel de Sobel sin normalizar),
 lo que hace que calibrar el umbral de ocupación contra el canal de profundidad —con el mismo enfoque
 de curva ROC ya aplicado al TTC— sea un paso pendiente y no meramente un refinamiento opcional: el
@@ -62,9 +61,9 @@ propio código.
 |---|---|---|---|
 | _pendiente de recalibración_ | _pendiente_ | _pendiente_ | _pendiente_ |
 
-## 6.4 Validación de la derotación con giros agresivos (pendiente)
+## 7.4 Validación de la derotación con giros agresivos (pendiente)
 
-Ampliar el escenario de giros de guiñada del conjunto de datos de validación (sección 6.1) para cubrir
+Ampliar el escenario de giros de guiñada del conjunto de datos de validación (sección 7.1) para cubrir
 tasas de guiñada más agresivas (del orden de ±0.3 a ±0.5 rad/s, sin componente de traslación), y
 re-correr la estratificación del error de TTC por `|yaw_rate|`, permitiría confirmar si el error
 relativo en los bins de guiñada alta es comparable al de guiñada baja. Si no lo es, indicaría un error

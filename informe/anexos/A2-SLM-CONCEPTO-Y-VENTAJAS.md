@@ -1,4 +1,4 @@
-> **Nota de ubicación:** notas de investigación sobre el concepto y las ventajas de los Small Language Models (SLM). Material de referencia para `07-DECISIONES-SLM.md` §7.1. Reubicado desde `informe/SLM Concepto y Ventajas.md` el 2026-08-25.
+> **Nota de ubicación:** notas de investigación sobre el concepto y las ventajas de los Small Language Models (SLM). Material de referencia para `08-DECISIONES-SLM.md` §8.1. Reubicado desde `informe/SLM Concepto y Ventajas.md` el 2026-08-25.
 
 ---
 

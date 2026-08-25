@@ -10,7 +10,7 @@ distancia de seguridad frente a objetos en movimiento. Hughes y Engelbrecht (202
 idea a enjambres, con planificación de largo plazo y evasión cooperativa basada en *bounding volume
 hierarchies* y diagramas de Voronoi sobre un modelo 3D tipo Manhattan —el mismo tipo de trazado
 urbano en cuadrícula que emplean los escenarios de evaluación de este trabajo (`manhattan_a`,
-`manhattan_b`; ver capítulo 9—.
+`manhattan_b`; ver capítulo 10—.
 
 Frente a estos enfoques deliberativos, las máquinas de estados finitos (FSM) siguen siendo el
 estándar de facto en pilotos automáticos por su predictibilidad y bajo costo computacional: Hu et al.
@@ -19,33 +19,17 @@ las utilizan como base de un sistema de recarga autónoma sobre líneas de alta 
 es estructural: una FSM no interpreta contexto más allá de los umbrales sobre los que fue diseñada.
 Ese contraste —predictibilidad y bajo costo de la FSM frente a la promesa de adaptabilidad contextual
 de un modelo de lenguaje— es precisamente el eje de la comparación experimental de este trabajo (cap.
-9), y es también donde AlMahamid y Grolinger (2022) y Bouhamed et al. (2020) sitúan al aprendizaje
+10), y es también donde AlMahamid y Grolinger (2022) y Bouhamed et al. (2020) sitúan al aprendizaje
 por refuerzo como tercera vía: políticas aprendidas en lugar de reglas explícitas o inferencia de un
 modelo de lenguaje.
 
 ## 2.2 Percepción monocular para detección y evitación de obstáculos
 
-La decisión de este trabajo de prescindir de redes neuronales de detección (cap. 5) se apoya en una
-línea de investigación consolidada sobre detección de obstáculos a partir de una única cámara, sin
-aprendizaje profundo. Kaneko et al. (2017) proponen un método de detección rápida para robots móviles
-monoculares basado en mapeo de perspectiva inversa (IPM) sobre un plano de suelo asumido —la misma
-técnica que este trabajo evalúa y descarta en el capítulo 5, por no cumplirse su hipótesis geométrica
-de base con cámara frontal en cañón urbano—. Badrloo y Varshosaz (2017) revisan el estado de la
-detección de obstáculos por visión monocular en general, mientras que Molineros et al. (2012) y Chen
-et al. (2016) abordan variantes del problema con flujo residual y detección 3D respectivamente, en el
-dominio de vehículos terrestres.
+La adopción de una arquitectura de percepción monocular ligera sin redes neuronales profundas (cap. 6) se fundamenta en una línea de investigación consolidada sobre detección de obstáculos por visión artificial clásica. Badrloo y Varshosaz (2017) revisan el estado del arte de la detección monocular en robótica móvil, mientras que Molineros et al. (2012) y Chen et al. (2016) analizan la estimación de riesgo mediante flujo residual y análisis 3D. 
 
-Más cerca de la técnica finalmente adoptada, Vera-Yanez et al. (2024) desarrollan un detector de
-obstáculos aéreos basado íntegramente en flujo óptico —morfología, expansión del foco (*focus of
-expansion*, FOE) y agrupamiento— sin depender de datos de entrenamiento, con el argumento explícito de
-que el flujo óptico separa el movimiento propio de la cámara del inducido por objetos que se acercan,
-sin necesidad de una red entrenada. Es el mismo principio físico —divergencia del campo traslacional
-como proxy de tiempo-a-colisión— sobre el que se construye el estimador de TTC de este trabajo (cap.
-6). Rill y Faragó (2021) y Shi et al. (2024), en cambio, sí emplean aprendizaje profundo monocular
-para evitar colisiones, y Zhou et al. (2026) retoman el IPM pero para un caso de uso distinto
-(vehículos terrestres con cámaras *around-view*, no un UAV con cámara frontal), lo que ilustra que la
-inadecuación del IPM a este trabajo es específica de la geometría del caso de uso, no del método en
-general.
+Por otra parte, técnicas clásicas basadas en Mapeo de Perspectiva Inversa (IPM), como las propuestas por Kaneko et al. (2017) y retomadas por Zhou et al. (2026), asumen la existencia de un plano de suelo dominante en el campo de visión, una hipótesis adecuada para vehículos terrestres o cámaras cenitales pero inaplicable a cuadricópteros con cámara frontal a baja altitud en cañones urbanos, donde el campo visual está dominado por estructuras verticales y fachadas.
+
+En contraste, el uso de flujo óptico denso traslacional constituye una solución físicamente rigurosa y libre de entrenamiento supervisado. Vera-Yanez et al. (2024) desarrollan un detector de obstáculos aéreos basado íntegramente en flujo óptico —morfología, foco de expansión (*focus of expansion*, FOE) y agrupamiento—, demostrando que desacoplar la rotación propia del movimiento traslacional permite aislar los vectores de aproximación generados por objetos en la trayectoria. Este principio físico —la divergencia del campo traslacional como estimador directo del Tiempo-a-Colisión (TTC)— constituye la base matemática del módulo de percepción y estimación de TTC implementado en este trabajo (cap. 6 y 7). Enfoques alternativos basados en aprendizaje profundo monocular (Rill y Faragó, 2021; Shi et al., 2024) logran estimaciones densas de profundidad pero introducen una alta carga computacional y sensibilidad a dominios no vistos, justificando la preferencia por métodos geométricos deterministas en plataformas de bajo costo.
 
 ## 2.3 Arquitecturas de control asistidas por modelos de lenguaje
 
@@ -55,14 +39,14 @@ lenguaje natural, un modelo (grande o pequeño) produce una decisión estructura
 ejecuta y se vuelve a observar. Chahine et al. (2023) muestran robustez fuera de distribución con
 redes neuronales líquidas como capa de control; Zhu et al. (2024) estudian específicamente hasta qué
 punto los modelos de lenguaje entienden el contexto que se les provee, una pregunta directamente
-relevante para el capítulo 8 de este trabajo, donde el problema no es la capacidad de razonamiento
+relevante para el capítulo 9 de este trabajo, donde el problema no es la capacidad de razonamiento
 del modelo sino la integridad del contexto que efectivamente recibe.
 
 Dos líneas de trabajo son especialmente pertinentes para la ingeniería de decisiones del SLM descripta
-en el capítulo 7. Por un lado, la generación de salida estructurada y restringida: Geng et al. (2025)
+en el capítulo 8. Por un lado, la generación de salida estructurada y restringida: Geng et al. (2025)
 sistematizan el estado del arte en generación de salidas estructuradas desde modelos de lenguaje —el
 problema exacto que resuelve, en este trabajo, la decodificación restringida vía `json_schema` con
-parser tolerante como red de contención (cap. 7)—, y Raspanti et al. (2025) muestran que la
+parser tolerante como red de contención (cap. 8)—, y Raspanti et al. (2025) muestran que la
 decodificación con gramática restringida mejora específicamente el desempeño en tareas de análisis
 lógico estructurado. Por otro lado, la simulación de alta fidelidad como banco de pruebas: Shah et al.
 (2017) introducen AirSim, el simulador sobre el que se desarrolla y valida este trabajo, y Jansen et
@@ -77,6 +61,6 @@ neuronales, control por FSM como línea de base, y un SLM con salida restringida
 alternativa— pero con un énfasis distinto al de buena parte de la literatura revisada: en lugar de
 proponer una arquitectura novedosa de percepción o de razonamiento, documenta con evidencia medida los
 modos de falla específicos de integrar un modelo de lenguaje en un lazo de control real, un tipo de
-resultado que —según constata el propio capítulo 8— es poco frecuente en la literatura publicada,
+resultado que —según constata el propio capítulo 9— es poco frecuente en la literatura publicada,
 que tiende a reportar arquitecturas que funcionan más que arquitecturas que fallaron de una manera
 instructiva y cómo se detectó y corrigió esa falla.

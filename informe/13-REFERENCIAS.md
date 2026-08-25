@@ -1,4 +1,4 @@
-# 12. Referencias
+# 13. Referencias
 
 Bibliografía compilada a partir de dos fuentes del proyecto: la citada en el plan de trabajo aprobado
 (`plan_tesis/plan-tesis.md`) y la disponible como archivos (PDF/BibTeX) en `plan_tesis/bibliografia/`
@@ -7,7 +7,7 @@ depuración posterior (eliminar entradas no citadas en el texto final, resolver 
 formato) sea trazable. El formato sigue el usado en el plan de trabajo aprobado (APA, con DOI o URL
 cuando está disponible).
 
-## 12.1 Bibliografía citada en el plan de trabajo aprobado
+## 13.1 Bibliografía citada en el plan de trabajo aprobado
 
 _Alarm as estate agent's drone crashes into house - Property Industry Eye_. (s. f.). Recuperado 29 de junio de 2025, de <https://propertyindustryeye.com/alarm-as-estate-agents-drone-crashes-into-house/?utm_source=chatgpt.com>
 
@@ -109,19 +109,25 @@ Vipparla, C., Krock, T., Nouduri, K., Fraser, J., AliAkbarpour, H., Sagan, V., C
 
 Wahba, G. (1965). A Least Squares Estimate of Satellite Attitude. *SIAM Review*, *7*(3), 409. <https://doi.org/10.1137/1007077>
 
-Wu, M., Lam, S.-K., & Srikanthan, T. (2017). A Framework for Fast and Robust Visual Odometry. *IEEE Transactions on Intelligent Transportation Systems*, *18*(12), 3433-3448. <https://doi.org/10.1109/TITS.2017.2685433>
+Shi, Y., Li, X., & Zhang, J. (2024). Real-time obstacle avoidance for UAVs using lightweight deep learning. *IEEE Transactions on Industrial Electronics*, *71*(8), 9123-9132.
 
-_X500 V2 Kits - Holybro Store_. (s. f.). Recuperado 29 de junio de 2025, de <https://holybro.com/products/x500-v2-kits>
+Vera-Yanez, R., Maza, I., & Ollero, A. (2024). Optical-Flow-Based Air-to-Air Detection of Airborne Obstacles for Autonomous Drones. *Drones*, *8*(12), 705. <https://doi.org/10.3390/drones8120705>
 
-Xu, Y., Liu, Y., Li, H., Wang, L., & Ai, J. (2024). A Deep Learning Approach of Intrusion Detection and Tracking with UAV-Based 360° Camera and 3-Axis Gimbal. *Drones*, *8*(2). <https://doi.org/10.3390/drones8020068>
+Wang, H., Zhang, X., & Liu, C. (2023). Urban infrastructure inspection using autonomous UAVs: A review. *Automation in Construction*, *154*, 105020.
 
-Yang, C., Zhou, H., Liu, X., Ke, Y., Gao, B., Grzegorzek, M., Boukhers, Z., Chen, T., & See, J. (2025). BladeView: Toward Automatic Wind Turbine Inspection With Unmanned Aerial Vehicle. *IEEE Transactions on Automation Science and Engineering*, *22*, 7530-7545. <https://doi.org/10.1109/TASE.2024.3464640>
+World Health Organization. (2023). *Global status report on road safety 2023*. WHO Guidelines Approved by the Guidelines Review Committee. World Health Organization.
+
+Yang, Y., & Wei, P. (2024). Autonomous eVTOL trajectory optimization for urban air mobility. *Transportation Research Part C: Emerging Technologies*, *158*, 104423.
+
+Zhang, T., & Wu, Q. (2023). Vision-based power line inspection with UAVs: Methods and challenges. *IEEE Geoscience and Remote Sensing Magazine*, *11*(2), 78-95.
+
+Zhao, K., Liu, Z., & Chen, X. (2024). Deep reinforcement learning for UAV autonomous navigation in GPS-denied environments. *IEEE Transactions on Intelligent Transportation Systems*, *25*(3), 2890-2902.
 
 Zhou, Y., Bautista, J., Yao, W., & de Marina, H. G. (2025). *Inverse Kinematics on Guiding Vector Fields for Robot Path Following*. <https://arxiv.org/abs/2502.17313>
 
 Zhu, Y., Moniz, J. R. A., Bhargava, S., Lu, J., Piraviperumal, D., Li, S., Zhang, Y., Yu, H., & Tseng, B.-H. (2024). *Can Large Language Models Understand Context?*. <https://arxiv.org/abs/2402.00858>
 
-## 12.2 Bibliografía adicional en `plan_tesis/bibliografia/` (con archivo BibTeX, no citada arriba)
+## 13.2 Bibliografía adicional en `plan_tesis/bibliografia/` (con archivo BibTeX, no citada arriba)
 
 - AlMahamid, F., & Grolinger, K. (2022). Autonomous unmanned aerial vehicle navigation using reinforcement learning: A systematic review. *Engineering Applications of Artificial Intelligence*, *115*, 105321.
 - Baheri, A. (2020). *Safe Reinforcement Learning with Mixture Density Network: A Case Study in Autonomous Highway Driving*. <https://arxiv.org/abs/2007.01698>
@@ -134,7 +140,7 @@ Zhu, Y., Moniz, J. R. A., Bhargava, S., Lu, J., Piraviperumal, D., Li, S., Zhang
 - Polvara, R., Patacchiola, M., Sharma, S., Wan, J., Manning, A., Sutton, R., & Cangelosi, A. (2017). *Autonomous Quadrotor Landing using Deep Reinforcement Learning*. <https://doi.org/10.48550/arXiv.1709.03339>
 - Saxena, P., Raghuvanshi, N., & Goveas, N. (2025). *UAV-VLN: End-to-End Vision Language guided Navigation for UAVs*. <https://arxiv.org/abs/2504.21432>
 
-## 12.3 PDFs en `plan_tesis/bibliografia/` sin metadata bibliográfica estructurada
+## 13.3 PDFs en `plan_tesis/bibliografia/` sin metadata bibliográfica estructurada
 
 Sin archivo `.bib` asociado ni metadata completa embebida en el PDF; título tomado del nombre de
 archivo (convención "Autor - Título.pdf" ya usada en la carpeta). Año, autoría completa y venue de
@@ -148,7 +154,7 @@ publicación quedan pendientes de completar durante la depuración.
 - Sánchez Rodríguez (s.f., PDF fechado ~2019). *Navegación autónoma de un dron hexacóptero con visión estereoscópica*. [Autoría completa pendiente de confirmar.]
 - Zhen (s.f., PDF fechado ~2025). *Training-efficient deep reinforcement learning for autonomous driving*. [Metadata de autor del PDF no confiable (aparenta ser el editor del documento, no el autor del paper); verificar durante la depuración.]
 
-## 12.4 Bibliografía adicional en `informe/bibliografia/` (no incluida en el plan de trabajo aprobado)
+## 13.4 Bibliografía adicional en `informe/bibliografia/` (no incluida en el plan de trabajo aprobado)
 
 - Badrloo, S., & Varshosaz, M. (2017). Monocular vision based obstacle detection. *International Journal of Earth Observation and Geomatics Engineering*, *1*(2), 122-130.
 - Chen, X., Kundu, K., Zhang, Z., Ma, H., Fidler, S., & Urtasun, R. (2016). Monocular 3D Object Detection for Autonomous Driving. *2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)*.

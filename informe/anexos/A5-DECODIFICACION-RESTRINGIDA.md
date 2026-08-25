@@ -1,4 +1,4 @@
-> **Nota de ubicación:** notas de investigación sobre decodificación restringida (constrained decoding / gramáticas GBNF / `json_schema`). Material de referencia directo para `07-DECISIONES-SLM.md` §7.2 ("Decodificación restringida vs. parser tolerante"). Reubicado desde `informe/Optimización de Modelos mediante Decodificación Restringida.md` el 2026-08-25.
+> **Nota de ubicación:** notas de investigación sobre decodificación restringida (constrained decoding / gramáticas GBNF / `json_schema`). Material de referencia directo para `08-DECISIONES-SLM.md` §8.2 ("Decodificación restringida vs. parser tolerante"). Reubicado desde `informe/Optimización de Modelos mediante Decodificación Restringida.md` el 2026-08-25.
 
 ---
 

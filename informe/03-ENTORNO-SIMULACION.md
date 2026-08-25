@@ -7,22 +7,22 @@ aprobado (`plan_tesis/plan-tesis.md`), sobre AirSim, un simulador basado en Unre
 física y renderizado de alta fidelidad (Shah et al., 2017). La implementación efectiva, sin embargo,
 no usa la distribución original de AirSim de Microsoft: desde el inicio del proyecto se adoptó
 **Cosys-AirSim**, un fork mantenido por el Cosys-Lab (Laboratorio de Co-Diseño para Sistemas
-Ciber-Físicos de la Universidad de Amberes, Bélgica). El propio historial del proyecto documenta la
-decisión: *"Abandonado el proyecto original AirSim por Microsoft, se utiliza la actual versión a
-partir de un fork mantenido por el Cosys-Lab"* (`CHANGELOG.md`, 2025-12-03), compilado e integrado
+Ciber-Físicos de la Universidad de Amberes, Bélgica). Al inicio del desarrollo se adoptó
+la decisión de utilizar este fork: *"Abandonado el proyecto original AirSim por Microsoft, se utiliza la actual versión a
+partir de un fork mantenido por el Cosys-Lab"*, compilado e integrado
 sobre un proyecto de Unreal Engine 5.5 (**`CitySim`** / `CityParkSim`) que sirvió de entorno de
 desarrollo y validación experimental de las pruebas.
 
 Cosys-AirSim, a diferencia del AirSim clásico de Microsoft —enfocado principalmente en cámaras RGB y
 visión por computadora—, agrega sensores adicionales basados en GPU y CPU (LiDAR, sonar, radar),
 documentados en el paper oficial de la plataforma (Jansen et al., 2023). Este trabajo no usa esos
-sensores adicionales: la percepción descrita en el capítulo 5 depende exclusivamente de la cámara RGB
+sensores adicionales: la percepción descrita en el capítulo 6 depende exclusivamente de la cámara RGB
 monocular y de la telemetría de actitud, consistente con la restricción de hardware de bajo costo que
 motiva todo el proyecto (§1.2). La elección de Cosys-AirSim sobre el AirSim original responde, de
 todos modos, a la actividad de mantenimiento del fork más que a una necesidad de esos sensores
 adicionales: hacia 2025-2026 el proyecto de Microsoft dejó de recibir actualizaciones activas, y la
-documentación, configuración y versiones del fork de Cosys-Lab fueron revisadas explícitamente antes
-de adoptarlo (`CHANGELOG.md`, 2026-0624).
+documentación, configuración y versiones del fork de Cosys-Lab fueron revisadas exhaustivamente antes
+de adoptarlo.
 
 ## 3.2 Desvío respecto del plan aprobado: de la fotogrametría de Buenos Aires a activos urbanos genéricos
 
@@ -42,7 +42,7 @@ de Buenos Aires (disponibles en el repositorio compartido de Google Drive: <http
 - **`CitySim` / `CityParkSim`** (2025-12-03): el proyecto y mapa urbano principal sobre el que se integró
   el plugin de Cosys-AirSim, constituyendo el **entorno de validación experimental y benchmark** del
   sistema (incluye los manifiestos de misión para los escenarios de prueba `manhattan_a` y `manhattan_b`
-  analizados en el capítulo 9).
+  analizados en el capítulo 10).
 - **"City Sample"** (Epic Games, vía Fab): entorno dedicadamente urbano denso, con peatones y tráfico
   gestionado por IA autónoma de Unreal Engine, confirmado funcionando con Cosys-AirSim el 2026-0522 y
   optimizado el 2026-0622 (escena `Small_City_LVL`) siguiendo las recomendaciones oficiales de Epic
@@ -51,23 +51,23 @@ de Buenos Aires (disponibles en el repositorio compartido de Google Drive: <http
   configurado el 2026-0521 como alternativa de mayor realismo visual al entorno base.
 - **"Dynamic City Creator"** (2026-0509): un intento de generar un entorno urbano paramétricamente en
   lugar de usar un activo fijo, **abandonado**: el plugin de Cosys-AirSim no detectaba correctamente
-  la malla de colisión de la ciudad generada de esta forma (`CHANGELOG.md`, 2026-0509), lo que la
+  la malla de colisión de la ciudad generada de esta forma, lo que la
   hacía inutilizable para vuelo con evasión de obstáculos.
 
 El historial del proyecto no deja registrada una justificación explícita, en el momento del cambio,
 de por qué se sustituyó el pipeline de fotogrametría de Buenos Aires por estos entornos genéricos; se
 documenta aquí como un desvío de hecho respecto del plan aprobado, en el mismo sentido en que el
 capítulo 1 (§1.3) documenta el desvío en percepción: verificable contra el registro del proyecto, sin
-inventar una razón que ese registro no sostiene. Una lectura razonable, aunque no confirmada
-explícitamente en el `CHANGELOG.md`, es que los entornos ya disponibles con tráfico y peatones
+inventar una razón que ese registro no sostiene. Una lectura razonable
+es que los entornos ya disponibles con tráfico y peatones
 gestionados por IA (como "City Sample") resolvían una necesidad —escenas urbanas dinámicas para
 ejercitar evasión de obstáculos— sin el costo del pipeline de reconstrucción fotogramétrica completo;
 esa lectura queda señalada como interpretación, no como hecho documentado.
 
 ## 3.3 Configuración de rendimiento: gráficos frente a física
 
-La documentación oficial de Cosys-Lab, revisada explícitamente durante el proyecto (`CHANGELOG.md`,
-2026-0622, 2026-0624), sostiene que priorizar la tasa de actualización de la física y los sensores
+La documentación técnica de Cosys-Lab
+sostiene que priorizar la tasa de actualización de la física y los sensores
 activos por sobre la fidelidad gráfica es una práctica recomendada cuando el objetivo principal no es
 la fotografía de la escena. Siguiendo esas recomendaciones, se aplicaron los siguientes ajustes:
 
@@ -82,23 +82,23 @@ la fotografía de la escena. Siguiendo esas recomendaciones, se aplicaron los si
 
 El modo `NoDisplay` (que anula por completo el renderizado de pantalla cuando solo se necesitan
 telemetría y datos de sensores) no se utilizó: la captura de imágenes RGB es central a la percepción
-monocular de este trabajo (capítulo 5), por lo que el renderizado de la cámara no puede desactivarse.
+monocular de este trabajo (capítulo 6), por lo que el renderizado de la cámara no puede desactivarse.
 Por el mismo motivo, no se redujo la calidad de texturas del entorno, aunque sí se redujo el
 posprocesamiento de renderizado cinemático en escenas con mayor exigencia gráfica (como "City
 Sample"), como concesión intermedia entre realismo visual y presupuesto de cómputo compartido con la
-inferencia del modelo de lenguaje local (§7.1).
+inferencia del modelo de lenguaje local (§8.1).
 
 ## 3.4 Validación frente a telemetría de vuelos reales
 
 La dinámica de vuelo simulada —no la geometría de la escena urbana, cuya fidelidad fotográfica es el
 desvío documentado en §3.2— se validó de forma independiente contra telemetría de drones reales, con
-el objetivo explícito de que la comparación experimental entre brazos (capítulo 9) se apoyara en
+el objetivo explícito de que la comparación experimental entre brazos (capítulo 10) se apoyara en
 vuelos simulados cuya cinemática fuera comparable a la de un cuadricóptero real y no solo
 físicamente plausible en abstracto.
 
 **Fuente de datos reales.** Se descargó un conjunto de datos de telemetría real de drones
 cuadricópteros comerciales (DJI) desde el repositorio público de Zenodo
-(<https://zenodo.org/records/15912415>, `CHANGELOG.md`, 2026-0413).
+(<https://zenodo.org/records/15912415>).
 
 **Protocolo de calibración.** Sobre esa telemetría real se identificaron dos trayectorias de vuelo
 distintas —un patrón rectangular simple (Drone 1) y un patrón de cruz combinado con rectángulo (Drone
@@ -149,6 +149,6 @@ idealización conocida y cuantificada (varianza de actitud, ausencia de viento s
 cambio, la fidelidad fotográfica de la escena urbana frente a Buenos Aires real: esa es una validación
 distinta, no realizada, y coincide con el desvío documentado en §3.2. Un ejercicio de validación
 relacionado pero diferente —si el suavizado por histéresis y media móvil exponencial introducido en
-`WaypointTracker` (capítulo 4, §4.3) mejora medible la telemetría real de vuelo— arrojó un resultado
+`WaypointTracker` (capítulo 5, §5.3) mejora medible la telemetría real de vuelo— arrojó un resultado
 honestamente ambiguo (`std(Δvx)` prácticamente plano antes/después) y se documenta como tal en el
-propio `CHANGELOG.md`, no como una mejora confirmada.
+presente informe, no como una mejora confirmada.

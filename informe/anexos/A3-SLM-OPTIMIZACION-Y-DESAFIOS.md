@@ -1,4 +1,4 @@
-> **Nota de ubicación:** notas de investigación sobre optimización y desafíos de los SLM. Material de referencia para `07-DECISIONES-SLM.md` §7.1. Reubicado desde `informe/SLM Optimización y Desafíos.md` el 2026-08-25.
+> **Nota de ubicación:** notas de investigación sobre optimización y desafíos de los SLM. Material de referencia para `08-DECISIONES-SLM.md` §8.1. Reubicado desde `informe/SLM Optimización y Desafíos.md` el 2026-08-25.
 
 ---
 

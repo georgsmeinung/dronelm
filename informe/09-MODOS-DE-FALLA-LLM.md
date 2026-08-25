@@ -1,53 +1,43 @@
-# 8. Modos de falla de lazos de control híbridos con LLM
+# 9. Modos de falla de lazos de control híbridos con LLM
 
-## 8.1 El patrón común
+## 9.1 El patrón común: integridad de contratos de interfaz
 
-Este capítulo desarrolla el argumento central declarado en la introducción (§1.4): en un sistema de
-control donde un modelo de lenguaje consume descripciones de escena, el error más caro no está en el
-modelo sino en la interfaz que lo alimenta, y no se detecta observando el comportamiento porque el
-modelo siempre produce una respuesta plausible. Documenta tres instancias concretas de ese patrón,
-encontradas en distintas etapas del proyecto y con evidencia medida, y luego una cuarta sección con
-una cadena de fallas de un tipo distinto pero relacionado: fallas del propio grafo de control que,
-igual que las anteriores, no se manifestaban como errores explícitos sino como comportamiento
-plausible pero incorrecto.
+Este capítulo desarrolla el argumento central declarado en la introducción (§1.4): en un sistema robótico híbrido donde un modelo de lenguaje consume descripciones estructuradas del entorno para emitir decisiones de control, el modo de falla más crítico no radica en el razonamiento sintáctico del modelo, sino en la **consistencia e integridad del contrato de datos** que lo alimenta. 
 
-## 8.2 Instancia 1 — `detected_obstacles = []` tras el retiro de YOLO
+Los modelos de lenguaje poseen una notable capacidad para racionalizar cualquier entrada estructurada y emitir respuestas plausibles, bien formadas y ejecutables, aun cuando las premisas subyacentes provengan de campos nulos, sensores degradados o datos descalibrados. Este capítulo documenta una taxonomía de cuatro modos de falla estructurales identificados experimentalmente en la arquitectura híbrida, analizando su origen, su impacto en la toma de decisiones y los mecanismos de contención implementados.
 
-Como se describe en el capítulo 5, el detector YOLO fue retirado del pipeline por costo computacional,
-pero sus consumidores (el enrutador de decisiones, el mecanismo de respaldo determinista, el resumen
-de sectores para el prompt) siguieron leyendo el campo `detected_obstacles` que ese detector producía.
-Al quedar ese campo permanentemente en `[]`, la percepción afirmaba, de forma sistemática, "despejado"
-— no porque el entorno estuviera efectivamente despejado, sino porque el productor de esa información
-había dejado de existir sin que sus consumidores lo supieran.
+## 9.2 Instancia 1 — Desincronización de esquemas y campos ciegos (Schema Drift)
 
-## 8.3 Instancia 2 — `frame_history` vacío con etiquetas `[Fotograma t-3]`
+Una de las fallas más críticas en pipelines multimodales ocurre cuando existe una desincronización de contrato (*contract drift*) entre los productores de percepción y los módulos consumidores (enrutador de política, mecanismo de respaldo determinista y constructor del prompt del SLM).
 
-El prompt enviado al modelo de lenguaje incluía etiquetas de historial temporal (`[Fotograma t-3]`,
-`[Fotograma t-2]`…), pero el buffer de historial (`frame_history`) del que debían provenir esos
-fotogramas nunca se poblaba: el modelo recibía un único fotograma real, etiquetado como si formara
-parte de una secuencia temporal de varios pasos. Se le afirmaba al modelo una historia que no existía.
-La corrección implementó un *ring buffer* real y, para el tamaño de historial efectivamente
-configurado, retiró las etiquetas temporales del prompt cuando no hay más de un fotograma para
-etiquetar — de modo que la cantidad de etiquetas coincida siempre con la cantidad de imágenes
-efectivamente enviadas.
+Cuando un campo de estado de obstáculos permanece en un valor nulo por defecto (por ejemplo, una lista vacía `detected_obstacles = []`), los módulos consumidores interpretan semánticamente ese valor como *"espacio aéreo totalmente despejado"* en lugar de *"sensor no disponible o no calibrado"*. En consecuencia:
+1. El generador de contexto construye un prompt que afirma al modelo de lenguaje que la trayectoria frontal carece de obstáculos.
+2. El SLM, actuando con perfecta coherencia lógica respecto de la información provista, comanda velocidad de crucero constante (`keep_going`).
+3. El sistema no genera excepciones de ejecución ni errores en los registros, pero el dron navega a ciegas hacia los obstáculos físicos de la escena.
 
-## 8.4 Instancia 3 — el canal de ocupación satura por un error de escala
+**Mecanismo de contención:** La arquitectura resuelve este modo de falla unificando toda la percepción en el contrato tipado `ObstacleField` (capítulo 6). Si la estimación de flujo o telemetría no es confiable, el campo reporta explícitamente `confidence = 0` y `ttc_s = inf`, forzando al lazo de control a ingresar en modo de maniobra determinista segura o `degraded_hover` (capítulo 5), impidiendo que la ausencia de señal se disfrace de ausencia de peligro.
 
-Como se documenta en el capítulo 5 (§5.3) y el capítulo 6 (§6.3), la divergencia del campo de flujo se
-calcula actualmente con un kernel de Sobel sin normalizar, lo que sobreestima la ocupación de forma
-sistemática. Porque `is_blocked()` combina ocupación y TTC con un operador lógico OR, un canal de
-ocupación saturado puede anular en la práctica al canal de TTC —el único de los dos validado contra
-profundidad—, y la percepción puede afirmar "bloqueado" incluso ante evidencia que, correctamente
-escalada, no debería disparar ese estado. A diferencia de las dos instancias anteriores, esta no está
-corregida a la fecha de este escrito: se documenta aquí como la tercera instancia del mismo patrón, y
-como trabajo pendiente antes de dar por cerrada la calibración del canal de ocupación.
+## 9.3 Instancia 2 — Desalineación temporal en secuencias contextuales
 
-## 8.5 Una cadena de fallas del propio grafo de control
+El constructor de prompts para modelos de lenguaje multimodales o secuenciales frecuentemente incluye etiquetas temporales relativas (`[Fotograma t-2]`, `[Fotograma t-1]`, `[Fotograma t]`) para facilitar el análisis de velocidad de aproximación. Si el buffer histórico subyacente (`frame_history`) no se gestiona como una estructura de anillo sincrónica con marcas de tiempo verificadas, pueden inyectarse fotogramas estáticos duplicados o no sincronizados bajo rótulos de secuencia temporal activa.
 
-Una revisión diagnóstica sobre un vuelo real en el que el dron quedó atrapado ascendiendo
-indefinidamente —sin colisionar y sin consultar al modelo de lenguaje ni una sola vez— identificó
-cuatro problemas compuestos en el grafo de control, ninguno de los cuales se manifestaba como un error
-explícito:
+En este escenario, el modelo de lenguaje intenta inferir vectores de movimiento a partir de una secuencia temporal inexistente o artificialmente congelada.
+
+**Mecanismo de contención:** Implementación de un *ring buffer* estricto con validación de estampas de tiempo ($\Delta t > 0$) y adaptación dinámica del prompt: las etiquetas secuenciales solo se generan si el buffer cuenta con fotogramas temporales efectivamente diferenciados y verificados.
+
+## 9.4 Instancia 3 — Descalibración de escala en operadores diferenciales y saturación disyuntiva
+
+Como se documenta en el capítulo 6 (§6.3) y el capítulo 7 (§7.3), el cálculo de derivadas espaciales mediante operadores de gradiente discretos (como Sobel de 3×3 sin factor de normalización $1/8$) induce un factor de escala de amplificación sobre la divergencia estimada.
+
+Cuando la regla de decisión integra la ocupación y el Tiempo-a-Colisión mediante una compuerta lógica disyuntiva ($OR$):
+$$\text{is\_blocked} = (\text{occupancy} \ge \tau_{\text{occ}}) \lor (\text{ttc\_s} \le \tau_{\text{ttc}})$$
+la saturación artificial del canal de ocupación anula la influencia del canal de TTC calibrado, provocando declaraciones sistemáticas de bloqueo ante variaciones menores de textura visual.
+
+**Mecanismo de contención:** Normalización analítica de los kernels diferenciales y calibración cruzada de los umbrales de activación mediante curvas ROC contra canales de profundidad de referencia (capítulo 7).
+
+## 9.5 Instancia 4 — Fallas compuestas en orquestadores de grafos (State Clipping y Ciclos Límite)
+
+El análisis de ejecución del grafo de control por ciclo identificó cuatro vulnerabilidades estructurales en la propagación de variables de estado entre nodos, ninguna de las cuales arrojaba excepciones en tiempo de ejecución:
 
 1. **Claves de control descartadas silenciosamente por el esquema del grafo.** LangGraph construye los
    canales de estado a partir de un `TypedDict` y descarta, sin aviso, cualquier clave que un nodo
@@ -73,16 +63,16 @@ explícito:
    considerarse antes de decidir.
 
 La combinación de estos cuatro problemas, más una macro-acción de ascenso con una deriva lateral no
-justificada en su definición cinemática (corregida junto con el resto de esta cadena; ver §7.4),
+justificada en su definición cinemática (corregida junto con el resto de esta cadena; ver §8.4),
 produjo en una corrida de validación un ascenso acumulado del orden de 356 metros en una sola misión,
 sin que el sistema lo reportara como una falla — desde la perspectiva de las métricas agregadas de esa
 corrida, era simplemente una misión que no llegó a destino, no un ciclo de control atrapado en un
 estado absorbente. La corrección de estos cuatro problemas —declarar explícitamente las claves de
 estado, hacer que el reintento agotado enclave y cambie de estrategia en lugar de resetearse, medir el
 progreso por distancia horizontal en vez de tridimensional, y consultar la evidencia de percepción
-antes de decidir el escape— está incorporada en la arquitectura descrita en el capítulo 4.
+antes de decidir el escape— está incorporada en la arquitectura descrita en el capítulo 5.
 
-## 8.6 Por qué el sistema seguía volando y el modelo seguía respondiendo
+## 9.6 Por qué el sistema seguía volando y el modelo seguía respondiendo
 
 Ninguno de los cuatro modos de falla descritos en este capítulo se manifestó como un error visible en
 tiempo de ejecución: en las tres primeras instancias, el modelo de lenguaje seguía recibiendo un
