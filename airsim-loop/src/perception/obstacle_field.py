@@ -142,3 +142,51 @@ class ObstacleField:
 def empty_field(source: str = "none", timestamp: float = 0.0) -> ObstacleField:
     """Campo vacio (sin evidencia): usado en el primer ciclo o en modo degradado."""
     return ObstacleField(cells=_empty_cells(), dt_s=0.0, timestamp=timestamp, source=source)
+
+
+# --------------------------------------------------------------------------- #
+# Consultas compartidas router / deliberative / fsm                            #
+# --------------------------------------------------------------------------- #
+# Medio ancho (grados) de la banda de rumbo que se considera "de frente". Fuera
+# de esta banda, el waypoint cae en el sector lateral correspondiente.
+BEARING_SECTOR_DEG = float(os.getenv("BEARING_SECTOR_DEG", "15.0"))
+
+
+def sector_towards_waypoint(bearing_err_deg: float) -> str:
+    """Sector visual en el que cae el waypoint activo segun el error de rumbo."""
+    if bearing_err_deg < -BEARING_SECTOR_DEG:
+        return "izquierda"
+    if bearing_err_deg > BEARING_SECTOR_DEG:
+        return "derecha"
+    return "centro"
+
+
+def has_open_corridor(field: ObstacleField, guidance: Optional[dict] = None) -> bool:
+    """True si la percepcion tiene evidencia valida Y ve al menos un sector transitable.
+
+    Existe para que el escape de deadlock (policy_router / deliberative / fsm)
+    deje de ser ciego a la percepcion. En el vuelo del 2026-0824 el dron subio
+    12 metros seguidos mientras el ObstacleField reportaba `DERECHA: DESPEJADO`
+    ciclo tras ciclo: tanto el router como el nodo deliberativo cortocircuitaban
+    hacia GANAR_ALTURA por `evasion_stuck_cycles` ANTES de mirar el campo, asi
+    que la evidencia de corredor libre no la leia nadie.
+
+    Requiere evidencia real (`has_evidence()` + confianza del sector sobre el
+    piso): "sin evidencia" no es lo mismo que "despejado", y un hover sin flujo
+    optico produce exactamente ese vacio -- tratarlo como corredor abierto
+    desactivaria el escape justo cuando mas hace falta.
+    """
+    if not field.has_evidence():
+        return False
+
+    guidance = guidance or {}
+    target = sector_towards_waypoint(float(guidance.get("bearing_err_deg", 0.0)))
+
+    # Se prioriza el sector hacia el waypoint, pero cualquier sector lateral
+    # con evidencia y libre tambien rompe el atasco mejor que subir en el lugar.
+    for sector in (target, *(s for s in SECTORS if s != target)):
+        if field.sector_confidence(sector) < MIN_CONFIDENCE_FOR_BLOCKED:
+            continue
+        if not field.is_blocked(sector):
+            return True
+    return False

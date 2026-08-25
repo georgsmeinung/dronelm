@@ -4,6 +4,8 @@ Este submódulo (`airsim-loop`) implementa el bucle de control reactivo/delibera
 
 > **Nota de arquitectura (2026-08):** este README fue reescrito para reflejar el estado real del código tras la implementación de `PLAN-MEJORAS.md`. La versión anterior describía YOLO + ROI 62° + IoU/area_ratio, que fueron retirados (ver [`legacy/README.md`](legacy/README.md) para la justificación medida de cada retiro) y reemplazados por el contrato único de percepción `ObstacleField`.
 
+> 📄 **Referencia detallada:** [`GRAFO-DE-CONTROL.md`](GRAFO-DE-CONTROL.md) documenta la configuración completa del grafo tal como está en el código — topología, esquema de estado, cascada de decisión del router, máquina de escape de deadlock, cinemática por macro-acción, tabla completa de umbrales con su origen, e invariantes con el test que verifica cada uno. Este README es el mapa; ese documento es el detalle.
+
 ## Arquitectura del Bucle de Control Jerárquico
 
 El pipeline sigue un gating multinivel para economizar recursos y maximizar el vuelo fluido (*Keep Going*), reservando la deliberación del SLM para situaciones de alta incertidumbre o peligro inminente. La decisión de qué "cerebro" resuelve una situación de riesgo (SLM / FSM determinista / puramente reactivo) es seleccionable vía `AGENT_ARM`, para poder comparar los tres brazos sobre el mismo pipeline de percepción.
@@ -59,8 +61,12 @@ Router único de política. Reemplaza a la combinación `ttc_router` + `hover_be
 - **`fsm`**: siempre `fsm_node`, máquina de estados determinista sobre el mismo `ObstacleField` y el mismo `action_to_command()` que usa el brazo SLM — para que la comparación SLM vs FSM sea limpia.
 - **`slm`** (default): la lógica táctica jerárquica original (TTC + bloqueo por sector + persistencia de maniobra + escape de deadlock), resolviendo hacia `keep_going` / `evasive` / `girar_90` (bypass determinista si el FOV está mayormente bloqueado) / `deliberative`.
 
+El orden de evaluación **es** la política; la cascada completa, con el racional de cada paso, está en [`GRAFO-DE-CONTROL.md` §6](GRAFO-DE-CONTROL.md).
+
 ### `deliberative` (brazo `slm`)
-Corre en un hilo aparte (`DeliberationService`, `src/agents/deliberation_service.py`): el nodo **nunca bloquea** el lazo de control. El ciclo en que se encola el pedido (o mientras se espera respuesta) el comando es `FRENAR`; si el SLM no responde dentro de `SLM_WATCHDOG_MS` (default 1500 ms), se aplica el fallback determinista y se marca `timeout=True` en `deliberations[]`. Usa decodificación restringida (`response_format=json_schema`) cuando el servidor la soporta, con el parser tolerante como red de seguridad.
+Corre en un hilo aparte (`DeliberationService`, `src/agents/deliberation_service.py`): el nodo **nunca bloquea** el lazo de control. El ciclo en que se encola el pedido (o mientras se espera respuesta) el comando es `FRENAR`; si el SLM no responde dentro de `SLM_WATCHDOG_MS` (6000 ms, calibrado sobre latencias reales de LM Studio), se aplica el fallback determinista y se marca `timeout=True` en `deliberations[]`. Usa decodificación restringida (`response_format=json_schema`) cuando el servidor la soporta, con el parser tolerante como red de seguridad.
+
+Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos sin progreso real hacia el waypoint, fuerza `GANAR_ALTURA` sin consultar al modelo. El escape está acotado por tres guardas — umbral coherente con la métrica que lo alimenta, chequeo de corredor visible, y enclavamiento tras `MAX_CONSECUTIVE_ESCAPES` intentos sin progreso horizontal medido — cuya ausencia produjo el estado absorbente documentado en `CHANGELOG.md` (2026-0824). Ver [`GRAFO-DE-CONTROL.md` §7](GRAFO-DE-CONTROL.md).
 
 ### `evasive`, `fsm`, `girar_90`, `motor`
 `evasive_node` y `fsm_node` comparten `action_to_command()` (`src/agents/action_map.py`) con `deliberative_node`: es la única fuente de verdad de la cinemática por macro-acción, para que ninguna tenga dos definiciones distintas según quién la ejecute. `motor_node` envía el comando final a `AirSimClient.execute_velocity()`, que ya no bloquea (`moveByVelocityBodyFrameAsync` es last-command-wins; antes un `.join()` fijaba el período del lazo en 2 s).
@@ -69,6 +75,7 @@ Corre en un hilo aparte (`DeliberationService`, `src/agents/deliberation_service
 
 ## Estructura del Código
 
+- [`GRAFO-DE-CONTROL.md`](GRAFO-DE-CONTROL.md): referencia detallada de la configuración del grafo (topología, estado, routers, escape, umbrales, invariantes).
 - [`main.py`](main.py): punto de entrada. Crea el único `AirSimClient` del proceso y lo inyecta en `compile_workflow()`.
 - [`src/agents/graph.py`](src/agents/graph.py): `DroneState`, nodos, `policy_router`, `degraded_router`.
 - [`src/agents/action_map.py`](src/agents/action_map.py): cinemática única por macro-acción.
@@ -102,7 +109,19 @@ TTC_SAFE_THRESHOLD=4.6       # idem
 FOV_BLOCKED_THRESHOLD=0.6
 
 REACTIVE_FORWARD_SPEED=2.0
-SLM_WATCHDOG_MS=1500
+SLM_WATCHDOG_MS=6000         # calibrado sobre latencias reales (regimen 2-3.5s, cold-start 8s+)
+
+# Atasco y escape de deadlock (el umbral EFECTIVO se deriva, ver GRAFO-DE-CONTROL.md §9)
+EVASION_STUCK_THRESHOLD=10
+WAYPOINT_PROGRESS_EPS_M=0.5
+MIN_PROGRESS_SPEED_MPS=0.25
+STUCK_HARD_FACTOR=3.0
+MAX_CONSECUTIVE_ESCAPES=2
+MAX_ESCAPE_ALT_M=30.0
+
+# Autoridad de giro del guiado
+GUIDANCE_YAW_RATE_MAX_DPS=15.0
+GUIDANCE_YAW_RATE_SHARP_MAX_DPS=45.0
 
 LOCAL_LLM_URL=http://[IP_ADDRESS]/v1
 LOCAL_LLM_MODEL_NAME=qwen/qwen2.5-vl-3b

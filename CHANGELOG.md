@@ -1,8 +1,47 @@
 # 2026-0824
 
+## Deadlock del escape por altura: el estado absorbente del grafo de control
+
+Diagnóstico sobre un vuelo real de 76+ ciclos en `A_BASIC_CITY` (`AGENT_ARM=slm`) en el que el dron nunca se movió del waypoint 1: subió de 2.2 m a 14 m repitiendo `(GANAR_ALTURA, GANAR_ALTURA, FRENAR)` indefinidamente, **sin consultar al SLM ni una sola vez** (ni un bloque `AUDITORÍA SLM` en todo el log) y **sin colisión**. No fue un fallo de percepción ni del modelo: fue un estado absorbente del grafo.
+
+### Causa raíz: claves de control descartadas por el esquema del grafo
+
+LangGraph construye los canales a partir del `TypedDict` `DroneState` y **descarta en silencio toda clave que un nodo escriba y no esté declarada ahí**. Cuatro claves cruzaban la frontera nodo ↔ lazo sin estar declaradas:
+
+- `_escape_reset`: `deliberative_node` la marcaba para que `main.py`/`runner.py` llamaran a `WaypointTracker.reset_progress()`. Al perderse en cada `graph.invoke()`, **el contador de atasco nunca se reiniciaba**: crecía monótono (5, 6, 8, 9, 11, 12, 14… medidos en el log), `policy_router` quedaba clavado en la rama deliberativa y el nodo deliberativo en su rama de escape. Éste era el deadlock duro.
+- `_delib_baseline` / `_delib_last_baselined_id`: la memoria corta de resultados (F2.2) nunca acumuló nada.
+- `inject_corner`: la inyección de sub-waypoints de esquina (Manhattan) nunca llegó al tracker.
+
+Los tests existentes no lo veían porque invocaban `deliberative_node(dict)` directamente: el bug solo existe en la frontera del grafo compilado. Se agregan regresiones que corren el grafo **compilado** (`test_control_keys_survive_graph_invoke`, `test_stall_counter_resets_after_escape_in_main_loop`) y que fallan si se quita cualquiera de las declaraciones.
+
+### El ciclo límite de período 3
+
+La red de seguridad `MAX_CONSECUTIVE_ESCAPES` frenaba **y además ponía `_consecutive_escapes = 0` en la misma rama**: se reseteaba a sí misma, convirtiendo un estado terminal en un ciclo `(SUBIR, SUBIR, FRENAR)` que se repetía para siempre. Ahora el escape agotado **enclava** (`_escape_locked`) y **cambia de estrategia** (giro hacia el lado del waypoint, que además corrige el rumbo que el ascenso dejaba congelado); los ciclos siguientes caen a la deliberación normal, devolviéndole la voz al SLM. El enclavamiento se libera solo con **progreso horizontal medido** (`_escape_baseline_dist`), nunca por el reseteo del contador de atasco — usar esa señal haría que cada escape "pareciera" exitoso y el tope jamás se alcanzara. Mismo enclavamiento aplicado al `STATE_CLIMB` del brazo FSM, que tenía el ciclo límite idéntico.
+
+### El atasco se fabricaba solo (métrica incoherente)
+
+`EVASION_STUCK_THRESHOLD` se declaraba en **ciclos** y `WAYPOINT_PROGRESS_EPS_M` en **metros**, de forma independiente: para no acumular atasco hacía falta una velocidad de acercamiento de `eps × LOOP_HZ / umbral`. Con los valores versionados (0.5 m, 5 ciclos, 5 Hz) eso exigía **0.5 m/s sostenidos**, mientras el guiado en giro cerrado limita `vx` a 0.8 m/s con el rumbo a ~70° del objetivo (≈0.25 m/s reales de acercamiento). El escape estaba **garantizado a los 5 ciclos de arrancar la misión, sin ningún obstáculo**. Nueva `effective_stall_threshold()` (`waypoint_tracker.py`) eleva el umbral configurado hasta el mínimo que hace físicamente demostrable el progreso, con `MIN_PROGRESS_SPEED_MPS` como parámetro explícito (10 ciclos con los valores actuales).
+
+### Escape ciego a la percepción
+
+`policy_router` devolvía `"deliberative"` por `evasion_stuck_cycles` **antes de mirar el `ObstacleField`**, y el nodo deliberativo entraba en su rama de escape **antes de consultar nada**: en los ciclos 50, 53, 56, 65, 69 y 72 la percepción reportaba `DERECHA: DESPEJADO` (y en el 72 también `IZQUIERDA: DESPEJADO`) y el dron siguió subiendo. Nueva `has_open_corridor()` (`obstacle_field.py`, consulta compartida por router, `deliberative` y `fsm`): con evidencia válida de sector transitable, manda la decisión táctica normal. El bypass tiene techo (`hard_stall_threshold()`, 3× el umbral) para que un campo "despejado" espurio no desactive el escape indefinidamente. Además, la persistencia de maniobra comprometida pasa a evaluarse **antes** que el contador de atasco, para que el giro de cambio de estrategia llegue a ejecutarse.
+
+### Cinemática que alimentaba el propio atasco
+
+- **`GANAR_ALTURA` llevaba `vy = 0.5`**: deriva lateral constante de 0.5 m/s en una macro-acción de *ascenso*, sin ninguna justificación. Eso **alejaba** el waypoint en el plano XY (82.8 m → 85.0 m en el log) — exactamente la métrica que decide si el atasco se resolvió — y con `yaw_rate = 0` dejaba el rumbo congelado en −5.3° mientras el objetivo estaba a −67°. Retirados ambos: ahora sube en el lugar y aprovecha el ascenso para alinear el rumbo al waypoint.
+- **`GIRAR_90` giraba siempre a la derecha**: en el ciclo 5 mandó al dron a girar a la derecha con el waypoint 68° a la izquierda, en contra de la corrección que el guiado venía aplicando. Ahora elige el lado por el error de rumbo (`bearing_err_deg`); sin `guidance` conserva el comportamiento histórico.
+- **Autoridad de yaw insuficiente**: con un tope único de 15 °/s (más el EMA), realinear un desvío de ~70° tardaba más que lo que tarda el contador de atasco en dispararse — el dron se declaraba atascado por no terminar un giro que el propio limitador le impedía terminar a tiempo. Nuevo tope diferenciado para giro brusco (`GUIDANCE_YAW_RATE_SHARP_MAX_DPS = 45`).
+
+### Pendiente (no cubierto por este cambio)
+
+- El TTC por flujo óptico oscila entre `SIN EVIDENCIA` y `BLOQUEADO 100%` en ciclos alternos durante el escape: `FRENAR` no produce traslación (sin flujo → sin FOE) y el ascenso puro produce flujo vertical que genera FOE espurio con TTC de 0.1–0.4 s. La maniobra viola los supuestos del estimador que la está justificando. Consistente con el caveat de F1.3: la derotación no está validada para yaw fuerte.
+- `main.py` no tiene tope de duración de misión (`experiments/runner.py` sí, vía `max_cycles`/`max_seconds`): un atasco genuinamente irresoluble sigue sin terminar la corrida por sí solo.
+
 ## Implementación de `PLAN-MEJORAS.md`: reconstrucción del lazo táctico
 
 Implementación de las fases F0–F4 del plan de mejoras derivado de la revisión crítica del lazo (`airsim-loop`), cuyo hallazgo central era que el contrato de percepción quedó roto al retirar YOLO: `detected_obstacles` quedaba siempre en `[]`, dejando ciegos al router, al fallback determinista y al override de seguridad, mientras el resto del sistema (prompt del SLM, evasión, documentación) seguía escrito como si existiera. Ver `PLAN-MEJORAS.md` para el detalle completo por fase.
+
+<img src="informe/2026-0824 Reconstruccion del lazo tactico.jpg"/>
 
 ### F0 — Desbloqueo del lazo
 - **Actuador no bloqueante:** `execute_velocity()` ya no hace `.join()` sobre el comando anterior (`src/hardware/airsim_client.py`). Ese `.join()` con `duration=2.0` era la causa raíz de `LOOP_HZ=0.5`, no su consecuencia. Ahora la duración del comando se deriva de `LOOP_HZ` (last-command-wins).
@@ -190,6 +229,85 @@ Se evaluaron 3 opciones (usar `hoverAsync()` en vez de velocidad-cero; estirar l
 - `motor_node` (`src/agents/graph.py`) ancla la altitud (`state["_hover_alt_anchor"]`) en el primer ciclo de un `FRENAR` sostenido, y mientras el `macro_action` siga siendo `FRENAR`, corrige `vz` hacia esa ancla si la desviación supera `HOVER_ALT_DEADZONE_M` (0.3m) — mismo patrón (ganancia proporcional + zona muerta + clamp) que ya usa `WaypointTracker.compute_guidance()` para el guiado normal. Nuevos env vars: `HOVER_ALT_DEADZONE_M`, `HOVER_ALT_KP` (0.35), `HOVER_ALT_MAX_VZ` (0.8). El ancla se limpia (`None`) en cualquier ciclo que no sea `FRENAR`.
 - 3 tests nuevos en `tests/test_hover_altitude.py`: corrige la deriva fuera de la zona muerta, no corrige dentro de ella, y limpia el ancla al salir de `FRENAR`. Suite completa: 82/82 (79 + 3 nuevos).
 - **Verificación en vivo, mismo escenario y misma duración (`manhattan_a`, brazo `slm`, 120s):** antes, `z` derivaba sin parar (-9.98 → -0.65, 9.3m en 120s). Después, `z` se estabiliza en ~-8.8 desde el ciclo 200 en adelante (`z_min=-9.98, z_max=-8.80`) — una desviación acotada de ~1.2m, no una deriva sostenida.
+
+## Nueva configuración del Grafo de Control
+A continuación se detalla la explicación estructurada paso a paso de su funcionamiento, desde la ejecución en el lazo externo hasta la cinemática en los actuadores y sus mecanismos de salvaguarda.
+
+<img src="informe/2026-0824 Nuevo Grafo de Control.jpg"/>
+
+### Paso 1: Ejecución del Lazo Externo (`main.py`)
+
+El ciclo no comienza de forma aislada en el grafo, sino en un orquestador externo que gestiona la telemetría, el avance de la misión y la sincronización temporal:
+
+1. **Adquisición de Telemetría Fresca:** Obtiene de forma independiente la posición, velocidad, orientación y estado de colisión del dron.
+2. **Actualización de Waypoints:** El `waypoint_tracker` evalúa si la posición actual ha entrado dentro del radio de aceptación (`WAYPOINT_ACCEPTANCE_RADIUS = 3.5 m`) para pasar al siguiente punto de ruta.
+3. **Cálculo del Vector de Guiado:** Genera las referencias de velocidad y orientación en *body frame*, corrigiendo el error de seguimiento de trayectoria (*cross-track error*) mediante filtrado por media móvil exponencial (EMA) e histéresis de régimen para evitar oscilaciones.
+4. **Registro de Progreso Horizontal:** Actualiza el contador de ciclos de atasco (`stuck`), midiendo únicamente la distancia en el plano XY (para evitar que subir en altura falsee el avance) y pausando el contador si el sistema está deliberadamente frenado esperando al modelo de lenguaje (SLM).
+5. **Invocación del Grafo (`graph.invoke`):** Ejecuta la máquina de estados del grafo con el estado `DroneState`.
+6. **Reinicio de Escape y Esquinas:** Si el grafo marcó la bandera `_escape_reset`, se reinicia el progreso en el tracker. Si se propuso `inject_corner`, se inyecta un sub-waypoint de giro.
+7. **Post-procesamiento y Sincronización:** Mide la variación de distancia y tiempo de colisión ($\Delta\text{distancia}$, $\Delta\text{TTC}$) para realimentar el prompt de deliberación, emite logs/telemetría y duerme el hilo hasta completar los 200 ms del ciclo.
+
+### Paso 2: Captura Sensorial y Detección de Degradación
+
+El grafo inicia formalmente su ejecución pasando por la ingesta de datos y la verificación del simulador:
+
+* **`capture_node`:** Lee la imagen RGB y la telemetría a través de un cliente AirSim único por proceso. Gestiona un búfer circular de imágenes (`frame_history`). Con el modo estricto activado, si el simulador falla o no responde, no inventa datos sintéticos, sino que activa la bandera booleana `degraded = True`.
+* **`degraded_router`:** Evalúa el estado del canal:
+* **Modo Degradado (`degraded_hover`):** Si AirSim falló, deriva inmediatamente a un comando de `FRENAR` explícito, sin gastar recursos de percepción ni inferencia.
+* **Modo Normal:** Envía el flujo sensorial hacia el nodo de percepción.
+
+### Paso 3: Pipeline de Percepción Estructurada (`perception_node`)
+
+Para cumplir con el principio de desacoplamiento, la política de control nunca lee imágenes crudas, sino un descriptor abstracto:
+
+* **Estimación de Flujo Óptico y TTC:** El módulo `FlowTTCEstimator` procesa el flujo visual, aplica derotación utilizando la actitud de la telemetría, calcula el foco de expansión (FOE) mediante mínimos cuadrados ponderados y estima el Tiempo de Colisión (TTC) en segundos reales.
+* **Construcción del `ObstacleField`:** Genera una matriz 3×3 de ocupación y TTC de la escena frontal. Si no hay suficiente movimiento (como en hover o giros puros), devuelve `confidence = 0` y `ttc = inf`, asumiendo formalmente la falta de evidencia en lugar de entregar datos ficticios.
+
+### Paso 4: Cascada de Decisión y Ruteo de Política (`policy_router`)
+
+Un único enrutador evalúa las condiciones de navegación en orden estricto de arriba hacia abajo (el primer criterio que coincide determina la rama):
+
+1. **Selección de Brazo Base:** Si el sistema está configurado en modo puramente reactivo (`AGENT_ARM == "reactive"`) o en máquina de estados determinista (`fsm`), deriva directamente a `keep_going` o `fsm_node`.
+2. **Persistencia de Maniobra Comprometida:** Si existe una maniobra activa con ciclos restantes y el TTC mínimo es seguro (`min_ttc > 3.2 s`), se mantiene en `evasive_node` para evitar alternancias erráticas de trayectoria (*flip-flop*).
+3. **Escape de Atasco (Deadlock):** Si el contador de atasco supera el umbral y no existe un corredor visual despejado, deriva a la lógica de escape deliberativo.
+4. **Peligro Estructural Frontal Inminente:** Si el centro está bloqueado o el TTC es crítico:
+* Si más del 60% del campo visual está bloqueado (`FOV_BLOCKED_THRESHOLD > 0.6`), se activa un desvío determinista `girar_90`.
+* Si hay sectores viables, se transfiere la decisión a la rama deliberativa (`deliberative_node`).
+
+
+5. **Advertencia Preventiva:** Si hay obstáculos cercanos en sectores no críticos, deriva a una corrección lateral rápida en `evasive_node`.
+6. **Camino Despejado:** Por descarte, continúa con navegación nominal hacia el waypoint en `keep_going`.
+
+### Paso 5: Ramas de Ejecución Táctica
+
+Dependiendo de la ruta asignada por el router, se procesa la acción táctica:
+
+* **`keep_going` (Reactivo):** Traduce el vector de velocidad y orientación directamente del guiado nominal de waypoints.
+* **`evasive_node` (Evasivo Lateral):** Sostiene un giro sobre el eje de rumbo fijado (cerrando lazo sobre $\pm 15^\circ/\text{s}$ con avance moderado) o ejecuta una corrección hacia el lateral con menor ocupación y mayor TTC.
+* **`girar_90_node` (Giro Determinista):** Ejecuta un giro puro sobre el eje a $\pm 20^\circ/\text{s}$ alineándose a la cuadrícula Manhattan más cercana ($90^\circ, 180^\circ, 270^\circ$), orientándose hacia el lado donde queda el waypoint activo.
+* **`fsm_node` (Máquina de Estados Finita):** Resuelve la acción mediante reglas deterministas (`CRUISE`, `AVOID_LEFT`, `AVOID_RIGHT`, `CLIMB`, `BRAKE`) compartiendo las mismas salvaguardas que el modelo de lenguaje.
+* **`deliberative_node` (Brazo SLM Asíncrono):**
+* *Sin pedido en curso:* Emite orden de `FRENAR`, encola la consulta al modelo multimodal en un hilo independiente (`DeliberationService`) y activa la espera.
+* *En espera dentro del tiempo límite (watchdog de 6000 ms):* Mantiene el frenado activo sin reencolar.
+* *Respuesta lista:* Procesa la macro-acción sugerida por el SLM.
+* *Expiración o fallo:* Activa una acción determinista de respaldo basada en el `ObstacleField`.
+* *Salvaguardas adicionales:* Bloquea decisiones incoherentes del modelo (por ejemplo, avanzar de frente con obstáculo a menos de 2.0 s) y limita la elección a un catálogo cerrado de macro-acciones estructuradas en esquemas JSON.
+
+### Paso 6: Lógica de Escape de Atasco y Recuperación
+
+Si el dron se encuentra detenido por obstáculos sin ruta clara, el nodo deliberativo activa un protocolo escalonado:
+
+1. **Ascenso Táctico:** Ejecuta hasta 2 maniobras consecutivas de `GANAR_ALTURA` (subiendo a $-1.5\text{ m/s}$ durante 1.6 s sin deriva horizontal) siempre que no supere los 30 m de altitud.
+2. **Enclavamiento y Giro:** Si tras los intentos no se detecta progreso horizontal medible ($\ge 0.5\text{ m}$ de acercamiento real al objetivo), el sistema asume que la altura no resolvió el bloqueo, activa el enclavamiento (`_escape_locked = True`) y fuerza un `GIRAR_90` hacia el sector del waypoint para buscar una ruta alternativa.
+3. **Liberación del Enclavamiento:** El bloqueo se retira únicamente cuando se confirma avance en el plano XY hacia el objetivo.
+
+### Paso 7: Mapeo Cinemático y Actuación Motora (`motor_node`)
+
+Todas las ramas convergen en un único punto final que garantiza la seguridad física del dron:
+
+* **Mapeo Unificado (`action_to_command`):** Convierte la macro-acción en velocidades lineales ($v_x, v_y, v_z$) y angulares en el sistema de coordenadas NED local.
+* **Ancla de Altitud Activa:** Al ejecutar la acción de `FRENAR`, el controlador aplica una compensación en $v_z$ proporcional a la desviación vertical ($k_p = 0.35$ con zona muerta de 0.3 m) para corregir la deriva natural de los comandos de velocidad nula sostenidos.
+* **Actuación No Bloqueante:** Envía la orden a AirSim mediante `execute_velocity()` descartando las tareas previas con `cancelLastTask()`, asegurando que el bucle complete exactamente su ciclo de 5 Hz sin esperas bloqueantes.
 
 # 2026-0823
 

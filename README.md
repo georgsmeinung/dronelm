@@ -88,7 +88,7 @@ Para ilustrar el flujo completo:
 El código del proyecto se organiza en los siguientes componentes:
 
 *   **[`airsim-plan`](./airsim-plan):** Planificador de misiones y Ground Control Station. Contiene el CLI `airsim-plan` y el servidor web **WebDCS** con streaming de video, telemetría e inspector de auditoría SLM.
-*   **[`airsim-loop`](./airsim-loop):** Lazo de control táctico autónomo del dron. Implementa el grafo de navegación en LangGraph (Captura, Percepción por Flujo Óptico/TTC, Router Táctico, brazos SLM/FSM/Reactivo y Control de Waypoints).
+*   **[`airsim-loop`](./airsim-loop):** Lazo de control táctico autónomo del dron. Implementa el grafo de navegación en LangGraph (Captura, Percepción por Flujo Óptico/TTC, Router Táctico, brazos SLM/FSM/Reactivo y Control de Waypoints), la suite de tests (94 tests) y el framework de experimentación (`experiments/runner.py` y `experiments/analyze.py` para corridas batch N misiones × M escenarios × K semillas comparando los tres brazos; `experiments/collect_ttc_dataset.py` y `experiments/analyze_ttc.py` para calibrar los umbrales de TTC contra el canal depth).
 *   **[`airsim-mcp`](./airsim-mcp):** Servidor de Model Context Protocol (MCP) que expone herramientas de telemetría y control de AirSim para interactuar con agentes autónomos externos.
 *   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`kc_control.py`) para pilotaje directo y configuración de segmentación en AirSim.
 *   **[`airsim-poc`](./airsim-poc):** Pruebas de concepto iniciales de conexión, telemetría y maniobras básicas.
@@ -115,7 +115,9 @@ El código del proyecto se organiza en los siguientes componentes:
 ### Prerrequisitos
 *   GPU NVIDIA con soporte CUDA (ej. RTX 4060 / 5060 o superior) para simulación fluida y para acelerar la inferencia del SLM local.
 *   Unreal Engine 5.5 con el entorno de simulación compilado (ej. `CitySim` / `A_CITY`).
-*   LM Studio o Ollama corriendo localmente en el puerto `1234` o `11434`.
+*   LM Studio o Ollama sirviendo el SLM en `LOCAL_LLM_URL` (puerto `1234` o `11434`); puede correr en la misma máquina o en otra de la LAN, ya que la consulta es asíncrona y no bloquea el lazo de percepción.
+
+> **Nota de topología (2026-08):** AirSim y `airsim-loop` deben ejecutarse en la **misma máquina** (loopback `127.0.0.1`). Un benchmark de `simGetImages` sobre AirSim remoto en LAN mostró que prácticamente todas las capturas agotaban un timeout de 8s independientemente de la resolución (ver `CHANGELOG.md`, sección F0.0), por lo que solo el servidor del SLM puede quedar en otra máquina de la red.
 
 ### 1. Configuración del Entorno Python
 Crea y activa el entorno de Conda utilizando el archivo `environment.yml`:
@@ -146,7 +148,9 @@ Abre en tu navegador `http://localhost:8000` para acceder a la interfaz WebDCS, 
 En [`callibration_flight`](./callibration_flight) y [`CHANGELOG.md`](CHANGELOG.md) se documentan:
 *   **Fidelidad Cinemática:** Calibración de la rigidez inercial en giros de actitud y control de guiñada amortiguado para replicar límites de aeronaves reales.
 *   **Robustez de Visión Monocular Pura:** Desacople del Time-To-Collision de la distancia estática, eliminando oscilaciones en zigzag (*slalom*) y adaptando el crucero al ancho de calle.
+*   **Calibración de TTC contra el canal depth:** `TTC_EVASION_THRESHOLD`/`TTC_SAFE_THRESHOLD` calibrados con 3735 registros de vuelo real (aproximación frontal, cañón recto, giros de yaw) — AUC 0.96–0.97 para el evento "colisión dentro de τ segundos" pese a correlación puntual baja del valor estimado.
 *   **Benchmark de Inferencia Local:** Tiempos de respuesta de modelos compactos de 2B-4B parámetros corriendo en paralelo con el lazo de percepción por flujo óptico.
+*   **Comparación de brazos (SLM vs FSM vs Reactivo):** primeros batches end-to-end con `experiments/runner.py` validaron el pipeline de instrumentación (logging, latencias por ciclo, SPL) y expusieron y corrigieron un deadlock real en el mecanismo de escape por altura. La corrida comparativa final de la tesis, con el servidor SLM disponible durante toda la corrida, está pendiente.
 
 ---
 

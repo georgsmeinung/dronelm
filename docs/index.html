@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap"
     rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css">
@@ -60,6 +60,7 @@
           <li><a href="#changelog">Historial de Cambios</a></li>
           <li><a href="#instalacion">Instalación y Uso</a></li>
         </ul>
+        <a class="nav-page" href="grafo-de-control.html">Grafo de Control Táctico</a>
       </nav>
     </aside>
 
@@ -79,8 +80,8 @@
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
-          <span class="badge-pill badge-green" style="background: rgba(118, 185, 0, 0.2); color: #76B900; border: 1px solid #76B900;">NVIDIA TensorRT 2ms</span>
-          <span class="badge-pill badge-teal" style="background: rgba(0, 150, 136, 0.2); color: #009688; border: 1px solid #009688;">FastAPI WebDCS</span>
+          <span class="badge-pill badge-green">NVIDIA TensorRT 2ms</span>
+          <span class="badge-pill badge-teal">FastAPI WebDCS</span>
         </div>
       </header>
 
@@ -123,31 +124,57 @@
 
         <h3>2. Lazo de Vuelo Táctico Autónomo (In-Flight - <code>airsim-loop</code>)</h3>
         <p>
-          Es un bucle autónomo continuo de alta frecuencia implementado sobre <strong>LangGraph</strong> que coordina la
-          percepción monocular, la detección geométrica de obstáculos y la deliberación inteligente:
+          Es un bucle autónomo continuo implementado sobre <strong>LangGraph</strong> que corre a 5 Hz y coordina la
+          percepción monocular, la evaluación de riesgo y la deliberación inteligente. Cada ciclo captura un fotograma y
+          telemetría, produce un descriptor de escena, elige <strong>una</strong> macro-acción y la traduce a un comando
+          de velocidad en <em>body frame</em>:
         </p>
         <ul>
-          <li><strong>Flujo Óptico y Estimación de TTC (<code>optical_flow_node</code> / <code>ttc_router</code>):</strong> Monitorea el foco de expansión (FOE) y la divergencia radial entre fotogramas consecutivos. Si el Tiempo de Colisión estimado cae por debajo del umbral crítico (TTC &lt; 2.5s), activa de inmediato el frenado preventivo del dron.</li>
-          <li><strong>Segmentación Geométrica IPM y Cálculo de Oclusión (<code>ipm_segmentation_node</code>):</strong> Mediante matrices de homografía de suelo (IPM) y superpíxeles compactos (SLIC), aísla estructuras tridimensionales en solo 26.6ms sin redes neuronales y calcula el <em>Ratio de Oclusión</em> porcentual del campo visual.</li>
-          <li><strong>Enrutador de Muros Ciegos (<code>blind_wall_router</code>):</strong> Si el obstáculo cubre el campo visual masivamente (Ratio &ge; 90%, e.g., pared sólida de rascacielos), activa un <em>Bypass Determinista</em> (<code>GIRAR_90</code>) para orientar la cámara al corredor lateral sin despertar al VLM, evitando parálisis y alucinaciones.</li>
-          <li><strong>Cerebro Deliberativo Multimodal (VLM / SLM - <code>hover_and_slm</code>):</strong> Para oclusiones parciales (&lt; 90%), el dron envía una secuencia temporal FIFO de hasta 4 fotogramas anotados ($t-3, t-2, t-1, t$) en base64 a un VLM local (Qwen2.5-VL-3B) para evaluar pasillos libres y determinar macro-acciones (<code>AVANZAR</code>, <code>EVADIR_IZQUIERDA</code>, <code>EVADIR_DERECHA</code>, <code>GANAR_ALTURA</code>).</li>
-          <li><strong>Navegación Urbana en Cuadrícula (Manhattan Detour & Cornering):</strong> Inyección dinámica de sub-waypoints de esquina (<code>CORNER_WP</code>) con alineación ortogonal estricta ($0^\circ, \pm 90^\circ, 180^\circ$), eliminando oscilaciones en zigzag y el efecto imán contra fachadas.</li>
-          <li><strong>Aterrizaje Autónomo:</strong> Detección de fin de ruta, descenso controlado con <code>landAsync()</code>, desarme de motores y desasociación limpia del runner en WebDCS.</li>
+          <li><strong>Contrato único de percepción (<code>ObstacleField</code>):</strong> una grilla de 3×3 celdas
+            (sector × banda) con ocupación, TTC, divergencia y confianza. Es el único objeto que consultan el router, la
+            evasión, el nodo deliberativo y el logger; ninguno accede a datos crudos de flujo óptico.</li>
+          <li><strong>Flujo Óptico con derotación y FOE (<code>flow_ttc.py</code>):</strong> el flujo se corrige por la
+            actitud propia del dron antes de estimar nada, el FOE se resuelve por mínimos cuadrados ponderados con
+            recorte de outliers, y el TTC queda en <em>segundos reales</em> usando el <code>dt</code> de telemetría. Sin
+            evidencia suficiente (hover, giro puro) el campo devuelve confianza 0 y TTC infinito, en vez de disfrazar la
+            falta de señal.</li>
+          <li><strong>Router único de política (<code>policy_router</code>):</strong> una sola cascada de decisión
+            resuelve, en un paso, tanto el brazo activo como la táctica: crucero, corrección lateral, bypass
+            determinista de giro, o deliberación. Elimina estructuralmente la posibilidad de consultar al modelo dos
+            veces en el mismo ciclo.</li>
+          <li><strong>Cerebro Deliberativo Multimodal (VLM / SLM local):</strong> corre en un hilo aparte, con watchdog
+            calibrado y decodificación restringida por JSON Schema. El nodo <strong>nunca bloquea</strong> el lazo: encola
+            el pedido, frena ese ciclo, y aplica la decisión —o el fallback determinista— cuando llega.</li>
+          <li><strong>Tres brazos comparables (<code>AGENT_ARM</code>):</strong> SLM, máquina de estados determinista y
+            reactivo puro, sobre el mismo pipeline de percepción y la misma cinemática, de modo que la comparación aísle
+            exactamente la variable de interés: quién elige la macro-acción.</li>
+          <li><strong>Navegación Urbana en Cuadrícula (Manhattan):</strong> rumbos objetivo alineados a múltiplos de 90°
+            e inyección de sub-waypoints de esquina, eliminando oscilaciones en zigzag y el efecto imán contra fachadas.
+          </li>
+          <li><strong>Aterrizaje Autónomo:</strong> detección de fin de ruta, descenso controlado con
+            <code>landAsync()</code>, desarme de motores y desasociación limpia del runner en WebDCS.</li>
         </ul>
 
-        <figure>
-          <img
-            src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0823 Refinamiento Algoritmo de Navegacion.png"
-            alt="Refinamiento del Algoritmo de Navegación con Blind Wall Avoidance e IPM" loading="lazy" />
-          <figcaption>Figura 1 — Flujo del nuevo algoritmo de navegación: Flujo Óptico &rarr; IPM &rarr; Blind Wall Router &rarr; VLM / Bypass.</figcaption>
-        </figure>
+        <div class="alert-box">
+          <span class="tag">Referencia técnica</span>
+          <p>
+            La configuración completa del grafo —topología, esquema de estado, cascada de decisión del router, máquina
+            de escape de deadlock, cinemática por macro-acción, tabla de umbrales con su origen e invariantes con el
+            test que verifica cada una— está documentada en
+            <strong><a href="grafo-de-control.html">Grafo de Control Táctico</a></strong>.
+          </p>
+        </div>
 
-        <figure>
-          <img
-            src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0823 Nuevo Grafo de Navegacion.png"
-            alt="Grafo de Navegación en LangGraph con Enrutador de Muros Ciegos" loading="lazy" />
-          <figcaption>Figura 2 — Grafo de ejecución en LangGraph integrando el enrutador de muros ciegos y deliberación VLM.</figcaption>
-        </figure>
+        <div class="alert-box">
+          <span class="tag">Nota de arquitectura · 2026-08</span>
+          <p>
+            Los módulos de <strong>YOLO</strong>, <strong>segmentación IPM</strong>, el <strong>enrutador de muros
+              ciegos</strong> y el <strong>gate de bordes Canny/XOR</strong> descritos en las entradas del historial de
+            julio y agosto fueron <strong>retirados</strong> del pipeline, cada uno con evidencia medida en vuelo real
+            que justifica el retiro. El historial de cambios más abajo los conserva como registro cronológico del
+            proceso, no como descripción del sistema actual.
+          </p>
+        </div>
       </section>
 
       <!-- Estructura del Repositorio -->
@@ -339,6 +366,46 @@
         <p>Evolución reciente del repositorio y hitos de desarrollo alcanzados:</p>
 
         <div class="timeline">
+          <!-- Item 2026-08-24 -->
+          <div class="timeline-item current">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              2026-08-24
+              <span class="tag">Reconstrucción del lazo</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Reconstrucción del Lazo Táctico y Corrección del Deadlock de Escape</h4>
+              <p>Implementación de las fases F0–F4 del plan de mejoras, derivadas de una revisión crítica cuyo hallazgo
+                central fue que el contrato de percepción había quedado roto al retirar YOLO: la lista de obstáculos
+                detectados quedaba siempre vacía, dejando ciegos al router, al fallback determinista y al override de
+                seguridad, mientras el resto del sistema seguía escrito como si existiera.</p>
+              <ul>
+                <li><strong>Contrato único de percepción (<code>ObstacleField</code>)</strong> y estimador de TTC con
+                  derotación y FOE en segundos reales, calibrado contra el canal depth (AUC 0.96–0.97 sobre 3735
+                  registros de vuelo).</li>
+                <li><strong>Lazo desbloqueado:</strong> actuador no bloqueante, cliente AirSim único inyectado y
+                  consulta al SLM en hilo aparte con watchdog. El período del lazo pasó a ser consecuencia de la
+                  captura, no de la latencia del modelo.</li>
+                <li><strong>Deadlock del escape por altura, corregido:</strong> un vuelo de 76 ciclos reveló un estado
+                  absorbente en el que el dron subía indefinidamente sin consultar al SLM ni una vez. La causa raíz era
+                  una clave de control que LangGraph descartaba en silencio por no estar declarada en el esquema del
+                  grafo, más una red de seguridad que reseteaba su propio contador y se convertía en un ciclo límite.
+                </li>
+                <li><strong>Instrumentación experimental:</strong> tres brazos comparables
+                  (<code>AGENT_ARM=slm|fsm|reactive</code>), logging JSONL por ciclo, framework de corridas batch y 94
+                  tests automatizados (antes no había ninguno).</li>
+              </ul>
+              <p>Detalle completo en <a href="grafo-de-control.html"><strong>Grafo de Control Táctico</strong></a>.</p>
+              <figure>
+                <img
+                  src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0824 Reconstruccion del lazo tactico.jpg"
+                  alt="Reconstrucción del lazo táctico" loading="lazy" />
+                <figcaption>Reconstrucción del lazo táctico: percepción, router único de política y deliberación
+                  asíncrona.</figcaption>
+              </figure>
+            </div>
+          </div>
+
           <!-- Item 2026-08-23 -->
           <div class="timeline-item">
             <div class="timeline-badge"></div>
@@ -484,7 +551,7 @@
               <figure>
                 <img
                   src="https://raw.githubusercontent.com/georgsmeinung/dronelm/main/informe/2026-0812 Diagrama Bucle de Control.png"
-                  alt="Diagrama Bucle de Control LangGraph" loading="lazy" style="max-width: 500px;" />
+                  alt="Diagrama Bucle de Control LangGraph" loading="lazy" />
                 <figcaption>Diagrama del bucle de control jerárquico multinivel en LangGraph.</figcaption>
               </figure>
             </div>
@@ -742,9 +809,8 @@ python -m airsim_plan.webdcs.server</code></pre>
 
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
-        <p style="margin-top: 0.5rem; font-size: 0.8rem;">Desarrollado y mantenido para el repositorio
-          <code>georgsmeinung/dronelm</code>.
-        </p>
+        <p>Repositorio: georgsmeinung/dronelm</p>
+        <p>Actividad: 2026-08-24</p>
       </footer>
     </main>
   </div>

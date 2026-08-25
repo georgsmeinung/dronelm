@@ -77,13 +77,19 @@ def test_waiting_for_slm_does_not_trigger_altitude_escape(monkeypatch):
         service.stop()
 
 
-def test_max_consecutive_escapes_switches_to_brake(monkeypatch):
+def test_max_consecutive_escapes_latches_and_changes_strategy(monkeypatch):
     """Fix 3 (deliberative.py): tras MAX_CONSECUTIVE_ESCAPES disparos
 
-    seguidos del escape sincrono, deja de comandar GANAR_ALTURA y frena en
-    el lugar en vez de seguir subiendo sin techo.
+    seguidos del escape sincrono, deja de comandar GANAR_ALTURA, ENCLAVA el
+    escape y cambia de estrategia (giro) en vez de seguir subiendo sin techo.
+
+    Regresion del ciclo limite del 2026-0824: la version anterior frenaba
+    pero ademas ponia `_consecutive_escapes = 0` en la misma rama, asi que el
+    ciclo siguiente volvia a subir. La red de seguridad se reseteaba a si
+    misma y el resultado medido en vuelo fue (SUBIR, SUBIR, FRENAR) repetido
+    indefinidamente, con el dron ganando altura sin parar.
     """
-    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", lambda payload: (None, "", 5.0, "no deberia llamarse"))
+    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", lambda payload: (None, "", 5.0, "sin servidor SLM"))
     monkeypatch.setenv("MAX_CONSECUTIVE_ESCAPES", "3")
 
     from src.agents.deliberative import make_deliberation_service, make_deliberative_node
@@ -95,14 +101,90 @@ def test_max_consecutive_escapes_switches_to_brake(monkeypatch):
         state["obstacle_field"] = empty_field()
 
         actions = []
-        for _ in range(5):
+        for _ in range(8):
             state["evasion_stuck_cycles"] = 999  # simula atasco persistente
             state = node(state)
             actions.append(state["next_action"])
 
         assert actions[:3] == ["GANAR_ALTURA"] * 3
-        assert actions[3] == "FRENAR"
-        assert state["flight_status"] == "escape_agotado"
+        assert actions[3] == "GIRAR_90"  # cambio de estrategia, no mas ascenso
+        assert state["flight_status"] in ("escape_agotado", "hover_slm")
+        # El enclavamiento persiste: sin progreso horizontal medido, el escape
+        # por altura no vuelve a dispararse NUNCA (antes reaparecia al ciclo
+        # siguiente de cada freno).
+        assert "GANAR_ALTURA" not in actions[3:]
+        assert state["_escape_locked"] is True
+    finally:
+        service.stop()
+
+
+def test_escape_lock_releases_after_real_horizontal_progress(monkeypatch):
+    """El enclavamiento se levanta solo con progreso horizontal MEDIDO.
+
+    No puede colgarse de `evasion_stuck_cycles`: el propio escape pide
+    `_escape_reset`, que lo pone en cero al ciclo siguiente. Si se usara esa
+    senal, cada escape pareceria haber resuelto el atasco y el tope de
+    intentos consecutivos nunca se alcanzaria.
+    """
+    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", lambda payload: (None, "", 5.0, "sin servidor SLM"))
+    monkeypatch.setenv("MAX_CONSECUTIVE_ESCAPES", "1")
+
+    from src.agents.deliberative import make_deliberation_service, make_deliberative_node
+
+    service = make_deliberation_service()
+    node = make_deliberative_node(service)
+    try:
+        state = _base_state()
+        state["obstacle_field"] = empty_field()
+        state["waypoint_guidance"] = {"dist_xy": 80.0, "distance": 80.0, "bearing_err_deg": 0.0}
+
+        state["evasion_stuck_cycles"] = 999
+        state = node(state)
+        assert state["next_action"] == "GANAR_ALTURA"
+
+        # Sin progreso: se agota y enclava.
+        state["evasion_stuck_cycles"] = 999
+        state = node(state)
+        assert state["_escape_locked"] is True
+
+        # Con progreso horizontal real (80 -> 70m), el enclavamiento se libera
+        # y el escape vuelve a estar disponible.
+        state["waypoint_guidance"] = {"dist_xy": 70.0, "distance": 70.0, "bearing_err_deg": 0.0}
+        state["evasion_stuck_cycles"] = 999
+        state = node(state)
+        assert state["next_action"] == "GANAR_ALTURA"
+        assert state["_escape_locked"] is False
+    finally:
+        service.stop()
+
+
+def test_escape_does_not_fire_when_perception_sees_an_open_corridor(monkeypatch):
+    """El escape ya no es ciego a la percepcion.
+
+    En el vuelo del 2026-0824 el dron subio 12m seguidos mientras el
+    ObstacleField reportaba `DERECHA: DESPEJADO` ciclo tras ciclo: la rama de
+    escape se ejecutaba antes de mirar el campo.
+    """
+    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", lambda payload: (None, "", 5.0, "sin servidor SLM"))
+
+    from src.agents.deliberative import make_deliberation_service, make_deliberative_node
+    from src.navigation.waypoint_tracker import effective_stall_threshold
+
+    service = make_deliberation_service()
+    node = make_deliberative_node(service)
+    try:
+        cells = {(s, b): Cell(sector=s, band=b, occupancy=0.9, ttc_s=1.0, confidence=0.9) for s in SECTORS for b in BANDS}
+        for band in BANDS:  # corredor libre a la derecha, con evidencia valida
+            cells[("derecha", band)] = Cell(sector="derecha", band=band, occupancy=0.0, ttc_s=float("inf"), confidence=0.9)
+        field = ObstacleField(cells=cells, source="flow", foe=(0.0, 0.0), foe_confidence=1.0)
+
+        state = _base_state()
+        state["obstacle_field"] = field
+        state["waypoint_guidance"] = {"dist_xy": 80.0, "distance": 80.0, "bearing_err_deg": 30.0}
+        state["evasion_stuck_cycles"] = effective_stall_threshold()
+
+        state = node(state)
+        assert state["next_action"] != "GANAR_ALTURA"
     finally:
         service.stop()
 

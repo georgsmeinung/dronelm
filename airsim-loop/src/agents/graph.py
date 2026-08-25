@@ -30,7 +30,8 @@ except Exception:  # pragma: no cover
 # pyrefly: ignore [missing-import]
 from langgraph.graph import END, StateGraph
 
-from src.perception.obstacle_field import ObstacleField, empty_field
+from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
+from src.perception.obstacle_field import ObstacleField, empty_field, has_open_corridor
 
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")  # "slm" | "fsm" | "reactive"
 
@@ -89,6 +90,27 @@ class DroneState(TypedDict, total=False):
     _deliberation_pending: bool
     _consecutive_escapes: int
     _hover_alt_anchor: Optional[float]  # altitud anclada durante FRENAR prolongado (corrige deriva, ver motor_node)
+    # IMPORTANTE (2026-0824): LangGraph construye los canales del grafo a
+    # partir de ESTE esquema y descarta en silencio cualquier clave que un
+    # nodo escriba y no este declarada aca. Las cuatro de abajo se escribian
+    # sin declarar, asi que nunca sobrevivian a `graph.invoke()`:
+    #   - _escape_reset: el nodo deliberativo lo marca para que el lazo llame
+    #     a WaypointTracker.reset_progress(). Al perderse, el contador de
+    #     atasco NUNCA se reiniciaba: crecia monotono (5, 6, 8, 9, 11, ...
+    #     medidos en vuelo), el router quedaba clavado en "deliberative" y el
+    #     nodo deliberativo en su rama de escape -- el SLM no se consultaba
+    #     ni una vez en 76 ciclos. Este era el deadlock duro.
+    #   - _escape_locked: enclavamiento del escape agotado (ver deliberative).
+    #   - _delib_baseline / _delib_last_baselined_id: memoria corta de
+    #     resultados (F2.2), que por lo mismo nunca llego a acumular nada.
+    #   - inject_corner: inyeccion de sub-waypoints de esquina (Manhattan).
+    # Regla: toda clave que cruce la frontera nodo <-> lazo va declarada aca.
+    _escape_reset: bool
+    _escape_locked: bool
+    _escape_baseline_dist: Optional[float]
+    _delib_baseline: Optional[Dict[str, Any]]
+    _delib_last_baselined_id: Optional[int]
+    inject_corner: Optional[Dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
@@ -153,8 +175,12 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     def girar_90_node(state: DroneState) -> DroneState:
         telemetry = state.get("telemetry", {}) or {}
         field: ObstacleField = state.get("obstacle_field") or empty_field()
-        cmd = action_to_command("GIRAR_90", telemetry=telemetry)
-        cmd["rationale"] = f"FOV bloqueado ({field.blocked_fraction()*100:.0f}%). Girando 90° para buscar corredor."
+        # guidance se pasa para que el giro elija el lado del waypoint en vez
+        # de girar siempre a la derecha (ver action_map.GIRAR_90).
+        guidance = state.get("waypoint_guidance") or {}
+        cmd = action_to_command("GIRAR_90", guidance=guidance, telemetry=telemetry)
+        side = "izquierda" if cmd["yaw_rate"] < 0 else "derecha"
+        cmd["rationale"] = f"FOV bloqueado ({field.blocked_fraction()*100:.0f}%). Girando 90° hacia la {side} para buscar corredor."
         state["next_action"] = "GIRAR_90"
         state["velocity_command"] = cmd
         state["route"] = "girar_90"
@@ -244,20 +270,35 @@ def policy_router(state: DroneState) -> str:
     if AGENT_ARM == "fsm":
         return "fsm"
 
-    stuck_threshold = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
-    stuck = int(state.get("evasion_stuck_cycles", 0))
-    if stuck >= stuck_threshold:
-        return "deliberative"
-
     field: ObstacleField = state.get("obstacle_field") or empty_field()
+    guidance = state.get("waypoint_guidance") or {}
     ttc = field.min_ttc()
     center_blocked = field.is_blocked("centro")
     center_ttc = field.sector_ttc("centro")
 
+    # Persistencia de maniobra comprometida (anti flip-flop). Va ANTES del
+    # escape de deadlock: una maniobra ya comprometida -- incluido el giro de
+    # cambio de estrategia que emite el escape agotado -- no debe ser
+    # preemptada por el contador de atasco antes de llegar a ejecutarse. La
+    # condicion de TTC seguro sigue garantizando que una emergencia real si la
+    # interrumpa.
     active_man = state.get("active_maneuver")
     cycles_left = int(state.get("maneuver_cycles_left", 0))
     if active_man and cycles_left > 0 and ttc > TTC_EVASION_THRESHOLD:
         return "evasive"
+
+    # Escape de deadlock: ya no cortocircuita la percepcion. Si el campo tiene
+    # evidencia valida y ve un sector transitable, la decision tactica normal
+    # (evasive / keep_going, mas abajo) es estrictamente mejor que forzar la
+    # rama de escape -- en el vuelo del 2026-0824 el dron subio 12m mientras
+    # la percepcion reportaba `DERECHA: DESPEJADO` porque este `return`
+    # ocurria antes de mirar el campo. El bypass tiene techo (hard_stall_
+    # threshold): un campo "despejado" espurio no desactiva el escape para
+    # siempre.
+    stuck = int(state.get("evasion_stuck_cycles", 0))
+    if stuck >= effective_stall_threshold():
+        if stuck >= hard_stall_threshold() or not has_open_corridor(field, guidance):
+            return "deliberative"
 
     center_imminent = center_ttc <= TTC_EVASION_THRESHOLD
     if center_imminent or (center_blocked and center_ttc <= TTC_SAFE_THRESHOLD):

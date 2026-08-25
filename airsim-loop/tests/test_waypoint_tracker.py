@@ -1,6 +1,10 @@
 import math
 
-from src.navigation.waypoint_tracker import WaypointTracker
+from src.navigation.waypoint_tracker import (
+    WaypointTracker,
+    effective_stall_threshold,
+    hard_stall_threshold,
+)
 
 
 def test_single_waypoint_mission_completes():
@@ -100,6 +104,53 @@ def test_waypoint_advance_resets_progress_tracking():
     assert tracker.progress_stall_cycles == 1
     tracker.update({"x": 10, "y": 0, "z": -10})  # alcanza WP A
     assert tracker.progress_stall_cycles == 0
+
+
+def test_effective_stall_threshold_is_coherent_with_the_progress_epsilon(monkeypatch):
+    """Regresion 2026-0824: el umbral en CICLOS y el epsilon en METROS se
+    configuraban por separado, produciendo combinaciones imposibles.
+
+    Con eps=0.5m, umbral=5 ciclos y LOOP_HZ=5 hacia falta acercarse a 0.5 m/s
+    sostenidos para no acumular atasco; durante un giro cerrado el guiado da
+    ~0.25 m/s reales, asi que el escape por altura se disparaba solo a los 5
+    ciclos de arrancar la mision, sin ningun obstaculo.
+    """
+    monkeypatch.setenv("EVASION_STUCK_THRESHOLD", "5")
+    monkeypatch.setenv("WAYPOINT_PROGRESS_EPS_M", "0.5")
+    monkeypatch.setenv("LOOP_HZ", "5.0")
+    monkeypatch.setenv("MIN_PROGRESS_SPEED_MPS", "0.25")
+
+    threshold = effective_stall_threshold()
+    assert threshold == 10  # ceil(0.5 * 5 / 0.25), no los 5 configurados
+
+    # La velocidad de acercamiento exigida queda por debajo de la alcanzable.
+    assert 0.5 * 5.0 / threshold <= 0.25
+    assert hard_stall_threshold() > threshold
+
+
+def test_effective_stall_threshold_never_lowers_the_configured_value(monkeypatch):
+    monkeypatch.setenv("EVASION_STUCK_THRESHOLD", "40")
+    monkeypatch.setenv("WAYPOINT_PROGRESS_EPS_M", "0.5")
+    monkeypatch.setenv("LOOP_HZ", "5.0")
+    monkeypatch.setenv("MIN_PROGRESS_SPEED_MPS", "0.25")
+    assert effective_stall_threshold() == 40
+
+
+def test_sharp_turn_gets_more_yaw_authority():
+    """Regresion 2026-0824: con un tope unico de 15 deg/s, realinear un desvio
+    de ~70 grados tardaba mas que lo que tarda el contador de atasco en
+    dispararse -- el dron se declaraba atascado por no terminar un giro que el
+    propio limitador le impedia terminar a tiempo.
+    """
+    tracker = WaypointTracker([{"x": 100, "y": 0, "z": -10, "label": "WP1"}])
+    pos = {"x": 0.0, "y": 0.0, "z": -10.0}
+
+    g_small = tracker.compute_guidance(pos, current_yaw=math.radians(10.0), cruise_speed=2.0)
+    assert abs(g_small["yaw_rate"]) <= 15.0  # regimen normal: tope historico
+
+    tracker_sharp = WaypointTracker([{"x": 100, "y": 0, "z": -10, "label": "WP1"}])
+    g_sharp = tracker_sharp.compute_guidance(pos, current_yaw=math.radians(72.0), cruise_speed=2.0)
+    assert abs(g_sharp["yaw_rate"]) > 15.0  # giro brusco: mas autoridad
 
 
 def test_guidance_sharp_turn_hysteresis_does_not_flip_flop():

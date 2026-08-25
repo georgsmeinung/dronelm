@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Configuración del grafo de control táctico de airsim-loop: topología LangGraph, esquema de estado, cascada de decisión del router, máquina de escape de deadlock, cinemática por macro-acción, umbrales calibrados e invariantes verificadas." />
+  <title>Grafo de Control Táctico — Navegación Autónoma de Drones con SLM/VLM</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+      <div class="university-logo-container">
+        <img class="university-logo"
+          src="https://www.austral.edu.ar/wp-content/uploads/2022/10/facultades-horizontales-03.png"
+          alt="Universidad Austral - Facultad de Ingeniería" />
+      </div>
+
+      <div class="thesis-meta">
+        <h4>Tesis de Maestría</h4>
+        <div class="thesis-meta-item">
+          <span class="meta-label">Alumno</span>
+          <span class="meta-value"><a href="https://www.linkedin.com/in/jorgenicolau/" target="_blank">Jorge E.
+              Nicolau</a></span>
+        </div>
+        <div class="thesis-meta-item">
+          <span class="meta-label">Directores</span>
+          <span class="meta-value">
+            <a href="https://www.linkedin.com/in/rodrigodelrosso/" target="_blank">Rodrigo Del Rosso</a><br />
+            <a href="https://www.linkedin.com/in/ezequiel-nuske-15137862/" target="_blank">Ezequiel Nuske</a>
+          </span>
+        </div>
+        <div class="thesis-meta-item">
+          <span class="meta-label">Documento</span>
+          <span class="meta-value">Referencia técnica<br />Estado al 2026-08-24</span>
+        </div>
+      </div>
+
+      <nav>
+        <h5>Contenido</h5>
+        <ul>
+          <li><a href="#panorama" class="active">1 · Panorama</a></li>
+          <li><a href="#topologia">2 · Topología</a></li>
+          <li><a href="#estado">3 · El estado</a></li>
+          <li><a href="#lazo">4 · El lazo externo</a></li>
+          <li><a href="#nodos">5 · Nodos</a></li>
+          <li><a href="#routers">6 · Routers</a></li>
+          <li><a href="#deliberativo">7 · Nodo deliberativo</a></li>
+          <li><a href="#cinematica">8 · Cinemática</a></li>
+          <li><a href="#umbrales">9 · Umbrales</a></li>
+          <li><a href="#invariantes">10 · Invariantes</a></li>
+          <li><a href="#limitaciones">11 · Limitaciones</a></li>
+        </ul>
+        <a class="nav-page" href="index.html">Volver al resumen del proyecto</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main>
+      <header>
+        <p class="eyebrow">airsim-loop · lazo táctico · 2026-08-24</p>
+        <h1>Configuración del grafo de control</h1>
+        <p class="lead-subtitle">
+          Referencia del lazo de navegación autónoma <strong>tal como está en el código</strong>: topología, esquema de
+          estado, cascada de decisión, máquina de escape y la tabla completa de umbrales con su origen. Cada valor es
+          verificable en el archivo que se cita.
+        </p>
+        <dl class="readout">
+          <div><dt>Frecuencia</dt><dd>5.0 <span>Hz</span></dd></div>
+          <div><dt>Brazo activo</dt><dd>slm</dd></div>
+          <div><dt>TTC evasión</dt><dd>3.2 <span>s</span></dd></div>
+          <div><dt>TTC seguro</dt><dd>4.6 <span>s</span></dd></div>
+          <div><dt>Umbral atasco</dt><dd>10 <span>ciclos</span></dd></div>
+          <div><dt>Escapes máx</dt><dd>2</dd></div>
+          <div><dt>Watchdog SLM</dt><dd>6000 <span>ms</span></dd></div>
+          <div><dt>Tests</dt><dd>94</dd></div>
+        </dl>
+        <div class="badges-row">
+          <a class="badge-pill badge-blue"
+            href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/GRAFO-DE-CONTROL.md">Fuente:
+            GRAFO-DE-CONTROL.md</a>
+          <a class="badge-pill badge-gray"
+            href="https://github.com/georgsmeinung/dronelm/tree/main/airsim-loop">Módulo: airsim-loop</a>
+          <span class="badge-pill badge-teal">LangGraph · Cosys-AirSim · UE 5.5</span>
+        </div>
+      </header>
+
+      <!-- 1 -->
+      <section id="panorama">
+        <h2 class="numbered"><span class="sec-n">01</span><span>Panorama</span></h2>
+        <p class="lead">
+          El grafo es un lazo de control jerárquico compilado con LangGraph que corre a <code>LOOP_HZ = 5.0</code>
+          (período nominal 200 ms). Cada ciclo captura un fotograma y telemetría, produce un descriptor de escena, elige
+          <strong>una</strong> macro-acción y la traduce a un comando de velocidad en <em>body frame</em>.
+        </p>
+
+        <p>Tres principios estructuran la configuración actual:</p>
+        <ol>
+          <li><strong>Un solo camino por ciclo.</strong> Un único router de política decide el destino táctico; ningún
+            nodo invoca otro nodo dentro de su cuerpo. Esto elimina estructuralmente la posibilidad de consultar al SLM
+            dos veces en el mismo ciclo.</li>
+          <li><strong>El lazo nunca se bloquea.</strong> La consulta al SLM corre en un hilo aparte y el actuador es
+            <em>last-command-wins</em>: el período del lazo es consecuencia de la captura, no de la latencia del modelo
+            ni del actuador.</li>
+          <li><strong>Un solo contrato de percepción.</strong> Todos los consumidores leen <code>ObstacleField</code> y
+            nada más. No hay acceso a flujo óptico crudo, máscaras ni detecciones desde la capa de política.</li>
+        </ol>
+
+        <p>
+          El “cerebro” que resuelve las situaciones de riesgo es seleccionable con <code>AGENT_ARM</code>
+          (<code>slm</code> · <code>fsm</code> · <code>reactive</code>) sobre <strong>el mismo pipeline de percepción y
+            la misma cinemática</strong>, de modo que la comparación entre brazos aísle exactamente la variable de
+          interés: quién elige la macro-acción.
+        </p>
+      </section>
+
+      <!-- 2 -->
+      <section id="topologia">
+        <h2 class="numbered"><span class="sec-n">02</span><span>Topología</span></h2>
+
+        <figure>
+          <div class="fig-scroll">
+            <svg viewBox="0 0 1040 470" role="img"
+              aria-label="Topología del grafo: capture alimenta un router de degradación que deriva a hover de seguridad o a percepción; percepción alimenta el router de política, que resuelve hacia uno de cinco nodos de acción, y todos convergen en el nodo motor antes de END.">
+              <defs>
+                <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+                  <polygon class="dg-arrow" points="0 0, 10 4, 0 8" />
+                </marker>
+                <marker id="ara" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+                  <polygon class="dg-arrow-a" points="0 0, 10 4, 0 8" />
+                </marker>
+              </defs>
+
+              <rect class="dg-box" x="20" y="208" width="104" height="44" rx="3" />
+              <text class="dg-name" x="72" y="235" text-anchor="middle">capture</text>
+
+              <rect class="dg-router" x="150" y="208" width="124" height="44" rx="3" />
+              <text class="dg-name" x="212" y="228" text-anchor="middle">degraded</text>
+              <text class="dg-name" x="212" y="243" text-anchor="middle">_router</text>
+
+              <rect class="dg-box" x="300" y="208" width="104" height="44" rx="3" />
+              <text class="dg-name" x="352" y="235" text-anchor="middle">perception</text>
+
+              <rect class="dg-router" x="430" y="208" width="124" height="44" rx="3" />
+              <text class="dg-name" x="492" y="228" text-anchor="middle">policy</text>
+              <text class="dg-name" x="492" y="243" text-anchor="middle">_router</text>
+
+              <rect class="dg-box" x="300" y="16" width="180" height="44" rx="3" />
+              <text class="dg-name" x="390" y="35" text-anchor="middle">degraded_hover</text>
+              <text class="dg-sub" x="390" y="50" text-anchor="middle">FRENAR, sin percepción</text>
+
+              <rect class="dg-box" x="590" y="72" width="180" height="44" rx="3" />
+              <text class="dg-name" x="680" y="91" text-anchor="middle">keep_going</text>
+              <text class="dg-sub" x="680" y="106" text-anchor="middle">camino despejado</text>
+
+              <rect class="dg-box" x="590" y="140" width="180" height="44" rx="3" />
+              <text class="dg-name" x="680" y="159" text-anchor="middle">evasive</text>
+              <text class="dg-sub" x="680" y="174" text-anchor="middle">maniobra activa · TTC ≤ 4.6 s</text>
+
+              <rect class="dg-box" x="590" y="208" width="180" height="44" rx="3" />
+              <text class="dg-name" x="680" y="227" text-anchor="middle">girar_90</text>
+              <text class="dg-sub" x="680" y="242" text-anchor="middle">FOV bloqueado &gt; 60 %</text>
+
+              <rect class="dg-focus" x="590" y="276" width="180" height="44" rx="3" />
+              <text class="dg-name-a" x="680" y="295" text-anchor="middle">deliberative</text>
+              <text class="dg-sub" x="680" y="310" text-anchor="middle">bloqueo frontal · atasco</text>
+
+              <rect class="dg-box" x="590" y="344" width="180" height="44" rx="3" />
+              <text class="dg-name" x="680" y="363" text-anchor="middle">fsm</text>
+              <text class="dg-sub" x="680" y="378" text-anchor="middle">AGENT_ARM = fsm</text>
+
+              <rect class="dg-box" x="810" y="206" width="130" height="48" rx="3" />
+              <text class="dg-name" x="875" y="226" text-anchor="middle">motor</text>
+              <text class="dg-sub" x="875" y="241" text-anchor="middle">1 comando / ciclo</text>
+
+              <rect class="dg-box" x="972" y="219" width="52" height="22" rx="11" />
+              <text class="dg-lab" x="998" y="234" text-anchor="middle">END</text>
+
+              <line class="dg-edge" x1="124" y1="230" x2="146" y2="230" marker-end="url(#ar)" />
+              <line class="dg-edge" x1="274" y1="230" x2="296" y2="230" marker-end="url(#ar)" />
+              <text class="dg-lab" x="285" y="222" text-anchor="middle">ok</text>
+              <line class="dg-edge" x1="404" y1="230" x2="426" y2="230" marker-end="url(#ar)" />
+
+              <path class="dg-edge" d="M212 208 L212 38 L296 38" marker-end="url(#ar)" />
+              <text class="dg-lab" x="218" y="120">degradado</text>
+              <path class="dg-edge" d="M480 38 L875 38 L875 202" marker-end="url(#ar)" />
+
+              <path class="dg-edge" d="M554 230 L572 230 L572 94 L586 94" marker-end="url(#ar)" />
+              <path class="dg-edge" d="M554 230 L572 230 L572 162 L586 162" marker-end="url(#ar)" />
+              <path class="dg-edge" d="M554 230 L586 230" marker-end="url(#ar)" />
+              <path class="dg-edge-a" d="M554 230 L572 230 L572 298 L586 298" marker-end="url(#ara)" />
+              <path class="dg-edge" d="M554 230 L572 230 L572 366 L586 366" marker-end="url(#ar)" />
+
+              <path class="dg-edge" d="M770 94 L790 94 L790 230 L806 230" marker-end="url(#ar)" />
+              <path class="dg-edge" d="M770 162 L790 162 L790 230" />
+              <path class="dg-edge-a" d="M770 298 L790 298 L790 230" />
+              <path class="dg-edge" d="M770 366 L790 366 L790 230" />
+              <path class="dg-edge" d="M770 230 L806 230" marker-end="url(#ar)" />
+              <line class="dg-edge" x1="940" y1="230" x2="968" y2="230" marker-end="url(#ar)" />
+            </svg>
+          </div>
+          <figcaption><b>La política vive en las aristas condicionales, no en los nodos.</b> Los dos rombos punteados son
+            los únicos puntos de decisión del grafo; las etiquetas bajo cada nodo son la guarda que lo selecciona. Todo
+            camino converge en <code>motor</code>: hay exactamente un comando de velocidad emitido por ciclo, cualquiera
+            sea la rama tomada. En teal, la rama deliberativa —donde viven el SLM y el escape de deadlock— objeto de las
+            secciones 6 y 7.</figcaption>
+        </figure>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Origen</th>
+                <th>Tipo</th>
+                <th>Destinos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">(entry)</td>
+                <td>fija</td>
+                <td class="mono">capture</td>
+              </tr>
+              <tr>
+                <td class="mono">capture</td>
+                <td>condicional · <code>degraded_router</code></td>
+                <td class="mono wrap">degraded_hover, perception</td>
+              </tr>
+              <tr>
+                <td class="mono">perception</td>
+                <td>condicional · <code>policy_router</code></td>
+                <td class="mono wrap">keep_going, evasive, girar_90, deliberative, fsm</td>
+              </tr>
+              <tr>
+                <td class="mono wrap">las 6 ramas de acción</td>
+                <td>fijas</td>
+                <td class="mono">motor</td>
+              </tr>
+              <tr>
+                <td class="mono">motor</td>
+                <td>fija</td>
+                <td class="mono">END</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="estado">
+        <h2 class="numbered"><span class="sec-n">03</span><span>El estado <code>DroneState</code></span></h2>
+
+        <p>
+          <code>DroneState</code> es un <code>TypedDict</code> y LangGraph construye los <strong>canales</strong> del
+          grafo a partir de él. Esto tiene una consecuencia operativa que es parte de la configuración, no un detalle de
+          implementación:
+        </p>
+
+        <div class="note caution">
+          <span class="tag">Regla de declaración</span>
+          <p>Toda clave que cruce la frontera <em>nodo ↔ lazo externo</em> <strong>debe estar declarada</strong> en
+            <code>DroneState</code>. Una clave que un nodo escriba sin declarar se descarta en silencio en
+            <code>graph.invoke()</code> — no hay error, no hay warning, el dato simplemente no existe del otro lado.</p>
+        </div>
+
+        <p>
+          Esa regla es la que se violaba antes del 2026-08-24 con <code>_escape_reset</code>, y produjo un estado
+          absorbente: el contador de atasco nunca se reiniciaba, el router quedaba clavado en la rama deliberativa y el
+          SLM no se consultaba ni una vez en 76 ciclos de vuelo.
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Rol</th>
+                <th>Campos</th>
+                <th>Escrito por</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Percepción y sensores</td>
+                <td class="mono wrap">rgb_image, prev_image, frame_history, telemetry, prev_telemetry, degraded,
+                  obstacle_field, estimated_ttc, scene_summary</td>
+                <td><code>capture</code>, <code>perception</code></td>
+              </tr>
+              <tr>
+                <td>Misión y guiado</td>
+                <td class="mono wrap">waypoints, current_wp_index, target_waypoint, waypoint_guidance,
+                  mission_completed</td>
+                <td>lazo externo</td>
+              </tr>
+              <tr>
+                <td>Decisión y actuación</td>
+                <td class="mono wrap">next_action, velocity_command, route, flight_status</td>
+                <td>nodos de política</td>
+              </tr>
+              <tr>
+                <td>Deliberación</td>
+                <td class="mono wrap">deliberations[], last_deliberation, slm_request_id, _deliberation_pending,
+                  _delib_outcomes, _delib_baseline, _delib_last_baselined_id</td>
+                <td><code>deliberative</code> + lazo</td>
+              </tr>
+              <tr>
+                <td>Persistencia de maniobra</td>
+                <td class="mono wrap">active_maneuver, maneuver_cycles_left, maneuver_command</td>
+                <td>nodos de política</td>
+              </tr>
+              <tr>
+                <td>Escape de deadlock</td>
+                <td class="mono wrap">evasion_stuck_cycles, _consecutive_escapes, _escape_locked,
+                  _escape_baseline_dist, _escape_reset</td>
+                <td><code>deliberative</code>, <code>fsm</code> + lazo</td>
+              </tr>
+              <tr>
+                <td>Otros</td>
+                <td class="mono wrap">_hover_alt_anchor, inject_corner</td>
+                <td><code>motor</code>, lazo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>La auditoría de cada deliberación queda completa en <code>deliberations[]</code>: prompt, respuesta cruda,
+          latencia, si fue fallback, si hubo timeout y si adhirió al esquema JSON.</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="lazo">
+        <h2 class="numbered"><span class="sec-n">04</span><span>El lazo externo</span></h2>
+        <p>No todo vive en el grafo. El orden por ciclo en <code>main.py</code> es:</p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Paso</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="step">1</td>
+                <td class="mono">get_telemetry()</td>
+                <td>Telemetría fresca, independiente de la captura de imagen</td>
+              </tr>
+              <tr>
+                <td class="step">2</td>
+                <td class="mono">tracker.update(pos)</td>
+                <td>Avanza el waypoint activo si se entró en el radio de aceptación (3.5 m)</td>
+              </tr>
+              <tr>
+                <td class="step">3</td>
+                <td class="mono">compute_guidance()</td>
+                <td>Vector de guiado con corrección de <em>cross-track error</em> al corredor de calle, histéresis de
+                  régimen y suavizado EMA</td>
+              </tr>
+              <tr>
+                <td class="step">4</td>
+                <td class="mono">record_progress(dist_xy)</td>
+                <td>Actualiza el contador de atasco, <strong>salvo</strong> que <code>_deliberation_pending</code> esté
+                  activo. Distancia <strong>horizontal</strong>: subir no debe empeorar la métrica que evalúa un escape
+                  por altura</td>
+              </tr>
+              <tr>
+                <td class="step">5</td>
+                <td class="mono">graph.invoke(state)</td>
+                <td>Un ciclo completo del grafo</td>
+              </tr>
+              <tr>
+                <td class="step">6</td>
+                <td class="mono">pop("_escape_reset")</td>
+                <td>Si estaba marcado → <code>tracker.reset_progress()</code></td>
+              </tr>
+              <tr>
+                <td class="step">7</td>
+                <td class="mono">_update_delib_outcomes()</td>
+                <td>Mide el efecto de la decisión anterior (Δdistancia, ΔTTC) y lo realimenta al prompt</td>
+              </tr>
+              <tr>
+                <td class="step">8</td>
+                <td class="mono">inject_corner</td>
+                <td>Inyecta sub-waypoint de esquina si el grafo lo propuso</td>
+              </tr>
+              <tr>
+                <td class="step">9</td>
+                <td>Salidas</td>
+                <td>Estado por consola, logging JSONL, streaming a WebDCS, chequeo de fin de misión</td>
+              </tr>
+              <tr>
+                <td class="step">10</td>
+                <td class="mono">sleep</td>
+                <td>Hasta completar el período de <code>LOOP_HZ</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Los pasos <strong>6 y 8</strong> son exactamente los que dependen de la regla de declaración de la sección 3.
+        </p>
+      </section>
+
+      <!-- 5 -->
+      <section id="nodos">
+        <h2 class="numbered"><span class="sec-n">05</span><span>Nodos</span></h2>
+
+        <h3><code>capture_node</code></h3>
+        <p>Un único <code>AirSimClient</code> por proceso, inyectado en <code>compile_workflow()</code>. Con
+          <code>AIRSIM_STRICT=true</code> (default en vuelo), si AirSim no responde <strong>no</strong> fabrica un
+          fotograma sintético: marca <code>degraded=True</code> y el ciclo deriva a hover de seguridad. Mantiene el ring
+          buffer <code>frame_history</code> solo con fotogramas reales.</p>
+
+        <h3><code>degraded_hover_node</code></h3>
+        <p><code>FRENAR</code> explícito, sin percepción ni deliberación. Es la rama de “no sé nada de mi entorno”: la
+          única respuesta correcta es no moverse.</p>
+
+        <h3><code>perception_node</code></h3>
+        <p>Único punto de percepción pesada. <code>FlowTTCEstimator</code> —instanciado <strong>una vez</strong>, no por
+          fotograma— produce el <code>ObstacleField</code> del ciclo: flujo óptico → derotación por actitud → FOE por
+          mínimos cuadrados ponderados con recorte de outliers → TTC en segundos reales usando el <code>dt</code> de
+          telemetría. Sin evidencia suficiente (hover, giro puro, flujo bajo el piso de ruido) devuelve
+          <code>confidence = 0</code> y <code>ttc = inf</code>; no hay clamp cosmético que disfrace la falta de señal.
+        </p>
+
+        <h3><code>keep_going</code> · <code>reactive_node</code></h3>
+        <p>Guiado nominal a waypoint: toma <code>vx</code>, <code>vz</code> y <code>yaw_rate</code> directamente del
+          guiado. Es también el brazo completo cuando <code>AGENT_ARM=reactive</code> — la cota inferior de la
+          comparación: navega, no evade.</p>
+
+        <h3><code>evasive_node</code></h3>
+        <p>Dos modos. <strong>Continuación de maniobra comprometida</strong> (anti flip-flop): si hay
+          <code>active_maneuver</code> con ciclos restantes, la sostiene cerrando el lazo sobre <code>target_yaw</code>
+          (±15 °/s, zona muerta de 3°, empujón de <code>vx = 0.8</code> una vez alineado). <strong>Corrección lateral
+            rápida</strong>: elige el lado con menor ocupación —a igualdad, mayor TTC— y avanza a <code>vx = 1.2</code>
+          mientras gira.</p>
+
+        <h3><code>girar_90_node</code></h3>
+        <p>Bypass determinista para FOV mayormente bloqueado: giro sobre el eje, sin traslación, con el rumbo objetivo
+          <em>snapeado</em> a la cuadrícula Manhattan (múltiplo de 90°). <strong>Elige el lado según el error de rumbo al
+            waypoint</strong>, no siempre a la derecha.</p>
+
+        <h3><code>fsm_node</code> · brazo <code>fsm</code></h3>
+        <p>Máquina de estados determinista (<code>CRUISE</code>, <code>AVOID_LEFT</code>, <code>AVOID_RIGHT</code>,
+          <code>CLIMB</code>, <code>BRAKE</code>) sobre el <strong>mismo</strong> <code>ObstacleField</code> y la
+          <strong>misma</strong> <code>action_to_command()</code> que usa el brazo SLM. Tiene la misma persistencia de
+          maniobra y el mismo enclavamiento de escape, para que la comparación no mida quién tiene mejor puesta la
+          salvaguarda sino quién elige mejor la acción.</p>
+
+        <h3><code>motor_node</code></h3>
+        <p>Emite el comando final, con dos responsabilidades adicionales:</p>
+        <ul>
+          <li><strong>Ancla de altitud durante <code>FRENAR</code>.</strong>
+            <code>moveByVelocityBodyFrameAsync(vz=0)</code> reemitido cada ciclo es un controlador de
+            <em>velocidad</em>, no de altitud: pedir “velocidad cero” repetidamente no es lo mismo que pedir “quedate en
+            esta altura” (≈9 m de deriva medidos en 120 s de freno sostenido). El nodo ancla la altitud al primer ciclo
+            de freno y corrige <code>vz</code> con zona muerta de 0.3 m, <code>kp = 0.35</code> y tope ±0.8 m/s.</li>
+          <li><strong>Actuación no bloqueante.</strong> <code>execute_velocity()</code> no hace <code>.join()</code>
+            sobre el comando anterior; <code>cancelLastTask()</code> descarta el comando en curso sin bloquear,
+            permitiendo abortar una maniobra a mitad de ejecución.</li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section id="routers">
+        <h2 class="numbered"><span class="sec-n">06</span><span>Routers</span></h2>
+
+        <h3><code>degraded_router</code></h3>
+        <p>Una línea: <code>degraded_hover</code> si <code>degraded</code>, si no <code>perception</code>.</p>
+
+        <h3><code>policy_router</code> — la cascada</h3>
+        <p>El orden de evaluación <strong>es</strong> la política. Se evalúa de arriba hacia abajo y el primer match
+          gana:</p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Condición</th>
+                <th>Destino</th>
+                <th>Racional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="step">0</td>
+                <td class="mono wrap">AGENT_ARM ∈ {reactive, fsm}</td>
+                <td class="mono wrap">keep_going / fsm</td>
+                <td>Selección de brazo</td>
+              </tr>
+              <tr>
+                <td class="step">1</td>
+                <td class="mono wrap">active_maneuver &gt; 0 ciclos ∧ min_ttc &gt; 3.2 s</td>
+                <td class="mono">evasive</td>
+                <td>Persistencia anti flip-flop. Una maniobra comprometida no se preempta; la condición de TTC seguro
+                  garantiza que una emergencia real sí la interrumpa</td>
+              </tr>
+              <tr>
+                <td class="step">2</td>
+                <td class="mono wrap">stuck ≥ 10 ∧ (stuck ≥ 30 ∨ ¬corredor abierto)</td>
+                <td class="mono">deliberative</td>
+                <td>Escape de deadlock, ya <strong>no</strong> ciego a la percepción</td>
+              </tr>
+              <tr>
+                <td class="step">3</td>
+                <td class="mono wrap">ttc_centro ≤ 3.2 s ∨ (centro bloq. ∧ ttc_centro ≤ 4.6 s)</td>
+                <td class="mono wrap">girar_90 <span class="muted">si FOV bloq. &gt; 60 %</span><br />deliberative <span
+                    class="muted">si no</span></td>
+                <td>Peligro estructural al frente: bypass determinista si no hay nada que decidir, deliberación si hay
+                  opciones</td>
+              </tr>
+              <tr>
+                <td class="step">4</td>
+                <td class="mono wrap">centro bloqueado ∨ min_ttc ≤ 4.6 s</td>
+                <td class="mono">evasive</td>
+                <td>Ventana de advertencia: corrección lateral rápida sin gastar una consulta al SLM</td>
+              </tr>
+              <tr>
+                <td class="step">5</td>
+                <td class="mono">—</td>
+                <td class="mono">keep_going</td>
+                <td>Camino despejado</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Dos propiedades del orden actual que importan:</p>
+        <ul>
+          <li><strong>La persistencia (paso 1) está por encima del escape (paso 2).</strong> Si no lo estuviera, el giro
+            de cambio de estrategia que emite el escape agotado sería preemptado por el propio contador de atasco antes
+            de llegar a ejecutarse.</li>
+          <li><strong>El escape (paso 2) ya no cortocircuita la percepción.</strong> Con evidencia válida de sector
+            transitable manda la decisión táctica normal. El bypass tiene techo —el umbral duro— para que un campo
+            “despejado” espurio no desactive el escape indefinidamente.</li>
+        </ul>
+
+        <h3><code>has_open_corridor()</code></h3>
+        <p>Consulta compartida por router, <code>deliberative</code> y <code>fsm</code>. Devuelve verdadero solo si:</p>
+        <ol>
+          <li>el campo <strong>tiene evidencia real</strong> (<code>source == "flow"</code> y
+            <code>foe_confidence &gt; 0</code>), y</li>
+          <li>existe al menos un sector con confianza sobre el piso (<code>≥ 0.15</code>) y <strong>no
+              bloqueado</strong>, priorizando el sector donde cae el waypoint (banda de ±15° de rumbo).</li>
+        </ol>
+
+        <div class="note">
+          <span class="tag">Por qué el requisito (1)</span>
+          <p><em>“Sin evidencia” no es lo mismo que “despejado”.</em> Un hover sin flujo óptico produce exactamente ese
+            vacío, y tratarlo como corredor abierto desactivaría el escape justo cuando más hace falta.</p>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section id="deliberativo">
+        <h2 class="numbered"><span class="sec-n">07</span><span>El nodo deliberativo</span></h2>
+
+        <figure>
+          <div class="fig-scroll">
+            <svg viewBox="0 0 980 360" role="img"
+              aria-label="Máquina de escape de deadlock: desde navegación se entra al escape por altura cuando hay atasco sin corredor visible; el escape se repite hasta el máximo de intentos y luego enclava, cambiando de estrategia a un giro y devolviendo el control a la deliberación normal; el único retorno a navegación es el progreso horizontal medido.">
+              <defs>
+                <marker id="ar2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+                  <polygon class="dg-arrow" points="0 0, 10 4, 0 8" />
+                </marker>
+                <marker id="ar2a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+                  <polygon class="dg-arrow-a" points="0 0, 10 4, 0 8" />
+                </marker>
+              </defs>
+
+              <rect class="dg-box" x="24" y="112" width="186" height="58" rx="3" />
+              <text class="dg-name" x="117" y="136" text-anchor="middle">NAVEGANDO</text>
+              <text class="dg-sub" x="117" y="153" text-anchor="middle">ruta táctica normal</text>
+
+              <rect class="dg-box" x="352" y="112" width="216" height="58" rx="3" />
+              <text class="dg-name" x="460" y="136" text-anchor="middle">ESCAPE POR ALTURA</text>
+              <text class="dg-sub" x="460" y="153" text-anchor="middle">GANAR_ALTURA · 1.6 s</text>
+
+              <rect class="dg-focus" x="712" y="112" width="216" height="58" rx="3" />
+              <text class="dg-name-a" x="820" y="136" text-anchor="middle">ENCLAVADO</text>
+              <text class="dg-sub" x="820" y="153" text-anchor="middle">GIRAR_90 hacia el waypoint</text>
+
+              <rect class="dg-box" x="712" y="256" width="216" height="52" rx="3" />
+              <text class="dg-name" x="820" y="278" text-anchor="middle">DELIBERACIÓN NORMAL</text>
+              <text class="dg-sub" x="820" y="294" text-anchor="middle">el SLM vuelve a decidir</text>
+
+              <line class="dg-edge" x1="210" y1="141" x2="348" y2="141" marker-end="url(#ar2)" />
+              <text class="dg-lab" x="279" y="120" text-anchor="middle">stuck ≥ 10</text>
+              <text class="dg-lab" x="279" y="106" text-anchor="middle">∧ sin corredor</text>
+
+              <path class="dg-edge" d="M406 112 C406 56, 514 56, 514 112" marker-end="url(#ar2)" />
+              <text class="dg-lab" x="460" y="66" text-anchor="middle">sin progreso · intentos ≤ 2</text>
+
+              <line class="dg-edge-a" x1="568" y1="141" x2="708" y2="141" marker-end="url(#ar2a)" />
+              <text class="dg-lab-a" x="638" y="120" text-anchor="middle">intentos &gt; 2</text>
+              <text class="dg-lab-a" x="638" y="106" text-anchor="middle">∨ alt &gt; 30 m</text>
+
+              <line class="dg-edge" x1="820" y1="170" x2="820" y2="252" marker-end="url(#ar2)" />
+              <text class="dg-lab" x="830" y="215">ciclos siguientes</text>
+
+              <path class="dg-edge-a" d="M712 282 L640 282 L640 332 L117 332 L117 174" marker-end="url(#ar2a)" />
+              <text class="dg-lab-a" x="380" y="324" text-anchor="middle">Δdist_xy &gt; 0.5 m — progreso horizontal
+                medido, único release</text>
+
+              <text class="dg-lab" x="820" y="196" text-anchor="middle">_escape_locked = True</text>
+              <text class="dg-lab" x="820" y="210" text-anchor="middle">(el contador NO se resetea)</text>
+            </svg>
+          </div>
+          <figcaption><b>El enclavamiento es lo que convierte la red de seguridad en un estado terminal.</b> La versión
+            anterior ponía el contador de escapes en cero al agotarse, de modo que el ciclo siguiente volvía a subir: la
+            salvaguarda se reseteaba a sí misma y producía un ciclo límite de período 3 (SUBIR, SUBIR, FRENAR) que en
+            vuelo real duró hasta el final del log. Nótese que el único arco de retorno a <code>NAVEGANDO</code> está
+            condicionado a distancia medida, no al contador de atasco.</figcaption>
+        </figure>
+
+        <h3>Deliberación normal, asíncrona</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Situación</th>
+                <th>Comando del ciclo</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sin pedido pendiente</td>
+                <td class="mono">FRENAR</td>
+                <td>Encola el pedido, <code>_deliberation_pending = True</code></td>
+              </tr>
+              <tr>
+                <td>Pendiente, sin respuesta, dentro del watchdog</td>
+                <td class="mono">FRENAR</td>
+                <td>Sigue esperando, <strong>no</strong> re-encola</td>
+              </tr>
+              <tr>
+                <td>Llegó la respuesta</td>
+                <td class="mono wrap">macro-acción decidida</td>
+                <td>Registra la deliberación, libera el freno</td>
+              </tr>
+              <tr>
+                <td>Watchdog expirado (6000 ms)</td>
+                <td class="mono wrap">fallback determinista</td>
+                <td><code>timeout = True</code> en la auditoría</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p><code>_deliberation_pending</code> es lo que hace que frenar a propósito esperando al SLM <strong>no</strong>
+          cuente como “no progresar”: sin esa marca, una latencia real de 2–8 s disparaba el escape antes de que el
+          modelo pudiera responder.</p>
+
+        <h3>Salvaguardas sobre la decisión del modelo</h3>
+        <ul>
+          <li><strong>Override de seguridad.</strong> <code>MANTENER_RUMBO</code> con el centro bloqueado y
+            <code>TTC ≤ 2.0 s</code> se reemplaza por el fallback determinista. El modelo no puede decidir seguir de
+            frente contra una estructura cercana.</li>
+          <li><strong>Espacio de acciones acotado.</strong> El SLM elige solo entre <code>MANTENER_RUMBO</code>,
+            <code>EVADIR_IZQUIERDA</code>, <code>EVADIR_DERECHA</code>, <code>GANAR_ALTURA</code>,
+            <code>PERDER_ALTURA</code> y <code>FRENAR</code>. <code>GIRAR_90</code> es un bypass determinista, nunca una
+            elección del modelo.</li>
+          <li><strong>Decodificación restringida</strong> (<code>response_format=json_schema</code>) cuando el servidor
+            la soporta, con parser ultratolerante como red de seguridad. Se registra <code>used_json_schema</code> y
+            <code>adherent</code> por deliberación.</li>
+          <li><strong>Fallback determinista</strong> sobre <code>ObstacleField</code>: sin evidencia →
+            <code>FRENAR</code>; centro bloqueado con ambos lados bloqueados → <code>GANAR_ALTURA</code>; centro
+            bloqueado con lado libre → evadir hacia ese lado, a igualdad hacia el waypoint.</li>
+        </ul>
+
+        <div class="note caution">
+          <span class="tag">Por qué el contador de escapes se mide con distancia</span>
+          <p>El propio escape pide <code>_escape_reset</code>, que pone <code>evasion_stuck_cycles</code> en cero al
+            ciclo siguiente. Si el contador de escapes consecutivos se colgara de esa señal, <strong>cada escape
+              “parecería” haber resuelto el atasco</strong> y <code>MAX_CONSECUTIVE_ESCAPES</code> nunca se alcanzaría.
+            La única evidencia válida de que subir sirvió es que la distancia <strong>horizontal</strong> al waypoint
+            bajó de verdad.</p>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="cinematica">
+        <h2 class="numbered"><span class="sec-n">08</span><span>Cinemática por macro-acción</span></h2>
+        <p><code>action_to_command()</code> es la <strong>única</strong> fuente de verdad; <code>deliberative</code>,
+          <code>evasive</code>, <code>fsm</code> y las ramas de escape la comparten. Body frame, NED (<code>vz</code>
+          negativo = sube).</p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Macro-acción</th>
+                <th>vx</th>
+                <th>vy</th>
+                <th>vz</th>
+                <th>yaw_rate</th>
+                <th>target_yaw</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">MANTENER_RUMBO</td>
+                <td class="num">guiado</td>
+                <td class="num">0</td>
+                <td class="num">guiado</td>
+                <td class="num">guiado</td>
+                <td class="num">—</td>
+              </tr>
+              <tr>
+                <td class="mono">EVADIR_IZQUIERDA</td>
+                <td class="num">0.8 · 0.3<sup>†</sup></td>
+                <td class="num">0</td>
+                <td class="num">guiado</td>
+                <td class="num">−15 °/s</td>
+                <td class="num">snap −90°</td>
+              </tr>
+              <tr>
+                <td class="mono">EVADIR_DERECHA</td>
+                <td class="num">0.8 · 0.3<sup>†</sup></td>
+                <td class="num">0</td>
+                <td class="num">guiado</td>
+                <td class="num">+15 °/s</td>
+                <td class="num">snap +90°</td>
+              </tr>
+              <tr>
+                <td class="mono">GANAR_ALTURA</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">−1.5</td>
+                <td class="num"><strong>guiado</strong></td>
+                <td class="num">—</td>
+              </tr>
+              <tr>
+                <td class="mono">PERDER_ALTURA</td>
+                <td class="num">1.0</td>
+                <td class="num">0</td>
+                <td class="num">+0.8</td>
+                <td class="num">0</td>
+                <td class="num">—</td>
+              </tr>
+              <tr>
+                <td class="mono">GIRAR_90</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">±20 °/s<sup>‡</sup></td>
+                <td class="num">snap ±90°</td>
+              </tr>
+              <tr>
+                <td class="mono">FRENAR</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted"><sup>†</sup> 0.3 m/s si hay estructura cercana al frente. &nbsp;<sup>‡</sup> El signo lo fija el
+          lado del waypoint. &nbsp;Toda acción desconocida cae a <code>FRENAR</code>.</p>
+
+        <p>Dos entradas de esta tabla cambiaron el 2026-08-24, y conviene entender por qué:</p>
+        <ul>
+          <li><strong><code>GANAR_ALTURA</code> llevaba <code>vy = 0.5</code> y <code>yaw_rate = 0</code>.</strong> Una
+            deriva lateral constante en una macro-acción de <em>ascenso</em> alejaba el waypoint en el plano XY —la
+            misma métrica que decide si el atasco se resolvió— mientras el rumbo quedaba congelado. El escape se
+            alimentaba a sí mismo.</li>
+          <li><strong><code>GIRAR_90</code> giraba siempre +90.</strong> Podía mandar al dron en contra de la corrección
+            que el guiado venía aplicando.</li>
+        </ul>
+        <p>El <em>snap</em> Manhattan redondea el rumbo objetivo al múltiplo de 90° más cercano, alineando las maniobras
+          con la cuadrícula urbana del escenario.</p>
+      </section>
+
+      <!-- 9 -->
+      <section id="umbrales">
+        <h2 class="numbered"><span class="sec-n">09</span><span>Umbrales y variables</span></h2>
+
+        <h4 class="label">Percepción y disparo táctico</h4>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Valor</th>
+                <th>Origen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">TTC_EVASION_THRESHOLD</td>
+                <td class="num">3.2 s</td>
+                <td><span class="pill calib">calibrado</span> Umbral de Youden, ROC contra el canal depth, τ = 2 s</td>
+              </tr>
+              <tr>
+                <td class="mono">TTC_SAFE_THRESHOLD</td>
+                <td class="num">4.6 s</td>
+                <td><span class="pill calib">calibrado</span> Ídem, τ = 3 s</td>
+              </tr>
+              <tr>
+                <td class="mono">FOV_BLOCKED_THRESHOLD</td>
+                <td class="num">0.6</td>
+                <td>Fracción de celdas bloqueadas que dispara <code>girar_90</code></td>
+              </tr>
+              <tr>
+                <td class="mono">OBSTACLE_OCCUPANCY_BLOCKED</td>
+                <td class="num">0.35</td>
+                <td>Umbral de ocupación de celda</td>
+              </tr>
+              <tr>
+                <td class="mono">OBSTACLE_TTC_BLOCKED_S</td>
+                <td class="num">2.5 s</td>
+                <td>TTC de celda que la marca bloqueada</td>
+              </tr>
+              <tr>
+                <td class="mono">OBSTACLE_MIN_CONFIDENCE</td>
+                <td class="num">0.15</td>
+                <td>Piso de confianza: por debajo, la celda no aporta evidencia</td>
+              </tr>
+              <tr>
+                <td class="mono">SAFE_MARGIN_TTC_S</td>
+                <td class="num">2.0 s</td>
+                <td>Margen del override de seguridad sobre la decisión del modelo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note caution">
+          <span class="tag">Caveat de calibración</span>
+          <p>AUC 0.96–0.97 para “colisión dentro de τ” pese a correlación punto a punto baja (r = −0.034, error relativo
+            mediano 66 %) — el <em>ranking</em> de riesgo separa bien las clases aunque la magnitud puntual sea ruidosa.
+            Una sola sesión de vuelo, sin variación de <code>|yaw_rate|</code>: valida la detección frontal,
+            <strong>no</strong> valida aún la derotación en giros fuertes.</p>
+        </div>
+
+        <h4 class="label">Atasco y escape</h4>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Valor</th>
+                <th>Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">EVASION_STUCK_THRESHOLD</td>
+                <td class="num">10 ciclos</td>
+                <td>Valor configurado (piso)</td>
+              </tr>
+              <tr>
+                <td class="mono">WAYPOINT_PROGRESS_EPS_M</td>
+                <td class="num">0.5 m</td>
+                <td>Mejora mínima que cuenta como progreso</td>
+              </tr>
+              <tr>
+                <td class="mono">MIN_PROGRESS_SPEED_MPS</td>
+                <td class="num">0.25 m/s</td>
+                <td>Velocidad de acercamiento por debajo de la cual se acepta que no hay progreso</td>
+              </tr>
+              <tr>
+                <td class="mono">STUCK_HARD_FACTOR</td>
+                <td class="num">3.0</td>
+                <td>Multiplicador del umbral duro</td>
+              </tr>
+              <tr>
+                <td class="mono">MAX_CONSECUTIVE_ESCAPES</td>
+                <td class="num">2</td>
+                <td>Ascensos consecutivos sin progreso antes de enclavar</td>
+              </tr>
+              <tr>
+                <td class="mono">MAX_ESCAPE_ALT_M</td>
+                <td class="num">30.0 m</td>
+                <td>Techo del escape por altura</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>El umbral efectivo <strong>no</strong> es el configurado: se deriva para que sea coherente con la métrica que
+          lo alimenta.</p>
+        <pre><code><span class="hl">umbral_efectivo</span> = max(EVASION_STUCK_THRESHOLD, ceil(EPS_M × LOOP_HZ / MIN_PROGRESS_SPEED))
+                = max(10, ceil(0.5 × 5.0 / 0.25)) = <span class="hl">10 ciclos</span>   (2.0 s)
+
+<span class="hl">umbral_duro</span>     = ceil(umbral_efectivo × STUCK_HARD_FACTOR) = <span class="hl">30 ciclos</span>   (6.0 s)</code></pre>
+
+        <p><strong>Por qué existe esta derivación.</strong> Declarar el umbral en <em>ciclos</em> y el epsilon en
+          <em>metros</em> de forma independiente produce combinaciones imposibles: para no acumular atasco hace falta una
+          velocidad de acercamiento de <code>EPS × LOOP_HZ / umbral</code>. Con los valores anteriores (0.5 m, 5 ciclos,
+          5 Hz) eso exigía <strong>0.5 m/s sostenidos</strong>, mientras el guiado en giro cerrado limita <code>vx</code>
+          a 0.8 m/s con el rumbo a ~70° del objetivo (≈0.25 m/s reales). El escape estaba <strong>garantizado a los 5
+            ciclos de arrancar la misión, sin ningún obstáculo</strong>.</p>
+
+        <h4 class="label">Guiado</h4>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Valor</th>
+                <th>Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">REACTIVE_FORWARD_SPEED</td>
+                <td class="num">2.0 m/s</td>
+                <td>Velocidad de crucero</td>
+              </tr>
+              <tr>
+                <td class="mono">WAYPOINT_ACCEPTANCE_RADIUS</td>
+                <td class="num">3.5 m</td>
+                <td>Radio de aceptación de waypoint</td>
+              </tr>
+              <tr>
+                <td class="mono">GUIDANCE_SMOOTHING_ALPHA</td>
+                <td class="num">0.5</td>
+                <td>EMA de <code>vx</code>/<code>yaw_rate</code> (≈94 % de un escalón en ~4 ciclos)</td>
+              </tr>
+              <tr>
+                <td class="mono">GUIDANCE_YAW_RATE_MAX_DPS</td>
+                <td class="num">15 °/s</td>
+                <td>Tope de giro en régimen normal</td>
+              </tr>
+              <tr>
+                <td class="mono">GUIDANCE_YAW_RATE_SHARP_MAX_DPS</td>
+                <td class="num">45 °/s</td>
+                <td>Tope de giro con desvío &gt; 60°</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>El tope diferenciado existe porque con un único tope de 15 °/s realinear un desvío de ~70° tardaba más que lo
+          que tarda el contador de atasco en dispararse: el dron se declaraba atascado por no terminar un giro que el
+          propio limitador le impedía terminar a tiempo.</p>
+
+        <p><strong>Histéresis del guiado.</strong> Tres regímenes con banda de entrada distinta a la de salida, para que
+          un valor oscilando en el borde no alterne la fórmula cada ciclo —esa alternancia es el cabeceo observado en
+          vuelo real:</p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Régimen</th>
+                <th>Entra</th>
+                <th>Sale</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Giro brusco</td>
+                <td class="num">&gt; 60°</td>
+                <td class="num">&lt; 50°</td>
+              </tr>
+              <tr>
+                <td>Aproximación final</td>
+                <td class="num">&lt; 4.0 m</td>
+                <td class="num">&gt; 4.5 m</td>
+              </tr>
+              <tr>
+                <td>Zona muerta de yaw</td>
+                <td class="num">&gt; 2.5°</td>
+                <td class="num">&lt; 1.5°</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class="label">Deliberación</h4>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Valor</th>
+                <th>Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">AGENT_ARM</td>
+                <td class="num">slm</td>
+                <td>Brazo activo: <code>slm</code> · <code>fsm</code> · <code>reactive</code></td>
+              </tr>
+              <tr>
+                <td class="mono">LOCAL_LLM_MODEL_NAME</td>
+                <td class="num">qwen2.5-vl-3b</td>
+                <td>Modelo local</td>
+              </tr>
+              <tr>
+                <td class="mono">SLM_WATCHDOG_MS</td>
+                <td class="num">6000 ms</td>
+                <td><span class="pill calib">calibrado</span> 4 muestras reales: 8298 / 3405 / 2201 / 1911 ms (la primera
+                  es cold-start). El default anterior de 1500 ms garantizaba fallback en el 100 % de los casos aunque el
+                  servidor estuviera sano</td>
+              </tr>
+              <tr>
+                <td class="mono">VLM_VISION_ENABLED</td>
+                <td class="num">true</td>
+                <td>Visión directa vs. texto puro</td>
+              </tr>
+              <tr>
+                <td class="mono">VLM_IMAGE_MAX_SIZE</td>
+                <td class="num">384 px</td>
+                <td>Reescalado antes de codificar</td>
+              </tr>
+              <tr>
+                <td class="mono">VLM_FRAME_HISTORY_SIZE</td>
+                <td class="num">1</td>
+                <td>Fotogramas enviados al VLM</td>
+              </tr>
+              <tr>
+                <td class="mono">VLM_USE_JSON_SCHEMA</td>
+                <td class="num">true</td>
+                <td>Decodificación restringida</td>
+              </tr>
+              <tr>
+                <td class="mono">MANEUVER_DURATION_S</td>
+                <td class="num">1.0 s · 5 ciclos</td>
+                <td>Persistencia de maniobra deliberada</td>
+              </tr>
+              <tr>
+                <td class="mono">ESCAPE_MANEUVER_DURATION_S</td>
+                <td class="num">1.6 s · 8 ciclos</td>
+                <td>Persistencia de maniobra de escape</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class="label">Infraestructura</h4>
+        <p><code>AIRSIM_IP=127.0.0.1</code> · <code>AIRSIM_RPC_TIMEOUT=8 s</code> · <code>AIRSIM_STRICT=true</code> ·
+          <code>LOOP_HZ=5.0</code> · <code>GRAPH_TIMEOUT_S=30.0</code></p>
+        <div class="note">
+          <span class="tag">Topología de despliegue</span>
+          <p>El simulador corre <strong>local</strong> y el servidor del SLM <strong>remoto</strong>: la latencia de red
+            del modelo está absorbida por diseño (servicio asíncrono), la del RPC de AirSim no. Sobre LAN,
+            <code>simGetImages</code> daba timeout de 8–9 s en <strong>todas</strong> las resoluciones por igual — al ser
+            independiente de la resolución, el problema era el socket RPC, no el ancho de banda.</p>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="invariantes">
+        <h2 class="numbered"><span class="sec-n">10</span><span>Invariantes</span></h2>
+        <p>Lo que la configuración actual garantiza, y dónde se verifica:</p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Invariante</th>
+                <th>Test</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Como máximo una consulta al SLM por ciclo</td>
+                <td class="mono wrap">test_single_cycle_produces_at_most_one_new_deliberation</td>
+              </tr>
+              <tr>
+                <td>El lazo nunca bloquea esperando al modelo</td>
+                <td class="mono wrap">test_waiting_for_slm_does_not_trigger_altitude_escape</td>
+              </tr>
+              <tr>
+                <td>Las claves de control cruzan la frontera nodo ↔ lazo</td>
+                <td class="mono wrap">test_control_keys_survive_graph_invoke</td>
+              </tr>
+              <tr>
+                <td>El contador de atasco se reinicia tras un escape</td>
+                <td class="mono wrap">test_stall_counter_resets_after_escape_in_main_loop</td>
+              </tr>
+              <tr>
+                <td>El escape agotado enclava y no reintenta subir</td>
+                <td class="mono wrap">test_max_consecutive_escapes_latches_and_changes_strategy</td>
+              </tr>
+              <tr>
+                <td>El enclavamiento se libera solo con progreso medido</td>
+                <td class="mono wrap">test_escape_lock_releases_after_real_horizontal_progress</td>
+              </tr>
+              <tr>
+                <td>El escape no dispara con corredor visible</td>
+                <td class="mono wrap">test_escape_does_not_fire_when_perception_sees_an_open_corridor</td>
+              </tr>
+              <tr>
+                <td>El atasco no cortocircuita la percepción (con techo)</td>
+                <td class="mono wrap">test_stuck_does_not_short_circuit_an_open_corridor<br />
+                  test_hard_stuck_overrides_the_open_corridor_bypass</td>
+              </tr>
+              <tr>
+                <td>Una maniobra comprometida no se preempta</td>
+                <td class="mono wrap">test_committed_maneuver_is_not_preempted_by_the_stall_counter</td>
+              </tr>
+              <tr>
+                <td>El umbral de atasco es coherente con su métrica</td>
+                <td class="mono wrap">test_effective_stall_threshold_is_coherent_with_the_progress_epsilon</td>
+              </tr>
+              <tr>
+                <td>Ninguna macro-acción produce velocidades desbocadas</td>
+                <td class="mono wrap">test_every_valid_action_maps_to_bounded_command</td>
+              </tr>
+              <tr>
+                <td>Sin AirSim, hover explícito y sin deliberación</td>
+                <td class="mono wrap">test_degraded_mode.py</td>
+              </tr>
+              <tr>
+                <td>El giro puro no dispara freno espurio</td>
+                <td class="mono wrap">test_flow_ttc.py</td>
+              </tr>
+              <tr>
+                <td>El prompt no inventa historia temporal</td>
+                <td class="mono wrap">test_prompt_invariants.py</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p><strong>94 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
+        <pre><code>pytest tests/ -q</code></pre>
+
+        <div class="note">
+          <span class="tag">Dónde corren</span>
+          <p>Los tests que cubren la frontera del grafo corren el <strong>grafo compilado</strong>, no el nodo suelto: el
+            bug de las claves descartadas solo existe en esa frontera, y los tests que invocaban
+            <code>deliberative_node(dict)</code> directamente pasaban con el bug presente.</p>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="limitaciones">
+        <h2 class="numbered"><span class="sec-n">11</span><span>Limitaciones conocidas</span></h2>
+        <ul>
+          <li><strong>El TTC no es confiable durante el propio escape.</strong> <code>FRENAR</code> no produce
+            traslación (sin flujo → sin FOE → sin evidencia) y el ascenso puro produce flujo vertical que genera FOE
+            espurio con TTC de 0.1–0.4 s. La maniobra viola los supuestos del estimador que la está justificando: es una
+            realimentación positiva cerrada, visible como <code>SIN EVIDENCIA</code> ↔ <code>BLOQUEADO 100%</code>
+            alternando en ciclos consecutivos.</li>
+          <li><strong>La derotación no está validada para yaw fuerte.</strong> El dataset de calibración quedó casi todo
+            en el bin <code>|yaw_rate| ∈ [0, 0.05)</code> rad/s.</li>
+          <li><strong><code>main.py</code> no tiene tope de duración de misión.</strong>
+            <code>experiments/runner.py</code> sí (<code>max_cycles</code> / <code>max_seconds</code>): un atasco
+            genuinamente irresoluble no termina la corrida por sí solo en vuelo interactivo.</li>
+          <li><strong><code>vy</code> es siempre 0 en el guiado nominal.</strong> El desplazamiento es puramente frontal
+            + yaw (estrategia <em>car-like</em>); no hay vuelo lateral coordinado.</li>
+        </ul>
+
+        <h3>Referencias</h3>
+        <ul>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/GRAFO-DE-CONTROL.md"><code>airsim-loop/GRAFO-DE-CONTROL.md</code></a>
+            — esta referencia, versionada junto al código.</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/README.md"><code>airsim-loop/README.md</code></a>
+            — mapeo de código a grafo, ejecución, experimentos.</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/CHANGELOG.md"><code>CHANGELOG.md</code></a> —
+            historia y evidencia medida de cada decisión.</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/PLAN-MEJORAS.md"><code>PLAN-MEJORAS.md</code></a>
+            — plan F0–F4 del que sale esta arquitectura.</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/legacy/README.md"><code>legacy/README.md</code></a>
+            — módulos retirados (YOLO, IPM, TTC anterior, gate XOR) con la justificación de cada retiro.</li>
+        </ul>
+      </section>
+
+      <footer>
+        <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
+        <p>airsim-loop · lazo táctico</p>
+        <p>Estado al 2026-08-24</p>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const id = entry.target.getAttribute('id');
+          if (entry.intersectionRatio > 0.1) {
+            document.querySelectorAll('nav a').forEach(a => {
+              a.classList.remove('active');
+              if (a.getAttribute('href') === `#${id}`) {
+                a.classList.add('active');
+              }
+            });
+          }
+        });
+      }, { threshold: [0.1, 0.2, 0.3], rootMargin: "0px 0px -70% 0px" });
+
+      document.querySelectorAll('main > section').forEach((section) => {
+        observer.observe(section);
+      });
+    });
+  </script>
+</body>
+
+</html>

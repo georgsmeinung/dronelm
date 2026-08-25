@@ -85,12 +85,20 @@ def action_to_command(
         }
 
     if action == "GANAR_ALTURA":
+        # 2026-0824: se retira `vy=0.5` (deriva lateral constante sin ninguna
+        # justificacion en una macro-accion de ASCENSO) y `yaw_rate=0.0`.
+        # Juntas producian el peor caso medido en vuelo: el dron subia 12m
+        # derivando 0.5 m/s de costado -- lo que ALEJABA el waypoint en el
+        # plano XY, la misma metrica que decide si el atasco se resolvio, y
+        # con el rumbo congelado en -5.3 grados mientras el objetivo estaba a
+        # -67 grados. El escape se alimentaba a si mismo. Ahora sube en el
+        # lugar y aprovecha el ascenso para alinear el rumbo al waypoint.
         return {
             "macro_action": action,
             "vx": 0.0,
-            "vy": 0.5,
+            "vy": 0.0,
             "vz": -EVASION_UP_SPEED,
-            "yaw_rate": 0.0,
+            "yaw_rate": yaw_rate_guidance,
             "target_yaw": None,
         }
 
@@ -105,13 +113,21 @@ def action_to_command(
         }
 
     if action == "GIRAR_90":
-        target_yaw_deg = _manhattan_snap_yaw(current_yaw_deg, 90.0)
+        # El giro de exploracion elige el lado por el error de rumbo al
+        # waypoint. Antes era siempre +90 (derecha): en el vuelo del
+        # 2026-0824 eso mando al dron a girar a la DERECHA con el waypoint 68
+        # grados a la IZQUIERDA, en contra de la correccion que el guiado
+        # venia aplicando. Sin guidance (llamador sin mision) se conserva el
+        # comportamiento historico: +90.
+        bearing_err_deg = float(guidance.get("bearing_err_deg", 0.0))
+        turn_sign = -1.0 if bearing_err_deg < 0.0 else 1.0
+        target_yaw_deg = _manhattan_snap_yaw(current_yaw_deg, 90.0 * turn_sign)
         return {
             "macro_action": action,
             "vx": 0.0,
             "vy": 0.0,
             "vz": 0.0,
-            "yaw_rate": 20.0,
+            "yaw_rate": 20.0 * turn_sign,
             "target_yaw": target_yaw_deg,
         }
 

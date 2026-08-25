@@ -18,6 +18,58 @@ PROGRESS_EPS_M = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
 # cubre: incluso dentro de un mismo regimen, vx/yaw_rate se recalculan desde
 # cero cada ciclo sin memoria del valor anterior.
 GUIDANCE_SMOOTHING_ALPHA = float(os.getenv("GUIDANCE_SMOOTHING_ALPHA", "0.5"))
+# Velocidad de acercamiento (m/s) por debajo de la cual se acepta que el dron
+# "no progresa". Es el parametro que reconcilia PROGRESS_EPS_M (metros) con
+# EVASION_STUCK_THRESHOLD (ciclos) -- ver effective_stall_threshold().
+MIN_PROGRESS_SPEED_MPS = float(os.getenv("MIN_PROGRESS_SPEED_MPS", "0.25"))
+# Topes de yaw_rate (grados/s) de compute_guidance(). El tope de giro brusco
+# es mayor: con un solo tope de 15 deg/s, realinear un desvio de 70 grados
+# tomaba 6-8s de giro (mas todavia por el EMA), mientras el reloj de atasco
+# vencia en 1-2s -- el dron se declaraba atascado por no haber terminado un
+# giro que el propio limitador le impedia terminar a tiempo.
+YAW_RATE_MAX_DPS = float(os.getenv("GUIDANCE_YAW_RATE_MAX_DPS", "15.0"))
+YAW_RATE_SHARP_MAX_DPS = float(os.getenv("GUIDANCE_YAW_RATE_SHARP_MAX_DPS", "45.0"))
+
+
+def effective_stall_threshold() -> int:
+    """Ciclos sin progreso antes de declarar atasco, coherente con la metrica.
+
+    `record_progress()` solo resetea el contador cuando la distancia al
+    waypoint mejora en PROGRESS_EPS_M metros. Declarar el umbral en CICLOS y
+    el epsilon en METROS de forma independiente produce combinaciones
+    imposibles: para nunca acumular atasco hace falta una velocidad de
+    acercamiento de al menos `PROGRESS_EPS_M * LOOP_HZ / umbral`.
+
+    Con los valores de .env del 2026-0824 (eps=0.5m, umbral=5 ciclos, 5Hz) eso
+    exigia 0.5 m/s sostenidos. Durante un giro cerrado el guiado limita vx a
+    `max(0.5, cruise*0.4)` = 0.8 m/s y el rumbo esta a ~70 grados del objetivo,
+    o sea ~0.25 m/s de acercamiento real: el atasco se declaraba solo, sin
+    ningun obstaculo, a los 5 ciclos de arrancar la mision (ver el vuelo del
+    2026-0824, ciclos 1-5). Esta funcion eleva el umbral configurado hasta el
+    minimo que hace fisicamente demostrable el progreso.
+    """
+    configured = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
+    eps_m = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", PROGRESS_EPS_M))
+    loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
+    min_speed = float(os.getenv("MIN_PROGRESS_SPEED_MPS", MIN_PROGRESS_SPEED_MPS))
+
+    if min_speed <= 0.0 or loop_hz <= 0.0:
+        return max(1, configured)
+
+    coherent = int(math.ceil(eps_m * loop_hz / min_speed))
+    return max(1, configured, coherent)
+
+
+def hard_stall_threshold() -> int:
+    """Umbral de "atasco duro": a partir de aca el escape se fuerza aunque la
+    percepcion crea ver un corredor libre.
+
+    Es el techo del bypass por percepcion de policy_router/deliberative: un
+    campo despejado espurio (o un sector con evidencia debil) no debe poder
+    desactivar el escape indefinidamente.
+    """
+    factor = float(os.getenv("STUCK_HARD_FACTOR", "3.0"))
+    return max(1, int(math.ceil(effective_stall_threshold() * max(1.0, factor))))
 
 
 class WaypointTracker:
@@ -259,7 +311,11 @@ class WaypointTracker:
             yaw_rate = 0.0
         else:
             kp_yaw = 0.35
-            yaw_rate = max(-15.0, min(15.0, kp_yaw * delta_yaw_deg))
+            # Mas autoridad de giro cuando el desvio es grande: con el tope
+            # unico de 15 deg/s un desvio de 70 grados tardaba mas en
+            # corregirse que lo que tarda el contador de atasco en dispararse.
+            cap = YAW_RATE_SHARP_MAX_DPS if self._sharp_turn_active else YAW_RATE_MAX_DPS
+            yaw_rate = max(-cap, min(cap, kp_yaw * delta_yaw_deg))
 
         # Avance continuo fluido de crucero sin frenazos intermitentes
         if self._sharp_turn_active:

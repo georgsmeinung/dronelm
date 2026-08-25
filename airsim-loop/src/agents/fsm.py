@@ -11,10 +11,11 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .action_map import action_to_command
-from src.perception import ObstacleField, empty_field
+from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
+from src.perception import ObstacleField, empty_field, has_open_corridor
 
 FSM_TTC_BRAKE_S = float(os.getenv("FSM_TTC_BRAKE_S", "1.5"))
 FSM_TTC_AVOID_S = float(os.getenv("FSM_TTC_AVOID_S", "3.5"))
@@ -37,15 +38,28 @@ _STATE_TO_ACTION = {
 }
 
 
-def _decide_state(field: ObstacleField, stuck_cycles: int, stuck_threshold: int) -> str:
+def _decide_state(
+    field: ObstacleField,
+    stuck_cycles: int,
+    stuck_threshold: int,
+    guidance: Optional[Dict[str, Any]] = None,
+    escape_locked: bool = False,
+) -> str:
     """Transiciones deterministas por umbral sobre el ObstacleField.
 
     Replica la logica tactica del router SLM (ttc_router / _fallback_decision)
     pero sin invocar ningun modelo: es la maquina de estados clasica contra la
     que se compara el brazo SLM.
     """
-    if stuck_cycles >= stuck_threshold:
-        return STATE_CLIMB
+    # El CLIMB por atasco ya no es ciego: no dispara si la percepcion ve un
+    # corredor transitable (salvo atasco duro) ni si el escape esta enclavado
+    # por haberse agotado. Mismo criterio que policy_router/deliberative, para
+    # que la comparacion SLM vs FSM siga siendo sobre quien elige la accion y
+    # no sobre quien tiene la salvaguarda mejor puesta.
+    if stuck_cycles >= stuck_threshold and not escape_locked:
+        hard_stuck = stuck_cycles >= hard_stall_threshold()
+        if hard_stuck or not has_open_corridor(field, guidance):
+            return STATE_CLIMB
 
     center_ttc = field.sector_ttc("centro")
     if center_ttc <= FSM_TTC_BRAKE_S and field.is_blocked("centro"):
@@ -93,9 +107,8 @@ def fsm_node(state: Dict[str, Any]) -> Dict[str, Any]:
             state["maneuver_command"] = None
         return state
 
-    stuck_threshold = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
+    stuck_threshold = effective_stall_threshold()
     stuck_cycles = int(state.get("evasion_stuck_cycles", 0))
-    fsm_state = _decide_state(field, stuck_cycles, stuck_threshold)
 
     # Red de seguridad (2026-0824, mismo mecanismo que deliberative.py):
     # tope de intentos de CLIMB consecutivos. Sin esto, subir para escapar
@@ -103,15 +116,31 @@ def fsm_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # imposible de superar subiendo) y el estado quedaria disparando CLIMB
     # sin techo. Se cuenta CUALQUIER CLIMB (por stuck_cycles o por bloqueo
     # lateral en ambos sectores), no solo el de stuck_cycles.
-    max_escapes = int(os.getenv("MAX_CONSECUTIVE_ESCAPES", "3"))
+    #
+    # El tope ENCLAVA: antes, al pasar a BRAKE la rama `else` ponia el
+    # contador en cero y el ciclo siguiente volvia a subir -- la red de
+    # seguridad se reseteaba a si misma y producia un ciclo limite
+    # (CLIMB, CLIMB, CLIMB, BRAKE, CLIMB, ...) en vez de un estado terminal.
+    # El enclavamiento se levanta solo cuando el atasco se resuelve de verdad
+    # (stuck_cycles vuelve por debajo del umbral). A diferencia del brazo SLM,
+    # aca el contador de atasco no se fuerza a cero desde el nodo, asi que
+    # `stuck_cycles < stuck_threshold` ya es evidencia de progreso real.
+    escape_locked = bool(state.get("_escape_locked", False))
     consecutive_escapes = int(state.get("_consecutive_escapes", 0))
+    if stuck_cycles < stuck_threshold:
+        escape_locked = False
+        consecutive_escapes = 0
+
+    fsm_state = _decide_state(field, stuck_cycles, stuck_threshold, guidance, escape_locked)
+
+    max_escapes = int(os.getenv("MAX_CONSECUTIVE_ESCAPES", "3"))
     if fsm_state == STATE_CLIMB:
         consecutive_escapes += 1
         if consecutive_escapes > max_escapes:
             fsm_state = STATE_BRAKE
-    else:
-        consecutive_escapes = 0
+            escape_locked = True
     state["_consecutive_escapes"] = consecutive_escapes
+    state["_escape_locked"] = escape_locked
 
     action = _STATE_TO_ACTION[fsm_state]
 

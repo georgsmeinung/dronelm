@@ -1,4 +1,5 @@
 from src.agents import graph as graph_mod
+from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception.obstacle_field import BANDS, SECTORS, Cell, ObstacleField, empty_field
 
 
@@ -58,6 +59,54 @@ def test_stuck_deadlock_forces_deliberative_regardless_of_field(monkeypatch):
     monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
     state = {"obstacle_field": empty_field(), "evasion_stuck_cycles": 999}
     assert graph_mod.policy_router(state) == "deliberative"
+
+
+def test_stuck_does_not_short_circuit_an_open_corridor(monkeypatch):
+    """El escape de deadlock ya no cortocircuita la percepcion.
+
+    En el vuelo del 2026-0824 el router devolvia "deliberative" por
+    `evasion_stuck_cycles` ANTES de mirar el ObstacleField, asi que el dron
+    subio 12 metros mientras la percepcion reportaba `DERECHA: DESPEJADO`
+    ciclo tras ciclo. Con evidencia valida de corredor libre, la decision
+    tactica normal manda.
+    """
+    monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
+    field = _field_with()  # los tres sectores libres, con evidencia valida
+    state = {
+        "obstacle_field": field,
+        "waypoint_guidance": {"bearing_err_deg": 30.0},  # waypoint a la derecha
+        "evasion_stuck_cycles": effective_stall_threshold(),
+    }
+    assert graph_mod.policy_router(state) == "keep_going"
+
+
+def test_hard_stuck_overrides_the_open_corridor_bypass(monkeypatch):
+    """El bypass por percepcion tiene techo: un campo "despejado" espurio no
+    puede desactivar el escape indefinidamente.
+    """
+    monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
+    field = _field_with()  # mismo campo despejado que el test anterior
+    state = {
+        "obstacle_field": field,
+        "waypoint_guidance": {"bearing_err_deg": 30.0},
+        "evasion_stuck_cycles": hard_stall_threshold(),
+    }
+    assert graph_mod.policy_router(state) == "deliberative"
+
+
+def test_committed_maneuver_is_not_preempted_by_the_stall_counter(monkeypatch):
+    """Una maniobra ya comprometida (p. ej. el giro de cambio de estrategia
+    que emite el escape agotado) debe poder ejecutarse: el contador de atasco
+    no la preempta mientras el TTC sea seguro.
+    """
+    monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
+    state = {
+        "obstacle_field": empty_field(),
+        "evasion_stuck_cycles": 999,
+        "active_maneuver": "GIRAR_90",
+        "maneuver_cycles_left": 3,
+    }
+    assert graph_mod.policy_router(state) == "evasive"
 
 
 def test_active_maneuver_persists_as_evasive_when_ttc_safe(monkeypatch):

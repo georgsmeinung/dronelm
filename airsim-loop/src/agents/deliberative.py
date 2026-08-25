@@ -31,7 +31,8 @@ import json as _json
 
 from .action_map import action_to_command
 from .deliberation_service import DeliberationService
-from src.perception import ObstacleField, empty_field
+from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
+from src.perception import ObstacleField, empty_field, has_open_corridor
 
 LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
 LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "ollama")
@@ -360,6 +361,32 @@ def make_deliberation_service() -> DeliberationService:
     return DeliberationService(query_fn=_query_slm_impl)
 
 
+def _dist_xy(guidance: Dict[str, Any]) -> float:
+    """Distancia horizontal al waypoint activo (0.0 si no hay guiado)."""
+    value = guidance.get("dist_xy", guidance.get("distance", 0.0))
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _escape_resolved_the_stall(state: Dict[str, Any], guidance: Dict[str, Any]) -> bool:
+    """True si hubo progreso horizontal REAL desde el ultimo escape forzado.
+
+    El contador de escapes consecutivos no puede colgarse de
+    `evasion_stuck_cycles`: el propio escape pide `_escape_reset`, que pone
+    ese contador en cero en el ciclo siguiente. Si se usara esa senal, cada
+    escape "pareceria" haber resuelto el atasco y MAX_CONSECUTIVE_ESCAPES
+    nunca se alcanzaria. La unica evidencia valida de que subir sirvio es que
+    la distancia horizontal al waypoint bajo de verdad.
+    """
+    baseline = state.get("_escape_baseline_dist")
+    if baseline is None:
+        return True  # todavia no hubo ningun escape que evaluar
+    eps_m = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
+    return _dist_xy(guidance) < float(baseline) - eps_m
+
+
 def _apply_maneuver_kinematics(decision: Dict[str, Any], guidance: Dict[str, Any], telemetry: Dict[str, Any], close_structural: bool) -> Dict[str, Any]:
     macro = decision.get("macro_action", "MANTENER_RUMBO")
     cmd = action_to_command(macro, guidance=guidance, telemetry=telemetry, close_structural=close_structural)
@@ -374,6 +401,10 @@ def make_deliberative_node(service: DeliberationService):
         print("[Deliberativo] -> Iniciando nodo deliberativo...")
         state["flight_status"] = "hover_slm"
         state["route"] = "deliberative"
+        # Flanco, no nivel: el lazo consume `_escape_reset` con pop(), pero el
+        # nodo tampoco debe depender de que lo haga -- un consumidor que se lo
+        # olvide dejaria el tracker reseteandose en todos los ciclos.
+        state["_escape_reset"] = False
 
         field: ObstacleField = state.get("obstacle_field") or empty_field()
         telemetry = state.get("telemetry", {}) or {}
@@ -387,32 +418,79 @@ def make_deliberative_node(service: DeliberationService):
         # progresar" y disparaba este escape en ~2s (EVASION_STUCK_THRESHOLD
         # a LOOP_HZ=5.0), descartando el pedido pendiente antes de que
         # pudiera resolverse.
-        stuck_threshold = int(os.getenv("EVASION_STUCK_THRESHOLD", "10"))
+        #
+        # 2026-0824: esta rama tiene ahora tres guardas que antes no tenia, y
+        # que juntas explican el vuelo en el que el dron subio 12m sin
+        # consultar al SLM ni una vez (ver CHANGELOG.md):
+        #   1. Umbral coherente con la metrica que lo alimenta
+        #      (effective_stall_threshold): antes se declaraba atasco a los 5
+        #      ciclos, mas rapido de lo que era fisicamente demostrable el
+        #      progreso durante un giro.
+        #   2. No se sube a ciegas si la percepcion ve corredor transitable.
+        #   3. El escape agotado ENCLAVA en vez de resetear su propio contador
+        #      (el reseteo lo convertia en un ciclo limite de periodo 3).
+        stuck_threshold = effective_stall_threshold()
         stuck_cycles = int(state.get("evasion_stuck_cycles", 0))
-        if stuck_cycles >= stuck_threshold:
+        loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
+
+        # El escape solo se "perdona" con progreso horizontal medido, nunca
+        # por el mero hecho de que el contador de atasco se haya reseteado.
+        if _escape_resolved_the_stall(state, guidance):
+            state["_consecutive_escapes"] = 0
+            state["_escape_locked"] = False
+            state["_escape_baseline_dist"] = None
+
+        escape_locked = bool(state.get("_escape_locked", False))
+        hard_stuck = stuck_cycles >= hard_stall_threshold()
+        # Mismo criterio que policy_router: no se sube a ciegas si la
+        # percepcion ve un corredor transitable (salvo atasco duro).
+        corridor_open = (not hard_stuck) and has_open_corridor(field, guidance)
+
+        if stuck_cycles >= stuck_threshold and not escape_locked and not corridor_open:
             max_escapes = int(os.getenv("MAX_CONSECUTIVE_ESCAPES", "3"))
             consecutive_escapes = int(state.get("_consecutive_escapes", 0)) + 1
             state["_consecutive_escapes"] = consecutive_escapes
+            state["_escape_baseline_dist"] = _dist_xy(guidance)
             state["_deliberation_pending"] = False
             state["evasion_stuck_cycles"] = 0
             state["_escape_reset"] = True
             state["slm_request_id"] = None
 
-            if consecutive_escapes > max_escapes:
-                # Red de seguridad: subir tampoco resolvio el atasco despues
-                # de varios intentos (ver dist_xy en Fix 2 -- si esto sigue
-                # disparando incluso con esa correccion, el atasco es real y
-                # no un artefacto de la metrica). Frenar en el lugar en vez
-                # de seguir subiendo sin techo.
-                print(f"[Deliberativo] -> ESCAPE AGOTADO: {consecutive_escapes} intentos de GANAR_ALTURA consecutivos sin resolver el atasco. Frenando en el lugar.")
-                cmd = action_to_command("FRENAR", guidance=guidance, telemetry=telemetry)
-                cmd["rationale"] = f"Escape agotado tras {consecutive_escapes - 1} intentos de GANAR_ALTURA sin resolver el atasco."
-                state["next_action"] = "FRENAR"
+            max_escape_alt = float(os.getenv("MAX_ESCAPE_ALT_M", "20.0"))
+            current_alt = abs(float(telemetry.get("position", {}).get("z", 0.0)))
+            exhausted = consecutive_escapes > max_escapes
+            above_ceiling = current_alt > max_escape_alt
+
+            if exhausted or above_ceiling:
+                # ENCLAVAMIENTO + CAMBIO DE ESTRATEGIA. Antes esta rama
+                # frenaba y ademas ponia `_consecutive_escapes = 0`: se
+                # reseteaba a si misma, convirtiendo la red de seguridad en un
+                # ciclo limite de periodo 3 (SUBIR, SUBIR, FRENAR, SUBIR, ...)
+                # que en vuelo real duro hasta el final del log. Ahora el
+                # enclavamiento persiste -- GANAR_ALTURA queda descartada
+                # hasta que haya progreso medido -- y se cambia de estrategia:
+                # un giro hacia el lado del waypoint, que es ademas lo unico
+                # que corrige el rumbo congelado que el ascenso dejaba atras.
+                # Los ciclos siguientes caen a la deliberacion normal (SLM),
+                # que vuelve a tener voz en vez de quedar cortocircuitada.
+                state["_escape_locked"] = True
+                if above_ceiling:
+                    print(f"[Deliberativo] -> ALTURA MÁXIMA DE ESCAPE ALCANZADA: {current_alt:.1f}m > {max_escape_alt:.1f}m. Escape enclavado, girando para buscar corredor.")
+                    reason = f"Altura máxima de escape alcanzada ({current_alt:.1f}m)."
+                    state["flight_status"] = "escape_altitude_limit"
+                else:
+                    print(f"[Deliberativo] -> ESCAPE AGOTADO: {consecutive_escapes - 1} intentos de GANAR_ALTURA sin progreso horizontal. Enclavando el escape y cambiando de estrategia (giro).")
+                    reason = f"Escape agotado tras {consecutive_escapes - 1} intentos de GANAR_ALTURA sin progreso."
+                    state["flight_status"] = "escape_agotado"
+
+                cmd = action_to_command("GIRAR_90", guidance=guidance, telemetry=telemetry)
+                side = "izquierda" if cmd["yaw_rate"] < 0 else "derecha"
+                cmd["rationale"] = f"{reason} Girando 90° hacia la {side} para buscar corredor; ascenso descartado hasta que haya progreso."
+                state["next_action"] = "GIRAR_90"
                 state["velocity_command"] = cmd
-                state["flight_status"] = "escape_agotado"
-                state["active_maneuver"] = None
-                state["maneuver_cycles_left"] = 0
-                state["maneuver_command"] = None
+                state["active_maneuver"] = "GIRAR_90"
+                state["maneuver_cycles_left"] = max(1, round(ESCAPE_MANEUVER_DURATION_S * loop_hz))
+                state["maneuver_command"] = cmd
                 return state
 
             print(f"[Deliberativo] -> ESCAPE POR ALTURA ({consecutive_escapes}/{max_escapes}): {stuck_cycles} ciclos sin progresar. Forzando GANAR_ALTURA sin consultar al LLM.")
@@ -421,13 +499,11 @@ def make_deliberative_node(service: DeliberationService):
             state["next_action"] = "GANAR_ALTURA"
             state["velocity_command"] = cmd
             state["flight_status"] = "escape_altura"
-            loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
             state["active_maneuver"] = "GANAR_ALTURA"
             state["maneuver_cycles_left"] = max(1, round(ESCAPE_MANEUVER_DURATION_S * loop_hz))
             state["maneuver_command"] = cmd
             return state
 
-        state["_consecutive_escapes"] = 0
         close_structural = field.is_blocked("centro") and field.sector_ttc("centro") <= SAFE_MARGIN_TTC_S
 
         pending_id = state.get("slm_request_id")

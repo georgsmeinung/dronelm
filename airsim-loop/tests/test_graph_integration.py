@@ -122,6 +122,91 @@ def test_single_cycle_produces_at_most_one_new_deliberation(monkeypatch):
         service.stop()
 
 
+def test_control_keys_survive_graph_invoke(monkeypatch):
+    """Regresion del deadlock del 2026-0824.
+
+    LangGraph construye los canales del grafo a partir del esquema DroneState
+    y DESCARTA en silencio toda clave que un nodo escriba y no este declarada
+    ahi. `_escape_reset` no lo estaba: el nodo deliberativo lo marcaba, el
+    lazo de main.py/runner.py lo leia para llamar a
+    `WaypointTracker.reset_progress()` -- y nunca llegaba. El contador de
+    atasco jamas se reiniciaba, el router quedaba clavado en la rama
+    deliberativa y el nodo en su rama de escape: 76 ciclos de vuelo real sin
+    una sola consulta al SLM.
+
+    Este test corre el grafo COMPILADO (no el nodo suelto) porque el bug solo
+    existe en esa frontera: los tests que invocan `deliberative_node(dict)`
+    directamente pasaban con el bug presente.
+    """
+    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
+    monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
+
+    client = _StubAirSimClient()
+    graph, service = compile_workflow(client)
+    try:
+        state = _base_state()
+        state["evasion_stuck_cycles"] = 9999  # atasco duro: fuerza la rama de escape
+        state["_delib_baseline"] = {"macro_action": "GANAR_ALTURA", "dist": 10.0, "min_ttc": 1.0}
+        state["inject_corner"] = {"x": 1.0, "y": 2.0, "z": -10.0, "label": "CORNER_TEST"}
+
+        result = graph.invoke(state)
+
+        # Escritas por el nodo: deben cruzar la frontera hacia el lazo.
+        assert result.get("_escape_reset") is True
+        assert result.get("_consecutive_escapes") == 1
+        assert "_escape_baseline_dist" in result
+        # Escritas por el lazo: deben sobrevivir al invoke sin que el nodo las toque.
+        assert result.get("_delib_baseline") == state["_delib_baseline"]
+        assert result.get("inject_corner") == state["inject_corner"]
+    finally:
+        service.stop()
+
+
+def test_stall_counter_resets_after_escape_in_main_loop(monkeypatch):
+    """El escape debe reiniciar el contador de atasco a traves del lazo real.
+
+    Replica el acoplamiento grafo <-> WaypointTracker de main.py/runner.py. Sin
+    el fix, `progress_stall_cycles` crecia monotono (5, 6, 8, 9, 11, ... en el
+    log de vuelo) y el escape se re-disparaba cada ciclo para siempre.
+    """
+    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
+    monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
+
+    from src.navigation.waypoint_tracker import WaypointTracker, effective_stall_threshold
+    from src.perception import FlowTTCEstimator
+    from src.perception.obstacle_field import empty_field
+
+    # Frames aleatorios producen un ObstacleField impredecible; aca interesa
+    # el acoplamiento contador <-> escape, no la percepcion.
+    monkeypatch.setattr(FlowTTCEstimator, "estimate", lambda self, *a, **kw: empty_field())
+
+    client = _StubAirSimClient()
+    graph, service = compile_workflow(client)
+    try:
+        tracker = WaypointTracker([{"x": 100.0, "y": 0.0, "z": -10.0, "label": "WP1"}])
+        state = _base_state()
+        threshold = effective_stall_threshold()
+
+        escapes = 0
+        for _ in range(threshold * 3):
+            guidance = tracker.compute_guidance({"x": 0.0, "y": 0.0, "z": -10.0}, current_yaw=0.0)
+            if not state.get("_deliberation_pending", False):
+                tracker.record_progress(guidance["dist_xy"])  # posicion fija: nunca progresa
+            state["waypoint_guidance"] = guidance
+            state["evasion_stuck_cycles"] = tracker.progress_stall_cycles
+            state = graph.invoke(state)
+            if state.pop("_escape_reset", False):
+                tracker.reset_progress()
+                escapes += 1
+                assert tracker.progress_stall_cycles == 0
+
+        # Con el contador reiniciandose, los escapes quedan espaciados por al
+        # menos `threshold` ciclos en vez de dispararse en cada ciclo.
+        assert 0 < escapes <= 3
+    finally:
+        service.stop()
+
+
 def test_deliberative_branch_resolves_to_single_entry_via_service(monkeypatch):
     monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
 
