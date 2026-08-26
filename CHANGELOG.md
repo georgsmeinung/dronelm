@@ -1,7 +1,49 @@
 # 2026-0825
 
+## Debugging de navegación: Sincronización de waypoint_index en G4
+
+Investigación de problema reportado donde drone estaba "completamente desorientado" en ambiente despejado durante corridas de tesis (G4). Análisis de logs reveló incoherencia crítica: `state["current_wp_index"]` nunca se sincronizaba con `tracker.current_index`.
+
+### Bug Identificado
+
+En `experiments/runner.py`, después de actualizar `tracker` con nueva posición:
+- `tracker.update(pos)` avanzaba `tracker.current_index` correctamente
+- `tracker.compute_guidance()` calculaba distancia al nuevo waypoint
+- **PERO**: `state["current_wp_index"]` permanecía en valor anterior
+- Logs registraban `wp_index=0` pero `dist_to_wp_m` a WP_1, creando inconsistencia
+
+Impacto:
+- WP_0 se completaba en ciclo 1 pero nunca se reflejaba en estado/logs
+- Distancia loguada era a waypoint incorrecto (135.69m → WP_1 en lugar de 1.5m → WP_0)
+- Navegación se reportaba como atascada aunque avanzaba internamente
+
+### Fix
+
+Agregada línea en runner.py después de `compute_guidance()`:
+```python
+state["current_wp_index"] = tracker.current_index
+```
+
+Sincroniza explícitamente el estado con el tracker antes de pasar a graph.invoke().
+
+### Validación
+
+Test de 300 ciclos post-fix:
+- WP_0 se completa en ciclo 1 ✓
+- `wp_index` avanza a 1 ✓
+- Drone navega hacia WP_1 (135m lejos) ✓
+- Path_length: 90.77m en 60s (progreso real medible)
+
+### Problema Secundario Identificado
+
+Drone zigzaguea significativamente (90.77m recorridos → 10.8m progreso neto). Probable oscillación en lógica de yaw_rate debida a histeresis de banda muerta (2.5-1.5°). Requiere revisión de `compute_guidance()` en futuras iteraciones.
+
+---
+
 * Primera versión del [Informe de Tesis](informe/README.md)
-* Seleccionado mejor modo de simulación para Unreal Engine: todos los parametros de Scalability en LOW, excepto para Effects, que va en EPIC para poder tener captura del drone utilizable en la cámara frontal
+* Seleccionado mejor configuración de simulación para Unreal Engine para poder tener captura de video del drone utilizable de la cámara frontal
+
+<img src="informe/2026-0825 Config Scalability UE Editor.png"/>
 
 # 2026-0824
 
