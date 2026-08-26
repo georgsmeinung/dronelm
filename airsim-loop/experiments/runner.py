@@ -118,6 +118,7 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
             yaw = telem.get("orientation", {}).get("yaw", 0.0)
             target_wp = tracker.update(pos)
             guidance = tracker.compute_guidance(pos, yaw)
+            state["current_wp_index"] = tracker.current_index
             # Fix 1 (2026-0824): frenar a proposito mientras se espera al SLM
             # (dentro del watchdog) no cuenta como "sin progresar" -- ver
             # _deliberation_pending en deliberative.py. Fix 2: distancia
