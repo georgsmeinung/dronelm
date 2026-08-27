@@ -10,12 +10,6 @@
 
   <link rel="stylesheet" href="styles.css">
 
-  <!-- KaTeX for LaTeX formulas -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
-    onload="renderMathInElement(document.body, {delimiters: [{left: '$', right: '$', display: false}, {left: '$$', right: '$$', display: true}]})">
-  </script>
 </head>
 
 <body>
@@ -157,7 +151,7 @@
           de la estación terrena. Un modelo de lenguaje local compila estas directivas en un <strong>Manifiesto de Vuelo
             Inmutable</strong> (<code>MissionManifest.json</code>), validado mediante esquemas Pydantic para garantizar
           que todos los waypoints se encuentren dentro del polígono georreferenciado del mapa y en coordenadas locales
-          NED seguras ($z &lt; 0$).
+          NED seguras (z &lt; 0).
         </p>
         <p>
           La suite incluye <strong>WebDCS (Ground Control Station Web)</strong> sobre FastAPI, que provee renderizado de
@@ -221,7 +215,7 @@
           </div>
           <div class="card">
             <h4>Derotación Analítica</h4>
-            <p>Proyecta los deltas de actitud (IMU: $\Delta\phi, \Delta\theta, \Delta\psi$) sobre el plano focal y resta
+            <p>Proyecta los deltas de actitud (IMU: Δφ, Δθ, Δψ) sobre el plano focal y resta
               el flujo angular, aislando el componente traslacional puro.</p>
           </div>
           <div class="card">
@@ -231,7 +225,7 @@
           </div>
           <div class="card">
             <h4>TTC Calibrado por ROC</h4>
-            <p>Calcula $TTC(p) = \frac{\|p - \mathbf{FOE}\| \cdot \Delta t}{\|\mathbf{v}_{\text{trans}}(p)\|}$ en
+            <p>Calcula TTC(p) = ||p - FOE|| · Δt / ||v_trans(p)|| en
               segundos reales, alcanzando un AUC de 0.96–0.97 contra profundidad de referencia.</p>
           </div>
         </div>
@@ -240,28 +234,28 @@
           <table>
             <thead>
               <tr>
-                <th>Horizonte Crítico ($\tau$)</th>
-                <th>Umbral Óptimo de Youden ($TTC$)</th>
+                <th>Horizonte Crítico (τ)</th>
+                <th>Umbral Óptimo de Youden (TTC)</th>
                 <th>AUC ROC</th>
                 <th>Acción Asociada en el Grafo</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><strong>$\tau = 2.0\text{ s}$</strong></td>
-                <td>$TTC \le 3.18\text{ s}$ ($\approx 3.2\text{ s}$)</td>
+                <td><strong>τ = 2.0 s</strong></td>
+                <td>TTC ≤ 3.18 s (≈ 3.2 s)</td>
                 <td><strong>0.97</strong></td>
                 <td>Activación de maniobra de evasión reactiva o bypass determinista.</td>
               </tr>
               <tr>
-                <td><strong>$\tau = 3.0\text{ s}$</strong></td>
-                <td>$TTC \le 4.58\text{ s}$ ($\approx 4.6\text{ s}$)</td>
+                <td><strong>τ = 3.0 s</strong></td>
+                <td>TTC ≤ 4.58 s (≈ 4.6 s)</td>
                 <td><strong>0.96</strong></td>
                 <td>Alerta de proximidad y habilitación de deliberación táctica SLM.</td>
               </tr>
               <tr>
                 <td><strong>Despejado / Seguro</strong></td>
-                <td>$TTC &gt; 4.6\text{ s}$ o $TTC = +\infty$</td>
+                <td>TTC > 4.6 s o TTC = +∞</td>
                 <td>—</td>
                 <td>Navegación en crucero nominal hacia el waypoint (<code>keep_going</code>).</td>
               </tr>
@@ -459,10 +453,10 @@
         </p>
         <ul>
           <li><strong>Varianza de Actitud en Giros:</strong> En simulación, el dron ejecuta inclinaciones instantáneas
-            de pitch/roll para seguir la ruta ($p \ll 0.05$), mientras que el dron físico está acotado electrónicamente
-            a $\pm 30^\circ$ por su controlador PID.</li>
+            de pitch/roll para seguir la ruta (p ≪ 0.05), mientras que el dron físico está acotado electrónicamente
+            a ±30° por su controlador PID.</li>
           <li><strong>Comportamiento en Crucero Recto:</strong> La simulación exhibe varianza nula en tramos rectos sin
-            viento, mientras que el dron real mantiene una oscilación permanente de $\pm 2^\circ$ a $\pm 3^\circ$ por
+            viento, mientras que el dron real mantiene una oscilación permanente de ±2° a ±3° por
             turbulencia atmosférica y estabilización.</li>
         </ul>
 
