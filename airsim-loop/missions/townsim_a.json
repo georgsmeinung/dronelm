@@ -1,0 +1,12 @@
+{
+  "mission_id": "townsim_a",
+  "summary": "Tier 1 (escenario intermedio, mision completa): 5 waypoints, ~530m totales, mapa townsim.png (proyecto UE TownSim, pocas cuadras con mucha vegetacion). Copia de airsim-plan/missions/A_TOWN_MISSION.preloop.json para el runner automatico.",
+  "start_pose": { "x": 0.4, "y": 5.3, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 0.4, "y": 5.3, "z": -10.0, "label": "WP_1" },
+    { "x": 1.6, "y": -137.9, "z": -10.0, "label": "WP_2" },
+    { "x": 75.2, "y": -135.5, "z": -10.0, "label": "WP_3" },
+    { "x": 74.0, "y": 3.3, "z": -10.0, "label": "WP_4" },
+    { "x": 51.2, "y": 53.7, "z": -10.0, "label": "WP_5" }
+  ]
+}

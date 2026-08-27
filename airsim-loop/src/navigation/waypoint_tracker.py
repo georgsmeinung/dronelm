@@ -297,22 +297,37 @@ class WaypointTracker:
         seg_y = wy - float(prev_wp.get("y", wy))
         seg_len = math.hypot(seg_x, seg_y)
 
-        if seg_len > 1.0 and dist_xy > 3.0:
+        # Progreso a lo largo del segmento (parametro t de la proyeccion de la
+        # posicion actual sobre A->B, 0=en A, 1=en B). El cross-track error de
+        # abajo solo mide desvio LATERAL a la linea infinita A->B -- no tiene
+        # forma de saber si el dron ya paso el punto B. Sin este chequeo
+        # (2026-0827, ver CHANGELOG.md), una maniobra evasiva que empuja al
+        # dron mas alla de B mientras sigue a >3m de distancia (nunca entro al
+        # radio de aceptacion) hace que el guiado en modo corredor lo siga
+        # apuntando a lo largo de la extension infinita de la linea, en vez de
+        # girarlo de vuelta hacia B -- el dron se aleja del waypoint sin limite.
+        overshot_segment = False
+        if seg_len > 1.0:
+            t_progress = ((x - float(prev_wp.get("x", 0.0))) * seg_x + (y - float(prev_wp.get("y", 0.0))) * seg_y) / (seg_len**2)
+            overshot_segment = t_progress >= 1.0
+
+        if seg_len > 1.0 and dist_xy > 3.0 and not overshot_segment:
             # Ángulo del corredor de la calle
             street_yaw = math.atan2(seg_y, seg_x)
-            
+
             # Cross-track error (desviación lateral perpendicular al eje de la calle)
             cte = (-(x - float(prev_wp.get("x", 0.0))) * seg_y + (y - float(prev_wp.get("y", 0.0))) * seg_x) / seg_len
-            
+
             # Corrección angular suave para reincorporarse al centro de la calle (máximo ±20°)
             k_cte = 0.15
             cte_correction_rad = -math.atan(k_cte * cte)
             cte_correction_rad = max(-math.radians(20.0), min(math.radians(20.0), cte_correction_rad))
-            
+
             # Rumbo deseado proyectado a lo largo del corredor
             target_yaw = street_yaw + cte_correction_rad
         else:
-            # Aproximación final directa al waypoint
+            # Aproximación final directa al waypoint (incluye el caso de
+            # haberse pasado del punto B por el corredor: overshot_segment).
             target_yaw = math.atan2(dy, dx)
 
         # Error angular relativo respecto a la orientación actual del dron (-180° a +180°)

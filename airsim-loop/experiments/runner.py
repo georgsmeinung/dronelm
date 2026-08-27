@@ -4,7 +4,7 @@ N misiones x M escenarios x K semillas, sin ventana cv2 ni stream_hub.
 Escribe un JSONL por corrida via FlightLogger.
 
 Uso:
-    python experiments/runner.py --scenarios missions/manhattan_a.json missions/manhattan_b.json \
+    python experiments/runner.py --scenarios missions/minisim_clear.json missions/citymap_pilot.json \
         --arms slm fsm reactive --seeds 1 2 3 --out-dir runs/
 
 Cada archivo de escenario es un manifiesto con el mismo formato que consume
@@ -134,7 +134,15 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
             state["target_waypoint"] = target_wp
             state["waypoint_guidance"] = guidance
             state["mission_completed"] = tracker.is_completed
-            state["telemetry"] = telem
+            # NO pisar state["telemetry"] aca (2026-0827, ver CHANGELOG.md): este
+            # get_telemetry() es una lectura rapida solo para el guiado (pos/yaw),
+            # separada del capture() que corre adentro del grafo. Si se guarda en
+            # state["telemetry"], capture_node la toma como prev_telemetry en el
+            # siguiente ciclo -- pero es casi el mismo instante que el propio
+            # capture() de este ciclo (milisegundos de diferencia, mismo reloj de
+            # pared), no la telemetria del ciclo anterior. Eso hacia que
+            # flow_ttc.py calculara dt=~0 SIEMPRE y degradara la percepcion en
+            # el 100% de los ciclos, en todos los escenarios corridos hoy.
             state["evasion_stuck_cycles"] = tracker.progress_stall_cycles
 
             state = graph.invoke(state)

@@ -2,10 +2,14 @@
 
 ## Resumen
 
-G4 ejecuta un experimento factorial: **3 brazos × 3 escenarios × N semillas**.
+G4 ejecuta un experimento factorial: **3 brazos × N escenarios × N semillas**.
 
 - **Brazos**: `slm` (deliberativo), `fsm` (máquina de estados), `reactive` (reactivo)
-- **Escenarios**: Misiones con waypoints (`manhattan_a.json`, `manhattan_b.json`, `manhattan_c.json`)
+- **Escenarios**: Misiones con waypoints, organizadas por tier de dificultad (ver plan 2026-0827):
+  - Tier 0 (base, `crater.png`/MiniSim): `minisim_clear.json` — debe cerrar en verde antes que el resto.
+  - Tier 1 (intermedio, `townsim.png`/TownSim): pendiente de crear (`townsim_pilot.json`, `townsim_a.json`).
+  - Tier 2 (complejo, `citymap.png`/CitySim): `citymap_pilot.json` (antes `manhattan_b.json`), pendiente `citymap_a.json`.
+  - `manhattan_a.json` queda **descartado** (2026-0827): sus waypoints vienen de un manifiesto que declara `crater.png`, no el mapa urbano que su nombre sugiere.
 - **Semillas**: Variables de control para reproducibilidad (default 5: 1-5)
 
 Total de corridas: 3 × 3 × 5 = **45 corridas** (ajustar semillas según disponibilidad)
@@ -14,7 +18,7 @@ Total de corridas: 3 × 3 × 5 = **45 corridas** (ajustar semillas según dispon
 
 - AirSim local corriendo en la máquina Windows
 - LM Studio corriendo (si se usa brazo `slm`)
-- Misiones disponibles en `missions/` (manhattan_a.json, etc.)
+- Misiones disponibles en `missions/` (minisim_clear.json, citymap_pilot.json, etc.)
 - Python venv activado: `.venv/Scripts/activate`
 
 ## Ejecución
@@ -24,7 +28,7 @@ Total de corridas: 3 × 3 × 5 = **45 corridas** (ajustar semillas según dispon
 ```bash
 cd airsim-loop
 python experiments/batch_runner.py \
-    --scenarios missions/manhattan_a.json missions/manhattan_b.json missions/manhattan_c.json \
+    --scenarios missions/minisim_clear.json missions/townsim_a.json missions/citymap_pilot.json \
     --arms slm fsm reactive \
     --seeds 1 2 3 4 5 \
     --out-dir runs/tesis \
@@ -32,17 +36,21 @@ python experiments/batch_runner.py \
     --max-seconds 300
 ```
 
+Ajustar `--max-seconds`/`--max-cycles` por escenario según la distancia total de sus waypoints y la
+velocidad de crucero (ver plan 2026-0827): el presupuesto por defecto de este ejemplo alcanza para los
+tres tiers, pero un piloto corto (p. ej. `minisim_clear`) puede correr con un presupuesto menor.
+
 **Tiempo estimado**: ~5-7 horas (45 corridas × 5-8 minutos c/u)
 
 ### Opción 2: Prueba Rápida (2 semillas, debug)
 
 ```bash
 python experiments/batch_runner.py \
-    --scenarios missions/manhattan_a.json \
+    --scenarios missions/minisim_clear.json \
     --arms slm fsm reactive \
     --seeds 1 2 \
     --out-dir runs/tesis_debug \
-    --max-cycles 500 \
+    --max-cycles 600 \
     --max-seconds 120
 ```
 

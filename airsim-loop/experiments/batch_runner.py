@@ -5,7 +5,7 @@ corre en un subproceso separado. Agrupa resultados por escenario para análisis.
 
 Uso:
     python experiments/batch_runner.py \
-        --scenarios missions/manhattan_a.json missions/manhattan_b.json missions/manhattan_c.json \
+        --scenarios missions/minisim_clear.json missions/townsim_a.json missions/citymap_pilot.json \
         --arms slm fsm reactive \
         --seeds 1 2 3 4 5 \
         --out-dir runs/tesis \
@@ -14,8 +14,8 @@ Uso:
 
 Salida:
     runs/tesis/manhattan_a/{slm,fsm,reactive}/seed_*.jsonl
-    runs/tesis/manhattan_b/{slm,fsm,reactive}/seed_*.jsonl
-    runs/tesis/manhattan_c/{slm,fsm,reactive}/seed_*.jsonl
+    runs/tesis/townsim_a/{slm,fsm,reactive}/seed_*.jsonl
+    runs/tesis/citymap_pilot/{slm,fsm,reactive}/seed_*.jsonl
     runs/tesis/RESULTS_SUMMARY.json (tabla de resultados por combinación)
 """
 from __future__ import annotations

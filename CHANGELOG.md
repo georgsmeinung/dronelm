@@ -1,3 +1,139 @@
+# 2026-0827
+
+## Dos bugs reales encontrados al correr Tier 1 completo (`townsim_a`, 5 waypoints): percepción muerta todo el día, y overshoot de waypoint por guiado en modo corredor
+
+Continuación de la corrida de Tier 1 completo (ver sección de abajo para el piloto corto). Al correr
+`townsim_a` (misión completa, 5 waypoints, ~411m) con `reactive`/`fsm`/`slm`, ninguno completó la misión
+y el brazo `slm` quedó ~200 de 300s inmóvil deliberando sin evidencia de percepción. Investigar por qué
+llevó a dos hallazgos de código reales, no ajustes de parámetros:
+
+### Bug 1 — `ObstacleField` degradado el 100% de los ciclos, en TODAS las corridas de hoy (no solo townsim_a)
+
+`runner.py` (y `main.py`, mismo patrón) llaman `client.get_telemetry()` al principio de cada ciclo para
+calcular el guiado al waypoint, y guardaban ese resultado en `state["telemetry"]` **antes** de invocar el
+grafo. Adentro del grafo, `capture_node` toma `state["telemetry"]` como `prev_telemetry` para el cálculo
+de `dt` en `FlowTTCEstimator` — pero en ese punto no es la telemetría del ciclo anterior, es la que
+`get_telemetry()` acaba de pisar hace milisegundos, en el mismo ciclo. Como `get_telemetry()` no pasa
+`timestamp_s` (cae a `time.time()`) y `capture()` también cae a `time.time()` cuando `response.time_stamp`
+viene en 0, `prev` y `curr` terminaban siendo dos lecturas de reloj de pared tomadas casi simultáneamente
+dentro del mismo ciclo — la diferencia caía sistemáticamente bajo el umbral `dt <= 1e-3` de
+`flow_ttc.py:219`, y la percepción devolvía `source="degraded"` siempre.
+
+Verificado con los 4 datasets de la sesión (`minisim_clear`, `townsim_pilot`, `townsim_a` × 2 brazos):
+`dt_s==0.0` en el 100% de los ciclos, en los cuatro. Es decir, **la percepción de flujo óptico/TTC no
+funcionó en ninguna corrida de hoy, incluidas las que cerraron el gate de Tier 0 y el piloto de Tier 1**
+— esas corridas "pasaron en verde" porque nunca entraron en una rama que dependiera de evidencia real
+(`reactive`/`fsm` con umbrales nunca alcanzados, `slm` con `slm_invocations=0`), no porque la percepción
+estuviera midiendo algo válido. Coincide con lo que predijo el usuario: era indetectable en el escenario
+"limpio" del cráter — exactamente el motivo de la escalera de dificultad Tier 0→1→2.
+
+**Fix:** en [runner.py](airsim-loop/experiments/runner.py) y [main.py](airsim-loop/main.py), la lectura
+rápida de `get_telemetry()` ya no pisa `state["telemetry"]`/`drone_state["telemetry"]` antes de
+`graph.invoke()` — se sigue usando localmente para el guiado, pero se deja que `capture_node` sea la única
+fuente de verdad de `telemetry`/`prev_telemetry` entre ciclos.
+
+**Validación** (`townsim_a`, `reactive`, presupuesto igual): `source` pasó de 0% a 95.5% `flow` (1315/1377
+ciclos), `dt_s` en el rango esperado (~0.15-0.2s, consistente con `LOOP_HZ=5.0`). En el punto de mayor
+acercamiento a la vegetación, la percepción ahora reporta `ttc_s=0.55s` con `confidence=0.22` — detecta el
+riesgo por tiempo-a-colisión aunque `occupancy` siga baja (la vegetación cubre poca área en píxeles). Con
+el fix, `fsm` pasó de 0 maniobras evasivas a 401 en la misma misión.
+
+### Bug 2 — Guiado en modo "corredor de calle" no detecta haberse pasado del waypoint (overshoot sin límite)
+
+Con la percepción arreglada y `fsm` evadiendo activamente por primera vez, apareció un segundo problema:
+en la corrida de validación el dron llegó a 5.42m de WP_2 (nunca entró al radio de aceptación de 3.5m,
+justo cuando una maniobra evasiva lo desvió un poco) y a partir de ahí seguido alejándose monótonamente
+hasta salirse del mapa (observado en vivo: caída infinita fuera del escenario).
+
+Causa: `compute_guidance()` en
+[waypoint_tracker.py:300-316](airsim-loop/src/navigation/waypoint_tracker.py#L300) usa un modo "corredor"
+mientras `dist_xy > 3.0m` — apunta a mantenerse centrado sobre la **línea infinita** entre el waypoint
+anterior y el actual (corrigiendo solo desvío lateral, `cte`), y recién cambia a rumbo directo al punto
+(`atan2(dy,dx)`) cuando `dist_xy <= 3.0m`. El cálculo de `cte` no tiene noción de progreso *a lo largo* de
+la línea, así que si el dron nunca entra al radio de aceptación pero ya pasó la posición del waypoint,
+sigue volando derecho por la extensión infinita de esa línea, indefinidamente.
+
+**Fix:** se agregó el parámetro de progreso a lo largo del segmento (`t_progress`, proyección de la
+posición actual sobre A→B); si `t_progress >= 1.0` (ya pasó B), se fuerza el modo de rumbo directo sin
+importar `dist_xy`.
+
+**Validación** (`fsm` sobre `townsim_a`, mismo presupuesto): `wp_index` ahora avanza correctamente
+(1→2→3, antes se quedaba en 1 para siempre), el dron llegó a WP_2 y WP_3 sin pasarse de largo,
+`path_length_m` volvió a un valor razonable (373.9m vs. 520.5m del overshoot).
+
+### Pendiente — atasco físico sin colisión registrada, cerca de WP_4
+
+En la misma corrida de validación, entre el ciclo ~1101 y el final del presupuesto (1401, ~65s), el dron
+quedó inmóvil en `(77.7, -23.8)` a 27.4m de WP_4, comandando mayormente `MANTENER_RUMBO` (203/279 ciclos)
+con percepción sana (`source=flow`, nada bloqueado) — no es el mismo mecanismo que el Bug 1 (no hay
+`FRENAR` sostenido por falta de evidencia). Parece un atasco físico contra geometría que no dispara
+`has_collided`, o un caso no cubierto del guiado. **No investigado todavía** — queda para la próxima
+sesión.
+
+## Plan de escenarios de complejidad creciente: base → intermedio → complejo, y Tier 0 cerrado en verde
+
+Punto de partida: el capítulo 11 del informe fija un criterio de arranque explícito —una sola corrida
+piloto brazo×escenario debe dar `success=True` antes de correr el batch completo— y ese criterio
+todavía no se cumplía ni siquiera en el escenario más simple posible (`minisim_clear`, sin obstáculos).
+Se definió un plan de tres niveles de dificultad, cada uno atado a un mapa/proyecto UE real y con doble
+copia de manifiesto (uno en `airsim-plan/missions/*.preloop.json` para pruebas interactivas vía WebDCS,
+otro en `airsim-loop/missions/*.json` para el runner automático):
+
+| Tier | Mapa (proyecto UE) | Estado |
+|---|---|---|
+| 0 — base | `crater.png` (MiniSim) | **Cerrado hoy**, ver abajo |
+| 1 — intermedio (vegetación, obstáculos orgánicos) | `townsim.png` (TownSim) | Pendiente — falta crear `TOWNSIM_PILOT.preloop.json`/`townsim_pilot.json` |
+| 2 — complejo (edificios altos, corredores angostos) | `citymap.png` (CitySim) | Piloto existente renombrado, corrida completa pendiente |
+
+### Limpieza de escenarios previos
+
+- **`manhattan_a` queda descartado.** Su `summary` afirmaba "mismo mapa CityParkSim", pero sus
+  waypoints vienen de `A_SIMPLE_MISSION.preloop.json`, que declara `"map": "crater.png"` — es decir, el
+  escenario que se venía usando como "urbano" (incluida la corrida de `runs/tesis_primary/`) en realidad
+  apuntaba al mapa base. No se investigó el origen exacto de la inconsistencia (`CREATEENV.md` sí lista
+  `CitySim`/`CityParkSim` como el mismo proyecto); se decidió tratarlo como resabio de una etapa anterior
+  del proyecto y no reutilizarlo.
+- **`manhattan_b.json` → `citymap_pilot.json`** (`git mv`, historial preservado). Su manifiesto fuente
+  (`A_BASIC_CITY.preloop.json`, `map: citymap.png`) sí es consistente, así que pasa a ser el piloto
+  oficial de Tier 2 con nombre alineado a los tiers nuevos.
+- Nuevo `airsim-plan/missions/MINISIM_BASE.preloop.json`: espejo de `airsim-loop/missions/minisim_clear.json`
+  (mismos 3 waypoints, `map: crater.png`) — antes ese escenario solo existía del lado de `airsim-loop`.
+- Referencias operativas a los nombres viejos actualizadas en
+  [runner.py](airsim-loop/experiments/runner.py), [batch_runner.py](airsim-loop/experiments/batch_runner.py)
+  y [G4_THESIS_RUN.md](airsim-loop/G4_THESIS_RUN.md). **No se tocaron** las menciones a `manhattan_a`/`manhattan_b`
+  en los capítulos del informe (02, 03, 04, 10, 11), `CREATEENV.md` ni `PLAN-MEJORAS-2.md` — queda como
+  tarea de limpieza de prosa para cuando los tres tiers nuevos estén corriendo.
+
+### Tier 0: el fallo no era un bug de control, era presupuesto de misión
+
+Los 13 intentos de `minisim_smoke_v1`...`v13` del día anterior (2026-0826) fallaban con
+`success=False` pese a 0 colisiones y rumbo correcto. Inspección del último JSONL: a los 60s del corte
+(`--max-seconds 60 --max-cycles 300`) el dron seguía en camino al último waypoint, a ~2.1 m/s de crucero
+sobre un recorrido total de 180m (~86s necesarios) — el presupuesto de esas corridas simplemente no
+alcanzaba, sin relación con ningún bug del grafo de control.
+
+Corrida de validación con presupuesto corregido (`--max-seconds 120 --max-cycles 600`,
+`runs/minisim_base_fix/`):
+
+| Brazo | `success` | Colisiones | Ciclos | Duración |
+|---|---|---|---|---|
+| `reactive` | True | 0 | 400 | 80.3s |
+| `fsm` | True | 0 | 396 | 79.3s |
+| `slm` | True | 0 | 396 | 79.7s |
+
+Los tres brazos cierran en verde — Tier 0 satisface el criterio de arranque de §11.
+
+Dos observaciones sobre esa corrida, ninguna es un problema real:
+- `reactive` reportó `min_obstacle_dist_m=0.378` en un solo ciclo (#5, t=1s, justo en la posición de
+  spawn) — artefacto transitorio de la captura de profundidad antes de que el dron se estabilice
+  post-despegue; del ciclo 135 en adelante todos los valores están en 30-40m+, consistente con campo
+  abierto.
+- `slm` corrió con `slm_invocations=0` y `deliberation_rate=0.0` (`route_histogram` 100% `reactive`).
+  El servidor SLM (`LOCAL_LLM_URL` del `.env` de `airsim-loop`, LM Studio en `192.168.110.101:1234`)
+  respondía sano (`/v1/models` → 200, `qwen/qwen2.5-vl-3b`); simplemente `minisim_clear` no tiene ningún
+  obstáculo que dispare la rama deliberativa de `policy_router`. La primera corrida donde el SLM va a
+  deliberar de verdad va a ser en `townsim` o `citymap` (Tier 1/2).
+
 # 2026-0826
 
 ## Cambios en el flujo de control

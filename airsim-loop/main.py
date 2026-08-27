@@ -260,7 +260,13 @@ def main() -> None:
             drone_state["target_waypoint"] = target_wp
             drone_state["waypoint_guidance"] = guidance
             drone_state["mission_completed"] = waypoint_tracker.is_completed
-            drone_state["telemetry"] = telem_now
+            # NO pisar drone_state["telemetry"] aca (2026-0827, ver CHANGELOG.md):
+            # mismo fix que experiments/runner.py -- este get_telemetry() es una
+            # lectura rapida solo para el guiado (pos/yaw), separada del capture()
+            # que corre adentro del grafo. Guardarla ahi hacia que capture_node
+            # tomara como prev_telemetry un timestamp de milisegundos antes (este
+            # mismo ciclo), no el del ciclo anterior -- dt=~0 siempre, percepcion
+            # degradada en el 100% de los ciclos.
             drone_state["evasion_stuck_cycles"] = waypoint_tracker.progress_stall_cycles
             if waypoint_tracker.is_completed:
                 drone_state["flight_status"] = "mision_completada"

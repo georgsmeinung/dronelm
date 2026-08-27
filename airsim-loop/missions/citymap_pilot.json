@@ -1,6 +1,6 @@
 {
-  "mission_id": "manhattan_b",
-  "summary": "F3.3: escenario con mas giros (7 waypoints, tipo grilla urbana), waypoints reutilizados de airsim-plan/missions/A_BASIC_CITY.preloop.json (mismo mapa CityParkSim).",
+  "mission_id": "citymap_pilot",
+  "summary": "Tier 2 (escenario complejo, piloto): renombrado desde manhattan_b (2026-0827). Circuito de 7 waypoints tipo grilla urbana sobre el mapa citymap.png (proyecto UE CitySim), waypoints reutilizados de airsim-plan/missions/A_BASIC_CITY.preloop.json.",
   "start_pose": { "x": 26.1, "y": -78.2, "z": -10.0, "yaw_deg": 0.0 },
   "waypoints": [
     { "x": 26.1, "y": -78.2, "z": -10.0, "label": "WP_1" },
