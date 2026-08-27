@@ -564,25 +564,34 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
 
   <!-- Responsive Active Section Highlight script -->
   <script id="active-nav-script">
-    window.addEventListener('DOMContentLoaded', () => {
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          const id = entry.target.getAttribute('id');
-          if (entry.intersectionRatio > 0.1) {
-            document.querySelectorAll('nav a').forEach(a => {
-              a.classList.remove('active');
-              if (a.getAttribute('href') === `#${id}`) {
-                a.classList.add('active');
-              }
-            });
-          }
-        });
-      }, { threshold: [0.1, 0.2, 0.3], rootMargin: "0px 0px -70% 0px" });
+    (function() {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initNav);
+      } else {
+        initNav();
+      }
 
-      document.querySelectorAll('main > section').forEach((section) => {
-        observer.observe(section);
-      });
-    });
+      function initNav() {
+        const observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            const id = entry.target.getAttribute('id');
+            if (entry.intersectionRatio > 0.1) {
+              document.querySelectorAll('nav a').forEach(function(a) {
+                a.classList.remove('active');
+                if (a.getAttribute('href') === '#' + id) {
+                  a.classList.add('active');
+                }
+              });
+            }
+          });
+        }, { threshold: [0.1, 0.2, 0.3], rootMargin: "0px 0px -70% 0px" });
+
+        const sections = document.querySelectorAll('main > section');
+        sections.forEach(function(section) {
+          observer.observe(section);
+        });
+      }
+    })();
   </script>
 </body>
 
