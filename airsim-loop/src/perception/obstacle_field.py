@@ -16,6 +16,14 @@ BANDS: Tuple[str, ...] = ("superior", "medio", "inferior")
 OCCUPANCY_BLOCKED_THRESHOLD = float(os.getenv("OBSTACLE_OCCUPANCY_BLOCKED", "0.35"))
 TTC_BLOCKED_THRESHOLD_S = float(os.getenv("OBSTACLE_TTC_BLOCKED_S", "2.5"))
 MIN_CONFIDENCE_FOR_BLOCKED = float(os.getenv("OBSTACLE_MIN_CONFIDENCE", "0.15"))
+# Piso de confianza mas exigente para que el TTC por si solo (sin apoyo de
+# occupancy) baste para marcar una celda bloqueada (2026-0826, ver CHANGELOG.md).
+# El camino de "pocos inliers" en flow_ttc.py clipea foe_confidence a 0.3 como
+# senal de FOE poco confiable -- ese 0.3 superaba de sobra el piso general
+# (0.15) y terminaba votando "bloqueado" con la misma autoridad que un FOE
+# robusto. Con este umbral, esa evidencia degradada ya no puede bloquear un
+# sector por TTC solo (occupancy sigue usando el piso general).
+MIN_CONFIDENCE_FOR_TTC_BLOCKED = float(os.getenv("OBSTACLE_MIN_CONFIDENCE_TTC", "0.35"))
 
 
 @dataclass(frozen=True)
@@ -32,7 +40,9 @@ class Cell:
     def is_blocked(self) -> bool:
         if self.confidence < MIN_CONFIDENCE_FOR_BLOCKED:
             return False
-        return self.occupancy >= OCCUPANCY_BLOCKED_THRESHOLD or self.ttc_s <= TTC_BLOCKED_THRESHOLD_S
+        if self.occupancy >= OCCUPANCY_BLOCKED_THRESHOLD:
+            return True
+        return self.confidence >= MIN_CONFIDENCE_FOR_TTC_BLOCKED and self.ttc_s <= TTC_BLOCKED_THRESHOLD_S
 
 
 def _empty_cells() -> Dict[Tuple[str, str], Cell]:

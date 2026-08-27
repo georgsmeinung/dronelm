@@ -250,7 +250,10 @@ def main() -> None:
             # Fix 2: distancia HORIZONTAL, no 3D -- subir para escapar de un
             # atasco no debe empeorar la metrica que decide si se resolvio.
             if not drone_state.get("_deliberation_pending", False):
-                waypoint_tracker.record_progress(guidance.get("dist_xy", guidance.get("distance", 0.0)))
+                waypoint_tracker.record_progress(
+                    guidance.get("dist_xy", guidance.get("distance", 0.0)),
+                    bearing_err_deg=guidance.get("bearing_err_deg", 0.0),
+                )
 
             drone_state["waypoints"] = waypoint_tracker.waypoints
             drone_state["current_wp_index"] = waypoint_tracker.current_index

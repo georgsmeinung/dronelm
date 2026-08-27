@@ -126,7 +126,10 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
             # empeorar mecanicamente la metrica que decide si el atasco se
             # resolvio (los waypoints estan a altitud constante).
             if not state.get("_deliberation_pending", False):
-                tracker.record_progress(guidance.get("dist_xy", guidance.get("distance", 0.0)))
+                tracker.record_progress(
+                    guidance.get("dist_xy", guidance.get("distance", 0.0)),
+                    bearing_err_deg=guidance.get("bearing_err_deg", 0.0),
+                )
 
             state["target_waypoint"] = target_wp
             state["waypoint_guidance"] = guidance

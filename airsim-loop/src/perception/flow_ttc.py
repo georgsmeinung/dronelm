@@ -48,6 +48,19 @@ FOE_OUTLIER_ANGLE_RAD = float(os.getenv("FOE_OUTLIER_ANGLE_RAD", "0.35"))
 
 TTC_AGGREGATION_PERCENTILE = float(os.getenv("TTC_AGGREGATION_PERCENTILE", "20"))
 
+# Rotacion maxima entre frames (grados) para la que la derotacion lineal
+# (_derotate, modelo de primer orden en el angulo) sigue siendo confiable
+# (2026-0826, ver CHANGELOG.md: falsos obstaculos -- "nubes" -- durante GIRAR_90
+# /EVADIR). En crucero recto el yaw cambia <0.5 grados/ciclo; durante un giro
+# activo (yaw_rate de 20-45 grados/s a 5Hz) cambia 4-9 grados/ciclo. Con
+# rotacion grande entre frames, ademas de que el error de linealizacion crece,
+# el cielo/nubes (regiones de bajisima textura) producen flujo optico
+# esencialmente ruido que la derotacion no cancela de forma limpia -- ese
+# residuo se leia como evidencia de obstaculo. Por encima de este umbral no
+# hay parallax traslacional confiable que extraer: se devuelve evidencia
+# vacia en vez de arriesgar un falso positivo.
+FLOW_MAX_ROTATION_DEG = float(os.getenv("FLOW_MAX_ROTATION_DEG", "2.0"))
+
 
 def _create_flow_backend():
     if FLOW_ALGORITHM == "dis":
@@ -233,6 +246,10 @@ class FlowTTCEstimator:
         # Envolver saltos de +-pi en el yaw (cruce del limite -180/180).
         delta_yaw = (delta_yaw + np.pi) % (2 * np.pi) - np.pi
 
+        max_rotation_rad = np.deg2rad(FLOW_MAX_ROTATION_DEG)
+        if max(abs(delta_pitch), abs(delta_yaw), abs(delta_roll)) > max_rotation_rad:
+            return empty_field(source="degraded", timestamp=ts_curr)
+
         flow_trans = self._derotate(flow, delta_pitch, delta_yaw, delta_roll, fx, fy, cx, cy)
 
         mag = np.linalg.norm(flow_trans, axis=2)
@@ -243,6 +260,17 @@ class FlowTTCEstimator:
             return empty_field(source="flow", timestamp=ts_curr)
 
         foe, foe_confidence = self._estimate_foe(flow_trans, mag, valid, cx, cy)
+
+        # Sanity check (2026-0826, ver CHANGELOG.md): un FOE fuera de los limites
+        # del frame no es un punto de fuga fisicamente plausible para esta imagen,
+        # es indicio de que el ajuste por minimos cuadrados no convergio a una
+        # senal traslacional real (tipico con velocidad baja/ruido dominante,
+        # donde el residuo de derotacion mal compensada contamina el flujo). Se
+        # descarta como evidencia en vez de dejar pasar el 0.3 de confianza
+        # "de consuelo" del camino de pocos inliers.
+        if foe is not None and not (0.0 <= foe[0] <= w and 0.0 <= foe[1] <= h):
+            foe, foe_confidence = None, 0.0
+
         if foe is None or foe_confidence <= 0.0:
             return ObstacleField(
                 cells={(s, b): Cell(sector=s, band=b) for s in SECTORS for b in BANDS},

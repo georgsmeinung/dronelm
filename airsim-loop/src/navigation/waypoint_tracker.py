@@ -22,6 +22,16 @@ GUIDANCE_SMOOTHING_ALPHA = float(os.getenv("GUIDANCE_SMOOTHING_ALPHA", "0.5"))
 # "no progresa". Es el parametro que reconcilia PROGRESS_EPS_M (metros) con
 # EVASION_STUCK_THRESHOLD (ciclos) -- ver effective_stall_threshold().
 MIN_PROGRESS_SPEED_MPS = float(os.getenv("MIN_PROGRESS_SPEED_MPS", "0.25"))
+# Error de rumbo (grados) por encima del cual un ciclo se considera "girando
+# activamente hacia el waypoint" y se excluye del contador de atasco
+# (2026-0826, ver CHANGELOG.md). record_progress() media el progreso solo por
+# distancia radial al waypoint; al completar un tramo y arrancar el
+# siguiente, la distancia apenas baja mientras el dron gira para encarar el
+# nuevo rumbo (avance casi nulo por diseno, no por obstaculo), y el contador
+# de atasco se disparaba en cada esquina -- confundiendo un giro normal con
+# un deadlock real. Un obstaculo genuino se sigue detectando aparte via
+# ObstacleField/TTC (policy_router), independiente de este contador.
+PROGRESS_STALL_BEARING_EXEMPT_DEG = float(os.getenv("PROGRESS_STALL_BEARING_EXEMPT_DEG", "30.0"))
 # Topes de yaw_rate (grados/s) de compute_guidance(). El tope de giro brusco
 # es mayor: con un solo tope de 15 deg/s, realinear un desvio de 70 grados
 # tomaba 6-8s de giro (mas todavia por el EMA), mientras el reloj de atasco
@@ -29,6 +39,17 @@ MIN_PROGRESS_SPEED_MPS = float(os.getenv("MIN_PROGRESS_SPEED_MPS", "0.25"))
 # giro que el propio limitador le impedia terminar a tiempo.
 YAW_RATE_MAX_DPS = float(os.getenv("GUIDANCE_YAW_RATE_MAX_DPS", "15.0"))
 YAW_RATE_SHARP_MAX_DPS = float(os.getenv("GUIDANCE_YAW_RATE_SHARP_MAX_DPS", "45.0"))
+# Ciclos de espera en el lugar (vx=0) al salir de un giro pronunciado, antes
+# de retomar avance (2026-0826, ver CHANGELOG.md: "horcajadas" en las
+# esquinas). Antes, un desvio grande (>60 grados) volaba en curva ancha a
+# 40% de cruise en vez de girar en el lugar -- ese avance simultaneo al giro
+# es lo que se percibia como bandazo. Ahora se detiene la traslacion durante
+# el giro entero; este settle adicional despues de alinear le da a la
+# percepcion (degradada durante rotacion rapida, ver FLOW_MAX_ROTATION_DEG en
+# flow_ttc.py) un par de frames de baja rotacion para producir evidencia
+# valida ANTES de comprometerse a avanzar -- el chequeo de corredor bloqueado
+# de policy_router actua sobre esa evidencia en el primer ciclo de avance.
+ORIENT_SETTLE_CYCLES = int(os.getenv("ORIENT_SETTLE_CYCLES", "2"))
 
 
 def effective_stall_threshold() -> int:
@@ -99,6 +120,9 @@ class WaypointTracker:
         self._sharp_turn_active: bool = False
         self._final_approach_active: bool = False
         self._yaw_correcting: bool = False
+        # Ciclos de espera en el lugar pendientes al salir de un giro
+        # pronunciado, antes de retomar avance (ver ORIENT_SETTLE_CYCLES).
+        self._orient_settle_cycles_left: int = 0
         # Estado del filtro EMA (ver GUIDANCE_SMOOTHING_ALPHA); None = sin
         # historia todavia, el primer valor calculado se usa tal cual.
         self._smoothed_vx: Optional[float] = None
@@ -115,16 +139,24 @@ class WaypointTracker:
         self._sharp_turn_active = False
         self._final_approach_active = False
         self._yaw_correcting = False
+        self._orient_settle_cycles_left = 0
         self._smoothed_vx = None
         self._smoothed_yaw_rate = None
 
-    def record_progress(self, dist_to_wp: float) -> int:
+    def record_progress(self, dist_to_wp: float, bearing_err_deg: float = 0.0) -> int:
         """Registra la distancia actual al waypoint activo y actualiza el
 
         contador de ciclos sin progreso real (F2.5). Devuelve el contador
         actualizado. Un desvío correcto que sigue reduciendo la distancia
         mínima vista nunca incrementa el contador, aunque tome muchos ciclos.
+
+        Si ``bearing_err_deg`` supera ``PROGRESS_STALL_BEARING_EXEMPT_DEG``,
+        el dron esta girando activamente hacia el rumbo objetivo: el ciclo se
+        excluye del conteo (ni incrementa ni resetea la distancia minima
+        vista) en lugar de contarlo como atasco.
         """
+        if abs(bearing_err_deg) > PROGRESS_STALL_BEARING_EXEMPT_DEG:
+            return self.progress_stall_cycles
         if self._min_dist_seen is None or dist_to_wp < self._min_dist_seen - PROGRESS_EPS_M:
             self._min_dist_seen = dist_to_wp
             self.progress_stall_cycles = 0
@@ -196,6 +228,7 @@ class WaypointTracker:
             self._sharp_turn_active = False
             self._final_approach_active = False
             self._yaw_correcting = False
+            self._orient_settle_cycles_left = 0
             # _smoothed_vx/_smoothed_yaw_rate NO se resetean aqui a proposito:
             # aproximan la velocidad real del dron, que es continua a traves
             # del cambio de waypoint activo (a diferencia de los flags de
@@ -226,6 +259,7 @@ class WaypointTracker:
             self._sharp_turn_active = False
             self._final_approach_active = False
             self._yaw_correcting = False
+            self._orient_settle_cycles_left = 0
             return {
                 "vx": 0.0,
                 "vy": 0.0,
@@ -296,10 +330,17 @@ class WaypointTracker:
         elif self._yaw_correcting and abs_err < 1.5:
             self._yaw_correcting = False
 
+        was_sharp_turn = self._sharp_turn_active
         if not self._sharp_turn_active and abs_err > 60.0:
             self._sharp_turn_active = True
         elif self._sharp_turn_active and abs_err < 50.0:
             self._sharp_turn_active = False
+        if was_sharp_turn and not self._sharp_turn_active:
+            # Recien alineado tras un giro pronunciado: mantener vx=0 unos
+            # ciclos mas para que la percepcion (degradada durante la
+            # rotacion) tenga frames de baja rotacion validos antes de
+            # comprometerse a avanzar (ver ORIENT_SETTLE_CYCLES).
+            self._orient_settle_cycles_left = ORIENT_SETTLE_CYCLES
 
         if not self._final_approach_active and dist_3d < 4.0:
             self._final_approach_active = True
@@ -317,10 +358,20 @@ class WaypointTracker:
             cap = YAW_RATE_SHARP_MAX_DPS if self._sharp_turn_active else YAW_RATE_MAX_DPS
             yaw_rate = max(-cap, min(cap, kp_yaw * delta_yaw_deg))
 
-        # Avance continuo fluido de crucero sin frenazos intermitentes
+        # Avance continuo fluido de crucero sin frenazos intermitentes, EXCEPTO
+        # durante un giro pronunciado: ahi se gira en el lugar (2026-0826, ver
+        # CHANGELOG.md) en vez de volar en curva ancha simultaneamente con el
+        # giro -- eso era lo que se percibia como bandazo/"horcajada" en las
+        # esquinas. El settle posterior (ver arriba) retiene vx=0 un par de
+        # ciclos mas tras alinear, dandole a la percepcion evidencia valida
+        # antes del primer ciclo de avance; policy_router ya frena ese avance
+        # si esa evidencia muestra un corredor bloqueado (evasive/deliberative
+        # en vez de keep_going), sin cambios necesarios ahi.
         if self._sharp_turn_active:
-            # Curva pronunciada en lugar de giro sobre su eje (pivot turn) para no detenerse.
-            vx = max(0.5, cruise_speed * 0.4)
+            vx = 0.0
+        elif self._orient_settle_cycles_left > 0:
+            vx = 0.0
+            self._orient_settle_cycles_left -= 1
         elif self._final_approach_active:
             vx = 1.2 * math.cos(delta_yaw)  # Aproximación suave en metros finales
         else:
@@ -333,6 +384,21 @@ class WaypointTracker:
         # ningun umbral de histeresis), eso produce pequenos saltos ciclo a
         # ciclo que el controlador de AirSim persigue como cabeceo. El EMA
         # los convierte en una rampa.
+        #
+        # 2026-0826 (ver CHANGELOG.md): se probo un limitador de tasa
+        # (m/s^2) separado de este EMA, para acotar la desaceleracion real
+        # en la entrada/salida del pivot. Revertido: con cap=1.5 no cambio
+        # el promedio de |vz| en vuelo real (0.0488 -> 0.0524, peor);
+        # bajando el cap a 0.4 para forzar que el dedup de comandos
+        # saltee reemisiones, el promedio empeoro mas (0.0581) Y ademas
+        # peor: la rampa de despegue tan lenta no cubria PROGRESS_EPS_M
+        # dentro de effective_stall_threshold(), disparando escapes
+        # GANAR_ALTURA espurios a los pocos segundos de cada mision (falso
+        # atasco). Conclusion: cada reemision real de comando (cambie mucho o
+        # poco el valor) parece tener un costo de perturbacion fijo -- estirar
+        # el cambio en mas ciclos mas chicos no reduce el total, solo lo
+        # reparte, y en este caso ademas creaba una interaccion nueva con el
+        # detector de atasco. El EMA solo (alpha=0.5) queda como esta.
         if self._smoothed_vx is None:
             self._smoothed_vx = vx
         else:

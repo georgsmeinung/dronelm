@@ -1,6 +1,7 @@
 import math
 
 from src.navigation.waypoint_tracker import (
+    ORIENT_SETTLE_CYCLES,
     WaypointTracker,
     effective_stall_threshold,
     hard_stall_threshold,
@@ -157,22 +158,30 @@ def test_guidance_sharp_turn_hysteresis_does_not_flip_flop():
     """Regresion: abs_err oscilando entre 45 y 61 grados (por encima y por
 
     debajo de los 60 grados de la condicion original de una sola cota) no
-    debe alternar la formula de vx cada ciclo -- eso es lo que se ve como
-    cabeceo (pitch) rapido en vuelo real, cada alternancia es un salto
-    discontinuo de velocidad que el controlador de AirSim debe perseguir.
+    debe alternar la formula de vx cada ciclo. 2026-0826: un giro pronunciado
+    ahora gira en el lugar (vx=0) en vez de volar en curva ancha simultanea
+    al giro -- eso era lo que se percibia como bandazo/"horcajada" en las
+    esquinas. Al salir del giro brusco, un settle adicional (ORIENT_SETTLE_CYCLES)
+    retiene vx=0 unos ciclos mas antes de retomar avance.
     """
     tracker = WaypointTracker([{"x": 100, "y": 0, "z": -10, "label": "WP1"}])
     pos = {"x": 0.0, "y": 0.0, "z": -10.0}
-    sharp_turn_vx = max(0.5, 5.0 * 0.4)
 
     g1 = tracker.compute_guidance(pos, current_yaw=math.radians(61), cruise_speed=5.0)
-    assert g1["vx"] == sharp_turn_vx  # abs_err=61 > 60: entra en giro brusco
+    assert g1["vx"] == 0.0  # abs_err=61 > 60: entra en giro brusco, gira en el lugar
 
     g2 = tracker.compute_guidance(pos, current_yaw=math.radians(55), cruise_speed=5.0)
-    assert g2["vx"] == sharp_turn_vx  # abs_err=55: bajo 60 pero sobre la banda de salida (50) -> sigue activo
+    assert g2["vx"] == 0.0  # abs_err=55: bajo 60 pero sobre la banda de salida (50) -> sigue activo
 
     g3 = tracker.compute_guidance(pos, current_yaw=math.radians(45), cruise_speed=5.0)
-    assert g3["vx"] != sharp_turn_vx  # abs_err=45 < 50: recien aqui sale del modo giro brusco
+    assert g3["vx"] == 0.0  # abs_err=45 < 50: sale del giro brusco, pero entra en settle
+
+    for _ in range(ORIENT_SETTLE_CYCLES - 1):
+        g_settle = tracker.compute_guidance(pos, current_yaw=math.radians(45), cruise_speed=5.0)
+        assert g_settle["vx"] == 0.0  # settle en curso: sigue sin avanzar
+
+    g_after_settle = tracker.compute_guidance(pos, current_yaw=math.radians(45), cruise_speed=5.0)
+    assert g_after_settle["vx"] > 0.0  # settle agotado: recien aqui retoma avance
 
 
 def test_guidance_final_approach_hysteresis_does_not_flip_flop():
@@ -236,15 +245,15 @@ def test_guidance_vx_smoothing_ramps_instead_of_jumping():
     g1 = tracker.compute_guidance(pos, current_yaw=0.0, cruise_speed=5.0)
     assert g1["vx"] == 5.0
 
-    # Giro brusco (abs_err=90 > 60): vx crudo salta a max(0.5, 5.0*0.4)=2.0.
-    # Sin suavizado, g2["vx"] seria exactamente 2.0. Con EMA (alpha=0.5),
-    # debe quedar a mitad de camino entre el valor anterior (5.0) y el nuevo
-    # objetivo (2.0): ni el valor viejo ni el nuevo de golpe.
+    # Giro brusco (abs_err=90 > 60): vx crudo salta a 0.0 (gira en el lugar,
+    # 2026-0826). Sin suavizado, g2["vx"] seria exactamente 0.0. Con EMA
+    # (alpha=0.5), debe quedar a mitad de camino entre el valor anterior
+    # (5.0) y el nuevo objetivo (0.0): ni el valor viejo ni el nuevo de golpe.
     g2 = tracker.compute_guidance(pos, current_yaw=math.radians(90), cruise_speed=5.0)
-    assert 2.0 < g2["vx"] < 5.0
+    assert 0.0 < g2["vx"] < 5.0
 
     # Con el regimen ya estable en giro brusco, varios ciclos despues
-    # converge al valor objetivo (2.0).
+    # converge al valor objetivo (0.0).
     for _ in range(20):
         g_settled = tracker.compute_guidance(pos, current_yaw=math.radians(90), cruise_speed=5.0)
-    assert abs(g_settled["vx"] - 2.0) < 0.01
+    assert abs(g_settled["vx"] - 0.0) < 0.01

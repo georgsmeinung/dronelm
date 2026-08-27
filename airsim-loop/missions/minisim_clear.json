@@ -1,0 +1,10 @@
+{
+  "mission_id": "minisim_clear",
+  "summary": "Prueba de humo (G4-post-fix): ambiente MiniSim despejado, sin obstaculos, solo para verificar que el drone avanza entre WPs con operacion normal (arm=slm, sin forzar rama). 3 waypoints en linea recta corta + un quiebre de rumbo.",
+  "start_pose": { "x": 0.0, "y": 0.0, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 60.0, "y": 0.0, "z": -10.0, "label": "WP_1" },
+    { "x": 60.0, "y": 60.0, "z": -10.0, "label": "WP_2" },
+    { "x": 0.0, "y": 60.0, "z": -10.0, "label": "WP_3" }
+  ]
+}

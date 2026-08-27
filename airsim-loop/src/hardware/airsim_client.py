@@ -40,10 +40,36 @@ DEFAULT_FRAME_HEIGHT = int(os.getenv("DEFAULT_FRAME_HEIGHT", "720"))
 # devuelve None en lugar de un frame sintetico. Los frames simulados quedan
 # disponibles solo para tests (AIRSIM_STRICT=false).
 AIRSIM_STRICT = os.getenv("AIRSIM_STRICT", "true").lower() == "true"
-# F0.1: duracion del comando de velocidad como multiplo del periodo del lazo,
-# para que el comando siga vigente aunque el ciclo siguiente se demore un
-# poco, sin bloquear esperando a que termine (last-command-wins en AirSim).
-MOVE_DURATION_LOOP_MULTIPLIER = float(os.getenv("MOVE_DURATION_LOOP_MULTIPLIER", "2.5"))
+# Reintento 2026-0826 (v2, ver CHANGELOG.md) del fix de cabeceo. El primer
+# intento (revertido) atava la vigencia del comando a un multiplo del periodo
+# del lazo (0.5s a 5Hz, ver F0.1 original) con un margen de reemision al 30%: en la practica igual
+# reemitia cada ~2 ciclos aunque el setpoint no hubiera cambiado, sin dejarle
+# tiempo real al PID interno de SimpleFlight para asentarse -- enfoque
+# equivocado, no la idea en si. Un operador humano no retoca el stick cada
+# 200ms "porque puede": lo retoca cuando cambia el rumbo o aparece un
+# obstaculo. Este enfoque separa las dos duraciones:
+#   - CMD_DURATION_S: duracion real del comando en AirSim, mucho mayor que el
+#     periodo del lazo -- el comando queda vigente varios segundos en vez de
+#     medio segundo.
+#   - Solo se cancela/reemite cuando el comando difiere del ultimo enviado
+#     mas alla de las tolerancias, o cuando a ese comando le queda menos del
+#     30% de vigencia (refresco de seguridad).
+# Un cambio real (obstaculo, nuevo rumbo) sigue tomando efecto en el ciclo
+# siguiente: cancelLastTask() no cambia, solo deja de dispararse sin motivo.
+#
+# Primer valor probado para CMD_DURATION_S (3.0s) mostro el problema real:
+# el refresco de seguridad (cada ~2.1s con margen 30%) seguia produciendo un
+# bache de -0.2/-0.25 m/s en vx cada vez que disparaba, IDENTICO en forma al
+# cabeceo original -- prueba directa de que reemitir el comando (incluso sin
+# cambiar el setpoint) es en si mismo lo que perturba a SimpleFlight, no la
+# frecuencia con la que se hacia antes. Se subio a 120s para que el refresco
+# de seguridad practicamente nunca dispare durante un tramo normal de vuelo;
+# sigue acotando el riesgo de un proceso colgado (no crasheado) a minutos en
+# vez de indefinido.
+CMD_DURATION_S = float(os.getenv("CMD_DURATION_S", "120.0"))
+CMD_VELOCITY_TOLERANCE_MPS = float(os.getenv("CMD_VELOCITY_TOLERANCE_MPS", "0.1"))
+CMD_YAW_RATE_TOLERANCE_DPS = float(os.getenv("CMD_YAW_RATE_TOLERANCE_DPS", "1.0"))
+CMD_REISSUE_MARGIN_FRACTION = float(os.getenv("CMD_REISSUE_MARGIN_FRACTION", "0.3"))
 
 
 @dataclass
@@ -75,6 +101,13 @@ class AirSimClient:
     # en el apagado (disconnect/land), nunca se espera (.join()) en el ciclo
     # de control: eso es lo que fijaba el período del lazo en 2s.
     _last_move_future: Any = field(default=None, init=False, repr=False)
+    # Ultimo comando de velocidad efectivamente enviado a AirSim (no cada
+    # llamada a execute_velocity(), solo las que de verdad reemitieron):
+    # (vx, vy, vz, yaw_rate, target_yaw). Ver CMD_DURATION_S mas arriba.
+    _last_cmd: Optional[Tuple[float, float, float, float, Optional[float]]] = field(
+        default=None, init=False, repr=False
+    )
+    _last_cmd_sent_at: float = field(default=0.0, init=False, repr=False)
 
     # ------------------------------------------------------------------ #
     # Conexión                                                           #
@@ -128,6 +161,9 @@ class AirSimClient:
             self._client.enableApiControl(True, vehicle_name=self.vehicle_name)
             self._client.armDisarm(True, vehicle_name=self.vehicle_name)
             self._client.takeoffAsync(vehicle_name=self.vehicle_name).join()
+            # El estado fisico se reinicio; el ultimo comando "recordado" ya
+            # no describe nada vigente, forzar reemision inmediata.
+            self._last_cmd = None
             return True
         except Exception as exc:
             print(f"[AirSimClient] Error al reiniciar el vehículo: {exc}")
@@ -220,6 +256,17 @@ class AirSimClient:
             t_after_images = time.time()
             
             response = responses[0] if responses else None
+            # Timestamp de captura real de la imagen, del reloj del propio
+            # simulador (nanosegundos, AirSim). Se usa para telemetry["timestamp"]
+            # en lugar de time.time() tomado despues de getMultirotorState():
+            # ver CHANGELOG.md 2026-0826 para el bug que esto corrige (dt/derotacion
+            # en flow_ttc.py contaminados por el jitter del round-trip RPC del
+            # lado del cliente, en vez de reflejar el intervalo real entre frames).
+            image_timestamp_s = (
+                float(response.time_stamp) / 1e9
+                if response is not None and getattr(response, "time_stamp", 0)
+                else None
+            )
             image = None
             t_before_resize = time.time()
             if response is not None and response.width > 0 and response.height > 0:
@@ -258,7 +305,7 @@ class AirSimClient:
             t_before_state = time.time()
             state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
             t_after_state = time.time()
-            telemetry = _state_to_telemetry(state)
+            telemetry = _state_to_telemetry(state, timestamp_s=image_timestamp_s)
             
             t_total = time.time() - t_start
             dt_images = (t_after_images - t_before_images) * 1000.0
@@ -328,6 +375,31 @@ class AirSimClient:
             )
             return True
         try:
+            now = time.time()
+
+            # No retocar el comando en curso si el nuevo es esencialmente
+            # igual al ultimo enviado y todavia le queda vigencia real (ver
+            # CMD_DURATION_S mas arriba): un cambio de rumbo o un obstaculo
+            # sigue tomando efecto de inmediato mas abajo, esto solo evita
+            # reemitir "lo mismo" sin motivo.
+            if self._last_cmd is not None:
+                lvx, lvy, lvz, lyaw_rate, ltarget_yaw = self._last_cmd
+                same_velocity = (
+                    abs(vx - lvx) < CMD_VELOCITY_TOLERANCE_MPS
+                    and abs(vy - lvy) < CMD_VELOCITY_TOLERANCE_MPS
+                    and abs(vz - lvz) < CMD_VELOCITY_TOLERANCE_MPS
+                    and abs(yaw_rate - lyaw_rate) < CMD_YAW_RATE_TOLERANCE_DPS
+                )
+                same_target_yaw = (target_yaw is None and ltarget_yaw is None) or (
+                    target_yaw is not None
+                    and ltarget_yaw is not None
+                    and abs(target_yaw - ltarget_yaw) < CMD_YAW_RATE_TOLERANCE_DPS
+                )
+                time_left = CMD_DURATION_S - (now - self._last_cmd_sent_at)
+                still_valid = time_left > CMD_DURATION_S * CMD_REISSUE_MARGIN_FRACTION
+                if same_velocity and same_target_yaw and still_valid:
+                    return True
+
             # moveByVelocityBodyFrameAsync es "last-command-wins" en el servidor
             # de AirSim: no hace falta esperar (join) al comando anterior para
             # emitir el siguiente. Antes, cada ciclo bloqueaba hasta 2s
@@ -340,7 +412,9 @@ class AirSimClient:
             except Exception:
                 pass
 
-            duration = MOVE_DURATION_LOOP_MULTIPLIER / max(self.loop_hz, 0.1)
+            self._last_cmd = (vx, vy, vz, yaw_rate, target_yaw)
+            self._last_cmd_sent_at = now
+            duration = CMD_DURATION_S
 
             # Si todas las velocidades y giro son nulos, mantener el mismo
             # comando de velocidad-cero (no usar hoverAsync().join(), que
@@ -352,6 +426,22 @@ class AirSimClient:
                     drivetrain=airsim.DrivetrainType.ForwardOnly,
                     yaw_mode=airsim.YawMode(is_rate=False, yaw_or_rate=0.0),
                     vehicle_name=self.vehicle_name,
+                )
+                return True
+
+            # Giro puro en el lugar (vx=vy=0, sin target_yaw absoluto): en vez
+            # de simular la rotacion embebiendola en moveByVelocityBodyFrameAsync
+            # (que sigue siendo, ante todo, un comando de TRASLACION), usar el
+            # primitivo nativo de AirSim para esto (2026-0826, ver CHANGELOG.md).
+            # rotateByYawRateAsync es la maniobra que el propio firmware de
+            # SimpleFlight ya sabe ejecutar manteniendo posicion/altitud
+            # mientras gira -- no tiene sentido reimplementarla a mano
+            # combinando ejes de traslacion en cero con yaw_rate. Coincide
+            # exactamente con la fase de pivot-en-el-lugar de
+            # waypoint_tracker.py (_sharp_turn_active/settle).
+            if abs(vx) < 0.05 and abs(vy) < 0.05 and abs(yaw_rate) > 0.01 and target_yaw is None:
+                self._last_move_future = self._client.rotateByYawRateAsync(
+                    float(yaw_rate), duration, vehicle_name=self.vehicle_name,
                 )
                 return True
 
@@ -438,8 +528,14 @@ def _resize_depth(image: np.ndarray, width: int, height: int) -> np.ndarray:
     return image[np.ix_(y_idx, x_idx)]
 
 
-def _state_to_telemetry(state: Any) -> Dict[str, Any]:
-    """Adapta un MultirotorState de AirSim a un dict simple en marco NED."""
+def _state_to_telemetry(state: Any, timestamp_s: Optional[float] = None) -> Dict[str, Any]:
+    """Adapta un MultirotorState de AirSim a un dict simple en marco NED.
+
+    ``timestamp_s`` es el instante real de captura (del reloj del simulador,
+    via ``ImageResponse.time_stamp``) cuando esta telemetria acompania un
+    frame; si no se provee (p. ej. ``get_telemetry()`` sin imagen asociada)
+    se cae a ``time.time()`` como antes.
+    """
     kin = getattr(state, "kinematics_estimated", None)
     pos = getattr(kin, "position", None)
     vel = getattr(kin, "linear_velocity", None)
@@ -495,6 +591,6 @@ def _state_to_telemetry(state: Any) -> Dict[str, Any]:
             "has_collided": bool(has_collided),
             "object_name": str(collision_object),
         },
-        "timestamp": time.time(),
+        "timestamp": timestamp_s if timestamp_s is not None else time.time(),
         "source": "airsim",
     }
