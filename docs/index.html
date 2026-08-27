@@ -49,6 +49,7 @@
           <li><a href="#arquitectura">Arquitectura del Sistema</a></li>
           <li><a href="#percepcion">Percepción y TTC</a></li>
           <li><a href="#modos-falla">Modos de Falla y Contratos</a></li>
+          <li><a href="#progreso">Progreso de Tesis</a></li>
           <li><a href="#stack">Stack Tecnológico</a></li>
           <li><a href="#evaluacion">Evaluación y Calibración</a></li>
           <li><a href="#instalacion">Instalación y Uso</a></li>
@@ -291,6 +292,90 @@
             <p>Variables de control no tipadas en el esquema del orquestador son descartadas silenciosamente, originando
               ciclos límite y bucles absorbentes de ascenso indefinido.</p>
           </div>
+        </div>
+      </section>
+
+      <!-- Progreso de Tesis -->
+      <section id="progreso">
+        <h2>Progreso de la Tesis (2024-2026)</h2>
+        <p>Cronología de hitos técnicos y avances documentados en la investigación:</p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              <span>Agost 2024</span>
+              <span class="tag">Inicio</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Planificación y Revisión de Literatura</h4>
+              <p>Definición del alcance, revisión de estado del arte en navegación autónoma, SLM y visión monocular. Establecimiento de requisitos y restricciones.</p>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              <span>Septiembre - Octubre 2024</span>
+              <span class="tag">Construcción</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Implementación del Pipeline de Percepción</h4>
+              <p>Desarrollo del estimador de flujo óptico denso, derotación por IMU, cálculo del Foco de Expansión (FOE) y estimación de TTC con validación contra datos de referencia.</p>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              <span>Noviembre 2024 - Enero 2025</span>
+              <span class="tag">Integración</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Integración con LangGraph y Entorno de Simulación</h4>
+              <p>Construcción del grafo de decisión táctica, integración con Cosys-AirSim, validación de cinemática contra datos reales de drones comerciales (DJI).</p>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              <span>Febrero - Marzo 2025</span>
+              <span class="tag">Optimización</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Calibración de Umbrales y Máquina de Escape</h4>
+              <p>Calibración de TTC por curvas ROC, desarrollo de la máquina de estados para escape de deadlock, pruebas de estabilidad y repetibilidad.</p>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              <span>Abril - Junio 2025</span>
+              <span class="tag">Evaluación</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Experimentación y Análisis Comparativo</h4>
+              <p>Evaluación de tres brazos experimentales (SLM, FSM, Reactivo) bajo condiciones idénticas. Medición de métricas de rendimiento y robustez.</p>
+            </div>
+          </div>
+
+          <div class="timeline-item current">
+            <div class="timeline-badge"></div>
+            <div class="timeline-date">
+              <span>Julio - Agosto 2026</span>
+              <span class="tag">Finalización</span>
+            </div>
+            <div class="timeline-content">
+              <h4>Documentación Final y Validación (Actual)</h4>
+              <p>Redacción de informe, documentación técnica completa, publicación de resultados y preparación para defensa. Últimos ajustes de estabilidad y optimización.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert-box">
+          <p><strong>Estado actual (2026-08-27):</strong> Sistema operacional en simulación. Navegación autónoma validada con AUC TTC de 0.96–0.97. Documentación y análisis finalizados.</p>
         </div>
       </section>
 
