@@ -639,17 +639,20 @@ pre .hl { color: var(--accent); font-weight: 500; }
 .table-container {
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
   margin: 24px 0;
   border: 1px solid var(--rule);
   border-radius: 8px;
   background: var(--surface);
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   text-align: left;
-  font-size: 14.5px;
+  font-size: 14px;
   background-color: var(--surface);
 }
 
@@ -662,16 +665,18 @@ th {
   letter-spacing: .05em;
   text-transform: uppercase;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--rule);
-  white-space: nowrap;
+  border-bottom: 2px solid var(--rule);
+  white-space: normal;
+  word-break: break-word;
 }
 
 td {
-  padding: 11px 14px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--rule-soft);
   color: var(--ink-soft);
   vertical-align: top;
-  font-size: 14px;
+  font-size: 13.5px;
+  word-break: break-word;
 }
 
 tr:last-child td { border-bottom: none; }
