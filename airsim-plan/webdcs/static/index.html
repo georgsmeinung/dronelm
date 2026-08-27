@@ -152,48 +152,6 @@
                         <div class="legend-item"><span class="legend-dot waypoint"></span> Waypoint</div>
                         <div class="legend-item"><span class="legend-dot path"></span> Trayectoria (NED)</div>
                     </div>
-
-                    <!-- Live Drone Video & Perception HUD Panel -->
-                    <div class="live-feed-card glass minimized" id="live-feed-panel">
-                        <div class="live-feed-header">
-                            <div class="live-feed-title">
-                                <span class="live-pulse-dot" id="live-indicator-dot"></span>
-                                <h3><i class="fa-solid fa-camera"></i> Live Perception & Video</h3>
-                            </div>
-                            <div class="live-feed-actions">
-                                <button id="btn-toggle-feed-size" class="btn btn-secondary btn-icon" title="Maximizar">
-                                    <i class="fa-solid fa-expand" id="icon-feed-size"></i>
-                                </button>
-                                <button id="btn-emergency-stop" class="btn btn-danger btn-sm" title="Detener Drone y Bucle">
-                                    <i class="fa-solid fa-stop"></i> Detener
-                                </button>
-                            </div>
-                        </div>
-                        <div class="live-feed-body" id="live-feed-body">
-                            <div class="live-video-container">
-                                <img id="drone-live-stream" src="/api/stream/video" alt="Feed Drone Anotado" />
-                                <div class="live-hud-badges">
-                                    <span class="hud-badge badge-act" id="hud-badge-act"><i class="fa-solid fa-crosshairs"></i> <strong id="hud-val-action">MANTENER_RUMBO</strong></span>
-                                    <span class="hud-badge badge-ttc" id="hud-badge-ttc"><i class="fa-solid fa-shield-halved"></i> TTC: <strong id="hud-val-ttc">inf</strong></span>
-                                    <span class="hud-badge badge-xor" id="hud-badge-xor"><i class="fa-solid fa-bolt"></i> XOR: <strong id="hud-val-xor">0.0%</strong></span>
-                                </div>
-                            </div>
-                            <div class="live-telemetry-grid">
-                                <div class="tel-box">
-                                    <span class="tel-title">Estado</span>
-                                    <span class="tel-value" id="tel-flight-status">Vuelo</span>
-                                </div>
-                                <div class="tel-box">
-                                    <span class="tel-title">Velocidad</span>
-                                    <span class="tel-value" id="tel-vel">vx:0.0 vy:0.0</span>
-                                </div>
-                                <div class="tel-box">
-                                    <span class="tel-title">Detecciones</span>
-                                    <span class="tel-value" id="tel-detections-count">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </section>
         </main>

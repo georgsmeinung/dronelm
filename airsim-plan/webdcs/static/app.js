@@ -823,21 +823,6 @@ function setupInteractiveControls() {
         showToast(`Mapa cambiado a: ${selectedMap}`, 'success');
     });
 
-    // Helpers para controlar tamaño de Live Perception & Video Feed
-    function minimizeLiveFeed() {
-        if (!elLiveFeedPanel) return;
-        elLiveFeedPanel.classList.add('minimized');
-        if (elIconFeedSize) elIconFeedSize.className = 'fa-solid fa-expand';
-        if (elBtnToggleFeedSize) elBtnToggleFeedSize.title = 'Maximizar';
-    }
-
-    function maximizeLiveFeed() {
-        if (!elLiveFeedPanel) return;
-        elLiveFeedPanel.classList.remove('minimized');
-        if (elIconFeedSize) elIconFeedSize.className = 'fa-solid fa-compress';
-        if (elBtnToggleFeedSize) elBtnToggleFeedSize.title = 'Minimizar';
-    }
-
     // 6. Lanzamiento de Misión
     elBtnLaunchMission.addEventListener('click', async () => {
         if (!activeManifest) {
@@ -864,8 +849,6 @@ function setupInteractiveControls() {
             }
 
             showToast(data.message, 'success');
-            // Auto-maximizar el panel de video en vivo al lanzar la misión
-            maximizeLiveFeed();
 
             if (data.manifest) {
                 activeManifest = data.manifest;
@@ -878,38 +861,6 @@ function setupInteractiveControls() {
             elBtnLaunchMission.disabled = false;
         }
     });
-
-    // 7. Controles del Panel de Live Perception Feed
-    const elLiveFeedPanel = document.getElementById('live-feed-panel');
-    const elBtnToggleFeedSize = document.getElementById('btn-toggle-feed-size');
-    const elIconFeedSize = document.getElementById('icon-feed-size');
-    const elBtnEmergencyStop = document.getElementById('btn-emergency-stop');
-
-    if (elBtnToggleFeedSize && elLiveFeedPanel) {
-        elBtnToggleFeedSize.addEventListener('click', () => {
-            if (elLiveFeedPanel.classList.contains('minimized')) {
-                maximizeLiveFeed();
-            } else {
-                minimizeLiveFeed();
-            }
-        });
-    }
-
-    if (elBtnEmergencyStop) {
-        elBtnEmergencyStop.addEventListener('click', async () => {
-            elBtnEmergencyStop.disabled = true;
-            try {
-                const res = await fetch('/api/stop', { method: 'POST' });
-                const data = await res.json();
-                showToast(data.message || 'Misión detenida.', 'warning');
-            } catch (err) {
-                console.error(err);
-                showToast('Error al detener la misión.', 'error');
-            } finally {
-                elBtnEmergencyStop.disabled = false;
-            }
-        });
-    }
 }
 
 // ----------------------------------------------------------------------------
@@ -937,68 +888,6 @@ async function updatePlannerStatus() {
     }
 }
 
-// ----------------------------------------------------------------------------
-// Polling en tiempo real de Telemetría y Percepción del Dron
-// ----------------------------------------------------------------------------
-async function pollLiveTelemetry() {
-    try {
-        const response = await fetch('/api/stream/telemetry');
-        if (!response.ok) return;
-        const tel = await response.json();
-
-        const elDot = document.getElementById('live-indicator-dot');
-        const elValAction = document.getElementById('hud-val-action');
-        const elValTtc = document.getElementById('hud-val-ttc');
-        const elValXor = document.getElementById('hud-val-xor');
-        const elFlightStatus = document.getElementById('tel-flight-status');
-        const elVel = document.getElementById('tel-vel');
-        const elDetections = document.getElementById('tel-detections-count');
-        const elBadgeAct = document.getElementById('hud-badge-act');
-
-        if (tel.active) {
-            if (elDot) elDot.classList.add('active');
-        } else {
-            if (elDot) elDot.classList.remove('active');
-        }
-
-        if (elValAction) elValAction.textContent = tel.decision || 'MANTENER_RUMBO';
-        if (elValTtc) {
-            elValTtc.textContent = (tel.estimated_ttc != null && tel.estimated_ttc < 999) ? `${Number(tel.estimated_ttc).toFixed(1)}s` : 'inf';
-        }
-        if (elValXor) {
-            const xorPct = ((tel.xor_change_ratio || 0) * 100).toFixed(1);
-            elValXor.textContent = `${xorPct}%`;
-        }
-        if (elFlightStatus) {
-            let statusText = tel.flight_status || 'En espera';
-            if (statusText === 'completada_en_tierra') {
-                statusText = 'Completada (En Tierra)';
-            } else if (statusText === 'aterrizando') {
-                statusText = 'Aterrizando...';
-            } else if (statusText === 'vuelo_waypoint') {
-                statusText = 'En Vuelo (Waypoint)';
-            } else if (statusText === 'mision_completada') {
-                statusText = 'Misión Completada';
-            }
-            elFlightStatus.textContent = statusText;
-        }
-        if (elVel && tel.velocity) {
-            const vx = Number(tel.velocity.vx || 0).toFixed(1);
-            const vy = Number(tel.velocity.vy || 0).toFixed(1);
-            const vz = Number(tel.velocity.vz || 0).toFixed(1);
-            elVel.textContent = `vx:${vx} vy:${vy} vz:${vz}`;
-        }
-        if (elDetections) {
-            const count = (tel.detections && Array.isArray(tel.detections)) ? tel.detections.length : 0;
-            elDetections.textContent = `${count}`;
-        }
-    } catch (err) {
-        // Silencioso para polling
-    }
-}
-
-// Iniciar monitoreo
+// Iniciar monitoreo una sola vez al cargar la página
 updatePlannerStatus();
-setInterval(updatePlannerStatus, 10000);
-setInterval(pollLiveTelemetry, 500);
 

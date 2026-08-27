@@ -95,15 +95,13 @@ class LMStudioClient:
             content = ""
         return PlannerResponse(content=content, raw=completion)
 
-    def check_connection(self) -> bool:
+    def check_connection(self, timeout: float = 1.5) -> bool:
         if OpenAI is None:
             return False
         try:
-            self.client.models.list()
+            self.client.models.list(timeout=timeout)
             return True
-        except Exception as e:
-            print("Error al conectar a Ollama")
-            print(e)
+        except Exception:
             return False
 class PlannerLLM:
     """High-level helper that exposes :meth:`complete_json` for the planner.

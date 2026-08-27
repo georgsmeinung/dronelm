@@ -238,8 +238,9 @@ async def list_maps():
 
 @app.get("/api/planner/status")
 async def planner_status():
+    import asyncio
     planner = MissionPlanner()
-    is_online = planner._client.check_connection()
+    is_online = await asyncio.to_thread(planner._client.check_connection)
     return {"status": "online" if is_online else "offline"}
 
 @app.get("/api/stream/video")
