@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, Optional
 
-from .action_map import action_to_command
+from .action_map import action_to_command, compute_corner_waypoint
 from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception import ObstacleField, empty_field, has_open_corridor
 
@@ -27,6 +27,7 @@ STATE_CRUISE = "CRUISE"
 STATE_AVOID_LEFT = "AVOID_LEFT"
 STATE_AVOID_RIGHT = "AVOID_RIGHT"
 STATE_CLIMB = "CLIMB"
+STATE_DESCEND = "DESCEND"
 STATE_BRAKE = "BRAKE"
 
 _STATE_TO_ACTION = {
@@ -34,8 +35,27 @@ _STATE_TO_ACTION = {
     STATE_AVOID_LEFT: "EVADIR_IZQUIERDA",
     STATE_AVOID_RIGHT: "EVADIR_DERECHA",
     STATE_CLIMB: "GANAR_ALTURA",
+    STATE_DESCEND: "PERDER_ALTURA",
     STATE_BRAKE: "FRENAR",
 }
+
+# Secuencia de estrategias de escape por atasco/bloqueo total (2026-0827, ver
+# CHANGELOG.md). Antes "todo bloqueado" siempre devolvia STATE_CLIMB -- sin
+# alternativa si arriba tampoco habia salida (confirmado visualmente en UE:
+# el dron quedaba insistiendo dentro de la copa de un arbol, subiendo mas
+# adentro en vez de salir). Se evaluo tambien RETROCEDER (retroceder por el
+# camino recien recorrido) pero se descarto: agregaba ruido notable a la
+# trayectoria (ver CHANGELOG.md) sin justificarse frente a la alternancia
+# CLIMB/DESCEND, mas simple.
+_ESCAPE_SEQUENCE = (STATE_CLIMB, STATE_DESCEND)
+
+
+def _vertical_escape_state(escape_attempt_no: int) -> str:
+    """Elige la estrategia de escape segun el numero de intento (0-indexado),
+
+    alternando CLIMB -> DESCEND -> CLIMB -> ...
+    """
+    return _ESCAPE_SEQUENCE[escape_attempt_no % len(_ESCAPE_SEQUENCE)]
 
 
 def _decide_state(
@@ -44,6 +64,7 @@ def _decide_state(
     stuck_threshold: int,
     guidance: Optional[Dict[str, Any]] = None,
     escape_locked: bool = False,
+    escape_attempt_no: int = 0,
 ) -> str:
     """Transiciones deterministas por umbral sobre el ObstacleField.
 
@@ -51,22 +72,23 @@ def _decide_state(
     pero sin invocar ningun modelo: es la maquina de estados clasica contra la
     que se compara el brazo SLM.
     """
-    # El CLIMB por atasco ya no es ciego: no dispara si la percepcion ve un
-    # corredor transitable (salvo atasco duro) ni si el escape esta enclavado
-    # por haberse agotado. Mismo criterio que policy_router/deliberative, para
-    # que la comparacion SLM vs FSM siga siendo sobre quien elige la accion y
-    # no sobre quien tiene la salvaguarda mejor puesta.
+    # El escape vertical por atasco ya no es ciego: no dispara si la
+    # percepcion ve un corredor transitable (salvo atasco duro) ni si el
+    # escape esta enclavado por haberse agotado. Mismo criterio que
+    # policy_router/deliberative, para que la comparacion SLM vs FSM siga
+    # siendo sobre quien elige la accion y no sobre quien tiene la
+    # salvaguarda mejor puesta.
     if stuck_cycles >= stuck_threshold and not escape_locked:
         hard_stuck = stuck_cycles >= hard_stall_threshold()
         if hard_stuck or not has_open_corridor(field, guidance):
-            return STATE_CLIMB
+            return _vertical_escape_state(escape_attempt_no)
 
     center_ttc = field.sector_ttc("centro")
     if center_ttc <= FSM_TTC_BRAKE_S and field.is_blocked("centro"):
         left_blocked = field.is_blocked("izquierda")
         right_blocked = field.is_blocked("derecha")
         if left_blocked and right_blocked:
-            return STATE_CLIMB
+            return _vertical_escape_state(escape_attempt_no)
         return STATE_BRAKE
 
     if field.is_blocked("centro") or center_ttc <= FSM_TTC_AVOID_S:
@@ -76,7 +98,7 @@ def _decide_state(
         right_blocked = field.is_blocked("derecha")
 
         if left_blocked and right_blocked:
-            return STATE_CLIMB
+            return _vertical_escape_state(escape_attempt_no)
         if left_blocked:
             return STATE_AVOID_RIGHT
         if right_blocked:
@@ -131,14 +153,57 @@ def fsm_node(state: Dict[str, Any]) -> Dict[str, Any]:
         escape_locked = False
         consecutive_escapes = 0
 
-    fsm_state = _decide_state(field, stuck_cycles, stuck_threshold, guidance, escape_locked)
+    fsm_state = _decide_state(
+        field, stuck_cycles, stuck_threshold, guidance, escape_locked,
+        escape_attempt_no=consecutive_escapes,
+    )
 
     max_escapes = int(os.getenv("MAX_CONSECUTIVE_ESCAPES", "3"))
-    if fsm_state == STATE_CLIMB:
+    if fsm_state in (STATE_CLIMB, STATE_DESCEND):
         consecutive_escapes += 1
         if consecutive_escapes > max_escapes:
-            fsm_state = STATE_BRAKE
+            # ESCAPE AGOTADO (2026-0827, ver CHANGELOG.md): antes esta rama
+            # pasaba a STATE_BRAKE y enclavaba para siempre -- si el
+            # obstaculo era horizontal (p. ej. trabado contra ramas), subir
+            # nunca acerca al waypoint, el enclave nunca se libera (solo se
+            # libera con progreso horizontal medido), y el dron quedaba
+            # frenando de forma indefinida hasta el timeout de la mision.
+            # Mismo mecanismo que ya tenia el brazo SLM (deliberative.py,
+            # F: "ESCAPE AGOTADO"): en vez de frenar sin salida, cambiar de
+            # estrategia con un giro de 90 grados hacia el lado del waypoint
+            # para buscar un corredor lateral. GANAR_ALTURA queda descartada
+            # (enclavada) hasta que haya progreso real; los ciclos siguientes
+            # caen a la evaluacion normal por TTC (_decide_state con
+            # escape_locked=True se salta el bloque de atasco).
             escape_locked = True
+            state["_consecutive_escapes"] = consecutive_escapes
+            state["_escape_locked"] = escape_locked
+
+            loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
+            escape_duration_s = float(os.getenv("ESCAPE_MANEUVER_DURATION_S", "1.6"))
+            cmd = action_to_command("GIRAR_90", guidance=guidance, telemetry=telemetry)
+            side = "izquierda" if cmd["yaw_rate"] < 0 else "derecha"
+            cmd["rationale"] = (
+                f"FSM: escape agotado tras {max_escapes} intentos verticales (CLIMB/DESCEND alternados) "
+                f"sin progreso horizontal. Girando 90° hacia la {side} para buscar corredor; escape "
+                f"vertical descartado hasta que haya progreso."
+            )
+            state["next_action"] = "GIRAR_90"
+            state["velocity_command"] = cmd
+            state["route"] = "fsm"
+            state["flight_status"] = "fsm_escape_agotado"
+            # Desvio persistente (2026-0827, ver CHANGELOG.md): sin esto, el
+            # guiado por corredor vuelve a apuntar a la misma linea bloqueada
+            # apenas termina el giro -- confirmado en UE, dron trabado dentro
+            # de la copa de un arbol. inject_corner ya estaba declarado en
+            # DroneState pero ningun nodo lo producia.
+            target_yaw = cmd.get("target_yaw")
+            if target_yaw is not None:
+                state["inject_corner"] = compute_corner_waypoint(telemetry, float(target_yaw), guidance=guidance)
+            state["active_maneuver"] = "GIRAR_90"
+            state["maneuver_cycles_left"] = max(1, round(escape_duration_s * loop_hz))
+            state["maneuver_command"] = cmd
+            return state
     state["_consecutive_escapes"] = consecutive_escapes
     state["_escape_locked"] = escape_locked
 
@@ -147,15 +212,13 @@ def fsm_node(state: Dict[str, Any]) -> Dict[str, Any]:
     close_structural = field.is_blocked("centro") and field.sector_ttc("centro") <= FSM_TTC_BRAKE_S
     command = action_to_command(action, guidance=guidance, telemetry=telemetry, close_structural=close_structural)
     command["rationale"] = f"FSM: estado {fsm_state} (TTC centro={field.sector_ttc('centro'):.1f}s)"
-    if fsm_state == STATE_BRAKE and consecutive_escapes > max_escapes:
-        command["rationale"] = f"FSM: escape agotado tras {max_escapes} CLIMB consecutivos sin resolver el atasco. Frenando."
 
     state["next_action"] = action
     state["velocity_command"] = command
     state["route"] = "fsm"
     state["flight_status"] = f"fsm_{fsm_state.lower()}"
 
-    if action in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA"):
+    if action in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA", "PERDER_ALTURA"):
         loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
         cycles = max(1, round(FSM_MANEUVER_DURATION_S * loop_hz))
         state["active_maneuver"] = action

@@ -13,6 +13,11 @@ DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
 EVASION_LATERAL_YAW_RATE = float(os.getenv("EVASION_LATERAL_YAW_RATE", "15.0"))
 EVASION_UP_SPEED = float(os.getenv("EVASION_UP_SPEED", "1.5"))
 EVASION_DOWN_SPEED = float(os.getenv("EVASION_DOWN_SPEED", "0.8"))
+# Distancia (metros) del waypoint de desvio temporal que se inyecta cuando el
+# escape sincronico se agota (ver compute_corner_waypoint mas abajo). Primera
+# aproximacion sin medir en vuelo real (2026-0827, ver CHANGELOG.md) -- punto
+# de partida razonable, no un valor calibrado.
+CORNER_OFFSET_M = float(os.getenv("CORNER_OFFSET_M", "12.0"))
 
 VALID_ACTIONS = {
     "MANTENER_RUMBO",
@@ -145,4 +150,40 @@ def action_to_command(
         "vz": 0.0,
         "yaw_rate": 0.0,
         "target_yaw": None,
+    }
+
+
+def compute_corner_waypoint(
+    telemetry: Optional[Dict[str, Any]],
+    target_yaw_deg: float,
+    guidance: Optional[Dict[str, Any]] = None,
+    offset_m: float = CORNER_OFFSET_M,
+) -> Dict[str, float]:
+    """Calcula un waypoint de desvio temporal (2026-0827, ver CHANGELOG.md).
+
+    Se usa cuando el escape sincronico se agota (GIRAR_90 de cambio de
+    estrategia, en fsm.py y deliberative.py): un solo punto, a `offset_m`
+    metros de la posicion actual, en la direccion del giro ya decidido
+    (`target_yaw_deg`, calculado igual que el comando GIRAR_90 via
+    `_manhattan_snap_yaw`). Reutiliza esa misma direccion en vez de recalcular
+    el lado por separado, para que el giro y el desvio apunten al mismo lugar.
+
+    La altitud se toma del waypoint objetivo original (`guidance.target_wp`)
+    si esta disponible, para no arrastrar la cota alcanzada por un escape
+    vertical previo (GANAR_ALTURA/PERDER_ALTURA) al punto de desvio.
+    """
+    pos = (telemetry or {}).get("position", {}) if isinstance(telemetry, dict) else {}
+    x = float(pos.get("x", 0.0))
+    y = float(pos.get("y", 0.0))
+    z = float(pos.get("z", -10.0))
+
+    target_wp = (guidance or {}).get("target_wp") if isinstance(guidance, dict) else None
+    if isinstance(target_wp, dict) and "z" in target_wp:
+        z = float(target_wp.get("z", z))
+
+    yaw_rad = math.radians(target_yaw_deg)
+    return {
+        "x": round(x + offset_m * math.cos(yaw_rad), 2),
+        "y": round(y + offset_m * math.sin(yaw_rad), 2),
+        "z": round(z, 2),
     }

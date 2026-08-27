@@ -1,4 +1,4 @@
-from src.agents.fsm import STATE_AVOID_LEFT, STATE_AVOID_RIGHT, STATE_BRAKE, STATE_CLIMB, STATE_CRUISE, _decide_state
+from src.agents.fsm import STATE_AVOID_LEFT, STATE_AVOID_RIGHT, STATE_BRAKE, STATE_CLIMB, STATE_CRUISE, STATE_DESCEND, _decide_state
 from src.perception.obstacle_field import BANDS, SECTORS, Cell, ObstacleField, empty_field
 
 
@@ -42,3 +42,14 @@ def test_moderate_block_both_sides_blocked_climbs():
 
 def test_stuck_cycles_force_climb_regardless_of_field():
     assert _decide_state(empty_field(), stuck_cycles=15, stuck_threshold=10) == STATE_CLIMB
+
+
+def test_escape_attempt_no_alternates_climb_and_descend():
+    # 2026-0827 (ver CHANGELOG.md): el primer intento de escape
+    # (escape_attempt_no=0, default) sigue subiendo primero; el segundo
+    # intento baja en vez de insistir con GANAR_ALTURA -- confirmado en UE
+    # que el dron podia quedar insistiendo dentro de la copa de un arbol.
+    field = _field(center_ttc=1.0, center_occ=0.9, left_occ=0.9, right_occ=0.9)
+    assert _decide_state(field, 0, 10, escape_attempt_no=0) == STATE_CLIMB
+    assert _decide_state(field, 0, 10, escape_attempt_no=1) == STATE_DESCEND
+    assert _decide_state(field, 0, 10, escape_attempt_no=2) == STATE_CLIMB

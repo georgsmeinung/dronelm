@@ -32,6 +32,16 @@ MIN_PROGRESS_SPEED_MPS = float(os.getenv("MIN_PROGRESS_SPEED_MPS", "0.25"))
 # un deadlock real. Un obstaculo genuino se sigue detectando aparte via
 # ObstacleField/TTC (policy_router), independiente de este contador.
 PROGRESS_STALL_BEARING_EXEMPT_DEG = float(os.getenv("PROGRESS_STALL_BEARING_EXEMPT_DEG", "30.0"))
+# Tope de ciclos CONSECUTIVOS que la exencion de arriba puede perdonar sin que
+# el error de rumbo converja (2026-0827, ver CHANGELOG.md). La exencion no
+# distingue un giro normal que progresa de uno que nunca converge -- si el
+# dron queda fisicamente trabado (p. ej. enganchado en ramas, colision que no
+# dispara has_collided) mientras intenta un giro grande, bearing_err_deg se
+# mantiene sobre el umbral indefinidamente y el contador de atasco queda
+# congelado para siempre, desactivando el escape de seguridad existente
+# (GANAR_ALTURA por atasco en fsm.py/deliberative.py). Pasado este tope, se
+# deja de eximir y el contador vuelve a acumular normalmente.
+PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES = int(os.getenv("PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES", "15"))
 # Topes de yaw_rate (grados/s) de compute_guidance(). El tope de giro brusco
 # es mayor: con un solo tope de 15 deg/s, realinear un desvio de 70 grados
 # tomaba 6-8s de giro (mas todavia por el EMA), mientras el reloj de atasco
@@ -113,6 +123,9 @@ class WaypointTracker:
         # activo) en lugar de contar ciclos en rutas evasivas/deliberativas.
         self._min_dist_seen: Optional[float] = None
         self.progress_stall_cycles: int = 0
+        # Ciclos consecutivos eximidos del contador de atasco por estar
+        # "girando activamente" (ver PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES).
+        self._bearing_exempt_streak: int = 0
         # Histeresis de compute_guidance() (banda de entrada != banda de
         # salida) para que abs_err/dist_3d oscilando justo en el borde de un
         # umbral no haga alternar vx/yaw_rate entre formulas cada ciclo --
@@ -136,6 +149,7 @@ class WaypointTracker:
         self._locked_turn_dir = None
         self._min_dist_seen = None
         self.progress_stall_cycles = 0
+        self._bearing_exempt_streak = 0
         self._sharp_turn_active = False
         self._final_approach_active = False
         self._yaw_correcting = False
@@ -153,10 +167,21 @@ class WaypointTracker:
         Si ``bearing_err_deg`` supera ``PROGRESS_STALL_BEARING_EXEMPT_DEG``,
         el dron esta girando activamente hacia el rumbo objetivo: el ciclo se
         excluye del conteo (ni incrementa ni resetea la distancia minima
-        vista) en lugar de contarlo como atasco.
+        vista) en lugar de contarlo como atasco -- pero solo hasta
+        ``PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES`` ciclos consecutivos. Un
+        giro que nunca converge (p. ej. el dron fisicamente trabado contra un
+        obstaculo que no dispara colision) no debe poder eximirse para
+        siempre: pasado el tope, se cuenta como atasco real para que el
+        escape de seguridad existente pueda activarse.
         """
         if abs(bearing_err_deg) > PROGRESS_STALL_BEARING_EXEMPT_DEG:
-            return self.progress_stall_cycles
+            if self._bearing_exempt_streak < PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES:
+                self._bearing_exempt_streak += 1
+                return self.progress_stall_cycles
+            # Tope agotado: el giro no convergio en el plazo esperado, tratar
+            # como atasco real (cae al conteo normal de abajo).
+        else:
+            self._bearing_exempt_streak = 0
         if self._min_dist_seen is None or dist_to_wp < self._min_dist_seen - PROGRESS_EPS_M:
             self._min_dist_seen = dist_to_wp
             self.progress_stall_cycles = 0
@@ -168,6 +193,7 @@ class WaypointTracker:
         """Reinicio manual del contador de atasco (p. ej. tras un escape forzado)."""
         self._min_dist_seen = None
         self.progress_stall_cycles = 0
+        self._bearing_exempt_streak = 0
 
     @property
     def current_waypoint(self) -> Optional[Dict[str, Any]]:

@@ -149,6 +149,21 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
             if state.pop("_escape_reset", False):
                 tracker.reset_progress()
 
+            # Desvio persistente por esquina (2026-0827, ver CHANGELOG.md):
+            # main.py ya consumia inject_corner, este runner no -- asi que
+            # ninguna corrida automatica de hoy pudo haberlo aplicado aunque
+            # algun nodo lo hubiera producido (tampoco lo producian, ver
+            # fsm.py/deliberative.py).
+            corner = state.pop("inject_corner", None)
+            if corner and isinstance(corner, dict):
+                injected = tracker.inject_corner_waypoint(
+                    corner.get("x", 0.0), corner.get("y", 0.0), corner.get("z", -10.0),
+                    label=corner.get("label", "CORNER_WP"),
+                )
+                if injected:
+                    state["waypoints"] = tracker.waypoints
+                    state["target_waypoint"] = tracker.current_waypoint
+
             field = state.get("obstacle_field")
 
             # G3.1: Capturar profundidad cada N ciclos para métrica min_obstacle_dist_m.

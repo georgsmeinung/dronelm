@@ -106,9 +106,19 @@ def test_max_consecutive_escapes_latches_and_changes_strategy(monkeypatch):
             state = node(state)
             actions.append(state["next_action"])
 
-        assert actions[:3] == ["GANAR_ALTURA"] * 3
-        assert actions[3] == "GIRAR_90"  # cambio de estrategia, no mas ascenso
+        # 2026-0827 (ver CHANGELOG.md): alterna GANAR_ALTURA/PERDER_ALTURA
+        # entre intentos, mismo fix que fsm.py -- antes solo subia, sin
+        # alternativa si el obstaculo tambien bloqueaba por arriba
+        # (confirmado en UE: dron trabado dentro de la copa de un arbol).
+        assert actions[:3] == ["GANAR_ALTURA", "PERDER_ALTURA", "GANAR_ALTURA"]
+        assert actions[3] == "GIRAR_90"  # cambio de estrategia, no mas escape vertical
         assert state["flight_status"] in ("escape_agotado", "hover_slm")
+        # 2026-0827: el giro de cambio de estrategia tambien inyecta un
+        # waypoint de desvio persistente (antes declarado en DroneState pero
+        # nunca producido por ningun nodo -- ver CHANGELOG.md).
+        corner = state.get("inject_corner")
+        assert isinstance(corner, dict)
+        assert {"x", "y", "z"} <= corner.keys()
         # El enclavamiento persiste: sin progreso horizontal medido, el escape
         # por altura no vuelve a dispararse NUNCA (antes reaparecia al ciclo
         # siguiente de cada freno).
@@ -189,14 +199,25 @@ def test_escape_does_not_fire_when_perception_sees_an_open_corridor(monkeypatch)
         service.stop()
 
 
-def test_fsm_max_consecutive_escapes_switches_to_brake(monkeypatch):
-    """Fix 3 (fsm.py): mismo tope, aplicado al estado CLIMB de la FSM."""
+def test_fsm_max_consecutive_escapes_latches_and_changes_strategy(monkeypatch):
+    """Fix 3 (fsm.py, 2026-0827): mismo tope Y mismo cambio de estrategia que
+
+    el brazo SLM (test_max_consecutive_escapes_latches_and_changes_strategy
+    arriba). Antes, agotado el tope, fsm.py pasaba a STATE_BRAKE y enclavaba
+    para siempre -- si el obstaculo era horizontal (p. ej. trabado contra
+    ramas que no disparan colision), subir nunca genera el progreso
+    horizontal que libera el enclave, y el dron quedaba frenando hasta el
+    timeout de la mision (ver CHANGELOG.md 2026-0827, corrida real en
+    townsim_a). Ahora gira 90 grados para buscar corredor, igual que
+    deliberative.py.
+    """
     monkeypatch.setenv("MAX_CONSECUTIVE_ESCAPES", "3")
 
     state = _base_state()
     state["obstacle_field"] = empty_field()
 
     actions = []
+    flight_statuses = []
     for _ in range(5):
         state["evasion_stuck_cycles"] = 999
         # Evita que la persistencia de maniobra de fsm_node tape el resultado:
@@ -206,6 +227,23 @@ def test_fsm_max_consecutive_escapes_switches_to_brake(monkeypatch):
         state["maneuver_cycles_left"] = 0
         state = fsm_mod.fsm_node(state)
         actions.append(state["next_action"])
+        flight_statuses.append(state["flight_status"])
 
-    assert actions[:3] == ["GANAR_ALTURA"] * 3
-    assert actions[3] == "FRENAR"
+    # 2026-0827: alterna CLIMB/DESCEND entre intentos sucesivos (ver
+    # _vertical_escape_state en fsm.py) en vez de insistir siempre con
+    # GANAR_ALTURA -- confirmado en UE que el dron podia quedar insistiendo
+    # dentro de la copa de un arbol sin nunca intentar bajar. Se evaluo
+    # tambien RETROCEDER (retroceder por el camino recien recorrido) pero se
+    # descarto: agregaba ruido notable a la trayectoria.
+    assert actions[:3] == ["GANAR_ALTURA", "PERDER_ALTURA", "GANAR_ALTURA"]
+    assert actions[3] == "GIRAR_90"  # cambio de estrategia, no mas escape vertical
+    assert flight_statuses[3] == "fsm_escape_agotado"
+    # 2026-0827: el giro de cambio de estrategia tambien inyecta un waypoint
+    # de desvio persistente (antes declarado en DroneState pero nunca
+    # producido por ningun nodo -- ver CHANGELOG.md).
+    corner = state.get("inject_corner")
+    assert isinstance(corner, dict)
+    assert {"x", "y", "z"} <= corner.keys()
+    # Una vez enclavado, la 5ta evaluacion ya no reintenta CLIMB/DESCEND: cae
+    # a la evaluacion normal por TTC (aca sin obstaculos, cruce normal).
+    assert actions[4] not in ("GANAR_ALTURA", "PERDER_ALTURA")

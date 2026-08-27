@@ -1,5 +1,143 @@
 # 2026-0827
 
+<img src="informe/2026-0827 Correcciones Adicionales a Grafo de Control Autonomo.jpg"/>
+
+## Cuatro correcciones más sobre el mismo atasco: retroceder (descartado), el mismo fix portado a `slm`, desvío de esquina reconectado, y `PERDER_ALTURA` agregado al vocabulario del VLM
+
+Continuación directa de la sección de abajo. Con el tercer bug corregido (`fsm.py` alterna `CLIMB`/`DESCEND`
+y cambia de estrategia con `GIRAR_90` al agotar los intentos), la investigación siguió en vivo con el
+usuario mirando el viewport de UE en tiempo real. Cuatro pasos más, cada uno validado con una corrida real
+antes de seguir al siguiente:
+
+### 4. `RETROCEDER` evaluado e implementado — y descartado
+
+Antes de cerrar el fix 3, se discutió si además de alternar `CLIMB`/`DESCEND` valía la pena agregar
+"retroceder por el camino recién volado" como primera estrategia de escape (es la única dirección con
+evidencia real de estar despejada). Se implementó completo (`STATE_RETREAT` en `fsm.py`, macro-acción
+`RETROCEDER` nueva en `action_map.py`, secuencia `RETROCEDER → CLIMB → DESCEND`) y **se revirtió** a pedido
+del usuario tras observar la corrida: agregaba ruido notable a la trayectoria. La secuencia final quedó en
+`CLIMB ↔ DESCEND` alternados, sin retroceso.
+
+### 5. La misma alternancia `CLIMB`/`DESCEND` portada a `deliberative.py` (brazo `slm`)
+
+`fsm.py` y `deliberative.py` comparten el mismo mecanismo de escape sincrónico por atasco, pero solo
+`fsm.py` había recibido el fix 3 — confirmado el problema en la práctica: `slm` sobre `townsim_a` quedó
+trabado en el mismo árbol (mismo cluster, ~1m de diferencia de posición entre corridas), con `slm_fallback_rate=0.0`
+y `slm_timeout_rate=0.0` (el servidor SLM respondía sano) pero 594 ciclos seguidos de `FRENAR` tras agotar
+18 intentos de `GANAR_ALTURA` — el escape se enclavaba y el fallback determinista (`_fallback_decision`,
+"sin evidencia → FRENAR") no tenía forma de resolverlo. Se portó el mismo cambio: alternar
+`GANAR_ALTURA`/`PERDER_ALTURA` en el escape sincrónico de `deliberative.py`, con un ajuste adicional (el
+techo de altura `MAX_ESCAPE_ALT_M` solo fuerza el agotamiento si el próximo intento sería subir — si toca
+bajar, estar por encima del techo es irrelevante).
+
+### 6. `inject_corner`: infraestructura muerta desde el refactor de 2026-0824, reconectada
+
+Preguntado por qué el guiado seguía "insistiendo" en el mismo árbol pese al escape activo, se encontró que
+`DroneState` declara un campo `inject_corner` (waypoint de desvío temporal) y que `main.py` **sí** lo
+consume (`waypoint_tracker.inject_corner_waypoint(...)`) — pero **ningún nodo lo produce** desde el
+refactor de arquitectura (era parte de un mecanismo "Manhattan Detour" de una versión anterior del
+pipeline, basado en detección de fachadas por YOLO, que ya no existe). Y `experiments/runner.py` —el
+harness usado en todas las corridas automáticas de hoy— ni siquiera tenía el código consumidor que sí tiene
+`main.py`.
+
+Se implementó `compute_corner_waypoint()` en `action_map.py` (fuente única de verdad, igual que
+`action_to_command`): un punto a `CORNER_OFFSET_M` metros (default 12.0, sin calibrar — primera
+aproximación) de la posición actual, en la misma dirección que el `GIRAR_90` de cambio de estrategia ya
+decidido, a la altitud del waypoint objetivo original. Se conecta en el momento exacto en que el escape se
+agota, en `fsm.py` y `deliberative.py`, y se agregó el consumidor faltante en `runner.py`.
+
+**Validación** (`slm` sobre `townsim_a`): el punto de atasco pasó de 55.7m del WP_4 a 11.9m — mejora
+grande y medible, aunque no resolvió la misión completa en esa corrida (quedó trabado de nuevo, esta vez
+~1m más cerca, con jitter de posición de apenas 0.1-0.2m durante 300+ ciclos pese a comandos activos en
+todas direcciones — confirmado con el usuario mirando UE: es un atasco **físico** contra la vegetación, no
+un bug de la lógica de reinyección).
+
+### 7. `PERDER_ALTURA` nunca estuvo en el vocabulario que el VLM conoce
+
+Pregunta del usuario: si el VLM ve la imagen (visión directa habilitada), ¿por qué no elige bajar por su
+cuenta cuando hay espacio despejado abajo? Revisando `SYSTEM_PROMPT_TEXT`/`SYSTEM_PROMPT_VISION` en
+`deliberative.py`: la lista documentada de "Valores permitidos para macro_action" nunca incluyó
+`PERDER_ALTURA` — existe en `PROMPT_ACTIONS` (el parser la acepta si aparece) pero el modelo nunca fue
+instruido de que bajar es una opción. Sus propias reglas (regla 2: evadir lateral solo con "calle
+transversal visiblemente despejada"; regla 4: "peligro crítico en todas direcciones → FRENAR") lo dejaban
+sin más salida documentada que `GANAR_ALTURA` o `FRENAR` ante follaje denso en todas direcciones — el
+modelo no estaba fallando al razonar, estaba siguiendo instrucciones incompletas.
+
+**Fix:** se agregó `PERDER_ALTURA` a la lista de acciones válidas en ambos prompts, con una regla explícita
+("si lo que bloquea es vegetación con espacio despejado visible más abajo, PERDER_ALTURA en vez de subir
+más adentro del follaje").
+
+**Validación** (`slm` sobre `townsim_a`): con este fix, el dron **rompió por completo** el atasco del
+árbol original — avanzó de `wp_index=3` (WP_4) hasta `wp_index=5` (WP_5, el último waypoint de la misión),
+cubriendo 445m de ruta real. Volvió a trabarse cerca del final (58m de WP_5), pero en un punto y con un
+mecanismo distintos: 450+ ciclos de `route=reactive`/`MANTENER_RUMBO` sin una sola deliberación —
+`policy_router` nunca detecta bloqueo ahí, consistente con el límite de percepción de origen (flujo óptico
+ciego ante vegetación fina) documentado al principio de la sesión, no con ninguno de los bugs corregidos
+hoy. **Queda como punto de partida para la próxima sesión**, no investigado todavía.
+
+### Resumen de la sesión: 7 correcciones reales, todas validadas con corridas antes/después
+
+1. Percepción muerta (`dt_s=0` sistemático, `runner.py`/`main.py` pisaban `telemetry`).
+2. Overshoot infinito de waypoint (guiado en modo corredor sin noción de "ya pasé el punto").
+3. Escape por atasco enclavado sin salida en `fsm.py` (ahora alterna `CLIMB`/`DESCEND` + cambio de
+   estrategia por giro).
+4. (Evaluado y descartado: `RETROCEDER` como estrategia de escape — ruido de trayectoria.)
+5. Mismo fix de escape portado a `deliberative.py` (brazo `slm`).
+6. `inject_corner` reconectado (desvío persistente por esquina al agotar el escape).
+7. `PERDER_ALTURA` agregado al vocabulario documentado del VLM.
+
+## Tercer bug: escape por atasco sesgado a "solo subir" — confirmado visualmente en UE (dron trabado en la copa de un árbol)
+
+Continuación directa de la sección de abajo. Con los dos bugs previos corregidos, `fsm` sobre `townsim_a`
+avanzaba mucho mejor pero quedaba físicamente inmóvil ~65-77s cerca de WP_4, comandando mayormente
+`MANTENER_RUMBO` con percepción sana (no es el mismo mecanismo que los bugs anteriores). El usuario
+confirmó visualmente en el viewport de UE: el dron estaba **atrapado dentro de la copa de una palmera**,
+sin que `has_collided` lo registrara (follaje sin colisión sólida).
+
+**Causa 1 — `record_progress()` exime el atasco sin límite.** La exención por "girando activamente"
+(`bearing_err_deg > 30°`, agregada el 2026-0826 para no confundir un giro normal de esquina con atasco) no
+tenía techo: si el dron está físicamente trabado y no puede completar el giro, el error de rumbo se
+mantiene alto para siempre y el contador de atasco queda congelado, desactivando el escape existente.
+**Fix:** tope de `PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES=15` ciclos consecutivos de exención; agotado el
+tope, el contador vuelve a acumular.
+
+**Causa 2 — el escape de `fsm.py`, agotados los intentos, enclavaba en `FRENAR` para siempre.** A
+diferencia de `deliberative.py` (brazo `slm`), que cambia de estrategia (gira 90° a buscar corredor)
+cuando el escape se agota, `fsm.py` solo pasaba a `STATE_BRAKE` sin salida — y el candado nunca se
+liberaba porque requiere progreso horizontal medido, imposible frenado. **Fix:** mismo cambio de estrategia
+que ya tenía `slm` (`GIRAR_90` al agotar los intentos).
+
+**Causa 3 — el vocabulario de estados de la FSM no tenía la opción de bajar.** `_decide_state()` solo
+conocía `CRUISE/AVOID_LEFT/AVOID_RIGHT/CLIMB/BRAKE` — ningún estado de descenso, así que "todo bloqueado"
+siempre subía, aunque la captura de UE mostrara terreno despejado debajo de la copa. **Fix:** nuevo
+`STATE_DESCEND` (`PERDER_ALTURA`, ya existía como macro-acción del lado del brazo `slm`/VLM, solo faltaba
+en la FSM), alternando con `CLIMB` entre intentos sucesivos de escape.
+
+Se evaluó también agregar `RETROCEDER` (retroceder por el tramo recién volado, la única dirección con
+evidencia real de estar despejada) como primera estrategia de la secuencia — implementado, probado y
+**descartado**: agregaba ruido notable a la trayectoria. Revertido; la secuencia final es solo
+CLIMB↔DESCEND alternados, con `GIRAR_90` como cambio de estrategia al agotar los intentos.
+
+**Validación** (`fsm` sobre `townsim_a`, `runs/townsim_a_fix5/`, cruise subido a 5.0 m/s — ver nota de
+velocidad más abajo): con los 3 fixes, el dron rompió el atasco por completo y llegó a **4.6m de WP_4**
+(radio de aceptación 3.5m) al agotarse el presupuesto de 300s, con progreso monótono sostenido desde el
+punto del atasco (dist 73→27→12→5→4.6m). Una segunda réplica con más presupuesto (330s) no repitió el
+resultado — quedó de nuevo trabada cerca de WP_3, activando la secuencia de escape sin lograr salir en esa
+ventana. Es variación real de réplica a réplica (mismo seed de jitter de posición inicial, pero el timing
+real del lazo de control sobre AirSim no es perfectamente reproducible ciclo a ciclo en una simulación
+viva) — exactamente el tipo de variación que el diseño experimental de la tesis ya contempla con múltiples
+semillas por combinación, no evidencia de que el fix no funcione.
+
+### Nota: velocidad de crucero subida a 5.0 m/s (antes 3.0)
+
+`REACTIVE_FORWARD_SPEED`/`REACTIVITY_FORWARD_SPEED` en `.env`: 3.0 → 5.0 m/s, a pedido del usuario para
+acortar el tiempo de reloj real de cada corrida de validación. Los umbrales de TTC (`TTC_SAFE_THRESHOLD`,
+`TTC_EVASION_THRESHOLD`) son de tiempo, no de distancia, así que en teoría el margen de reacción no se
+degrada al subir la velocidad (mismo razonamiento que justificó la subida anterior de 2.0 a 3.0 m/s, ver
+CHANGELOG.md 2026-0826) — pero nunca se remidió específicamente en un escenario con obstáculos reales como
+`townsim_a`. Vale la pena tenerlo presente si en el futuro aparecen colisiones o near-misses nuevos que no
+se explican por los tres bugs de esta sección.
+
 ## Dos bugs reales encontrados al correr Tier 1 completo (`townsim_a`, 5 waypoints): percepción muerta todo el día, y overshoot de waypoint por guiado en modo corredor
 
 Continuación de la corrida de Tier 1 completo (ver sección de abajo para el piloto corto). Al correr

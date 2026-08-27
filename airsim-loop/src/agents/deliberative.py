@@ -29,7 +29,7 @@ except Exception:  # pragma: no cover
 
 import json as _json
 
-from .action_map import action_to_command
+from .action_map import action_to_command, compute_corner_waypoint
 from .deliberation_service import DeliberationService
 from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception import ObstacleField, empty_field, has_open_corridor
@@ -85,7 +85,8 @@ SYSTEM_PROMPT_TEXT = (
     "2. Evasión Proactiva por Calles Libres: Si el frente está bloqueado por una estructura, evalúa los laterales. "
     "Elige EVADIR_IZQUIERDA o EVADIR_DERECHA únicamente si hay una calle transversal o pasaje despejado en esa dirección.\n"
     "3. Bloqueo Total (Callejón sin salida): Si el frente está bloqueado y ambos laterales también están cerrados por estructuras (edificios/paredes), "
-    "debes elegir GANAR_ALTURA para sobrevolar el obstáculo de manera suave, en lugar de intentar girar lateralmente contra las paredes.\n"
+    "elegí GANAR_ALTURA para sobrevolar el obstáculo, o PERDER_ALTURA si el obstáculo es orgánico (copa de un árbol, ramas) y hay espacio despejado "
+    "más abajo (suelo, sendero) en lugar de intentar girar lateralmente contra el bloqueo.\n"
     "4. Peligro Inminente: Si estás en peligro crítico inminente en todas las direcciones, elige FRENAR.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
     '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en la trayectoria y suavidad>"}\n\n'
@@ -94,10 +95,11 @@ SYSTEM_PROMPT_TEXT = (
     "- EVADIR_IZQUIERDA: Calle transversal libre a la izquierda.\n"
     "- EVADIR_DERECHA: Calle transversal libre a la derecha.\n"
     "- GANAR_ALTURA: Frente y laterales bloqueados por estructuras (subir).\n"
+    "- PERDER_ALTURA: Frente y laterales bloqueados por un obstáculo orgánico (árbol/ramas) con espacio despejado abajo (bajar).\n"
     "- FRENAR: Peligro crítico en todas direcciones.\n\n"
     "Reglas estrictas:\n"
     f"1. No elijas MANTENER_RUMBO si el sector central está BLOQUEADO con TTC menor a {SAFE_MARGIN_TTC_S:.1f} segundos.\n"
-    "2. Si estás rodeado de estructuras de cerca, prioriza GANAR_ALTURA para sobrevolarlas.\n"
+    "2. Si estás rodeado de estructuras de cerca, prioriza GANAR_ALTURA (edificios/paredes) o PERDER_ALTURA (vegetación con salida abajo) para superarlas.\n"
     "3. Salida estrictamente JSON sin texto adicional."
 )
 
@@ -110,7 +112,9 @@ SYSTEM_PROMPT_VISION = (
     "2. Evasión Proactiva por Calles Libres: Si el frente está obstruido por una estructura, evalúa los laterales. "
     "Solo elige EVADIR_IZQUIERDA o EVADIR_DERECHA si ves claramente una calle transversal o pasillo libre y abierto en esa dirección.\n"
     "3. Bloqueo Total (Callejón sin salida): Si el frente está bloqueado y no hay una calle transversal visiblemente despejada a los lados "
-    "(ambos laterales cerrados por paredes/edificios), debes elegir GANAR_ALTURA de inmediato para sobrevolar la estructura en lugar de girar en círculos contra las paredes.\n"
+    "(ambos laterales cerrados por paredes/edificios), elegí GANAR_ALTURA de inmediato para sobrevolar la estructura. Si en cambio lo que bloquea "
+    "es vegetación (ramas, copa de un árbol) y ves claramente espacio despejado más abajo en la imagen (suelo, sendero, calle), elegí PERDER_ALTURA "
+    "para pasar por debajo en lugar de subir más adentro del follaje. No sigas girando en círculos contra el bloqueo.\n"
     "4. Peligro Inminente: Si estás en una situación de peligro inminente y necesitas detenerte a evaluar, elige FRENAR.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
     '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en la trayectoria y suavidad>"}\n\n'
@@ -119,10 +123,12 @@ SYSTEM_PROMPT_VISION = (
     "- EVADIR_IZQUIERDA: Calle transversal libre visible a la izquierda.\n"
     "- EVADIR_DERECHA: Calle transversal libre visible a la derecha.\n"
     "- GANAR_ALTURA: Frente y ambos lados bloqueados por estructuras (callejón sin salida).\n"
+    "- PERDER_ALTURA: Frente y ambos lados bloqueados por vegetación (árbol/ramas), con espacio despejado visible más abajo.\n"
     "- FRENAR: Peligro crítico inmediato en todas las direcciones.\n\n"
     "Reglas estrictas:\n"
     f"1. No elijas MANTENER_RUMBO si el sector central está BLOQUEADO con TTC menor a {SAFE_MARGIN_TTC_S:.1f} segundos.\n"
-    "2. Evita giros innecesarios o alternantes si no hay una vía de escape abierta. Si estás rodeado, gana altura.\n"
+    "2. Evita giros innecesarios o alternantes si no hay una vía de escape abierta. Si estás rodeado por estructuras, gana altura; "
+    "si estás rodeado por vegetación con salida visible abajo, perdé altura.\n"
     "3. Salida estrictamente JSON sin texto adicional."
 )
 
@@ -456,10 +462,24 @@ def make_deliberative_node(service: DeliberationService):
             state["_escape_reset"] = True
             state["slm_request_id"] = None
 
+            # Alterna GANAR_ALTURA/PERDER_ALTURA entre intentos sucesivos
+            # (2026-0827, ver CHANGELOG.md, mismo fix que fsm.py): antes el
+            # escape sincronico solo sabia subir, sin alternativa si el
+            # obstaculo bloqueaba tambien por arriba -- confirmado en UE con
+            # el dron trabado dentro de la copa de un arbol, insistiendo con
+            # GANAR_ALTURA hasta agotar los intentos y quedar frenando (sin
+            # evidencia de percepcion en ese punto, el fallback determinista
+            # de _fallback_decision elige FRENAR indefinidamente).
+            escape_action = "GANAR_ALTURA" if (consecutive_escapes - 1) % 2 == 0 else "PERDER_ALTURA"
+
             max_escape_alt = float(os.getenv("MAX_ESCAPE_ALT_M", "20.0"))
             current_alt = abs(float(telemetry.get("position", {}).get("z", 0.0)))
             exhausted = consecutive_escapes > max_escapes
-            above_ceiling = current_alt > max_escape_alt
+            # El techo de altura solo fuerza el agotamiento si el proximo
+            # intento seguiria subiendo -- si toca bajar (alternancia), estar
+            # por encima del techo es irrelevante (bajar es, si acaso, la
+            # correccion correcta).
+            above_ceiling = escape_action == "GANAR_ALTURA" and current_alt > max_escape_alt
 
             if exhausted or above_ceiling:
                 # ENCLAVAMIENTO + CAMBIO DE ESTRATEGIA. Antes esta rama
@@ -467,39 +487,50 @@ def make_deliberative_node(service: DeliberationService):
                 # reseteaba a si misma, convirtiendo la red de seguridad en un
                 # ciclo limite de periodo 3 (SUBIR, SUBIR, FRENAR, SUBIR, ...)
                 # que en vuelo real duro hasta el final del log. Ahora el
-                # enclavamiento persiste -- GANAR_ALTURA queda descartada
-                # hasta que haya progreso medido -- y se cambia de estrategia:
-                # un giro hacia el lado del waypoint, que es ademas lo unico
-                # que corrige el rumbo congelado que el ascenso dejaba atras.
-                # Los ciclos siguientes caen a la deliberacion normal (SLM),
-                # que vuelve a tener voz en vez de quedar cortocircuitada.
+                # enclavamiento persiste -- el escape vertical queda
+                # descartado hasta que haya progreso medido -- y se cambia de
+                # estrategia: un giro hacia el lado del waypoint, que es
+                # ademas lo unico que corrige el rumbo congelado que el
+                # ascenso/descenso dejaba atras. Los ciclos siguientes caen a
+                # la deliberacion normal (SLM), que vuelve a tener voz en vez
+                # de quedar cortocircuitada.
                 state["_escape_locked"] = True
                 if above_ceiling:
                     print(f"[Deliberativo] -> ALTURA MÁXIMA DE ESCAPE ALCANZADA: {current_alt:.1f}m > {max_escape_alt:.1f}m. Escape enclavado, girando para buscar corredor.")
                     reason = f"Altura máxima de escape alcanzada ({current_alt:.1f}m)."
                     state["flight_status"] = "escape_altitude_limit"
                 else:
-                    print(f"[Deliberativo] -> ESCAPE AGOTADO: {consecutive_escapes - 1} intentos de GANAR_ALTURA sin progreso horizontal. Enclavando el escape y cambiando de estrategia (giro).")
-                    reason = f"Escape agotado tras {consecutive_escapes - 1} intentos de GANAR_ALTURA sin progreso."
+                    print(f"[Deliberativo] -> ESCAPE AGOTADO: {consecutive_escapes - 1} intentos verticales (GANAR_ALTURA/PERDER_ALTURA alternados) sin progreso horizontal. Enclavando el escape y cambiando de estrategia (giro).")
+                    reason = f"Escape agotado tras {consecutive_escapes - 1} intentos verticales sin progreso."
                     state["flight_status"] = "escape_agotado"
 
                 cmd = action_to_command("GIRAR_90", guidance=guidance, telemetry=telemetry)
                 side = "izquierda" if cmd["yaw_rate"] < 0 else "derecha"
-                cmd["rationale"] = f"{reason} Girando 90° hacia la {side} para buscar corredor; ascenso descartado hasta que haya progreso."
+                cmd["rationale"] = f"{reason} Girando 90° hacia la {side} para buscar corredor; escape vertical descartado hasta que haya progreso."
                 state["next_action"] = "GIRAR_90"
                 state["velocity_command"] = cmd
                 state["active_maneuver"] = "GIRAR_90"
                 state["maneuver_cycles_left"] = max(1, round(ESCAPE_MANEUVER_DURATION_S * loop_hz))
                 state["maneuver_command"] = cmd
+                # Desvio persistente (2026-0827, ver CHANGELOG.md): mismo fix
+                # que fsm.py -- sin esto, el guiado por corredor vuelve a
+                # apuntar a la misma linea bloqueada apenas termina el giro
+                # (confirmado en UE, dron trabado dentro de la copa de un
+                # arbol). inject_corner ya estaba declarado en DroneState pero
+                # ningun nodo lo producia.
+                target_yaw = cmd.get("target_yaw")
+                if target_yaw is not None:
+                    state["inject_corner"] = compute_corner_waypoint(telemetry, float(target_yaw), guidance=guidance)
                 return state
 
-            print(f"[Deliberativo] -> ESCAPE POR ALTURA ({consecutive_escapes}/{max_escapes}): {stuck_cycles} ciclos sin progresar. Forzando GANAR_ALTURA sin consultar al LLM.")
-            cmd = action_to_command("GANAR_ALTURA", guidance=guidance, telemetry=telemetry)
-            cmd["rationale"] = f"Escape de deadlock ({consecutive_escapes}/{max_escapes}): {stuck_cycles} ciclos bloqueado. Subiendo para superar el obstáculo."
-            state["next_action"] = "GANAR_ALTURA"
+            print(f"[Deliberativo] -> ESCAPE VERTICAL ({consecutive_escapes}/{max_escapes}, {escape_action}): {stuck_cycles} ciclos sin progresar. Forzando {escape_action} sin consultar al LLM.")
+            cmd = action_to_command(escape_action, guidance=guidance, telemetry=telemetry)
+            verbo = "Subiendo" if escape_action == "GANAR_ALTURA" else "Bajando"
+            cmd["rationale"] = f"Escape de deadlock ({consecutive_escapes}/{max_escapes}): {stuck_cycles} ciclos bloqueado. {verbo} para superar el obstáculo."
+            state["next_action"] = escape_action
             state["velocity_command"] = cmd
-            state["flight_status"] = "escape_altura"
-            state["active_maneuver"] = "GANAR_ALTURA"
+            state["flight_status"] = "escape_altura" if escape_action == "GANAR_ALTURA" else "escape_descenso"
+            state["active_maneuver"] = escape_action
             state["maneuver_cycles_left"] = max(1, round(ESCAPE_MANEUVER_DURATION_S * loop_hz))
             state["maneuver_command"] = cmd
             return state
