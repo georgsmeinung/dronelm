@@ -21,6 +21,8 @@
   /* acento — azul moderno */
   --accent:       #0066CC;
   --accent-light: #E6F2FF;
+  --accent-wash:  #E6F2FF;
+  --accent-ink:   #003D99;
   --accent-hover: #0052A3;
 
   /* semántica de riesgo — no usar como decoración */
@@ -53,6 +55,8 @@
 
     --accent:      #4A9EFF;
     --accent-light: #1A2D4D;
+    --accent-wash:  #1A2D4D;
+    --accent-ink:   #6BAFFF;
     --accent-hover: #6BAFFF;
 
     --safe:        #34D399;
