@@ -8,13 +8,6 @@
     content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM) en Unreal Engine." />
   <title>Navegación Autónoma de Drones con SLM - Tesis Maestría Ciencia de Datos</title>
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap"
-    rel="stylesheet">
-
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -51,11 +44,11 @@
       <nav>
         <h5>Navegación</h5>
         <ul>
+          <li><a href="#actualizaciones">Actualizaciones Recientes</a></li>
           <li><a href="#introduccion" class="active">Resumen Ejecutivo</a></li>
           <li><a href="#arquitectura">Arquitectura del Sistema</a></li>
           <li><a href="#percepcion">Percepción y TTC</a></li>
           <li><a href="#modos-falla">Modos de Falla y Contratos</a></li>
-          <li><a href="#capitulos">Índice del Informe</a></li>
           <li><a href="#stack">Stack Tecnológico</a></li>
           <li><a href="#evaluacion">Evaluación y Calibración</a></li>
           <li><a href="#instalacion">Instalación y Uso</a></li>
@@ -77,7 +70,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Versión: 2026-08-25</span>
+          <span class="badge-pill badge-teal">Versión: 2026-08-27</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -85,6 +78,29 @@
           <span class="badge-pill badge-teal">FastAPI WebDCS</span>
         </div>
       </header>
+
+      <!-- Últimas actualizaciones -->
+      <section id="actualizaciones">
+        <h2>Actualizaciones Recientes (2026-08-27)</h2>
+        <div class="card-grid">
+          <div class="card">
+            <h4>Estabilidad en Vuelo Sin Obstáculos</h4>
+            <p>Mejorada la trayectoria y estabilización cuando no hay obstáculos en el camino. Optimización de la cinemática nominal y reducción de oscilaciones.</p>
+          </div>
+          <div class="card">
+            <h4>Ciclo de Corrección y Optimización</h4>
+            <p>Nuevo ciclo de calibración de vuelo con ajustes en los umbrales de TTC y persistencia de maniobras para mejor eficiencia táctica.</p>
+          </div>
+          <div class="card">
+            <h4>Sincronización de Waypoints</h4>
+            <p>Corrección de sincronización entre el tracker y el estado del runner. El índice de waypoint activo se mantiene coherente en todo el ciclo.</p>
+          </div>
+          <div class="card">
+            <h4>Configuración del Entorno Virtual</h4>
+            <p>Uso correcto de venv en procesos subprocesados del batch runner. Mejor gestión de dependencias en ejecuciones paralelas.</p>
+          </div>
+        </div>
+      </section>
 
       <!-- Resumen del Proyecto -->
       <section id="introduccion">
@@ -455,7 +471,7 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>Repositorio: georgsmeinung/dronelm</p>
-        <p>Fecha de actualización: 2026-08-25</p>
+        <p>Fecha de actualización: 2026-08-27</p>
       </footer>
     </main>
   </div>
