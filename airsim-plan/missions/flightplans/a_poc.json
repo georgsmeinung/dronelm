@@ -3,28 +3,34 @@
   "summary": "Manifiesto de vuelo vacío creado manualmente.",
   "waypoints": [
     {
-      "x": -26.3,
-      "y": -6.8,
+      "x": -66.0,
+      "y": -11.1,
       "z": -10.0,
       "label": "WP_1"
     },
     {
-      "x": -8.7,
-      "y": -29.2,
-      "z": -50.0,
+      "x": -3.2,
+      "y": 38.5,
+      "z": -20.0,
       "label": "WP_2"
     },
     {
-      "x": -42.3,
-      "y": -32.0,
-      "z": -20.0,
+      "x": 62.4,
+      "y": -19.1,
+      "z": -30.0,
       "label": "WP_3"
     },
     {
-      "x": -35.1,
-      "y": -6.8,
-      "z": -5.0,
+      "x": -2.8,
+      "y": -82.3,
+      "z": -15.0,
       "label": "WP_4"
+    },
+    {
+      "x": -66.0,
+      "y": -16.7,
+      "z": 0.0,
+      "label": "WP_5"
     }
   ],
   "rules_of_engagement": {
@@ -37,6 +43,6 @@
     "min_altitude_m": -10.0,
     "notes": null
   },
-  "tactical_system_prompt": "Sos el navegador tactico de un dron autonomo. Tu objetivo es ejecutar el\nMANIFIESTO DE MISION entregado por la estacion de tierra sin colisionar.\n\nReglas duras:\n1. SIEMPRE respetar la altitud minima (min_altitude_m) y la velocidad maxima\n   (max_speed_mps) declaradas en el manifiesto.\n2. SI la bateria cae por debajo de 20.0%, la UNICA accion\n   permitida es RETURN_TO_LAUNCH.\n3. SI el objetivo coincide con una clase en ignore_objects (person, car),\n   tratarla como ruido: NO esquivar agresivamente, continuar la ruta.\n4. El objetivo global es alcanzar el siguiente waypoint pendiente en la lista.\n5. Cada decision debe ser un objeto JSON con la forma exacta:\n   {\n     \"macro_action\": \"MANTENER_RUMBO|EVADIR_IZQUIERDA|EVADIR_DERECHA|\"\n                     \"GANAR_ALTURA|PERDER_ALTURA|FRENAR|RETURN_TO_LAUNCH\",\n     \"vx\": <float>, \"vy\": <float>, \"vz\": <float>, \"yaw_rate\": <float>,\n     \"rationale\": \"<texto corto>\"\n   }\n6. NO responder en prosa. NO incluir campos fuera del JSON.\n\n\nMISION ACTIVA: A_POC\nObjetivo final (waypoint #4): [-35.1, -6.8, -5.0] (WP_4)\nWaypoints pendientes (en orden): #1[-26.3,-6.8,-10.0]; #2[-8.7,-29.2,-50.0]; #3[-42.3,-32.0,-20.0]; #4[-35.1,-6.8,-5.0]\n",
+  "tactical_system_prompt": "Sos el navegador tactico de un dron autonomo. Tu objetivo es ejecutar el\nMANIFIESTO DE MISION entregado por la estacion de tierra sin colisionar.\n\nReglas duras:\n1. SIEMPRE respetar la altitud minima (min_altitude_m) y la velocidad maxima\n   (max_speed_mps) declaradas en el manifiesto.\n2. SI la bateria cae por debajo de 20.0%, la UNICA accion\n   permitida es RETURN_TO_LAUNCH.\n3. SI el objetivo coincide con una clase en ignore_objects (person, car),\n   tratarla como ruido: NO esquivar agresivamente, continuar la ruta.\n4. El objetivo global es alcanzar el siguiente waypoint pendiente en la lista.\n5. Cada decision debe ser un objeto JSON con la forma exacta:\n   {\n     \"macro_action\": \"MANTENER_RUMBO|EVADIR_IZQUIERDA|EVADIR_DERECHA|\"\n                     \"GANAR_ALTURA|PERDER_ALTURA|FRENAR|RETURN_TO_LAUNCH\",\n     \"vx\": <float>, \"vy\": <float>, \"vz\": <float>, \"yaw_rate\": <float>,\n     \"rationale\": \"<texto corto>\"\n   }\n6. NO responder en prosa. NO incluir campos fuera del JSON.\n\n\nMISION ACTIVA: A_POC\nObjetivo final (waypoint #5): [-66.0, -16.7, 0.0] (WP_5)\nWaypoints pendientes (en orden): #1[-66.0,-11.1,-10.0]; #2[-3.2,38.5,-20.0]; #3[62.4,-19.1,-30.0]; #4[-2.8,-82.3,-15.0]; #5[-66.0,-16.7,0.0]\n",
   "map": "crater.png"
 }

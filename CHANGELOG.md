@@ -2,6 +2,36 @@
 
 <img src="informe/2026-0827 Correcciones Adicionales a Grafo de Control Autonomo.jpg"/>
 
+## Nueva herramienta: dibujar la ruta de una misión en UE antes de volar
+
+A raíz de todo lo de abajo (varias horas de vuelo real para descubrir que `townsim_a` cruza directo por la
+copa de un árbol), surgió la pregunta obvia: ¿se puede visualizar la ruta planificada en el viewport de UE
+*antes* de volarla? Sí — `Cosys-AirSim` (la versión que usa este proyecto) expone una API de dibujo de
+depuración (`simPlotLineStrip`, `simPlotPoints`, `simPlotStrings`, `simFlushPersistentMarkers`) que pinta
+directamente en el viewport, sin necesidad de armar ni despegar el vehículo.
+
+Nuevo [scripts/plot_mission_route.py](airsim-loop/scripts/plot_mission_route.py): toma la ruta a un
+manifiesto de misión (acepta ambos formatos, `airsim-loop/missions/*.json` y
+`airsim-plan/missions/*.preloop.json`), se conecta a AirSim sin tocar el estado del vehículo, y dibuja la
+línea de trayectoria completa + un marcador por waypoint + su etiqueta (`WP_1`, `WP_2`, ...), persistente
+en el viewport. `--clear-only` borra los dibujos previos sin pintar nada nuevo (necesario porque, sin
+limpiar, cada corrida se apila sobre las anteriores).
+
+También configura la **traza real del dron** (`simSetTraceLine`) en un color distinto (cyan por defecto,
+`--trace-color`) al de la ruta planificada (rojo por defecto) — así se puede comparar visualmente "por
+dónde debería ir" contra "por dónde vuela de verdad" en la misma corrida. `simSetTraceLine` solo fija
+color/grosor; activar la traza en sí requiere apretar `T` en el viewport de UE (o `EnableTrace: true` en
+`settings.json`, que necesita reiniciar el proyecto) — el script lo deja impreso como instrucción.
+
+**Validación inmediata:** corrido sobre `townsim_a`, confirmado visualmente con el usuario — la línea roja
+cruza justo por la vegetación densa donde el dron venía atascándose toda la sesión. Con esta herramienta,
+ese problema se detecta en segundos, antes de gastar un solo ciclo de vuelo. Queda como buena práctica
+recomendada para cualquier misión nueva, antes de la primera corrida real.
+
+Nuevo [scripts/clear_mission_plot.py](airsim-loop/scripts/clear_mission_plot.py): versión standalone de
+`plot_mission_route.py --clear-only`, sin depender de pasarle un archivo de misión que de todos modos no
+se usa para borrar — solo conecta y llama `simFlushPersistentMarkers()`.
+
 ## Cuatro correcciones más sobre el mismo atasco: retroceder (descartado), el mismo fix portado a `slm`, desvío de esquina reconectado, y `PERDER_ALTURA` agregado al vocabulario del VLM
 
 Continuación directa de la sección de abajo. Con el tercer bug corregido (`fsm.py` alterna `CLIMB`/`DESCEND`
