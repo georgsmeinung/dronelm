@@ -17,6 +17,24 @@ def test_clear_path_keeps_going(monkeypatch):
     assert graph_mod.policy_router(state) == "keep_going"
 
 
+def test_pending_slm_request_keeps_routing_to_deliberative(monkeypatch):
+    """Fix 8 (graph.py, 2026-0828, ver CHANGELOG.md): un pedido al LLM en
+
+    vuelo no se abandona aunque el disparador puntual (TTC de un frame
+    ruidoso) ya haya desaparecido en el ciclo siguiente. Antes, con el campo
+    despejado, este estado hubiera vuelto a "keep_going" -- huerfano el
+    pedido pendiente (slm_request_id != None), state["_deliberation_pending"]
+    nunca vuelve a False, y el detector de atasco de runner.py/main.py queda
+    desactivado por el resto de la mision (confirmado con una corrida real de
+    townsim_a: 528 ciclos de keep_going sin escalar nunca).
+    """
+    monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
+    # Campo totalmente despejado -- sin el fix, esto por si solo ya devuelve
+    # "keep_going". Con el fix, el pedido pendiente tiene prioridad.
+    state = {"obstacle_field": empty_field(), "evasion_stuck_cycles": 0, "slm_request_id": "req-123"}
+    assert graph_mod.policy_router(state) == "deliberative"
+
+
 def test_moderate_ttc_without_center_block_triggers_evasive(monkeypatch):
     monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
     # Centro sin ocupacion (no "bloqueado"), pero TTC dentro de la ventana de

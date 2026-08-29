@@ -1,0 +1,10 @@
+{
+  "mission_id": "townsim_demo",
+  "summary": "Mision demo para video de avance (2026-0828, v3): calle pavimentada sur, identificada en airsim-plan/missions/maps/townsim.png como el tramo despejado (sin arboles dibujados) que sale del complejo de edificios. Distancia corta (35m) con margen de seguridad antes de la vegetacion conocida en y~-52 a -81 del tramo WP_1->WP_2 de townsim_a.",
+  "start_pose": { "x": 0.4, "y": 5.3, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 0.4, "y": 5.3, "z": -10.0, "label": "START" },
+    { "x": 0.4, "y": -30.0, "z": -10.0, "label": "WP_A" },
+    { "x": 0.4, "y": 5.3, "z": 0.0, "label": "WP_D_RETORNO" }
+  ]
+}

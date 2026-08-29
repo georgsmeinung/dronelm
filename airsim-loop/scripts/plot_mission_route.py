@@ -81,6 +81,11 @@ def main() -> None:
     parser.add_argument("--thickness", type=float, default=12.0, help="Grosor de la linea de ruta")
     parser.add_argument("--point-size", type=float, default=25.0, help="Tamano de los marcadores de waypoint")
     parser.add_argument("--text-scale", type=float, default=8.0, help="Tamano del texto de las etiquetas")
+    parser.add_argument("--text-duration", type=float, default=90.0,
+                         help="Segundos que dura cada etiqueta de texto (simPlotStrings no admite "
+                              "is_persistent -- solo duration -- asi que simFlushPersistentMarkers() NO "
+                              "las borra; corridas repetidas en poco tiempo dejan etiquetas viejas "
+                              "superpuestas hasta que expira esta duracion)")
     parser.add_argument("--trace-color", nargs=4, type=float, default=[0.0, 1.0, 1.0, 1.0], metavar=("R", "G", "B", "A"),
                          help="Color RGBA de la TRAZA REAL del dron (simSetTraceLine), distinto del de la "
                               "ruta planificada para poder comparar ambas -- default: cyan opaco")
@@ -88,6 +93,9 @@ def main() -> None:
     parser.add_argument("--vehicle-name", default=DEFAULT_VEHICLE)
     parser.add_argument("--clear-only", action="store_true",
                          help="Solo borra los dibujos persistentes previos, no dibuja nada nuevo")
+    parser.add_argument("--simple-labels", action="store_true",
+                         help="Etiquetar los waypoints como 1, 2, 3, ..., END en vez de usar el campo "
+                              "'label' del manifiesto (util para video/demo, mas legible que WP_X)")
     args = parser.parse_args()
 
     client = airsim.MultirotorClient(ip=DEFAULT_IP, port=DEFAULT_PORT)
@@ -120,12 +128,16 @@ def main() -> None:
         airsim.Vector3r(float(wp.get("x", 0.0)), float(wp.get("y", 0.0)), float(wp.get("z", -10.0)))
         for wp in waypoints
     ]
-    labels = [str(wp.get("label", f"WP_{i + 1}")) for i, wp in enumerate(waypoints)]
+    if args.simple_labels:
+        labels = [str(i + 1) for i in range(len(waypoints))]
+        labels[-1] = "END"
+    else:
+        labels = [str(wp.get("label", f"WP_{i + 1}")) for i, wp in enumerate(waypoints)]
 
     if len(points) >= 2:
         client.simPlotLineStrip(points, color_rgba=args.color, thickness=args.thickness, is_persistent=True)
     client.simPlotPoints(points, color_rgba=args.color, size=args.point_size, is_persistent=True)
-    client.simPlotStrings(labels, points, scale=args.text_scale, color_rgba=[1.0, 1.0, 1.0, 1.0], duration=3600.0)
+    client.simPlotStrings(labels, points, scale=args.text_scale, color_rgba=[1.0, 1.0, 1.0, 1.0], duration=args.text_duration)
 
     total_dist = sum(
         points[i].distance_to(points[i + 1]) if hasattr(points[i], "distance_to") else (

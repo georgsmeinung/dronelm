@@ -270,6 +270,22 @@ def policy_router(state: DroneState) -> str:
     if AGENT_ARM == "fsm":
         return "fsm"
 
+    # No abandonar una deliberacion ya encolada (2026-0828, ver CHANGELOG.md):
+    # si hay un pedido al LLM en vuelo (slm_request_id != None), seguir
+    # enrutando a "deliberative" para que el poll se resuelva, sin importar
+    # que el disparador puntual (p. ej. un TTC de un frame ruidoso) ya haya
+    # desaparecido en el ciclo siguiente. Sin esto, el pedido queda huerfano:
+    # nada vuelve a entrar a deliberative_node para resolverlo,
+    # state["_deliberation_pending"] nunca vuelve a False, y el guard de
+    # runner.py/main.py que salta record_progress() mientras se espera al SLM
+    # queda activado para siempre -- desactivando el detector de atasco por
+    # el resto de la mision. Confirmado con una corrida real de townsim_a
+    # (replay offline de compute_guidance()/record_progress() contra las
+    # posiciones reales del log): 528 ciclos seguidos de keep_going sin
+    # escalar nunca, pese a que el dron no avanzaba.
+    if state.get("slm_request_id") is not None:
+        return "deliberative"
+
     field: ObstacleField = state.get("obstacle_field") or empty_field()
     guidance = state.get("waypoint_guidance") or {}
     ttc = field.min_ttc()

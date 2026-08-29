@@ -1,4 +1,153 @@
-# 2026-0827
+# 2026-0828
+
+## Misión demo `TOWNSIM_DEMO`: tres intentos fallidos por adivinar coordenadas, resuelto con el mapa de referencia
+
+Pedido del usuario: una ruta corta en TownSim, sin obstáculos, disparable desde WebDCS, para un video de
+avance. Se creó [missions/townsim_demo.json](airsim-loop/missions/townsim_demo.json) (formato runner
+automático) y su espejo [TOWNSIM_DEMO.preloop.json](airsim-plan/missions/TOWNSIM_DEMO.preloop.json)
+(formato WebDCS), y se usó `scripts/plot_mission_route.py` para confirmar cada candidata visualmente antes
+de volar — exactamente el flujo de trabajo que se armó ayer.
+
+**Tres intentos de ruta adivinando coordenadas a ciegas, los tres terminaron con el dron dentro de la copa
+de un árbol** (confirmado visualmente por el usuario en cada caso): primero un rectángulo hacia +x/+y
+cerca del spawn, después el mismo rectángulo acortado en x, después el espejo hacia -x. Ajustes menores en
+el camino, aplicados y validados: velocidad de crucero bajada a 3 m/s (menos inercia/correcciones en los
+giros), altitud de los waypoints intermedios subida (`WP_B`/`WP_C`) para pasar por encima de techos de
+edificios cercanos, último waypoint a nivel de piso (`z=0.0`, en vez de altitud de crucero) para que la
+misión termine aterrizando en lugar de quedar en hover, y `--simple-labels` nuevo en
+`plot_mission_route.py` (etiquetas `1, 2, 3...END` en vez de los labels del manifiesto, más legibles en
+video). También se encontró que `simPlotStrings` no soporta `is_persistent` (solo `duration`), así que
+`simFlushPersistentMarkers()` no limpia las etiquetas de texto — quedan superpuestas de corridas anteriores
+hasta que expira su duración; se agregó `--text-duration` (default 90s, antes 3600s fijo sin exponer).
+
+**Lo que rompió el patrón de adivinar y listo:** revisar
+[airsim-plan/missions/maps/townsim.png](airsim-plan/missions/maps/townsim.png) — la imagen de referencia
+del mapa que ya existía en el repo, nunca antes consultada para diseñar una ruta. Vista cenital: un
+complejo de edificios con una plaza central (la fuente rodeada de árboles en círculo, exactamente donde
+pegaban los tres intentos anteriores) y una **calle pavimentada que sale derecha hacia el sur**, sin
+ningún árbol dibujado encima — a diferencia del pasto de alrededor, con árboles dispersos por todos lados
+en cualquier otra dirección. Cruzando esto con el dato ya conocido de vuelos reales (el tramo
+`WP_1`→`WP_2` de `townsim_a` va de `(0.4,5.3)` a `(1.6,-137.9)`, casi puro -Y, y esa vegetación problemática
+ya identificada está en y≈-52 a -81), se dedujo que esa calle sur es esa misma dirección — y se acortó la
+ruta demo a solo 35m (y: 5.3 → -30.0) para quedar con margen de seguridad antes de la vegetación conocida.
+
+**Estado: ruta final confirmada visualmente por el usuario, sin obstáculos.** Corrida de validación
+automática (`experiments/runner.py`) interrumpida antes de completarse — **queda pendiente para la próxima
+sesión** confirmar `success: true` en `runs/townsim_demo_validate7/` antes de grabar el video.
+
+## `VLM_IMAGE_MAX_SIZE`: 384 → 640 probado y revertido — el costo de latencia se come el margen del watchdog
+
+Continuación directa de la sección de abajo. Con `FLOW_DOWNSCALE_WIDTH=640` ya validado, se probó subir
+también `VLM_IMAGE_MAX_SIZE` (384→640) — la resolución de la imagen que efectivamente ve el VLM, canal
+separado del anterior.
+
+**Resultado: regresión clara.** Misma misión de diagnóstico
+([townsim_wp4_wp5.json](airsim-loop/missions/townsim_wp4_wp5.json)): `success: false`, apenas
+`path_length_m=5.61` en 150s (contra 57.43m/165 ciclos exitosos con 384px). Causa medida directamente del
+log: la latencia real de las consultas al modelo saltó a `p50=2.7s` / **`p95=6.25s`**, justo en el límite
+de `SLM_WATCHDOG_MS=6000` — 57 de 534 consultas (10.7%, antes 0%) expiraron por watchdog y cayeron al
+fallback de seguridad, con `deliberation_rate` disparado a 0.81. El costo de inferencia de una imagen más
+grande (más tokens de visión, más lento generar) se comió el margen que antes existía frente al watchdog.
+
+**Revertido** a `VLM_IMAGE_MAX_SIZE=384`. Queda como lección concreta: a diferencia de
+`FLOW_DOWNSCALE_WIDTH` (que solo afecta cómputo local, barato de subir), `VLM_IMAGE_MAX_SIZE` compite
+directamente con el presupuesto del watchdog — cualquier cambio ahí necesita remedirse contra
+`SLM_WATCHDOG_MS`, no asumir que "más resolución es gratis" porque el modelo sea multimodal.
+
+## `FLOW_DOWNSCALE_WIDTH`: 320 → 640, y confirmación de que la "ROI de 62°" es código muerto
+
+A raíz de reintentar `townsim_a` completo (que volvió a trabarse en un árbol distinto del primer tramo,
+esta vez con traslación completamente bloqueada — confirmado comparando posición cruda entre ciclos: 0.04m
+de variación en 124 ciclos/27s, pese a dos ciclos completos de `GIRAR_90` + inyección de esquina; se
+documenta como límite físico conocido, no un bug de software), surgieron dos preguntas sobre el pipeline de
+percepción: ¿la "ROI de 62°" (`CAMERA_FOV_DIAGONAL`/`ROI_DIAGONAL` en `.env`) restringe demasiado el área
+analizada, y tiene sentido subir la resolución que recibe el VLM?
+
+**La ROI de 62° es código muerto.** Búsqueda en todo `src/perception/`: cero referencias a esas dos
+variables. Es infraestructura de una versión anterior del pipeline (basada en YOLO/SIFT, documentada en
+CHANGELOG histórico como "Paso 2: Restricción de ROI + Inferencia YOLO Ligero"), nunca portada al
+`FlowTTCEstimator` actual — misma categoría que `inject_corner` (bug 6). La percepción actual ya analiza
+el frame **completo**: [flow_ttc.py:292-293](airsim-loop/src/perception/flow_ttc.py#L292) divide toda la
+imagen en una grilla 3×3 (sectores × bandas), sin recortar a ningún campo de visión reducido. Documentado
+en `.env` con una nota para que no se confunda con configuración activa.
+
+**El downscale que sí importa, y no es el del VLM:** `FLOW_DOWNSCALE_WIDTH` (320px, default del código, no
+estaba en `.env`) reduce el frame **antes** de calcular flujo óptico — independiente de
+`VLM_IMAGE_MAX_SIZE` (384px), que solo afecta lo que ve el VLM. A 320px, un objeto fino (rama, hoja)
+puede perder tanto grosor en píxeles que cae bajo `FLOW_NOISE_FLOOR_PX` (0.35px) y el mínimo de píxeles
+válidos por celda de la grilla (5) — consistente con la confianza/ocupación ~0 medida toda la sesión
+anterior cerca de vegetación fina, mientras la cámara de profundidad (resolución completa, solo métricas,
+nunca realimentada al control) sí detectaba el acercamiento real.
+
+**Medición de latencia real** (frames reales capturados de AirSim en vivo, no sintéticos,
+`FlowTTCEstimator.estimate()` aislado):
+
+| `FLOW_DOWNSCALE_WIDTH` | p50 | p95 |
+|---|---|---|
+| 320 (anterior) | 16.8ms | 19.5ms |
+| 480 | 37.8ms | 43.5ms |
+| **640 (nuevo default)** | **57.5ms** | **66.5ms** |
+| 1080 (sin downscale) | 196.0ms | 222.3ms |
+
+Con `LOOP_HZ=5.0` (presupuesto 200ms/ciclo) y captura (`simGetImages`) midiendo ~90ms en la misma sesión,
+640px deja margen (~50ms) para el resto del grafo; 1080px por sí solo ya casi agota el presupuesto. Se
+descartó 1080, se eligió 640.
+
+**Validación** (`slm` sobre [missions/townsim_wp4_wp5.json](airsim-loop/missions/townsim_wp4_wp5.json), la
+misión de diagnóstico del tramo WP_4→WP_5): con 320px había dado `success:true` en 416 ciclos (89.5s),
+`path_length_m=75.7`, con mucho zigzageo (84 `evasive`, 13 `girar_90`). Con 640px: **`success:true` en solo
+165 ciclos (37.8s)**, `path_length_m=57.43` (casi la línea recta teórica de ~58m), mucho menos zigzageo (11
+`evasive`, 3 `girar_90`). Latencia real del grafo en esta corrida: p50=152.1ms (dentro de presupuesto),
+p95=337.6ms (algunos ciclos sí exceden los 200ms — el lazo ocasionalmente corre más lento que 5Hz exactos
+en esos ciclos, no es una falla dura, pero es un costo real a tener presente).
+
+**Pendiente, no aplicado todavía:** subir `VLM_IMAGE_MAX_SIZE` (384→720) — afecta solo lo que ve el VLM
+directamente, no la detección de TTC/ocupación (que depende de `FLOW_DOWNSCALE_WIDTH`, ya resuelto acá).
+Qwen2.5-VL usa resolución dinámica de encoder, así que en teoría debería aprovechar una imagen más grande,
+pero no está confirmado para esta versión específica corriendo en LM Studio.
+
+## Octavo bug: deliberación al LLM abandonada en vuelo, detector de atasco desactivado por el resto de la misión
+
+Retomando el pendiente de ayer (atasco cerca de WP_5 en `townsim_a`: percepción sin detectar bloqueo,
+450+ ciclos en `keep_going`/`MANTENER_RUMBO`). Sin necesitar AirSim corriendo, se reprodujo la lógica real
+de `compute_guidance()`/`record_progress()` offline, alimentada con las posiciones/yaw reales del log de
+`runs/townsim_a_fix8/`. La réplica mostró que el contador de atasco (`progress_stall_cycles`) **debería**
+haber llegado a 51+ hacia el ciclo 1030 (muy por encima de cualquier umbral) — pero en la corrida real
+quedó congelado, con 528 ciclos seguidos de `route=reactive` sin una sola escalada.
+
+**Causa:** en el ciclo 989, un TTC momentáneo (un frame ruidoso de percepción, típico cerca de vegetación
+fina) dispara la rama de `policy_router` que encola una consulta real al LLM (`slm_request_id` asignado,
+`state["_deliberation_pending"]=True`). En el ciclo siguiente (990), ese TTC puntual ya desapareció y
+`policy_router` — que no comprobaba en ningún lado si había un pedido en vuelo — vuelve derecho a
+`keep_going`, **abandonando el pedido que sigue procesándose del lado del `DeliberationService`**. Como
+nada vuelve a entrar a `deliberative_node` para resolverlo, `_deliberation_pending` queda en `True` para
+siempre, y el guard de `runner.py`/`main.py` que salta `record_progress()` mientras se espera al SLM
+(pensado para no penalizar la espera legítima) queda activado por el resto de la misión — desactivando en
+silencio el detector de atasco, sin ningún síntoma visible salvo "el dron nunca más se declara atascado
+aunque no avance".
+
+**Fix:** en [graph.py](airsim-loop/src/agents/graph.py), `policy_router` ahora comprueba
+`state.get("slm_request_id")` al principio — mientras haya un pedido en vuelo, sigue enrutando a
+`"deliberative"` para que el poll se complete, sin importar que el disparador puntual haya desaparecido.
+Test de regresión agregado (`test_pending_slm_request_keeps_routing_to_deliberative` en
+`tests/test_policy_router.py`): con el campo totalmente despejado (que por sí solo daría `keep_going`) y
+un `slm_request_id` seteado, confirma que el router prioriza resolver el pedido pendiente. Suite completa:
+102/102.
+
+**Validado en vuelo real.** Con AirSim y el servidor SLM en línea, un primer intento de recorrer
+`townsim_a` completo se trabó en el tramo WP_1→WP_2 (vegetación densa, `has_collided=False` con
+TTC/occupancy normales — el mismo tipo de atasco físico sin colisión registrada ya documentado, no
+relacionado con el bug 8). Para aislar específicamente el tramo de WP_5 sin tener que re-atravesar los
+tramos anteriores en cada intento, se creó
+[missions/townsim_wp4_wp5.json](airsim-loop/missions/townsim_wp4_wp5.json) — misión de diagnóstico corta,
+`start_pose` en WP_4, un único waypoint objetivo (WP_5), no forma parte del catálogo de escenarios de
+tier permanente.
+
+Corrida sobre ese tramo aislado (`slm`, `runs/townsim_wp4_wp5_fix9/`): **`success: true`**. El mismo tramo
+que el día anterior quedó congelado 528+ ciclos en `keep_going` sin escalar nunca, ahora completa la
+misión en 416 ciclos (89.5s) — con el sistema activamente peleando durante todo el tramo
+(`route_histogram`: 144 `reactive`, 175 `deliberative`, 84 `evasive`, 13 `girar_90`, nunca queda
+"silencioso" como antes), 0 colisiones, `min_obstacle_dist_m` mejorado a 0.17m.
 
 <img src="informe/2026-0827 Correcciones Adicionales a Grafo de Control Autonomo.jpg"/>
 
