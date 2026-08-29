@@ -1,59 +1,5 @@
 # 2026-0828
 
-## Misión demo `TOWNSIM_DEMO`: tres intentos fallidos por adivinar coordenadas, resuelto con el mapa de referencia
-
-Pedido del usuario: una ruta corta en TownSim, sin obstáculos, disparable desde WebDCS, para un video de
-avance. Se creó [missions/townsim_demo.json](airsim-loop/missions/townsim_demo.json) (formato runner
-automático) y su espejo [TOWNSIM_DEMO.preloop.json](airsim-plan/missions/TOWNSIM_DEMO.preloop.json)
-(formato WebDCS), y se usó `scripts/plot_mission_route.py` para confirmar cada candidata visualmente antes
-de volar — exactamente el flujo de trabajo que se armó ayer.
-
-**Tres intentos de ruta adivinando coordenadas a ciegas, los tres terminaron con el dron dentro de la copa
-de un árbol** (confirmado visualmente por el usuario en cada caso): primero un rectángulo hacia +x/+y
-cerca del spawn, después el mismo rectángulo acortado en x, después el espejo hacia -x. Ajustes menores en
-el camino, aplicados y validados: velocidad de crucero bajada a 3 m/s (menos inercia/correcciones en los
-giros), altitud de los waypoints intermedios subida (`WP_B`/`WP_C`) para pasar por encima de techos de
-edificios cercanos, último waypoint a nivel de piso (`z=0.0`, en vez de altitud de crucero) para que la
-misión termine aterrizando en lugar de quedar en hover, y `--simple-labels` nuevo en
-`plot_mission_route.py` (etiquetas `1, 2, 3...END` en vez de los labels del manifiesto, más legibles en
-video). También se encontró que `simPlotStrings` no soporta `is_persistent` (solo `duration`), así que
-`simFlushPersistentMarkers()` no limpia las etiquetas de texto — quedan superpuestas de corridas anteriores
-hasta que expira su duración; se agregó `--text-duration` (default 90s, antes 3600s fijo sin exponer).
-
-**Lo que rompió el patrón de adivinar y listo:** revisar
-[airsim-plan/missions/maps/townsim.png](airsim-plan/missions/maps/townsim.png) — la imagen de referencia
-del mapa que ya existía en el repo, nunca antes consultada para diseñar una ruta. Vista cenital: un
-complejo de edificios con una plaza central (la fuente rodeada de árboles en círculo, exactamente donde
-pegaban los tres intentos anteriores) y una **calle pavimentada que sale derecha hacia el sur**, sin
-ningún árbol dibujado encima — a diferencia del pasto de alrededor, con árboles dispersos por todos lados
-en cualquier otra dirección. Cruzando esto con el dato ya conocido de vuelos reales (el tramo
-`WP_1`→`WP_2` de `townsim_a` va de `(0.4,5.3)` a `(1.6,-137.9)`, casi puro -Y, y esa vegetación problemática
-ya identificada está en y≈-52 a -81), se dedujo que esa calle sur es esa misma dirección — y se acortó la
-ruta demo a solo 35m (y: 5.3 → -30.0) para quedar con margen de seguridad antes de la vegetación conocida.
-
-**Estado: ruta final confirmada visualmente por el usuario, sin obstáculos.** Corrida de validación
-automática (`experiments/runner.py`) interrumpida antes de completarse — **queda pendiente para la próxima
-sesión** confirmar `success: true` en `runs/townsim_demo_validate7/` antes de grabar el video.
-
-## `VLM_IMAGE_MAX_SIZE`: 384 → 640 probado y revertido — el costo de latencia se come el margen del watchdog
-
-Continuación directa de la sección de abajo. Con `FLOW_DOWNSCALE_WIDTH=640` ya validado, se probó subir
-también `VLM_IMAGE_MAX_SIZE` (384→640) — la resolución de la imagen que efectivamente ve el VLM, canal
-separado del anterior.
-
-**Resultado: regresión clara.** Misma misión de diagnóstico
-([townsim_wp4_wp5.json](airsim-loop/missions/townsim_wp4_wp5.json)): `success: false`, apenas
-`path_length_m=5.61` en 150s (contra 57.43m/165 ciclos exitosos con 384px). Causa medida directamente del
-log: la latencia real de las consultas al modelo saltó a `p50=2.7s` / **`p95=6.25s`**, justo en el límite
-de `SLM_WATCHDOG_MS=6000` — 57 de 534 consultas (10.7%, antes 0%) expiraron por watchdog y cayeron al
-fallback de seguridad, con `deliberation_rate` disparado a 0.81. El costo de inferencia de una imagen más
-grande (más tokens de visión, más lento generar) se comió el margen que antes existía frente al watchdog.
-
-**Revertido** a `VLM_IMAGE_MAX_SIZE=384`. Queda como lección concreta: a diferencia de
-`FLOW_DOWNSCALE_WIDTH` (que solo afecta cómputo local, barato de subir), `VLM_IMAGE_MAX_SIZE` compite
-directamente con el presupuesto del watchdog — cualquier cambio ahí necesita remedirse contra
-`SLM_WATCHDOG_MS`, no asumir que "más resolución es gratis" porque el modelo sea multimodal.
-
 ## `FLOW_DOWNSCALE_WIDTH`: 320 → 640, y confirmación de que la "ROI de 62°" es código muerto
 
 A raíz de reintentar `townsim_a` completo (que volvió a trabarse en un árbol distinto del primer tramo,
