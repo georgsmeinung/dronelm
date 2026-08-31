@@ -1,8 +1,0 @@
-{
-  "mission_id": "townsim_wp4_wp5",
-  "summary": "Mision de diagnostico (2026-0828): tramo aislado WP_4->WP_5 de townsim_a, para validar el fix del bug 8 (deliberacion al LLM abandonada, ver CHANGELOG.md) sin tener que volver a atravesar los tramos anteriores de townsim_a en cada corrida. No es un escenario de tier permanente, solo un atajo de prueba.",
-  "start_pose": { "x": 74.0, "y": 3.3, "z": -10.0, "yaw_deg": 0.0 },
-  "waypoints": [
-    { "x": 51.2, "y": 53.7, "z": -10.0, "label": "WP_5" }
-  ]
-}

@@ -1,6 +1,6 @@
 {
-  "mission_id": "citymap_pilot",
-  "summary": "Tier 2 (escenario complejo, piloto): renombrado desde manhattan_b (2026-0827). Circuito de 7 waypoints tipo grilla urbana sobre el mapa citymap.png (proyecto UE CitySim), waypoints reutilizados de airsim-plan/missions/A_BASIC_CITY.preloop.json.",
+  "mission_id": "CITYMAP_PILOT",
+  "summary": "Tier 2 (escenario complejo, piloto): circuito de 7 waypoints tipo grilla urbana sobre el mapa citymap.png (proyecto UE CitySim). Renombrado desde manhattan_b (2026-0827), waypoints reutilizados de A_BASIC_CITY. Formato unico (2026-0828): antes existia por duplicado como citymap_pilot.json (airsim-loop) y A_BASIC_CITY.preloop.json (airsim-plan).",
   "start_pose": { "x": 26.1, "y": -78.2, "z": -10.0, "yaw_deg": 0.0 },
   "waypoints": [
     { "x": 26.1, "y": -78.2, "z": -10.0, "label": "WP_1" },
@@ -10,5 +10,6 @@
     { "x": -16.3, "y": -145.0, "z": -10.0, "label": "WP_5" },
     { "x": -17.9, "y": -78.6, "z": -10.0, "label": "WP_6" },
     { "x": 12.5, "y": -78.6, "z": -10.0, "label": "WP_7" }
-  ]
+  ],
+  "map": "citymap.png"
 }

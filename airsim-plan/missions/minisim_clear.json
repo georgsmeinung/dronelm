@@ -1,0 +1,11 @@
+{
+  "mission_id": "MINISIM_CLEAR",
+  "summary": "Tier 0 (escenario base): ambiente MiniSim despejado, sin obstaculos. 3 waypoints en linea recta corta + un quiebre de rumbo. Formato unico (2026-0828): antes existia por duplicado como minisim_clear.json (airsim-loop) y MINISIM_BASE.preloop.json (airsim-plan).",
+  "start_pose": { "x": 0.0, "y": 0.0, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 60.0, "y": 0.0, "z": -10.0, "label": "WP_1" },
+    { "x": 60.0, "y": 60.0, "z": -10.0, "label": "WP_2" },
+    { "x": 0.0, "y": 60.0, "z": -10.0, "label": "WP_3" }
+  ],
+  "map": "crater.png"
+}

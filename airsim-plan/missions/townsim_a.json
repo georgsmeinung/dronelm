@@ -1,6 +1,6 @@
 {
-  "mission_id": "townsim_a",
-  "summary": "Tier 1 (escenario intermedio, mision completa): 5 waypoints, ~530m totales, mapa townsim.png (proyecto UE TownSim, pocas cuadras con mucha vegetacion). Copia de airsim-plan/missions/A_TOWN_MISSION.preloop.json para el runner automatico.",
+  "mission_id": "TOWNSIM_A",
+  "summary": "Tier 1 (escenario intermedio, mision completa): 5 waypoints, ~411m totales, mapa townsim.png (proyecto UE TownSim, pocas cuadras con mucha vegetacion). Formato unico (2026-0828): antes existia por duplicado como townsim_a.json (airsim-loop) y A_TOWN_MISSION.preloop.json (airsim-plan).",
   "start_pose": { "x": 0.4, "y": 5.3, "z": -10.0, "yaw_deg": 0.0 },
   "waypoints": [
     { "x": 0.4, "y": 5.3, "z": -10.0, "label": "WP_1" },
@@ -8,5 +8,6 @@
     { "x": 75.2, "y": -135.5, "z": -10.0, "label": "WP_3" },
     { "x": 74.0, "y": 3.3, "z": -10.0, "label": "WP_4" },
     { "x": 51.2, "y": 53.7, "z": -10.0, "label": "WP_5" }
-  ]
+  ],
+  "map": "townsim.png"
 }
