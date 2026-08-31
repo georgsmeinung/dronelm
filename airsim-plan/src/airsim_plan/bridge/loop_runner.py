@@ -74,8 +74,6 @@ class LoopRunner:
         return {
             "mission_id": self._manifest.mission_id,
             "waypoints": [w.model_dump() for w in self._manifest.waypoints],
-            "rules_of_engagement": self._manifest.rules_of_engagement.model_dump(),
-            "tactical_system_prompt": self._manifest.tactical_system_prompt,
         }
 
     # ------------------------------------------------------------------ #
@@ -166,7 +164,6 @@ class LoopRunner:
         # Prepare environment variables for the new process
         env = os.environ.copy()
         env["AIRSIM_PLAN_MANIFEST"] = str(env_path)
-        env["AIRSIM_PLAN_TACTICAL_PROMPT"] = self._manifest.tactical_system_prompt or ""
         env["AIRSIM_LOOP_WATCH"] = "true" if self._watch else "false"
         
         try:

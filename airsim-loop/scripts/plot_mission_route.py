@@ -8,14 +8,15 @@ vista si la ruta cruza un obstaculo evidente (ver CHANGELOG.md 2026-0827:
 el atasco de townsim_a en la copa de un arbol hubiera sido obvio con esto
 antes de gastar ciclos de vuelo descubriendolo).
 
-Acepta tanto el formato de mision de airsim-loop/missions/*.json
-(mission_id, waypoints, start_pose opcional) como el de
-airsim-plan/missions/*.preloop.json (mismo campo "waypoints").
+Formato unico de mision (2026-0828, ver CHANGELOG.md): todas las misiones
+viven en airsim-plan/missions/*.json (mission_id en MAYUSCULAS, waypoints,
+start_pose opcional) -- ya no hay una copia separada en airsim-loop/missions/
+ni un formato ".preloop.json" distinto.
 
 Uso:
-    python scripts/plot_mission_route.py missions/townsim_a.json
-    python scripts/plot_mission_route.py ../airsim-plan/missions/A_TOWN_MISSION.preloop.json --color 0 1 0 1
-    python scripts/plot_mission_route.py missions/townsim_a.json --clear-only   # solo borra dibujos previos
+    python scripts/plot_mission_route.py ../airsim-plan/missions/townsim_a.json
+    python scripts/plot_mission_route.py ../airsim-plan/missions/townsim_demo.json --color 0 1 0 1 --simple-labels
+    python scripts/plot_mission_route.py ../airsim-plan/missions/townsim_a.json --clear-only   # solo borra dibujos previos
 """
 from __future__ import annotations
 

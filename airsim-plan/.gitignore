@@ -23,7 +23,8 @@ htmlcov/
 .vscode/
 .idea/
 
-# Local config + compiled manifests (we keep examples/ under VCS)
-
-missions/*.json
-!missions/.gitkeep
+# missions/*.json ya no esta ignorado (2026-0828, ver CHANGELOG.md): es el
+# unico formato de mision (source of truth), trackeado en VCS junto con el
+# resto del repo -- antes decia "compiled manifests" y prometia mantener un
+# directorio examples/ bajo VCS que nunca se creo, dejando missions/ como el
+# unico lugar real pero gitignorado.

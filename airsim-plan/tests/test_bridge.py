@@ -8,7 +8,7 @@ import pytest
 
 from airsim_plan.bridge import AirSimBridge, LoopRunner, LoopRunnerError
 from airsim_plan.bridge.loop_runner import LoopRunner as LR
-from airsim_plan.missions import MissionPlanner, load_manifest
+from airsim_plan.missions import load_manifest
 
 
 GOOD_MANIFEST = {
@@ -18,10 +18,6 @@ GOOD_MANIFEST = {
         {"x": 0, "y": 50, "z": -10},
         {"x": 50, "y": 100, "z": -10},
     ],
-    "rules_of_engagement": {
-        "ignore_objects": ["person"],
-        "return_to_launch_battery_threshold": 20.0,
-    },
 }
 
 
@@ -35,24 +31,19 @@ def test_bridge_dry_run_takeoff() -> None:
 
 
 def test_bridge_initial_state_shape() -> None:
-    # Load through the planner so the tactical prompt is generated.
-    planner = MissionPlanner()
     manifest = load_manifest(
-        Path(__file__).resolve().parent.parent / "examples" / "perimeter_north_01.json"
+        Path(__file__).resolve().parent.parent / "missions" / "perimeter_north_01.json"
     )
-    manifest.tactical_system_prompt = planner.build_tactical_prompt(manifest)
 
     runner = LoopRunner(manifest)
     state = runner.build_initial_state()
     assert state["mission_id"] == "PERIMETER_NORTH_01"
-    assert len(state["waypoints"]) == 2
-    assert state["rules_of_engagement"]["ignore_objects"] == ["person", "car"]
-    assert state["tactical_system_prompt"].startswith("Eres el navegador")
+    assert len(state["waypoints"]) == 7
 
 
 def test_loop_runner_handles_missing_package(monkeypatch: pytest.MonkeyPatch) -> None:
     manifest = load_manifest(
-        Path(__file__).resolve().parent.parent / "examples" / "perimeter_north_01.json"
+        Path(__file__).resolve().parent.parent / "missions" / "perimeter_north_01.json"
     )
     runner = LoopRunner(manifest)
 
@@ -74,7 +65,7 @@ def test_loop_runner_handles_missing_package(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_loop_runner_invokes_graph_then_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     manifest = load_manifest(
-        Path(__file__).resolve().parent.parent / "examples" / "perimeter_north_01.json"
+        Path(__file__).resolve().parent.parent / "missions" / "perimeter_north_01.json"
     )
     runner = LoopRunner(manifest)
 
@@ -112,8 +103,6 @@ def test_loop_runner_invokes_graph_then_returns(monkeypatch: pytest.MonkeyPatch)
         {
             "mission_id": manifest.mission_id,
             "waypoints": [w.model_dump() for w in manifest.waypoints],
-            "rules_of_engagement": manifest.rules_of_engagement.model_dump(),
-            "tactical_system_prompt": manifest.tactical_system_prompt,
         }
     )
     assert calls["n"] == 2
@@ -126,7 +115,7 @@ def test_loop_runner_invokes_graph_then_returns(monkeypatch: pytest.MonkeyPatch)
 
 def test_loop_runner_run_calls_bridge_then_graph(monkeypatch: pytest.MonkeyPatch) -> None:
     manifest = load_manifest(
-        Path(__file__).resolve().parent.parent / "examples" / "perimeter_north_01.json"
+        Path(__file__).resolve().parent.parent / "missions" / "perimeter_north_01.json"
     )
     runner = LoopRunner(manifest)
 

@@ -1,3 +1,129 @@
+# 2026-0831
+
+* Configuración minima para correr AirSim en Unreal Engine y tener captura de video:
+
+<img src="informe/2026-0831 Minimal Scalability Config for Airsim.png"/>
+
+## Noveno bug: overshoot-latch inestable (giro espurio en aproximación final), y dos límites de percepción más confirmados (obstrucción física invisible, poste de semáforo)
+
+Retomando `TOWNSIM_DEMO`: la corrida `runs/townsim_demo_validate9` completó bien pero con un giro raro de
+5+ segundos justo en la aproximación final al aterrizaje (el dron se frenaba en el lugar y giraba ~140°
+sin moverse). Investigado con la misma técnica de réplica offline de `compute_guidance()` contra las
+posiciones reales del log:
+
+**Causa:** el chequeo de overshoot agregado ayer (`t_progress >= 1.0`, bug del corredor) se recalculaba
+desde cero cada ciclo. Cerca del borde (t≈1.0), un desvío lateral mínimo alcanza para que `t_progress`
+oscile por encima y por debajo de 1.0 sin que el dron realmente "retroceda" — cada oscilación alterna el
+modo corredor/directo, y cada alternancia salta el rumbo objetivo decenas de grados (confirmado: de 77° a
+150° de golpe entre dos ciclos consecutivos). **Fix:** el overshoot ahora se **enclava** (`_overshot_latch`)
+una vez detectado, para el resto de la aproximación a ese waypoint — se libera solo al avanzar al
+siguiente. Test de regresión agregado en `test_waypoint_tracker.py`. Suite completa: 103/103.
+
+Validando el fix (`runs/townsim_demo_validate10`), apareció un problema **distinto**: el descenso final se
+frenaba solo en `z≈-5.08m` (5m sobre el punto de referencia), sin ningún obstáculo detectado
+(`confidence=0` sostenido) — el detector de atasco correctamente forzaba `GANAR_ALTURA`, pero nunca
+lograba resolverlo dentro del presupuesto. Descartado un límite de altitud en el código (sin resultados en
+`src/agents/` ni `src/hardware/`); es la misma categoría de punto ciego de percepción de siempre (objeto
+físico real, invisible al flujo óptico) — esta vez en descenso vertical durante el aterrizaje, no en vuelo
+horizontal.
+
+Reubicando el punto de aterrizaje lejos de esa obstrucción, apareció un **tercer caso**, esta vez
+confirmado visualmente por el usuario: el dron chocaba contra un semáforo antes de llegar al nuevo punto,
+dos veces seguidas. Confirmado en el log: `y` quedaba literalmente clavado en 58.9-59.0 durante ~29
+segundos (mientras `x` seguía avanzando y `z` seguía descendiendo con normalidad) — una barrera física real
+(probablemente el brazo horizontal del semáforo cruzando la calle), con `confidence` de percepción
+prácticamente en 0 todo el tramo pese a la mejora de `FLOW_DOWNSCALE_WIDTH` de ayer. Conclusión: esa mejora
+sí ayudó con vegetación (superficies con más textura), pero un poste/brazo de semáforo delgado sigue
+cayendo bajo el piso de detección del flujo óptico, independiente de la resolución — y `has_collided` no
+se dispara para esa malla en particular pese a la colisión física real (probablemente una particularidad
+de cómo esa malla especifica reporta colisiones en AirSim/UE, no investigado en profundidad).
+
+**Punto de aterrizaje final**, elegido de forma iterativa (marcador de punto + confirmación visual en cada
+intento, evitando esta vez tanto vegetación como postes/mobiliario urbano): `(0.0, 5.0)`.
+**Validación** (`runs/townsim_demo_validate13/`): `success: true`, 124.3s, 0 colisiones, 0 timeouts, un solo
+`GIRAR_90`, `min_obstacle_dist_m=0.125` (sin acercamientos sostenidos). Misión demo cerrada y lista para
+grabar.
+
+## `TOWNSIM_DEMO` cerrada: circuito de 4 waypoints + aterrizaje, validado sin colisiones
+
+Continuación de la sección de misión demo de ayer (quedó con la corrida de validación interrumpida). Hoy,
+con AirSim y el servidor SLM en línea:
+
+- La corrida pendiente (`runs/townsim_demo_validate7`) sí dio `success: true`, pero con
+  `min_obstacle_dist_m=0.0` sostenido en un tramo de 30s sobre la calle sur — se marcó el punto exacto en
+  el viewport con `simPlotPoints` (nueva utilidad ad-hoc, no un flag del script) y el usuario confirmó
+  visualmente: es un **poste de luz** junto a la calle, no vegetación ni nada nuevo.
+- A pedido del usuario, se amplió de 2 a **5 puntos** (`START` + 4 waypoints, circuito completo alrededor
+  de la manzana en vez de solo la calle sur) — diseñado de forma **iterativa**, un tramo a la vez, dibujando
+  y confirmando cada uno en el viewport antes de agregar el siguiente (en vez de adivinar toda la ruta de
+  una, que ya había fallado 3 veces el día anterior).
+- El último punto del circuito (`WP_3`, `(25, 5.3)`) resultó estar metido en la copa de otro árbol; se
+  subió la altitud dos veces (−10→−15→−20) hasta despejarlo, confirmado visualmente en cada paso.
+- El tramo sur se corrió 3.6m en x (0.4→4.0) para dar más margen al poste de luz ya identificado (sigue
+  detectándose por profundidad, pero no cambia el resultado — ver abajo).
+
+**Validación final** (`runs/townsim_demo_validate9/`): `success: true`, 142.2s, **0 colisiones, 0 timeouts
+del SLM, 0 disparos de `GIRAR_90`** — la corrida más limpia de todo el proceso. Los `min_obstacle_dist_m=0.0`
+remanentes son el artefacto de spawn conocido (ciclo 10) y el mismo poste de luz (esperado, no bloqueante).
+Misión lista para grabar: [townsim_demo.json](airsim-loop/missions/townsim_demo.json) (runner automático) y
+[TOWNSIM_DEMO.preloop.json](airsim-plan/missions/TOWNSIM_DEMO.preloop.json) (disparable desde WebDCS).
+
+## Formato único de misión: `airsim-plan/missions/*.json` como source of truth
+
+Existían dos formatos de misión divergentes: uno mínimo en `airsim-loop/missions/*.json` (usado por
+`runner.py`/`main.py`) y uno rico en `airsim-plan/missions/*.preloop.json` (usado por WebDCS), con
+`rules_of_engagement`/`tactical_system_prompt` que solo existían en el segundo. Grep exhaustivo confirmó
+que esos dos campos no tenían **ningún** efecto en la deliberación del grafo (nunca leídos por
+`src/agents/`) — eran metadata muerta desde que el planner dejó de generar `tactical_system_prompt` a
+partir de ellos. A pedido del usuario, se consolidó en un único formato y una única ubicación:
+
+- `MissionManifest` (`airsim_plan/missions/manifest.py`) perdió `rules_of_engagement`/
+  `tactical_system_prompt`; lo mismo en el schema JSON, `planner.py` (`build_tactical_prompt()` eliminado),
+  `webdcs/main.py`, `json_extract.py` y el prompt del compilador LLM.
+- Todas las misiones (`minisim_clear`, `townsim_*`, `citymap_pilot`, etc.) viven ahora solo en
+  `airsim-plan/missions/*.json`, sin sufijo `.preloop`; `airsim-loop/missions/` se eliminó por completo.
+  `runner.py`, `batch_runner.py`, `plot_mission_route.py` y `G4_THESIS_RUN.md` apuntan a la nueva ruta.
+- Se encontró que `airsim-plan/.gitignore` ignoraba `missions/*.json` — **ninguna misión estaba
+  versionada**. Corregido; las misiones ahora se trackean en git.
+- `fly_with_yolo.py` confirmado como código muerto (pipeline YOLO/SIFT anterior al `FlowTTCEstimator`
+  actual) en la misma pasada de limpieza.
+
+Pydantic v2 ignora campos desconocidos en `.model_validate()`, así que los archivos viejos con
+`rules_of_engagement` residual siguen cargando sin romperse. Suite completa de `airsim-plan` corrida contra
+`D:/Python/3.14/python.exe` (sin `.venv` propio): verde salvo dos fallas preexistentes y ambientales, no
+causadas por el refactor (`test_bridge_dry_run_takeoff` depende de si AirSim está corriendo;
+`test_settings_env_overrides` es sensible al `.env` real).
+
+## Seed-jitter del `runner.py` pasa a ser opt-in (posible causa de la traba con el poste de luz)
+
+Durante una prueba de `TOWNSIM_DEMO` el dron volvió a trabarse, esta vez contra un poste de luz, y el
+usuario señaló como sospechoso que el runner reposiciona el dron al arrancar en vez de partir de donde
+esté. Confirmado en `src/hardware/airsim_client.py`: `set_vehicle_pose()` llama a
+`simSetVehiclePose(..., ignore_collision=True)` — un teletransporte que **ignora colisiones en el destino**.
+El jitter de semilla (`SEED_JITTER_XY_M=1.5`, pensado para variación estadística entre semillas en
+`experiments/runner.py`) usaba esta función automáticamente en cada corrida, incluyendo corridas manuales
+de un solo vuelo, pudiendo depositar al dron más cerca de un obstáculo que un spawn limpio de AirSim.
+
+**Fix:** `run_one()` ahora solo aplica el jitter si se pasa `--seed-jitter` explícitamente (default off);
+sin el flag, la corrida usa la pose que entrega el propio `client.reset()` de AirSim. El flag se propaga
+desde `main()`/`_single_main()` de `runner.py`. Pendiente: re-validar `TOWNSIM_DEMO` con esta corrección
+para confirmar que el poste de luz no reaparece con un spawn sin teletransporte.
+
+## Export CSV de telemetría por ciclo, para inspección manual sin parsear JSONL
+
+El usuario preguntó cómo se lee la telemetría por ciclo del grafo (hasta ahora, inspección ad-hoc del
+JSONL de `FlightLogger` vía scripts de una línea) y pidió poder volcarla a CSV con nombre de misión +
+timestamp ISO, para poder mirarla él mismo. Cambios:
+
+- `FlightLogger` (`src/logging/flight_logger.py`) ahora escribe, además del `.jsonl` existente, un `.csv`
+  "plano" con el mismo stem: posición/velocidad/yaw, ruta y acción elegida, distancia y colisión, resumen
+  de percepción por sector (izquierda/centro/derecha: ocupación, TTC, confianza, bloqueado) y metadata de
+  deliberación SLM (invocada, latencia, fallback, timeout, adherente). El JSONL no cambia — sigue siendo la
+  fuente completa que usan `analyze_tesis_results.py` y compañía.
+- `main.py` (corridas interactivas) ya no requiere setear `AIRSIM_FLIGHT_LOG` a mano: por defecto registra
+  cada corrida en `runs/manual/{MISSION_ID}_{timestamp_ISO}.jsonl` (+ `.csv` al lado). `AIRSIM_FLIGHT_LOG`
+  sigue disponible para fijar una ruta explícita, y `AIRSIM_FLIGHT_LOG=none` desactiva el logging.
+
 # 2026-0828
 
 ## `FLOW_DOWNSCALE_WIDTH`: 320 → 640, y confirmación de que la "ROI de 62°" es código muerto

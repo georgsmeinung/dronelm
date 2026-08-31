@@ -18,7 +18,7 @@ def test_cli_version() -> None:
 
 
 def test_cli_validate_ok(tmp_path: Path) -> None:
-    src = Path(__file__).resolve().parent.parent / "examples" / "perimeter_north_01.json"
+    src = Path(__file__).resolve().parent.parent / "missions" / "perimeter_north_01.json"
     target = tmp_path / "m.json"
     target.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     result = runner.invoke(app, ["validate", str(target)])
@@ -31,18 +31,10 @@ def test_cli_validate_bad() -> None:
 
 
 def test_cli_show(tmp_path: Path) -> None:
-    src = Path(__file__).resolve().parent.parent / "examples" / "perimeter_north_01.json"
+    src = Path(__file__).resolve().parent.parent / "missions" / "perimeter_north_01.json"
     result = runner.invoke(app, ["show", str(src)])
     assert result.exit_code == 0, result.stdout
     assert "PERIMETER_NORTH_01" in result.stdout
-
-
-def test_cli_prompt(tmp_path: Path) -> None:
-    src = Path(__file__).resolve().parent.parent / "examples" / "perimeter_north_01.json"
-    # The example has no tactical_system_prompt because we didn't go through
-    # the planner; the CLI should fail with exit code 2.
-    result = runner.invoke(app, ["prompt", str(src)])
-    assert result.exit_code == 2
 
 
 def test_cli_dump_schema(tmp_path: Path) -> None:

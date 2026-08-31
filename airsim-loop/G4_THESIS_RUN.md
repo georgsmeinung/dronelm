@@ -28,7 +28,7 @@ Total de corridas: 3 × 3 × 5 = **45 corridas** (ajustar semillas según dispon
 ```bash
 cd airsim-loop
 python experiments/batch_runner.py \
-    --scenarios missions/minisim_clear.json missions/townsim_a.json missions/citymap_pilot.json \
+    --scenarios ../airsim-plan/missions/minisim_clear.json ../airsim-plan/missions/townsim_a.json ../airsim-plan/missions/citymap_pilot.json \
     --arms slm fsm reactive \
     --seeds 1 2 3 4 5 \
     --out-dir runs/tesis \
@@ -46,7 +46,7 @@ tres tiers, pero un piloto corto (p. ej. `minisim_clear`) puede correr con un pr
 
 ```bash
 python experiments/batch_runner.py \
-    --scenarios missions/minisim_clear.json \
+    --scenarios ../airsim-plan/missions/minisim_clear.json \
     --arms slm fsm reactive \
     --seeds 1 2 \
     --out-dir runs/tesis_debug \

@@ -3,7 +3,7 @@
   "$id": "https://lm-drone.local/schemas/manifest.schema.json",
   "title": "MissionManifest",
   "type": "object",
-  "required": ["mission_id", "waypoints", "rules_of_engagement"],
+  "required": ["mission_id", "waypoints"],
   "additionalProperties": false,
   "properties": {
     "mission_id": {
@@ -29,33 +29,6 @@
           "label": {"type": "string"}
         }
       }
-    },
-    "rules_of_engagement": {
-      "type": "object",
-      "required": [
-        "ignore_objects",
-        "return_to_launch_battery_threshold"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "ignore_objects": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "Object classes the tactical SLM must treat as non-hostile."
-        },
-        "return_to_launch_battery_threshold": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 100.0
-        },
-        "max_speed_mps": {"type": "number", "minimum": 0.0},
-        "min_altitude_m": {"type": "number"},
-        "notes": {"type": "string"}
-      }
-    },
-    "tactical_system_prompt": {
-      "type": "string",
-      "description": "Pre-prompt handed to the LangGraph SLM (Step 3)."
     },
     "map": {
       "type": "string",

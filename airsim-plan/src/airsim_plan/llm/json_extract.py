@@ -74,7 +74,7 @@ def extract_json_object(text: str) -> Optional[dict]:
 
 
 # Minimal structural fingerprint for our Manifest.
-_MANIFEST_KEYS = {"mission_id", "waypoints", "rules_of_engagement"}
+_MANIFEST_KEYS = {"mission_id", "waypoints"}
 
 
 def looks_like_manifest(payload: Any) -> bool:

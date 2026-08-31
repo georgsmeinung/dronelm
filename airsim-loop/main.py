@@ -7,6 +7,7 @@
 import math
 import os
 import time
+from datetime import datetime, timezone
 
 try:
     from dotenv import load_dotenv
@@ -21,7 +22,11 @@ from src.navigation import WaypointTracker
 
 DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "5.0"))
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")
-FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # F3.2: si se setea, se escribe un JSONL
+FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # F3.2: override manual de la ruta de log
+# F3.2b: sin AIRSIM_FLIGHT_LOG explicito, cada corrida interactiva (main.py) igual
+# se registra sola bajo runs/manual/, para poder inspeccionar telemetria de pruebas
+# manuales (antes solo quedaba lo que se veia por consola). "none" desactiva.
+FLIGHT_LOG_DISABLED = (FLIGHT_LOG_PATH or "").strip().lower() == "none"
 MISSION_MAX_SECONDS = float(os.getenv("MISSION_MAX_SECONDS", "0.0"))  # 0 = sin límite de tiempo
 MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límite de ciclos
 
@@ -179,15 +184,23 @@ def main() -> None:
         print(f"[Navegación] Cargados {len(waypoints_list)} waypoints de misión. Iniciando hacia {waypoints_list[0].get('label', 'WP_1')}.")
 
     flight_logger = None
-    if FLIGHT_LOG_PATH:
+    if not FLIGHT_LOG_DISABLED:
         from src.logging import FlightLogger
 
+        if FLIGHT_LOG_PATH:
+            flight_log_path = FLIGHT_LOG_PATH
+        else:
+            iso_ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            flight_log_path = os.path.join("runs", "manual", f"{mission_id}_{iso_ts}.jsonl")
+
         flight_logger = FlightLogger(
-            FLIGHT_LOG_PATH,
-            scenario=manifest_data.get("mission_id", "default"),
+            flight_log_path,
+            scenario=mission_id,
             seed=int(os.getenv("AIRSIM_SEED", "0")),
             arm=AGENT_ARM,
         )
+        print(f"[FlightLogger] Telemetria de esta corrida en {flight_logger.out_path} "
+              f"(y {flight_logger.csv_path} para inspeccion en planilla).")
 
     cycle_count = 0
     mission_start_time = time.time()

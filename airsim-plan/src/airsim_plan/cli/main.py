@@ -5,7 +5,6 @@ Sub-commands mirror the four steps of the pipeline:
     plan      Compile a Manifest from an NL instruction (Step 1+2).
     validate  Validate a Manifest JSON file.
     show      Pretty-print a Manifest JSON file.
-    prompt    Print the tactical system prompt that would be injected.
     takeoff   Just arm + takeoff (Step 4, without running the loop).
     run       Full hand-off: compile (optional), takeoff, run airsim-loop.
     interactive  REPL: compile, edit, save, launch.
@@ -13,7 +12,6 @@ Sub-commands mirror the four steps of the pipeline:
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -93,11 +91,6 @@ def plan_cmd(
         "-o",
         help="Where to write the manifest. Defaults to MISSION_DIR/<id>.json.",
     ),
-    print_prompt: bool = typer.Option(
-        False,
-        "--print-prompt",
-        help="Also print the tactical system prompt that would be injected.",
-    ),
 ) -> None:
     """Compile a Manifest from an NL instruction."""
     planner = MissionPlanner()
@@ -118,14 +111,6 @@ def plan_cmd(
 
     console.print(f"[green]manifest saved to[/green] {path}")
     _print_manifest(manifest)
-    if print_prompt and manifest.tactical_system_prompt:
-        console.print(
-            Panel(
-                manifest.tactical_system_prompt,
-                title=f"tactical_system_prompt · {manifest.mission_id}",
-                border_style="magenta",
-            )
-        )
 
 
 @app.command("validate")
@@ -148,31 +133,6 @@ def show_cmd(
     """Pretty-print a Manifest JSON file."""
     manifest = load_manifest(manifest_path)
     _print_manifest(manifest)
-    if manifest.tactical_system_prompt:
-        console.print(
-            Panel(
-                manifest.tactical_system_prompt,
-                title=f"tactical_system_prompt · {manifest.mission_id}",
-                border_style="magenta",
-            )
-        )
-
-
-@app.command("prompt")
-def prompt_cmd(
-    manifest_path: Path = typer.Argument(..., exists=True, readable=True),
-) -> None:
-    """Print only the tactical system prompt that would be injected."""
-    manifest = load_manifest(manifest_path)
-    if not manifest.tactical_system_prompt:
-        console.print(
-            "[yellow]manifest has no tactical_system_prompt "
-            "(compile it through the planner to inject one).[/yellow]"
-        )
-        raise typer.Exit(code=2)
-    sys.stdout.write(manifest.tactical_system_prompt)
-    if not manifest.tactical_system_prompt.endswith("\n"):
-        sys.stdout.write("\n")
 
 
 @app.command("takeoff")

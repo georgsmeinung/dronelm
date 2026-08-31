@@ -126,6 +126,9 @@ class WaypointTracker:
         # Ciclos consecutivos eximidos del contador de atasco por estar
         # "girando activamente" (ver PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES).
         self._bearing_exempt_streak: int = 0
+        # Enclavamiento de "ya pase el waypoint activo por el eje del
+        # corredor" (ver compute_guidance). Se resetea al avanzar de waypoint.
+        self._overshot_latch: bool = False
         # Histeresis de compute_guidance() (banda de entrada != banda de
         # salida) para que abs_err/dist_3d oscilando justo en el borde de un
         # umbral no haga alternar vx/yaw_rate entre formulas cada ciclo --
@@ -150,6 +153,7 @@ class WaypointTracker:
         self._min_dist_seen = None
         self.progress_stall_cycles = 0
         self._bearing_exempt_streak = 0
+        self._overshot_latch = False
         self._sharp_turn_active = False
         self._final_approach_active = False
         self._yaw_correcting = False
@@ -255,6 +259,7 @@ class WaypointTracker:
             self._final_approach_active = False
             self._yaw_correcting = False
             self._orient_settle_cycles_left = 0
+            self._overshot_latch = False
             # _smoothed_vx/_smoothed_yaw_rate NO se resetean aqui a proposito:
             # aproximan la velocidad real del dron, que es continua a traves
             # del cambio de waypoint activo (a diferencia de los flags de
@@ -332,10 +337,25 @@ class WaypointTracker:
         # radio de aceptacion) hace que el guiado en modo corredor lo siga
         # apuntando a lo largo de la extension infinita de la linea, en vez de
         # girarlo de vuelta hacia B -- el dron se aleja del waypoint sin limite.
-        overshot_segment = False
+        # Enclavamiento (2026-0828, ver CHANGELOG.md): el chequeo de arriba
+        # solo evalua la posicion INSTANTANEA -- cerca del borde (t~1.0), un
+        # desvio lateral minimo (perpendicular al segmento) puede hacer que
+        # t_progress oscile por encima y por debajo de 1.0 ciclo a ciclo,
+        # alternando el modo corredor/directo. Cada alternancia recalcula un
+        # rumbo objetivo completamente distinto (la linea del corredor vs. el
+        # punto real), lo que se traduce en saltos de decenas de grados en
+        # bearing_err_deg de un ciclo al siguiente -- forzando un giro en el
+        # lugar espurio justo en el tramo final antes de un waypoint (medido
+        # en vuelo real: 5+ segundos frenado girando, en la aproximacion a
+        # aterrizaje de townsim_demo). Una vez detectado el overshoot para el
+        # waypoint activo, se mantiene el modo directo para el resto de la
+        # aproximacion a ESE waypoint -- se libera solo al avanzar al
+        # siguiente (ver update()).
         if seg_len > 1.0:
             t_progress = ((x - float(prev_wp.get("x", 0.0))) * seg_x + (y - float(prev_wp.get("y", 0.0))) * seg_y) / (seg_len**2)
-            overshot_segment = t_progress >= 1.0
+            if t_progress >= 1.0:
+                self._overshot_latch = True
+        overshot_segment = self._overshot_latch
 
         if seg_len > 1.0 and dist_xy > 3.0 and not overshot_segment:
             # Ángulo del corredor de la calle

@@ -20,7 +20,6 @@ the in-flight tactical loop).
 from .config import Settings, get_settings
 from .missions.manifest import (
     MissionManifest,
-    RulesOfEngagement,
     Waypoint,
     load_manifest,
     save_manifest,
@@ -33,7 +32,6 @@ __all__ = [
     "Settings",
     "get_settings",
     "MissionManifest",
-    "RulesOfEngagement",
     "Waypoint",
     "load_manifest",
     "save_manifest",

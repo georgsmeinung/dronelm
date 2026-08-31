@@ -257,3 +257,42 @@ def test_guidance_vx_smoothing_ramps_instead_of_jumping():
     for _ in range(20):
         g_settled = tracker.compute_guidance(pos, current_yaw=math.radians(90), cruise_speed=5.0)
     assert abs(g_settled["vx"] - 0.0) < 0.01
+
+
+def test_overshoot_latch_survives_lateral_drift_back_under_t_progress_1():
+    """Regresion (2026-0828, ver CHANGELOG.md): el chequeo de overshoot
+
+    (t_progress >= 1.0, agregado 2026-0827 para el bug del corredor) se
+    recalculaba desde cero cada ciclo. Cerca del borde (t~1.0), un desvio
+    lateral minimo puede hacer que t_progress oscile por encima y por debajo
+    de 1.0 sin que el dron realmente "vuelva" a estar antes del waypoint --
+    cada oscilacion alternaba el modo corredor/directo, y cada alternancia
+    saltaba el rumbo objetivo decenas de grados de un ciclo al siguiente
+    (medido en vuelo real: 150° de bearing_err de golpe, giro en el lugar de
+    5+ segundos en la aproximacion final a un aterrizaje). Ahora, una vez
+    detectado el overshoot, se enclava para el resto de la aproximacion a
+    ese waypoint.
+    """
+    # Segmento A(25,5.3) -> B(0.4,5.3): recta a lo largo de y=5.3.
+    tracker = WaypointTracker([
+        {"x": 25.0, "y": 5.3, "z": -10.0, "label": "A"},
+        {"x": 0.4, "y": 5.3, "z": -10.0, "label": "B"},
+    ])
+    tracker.current_index = 1
+
+    # Posicion claramente pasada de B (x < 0.4): dispara el enclave.
+    g_overshot = tracker.compute_guidance({"x": -0.2, "y": 1.4, "z": -10.0}, current_yaw=math.radians(10))
+    assert tracker._overshot_latch is True
+
+    # Posicion con x > 0.4 (formalmente t_progress < 1.0 de nuevo, "antes"
+    # de B por el eje del segmento) pero con desvio lateral en y: sin el
+    # enclave, esto volveria a modo corredor y el rumbo objetivo saltaria a
+    # lo largo de la linea A->B (180°) en vez de apuntar al punto real.
+    g_after = tracker.compute_guidance({"x": 0.7, "y": 1.4, "z": -10.0}, current_yaw=math.radians(10))
+    assert tracker._overshot_latch is True
+
+    # Con el enclave, el rumbo objetivo debe seguir apuntando al punto real
+    # B (modo directo), no a lo largo del corredor -- el bearing_err no
+    # puede saltar a un valor cercano a 150-170° (el que da modo corredor
+    # aca) de un ciclo al siguiente.
+    assert abs(g_after["bearing_err_deg"]) < 120.0

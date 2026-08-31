@@ -7,15 +7,35 @@
 # SOLO para metricas: no se realimenta al control (no contamina el experimento).
 from __future__ import annotations
 
+import csv
 import json
 import os
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+# Mismo orden que src/perception/obstacle_field.py:SECTORS -- se repite aca en
+# vez de importar para no acoplar el logger al modulo de percepcion.
+_CSV_SECTORS = ("izquierda", "centro", "derecha")
+
+_CSV_FIELDNAMES = [
+    "t", "cycle", "arm", "scenario", "seed",
+    "route", "action", "wp_index", "dist_to_wp_m", "degraded",
+    "pos_x", "pos_y", "pos_z", "vel_x", "vel_y", "vel_z", "yaw_deg",
+    "has_collided", "collision_object", "min_obstacle_dist_m",
+    "latency_ms_json",
+    "slm_invoked", "slm_latency_ms", "slm_fallback", "slm_timeout", "slm_adherent",
+] + [f"field_{s}_{k}" for s in _CSV_SECTORS for k in ("occ", "ttc_s", "conf", "blocked")]
+
 
 class FlightLogger:
-    """Escribe un registro JSON por ciclo a un archivo .jsonl, mas un summary.json final."""
+    """Escribe un registro JSON por ciclo a un archivo .jsonl, mas un summary.json final.
+
+    Ademas escribe un .csv "plano" (mismo stem que out_path) con las columnas
+    mas relevantes para inspeccion manual -- pedido explicito para poder
+    revisar corridas de prueba interactivas (main.py) sin tener que parsear
+    JSONL a mano.
+    """
 
     def __init__(self, out_path: str, scenario: str = "default", seed: int = 0, arm: str = "slm") -> None:
         self.out_path = Path(out_path)
@@ -25,6 +45,10 @@ class FlightLogger:
         self.arm = arm
         self._t0 = time.time()
         self._fh = open(self.out_path, "w", encoding="utf-8")
+        self.csv_path = self.out_path.with_suffix(".csv")
+        self._csv_fh = open(self.csv_path, "w", newline="", encoding="utf-8")
+        self._csv_writer = csv.DictWriter(self._csv_fh, fieldnames=_CSV_FIELDNAMES)
+        self._csv_writer.writeheader()
         self._cycle = 0
         self._collisions = 0
         self._min_obstacle_dist: Optional[float] = None
@@ -110,6 +134,40 @@ class FlightLogger:
         self._fh.write(json.dumps(record, default=str) + "\n")
         self._fh.flush()
 
+        field_dict = record["obstacle_field"]["sectors"] if record["obstacle_field"] else {}
+        csv_row = {
+            "t": record["t"],
+            "cycle": record["cycle"],
+            "arm": record["arm"],
+            "scenario": record["scenario"],
+            "seed": record["seed"],
+            "route": record["route"],
+            "action": record["action"],
+            "wp_index": record["wp_index"],
+            "dist_to_wp_m": record["dist_to_wp_m"],
+            "degraded": record["degraded"],
+            "pos_x": pos.get("x"), "pos_y": pos.get("y"), "pos_z": pos.get("z"),
+            "vel_x": vel.get("x"), "vel_y": vel.get("y"), "vel_z": vel.get("z"),
+            "yaw_deg": record["yaw_deg"],
+            "has_collided": record["collision"]["has_collided"],
+            "collision_object": record["collision"]["object"],
+            "min_obstacle_dist_m": record["min_obstacle_dist_m"],
+            "latency_ms_json": json.dumps(latency_ms, default=str),
+            "slm_invoked": slm_block is not None,
+            "slm_latency_ms": slm_block.get("latency_ms") if slm_block else None,
+            "slm_fallback": slm_block.get("fallback") if slm_block else None,
+            "slm_timeout": slm_block.get("timeout") if slm_block else None,
+            "slm_adherent": slm_block.get("adherent") if slm_block else None,
+        }
+        for s in _CSV_SECTORS:
+            cell = field_dict.get(s) or {}
+            csv_row[f"field_{s}_occ"] = cell.get("occupancy")
+            csv_row[f"field_{s}_ttc_s"] = cell.get("ttc_s")
+            csv_row[f"field_{s}_conf"] = cell.get("confidence")
+            csv_row[f"field_{s}_blocked"] = cell.get("blocked")
+        self._csv_writer.writerow(csv_row)
+        self._csv_fh.flush()
+
     def mark_success(self, success: bool) -> None:
         self._success = success
 
@@ -134,4 +192,5 @@ class FlightLogger:
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, default=str)
         self._fh.close()
+        self._csv_fh.close()
         return summary

@@ -4,12 +4,13 @@ N misiones x M escenarios x K semillas, sin ventana cv2 ni stream_hub.
 Escribe un JSONL por corrida via FlightLogger.
 
 Uso:
-    python experiments/runner.py --scenarios missions/minisim_clear.json missions/citymap_pilot.json \
+    python experiments/runner.py --scenarios ../airsim-plan/missions/minisim_clear.json ../airsim-plan/missions/citymap_pilot.json \
         --arms slm fsm reactive --seeds 1 2 3 --out-dir runs/
 
-Cada archivo de escenario es un manifiesto con el mismo formato que consume
-main.py (mission_id, waypoints, rules_of_engagement, pose inicial opcional
-"start_pose": {"x":.., "y":.., "z":.., "yaw_deg":..}).
+Cada archivo de escenario es el manifiesto unico de airsim-plan/missions/
+(2026-0828, ver CHANGELOG.md): mission_id en MAYUSCULAS, waypoints, y
+opcionalmente "start_pose": {"x":.., "y":.., "z":.., "yaw_deg":..} -- si no
+esta declarado, se usa el primer waypoint como pose de partida.
 """
 from __future__ import annotations
 
@@ -39,7 +40,7 @@ except Exception:
     pass
 
 
-def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: int, max_seconds: float) -> dict:
+def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: int, max_seconds: float, seed_jitter: bool = False) -> dict:
     os.environ["AGENT_ARM"] = arm
     os.environ["AIRSIM_SEED"] = str(seed)
 
@@ -68,16 +69,34 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
     # (ver PLAN-MEJORAS.md F3.3: "client.reset()" antes de reposicionar).
     client.reset()
 
-    start_pose = manifest.get("start_pose")
-    if start_pose:
-        rng = random.Random(seed)
-        jitter_x = rng.uniform(-SEED_JITTER_XY_M, SEED_JITTER_XY_M)
-        jitter_y = rng.uniform(-SEED_JITTER_XY_M, SEED_JITTER_XY_M)
-        jitter_yaw = rng.uniform(-SEED_JITTER_YAW_DEG, SEED_JITTER_YAW_DEG)
-        client.set_vehicle_pose(
-            start_pose.get("x", 0.0) + jitter_x, start_pose.get("y", 0.0) + jitter_y, start_pose.get("z", -10.0),
-            yaw_deg=start_pose.get("yaw_deg", 0.0) + jitter_yaw,
-        )
+    # Jitter de pose por semilla: DESHABILITADO por defecto (2026-0828, ver
+    # CHANGELOG.md). set_vehicle_pose() usa simSetVehiclePose(ignore_collision=
+    # True) -- un teletransporte instantaneo que no chequea colision en el
+    # posicionamiento. Con +-1.5m de jitter, eso podia materializar al dron
+    # mas cerca de un obstaculo cercano (poste, tronco) que el spawn limpio
+    # de AirSim, y explica variacion real de corrida a corrida que no tenia
+    # que ver con el codigo de control. client.reset() (arriba) ya devuelve
+    # el vehiculo a su pose de spawn original definida en settings.json --
+    # sin --seed-jitter, el runner no vuelve a reposicionarlo. El jitter
+    # sigue disponible detras de --seed-jitter para cuando haga falta variar
+    # la pose inicial entre semillas para el analisis estadistico
+    # (Mann-Whitney U necesita variacion real entre "seed 1" y "seed 2" con
+    # brazos deterministas, ver comentario original mas arriba).
+    if seed_jitter:
+        start_pose = manifest.get("start_pose")
+        waypoints_for_pose = manifest.get("waypoints") or []
+        if not start_pose and waypoints_for_pose:
+            first_wp = waypoints_for_pose[0]
+            start_pose = {"x": first_wp.get("x", 0.0), "y": first_wp.get("y", 0.0), "z": first_wp.get("z", -10.0), "yaw_deg": 0.0}
+        if start_pose:
+            rng = random.Random(seed)
+            jitter_x = rng.uniform(-SEED_JITTER_XY_M, SEED_JITTER_XY_M)
+            jitter_y = rng.uniform(-SEED_JITTER_XY_M, SEED_JITTER_XY_M)
+            jitter_yaw = rng.uniform(-SEED_JITTER_YAW_DEG, SEED_JITTER_YAW_DEG)
+            client.set_vehicle_pose(
+                start_pose.get("x", 0.0) + jitter_x, start_pose.get("y", 0.0) + jitter_y, start_pose.get("z", -10.0),
+                yaw_deg=start_pose.get("yaw_deg", 0.0) + jitter_yaw,
+            )
 
     graph, service = compile_workflow(client)
     waypoints_list = manifest.get("waypoints", [])
@@ -212,6 +231,11 @@ def main():
     parser.add_argument("--out-dir", default="runs")
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
+    parser.add_argument("--seed-jitter", action="store_true",
+                         help="Teletransportar (ignore_collision=True) a una pose con jitter aleatorio "
+                              "por semilla, en vez de arrancar del spawn limpio de AirSim. Desactivado "
+                              "por defecto (2026-0828, ver CHANGELOG.md) -- solo para corridas "
+                              "estadisticas multi-semilla que necesiten variacion real entre seeds.")
     args = parser.parse_args()
 
     # Cada combinacion corre en un subproceso propio: AGENT_ARM se lee a
@@ -231,6 +255,8 @@ def main():
                     "--out-dir", args.out_dir, "--max-cycles", str(args.max_cycles),
                     "--max-seconds", str(args.max_seconds),
                 ]
+                if args.seed_jitter:
+                    cmd.append("--seed-jitter")
                 proc = subprocess.run(cmd, capture_output=True, text=True)
                 if proc.returncode != 0:
                     print(f"[runner] FALLO scenario={scenario} arm={arm} seed={seed}:\n{proc.stderr[-2000:]}")
@@ -250,8 +276,9 @@ def _single_main():
     parser.add_argument("--out-dir", default="runs")
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
+    parser.add_argument("--seed-jitter", action="store_true")
     args = parser.parse_args()
-    summary = run_one(args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds)
+    summary = run_one(args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds, seed_jitter=args.seed_jitter)
     print(f"[runner] summary: {json.dumps(summary)}")
 
 

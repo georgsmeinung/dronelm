@@ -29,25 +29,17 @@ class MissionPlanner:
     * Persistencia en disco (``MISSION_DIR``).
     """
 
-    DEFAULT_TACTICAL_PROMPT_PATH = (
-        Path(__file__).resolve().parent.parent / "prompts" / "tactical_system.md"
-    )
-
     def __init__(
         self,
         *,
         client: Optional[LMStudioClient] = None,
         settings: Optional[Settings] = None,
         compiler_prompt: Optional[str] = None,
-        tactical_prompt_template: Optional[str] = None,
         llm: Optional[PlannerLLM] = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._client = client or LMStudioClient(settings=self._settings)
         self._compiler_prompt = compiler_prompt or self._load_compiler_prompt()
-        self._tactical_template = (
-            tactical_prompt_template or self._load_tactical_template()
-        )
         # `llm` is injected by tests; otherwise we build a default one per
         # compile() call so callers can swap the model cheaply.
         self._llm_override = llm
@@ -64,14 +56,6 @@ class MissionPlanner:
         if not path.exists():
             raise PlannerError(
                 f"Compiler system prompt missing at {path}. Reinstall the package."
-            )
-        return path.read_text(encoding="utf-8")
-
-    def _load_tactical_template(self) -> str:
-        path = self.DEFAULT_TACTICAL_PROMPT_PATH
-        if not path.exists():
-            raise PlannerError(
-                f"Tactical prompt template missing at {path}. Reinstall the package."
             )
         return path.read_text(encoding="utf-8")
 
@@ -110,9 +94,7 @@ class MissionPlanner:
                 f"Raw content: {content[:300]!r}"
             )
 
-        manifest = MissionManifest.from_dict(payload)
-        manifest.tactical_system_prompt = self.build_tactical_prompt(manifest)
-        return manifest
+        return MissionManifest.from_dict(payload)
 
     def compile_and_save(
         self,
@@ -130,32 +112,3 @@ class MissionPlanner:
 
         save_manifest(manifest, path)
         return manifest, path
-
-    # ------------------------------------------------------------------ #
-    # Tactical prompt builder                                           #
-    # ------------------------------------------------------------------ #
-    def build_tactical_prompt(self, manifest: MissionManifest) -> str:
-        """Componer el mensaje del sistema entregado a ``airsim-loop``.
-
-        El paso 3 del pipeline: el Manifiesto se convierte en un *pre-prompt* que
-        el SLM en vuelo recibe en cada ciclo, junto con YOLO/telemetría.
-        """
-        roe = manifest.rules_of_engagement
-        target_waypoint = manifest.waypoints[-1]
-        ignore_str = ", ".join(roe.ignore_objects) if roe.ignore_objects else "(ninguna)"
-        return (
-            self._tactical_template.format(
-                rtl_battery_threshold=roe.return_to_launch_battery_threshold,
-                ignore_objects=ignore_str,
-            )
-            + "\n\n"
-            f"MISION ACTIVA: {manifest.mission_id}\n"
-            f"Objetivo final (waypoint #{len(manifest.waypoints)}): "
-            f"[{target_waypoint.x}, {target_waypoint.y}, {target_waypoint.z}]"
-            + (f" ({target_waypoint.label})" if target_waypoint.label else "")
-            + "\nWaypoints pendientes (en orden): "
-            + "; ".join(
-                f"#{i + 1}[{w.x},{w.y},{w.z}]" for i, w in enumerate(manifest.waypoints)
-            )
-            + "\n"
-        )

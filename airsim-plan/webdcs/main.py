@@ -73,9 +73,7 @@ async def save_manifest_endpoint(req: SaveRequest):
     planner = MissionPlanner()
     try:
         manifest = MissionManifest.from_dict(req.manifest)
-        # Re-generar el prompt táctico por si cambiaron cosas en el JSON en la UI
-        manifest.tactical_system_prompt = planner.build_tactical_prompt(manifest)
-        
+
         target_dir = planner.settings.mission_dir / "flightplans"
         target_dir.mkdir(parents=True, exist_ok=True)
         filename = f"{manifest.mission_id.lower()}.json"
@@ -99,9 +97,7 @@ async def launch_mission(req: SaveRequest, background_tasks: BackgroundTasks):
     planner = MissionPlanner()
     try:
         manifest = MissionManifest.from_dict(req.manifest)
-        # Re-generar el prompt táctico
-        manifest.tactical_system_prompt = planner.build_tactical_prompt(manifest)
-        
+
         # Guardar manifiesto antes de lanzar para persistencia
         target_dir = planner.settings.mission_dir / "flightplans"
         target_dir.mkdir(parents=True, exist_ok=True)

@@ -21,34 +21,27 @@ class Waypoint(BaseModel):
     label: Optional[str] = None
 
 
-class RulesOfEngagement(BaseModel):
-    """Constraints injected into the tactical SLM (Step 3 of the pipeline)."""
-
-    ignore_objects: List[str] = Field(default_factory=list)
-    return_to_launch_battery_threshold: float = Field(ge=0.0, le=100.0)
-    max_speed_mps: Optional[float] = Field(default=None, ge=0.0)
-    min_altitude_m: Optional[float] = None
-    notes: Optional[str] = None
-
-    @field_validator("ignore_objects")
-    @classmethod
-    def _normalize_classes(cls, value: List[str]) -> List[str]:
-        return [str(v).strip().lower() for v in value if str(v).strip()]
-
-
 class MissionManifest(BaseModel):
     """The contract handed from the ground planner to ``airsim-loop``.
 
     This is the canonical Python representation; the JSON Schema lives in
     ``airsim_plan/schemas/manifest_schema.json`` for documentation /
     validation in other languages.
+
+    ``rules_of_engagement``/``tactical_system_prompt`` se sacaron del schema
+    (2026-0828, ver CHANGELOG.md): ningun modulo de airsim-loop (percepcion,
+    policy_router, deliberative_node, fsm_node, reactive_node) los leia --
+    LoopRunner.build_initial_state() los pasaba al DroneState inicial, pero
+    nada rio abajo los volvia a leer. El prompt real del VLM esta hardcodeado
+    en deliberative.py (SYSTEM_PROMPT_TEXT/SYSTEM_PROMPT_VISION); la velocidad
+    de crucero sale de REACTIVE_FORWARD_SPEED en .env; no hay monitoreo de
+    bateria ni clasificacion de objetos en el pipeline actual. Eran metadata
+    decorativa, no algo que cambiara el comportamiento de vuelo.
     """
 
     mission_id: str
     summary: Optional[str] = None
     waypoints: List[Waypoint] = Field(min_length=1)
-    rules_of_engagement: RulesOfEngagement
-    tactical_system_prompt: Optional[str] = None
     map: Optional[str] = "map.png"
 
     # ------------------------------------------------------------------ #

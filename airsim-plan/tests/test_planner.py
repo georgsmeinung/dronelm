@@ -18,12 +18,6 @@ GOOD_MANIFEST = {
         {"x": 0, "y": 50, "z": -10, "label": "north_edge"},
         {"x": 50, "y": 100, "z": -10, "label": "target"},
     ],
-    "rules_of_engagement": {
-        "ignore_objects": ["person", "car"],
-        "return_to_launch_battery_threshold": 20.0,
-        "max_speed_mps": 5.0,
-        "min_altitude_m": -10.0,
-    },
 }
 
 
@@ -53,9 +47,6 @@ def test_compile_with_stub() -> None:
     manifest = planner.compile("Revisa el perimetro norte")
     assert manifest.mission_id == "PERIMETER_NORTH_01"
     assert manifest.waypoints[-1].label == "target"
-    assert manifest.tactical_system_prompt is not None
-    assert "PERIMETER_NORTH_01" in manifest.tactical_system_prompt
-    assert "[50.0, 100.0, -10.0]" in manifest.tactical_system_prompt
 
 
 def test_compile_rejects_unparseable() -> None:
@@ -98,14 +89,3 @@ def test_compile_and_save(tmp_path: Path) -> None:
     manifest, path = planner.compile_and_save("foo")
     assert path.exists()
     assert manifest.mission_id == "PERIMETER_NORTH_01"
-
-
-def test_tactical_prompt_contains_roe() -> None:
-    from airsim_plan.missions.manifest import MissionManifest
-
-    manifest = MissionManifest.from_dict(GOOD_MANIFEST)
-    planner = MissionPlanner()
-    prompt = planner.build_tactical_prompt(manifest)
-    assert "person, car" in prompt
-    assert "20" in prompt  # battery threshold
-    assert "RETURN_TO_LAUNCH" in prompt
