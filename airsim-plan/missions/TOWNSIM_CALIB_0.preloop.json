@@ -1,0 +1,43 @@
+{
+  "mission_id": "TOWNSIM_CALIB_0",
+  "summary": "Manifiesto de vuelo vacío creado manualmente.",
+  "waypoints": [
+    {
+      "x": 0.0,
+      "y": 0.4,
+      "z": -10.0,
+      "label": "WP_1"
+    },
+    {
+      "x": 0.4,
+      "y": -71.6,
+      "z": -30.0,
+      "label": "WP_2"
+    },
+    {
+      "x": -145.2,
+      "y": -70.8,
+      "z": -30.0,
+      "label": "WP_3"
+    },
+    {
+      "x": -146.8,
+      "y": 83.6,
+      "z": -30.0,
+      "label": "WP_4"
+    },
+    {
+      "x": 1.2,
+      "y": 84.8,
+      "z": -30.0,
+      "label": "WP_5"
+    },
+    {
+      "x": 0.0,
+      "y": 27.2,
+      "z": 0.0,
+      "label": "WP_6"
+    }
+  ],
+  "map": "townsim_calib.png"
+}

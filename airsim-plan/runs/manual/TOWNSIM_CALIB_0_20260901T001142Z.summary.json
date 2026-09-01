@@ -1,0 +1,21 @@
+{
+  "scenario": "TOWNSIM_CALIB_0",
+  "seed": 0,
+  "arm": "slm",
+  "cycles": 1748,
+  "duration_s": 361.92,
+  "success": true,
+  "collisions": 0,
+  "min_obstacle_dist_m": null,
+  "path_length_m": 656.35,
+  "slm_invocations": 270,
+  "deliberation_rate": 0.15446224256292906,
+  "slm_fallback_rate": 0.0,
+  "slm_timeout_rate": 0.0,
+  "route_histogram": {
+    "reactive": 1348,
+    "deliberative": 285,
+    "evasive": 111,
+    "girar_90": 4
+  }
+}
