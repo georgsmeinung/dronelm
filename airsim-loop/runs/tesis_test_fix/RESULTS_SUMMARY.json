@@ -1,0 +1,63 @@
+[
+  {
+    "scenario": "manhattan_a",
+    "arm": "reactive",
+    "seed": 1,
+    "success": false,
+    "elapsed_s": 319.66,
+    "cycles": 1490,
+    "duration_s": 300.2,
+    "collisions": 0,
+    "min_obstacle_dist_m": 45.578125,
+    "path_length_m": 359.07,
+    "slm_invocations": 0,
+    "deliberation_rate": 0.0,
+    "slm_fallback_rate": null,
+    "slm_timeout_rate": null,
+    "route_histogram": {
+      "reactive": 1490
+    }
+  },
+  {
+    "scenario": "manhattan_a",
+    "arm": "fsm",
+    "seed": 1,
+    "success": false,
+    "elapsed_s": 310.39,
+    "cycles": 1491,
+    "duration_s": 300.05,
+    "collisions": 0,
+    "min_obstacle_dist_m": 43.28125,
+    "path_length_m": 426.32,
+    "slm_invocations": 0,
+    "deliberation_rate": 0.0,
+    "slm_fallback_rate": null,
+    "slm_timeout_rate": null,
+    "route_histogram": {
+      "fsm": 1491
+    }
+  },
+  {
+    "scenario": "manhattan_a",
+    "arm": "slm",
+    "seed": 1,
+    "success": false,
+    "elapsed_s": 303.99,
+    "cycles": 1471,
+    "duration_s": 300.42,
+    "collisions": 0,
+    "min_obstacle_dist_m": 1.0298340320587158,
+    "path_length_m": 34.99,
+    "slm_invocations": 601,
+    "deliberation_rate": 0.40856560163154315,
+    "slm_fallback_rate": 0.021630615640599003,
+    "slm_timeout_rate": 0.0,
+    "route_histogram": {
+      "reactive": 8,
+      "girar_90": 69,
+      "deliberative": 603,
+      "evasive": 68,
+      "degraded": 723
+    }
+  }
+]

@@ -40,9 +40,23 @@ except Exception:
     pass
 
 
-def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: int, max_seconds: float, seed_jitter: bool = False) -> dict:
+def run_one(
+    scenario_path: str,
+    arm: str,
+    seed: int,
+    out_dir: str,
+    max_cycles: int,
+    max_seconds: float,
+    seed_jitter: bool = False,
+    deadlock_strategy: str = "blind",
+) -> dict:
     os.environ["AGENT_ARM"] = arm
     os.environ["AIRSIM_SEED"] = str(seed)
+    # H3.1 (PLAN-MEJORAS-3): segunda variable del factorial (blind vs.
+    # deep_vlm), leida a nivel de modulo por src/agents/deep_scan.py -- mismo
+    # motivo que AGENT_ARM arriba: cada combinacion corre en su propio
+    # subproceso (ver main() mas abajo).
+    os.environ["DEADLOCK_STRATEGY"] = deadlock_strategy
 
     # Import diferido: AGENT_ARM se lee a nivel de modulo en graph.py, asi que
     # cada corrida necesita un interprete/subproceso propio para que el valor
@@ -58,7 +72,7 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
         manifest = json.load(f)
 
     scenario_name = Path(scenario_path).stem
-    out_path = Path(out_dir) / scenario_name / arm / f"seed_{seed}.jsonl"
+    out_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / f"seed_{seed}.jsonl"
 
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
     depth_metric_every_n = int(os.getenv("DEPTH_METRIC_EVERY_N", "5"))  # G3.1: capturar depth cada N ciclos
@@ -167,6 +181,14 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
             state = graph.invoke(state)
             if state.pop("_escape_reset", False):
                 tracker.reset_progress()
+            # H3.2: evento de resolucion de atasco (blind vs. deep_vlm),
+            # consumido por FlightLogger para el ablation (mismo patron que
+            # main.py: se saca del estado con pop(), nunca queda pisandolo).
+            deadlock_event = state.pop("_deadlock_event", None)
+            # Instrumentacion de auditoria VLM (2026-0901, mismo patron que
+            # main.py): frames RAW del ciclo exacto en que una deliberacion
+            # se resolvio, si los hay.
+            delib_frames = state.pop("_last_delib_frames", None)
 
             # Desvio persistente por esquina (2026-0827, ver CHANGELOG.md):
             # main.py ya consumia inject_corner, este runner no -- asi que
@@ -200,7 +222,13 @@ def run_one(scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: i
                 except Exception:
                     pass  # Si falla la captura de depth, solo no registramos la métrica
 
-            logger.log_cycle(state, latency_ms={"graph": (time.time() - t0) * 1000.0}, min_obstacle_dist_m=min_obstacle_dist_m)
+            logger.log_cycle(
+                state,
+                latency_ms={"graph": (time.time() - t0) * 1000.0},
+                min_obstacle_dist_m=min_obstacle_dist_m,
+                deadlock_event=deadlock_event,
+                delib_frames=delib_frames,
+            )
 
             if telem.get("collision", {}).get("has_collided"):
                 break
@@ -227,6 +255,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
+    parser.add_argument(
+        "--deadlock-strategies", nargs="+", default=["blind"], choices=["blind", "deep_vlm"],
+        help="H3.1: factorial AGENT_ARM x DEADLOCK_STRATEGY. 'deep_vlm' no tiene efecto sobre el "
+             "brazo reactive (nunca declara atasco/escape).",
+    )
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
     parser.add_argument("--out-dir", default="runs")
     parser.add_argument("--max-cycles", type=int, default=2000)
@@ -247,22 +280,27 @@ def main():
     results = []
     for scenario in args.scenarios:
         for arm in args.arms:
-            for seed in args.seeds:
-                print(f"[runner] scenario={scenario} arm={arm} seed={seed}")
-                cmd = [
-                    sys.executable, __file__, "--_single",
-                    "--scenario", scenario, "--arm", arm, "--seed", str(seed),
-                    "--out-dir", args.out_dir, "--max-cycles", str(args.max_cycles),
-                    "--max-seconds", str(args.max_seconds),
-                ]
-                if args.seed_jitter:
-                    cmd.append("--seed-jitter")
-                proc = subprocess.run(cmd, capture_output=True, text=True)
-                if proc.returncode != 0:
-                    print(f"[runner] FALLO scenario={scenario} arm={arm} seed={seed}:\n{proc.stderr[-2000:]}")
-                else:
-                    print(proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[runner] ok")
-                results.append({"scenario": scenario, "arm": arm, "seed": seed, "returncode": proc.returncode})
+            for deadlock_strategy in args.deadlock_strategies:
+                for seed in args.seeds:
+                    print(f"[runner] scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}")
+                    cmd = [
+                        sys.executable, __file__, "--_single",
+                        "--scenario", scenario, "--arm", arm, "--seed", str(seed),
+                        "--out-dir", args.out_dir, "--max-cycles", str(args.max_cycles),
+                        "--max-seconds", str(args.max_seconds),
+                        "--deadlock-strategy", deadlock_strategy,
+                    ]
+                    if args.seed_jitter:
+                        cmd.append("--seed-jitter")
+                    proc = subprocess.run(cmd, capture_output=True, text=True)
+                    if proc.returncode != 0:
+                        print(f"[runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
+                    else:
+                        print(proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[runner] ok")
+                    results.append({
+                        "scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
+                        "seed": seed, "returncode": proc.returncode,
+                    })
 
     print(f"\n[runner] {len(results)} corridas completadas. Ver {args.out_dir}/ para los JSONL y usar experiments/analyze.py.")
 
@@ -277,8 +315,12 @@ def _single_main():
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--seed-jitter", action="store_true")
+    parser.add_argument("--deadlock-strategy", default="blind", choices=["blind", "deep_vlm"])
     args = parser.parse_args()
-    summary = run_one(args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds, seed_jitter=args.seed_jitter)
+    summary = run_one(
+        args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,
+        seed_jitter=args.seed_jitter, deadlock_strategy=args.deadlock_strategy,
+    )
     print(f"[runner] summary: {json.dumps(summary)}")
 
 

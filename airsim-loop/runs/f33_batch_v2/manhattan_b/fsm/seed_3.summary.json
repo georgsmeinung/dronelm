@@ -1,0 +1,14 @@
+{
+  "scenario": "manhattan_b",
+  "seed": 3,
+  "arm": "fsm",
+  "cycles": 898,
+  "duration_s": 300.09,
+  "success": false,
+  "collisions": 0,
+  "min_obstacle_dist_m": null,
+  "path_length_m": 455.1,
+  "slm_invocations": 0,
+  "slm_fallback_rate": null,
+  "slm_timeout_rate": null
+}

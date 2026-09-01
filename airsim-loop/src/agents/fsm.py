@@ -13,9 +13,27 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, Optional
 
+from . import deep_scan
 from .action_map import action_to_command, compute_corner_waypoint
+from .deliberation_service import DeliberationService
 from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception import ObstacleField, empty_field, has_open_corridor
+
+# H3.1 (PLAN-MEJORAS-3): el brazo FSM comparte la capacidad de escaneo
+# profundo con el brazo SLM (mismo DeliberationService, ver graph.py). Si se
+# llama a fsm_node() directamente sin pasar `service` (p. ej. tests
+# existentes que nunca ejercitan DEADLOCK_STRATEGY=deep_vlm), este singleton
+# perezoso evita romper la firma historica `fsm_node(state)`.
+_fallback_deep_scan_service: Optional[DeliberationService] = None
+
+
+def _get_fallback_deep_scan_service() -> DeliberationService:
+    global _fallback_deep_scan_service
+    if _fallback_deep_scan_service is None:
+        from .deliberative import make_deliberation_service
+
+        _fallback_deep_scan_service = make_deliberation_service()
+    return _fallback_deep_scan_service
 
 FSM_TTC_BRAKE_S = float(os.getenv("FSM_TTC_BRAKE_S", "1.5"))
 FSM_TTC_AVOID_S = float(os.getenv("FSM_TTC_AVOID_S", "3.5"))
@@ -108,7 +126,7 @@ def _decide_state(
     return STATE_CRUISE
 
 
-def fsm_node(state: Dict[str, Any]) -> Dict[str, Any]:
+def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = None) -> Dict[str, Any]:
     """Nodo del brazo FSM: decide la macro-accion por umbrales sobre ObstacleField."""
     field: ObstacleField = state.get("obstacle_field") or empty_field()
     telemetry = state.get("telemetry", {}) or {}
@@ -152,6 +170,29 @@ def fsm_node(state: Dict[str, Any]) -> Dict[str, Any]:
     if stuck_cycles < stuck_threshold:
         escape_locked = False
         consecutive_escapes = 0
+
+    # H2/H3.1 (PLAN-MEJORAS-3): antes de que _decide_state() caiga a la
+    # alternancia ciega CLIMB/DESCEND, intentar el escaneo panoramico
+    # compartido con el brazo SLM (DEADLOCK_STRATEGY=deep_vlm). Misma
+    # condicion que _decide_state usa internamente para esa rama.
+    hard_stuck_for_scan = stuck_cycles >= hard_stall_threshold()
+    corridor_open_for_scan = (not hard_stuck_for_scan) and has_open_corridor(field, guidance)
+    deadlock = stuck_cycles >= stuck_threshold and not escape_locked and not corridor_open_for_scan
+
+    if deadlock:
+        state["_deadlock_cycles"] = int(state.get("_deadlock_cycles", 0)) + 1
+        if deep_scan.DEADLOCK_STRATEGY == "deep_vlm":
+            svc = service or _get_fallback_deep_scan_service()
+            handled = deep_scan.deep_scan_cycle(
+                state, svc, field, telemetry, guidance,
+                arm="fsm",
+                deadlock_cycles=state["_deadlock_cycles"],
+                consecutive_escapes=consecutive_escapes,
+            )
+            if handled:
+                return state
+    else:
+        state["_deadlock_cycles"] = 0
 
     fsm_state = _decide_state(
         field, stuck_cycles, stuck_threshold, guidance, escape_locked,

@@ -1,0 +1,20 @@
+{
+  "scenario": "minisim_clear",
+  "seed": 1,
+  "arm": "slm",
+  "cycles": 300,
+  "duration_s": 60.59,
+  "success": false,
+  "collisions": 0,
+  "min_obstacle_dist_m": 32.5546875,
+  "path_length_m": 75.17,
+  "slm_invocations": 0,
+  "deliberation_rate": 0.0,
+  "slm_fallback_rate": null,
+  "slm_timeout_rate": null,
+  "route_histogram": {
+    "reactive": 226,
+    "deliberative": 10,
+    "evasive": 64
+  }
+}

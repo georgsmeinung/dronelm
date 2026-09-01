@@ -1,0 +1,26 @@
+{
+  "scenario": "TOWNSIM_CALIB_PILOT",
+  "seed": 1,
+  "arm": "slm",
+  "cycles": 405,
+  "duration_s": 85.16,
+  "success": true,
+  "collisions": 0,
+  "min_obstacle_dist_m": null,
+  "path_length_m": 84.68,
+  "slm_invocations": 203,
+  "deliberation_rate": 0.5012345679012346,
+  "slm_fallback_rate": 0.0,
+  "slm_timeout_rate": 0.0,
+  "route_histogram": {
+    "reactive": 157,
+    "deliberative": 220,
+    "evasive": 28
+  },
+  "deadlock_strategy": "blind",
+  "deadlock_events": 0,
+  "deep_scan_events": 0,
+  "deep_scan_resolution_rate": null,
+  "deep_scan_avg_cycles_to_resolve": null,
+  "deep_scan_fallback_rate": null
+}

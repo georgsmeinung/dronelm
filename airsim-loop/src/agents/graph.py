@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import math
 import os
+import time
 from typing import Any, Dict, List, Optional, TypedDict
 
 try:
@@ -58,6 +59,12 @@ class DroneState(TypedDict, total=False):
     prev_image: Any
     prev_telemetry: Dict[str, Any]
     frame_history: List[Any]  # Ring buffer real de los ultimos N frames para el VLM (F2.1)
+    # Timestamp REAL de captura (reloj del simulador, no el de resolucion de
+    # la deliberacion) de cada frame de frame_history, mismo indice a indice
+    # -- 2026-0901, pedido explicito para poder nombrar los .png de auditoria
+    # VLM con el instante en que se tomaron, no con cuando el VLM contesto
+    # (pueden diferir varios segundos, mas en el barrido del escaneo profundo).
+    frame_history_ts: List[float]
     telemetry: Dict[str, Any]
     degraded: bool  # True si AirSim no respondio este ciclo (F0.6)
     obstacle_field: ObstacleField  # F1.1: unico contrato de percepcion
@@ -111,6 +118,41 @@ class DroneState(TypedDict, total=False):
     _delib_baseline: Optional[Dict[str, Any]]
     _delib_last_baselined_id: Optional[int]
     inject_corner: Optional[Dict[str, Any]]
+    # H2 (PLAN-MEJORAS-3): escaneo espacial profundo en atasco duro
+    # (DEADLOCK_STRATEGY=deep_vlm, ver src/agents/deep_scan.py). Mismo motivo
+    # que el bloque de arriba: cruzan la frontera nodo <-> lazo via multiples
+    # invocaciones de graph.invoke() (el barrido dura varios ciclos), asi que
+    # van declaradas aca o LangGraph las descarta en silencio.
+    _scan_phase: Optional[str]  # "rotando" | "asentando" | "capturado" | None
+    _scan_heading_index: int
+    _scan_frames: List[Any]
+    _scan_start_yaw_deg: Optional[float]
+    _scan_settle_left: int
+    _deep_scan_request_id: Optional[int]
+    _deadlock_cycles: int
+    _deadlock_event: Optional[Dict[str, Any]]  # H3.2: metricas de resolucion, consumido por main.py/flight_logger
+    # Instrumentacion de auditoria VLM (2026-0901, pedido explicito para
+    # analisis): _pending_delib_prompt/_pending_delib_frames se fijan al
+    # encolar un pedido (deliberative.py/deep_scan.py) y se leen al
+    # resolverlo -- sobreviven entre invocaciones de graph.invoke() mientras
+    # dura la espera asincrona al SLM/VLM, por eso van declaradas aca.
+    # _pending_delib_frames/_last_delib_frames son listas de tuplas
+    # (frame, capture_timestamp) -- cada frame lleva SU PROPIO timestamp real
+    # de captura (frame_history_ts), no el instante en que el VLM contesto
+    # (pueden diferir varios segundos, mas en el barrido del escaneo
+    # profundo). _last_delib_frames es un canal de UNA sola pasada (igual que
+    # _deadlock_event/_escape_reset): solo lleva contenido en el ciclo EXACTO
+    # en que una deliberacion se resuelve, y FlightLogger lo consume via
+    # pop() en main.py/runner.py -- nunca se acumulan frames RAW dentro de
+    # `deliberations` (que vive toda la mision) para no inflar memoria.
+    _pending_delib_prompt: Optional[str]
+    _pending_delib_frames: Optional[List[Any]]
+    _last_delib_frames: Optional[List[Any]]
+    # NUNCA agregar aca una clave de profundidad (depth/depth_image/
+    # min_obstacle_dist_m o similar, ver PLAN-MEJORAS-3.md §0.2): mientras
+    # ningun nodo pueda escribir una y que sobreviva a graph.invoke(), el
+    # esquema mismo actua como segunda red de la guardia de no-profundidad
+    # (H0.2) ademas del test estatico de tests/test_no_depth_in_flight_path.py.
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +166,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     from .reactive import reactive_node
     from .deliberative import make_deliberation_service, make_deliberative_node
     from .evasive import evasive_node
-    from .fsm import fsm_node
+    from .fsm import fsm_node as _fsm_node_fn
     from .action_map import action_to_command
     from src.perception import FlowTTCEstimator
 
@@ -146,8 +188,11 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         state["degraded"] = degraded
         if not degraded:
             history = list(state.get("frame_history") or [])
+            history_ts = list(state.get("frame_history_ts") or [])
             history.append(image)
+            history_ts.append(float(telemetry.get("timestamp") or time.time()))
             state["frame_history"] = history[-frame_history_size:]
+            state["frame_history_ts"] = history_ts[-frame_history_size:]
         return state
 
     def degraded_hover_node(state: DroneState) -> DroneState:
@@ -233,7 +278,10 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         "evasive": evasive_node,
         "deliberative": deliberative_node,
         "girar_90": girar_90_node,
-        "fsm": fsm_node,
+        # H3.1 (PLAN-MEJORAS-3): el escaneo profundo (DEADLOCK_STRATEGY=deep_vlm)
+        # es una capacidad compartida entre los brazos slm y fsm; ambos usan el
+        # mismo DeliberationService (un solo hilo worker, nunca dos pools).
+        "fsm": lambda state: _fsm_node_fn(state, service=deliberation_service),
         "motor": motor_node,
         "_airsim_client": airsim_client,
         "_deliberation_service": deliberation_service,

@@ -175,13 +175,37 @@ def main() -> None:
     airsim_client = AirSimClient(loop_hz=DEFAULT_LOOP_HZ)
     airsim_client.connect()
 
-    graph, deliberation_service = compile_workflow(airsim_client)
-    sleep_s = 1.0 / max(DEFAULT_LOOP_HZ, 0.01)
-
     waypoints_list = manifest_data.get("waypoints", [])
     waypoint_tracker = WaypointTracker(waypoints_list)
     if waypoints_list:
         print(f"[Navegación] Cargados {len(waypoints_list)} waypoints de misión. Iniciando hacia {waypoints_list[0].get('label', 'WP_1')}.")
+
+    # H1 (PLAN-MEJORAS-3): escaneo espacial inicial, parado y rotando, antes
+    # de entrar al lazo tactico. Advisory: sesga el rumbo de arranque y sirve
+    # de chequeo de cordura contra el plan de mision, nunca reemplaza al
+    # ObstacleField por ciclo como autoridad de seguridad.
+    from src.agents.spatial_scan import run_initial_scan
+
+    initial_scene_context = run_initial_scan(airsim_client)
+    if initial_scene_context.get("available") and waypoints_list:
+        wp0 = waypoints_list[0]
+        pos0 = (airsim_client.get_telemetry() or {}).get("position", {}) or {}
+        bearing_to_wp0 = math.degrees(math.atan2(
+            float(wp0.get("y", 0.0)) - float(pos0.get("y", 0.0)),
+            float(wp0.get("x", 0.0)) - float(pos0.get("x", 0.0)),
+        ))
+        recommended = initial_scene_context.get("recommended_heading_deg")
+        if recommended is not None:
+            diff = abs((float(recommended) - bearing_to_wp0 + 180.0) % 360.0 - 180.0)
+            if diff > 90.0:
+                print(
+                    f"[EscaneoInicial] AVISO: el rumbo recomendado ({recommended}°) difiere "
+                    f"{diff:.0f}° del rumbo al primer waypoint ({bearing_to_wp0:.0f}°). "
+                    "Verificar el plan de mision."
+                )
+
+    graph, deliberation_service = compile_workflow(airsim_client)
+    sleep_s = 1.0 / max(DEFAULT_LOOP_HZ, 0.01)
 
     flight_logger = None
     if not FLIGHT_LOG_DISABLED:
@@ -190,8 +214,14 @@ def main() -> None:
         if FLIGHT_LOG_PATH:
             flight_log_path = FLIGHT_LOG_PATH
         else:
+            # 2026-0901: un directorio por vuelo (runs/<mission_id>-<inicio
+            # ISO>/), autocontenido -- el .jsonl, el .csv (mismo stem, ver
+            # FlightLogger) y los .png de los fotogramas enviados al VLM
+            # (photo-<timestamp>.png, ver FlightLogger._save_delib_frames)
+            # quedan todos juntos, en vez de esparcidos bajo runs/manual/.
             iso_ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            flight_log_path = os.path.join("runs", "manual", f"{mission_id}_{iso_ts}.jsonl")
+            run_dir_name = f"{mission_id}-{iso_ts}"
+            flight_log_path = os.path.join("runs", run_dir_name, f"{run_dir_name}.jsonl")
 
         flight_logger = FlightLogger(
             flight_log_path,
@@ -300,6 +330,17 @@ def main() -> None:
                 # el contador de atasco de la ruta para no re-disparar de inmediato.
                 waypoint_tracker.reset_progress()
 
+            # H3.2 (PLAN-MEJORAS-3): evento de resolucion de atasco (deep_scan
+            # o escape ciego), consumido por FlightLogger para el ablation
+            # blind vs. deep_vlm. Mismo patron que _escape_reset arriba: se
+            # consume con pop() en el lazo, nunca queda pisando el estado.
+            deadlock_event = drone_state.pop("_deadlock_event", None)
+            # Instrumentacion de auditoria VLM (2026-0901): frames RAW del
+            # ciclo exacto en que una deliberacion se resolvio, si los hay.
+            # Mismo patron de canal de una sola pasada -- se consumen aca y
+            # nunca quedan viviendo en drone_state.
+            delib_frames = drone_state.pop("_last_delib_frames", None)
+
             _update_delib_outcomes(drone_state, guidance)
 
             corner = final_state.get("inject_corner")
@@ -319,6 +360,8 @@ def main() -> None:
                 flight_logger.log_cycle(
                     final_state,
                     latency_ms={"telemetry": round(latency_telem_ms, 1), "graph": round(latency_graph_ms, 1)},
+                    deadlock_event=deadlock_event,
+                    delib_frames=delib_frames,
                 )
 
             frame = final_state.get("rgb_image")

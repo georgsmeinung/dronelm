@@ -1,0 +1,14 @@
+{
+  "mission_id": "TOWNSIM_INI",
+  "summary": "Vuelta a la manzana de townsim_calib.png arrancando en (0,0) (PlayerStart), sin teletransporte y SIN cruzar el paseo peatonal central (el que tiene arboles/jardin y engancho al dron el 2026-0901, ver PLAN-PRUEBAS-TOWNSIM.md). WP_0 sube en el lugar (x/y del spawn) antes de trasladarse -- el primer intento se enganchaba en el follaje cercano a la plaza porque el guiado combina ascenso y traslacion lateral simultaneos, cruzando la copa de los arboles todavia bajo. Recien despues sale por el lado este (aproximando la avenida) a altitud de transito (z=-30, misma altura con la que TOWNSIM_CALIB_0 ya dio la vuelta completa sin colisiones), se une al perimetro YA VALIDADO por TOWNSIM_CALIB_0 (WP_2/WP_3/WP_4/WP_5 de ese manifiesto == WP_2..WP_5 aca), y vuelve a ~5m del punto de partida.",
+  "waypoints": [
+    { "x": 0.0, "y": 0.0, "z": -30.0, "label": "WP_0_ASCENSO" },
+    { "x": 60.0, "y": 50.0, "z": -30.0, "label": "WP_1_AVENIDA_ESTE" },
+    { "x": 0.4, "y": -71.6, "z": -30.0, "label": "WP_2_SUR" },
+    { "x": -145.2, "y": -70.8, "z": -30.0, "label": "WP_3_SUROESTE" },
+    { "x": -146.8, "y": 83.6, "z": -30.0, "label": "WP_4_NOROESTE" },
+    { "x": 1.2, "y": 84.8, "z": -30.0, "label": "WP_5_NORTE" },
+    { "x": 5.0, "y": 5.0, "z": -10.0, "label": "WP_6_RETORNO" }
+  ],
+  "map": "townsim_calib.png"
+}

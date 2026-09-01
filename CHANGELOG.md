@@ -1,3 +1,116 @@
+# 2026-0901
+
+## `PLAN-MEJORAS-3.md` implementado: guardia de no-profundidad, escaneo espacial inicial y profundo, ablation `DEADLOCK_STRATEGY` (H0–H3)
+
+Implementación completa del plan que discutía el orden de deliberación del grafo de control y la falta de
+una capacidad de análisis espacial más profundo en dos momentos: al despegar, y al detectar un atasco sin
+solución dentro del lazo táctico.
+
+- **H0 (guardia arquitectónica):** `tests/test_no_depth_in_flight_path.py` escanea como texto cada módulo
+  de vuelo buscando `return_depth=True`/`DepthPlanar`, y falla si aparece un `.py` nuevo bajo
+  `src/agents/`/`src/perception/` sin declarar explícitamente en la lista blanca o en la de excepción
+  (`experiments/*.py`, instrumentación offline). `DroneState` documenta por qué nunca debe llevar una clave
+  de profundidad — LangGraph descarta en silencio cualquier clave no declarada, así que el propio esquema
+  actúa como segunda red.
+- **H1 (`src/agents/spatial_scan.py`):** barrido de yaw parado (nunca traslación) inmediatamente después
+  del despegue, antes del lazo táctico — N rumbos, una sola llamada al VLM con watchdog propio en hilo
+  aparte (`INITIAL_SCAN_TIMEOUT_MS`, default 15s): un VLM caído nunca impide despegar. Advisory: sesga el
+  rumbo inicial y avisa si contradice el primer tramo de la misión, nunca reemplaza al `ObstacleField` por
+  ciclo. Conectado en `main.py` entre `connect()` y el lazo.
+- **H2 (`src/agents/deep_scan.py`):** antes de forzar el escape ciego sincrónico en atasco duro, un
+  barrido panorámico + una consulta al VLM. Corre **dentro** del mismo `StateGraph`/lazo (nunca un loop
+  aparte): reutiliza el frame que `capture_node` ya produjo ese ciclo, nunca vuelve a llamar `capture()`.
+  Estado de la máquina (`_scan_phase`/`_scan_heading_index`/`_scan_frames`/etc.) declarado en `DroneState`
+  para sobrevivir entre invocaciones de `graph.invoke()`. Si el escaneo expira o la respuesta no es
+  viable, cae exactamente al escape sincrónico existente (GANAR_ALTURA/PERDER_ALTURA alternado,
+  enclavamiento, `MAX_CONSECUTIVE_ESCAPES`), sin tocarlo — es la red de seguridad final. Capacidad
+  compartida entre los brazos `slm` (`deliberative.py`) y `fsm` (`fsm.py`), mismo `DeliberationService`.
+- **H3 (ablation):** `DEADLOCK_STRATEGY=blind|deep_vlm` selecciona la estrategia para cualquiera de los dos
+  brazos. `FlightLogger` agrega `deadlock_strategy`, `deep_scan_resolution_rate`,
+  `deep_scan_avg_cycles_to_resolve`, `deep_scan_fallback_rate` al `summary.json`; `experiments/runner.py`
+  suma `--deadlock-strategies` para el batch factorial `AGENT_ARM × DEADLOCK_STRATEGY`; `analyze.py` imprime
+  la tabla desagregada correspondiente.
+
+14 tests nuevos (`test_no_depth_in_flight_path.py`, `test_spatial_scan.py`, `test_deep_scan.py`), suite
+completa en 117/117 tras instalar `langgraph` (ausente en el entorno de validación — no declarado en
+`environment.yml`, gap preexistente no corregido en esta pasada).
+
+## Plan de pruebas para TownSim sobre `townsim_calib.png` (`PLAN-PRUEBAS-TOWNSIM.md`)
+
+A pedido del usuario, plan de escenarios de prueba para el mapa `townsim_calib.png` (más nuevo que
+`townsim.png`, usado por el Tier 1 actual). Geometría derivada **solo de datos ya volados**
+(`TOWNSIM_CALIB_0`, corrida manual previa exitosa: 656m, 0 colisiones, `slm`) en vez de medir el PNG a ojo
+— sin un archivo de calibración píxel↔metro confiable, cualquier coordenada estimada directamente de la
+imagen sería precisión fabricada. Seis escenarios propuestos (perímetro de control, piloto corto, dos
+variantes de bloqueo frontal masivo genuino — el "tercer escenario" que pedía
+`informe/10-METODOLOGIA-EXPERIMENTAL.md §10.1` —, avenida abierta de control, y uno diseñado para el
+ablation de H3), con protocolo de validación obligatorio (`scripts/plot_mission_route.py` + corrida piloto
+de una sola combinación) antes de confiar en cualquier escenario nuevo para un batch.
+
+**Corrección de diseño durante la propia sesión de pruebas:** la primera versión de los escenarios usaba
+`start_pose` para arrancar lejos del spawn real. El usuario aclaró que esto es **a propósito**: `main.py`
+nunca debe teletransportar al dron (`simSetVehiclePose(ignore_collision=True)` puede materializarlo dentro
+de un obstáculo, mismo riesgo que ya había forzado que el seed-jitter de `runner.py` pasara a opt-in el
+2026-0831) — siempre arranca en el *PlayerStart* del nivel de UE. Un cambio que agregaba soporte de
+`start_pose` a `main.py` se revirtió de inmediato; el plan se reescribió para que todo escenario sea
+alcanzable por **vuelo real** desde el spawn fijo (tramo de tránsito a altitud segura + descenso fuera del
+área de interés + tramo de prueba a nivel de calle), documentado como principio rector nuevo (§0.4).
+
+## Vuelos de prueba reales: piloto exitoso, y un atasco cerca del spawn sin resolver
+
+Con AirSim y LM Studio en línea:
+
+- **T-CALIB-1 (`townsim_calib_pilot.json`)**: éxito, 0 colisiones, 405 ciclos/85s, reusando exactamente
+  `WP_1→WP_2` de `TOWNSIM_CALIB_0`. Validado.
+- **T-CALIB-2 (`townsim_calib_cruce_frontal.json`, cruce frontal de un edificio)**: primer intento con
+  teletransporte agregado por error quedó atrapado en el jardín/seto de la plaza sin disparar
+  `has_collided` (colisión contra follaje que no dispara la bandera — mismo modo de falla ya documentado
+  para vegetación densa). Rediseñado sin teletransporte (tránsito a `z=-30` desde el spawn real,
+  reaprovechando coordenadas del perímetro ya validado) y relanzado con confirmación visual del usuario en
+  el viewport en cada paso.
+- **`TOWNSIM_INI` (`townsim_ini.json`, vuelta a la manzana por la avenida, no por el paseo peatonal con
+  árboles)**: tres intentos (estrategia `blind`, luego `deep_vlm`, luego agregando un waypoint de ascenso
+  vertical puro antes de trasladarse) quedaron atascados cerca del spawn — el punto de partida real está
+  pegado a la vegetación del jardín de la plaza, y ninguna de las tres variantes logró despejarla de forma
+  limpia antes de que el usuario cortara la prueba. `DEADLOCK_STRATEGY=deep_vlm` sí se confirmó operativo
+  (rotación real de rumbo observada, entradas `slm_deep_scan` en `deliberations[]`), pero el barrido de 4
+  rumbos resultó más lento en la práctica de lo estimado (`SCAN_SETTLE_CYCLES_DEEP=2` optimista frente a la
+  velocidad real de giro por yaw absoluto). **Sin resolver**: falta que el usuario confirme visualmente por
+  dónde hay espacio real de despegue cerca del spawn antes de reintentar una cuarta vez.
+- `DEADLOCK_STRATEGY=deep_vlm` quedó seteado como default en `.env` de este entorno (pedido explícito), sin
+  tocar el default de `deep_scan.py` (`blind`, para cualquier otro entorno).
+
+## Instrumentación de auditoría del VLM: fotogramas a PNG con timestamp real de captura, prompt + respuesta completos, directorio por vuelo
+
+A pedido del usuario, para poder auditar visualmente y por texto qué vio y qué contestó el VLM en cada
+deliberación:
+
+- `FlightLogger` guarda a PNG cada fotograma RAW efectivamente enviado al VLM (deliberación táctica normal
+  o escaneo profundo de H2), nombrado `photo-<timestamp_ISO>.png` — **con el timestamp real de captura del
+  propio fotograma** (`frame_history_ts` nuevo en `DroneState`, y el tercer elemento de las tuplas de
+  `_scan_frames`), no el instante en que el VLM terminó de contestar. Corrección sobre un primer intento
+  que etiquetaba todos los fotogramas de una deliberación con el timestamp de resolución compartido — en el
+  barrido de H2 (varios rumbos, varios segundos de diferencia entre capturas) eso los numeraba mal.
+  Formato ISO 8601 real (con el punto decimal de los milisegundos), no epoch crudo.
+- El JSONL ya tenía `raw_response`; ahora el bloque `slm` también lleva `prompt` (el texto completo
+  enviado) y `frame_paths`. El CSV suma `slm_delib_id`/`slm_frame_paths` (solo el nombre de archivo, ya que
+  PNG/CSV/JSONL conviven en el mismo directorio) sin duplicar el guardado cuando el mismo
+  `last_deliberation` se repite varios ciclos mientras se espera la próxima resolución (bug de conteo
+  preexistente en `_slm_invocations`, no corregido en esta pasada, solo el guardado de frames evita
+  duplicarse).
+- **Nuevo layout de directorio por vuelo** en `main.py` (default, sin `AIRSIM_FLIGHT_LOG` explícito):
+  `airsim-loop/runs/<mission_id>-<timestamp_ISO_inicio>/`, con el `.jsonl`, el `.csv` (mismo stem) y los
+  `.png` todos juntos — reemplaza el `runs/manual/<mission>_<ts>.jsonl` suelto de antes. Corregido de paso
+  un bug cosmético en la auditoría de consola: las entradas de escaneo profundo no llevaban
+  `model`/`vision_enabled`, así que se mostraban como "SLM TEXTO" en vez de "VLM VISIÓN DIRECTA".
+  `experiments/runner.py` no cambió su jerarquía `escenario/brazo/estrategia/seed_N.jsonl` (útil para
+  comparar corridas de batch), pero se beneficia igual del guardado de PNGs junto al log.
+
+Efecto colateral encontrado y corregido: fijar `DEADLOCK_STRATEGY=deep_vlm` en el `.env` local rompió 5
+tests preexistentes que asumían implícitamente el escape ciego (escritos antes de que H2 existiera, nunca
+pineaban la variable). Agregado un fixture `autouse` en `conftest.py` que fija `DEADLOCK_STRATEGY=blind`
+como default estable para todo el suite — ningún test debe depender del `.env` de quien lo corra.
+
 # 2026-0831
 
 * Configuración minima para correr AirSim en Unreal Engine y tener captura de video:

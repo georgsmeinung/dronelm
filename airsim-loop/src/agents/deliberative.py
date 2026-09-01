@@ -29,7 +29,9 @@ except Exception:  # pragma: no cover
 
 import json as _json
 
+from . import deep_scan
 from .action_map import action_to_command, compute_corner_waypoint
+from .deep_scan import SYSTEM_PROMPT_DEEP_SCAN  # usado en _query_slm_impl (mode="deep_scan")
 from .deliberation_service import DeliberationService
 from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception import ObstacleField, empty_field, has_open_corridor
@@ -305,6 +307,13 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
 
     prompt = payload["prompt"]
     images_b64 = payload.get("images_b64")
+    # H2 (PLAN-MEJORAS-3): el escaneo profundo reusa esta misma funcion de
+    # consulta (una unica cola/hilo worker, ver DeliberationService) pero con
+    # su propio system prompt y etiquetas por rumbo en vez de por fotograma
+    # -- reusar la etiqueta temporal aca seria el mismo error que corrigio
+    # F2.1 (afirmarle al modelo un eje que no es el real, ver deep_scan.py).
+    is_deep_scan = payload.get("mode") == "deep_scan"
+    image_labels = payload.get("image_labels")
 
     t0 = time.time()
     try:
@@ -316,16 +325,22 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
             for i, img_b64 in enumerate(images_b64):
                 # Invariante (F2.1 / test_prompt_invariants): una etiqueta por
                 # imagen efectivamente enviada, nunca una historia inventada.
-                if total_frames > 1:
+                if image_labels and i < len(image_labels):
+                    user_content.append({"type": "text", "text": f"{image_labels[i]}:"})
+                elif total_frames > 1:
                     delta = total_frames - 1 - i
                     frame_label = f"t-{delta}" if delta > 0 else "t (actual)"
                     user_content.append({"type": "text", "text": f"[Fotograma {frame_label}]:"})
                 user_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}})
-            system_prompt = SYSTEM_PROMPT_VISION
+            system_prompt = SYSTEM_PROMPT_DEEP_SCAN if is_deep_scan else SYSTEM_PROMPT_VISION
         else:
             user_content = prompt
             system_prompt = SYSTEM_PROMPT_TEXT
 
+        # El barrido multi-imagen del escaneo profundo tiene un prefill mas
+        # lento que una consulta tactica de 1 fotograma; SLM_DEEP_WATCHDOG_MS
+        # (mayor que SLM_WATCHDOG_MS) es el watchdog del lado del llamador,
+        # este timeout de cliente HTTP debe ser al menos igual de generoso.
         kwargs = dict(
             model=LOCAL_LLM_MODEL_NAME,
             messages=[
@@ -334,7 +349,7 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
             ],
             temperature=0.2,
             max_tokens=200,
-            timeout=8.0,
+            timeout=15.0 if is_deep_scan else 8.0,
         )
 
         raw = ""
@@ -445,6 +460,7 @@ def make_deliberative_node(service: DeliberationService):
             state["_consecutive_escapes"] = 0
             state["_escape_locked"] = False
             state["_escape_baseline_dist"] = None
+            state["_deadlock_cycles"] = 0
 
         escape_locked = bool(state.get("_escape_locked", False))
         hard_stuck = stuck_cycles >= hard_stall_threshold()
@@ -453,6 +469,24 @@ def make_deliberative_node(service: DeliberationService):
         corridor_open = (not hard_stuck) and has_open_corridor(field, guidance)
 
         if stuck_cycles >= stuck_threshold and not escape_locked and not corridor_open:
+            state["_deadlock_cycles"] = int(state.get("_deadlock_cycles", 0)) + 1
+
+            # H2 (PLAN-MEJORAS-3): antes de forzar el escape ciego, intentar
+            # un escaneo panoramico + una consulta al VLM (DEADLOCK_STRATEGY=
+            # deep_vlm). El escape sincronico de abajo queda intacto como red
+            # de seguridad final -- si el escaneo no resuelve (timeout,
+            # formato invalido, sin accion viable), la ejecucion sigue hacia
+            # abajo en el mismo ciclo, sin cambios en esa rama.
+            if deep_scan.DEADLOCK_STRATEGY == "deep_vlm":
+                handled = deep_scan.deep_scan_cycle(
+                    state, service, field, telemetry, guidance,
+                    arm="slm",
+                    deadlock_cycles=state["_deadlock_cycles"],
+                    consecutive_escapes=int(state.get("_consecutive_escapes", 0)),
+                )
+                if handled:
+                    return state
+
             max_escapes = int(os.getenv("MAX_CONSECUTIVE_ESCAPES", "3"))
             consecutive_escapes = int(state.get("_consecutive_escapes", 0)) + 1
             state["_consecutive_escapes"] = consecutive_escapes
@@ -562,6 +596,10 @@ def make_deliberative_node(service: DeliberationService):
                 "model": LOCAL_LLM_MODEL_NAME,
                 "vision_enabled": VLM_VISION_ENABLED,
                 "system_prompt": SYSTEM_PROMPT,
+                # Instrumentacion de auditoria (2026-0901): el prompt de
+                # usuario efectivamente enviado, para poder reconstruir la
+                # consulta completa junto con raw_response de abajo.
+                "prompt": state.get("_pending_delib_prompt", ""),
                 "raw_response": raw_response if not is_fallback else f"Fallback activado: {err or ('timeout' if timed_out else 'Formato JSON inválido')}",
                 "macro_action": macro,
                 "rationale": decision.get("rationale", ""),
@@ -571,6 +609,13 @@ def make_deliberative_node(service: DeliberationService):
                 "used_json_schema": decision.get("used_json_schema", False),
                 "latency_ms": round(latency_ms, 1),
             })
+            # Canal de una sola pasada hacia FlightLogger (ver graph.py): los
+            # frames RAW nunca se guardan en `deliberations` (viviria toda la
+            # mision, infla memoria) -- solo en este ciclo, consumido con
+            # pop() por el llamador.
+            state["_last_delib_frames"] = state.get("_pending_delib_frames") or []
+            state["_pending_delib_prompt"] = None
+            state["_pending_delib_frames"] = None
 
             state["next_action"] = macro
             state["velocity_command"] = cmd
@@ -627,6 +672,16 @@ def make_deliberative_node(service: DeliberationService):
         prompt = _build_user_prompt(field, telemetry, guidance, stuck_cycles=stuck_cycles, recent_history=recent_history)
         request_id = service.request({"prompt": prompt, "images_b64": images_b64})
         state["slm_request_id"] = request_id
+        # Instrumentacion de auditoria (2026-0901): recordar que se mando
+        # (texto + frames RAW, cada uno con su timestamp REAL de captura,
+        # ver frame_history_ts en graph.py) para adjuntarlo a la entrada de
+        # deliberations[] cuando _finalize() resuelva el pedido, varios
+        # ciclos despues.
+        state["_pending_delib_prompt"] = prompt
+        frame_history_ts = state.get("frame_history_ts") or []
+        state["_pending_delib_frames"] = (
+            list(zip(frame_history, frame_history_ts)) if VLM_VISION_ENABLED and frame_history else []
+        )
 
         cmd = action_to_command("FRENAR", guidance=guidance, telemetry=telemetry)
         cmd["rationale"] = "Frenando: pedido de deliberación recién encolado."

@@ -1,0 +1,18 @@
+{
+  "scenario": "townsim_pilot",
+  "seed": 1,
+  "arm": "reactive",
+  "cycles": 268,
+  "duration_s": 57.56,
+  "success": true,
+  "collisions": 0,
+  "min_obstacle_dist_m": 0.00952911376953125,
+  "path_length_m": 144.59,
+  "slm_invocations": 0,
+  "deliberation_rate": 0.0,
+  "slm_fallback_rate": null,
+  "slm_timeout_rate": null,
+  "route_histogram": {
+    "reactive": 268
+  }
+}

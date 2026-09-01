@@ -1,0 +1,9 @@
+{
+  "mission_id": "TOWNSIM_CALIB_PILOT",
+  "summary": "T-CALIB-1 (PLAN-PRUEBAS-TOWNSIM.md): chequeo de humo sobre townsim_calib.png, reusa exactamente WP_1->WP_2 de townsim_calib_0.json (ya volado y confirmado exitoso, ver TOWNSIM_CALIB_0_20260901T001142Z.summary.json). No introduce coordenadas nuevas.",
+  "start_pose": { "x": 0.0, "y": 0.4, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 0.4, "y": -71.6, "z": -30.0, "label": "WP_1" }
+  ],
+  "map": "townsim_calib.png"
+}

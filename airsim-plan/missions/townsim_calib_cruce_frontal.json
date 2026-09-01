@@ -1,0 +1,10 @@
+{
+  "mission_id": "TOWNSIM_CALIB_CRUCE_FRONTAL",
+  "summary": "T-CALIB-2 (PLAN-PRUEBAS-TOWNSIM.md, v2): bloqueo frontal masivo genuino sobre townsim_calib.png. Sin teletransporte -- el dron arranca en el PlayerStart real (coincide con el spawn de TOWNSIM_CALIB_0). WP_1/WP_2 transitan al borde oeste a altitud segura (-30, ya validada por TOWNSIM_CALIB_0) y descienden fuera del complejo; WP_3 cruza de lleno la fila de edificios oeste a nivel de calle (z=-10), volviendo a x/y del spawn.",
+  "waypoints": [
+    { "x": -150.0, "y": 0.4, "z": -30.0, "label": "WP_1" },
+    { "x": -150.0, "y": 0.4, "z": -10.0, "label": "WP_2" },
+    { "x": 0.0, "y": 0.4, "z": -10.0, "label": "WP_3" }
+  ],
+  "map": "townsim_calib.png"
+}

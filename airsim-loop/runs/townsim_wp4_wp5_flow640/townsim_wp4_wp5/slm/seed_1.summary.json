@@ -1,0 +1,21 @@
+{
+  "scenario": "townsim_wp4_wp5",
+  "seed": 1,
+  "arm": "slm",
+  "cycles": 165,
+  "duration_s": 37.82,
+  "success": true,
+  "collisions": 0,
+  "min_obstacle_dist_m": 0.171875,
+  "path_length_m": 57.43,
+  "slm_invocations": 72,
+  "deliberation_rate": 0.43636363636363634,
+  "slm_fallback_rate": 0.0,
+  "slm_timeout_rate": 0.0,
+  "route_histogram": {
+    "reactive": 67,
+    "deliberative": 84,
+    "girar_90": 3,
+    "evasive": 11
+  }
+}

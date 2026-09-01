@@ -1,0 +1,18 @@
+{
+  "scenario": "manhattan_a",
+  "seed": 1,
+  "arm": "fsm",
+  "cycles": 1491,
+  "duration_s": 300.05,
+  "success": false,
+  "collisions": 0,
+  "min_obstacle_dist_m": 43.28125,
+  "path_length_m": 426.32,
+  "slm_invocations": 0,
+  "deliberation_rate": 0.0,
+  "slm_fallback_rate": null,
+  "slm_timeout_rate": null,
+  "route_histogram": {
+    "fsm": 1491
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "scenario": "manhattan_a",
+  "seed": 1,
+  "arm": "slm",
+  "cycles": 1492,
+  "duration_s": 300.48,
+  "success": false,
+  "collisions": 0,
+  "min_obstacle_dist_m": 40.04999923706055,
+  "path_length_m": 55.54,
+  "slm_invocations": 631,
+  "deliberation_rate": 0.42292225201072386,
+  "slm_fallback_rate": 0.05229793977812995,
+  "slm_timeout_rate": 0.0,
+  "route_histogram": {
+    "reactive": 13,
+    "girar_90": 601,
+    "deliberative": 633,
+    "evasive": 245
+  }
+}

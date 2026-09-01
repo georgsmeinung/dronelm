@@ -132,6 +132,25 @@ def main():
         p50, p95 = np.percentile(lats, 50), np.percentile(lats, 95)
         print(f"  {arm:<10} {route or '(vacio)':<14} N={len(lats):<6} p50={p50:.1f}ms p95={p95:.1f}ms")
 
+    # H3.3 (PLAN-MEJORAS-3): tabla de resolucion de atascos desagregada por
+    # AGENT_ARM x DEADLOCK_STRATEGY. deadlock_strategy default a "blind" para
+    # corridas de antes de H3 (summary.json sin ese campo).
+    by_arm_strategy = defaultdict(list)
+    for r in rows:
+        by_arm_strategy[(r["arm"], r.get("deadlock_strategy", "blind"))].append(r)
+    if any(strategy == "deep_vlm" for _arm, strategy in by_arm_strategy):
+        print(f"\n{'Arm':<10} {'Estrategia':<10} {'N':<4} {'Atascos':<9} {'Tasa resol. escaneo':<20} {'Ciclos prom. resol.':<20} {'Tasa fallback':<14}")
+        for (arm, strategy), runs in sorted(by_arm_strategy.items()):
+            n = len(runs)
+            deadlock_events = sum(r.get("deadlock_events") or 0 for r in runs)
+            res_rates = [r["deep_scan_resolution_rate"] for r in runs if r.get("deep_scan_resolution_rate") is not None]
+            res_str = f"{np.mean(res_rates)*100:.0f}%" if res_rates else "N/D"
+            cycles = [r["deep_scan_avg_cycles_to_resolve"] for r in runs if r.get("deep_scan_avg_cycles_to_resolve") is not None]
+            cycles_str = f"{np.mean(cycles):.1f}" if cycles else "N/D"
+            fb_rates = [r["deep_scan_fallback_rate"] for r in runs if r.get("deep_scan_fallback_rate") is not None]
+            fb_str = f"{np.mean(fb_rates)*100:.0f}%" if fb_rates else "N/D"
+            print(f"{arm:<10} {strategy:<10} {n:<4} {deadlock_events:<9} {res_str:<20} {cycles_str:<20} {fb_str:<14}")
+
     if mannwhitneyu is not None and "slm" in by_arm and "fsm" in by_arm:
         slm_success = [1 if r.get("success") else 0 for r in by_arm["slm"]]
         fsm_success = [1 if r.get("success") else 0 for r in by_arm["fsm"]]
