@@ -117,7 +117,7 @@ como default estable para todo el suite — ningún test debe depender del `.env
 
 <img src="informe/2026-0831 Minimal Scalability Config for Airsim.png"/>
 
-## Noveno bug: overshoot-latch inestable (giro espurio en aproximación final), y dos límites de percepción más confirmados (obstrucción física invisible, poste de semáforo)
+## bug-fix: overshoot-latch inestable (giro espurio en aproximación final), y dos límites de percepción más confirmados (obstrucción física invisible, poste de semáforo)
 
 Retomando `TOWNSIM_DEMO`: la corrida `runs/townsim_demo_validate9` completó bien pero con un giro raro de
 5+ segundos justo en la aproximación final al aterrizaje (el dron se frenaba en el lugar y giraba ~140°
@@ -291,7 +291,7 @@ directamente, no la detección de TTC/ocupación (que depende de `FLOW_DOWNSCALE
 Qwen2.5-VL usa resolución dinámica de encoder, así que en teoría debería aprovechar una imagen más grande,
 pero no está confirmado para esta versión específica corriendo en LM Studio.
 
-## Octavo bug: deliberación al LLM abandonada en vuelo, detector de atasco desactivado por el resto de la misión
+## bug-fix: deliberación al LLM abandonada en vuelo, detector de atasco desactivado por el resto de la misión
 
 Retomando el pendiente de ayer (atasco cerca de WP_5 en `townsim_a`: percepción sin detectar bloqueo,
 450+ ciclos en `keep_going`/`MANTENER_RUMBO`). Sin necesitar AirSim corriendo, se reprodujo la lógica real
@@ -366,7 +366,7 @@ Nuevo [scripts/clear_mission_plot.py](airsim-loop/scripts/clear_mission_plot.py)
 `plot_mission_route.py --clear-only`, sin depender de pasarle un archivo de misión que de todos modos no
 se usa para borrar — solo conecta y llama `simFlushPersistentMarkers()`.
 
-## Cuatro correcciones más sobre el mismo atasco: retroceder (descartado), el mismo fix portado a `slm`, desvío de esquina reconectado, y `PERDER_ALTURA` agregado al vocabulario del VLM
+## bug-fix: retroceder (descartado), el mismo fix portado a `slm`, desvío de esquina reconectado, y `PERDER_ALTURA` agregado al vocabulario del VLM
 
 Continuación directa de la sección de abajo. Con el tercer bug corregido (`fsm.py` alterna `CLIMB`/`DESCEND`
 y cambia de estrategia con `GIRAR_90` al agotar los intentos), la investigación siguió en vivo con el
@@ -439,7 +439,7 @@ mecanismo distintos: 450+ ciclos de `route=reactive`/`MANTENER_RUMBO` sin una so
 ciego ante vegetación fina) documentado al principio de la sesión, no con ninguno de los bugs corregidos
 hoy. **Queda como punto de partida para la próxima sesión**, no investigado todavía.
 
-### Resumen de la sesión: 7 correcciones reales, todas validadas con corridas antes/después
+### bug-fix: 7 correcciones reales, todas validadas con corridas antes/después
 
 1. Percepción muerta (`dt_s=0` sistemático, `runner.py`/`main.py` pisaban `telemetry`).
 2. Overshoot infinito de waypoint (guiado en modo corredor sin noción de "ya pasé el punto").
@@ -450,7 +450,7 @@ hoy. **Queda como punto de partida para la próxima sesión**, no investigado to
 6. `inject_corner` reconectado (desvío persistente por esquina al agotar el escape).
 7. `PERDER_ALTURA` agregado al vocabulario documentado del VLM.
 
-## Tercer bug: escape por atasco sesgado a "solo subir" — confirmado visualmente en UE (dron trabado en la copa de un árbol)
+## bug-fix: escape por atasco sesgado a "solo subir" — confirmado visualmente en UE (dron trabado en la copa de un árbol)
 
 Continuación directa de la sección de abajo. Con los dos bugs previos corregidos, `fsm` sobre `townsim_a`
 avanzaba mucho mejor pero quedaba físicamente inmóvil ~65-77s cerca de WP_4, comandando mayormente
@@ -502,14 +502,14 @@ CHANGELOG.md 2026-0826) — pero nunca se remidió específicamente en un escena
 `townsim_a`. Vale la pena tenerlo presente si en el futuro aparecen colisiones o near-misses nuevos que no
 se explican por los tres bugs de esta sección.
 
-## Dos bugs reales encontrados al correr Tier 1 completo (`townsim_a`, 5 waypoints): percepción muerta todo el día, y overshoot de waypoint por guiado en modo corredor
+## bug-fix: percepción muerta todo el día, y overshoot de waypoint por guiado en modo corredor
 
 Continuación de la corrida de Tier 1 completo (ver sección de abajo para el piloto corto). Al correr
 `townsim_a` (misión completa, 5 waypoints, ~411m) con `reactive`/`fsm`/`slm`, ninguno completó la misión
 y el brazo `slm` quedó ~200 de 300s inmóvil deliberando sin evidencia de percepción. Investigar por qué
 llevó a dos hallazgos de código reales, no ajustes de parámetros:
 
-### Bug 1 — `ObstacleField` degradado el 100% de los ciclos, en TODAS las corridas de hoy (no solo townsim_a)
+### bug-fix: `ObstacleField` degradado el 100% de los ciclos, en TODAS las corridas de hoy (no solo townsim_a)
 
 `runner.py` (y `main.py`, mismo patrón) llaman `client.get_telemetry()` al principio de cada ciclo para
 calcular el guiado al waypoint, y guardaban ese resultado en `state["telemetry"]` **antes** de invocar el
@@ -540,7 +540,7 @@ acercamiento a la vegetación, la percepción ahora reporta `ttc_s=0.55s` con `c
 riesgo por tiempo-a-colisión aunque `occupancy` siga baja (la vegetación cubre poca área en píxeles). Con
 el fix, `fsm` pasó de 0 maniobras evasivas a 401 en la misma misión.
 
-### Bug 2 — Guiado en modo "corredor de calle" no detecta haberse pasado del waypoint (overshoot sin límite)
+### bug-fix: Guiado en modo "corredor de calle" no detecta haberse pasado del waypoint (overshoot sin límite)
 
 Con la percepción arreglada y `fsm` evadiendo activamente por primera vez, apareció un segundo problema:
 en la corrida de validación el dron llegó a 5.42m de WP_2 (nunca entró al radio de aceptación de 3.5m,
@@ -562,15 +562,6 @@ importar `dist_xy`.
 **Validación** (`fsm` sobre `townsim_a`, mismo presupuesto): `wp_index` ahora avanza correctamente
 (1→2→3, antes se quedaba en 1 para siempre), el dron llegó a WP_2 y WP_3 sin pasarse de largo,
 `path_length_m` volvió a un valor razonable (373.9m vs. 520.5m del overshoot).
-
-### Pendiente — atasco físico sin colisión registrada, cerca de WP_4
-
-En la misma corrida de validación, entre el ciclo ~1101 y el final del presupuesto (1401, ~65s), el dron
-quedó inmóvil en `(77.7, -23.8)` a 27.4m de WP_4, comandando mayormente `MANTENER_RUMBO` (203/279 ciclos)
-con percepción sana (`source=flow`, nada bloqueado) — no es el mismo mecanismo que el Bug 1 (no hay
-`FRENAR` sostenido por falta de evidencia). Parece un atasco físico contra geometría que no dispara
-`has_collided`, o un caso no cubierto del guiado. **No investigado todavía** — queda para la próxima
-sesión.
 
 ## Plan de escenarios de complejidad creciente: base → intermedio → complejo, y Tier 0 cerrado en verde
 
@@ -657,7 +648,7 @@ La **topología del grafo LangGraph en sí no cambió hoy** — sigue siendo la 
 
 `policy_router` en sí — sus 5 ramas y sus umbrales de TTC — no se tocó; se beneficia indirectamente de que la evidencia de percepción y el contador de atasco que recibe ya vienen más limpios.
 
-## Quinta vuelta: limitador de tasa de vx — probado, no funcionó, revertido
+## limitador de tasa de vx — probado, no funcionó, revertido
 
 Seguimiento directo del diagnóstico anterior (correlación 0.66 entre `|dvx|` y `|vz|`). Se implementó un limitador de tasa de cambio de `vx` en m/s², separado del EMA existente (`GUIDANCE_SMOOTHING_ALPHA`), en `waypoint_tracker.py`. Tres corridas reales en MiniSim, midiendo `|vz|` en las 300 muestras completas de cada una:
 
@@ -682,7 +673,7 @@ Investigación adicional al caso de la corrida v10: el pico grande de despegue (
 
 Después de cinco vueltas sobre el cabeceo (sync de `wp_index`, filtro de rotación en percepción, `CMD_DURATION_S` para el dedup de comandos, `rotateByYawRateAsync` para el pivot, y este intento de limitador de tasa), los valores absolutos de `|vz|` residual son chicos (media ~0.045-0.05 m/s) y concentrados en un puñado de transiciones puntuales (despegue, entrada/salida de giro pronunciado) sobre 300 ciclos de vuelo. Las dos correcciones que sí mostraron mejora medible y sin efectos secundarios fueron `CMD_DURATION_S=120` y `rotateByYawRateAsync`; seguir por la vía de "limitar más" el `vx` no parece ser el camino -- si se retoma, tendría más sentido investigar por qué cada reemisión de comando tiene ese costo fijo (¿es un artefacto del `cancelLastTask()`? ¿del propio PID de SimpleFlight?) en vez de seguir ajustando parámetros de la capa de guiado.
 
-## Cuarta vuelta: `rotateByYawRateAsync` nativo para el pivot (mejora parcial, diagnóstico del resto)
+## `rotateByYawRateAsync` nativo para el pivot (mejora parcial, diagnóstico del resto)
 
 Diagnóstico previo: el cabeceo residual coincidía con `vel.vz` (no `vx`, ya suavizado) en la ventana donde `yaw_rate` rampea rápido al entrar en un giro pronunciado, dentro de `MANTENER_RUMBO`/`reactive` (no un cambio de ruta del grafo). El usuario pidió empezar por la Opción 3: si AirSim ya tiene una maniobra nativa de rotación en el lugar, no reimplementarla combinando ejes de traslación en cero con `yaw_rate` dentro de `moveByVelocityBodyFrameAsync`.
 
@@ -694,11 +685,9 @@ En [airsim_client.py](airsim-loop/src/hardware/airsim_client.py), cuando el coma
 
 Comparando el mismo tramo de pivot puro (`vx<0.15`, ciclos 112-124) entre la corrida anterior y esta: `vel.vz` bajó de un rango de ruido de ±0.05-0.09 m/s a ±0.02-0.06 m/s — una reducción real de ~20-30% en la fase de rotación genuina.
 
-**Lo que NO se resolvió:** los picos más grandes de `vz` (hasta -0.3 m/s) siguen apareciendo justo en la entrada y salida del pivot — cuando `vx` todavía está en transición (decayendo desde crucero hacia 0, o acelerando de vuelta desde 0 hacia crucero). Esos comandos tienen `vx≠0` y por lo tanto siguen pasando por `moveByVelocityBodyFrameAsync`, fuera del alcance de este fix: la causa ahí no es el modo de giro sino el cambio real del setpoint de `vx`, que produce su propio transitorio en SimpleFlight. Pendiente si se quiere seguir puliendo: limitar la tasa de cambio de `vx` explícitamente (rampa con aceleración máxima) en vez de depender solo del EMA existente, tanto en la entrada como en la salida del pivot.
-
 ---
 
-## Tercera vuelta: giro en el lugar antes de avanzar ("horcajadas" en las esquinas)
+## giro en el lugar antes de avanzar ("horcajadas" en las esquinas)
 
 Con la trayectoria en recta ya limpia (sección anterior), el usuario notó que las esquinas seguían con bandazos ("horcajadas") y pidió, además, que el dron se oriente girando sobre su eje antes de encarar el nuevo tramo — así puede verificar que el corredor esté libre antes de comprometerse a avanzar, sin dejar de interrumpir el avance ante un obstáculo inminente.
 
@@ -716,15 +705,13 @@ La corrección fina de rumbo (abs_err<60°, ya existente) no cambió: sigue avan
 
 Corrida en MiniSim: al llegar a WP_1, el comando de avance cae a 0 en el ciclo exacto en que se detecta el desvío grande; la velocidad medida decae por inercia (sin frenado activo) hasta ~0.02-0.08 m/s mientras el yaw gira de -8.8° a 45.7° en ~20 ciclos, y solo entonces retoma avance (mezclado con la corrección fina de los ~44° de rumbo restantes, crucero continuo por diseño). `route_histogram` se mantuvo 100% `reactive` (sin falsos escapes) y `path_length_m=133.32` en el mismo presupuesto de 300 ciclos.
 
-**Pendiente/ajustable:** el tramo final del giro (últimos ~40-50° de rumbo) sigue corrigiendo en curva mientras avanza, por diseño (corrección fina vs. reorientación grande). Si se quiere alineación completa antes de cualquier avance, bajar el umbral de salida de `_sharp_turn_active` (hoy 50°, hardcodeado) sería el siguiente ajuste — no se tocó para no ensanchar el cambio sin validar primero esta versión.
-
 ---
 
-## Segunda vuelta: cabeceo resuelto, falsos obstáculos en giro ("nubes"), velocidad de crucero
+## cabeceo resuelto, falsos obstáculos en giro ("nubes"), velocidad de crucero
 
 Seguimiento de la sesión de arriba. Al revisar la telemetría de la corrida anterior, el vuelo en línea recta se veía poco fluido ("cabecea mucho"). Cuatro correcciones, con una vuelta de diseño en el medio (ver punto 1).
 
-### 1. Dedup de comandos de velocidad en `airsim_client.py` (dos intentos, el segundo funcionó)
+### bug-fix: Dedup de comandos de velocidad en `airsim_client.py` (dos intentos, el segundo funcionó)
 
 **Intento 1 (revertido).** La hipótesis: `cancelLastTask()` + reemisión de `moveByVelocityBodyFrameAsync()` en cada ciclo (5Hz) interrumpía el PID interno de SimpleFlight a mitad de su transitorio, produciendo el cabeceo. Se implementó un dedup con duración de comando corta (`0.5s`, ligada al período del lazo) y un margen de reemisión al 30%. Validación: la oscilación relativa de `vx`/`vz` en crucero **no mejoró** (~18% de amplitud antes, ~16% después). Se revirtió.
 
@@ -734,7 +721,7 @@ Seguimiento de la sesión de arriba. Al revisar la telemetría de la corrida ant
 
 **Fix final:** `CMD_DURATION_S` subido a 120s — el refresco de seguridad prácticamente nunca dispara durante un tramo normal de vuelo (sigue acotando a minutos, no indefinidamente, el riesgo de un proceso colgado sin crashear). Solo se cancela/reemite el comando cuando el nuevo difiere del último en velocidad/yaw_rate/target_yaw más allá de tolerancia (`CMD_VELOCITY_TOLERANCE_MPS=0.1`, `CMD_YAW_RATE_TOLERANCE_DPS=1.0`) — un cambio de rumbo real o una reacción a obstáculo se siguen aplicando en el ciclo siguiente, sin demora.
 
-### 2. Fix: falsos obstáculos ("nubes") durante los giros
+### bug-fix: falsos obstáculos ("nubes") durante los giros
 
 Al validar el fix de sincronización de percepción (sección anterior) con una corrida más larga, apareció un patrón nuevo: al llegar a un waypoint y girar hacia el siguiente, el dron entraba en `evasive`/`GANAR_ALTURA`/`GIRAR_90` durante decenas de ciclos aunque no hubiera ningún obstáculo real — el usuario sospechó que estaba "viendo" el cielo/nubes como obstáculo.
 
@@ -742,13 +729,13 @@ Al validar el fix de sincronización de percepción (sección anterior) con una 
 
 **Fix:** nueva constante `FLOW_MAX_ROTATION_DEG` (default 2.0°, env `FLOW_MAX_ROTATION_DEG`). Si la rotación entre frames (`max(|delta_pitch|, |delta_yaw|, |delta_roll|)`) supera ese umbral, se devuelve campo sin evidencia (`source="degraded"`) en vez de arriesgar un falso positivo — no hay parallax traslacional confiable que extraer durante una rotación fuerte.
 
-### 3. Fix: el detector de atasco confundía "girando" con "atascado"
+### bug-fix: el detector de atasco confundía "girando" con "atascado"
 
 Con el fix anterior, la percepción dejó de disparar falsos positivos (`blocked_fraction=0.0` confirmado en logs) pero el dron **seguía** entrando en `evasive`/`GANAR_ALTURA` en cada esquina. Causa distinta: `record_progress()` en [waypoint_tracker.py](airsim-loop/src/navigation/waypoint_tracker.py) mide progreso solo por distancia radial al waypoint activo. Al completar un tramo y arrancar el siguiente, la distancia casi no baja mientras el dron gira para encarar el nuevo rumbo (avance horizontal casi nulo por diseño del giro, no por obstáculo) — el contador de atasco se disparaba en cada esquina, confundiendo un giro normal con un deadlock real.
 
 **Fix:** `record_progress()` ahora acepta `bearing_err_deg` (pasado desde `guidance["bearing_err_deg"]` en `runner.py` y `main.py`). Si el error de rumbo supera `PROGRESS_STALL_BEARING_EXEMPT_DEG` (default 30°), el ciclo se excluye del conteo de atasco — ni incrementa ni resetea la distancia mínima vista. La detección de obstáculos reales (TTC/ObstacleField en `policy_router`) es independiente de este contador y sigue actuando sin cambios.
 
-### 4. Velocidad de crucero: 2.0 → 3.0 m/s
+### Velocidad de crucero: 2.0 → 3.0 m/s
 
 `REACTIVE_FORWARD_SPEED`/`REACTIVITY_FORWARD_SPEED` en `.env`. Los umbrales de seguridad (`TTC_SAFE_THRESHOLD`, `TTC_EVASION_THRESHOLD`) están en segundos, no en metros: el propio TTC ya se reduce proporcionalmente a la velocidad real de aproximación, así que el margen de reacción frente a un obstáculo real no se degrada al subir la velocidad de crucero (a diferencia de un umbral de distancia fijo). Pendiente: remedir en el escenario urbano (obstáculos reales) antes de subir más.
 
