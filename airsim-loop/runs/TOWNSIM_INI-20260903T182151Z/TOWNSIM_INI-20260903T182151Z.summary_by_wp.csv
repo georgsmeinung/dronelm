@@ -1,9 +1,0 @@
-wp_index,wp_label,cycles,duration_s,deliberative_cycles,deliberative_rate,deep_scan_events
-0,WP_0_ASCENSO,1955,394.24,1178,0.6026,22
-1,WP_1_AVENIDA_ESTE,166,33.44,28,0.1687,0
-2,WP_2_SUR,310,62.33,55,0.1774,0
-3,WP_3_SUROESTE,330,66.26,53,0.1606,0
-4,WP_4_NOROESTE,307,61.44,27,0.0879,0
-5,WP_5_NORTE,345,69.23,55,0.1594,0
-6,WP_6_RETORNO,168,33.6,0,0.0,0
-7,,1,0.0,0,0.0,0
