@@ -174,6 +174,14 @@ def main() -> None:
     # F0.3: un unico cliente de AirSim para todo el proceso.
     airsim_client = AirSimClient(loop_hz=DEFAULT_LOOP_HZ)
     airsim_client.connect()
+    # 2026-0903: los dibujos de depuracion de scripts/plot_mission_route.py
+    # (revision visual previa al vuelo) se ven en la propia captura de
+    # camara que recibe el VLM -- confirmado en un fotograma real guardado
+    # por FlightLogger (linea/marcador de ruta planificada, solidos y de
+    # color vivo, contaminando la escena con geometria que no existe en el
+    # mundo). Se limpian siempre al conectar, para que ningun vuelo dependa
+    # de que alguien se acuerde de hacerlo a mano tras revisar la ruta.
+    airsim_client.clear_debug_markers()
 
     waypoints_list = manifest_data.get("waypoints", [])
     waypoint_tracker = WaypointTracker(waypoints_list)

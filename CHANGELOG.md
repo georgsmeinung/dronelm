@@ -1,3 +1,121 @@
+# 2026-0903
+
+## Análisis del "porqué" de la deliberación excesiva: no es ruido visual, es falta de traslación durante el propio escape/escaneo — y un bug de CSV más encontrado en el camino
+
+A pedido del usuario, análisis cuantitativo de las 103 deliberaciones de la corrida `TOWNSIM_INI-
+20260903T152759Z` (fotogramas + `field_centro_*` del CSV) para poner a prueba la hipótesis de que la
+composición visual en el momento de deliberar explica las "espirales deliberativas":
+
+- **`centro_blocked=True` en solo 1 de 103 deliberaciones (0.97%)** — casi nunca se escala por un
+  obstáculo genuinamente detectado. **82.5% tiene `centro_conf < 0.1`**: el disparador dominante es falta
+  de confianza en la percepción, no un obstáculo real.
+- Esa falta de confianza es **mecánica, no visual**: en los 3 ciclos previos a cada disparo, `FRENAR`
+  (esperando una resolución previa) y `ESCANEO` (rotando en el escaneo profundo) dominan casi por
+  completo. `FlowTTCEstimator` necesita traslación real para producir una lectura confiable (documentado:
+  girando en el lugar da `confianza=0` por diseño) — se arma un bucle que se retroalimenta: poca confianza
+  → escala a deliberación → se queda quieto/rotando para resolver → sigue sin traslación → sigue sin
+  confianza → vuelve a escalar. Velocidad horizontal medida en el cluster más denso (t=330-362s): 0.44 m/s
+  promedio, contra ~3 m/s de crucero normal.
+- **Correlación entre densidad de bordes (proxy de "ruido visual") y confianza: positiva (r=0.25),
+  contraria a la hipótesis original** — frames de bajo detalle promediaron MENOS confianza (0.053) que los
+  de alto detalle (0.133), consistente con que el flujo óptico necesita textura para trackear.
+- **Sí se confirmó contaminación visual real, pero de otro origen**: un fotograma de la deliberación #23
+  (t=231.6s, terreno abierto sin obstáculos) muestra una cuña verde sólida — un dibujo de debug de
+  `plot_mission_route.py` todavía sin limpiar en ese punto del vuelo (ver sección de abajo) — posible causa
+  directa de la decisión `EVADIR_IZQUIERDA` en ese ciclo.
+
+### bug-fix: `vel_x`/`vel_y`/`vel_z` del CSV vacíos desde que existe (2026-0828)
+
+Encontrado analizando el mismo CSV: `telemetry["velocity"]` siempre usa las claves `vx`/`vy`/`vz` (ver
+`AirSimClient._state_to_telemetry`), nunca `x`/`y`/`z` — la fila de CSV leía las claves equivocadas, así
+que esas tres columnas quedaban vacías en **todo** el historial de corridas desde que existe el CSV. El
+JSONL nunca tuvo el bug (embebe el dict de velocidad completo, con las claves correctas). Test de
+regresión en `test_flight_logger.py`. Suite completa: 124/124.
+
+## bug-fix: los dibujos de depuración de `plot_mission_route.py` contaminaban la captura que recibe el VLM
+
+Reintentando `TOWNSIM_INI` con los dos fixes de la sección de abajo (color y espiral), el usuario notó en
+un fotograma de auditoría adjunto que se veían líneas y marcadores verdes gruesos cruzando la escena.
+Confirmado: son literalmente los `simPlotLineStrip`/`simPlotPoints`/`simPlotStrings` que
+`scripts/plot_mission_route.py` dibuja para la revisión visual previa al vuelo — persisten en el mundo de
+UE y **la cámara de la mision los captura igual que cualquier otro objeto**, así que quedaban en cada
+fotograma enviado al VLM durante el vuelo real, no solo durante la revisión. Explica en parte por qué
+`WP1→WP2`/`WP2→WP3` (volados con los marcadores todavía puestos) tuvieron más deliberación que `WP3→WP4`
+(volado después de limpiarlos a mano mid-vuelo) en la misma corrida, aunque la comparación de una sola
+corrida es ruidosa para conclusiones firmes.
+
+**Fix:** `AirSimClient.clear_debug_markers()` nuevo (wrapper de `simFlushPersistentMarkers()`), llamado
+siempre al conectar tanto en `main.py` como en `experiments/runner.py` — ningún vuelo depende ya de que
+alguien se acuerde de limpiar a mano después de usar `plot_mission_route.py`. La traza dinámica del propio
+recorrido (`simSetTraceLine`, toggle `T` en el viewport) queda fuera del fix automático porque es opt-in
+del usuario; si está activa durante un vuelo real, contamina de la misma manera y hay que desactivarla a
+mano.
+
+## `TOWNSIM_INI` corre limpio por primera vez (0 colisiones, 8/8 atascos resueltos por escaneo profundo), y dos bugs reales encontrados analizando el CSV con capturas
+
+Con `DEADLOCK_STRATEGY=deep_vlm` por default (ver sección de abajo) y prompt/respuesta/fotogramas ya en
+el CSV, primera corrida completa y exitosa de `TOWNSIM_INI`: 2771 ciclos, 591s, 842.6m, **0 colisiones**,
+8 eventos de atasco y **los 8 resueltos por el escaneo profundo** (H2) en un ciclo promedio, sin caer al
+escape ciego ni una vez. Analizando en vivo el tramo inicial (563 ciclos / 139.5s solo para el primer
+waypoint, mucha más deliberación de la esperada), y a partir de una captura del viewport de UE que el
+usuario adjuntó para comparar contra los `.png` de auditoría, aparecieron dos bugs reales:
+
+### bug-fix: canales de color R/B invertidos en toda captura de AirSim, incluida la que recibe el VLM
+
+Los `.png` de auditoría (nuevos de esta semana) se veían con el empedrado y las fachadas con un tinte
+azulado poco natural. Comparando un fotograma guardado contra la misma imagen con los canales R/B
+invertidos, la versión invertida coincide con la imagen aérea de referencia y con la captura de UE del
+usuario (empedrado terracota cálido, cielo de atardecer). Causa: `AirSimClient.capture()`
+(`src/hardware/airsim_client.py`) reshape-ea el buffer crudo de `simGetImages(ImageType.Scene)`
+directamente sin conversión, pero **todo** el resto del pipeline asume BGR (convención de OpenCV):
+`cv2.imencode` hacia el VLM, `cv2.imwrite` de `FlightLogger`, `cv2.imshow`/`rectangle`/`putText` del modo
+watch, `stream_hub` de WebDCS. El buffer de AirSim viene en RGB, así que cada consumidor cv2 veía rojo y
+azul invertidos — **incluido el VLM**, desde que existe visión directa (F2): el modelo viene deliberando
+sobre colores invertidos sin que nadie lo hubiera notado, porque nunca había una forma de ver lo que el
+VLM ve hasta la instrumentación de auditoría de esta semana. Fix: una sola conversión en el punto de
+captura (`image = np.ascontiguousarray(image[:, :, ::-1])`), corrige todos los consumidores a la vez.
+
+### bug-fix: rumbo objetivo inestable ("espiral") en un waypoint casi vertical
+
+Explica la deliberación excesiva del tramo inicial: `WP_0_ASCENSO` (agregado el 2026-0901 para subir
+derecho antes de trasladarse) tiene el mismo `x`/`y` que el punto de partida, así que el vector horizontal
+al waypoint es casi nulo. `compute_guidance()` calculaba el rumbo objetivo con `atan2(dy, dx)` sobre ese
+vector — numéricamente inestable: ruido de posición de centímetros alcanzaba para que el ángulo saltara
+decenas de grados de un ciclo al siguiente. En vuelo real eso se traducía en una espiral durante el
+ascenso en lugar de una subida derecha, y la cámara barriendo obstáculos distintos en cada giro espurio
+disparaba deliberación/evasión sin necesidad real. Fix: `src/navigation/waypoint_tracker.py` mantiene el
+rumbo actual (sin recalcular `atan2`) cuando la distancia horizontal cae por debajo de
+`BEARING_UNSTABLE_DIST_XY_M` (1.0m por defecto) — protege cualquier waypoint futuro casi vertical, no solo
+este caso puntual. Test de regresión en `test_waypoint_tracker.py`.
+
+Suite completa: 123/123.
+
+## `DEADLOCK_STRATEGY` pasa a `deep_vlm` por default, y dos detalles pendientes de la sesión anterior corregidos
+
+- **`DEADLOCK_STRATEGY` default cambiado de `blind` a `deep_vlm`** en `src/agents/deep_scan.py` (ya no
+  hace falta fijarlo en `.env`, que queda comentado como referencia) — coherente con H2/H3: el escape
+  ciego sigue como red de seguridad final si el escaneo profundo expira o no resuelve, así que el cambio
+  de default no reduce robustez, solo cambia cuál estrategia se prueba primero. Propagado también a los
+  defaults de CLI de `experiments/runner.py` (`--deadlock-strategy(ies)`) y al que reporta
+  `FlightLogger.close()` en `summary.json`. `tests/conftest.py` ya fijaba `DEADLOCK_STRATEGY=blind` como
+  default estable para todo el test suite (fixture `autouse` agregado el 2026-0901 por este mismo motivo),
+  así que el cambio de default de producción no afecta a los tests existentes.
+- **bug-fix:** `FlightLogger._slm_invocations` (y `_slm_fallbacks`/`_slm_timeouts`) contaban una vez por
+  **ciclo** que mostraba `last_deliberation`, no una vez por deliberación real — como `last_deliberation`
+  puede repetirse varios ciclos mientras se espera la próxima resolución (confirmado en vivo con
+  `TOWNSIM_INI` el 2026-0901), `deliberation_rate` quedaba inflado muy por encima de la tasa real de
+  consultas al modelo. Fix: solo cuenta cuando el `id` de la deliberación cambia. Test de regresión en
+  `tests/test_flight_logger.py`.
+- **`environment.yml`/`environment-arm64.yml` no declaraban `langgraph` ni `openai`** pese a que
+  `src/agents/graph.py` y `src/agents/deliberative.py` los importan directamente — brecha que obligó a
+  instalar `langgraph` a mano para poder correr el test suite en la sesión del 2026-0901. Agregados ambos
+  más el cierre transitivo completo de sus dependencias no cubiertas ya por el archivo (29 paquetes:
+  `langchain-core`, `langgraph-checkpoint`, `langsmith`, etc.), calculado recorriendo `pip show` en vez de
+  volcar un `pip freeze` completo del entorno (que mezclaba cientos de paquetes de otros proyectos sin
+  relación con `airsim-loop`).
+
+Suite completa: 122/122 (121 + 1 test nuevo de regresión del conteo de invocaciones).
+
 # 2026-0901
 
 ## `PLAN-MEJORAS-3.md` implementado: guardia de no-profundidad, escaneo espacial inicial y profundo, ablation `DEADLOCK_STRATEGY` (H0–H3)

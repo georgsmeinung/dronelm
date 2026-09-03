@@ -39,13 +39,17 @@ _CSV_FIELDNAMES = [
     "has_collided", "collision_object", "min_obstacle_dist_m",
     "latency_ms_json",
     "slm_invoked", "slm_latency_ms", "slm_fallback", "slm_timeout", "slm_adherent",
-    # Pedido explicito de instrumentacion para analisis (2026-0901): referencia
-    # al/los fotograma(s) efectivamente enviados al VLM en esta deliberacion
-    # (rutas relativas a la carpeta del propio log, ver FlightLogger.frames_dir)
-    # y el id de la entrada de deliberations[] para cruzar con el prompt/
-    # respuesta completos, que viven en el JSONL (serian demasiado largos para
-    # una fila de CSV "plano").
-    "slm_delib_id", "slm_frame_paths",
+    # Pedido explicito de instrumentacion para analisis (2026-0901, ampliado
+    # 2026-0903 a pedido del usuario -- el prompt/respuesta completos tienen
+    # que estar ACA, no solo en el JSONL, para poder analizar sin cruzar
+    # archivos): prompt y respuesta completos del VLM en esta deliberacion, y
+    # referencia al/los fotograma(s) efectivamente enviados (rutas relativas
+    # a la carpeta del propio log, ver FlightLogger.frames_dir) y el id de la
+    # entrada de deliberations[] para cruzar con el JSONL si hace falta mas
+    # contexto (system_prompt, macro_action, etc.). El modulo csv de Python
+    # ya escapa comas/saltos de linea embebidos (quoting por default), asi
+    # que un prompt multilinea no rompe el formato de fila.
+    "slm_prompt", "slm_raw_response", "slm_delib_id", "slm_frame_paths",
 ] + [f"field_{s}_{k}" for s in _CSV_SECTORS for k in ("occ", "ttc_s", "conf", "blocked")]
 
 
@@ -77,6 +81,14 @@ class FlightLogger:
         # asi el directorio de una corrida es autocontenido.
         self.frames_dir = self.out_path.parent
         self._delib_frame_paths_cache: Dict[int, list] = {}
+        # Bug encontrado 2026-0903: last_deliberation puede repetirse varios
+        # ciclos mientras el brazo sigue en ruta "deliberative" esperando la
+        # proxima resolucion (ver TOWNSIM_INI, 2026-0901) -- sin este id,
+        # _slm_invocations/_slm_fallbacks/_slm_timeouts contaban la MISMA
+        # deliberacion una vez por ciclo repetido en vez de una vez por
+        # invocacion real, inflando deliberation_rate muy por encima de la
+        # tasa real de consultas al modelo.
+        self._last_counted_delib_id: Optional[Any] = None
         self._cycle = 0
         self._collisions = 0
         self._min_obstacle_dist: Optional[float] = None
@@ -183,11 +195,17 @@ class FlightLogger:
         last_delib = deliberations[-1] if deliberations and state.get("route") == "deliberative" else None
         slm_block = None
         if last_delib is not None:
-            self._slm_invocations += 1
-            if last_delib.get("is_fallback"):
-                self._slm_fallbacks += 1
-            if last_delib.get("timeout"):
-                self._slm_timeouts += 1
+            delib_id = last_delib.get("id")
+            # Contar solo una vez por deliberacion REAL (id nuevo), no una vez
+            # por ciclo que la sigue mostrando mientras espera la proxima
+            # resolucion -- ver comentario en __init__.
+            if delib_id != self._last_counted_delib_id:
+                self._slm_invocations += 1
+                if last_delib.get("is_fallback"):
+                    self._slm_fallbacks += 1
+                if last_delib.get("timeout"):
+                    self._slm_timeouts += 1
+                self._last_counted_delib_id = delib_id
             # delib_frames solo llega no-vacio en el ciclo EXACTO en que esta
             # deliberacion se resolvio (ver deliberative.py/deep_scan.py:
             # _last_delib_frames es un canal transitorio, consumido con pop()
@@ -250,7 +268,12 @@ class FlightLogger:
             "dist_to_wp_m": record["dist_to_wp_m"],
             "degraded": record["degraded"],
             "pos_x": pos.get("x"), "pos_y": pos.get("y"), "pos_z": pos.get("z"),
-            "vel_x": vel.get("x"), "vel_y": vel.get("y"), "vel_z": vel.get("z"),
+            # bug-fix 2026-0903: telemetry["velocity"] siempre usa las claves
+            # vx/vy/vz (ver AirSimClient._state_to_telemetry), nunca x/y/z --
+            # con las claves equivocadas estas tres columnas quedaban vacias
+            # en TODO el historial de corridas, desde que existe el CSV
+            # (2026-0828). Encontrado analizando el CSV de TOWNSIM_INI.
+            "vel_x": vel.get("vx"), "vel_y": vel.get("vy"), "vel_z": vel.get("vz"),
             "yaw_deg": record["yaw_deg"],
             "has_collided": record["collision"]["has_collided"],
             "collision_object": record["collision"]["object"],
@@ -261,6 +284,8 @@ class FlightLogger:
             "slm_fallback": slm_block.get("fallback") if slm_block else None,
             "slm_timeout": slm_block.get("timeout") if slm_block else None,
             "slm_adherent": slm_block.get("adherent") if slm_block else None,
+            "slm_prompt": slm_block.get("prompt", "") if slm_block else "",
+            "slm_raw_response": slm_block.get("raw_response", "") if slm_block else "",
             "slm_delib_id": slm_block.get("delib_id") if slm_block else None,
             "slm_frame_paths": ";".join(slm_block.get("frame_paths") or []) if slm_block else "",
         }
@@ -304,7 +329,7 @@ class FlightLogger:
             # H3.1/H3.3: variable de diseno del factorial AGENT_ARM x
             # DEADLOCK_STRATEGY, leida al cierre (no al abrir el logger) para
             # que corridas largas reflejen el valor vigente durante el vuelo.
-            "deadlock_strategy": os.getenv("DEADLOCK_STRATEGY", "blind"),
+            "deadlock_strategy": os.getenv("DEADLOCK_STRATEGY", "deep_vlm"),  # 2026-0903: mismo default que src/agents/deep_scan.py
             "deadlock_events": len(self._deadlock_events),
             "deep_scan_events": len(deep_vlm_events),
             "deep_scan_resolution_rate": (len(resolved_events) / len(deep_vlm_events)) if deep_vlm_events else None,

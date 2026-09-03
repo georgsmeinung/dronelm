@@ -1,0 +1,27 @@
+{
+  "scenario": "TOWNSIM_INI",
+  "seed": 1,
+  "arm": "slm",
+  "cycles": 2771,
+  "duration_s": 591.08,
+  "success": true,
+  "collisions": 0,
+  "min_obstacle_dist_m": null,
+  "path_length_m": 842.63,
+  "slm_invocations": 51,
+  "deliberation_rate": 0.018404907975460124,
+  "slm_fallback_rate": 0.0,
+  "slm_timeout_rate": 0.0,
+  "route_histogram": {
+    "reactive": 1659,
+    "deliberative": 875,
+    "evasive": 222,
+    "girar_90": 15
+  },
+  "deadlock_strategy": "deep_vlm",
+  "deadlock_events": 8,
+  "deep_scan_events": 8,
+  "deep_scan_resolution_rate": 1.0,
+  "deep_scan_avg_cycles_to_resolve": 1.0,
+  "deep_scan_fallback_rate": 0.0
+}

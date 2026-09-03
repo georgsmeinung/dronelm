@@ -10,6 +10,17 @@ DEFAULT_CRUISE_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "5.0"))
 # waypoint activo. Un desvio Manhattan largo pero que reduce distancia no
 # cuenta como atasco; solo cuenta la falta de progreso sostenida.
 PROGRESS_EPS_M = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
+# Umbral (metros) por debajo del cual la distancia horizontal al waypoint es
+# demasiado chica para que atan2(dy,dx) devuelva un rumbo fisicamente
+# significativo -- ver compute_guidance(). Confirmado en vuelo real
+# (2026-0903, TOWNSIM_INI): un waypoint casi vertical (mismo x/y que el
+# punto de partida, solo cambia z, para forzar un ascenso recto) producia un
+# rumbo objetivo inestable ciclo a ciclo -- ruido de posicion de centimetros
+# alcanzaba para que el angulo saltara decenas de grados -- visible en vuelo
+# como una espiral durante el ascenso en vez de una subida derecha, y como
+# deliberacion/evasion excesiva (la camara barria obstaculos distintos en
+# cada giro espurio).
+BEARING_UNSTABLE_DIST_XY_M = float(os.getenv("BEARING_UNSTABLE_DIST_XY_M", "1.0"))
 # Suavizado exponencial (EMA) de vx/yaw_rate entre ciclos: alpha=1.0 desactiva
 # el filtro (usa el valor crudo cada vez); valores mas bajos = mas suave pero
 # mas lento en reaccionar a un cambio real de rumbo/velocidad. Con alpha=0.5
@@ -371,6 +382,12 @@ class WaypointTracker:
 
             # Rumbo deseado proyectado a lo largo del corredor
             target_yaw = street_yaw + cte_correction_rad
+        elif dist_xy < BEARING_UNSTABLE_DIST_XY_M:
+            # Vector horizontal casi nulo (waypoint casi directamente arriba/
+            # abajo, o ya alcanzado en el plano horizontal): atan2(dy,dx) no
+            # tiene un angulo fisicamente significativo que devolver aca, y
+            # perseguirlo solo mete ruido. Mantener el rumbo actual.
+            target_yaw = current_yaw
         else:
             # Aproximación final directa al waypoint (incluye el caso de
             # haberse pasado del punto B por el corredor: overshot_segment).

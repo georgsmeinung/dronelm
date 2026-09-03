@@ -48,7 +48,7 @@ def run_one(
     max_cycles: int,
     max_seconds: float,
     seed_jitter: bool = False,
-    deadlock_strategy: str = "blind",
+    deadlock_strategy: str = "deep_vlm",  # 2026-0903: mismo default que src/agents/deep_scan.py
 ) -> dict:
     os.environ["AGENT_ARM"] = arm
     os.environ["AIRSIM_SEED"] = str(seed)
@@ -82,6 +82,10 @@ def run_one(
     # haber quedado de una corrida anterior en el mismo proceso de AirSim
     # (ver PLAN-MEJORAS.md F3.3: "client.reset()" antes de reposicionar).
     client.reset()
+    # 2026-0903: los dibujos de scripts/plot_mission_route.py se ven en la
+    # captura de camara que recibe el VLM (mismo motivo que main.py) --
+    # limpiar siempre, no depender de que quien corrio el batch se acuerde.
+    client.clear_debug_markers()
 
     # Jitter de pose por semilla: DESHABILITADO por defecto (2026-0828, ver
     # CHANGELOG.md). set_vehicle_pose() usa simSetVehiclePose(ignore_collision=
@@ -256,7 +260,7 @@ def main():
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
     parser.add_argument(
-        "--deadlock-strategies", nargs="+", default=["blind"], choices=["blind", "deep_vlm"],
+        "--deadlock-strategies", nargs="+", default=["deep_vlm"], choices=["blind", "deep_vlm"],
         help="H3.1: factorial AGENT_ARM x DEADLOCK_STRATEGY. 'deep_vlm' no tiene efecto sobre el "
              "brazo reactive (nunca declara atasco/escape).",
     )
@@ -315,7 +319,7 @@ def _single_main():
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--seed-jitter", action="store_true")
-    parser.add_argument("--deadlock-strategy", default="blind", choices=["blind", "deep_vlm"])
+    parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])
     args = parser.parse_args()
     summary = run_one(
         args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,

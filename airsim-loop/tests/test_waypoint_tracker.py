@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from src.navigation.waypoint_tracker import (
     ORIENT_SETTLE_CYCLES,
     WaypointTracker,
@@ -296,3 +298,33 @@ def test_overshoot_latch_survives_lateral_drift_back_under_t_progress_1():
     # puede saltar a un valor cercano a 150-170° (el que da modo corredor
     # aca) de un ciclo al siguiente.
     assert abs(g_after["bearing_err_deg"]) < 120.0
+
+
+def test_near_vertical_waypoint_does_not_spiral_the_yaw():
+    """Regresion (2026-0903, ver CHANGELOG.md): un waypoint casi directamente
+
+    arriba/abajo del dron (mismo x/y, solo cambia z -- p. ej. un ascenso
+    vertical deliberado antes de trasladarse) deja el vector horizontal
+    (dx, dy) practicamente nulo. atan2(dy, dx) sobre un vector asi no tiene
+    un angulo fisicamente significativo: ruido de posicion de centimetros
+    (medido en vuelo real, TOWNSIM_INI) alcanzaba para que el rumbo objetivo
+    saltara decenas de grados de un ciclo al siguiente -- visible como una
+    espiral durante el ascenso, con deliberacion/evasion excesiva porque la
+    camara barria obstaculos distintos en cada giro espurio. Ahora, con la
+    distancia horizontal por debajo de BEARING_UNSTABLE_DIST_XY_M, se
+    mantiene el rumbo actual en vez de perseguir ese angulo inestable.
+    """
+    tracker = WaypointTracker([{"x": 0.0, "y": 0.0, "z": -30.0, "label": "WP_ASCENSO"}])
+
+    current_yaw = math.radians(37.0)
+    # Dos posiciones con ruido de centimetros en x/y (mismo orden de magnitud
+    # que la telemetria real), que en atan2(dy,dx) crudo dan angulos casi
+    # opuestos -- sin el fix, el rumbo objetivo saltaria de uno al otro.
+    g1 = tracker.compute_guidance({"x": 0.02, "y": -0.01, "z": -5.0}, current_yaw=current_yaw)
+    g2 = tracker.compute_guidance({"x": -0.01, "y": 0.02, "z": -8.0}, current_yaw=current_yaw)
+
+    assert g1["dist_xy"] < 1.0 and g2["dist_xy"] < 1.0
+    # target_yaw_deg debe quedar clavado en el rumbo actual (37°) en ambos
+    # ciclos, no saltar segun el ruido de posicion.
+    assert g1["target_yaw_deg"] == pytest.approx(37.0, abs=0.1)
+    assert g2["target_yaw_deg"] == pytest.approx(37.0, abs=0.1)

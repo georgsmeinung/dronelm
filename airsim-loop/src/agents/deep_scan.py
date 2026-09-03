@@ -30,7 +30,12 @@ from typing import Any, Dict, List, Optional
 from .action_map import action_to_command
 from .deliberation_service import DeliberationService
 
-DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "blind")  # "blind" | "deep_vlm"
+# Default deep_vlm (2026-0903, pedido explicito): coherente con el resto de
+# H2/H3 -- el escape ciego sigue existiendo como red de seguridad final (ver
+# deep_scan_cycle) para cuando el escaneo profundo expira o no resuelve, asi
+# que subir el default no reduce la robustez, solo la usa como primera
+# opcion en vez de la ultima.
+DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "deep_vlm")  # "blind" | "deep_vlm"
 SCAN_HEADING_COUNT_DEEP = int(os.getenv("SCAN_HEADING_COUNT_DEEP", "4"))
 SCAN_SETTLE_CYCLES_DEEP = int(os.getenv("SCAN_SETTLE_CYCLES_DEEP", "2"))
 SCAN_YAW_TOLERANCE_DEG = float(os.getenv("SCAN_YAW_TOLERANCE_DEG", "5.0"))

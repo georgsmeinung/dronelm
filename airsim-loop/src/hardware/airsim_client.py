@@ -202,6 +202,29 @@ class AirSimClient:
             print(f"[AirSimClient] Error al posicionar vehículo: {exc}")
             return False
 
+    def clear_debug_markers(self) -> bool:
+        """Borra los dibujos persistentes de depuracion (simPlotLineStrip/
+
+        simPlotPoints/simPlotStrings de scripts/plot_mission_route.py).
+
+        2026-0903: confirmado en un fotograma real guardado por FlightLogger
+        que estos dibujos SE VEN en la captura de la camara que recibe el
+        VLM (linea/marcador de ruta planificada, gruesos y de color solido)
+        -- quedaban ahi si se habia usado plot_mission_route.py para revisar
+        una mision antes de volarla y no se limpiaba antes de arrancar el
+        vuelo real, contaminando la percepcion visual con geometria que no
+        existe en el mundo. main.py llama a esto siempre al conectar, para
+        que ningun vuelo dependa de que alguien se acuerde de limpiar a mano.
+        """
+        if not self._connected or self._client is None:
+            return True
+        try:
+            self._client.simFlushPersistentMarkers()
+            return True
+        except Exception as exc:
+            print(f"[AirSimClient] Error al limpiar marcadores de depuracion: {exc}")
+            return False
+
     def disconnect(self) -> None:
         if self._client is None:
             return
@@ -272,6 +295,16 @@ class AirSimClient:
             if response is not None and response.width > 0 and response.height > 0:
                 img_1d = np.frombuffer(response.image_data_uint8, dtype=np.uint8)
                 image = img_1d.reshape(response.height, response.width, 3)
+                # simGetImages(ImageType.Scene) devuelve el buffer en orden RGB,
+                # pero TODO el resto del pipeline (cv2.imencode hacia el VLM,
+                # cv2.imwrite de FlightLogger, cv2.imshow/rectangle/putText del
+                # modo watch, stream_hub de WebDCS) asume BGR, la convencion de
+                # OpenCV -- sin esta conversion, cada consumidor cv2 ve rojo y
+                # azul invertidos (confirmado visualmente 2026-0903: el
+                # empedrado calido de la plaza se veia azulado en los .png de
+                # auditoria del VLM). El VLM recibia esta misma imagen con los
+                # canales invertidos desde que existe vision directa (F2).
+                image = np.ascontiguousarray(image[:, :, ::-1])
                 if (
                     image.shape[1] != self.frame_width
                     or image.shape[0] != self.frame_height
