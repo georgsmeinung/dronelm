@@ -27,15 +27,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-# Repo-local imports. ``conftest.py`` adds ``src/`` to sys.path for tests; we
-# reproduce the same logic here so the script works from a checkout without
-# installing the package.
+# Imports locales del repo. ``conftest.py`` agrega ``src/`` a sys.path para los
+# tests; reproducimos la misma lógica acá para que el script funcione desde un
+# checkout sin necesidad de instalar el paquete.
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if SRC.exists() and str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-# Local imports (after sys.path tweak)
+# Imports locales (después del ajuste de sys.path)
 from airsim_plan.missions.manifest import (  # noqa: E402
     MissionManifest,
     RulesOfEngagement,
@@ -44,7 +44,7 @@ from airsim_plan.missions.manifest import (  # noqa: E402
 from airsim_plan.bridge.airsim_bridge import AirSimBridge  # noqa: E402
 from airsim_plan.config import get_settings  # noqa: E402
 
-# External imports guarded so the script still runs with --mock-airsim.
+# Imports externos protegidos para que el script siga funcionando con --mock-airsim.
 try:
     import numpy as np  # noqa: E402
     import cv2  # noqa: E402
@@ -63,7 +63,7 @@ except Exception:  # pragma: no cover
 
 
 # --------------------------------------------------------------------------- #
-# Observation types                                                           #
+# Tipos de observación                                                        #
 # --------------------------------------------------------------------------- #
 
 @dataclass
@@ -99,20 +99,20 @@ class Observation:
 
 
 # --------------------------------------------------------------------------- #
-# Sensors                                                                     #
+# Sensores                                                                    #
 # --------------------------------------------------------------------------- #
 
 def make_mock_sensor(manifest: MissionManifest):
-    """Deterministic sensor for dry-runs / CI / unit tests."""
+    """Sensor determinista para dry-runs / CI / tests unitarios."""
 
     state = {"tick": 0}
 
     def sensor(_state: dict[str, Any] | None = None) -> Observation:
         state["tick"] += 1
         wp = manifest.waypoints[min(state["tick"] // 20, len(manifest.waypoints) - 1)]
-        # Pretend the drone is moving toward the current waypoint.
+        # Simula que el drone se mueve hacia el waypoint actual.
         pos = {"x": wp.x * 0.3, "y": wp.y * 0.3, "z": wp.z}
-        # Slow drain so we can verify the RTL safety at low battery.
+        # Descarga lenta para poder verificar la seguridad de RTL con batería baja.
         battery = max(100.0 - state["tick"] * 0.5, 15.0)
         return Observation(
             battery_percent=battery,
@@ -137,7 +137,7 @@ def make_airsim_yolo_sensor(
     imgsz: int = 640,
     camera_name: str = "0",
 ):
-    """Real sensor: grab AirSim RGB frame + telemetry, run YOLO."""
+    """Sensor real: toma un frame RGB + telemetría de AirSim y corre YOLO."""
 
     if not _YOLO_OK:
         raise RuntimeError(
@@ -159,13 +159,13 @@ def make_airsim_yolo_sensor(
                       if c.strip()}
 
     def sensor(_state: dict[str, Any] | None = None) -> Observation:
-        # 1) RGB frame from AirSim
+        # 1) Frame RGB desde AirSim
         raw = client.simGetImage(camera_name, airsim.ImageType.Scene, vehicle_name=vehicle)
         img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
         if img is None:
             raise RuntimeError("AirSim returned an empty frame; is the camera enabled?")
 
-        # 2) YOLO inference
+        # 2) Inferencia YOLO
         results = model.predict(img, verbose=False, conf=conf, imgsz=imgsz)
         detections: list[YoloDetection] = []
         for r in results:
@@ -181,13 +181,13 @@ def make_airsim_yolo_sensor(
                                   (x1, y1, x2, y2))
                 )
 
-        # 3) Telemetry
+        # 3) Telemetría
         s = client.getMultirotorState(vehicle_name=vehicle)
         pos = s.kinematics_estimated.position
         vel = s.kinematics_estimated.linear_velocity
         battery = float(getattr(s, "battery_percent", 100.0) or 100.0)
         orientation = s.kinematics_estimated.orientation
-        # Convert quaternion (w, x, y, z) -> yaw degrees.
+        # Convierte el cuaternión (w, x, y, z) -> grados de yaw.
         w, x, y, z = orientation.w_val, orientation.x_val, orientation.y_val, orientation.z_val
         siny_cosp = 2.0 * (w * z + x * y)
         cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
@@ -264,7 +264,7 @@ class TacticalController:
 
     # ------------------------------------------------------------------ #
     def step(self, observation: Observation) -> dict[str, Any]:
-        # Hard safety overrides — the SLM cannot negotiate these.
+        # Overrides de seguridad estrictos — el SLM no puede negociarlos.
         rtl_threshold = self.manifest.rules_of_engagement.return_to_launch_battery_threshold
         if observation.battery_percent <= rtl_threshold:
             self.scratchpad = "battery critical -> RTL"
@@ -274,7 +274,7 @@ class TacticalController:
         if self.dry_loop or self._graph is None:
             return self._dry_decision(observation)
 
-        # Drive the real LangGraph workflow.
+        # Ejecuta el flujo de trabajo real de LangGraph.
         state = dict(self._initial_state or {})
         state["telemetry"] = observation.to_jsonable()
         state["scratchpad"] = self.scratchpad
@@ -289,10 +289,10 @@ class TacticalController:
                                                 "rationale": "noop"})
 
     def _dry_decision(self, observation: Observation) -> dict[str, Any]:
-        # Pretend the SLM:
-        #   * goes straight to the next waypoint when the path is clear,
-        #   * dodges anything not on the ignore list,
-        #   * lands when nothing is left to do.
+        # Simula que el SLM:
+        #   * va directo al próximo waypoint cuando el camino está despejado,
+        #   * esquiva cualquier cosa que no esté en la lista de ignorados,
+        #   * aterriza cuando ya no queda nada por hacer.
         if not observation.detections:
             wp = self.current_waypoint()
             return {
@@ -300,7 +300,7 @@ class TacticalController:
                 "rationale": f"path clear, heading to wp#{self.next_waypoint_index} "
                              f"[{wp.x:.0f},{wp.y:.0f},{wp.z:.0f}]",
             }
-        # Find the closest non-ignored detection.
+        # Busca la detección no ignorada más cercana.
         target = min(observation.detections, key=lambda d: d.bbox_xyxy[0])
         return {
             "macro_action": "EVADIR_DERECHA",
@@ -309,7 +309,7 @@ class TacticalController:
 
 
 # --------------------------------------------------------------------------- #
-# Action -> AirSim command                                                    #
+# Acción -> comando de AirSim                                                 #
 # --------------------------------------------------------------------------- #
 
 MACRO_TO_VEL = {
@@ -325,12 +325,12 @@ MACRO_TO_VEL = {
 def action_to_velocity(action: dict[str, Any]) -> tuple[float, float, float, float]:
     name = action.get("macro_action", "MANTENER_RUMBO")
     if name == "RETURN_TO_LAUNCH":
-        return (0.0, 0.0, 0.0, 0.0)  # RTL handled by the runner, not velocity stream
+        return (0.0, 0.0, 0.0, 0.0)  # RTL lo maneja el runner, no el stream de velocidad
     return MACRO_TO_VEL.get(name, (0.0, 0.0, 0.0, 0.0))
 
 
 # --------------------------------------------------------------------------- #
-# Main loop                                                                   #
+# Bucle principal                                                             #
 # --------------------------------------------------------------------------- #
 
 def main(argv: list[str] | None = None) -> int:
@@ -449,7 +449,7 @@ def _dispatch_action(bridge: AirSimBridge, vehicle: str,
         client.moveToPositionAsync(wp0.x, wp0.y, wp0.z, 6.0, vehicle_name=vehicle).join()
         return
     if name == "EVADIR_IZQUIERDA" or name == "EVADIR_DERECHA":
-        # Quick horizontal shove while the SLM recomputes with forward orientation.
+        # Empujón horizontal rápido mientras el SLM recalcula, manteniendo orientación hacia adelante.
         vx, vy, vz, _ = action_to_velocity(decision)
         try:
             import cosysairsim as airsim
@@ -472,7 +472,7 @@ def _dispatch_action(bridge: AirSimBridge, vehicle: str,
     if name == "FRENAR":
         client.hoverAsync(vehicle_name=vehicle).join()
         return
-    # Default: MANTENER_RUMBO -> keep cruising toward the next waypoint.
+    # Default: MANTENER_RUMBO -> sigue avanzando hacia el próximo waypoint.
     wp = controller.current_waypoint()
     speed = controller.manifest.rules_of_engagement.max_speed_mps or 5.0
     client.moveToPositionAsync(wp.x, wp.y, wp.z, speed, vehicle_name=vehicle)

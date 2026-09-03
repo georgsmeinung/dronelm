@@ -108,3 +108,61 @@ o la telemetría faltante por datos sintéticos plausibles: el ciclo se dirige d
 razón de este diseño es la misma que motiva el capítulo 9: un dato sintético "razonable" en lugar de
 un dato ausente es indistinguible, para el resto del sistema, de un dato real, y esconde exactamente
 el tipo de fallo silencioso que este trabajo documenta en otros componentes.
+
+## 5.5 Escalación ante atasco persistente: barrido panorámico y consulta puntual al modelo de visión
+
+Cuando el mecanismo de evasión de corto plazo (`evasive`) no logra restablecer el progreso hacia el
+waypoint objetivo durante un número sostenido de ciclos — un atasco duro, en el sentido de que ninguna
+dirección inmediata frente al dron ofrece un corredor despejado según el `ObstacleField` (cap. 6) — el
+sistema no recurre de inmediato al escape ciego (alternancia determinista entre ganar y perder
+altitud). En su lugar, ejecuta primero un barrido panorámico: una secuencia de giros puros en el lugar
+(sin traslación) hacia un conjunto fijo de rumbos equiespaciados alrededor del rumbo actual, capturando
+un fotograma en cada uno tras un breve período de asentamiento.
+
+Con el panorama completo capturado, se realiza una única consulta al modelo de visión, presentando las
+imágenes de todos los rumbos explorados — etiquetadas explícitamente como direcciones distintas desde
+el mismo punto, no como fotogramas consecutivos en el tiempo — junto con el estado del atasco (ciclos
+sin progreso, escapes verticales ya intentados, distancia y rumbo al objetivo). El modelo elige una
+única macro-acción de la misma lista blanca que usa el nodo deliberativo ordinario (cap. 8): el barrido
+no introduce vocabulario de decisión nuevo, solo una vista panorámica de la evidencia. Si la respuesta
+no llega dentro del plazo del watchdog o no resulta en una acción viable, el sistema cae al escape
+ciego determinista como red de seguridad final, garantizando que el mecanismo de escalación nunca deje
+al vehículo sin una decisión.
+
+Todo el barrido se ejecuta dentro del mismo ciclo del grafo de decisión, nunca en un bucle separado:
+reutiliza el fotograma que el nodo `capture` ya produjo ese ciclo y reemite su propio comando de
+velocidad a través de `motor` como cualquier otro nodo de política, sin desactivar la vigilancia del
+enrutador de política mientras dura. Al igual que el resto de la percepción del sistema (cap. 6), el
+barrido nunca consulta el canal de profundidad del simulador: opera exclusivamente sobre los mismos
+fotogramas RGB monoculares que alimentan el resto del lazo.
+
+Este mecanismo de escalación es controlable como variable experimental: el sistema puede configurarse
+para omitirlo y recurrir directamente al escape ciego, lo que permite comparar ambas estrategias de
+resolución de atasco bajo las mismas condiciones de vuelo (cap. 10). En corridas de validación sobre el
+escenario urbano de referencia, la variante con consulta al modelo de visión resolvió la totalidad de
+los eventos de atasco duro observados sin recurrir al escape ciego de respaldo.
+
+## 5.6 Registro de vuelo y auditoría post-vuelo
+
+Cada ejecución del lazo táctico — interactiva o lanzada desde la estación terrena (cap. 4) — genera,
+salvo que se desactive explícitamente, una carpeta autocontenida identificada por el nombre de la
+misión y una marca de tiempo ISO de inicio. Dentro de ella conviven: una traza en formato JSONL con el
+estado completo de cada ciclo, la misma traza en CSV para inspección tabular directa, los fotogramas
+enviados al modelo de lenguaje en cada consulta deliberativa (nombrados por su marca de tiempo real de
+captura), un resumen agregado por waypoint (ciclos consumidos, proporción de ciclos deliberativos y
+eventos de escalación por atasco de cada tramo de la misión) y, opcionalmente, un video del vuelo
+completo con overlay de la acción tomada en cada ciclo.
+
+La traza CSV/JSONL es el contrato de evidencia primaria del sistema: cada fila conserva el prompt
+exacto y la respuesta cruda de toda consulta al modelo de lenguaje, la telemetría completa del
+vehículo, el estado del campo de obstáculos por sector y la ruta del grafo de decisión que resolvió ese
+ciclo — es la fuente de la que se derivan las métricas del capítulo 10 y el análisis de modos de falla
+del capítulo 9.
+
+Para la inspección cualitativa del comportamiento del sistema en un vuelo particular, cada corrida
+incluye además un visor HTML autocontenido que sincroniza en ambos sentidos la reproducción del video
+con la fila correspondiente de la traza: avanzar el video actualiza automáticamente el panel de detalle
+del ciclo correspondiente (incluyendo el prompt, la respuesta y los fotogramas enviados al modelo en
+ese instante), y seleccionar una fila de la tabla salta el video al momento correspondiente. Esta
+herramienta permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema
+y por qué tomó la decisión que tomó.

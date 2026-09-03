@@ -14,7 +14,7 @@ class Position:
         self.z = pos.z_val
 
 
-# Make the drone fly in a circle.
+# Hace que el drone vuele en círculo.
 class OrbitNavigator:
     def __init__(self, client, radius=2, altitude=10, speed=1, iterations=1, center=[1, 0], snapshots=0):
         self.radius = radius
@@ -26,7 +26,7 @@ class OrbitNavigator:
         self.next_snapshot = None
         self.z = None
         self.snapshot_index = 0
-        self.takeoff = False  # whether we did a take off
+        self.takeoff = False  # si ya hicimos el takeoff
 
         if self.snapshots > 0:
             self.snapshot_delta = 360 / self.snapshots
@@ -37,7 +37,7 @@ class OrbitNavigator:
         if len(center) != 2:
             raise Exception("Expecting '[x,y]' for the center direction vector")
 
-        # center is just a direction vector, so normalize it to compute the actual cx,cy locations.
+        # center es solo un vector de dirección, así que lo normalizamos para calcular las posiciones cx,cy reales.
         cx = float(center[0])
         cy = float(center[1])
         length = math.sqrt((cx * cx) + (cy * cy))
@@ -51,7 +51,7 @@ class OrbitNavigator:
         self.client.enableApiControl(True)
 
         self.home = self.client.getMultirotorState().kinematics_estimated.position
-        # check that our home position is stable
+        # chequea que nuestra posición home sea estable
         start = time.time()
         count = 0
         while count < 100:
@@ -73,11 +73,11 @@ class OrbitNavigator:
         print("arming the drone...")
         self.client.armDisarm(True)
 
-        # AirSim uses NED coordinates so negative axis is up.
+        # AirSim usa coordenadas NED, así que el eje negativo es hacia arriba.
         start = self.client.getMultirotorState().kinematics_estimated.position
 
         print("already flying so we will orbit at current altitude {}".format(start.z_val))
-        z = start.z_val  # use current altitude then
+        z = start.z_val  # usa la altitud actual entonces
 
         print("climbing to position: {},{},{}".format(start.x_val, start.y_val, z))
         self.client.moveToPositionAsync(start.x_val, start.y_val, z, self.speed).join()
@@ -88,14 +88,14 @@ class OrbitNavigator:
         self.start_angle = None
         self.next_snapshot = None
 
-        # ramp up time
+        # tiempo de ramp up
         ramptime = self.radius / 10
         self.start_time = time.time()
 
         while count < self.iterations:
             if 0 < self.snapshots <= self.snapshot_index:
                 break
-            # ramp up to full speed in smooth increments so we don't start too aggressively.
+            # hace ramp up a velocidad completa en incrementos suaves para no arrancar demasiado agresivo.
             now = time.time()
             speed = self.speed
             diff = now - self.start_time
@@ -108,7 +108,7 @@ class OrbitNavigator:
 
             lookahead_angle = speed / self.radius
 
-            # compute current angle
+            # calcula el ángulo actual
             pos = self.client.getMultirotorState().kinematics_estimated.position
             dx = pos.x_val - self.center.x_val
             dy = pos.y_val - self.center.y_val
@@ -117,7 +117,7 @@ class OrbitNavigator:
 
             camera_heading = (angle_to_center - math.pi) * 180 / math.pi
 
-            # compute lookahead
+            # calcula el lookahead
             lookahead_x = self.center.x_val + self.radius * math.cos(angle_to_center + lookahead_angle)
             lookahead_y = self.center.y_val + self.radius * math.sin(angle_to_center + lookahead_angle)
 
@@ -134,8 +134,8 @@ class OrbitNavigator:
         self.client.moveToPositionAsync(start.x_val, start.y_val, z, 2).join()
 
     def track_orbits(self, angle):
-        # tracking # of completed orbits is surprisingly tricky to get right in order to handle random wobbles
-        # about the starting point.  So we watch for complete 1/2 orbits to avoid that problem.
+        # llevar la cuenta de las órbitas completadas es sorprendentemente difícil de lograr bien porque hay que manejar
+        # las oscilaciones al azar alrededor del punto de partida. Por eso vigilamos medias órbitas completas para evitar ese problema.
         if angle < 0:
             angle += 360
 
@@ -150,12 +150,12 @@ class OrbitNavigator:
             self.quarter = False
             return False
 
-        # now we just have to watch for a smooth crossing from negative diff to positive diff
+        # ahora solo hay que vigilar un cruce suave de diff negativo a diff positivo
         if self.previous_angle is None:
             self.previous_angle = angle
             return False
 
-            # ignore the click over from 360 back to 0
+            # ignora el salto de 360 de vuelta a 0
         if self.previous_angle > 350 and angle < 10:
             if self.snapshot_delta and self.next_snapshot >= 360:
                 self.next_snapshot -= 360
@@ -175,8 +175,8 @@ class OrbitNavigator:
             self.quarter = True
 
         if self.quarter and self.previous_diff is not None and diff != self.previous_diff:
-            # watch direction this diff is moving if it switches from shrinking to growing
-            # then we passed the starting point.
+            # vigila la dirección en que se mueve este diff; si pasa de reducirse a crecer
+            # entonces ya pasamos el punto de partida.
             direction = self.sign(self.previous_diff - diff)
             if self.previous_sign is None:
                 self.previous_sign = direction
@@ -191,18 +191,18 @@ class OrbitNavigator:
         return crossing
 
     def take_snapshot(self):
-        # first hold our current position so drone doesn't try and keep flying while we take the picture.
+        # primero mantiene la posición actual para que el drone no siga volando mientras sacamos la foto.
         pos = self.client.getMultirotorState().kinematics_estimated.position
         self.client.moveToPositionAsync(pos.x_val, pos.y_val, self.z, 0.5, 10, airsim.DrivetrainType.MaxDegreeOfFreedom,
                                         airsim.YawMode(False, self.camera_heading)).join()
         responses = self.client.simGetImages(
-            [airsim.ImageRequest(1, airsim.ImageType.Scene)])  # scene vision image in png format
+            [airsim.ImageRequest(1, airsim.ImageType.Scene)])  # imagen de la escena en formato png
         response = responses[0]
         filename = "photo_" + str(self.snapshot_index)
         self.snapshot_index += 1
         airsim.write_file(os.path.normpath(filename + '.png'), response.image_data_uint8)
         print("Saved snapshot: {}".format(filename))
-        self.start_time = time.time()  # cause smooth ramp up to happen again after photo is taken.
+        self.start_time = time.time()  # hace que el ramp up suave vuelva a ocurrir después de sacar la foto.
 
     def sign(self, s):
         if s < 0:

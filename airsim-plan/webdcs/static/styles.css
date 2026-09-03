@@ -1,26 +1,39 @@
 /* ----------------------------------------------------------------------------
-   Configuración General & Variables (Premium Dark Mode / Cyberpunk Space Style)
+   Configuración General & Variables (Dark Mode -- 2026-0903, pedido explicito
+   del usuario: paleta Material Design Dark Theme (Primary #BB86FC / Primary
+   Variant #3700B3 / Secondary #03DAC6 / Background+Surface #121212 / Error
+   #CF6679). Material define texto NEGRO sobre Primary/Secondary/Error porque
+   son colores claros/pasteles pensados para tema oscuro (On Primary/On
+   Secondary/On Error = #000000) -- por eso .btn-primary y .btn-danger llevan
+   color: var(--text-dark) explicito mas abajo, a diferencia de los botones
+   con fondo oscuro (secondary/success) que se quedan con texto blanco.
+   --color-secondary (gris neutro, botones "Cancelar") es un concepto propio
+   de este archivo, DISTINTO del "Secondary" #03DAC6 de Material -- ese vive
+   en --color-accent, para no pisar el uno al otro.
    ---------------------------------------------------------------------------- */
 :root {
-    --bg-main: #06080e;
-    --bg-sidebar: #0b0f19;
-    --bg-card: rgba(17, 24, 39, 0.65);
-    --border-color: rgba(255, 255, 255, 0.07);
-    --border-focus: rgba(99, 102, 241, 0.4);
-    
-    --color-primary: #6366f1;
-    --color-primary-hover: #4f46e5;
-    --color-secondary: #334155;
-    --color-secondary-hover: #475569;
-    --color-success: #10b981;
-    --color-success-hover: #059669;
-    --color-warning: #f59e0b;
-    --color-danger: #ef4444;
-    
-    --text-main: #f3f4f6;
-    --text-muted: #9ca3af;
-    --text-dark: #1f2937;
-    
+    --bg-main: #121212;
+    --bg-sidebar: #121212;
+    --bg-card: rgba(30, 30, 30, 0.72);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-focus: rgba(187, 134, 252, 0.45);
+
+    --color-primary: #BB86FC;
+    --color-primary-variant: #3700B3;
+    --color-primary-hover: #A66EF5;
+    --color-secondary: #333844;
+    --color-secondary-hover: #454b59;
+    --color-accent: #03DAC6;
+    --color-success: #43A047;
+    --color-success-hover: #2E7D32;
+    --color-warning: #FFB74D;
+    --color-danger: #CF6679;
+    --color-danger-hover: #B85468;
+
+    --text-main: #FFFFFF;
+    --text-muted: rgba(255, 255, 255, 0.6);
+    --text-dark: #000000;
+
     --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --font-heading: 'Inter', sans-serif;
@@ -38,14 +51,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 body {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', sans-serif;
     background-color: var(--bg-main);
     color: var(--text-main);
     height: 100vh;
     overflow: hidden;
-    background-image: 
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+    background-image:
+        radial-gradient(at 0% 0%, rgba(187, 134, 252, 0.07) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(3, 218, 198, 0.05) 0px, transparent 50%);
 }
 
 /* ----------------------------------------------------------------------------
@@ -63,7 +76,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 2rem;
-    background-color: rgba(11, 15, 25, 0.8);
+    background-color: rgba(18, 18, 18, 0.85);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
     z-index: 10;
@@ -90,9 +103,9 @@ body {
     font-weight: 400;
     padding: 0.2rem 0.5rem;
     border-radius: 999px;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    color: #a5b4fc;
+    background: rgba(187, 134, 252, 0.15);
+    border: 1px solid rgba(187, 134, 252, 0.3);
+    color: #BB86FC;
     margin-left: 0.5rem;
     vertical-align: middle;
 }
@@ -104,8 +117,8 @@ body {
 }
 
 @keyframes pulse {
-    0% { transform: scale(1); filter: drop-shadow(0 0 2px var(--color-primary)); }
-    100% { transform: scale(1.1); filter: drop-shadow(0 0 8px var(--color-primary)); }
+    0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+    100% { transform: scale(1.05); filter: drop-shadow(0 0 3px rgba(187, 134, 252, 0.6)); }
 }
 
 .header-status {
@@ -114,22 +127,6 @@ body {
     gap: 0.5rem;
     font-size: 0.85rem;
     color: var(--text-muted);
-}
-
-.status-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
-.status-indicator.online {
-    background-color: var(--color-success);
-    box-shadow: 0 0 8px var(--color-success);
-}
-
-.status-indicator.offline {
-    background-color: var(--color-danger);
-    box-shadow: 0 0 8px var(--color-danger);
 }
 
 /* Dashboard Workspace */
@@ -236,7 +233,7 @@ textarea {
 
 textarea:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.15);
 }
 
 /* Buttons */
@@ -257,6 +254,7 @@ textarea:focus {
 
 .btn-primary {
     background-color: var(--color-primary);
+    color: var(--text-dark);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -290,14 +288,17 @@ textarea:focus {
     border-radius: 8px;
 }
 
-/* Glow Effect */
+/* Antes tenia un glow neon (box-shadow difuso de 15-25px, look "cyberpunk")
+   -- reemplazado por una sombra de profundidad con un toque de color, mucho
+   mas contenida (6-10px, opacidad baja) que sigue leyendose "moderna" sin
+   caer en el resplandor. */
 .btn-glow {
     position: relative;
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(187, 134, 252, 0.15);
 }
 
 .btn-glow:hover {
-    box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45), 0 0 10px rgba(187, 134, 252, 0.25);
 }
 
 /* Spinner */
@@ -368,12 +369,12 @@ textarea:focus {
 }
 
 .manifest-item:hover {
-    background-color: rgba(99, 102, 241, 0.08);
-    border-color: rgba(99, 102, 241, 0.3);
+    background-color: rgba(187, 134, 252, 0.08);
+    border-color: rgba(187, 134, 252, 0.3);
 }
 
 .manifest-item.active {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(187, 134, 252, 0.15) 0%, rgba(3, 218, 198, 0.05) 100%);
     border-color: var(--color-primary);
 }
 
@@ -415,6 +416,37 @@ textarea:focus {
 }
 
 /* ----------------------------------------------------------------------------
+   Guia de Inicio Rapido (sin mision activa, reemplaza a la Carta de Territorio)
+   ---------------------------------------------------------------------------- */
+.quickstart-card {
+    padding: 1rem;
+}
+
+.quickstart-wrapper {
+    width: 100%;
+    height: calc(100% - 2.5rem);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background-color: #040508;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* object-fit:contain (a diferencia de #map-image, que se muestra a tamano
+   natural con scroll -- pensado para paneo de cartas satelitales enormes)
+   para que la infografia entre completa sin recortarse, sea cual sea el alto
+   real del viewport. */
+#quickstart-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* ----------------------------------------------------------------------------
    Map Component (Satellite Chart & Path Visualizer)
    ---------------------------------------------------------------------------- */
 .map-card {
@@ -438,7 +470,7 @@ textarea:focus {
 .coord-indicator {
     font-size: 0.8rem;
     color: var(--text-muted);
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', monospace;
     background-color: rgba(0, 0, 0, 0.3);
     padding: 0.25rem 0.6rem;
     border-radius: 6px;
@@ -480,7 +512,7 @@ textarea:focus {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
-    background-color: rgba(11, 15, 25, 0.85);
+    background-color: rgba(18, 18, 18, 0.85);
     backdrop-filter: blur(8px);
     border: 1px solid var(--border-color);
     padding: 0.6rem 0.8rem;
@@ -502,17 +534,15 @@ textarea:focus {
 }
 
 .legend-dot.home {
-    background-color: #f59e0b;
-    box-shadow: 0 0 6px #f59e0b;
+    background-color: #FFB74D;
 }
 
 .legend-dot.waypoint {
-    background-color: #6366f1;
-    box-shadow: 0 0 6px #6366f1;
+    background-color: #BB86FC;
 }
 
 .legend-dot.path {
-    background-color: #06b6d4;
+    background-color: #03DAC6;
     border-radius: 2px;
     width: 12px;
     height: 3px;
@@ -541,8 +571,8 @@ textarea:focus {
     width: 100%;
     height: 100%;
     background-color: rgba(5, 7, 12, 0.95);
-    color: #34d399; /* Emerald text for JSON */
-    font-family: 'Fira Code', monospace;
+    color: #03DAC6; /* Emerald text for JSON */
+    font-family: 'JetBrains Mono', monospace;
     font-size: 0.85rem;
     padding: 1rem;
     border: none;
@@ -582,7 +612,7 @@ textarea:focus {
     align-items: center;
     gap: 0.8rem;
     padding: 0.9rem 1.4rem;
-    background-color: rgba(17, 24, 39, 0.9);
+    background-color: rgba(30, 30, 30, 0.92);
     backdrop-filter: blur(8px);
     border: 1px solid var(--border-color);
     border-radius: 10px;
@@ -602,8 +632,8 @@ textarea:focus {
 }
 
 .toast.toast-success {
-    border-color: rgba(16, 185, 129, 0.3);
-    background-color: rgba(16, 185, 129, 0.1);
+    border-color: rgba(67, 160, 71, 0.3);
+    background-color: rgba(67, 160, 71, 0.1);
 }
 
 .toast.toast-success i {
@@ -611,8 +641,8 @@ textarea:focus {
 }
 
 .toast.toast-error {
-    border-color: rgba(239, 68, 68, 0.3);
-    background-color: rgba(239, 68, 68, 0.1);
+    border-color: rgba(207, 102, 121, 0.3);
+    background-color: rgba(207, 102, 121, 0.1);
 }
 
 .toast.toast-error i {
@@ -690,8 +720,8 @@ textarea:focus {
 }
 
 .waypoint-item:hover {
-    background-color: rgba(99, 102, 241, 0.05);
-    border-color: rgba(99, 102, 241, 0.2);
+    background-color: rgba(187, 134, 252, 0.05);
+    border-color: rgba(187, 134, 252, 0.2);
 }
 
 .waypoint-item-info {
@@ -710,7 +740,7 @@ textarea:focus {
 .waypoint-item-coords {
     font-size: 0.75rem;
     color: var(--text-muted);
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 /* Botones de acción mini */
@@ -737,12 +767,13 @@ textarea:focus {
 
 .btn-mini:hover {
     background-color: var(--color-primary);
-    color: #fff;
+    color: var(--text-dark);
     border-color: var(--color-primary);
 }
 
 .btn-mini.btn-delete:hover {
     background-color: var(--color-danger);
+    color: var(--text-dark);
     border-color: var(--color-danger);
 }
 
@@ -753,7 +784,7 @@ textarea:focus {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(4, 5, 8, 0.8);
+    background-color: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex;
@@ -766,7 +797,7 @@ textarea:focus {
 .modal-content {
     width: 100%;
     max-width: 420px;
-    background-color: rgba(15, 23, 42, 0.95) !important;
+    background-color: rgba(30, 30, 30, 0.95) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 16px;
     padding: 1.5rem;
@@ -823,10 +854,11 @@ textarea:focus {
 /* Soporte extra para botón de peligro */
 .btn-danger {
     background-color: var(--color-danger);
+    color: var(--text-dark);
 }
 
 .btn-danger:hover:not(:disabled) {
-    background-color: #dc2626;
+    background-color: var(--color-danger-hover);
 }
 
 /* Cabecera con botón de acción lateral */
@@ -848,14 +880,14 @@ textarea:focus {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    color: #a5b4fc;
+    background-color: rgba(187, 134, 252, 0.15);
+    border: 1px solid rgba(187, 134, 252, 0.3);
+    color: #BB86FC;
 }
 
 .btn-new-mission:hover {
     background-color: var(--color-primary);
-    color: #fff;
+    color: var(--text-dark);
     border-color: var(--color-primary);
 }
 
@@ -870,9 +902,9 @@ textarea:focus {
     right: 0.8rem;
     top: 50%;
     transform: translateY(-50%);
-    background-color: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    color: #f87171;
+    background-color: rgba(207, 102, 121, 0.1);
+    border: 1px solid rgba(207, 102, 121, 0.2);
+    color: #CF6679;
     width: 28px;
     height: 28px;
     border-radius: 6px;
@@ -886,7 +918,7 @@ textarea:focus {
 
 .manifest-item-delete:hover {
     background-color: var(--color-danger);
-    color: #fff;
+    color: var(--text-dark);
     border-color: var(--color-danger);
 }
 
@@ -921,9 +953,9 @@ textarea:focus {
 }
 
 .tab-btn.active {
-    color: #a5b4fc;
-    background-color: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #BB86FC;
+    background-color: rgba(187, 134, 252, 0.15);
+    border: 1px solid rgba(187, 134, 252, 0.3);
 }
 
 .tab-content {
@@ -961,17 +993,15 @@ textarea:focus {
 }
 
 .btn-mode.active#btn-mode-start {
-    background-color: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.4);
-    color: #34d399;
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    background-color: rgba(67, 160, 71, 0.15);
+    border-color: rgba(67, 160, 71, 0.4);
+    color: #03DAC6;
 }
 
 .btn-mode.active#btn-mode-waypoint {
-    background-color: rgba(99, 102, 241, 0.15);
-    border-color: rgba(99, 102, 241, 0.4);
-    color: #a5b4fc;
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+    background-color: rgba(187, 134, 252, 0.15);
+    border-color: rgba(187, 134, 252, 0.4);
+    color: #BB86FC;
 }
 
 /* Collapsible JSON Layout adjustments */
@@ -985,7 +1015,7 @@ textarea:focus {
 
 .map-selector {
     transition: var(--transition-smooth);
-    background-color: #0b0f19 !important;
+    background-color: var(--bg-sidebar) !important;
     color: var(--text-main) !important;
 }
 
@@ -995,6 +1025,6 @@ textarea:focus {
 }
 
 .map-selector option {
-    background-color: #0b0f19 !important;
+    background-color: var(--bg-sidebar) !important;
     color: var(--text-main) !important;
 }

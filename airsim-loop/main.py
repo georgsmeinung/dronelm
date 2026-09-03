@@ -24,9 +24,15 @@ DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "5.0"))
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")
 FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # F3.2: override manual de la ruta de log
 # F3.2b: sin AIRSIM_FLIGHT_LOG explicito, cada corrida interactiva (main.py) igual
-# se registra sola bajo runs/manual/, para poder inspeccionar telemetria de pruebas
-# manuales (antes solo quedaba lo que se veia por consola). "none" desactiva.
+# se registra sola bajo AIRSIM_RUNS_DIR/manual/, para poder inspeccionar telemetria
+# de pruebas manuales (antes solo quedaba lo que se veia por consola). "none" desactiva.
 FLIGHT_LOG_DISABLED = (FLIGHT_LOG_PATH or "").strip().lower() == "none"
+# 2026-0903, pedido explicito: antes "runs" estaba hardcodeado en el armado del
+# path de cada corrida (mas abajo) -- sin forma de cambiarlo salvo pisando todo
+# el path via AIRSIM_FLIGHT_LOG (lo que tambien pisa el nombre de archivo, no
+# solo el directorio contenedor). AIRSIM_RUNS_DIR solo controla el directorio;
+# default "airsim-runs" (la carpeta "runs" vieja ya no existe, se renombro).
+AIRSIM_RUNS_DIR = os.getenv("AIRSIM_RUNS_DIR", "airsim-runs")
 MISSION_MAX_SECONDS = float(os.getenv("MISSION_MAX_SECONDS", "0.0"))  # 0 = sin límite de tiempo
 MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límite de ciclos
 # 2026-0903, pedido explicito: grabar un .webm (VP8, ver flight_video.py
@@ -223,14 +229,14 @@ def main() -> None:
         if FLIGHT_LOG_PATH:
             flight_log_path = FLIGHT_LOG_PATH
         else:
-            # 2026-0901: un directorio por vuelo (runs/<mission_id>-<inicio
-            # ISO>/), autocontenido -- el .jsonl, el .csv (mismo stem, ver
-            # FlightLogger) y los .png de los fotogramas enviados al VLM
+            # 2026-0901: un directorio por vuelo (AIRSIM_RUNS_DIR/<mission_id>-
+            # <inicio ISO>/), autocontenido -- el .jsonl, el .csv (mismo stem,
+            # ver FlightLogger) y los .png de los fotogramas enviados al VLM
             # (photo-<timestamp>.png, ver FlightLogger._save_delib_frames)
-            # quedan todos juntos, en vez de esparcidos bajo runs/manual/.
+            # quedan todos juntos, en vez de esparcidos bajo AIRSIM_RUNS_DIR/manual/.
             iso_ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             run_dir_name = f"{mission_id}-{iso_ts}"
-            flight_log_path = os.path.join("runs", run_dir_name, f"{run_dir_name}.jsonl")
+            flight_log_path = os.path.join(AIRSIM_RUNS_DIR, run_dir_name, f"{run_dir_name}.jsonl")
 
         flight_logger = FlightLogger(
             flight_log_path,

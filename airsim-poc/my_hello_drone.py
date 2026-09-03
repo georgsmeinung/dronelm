@@ -7,7 +7,7 @@ import pprint
 import cv2
 from dotenv import load_dotenv
 
-# connect to the AirSim simulator
+# conectar al simulador AirSim
 load_dotenv()
 airsim_ip = os.getenv("AIRSIM_IP", "")
 if airsim_ip:
@@ -74,5 +74,5 @@ airsim.wait_key('Press any key to reset to original state')
 client.reset()
 client.armDisarm(False)
 
-# that's enough fun for now. let's quit cleanly
+# suficiente diversión por ahora, salgamos prolijamente
 client.enableApiControl(False)

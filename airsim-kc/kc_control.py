@@ -35,7 +35,7 @@ class OrbitNavigator:
         self.next_snapshot = None
         self.z = None
         self.snapshot_index = 0
-        self.takeoff = False  # whether we did a take off
+        self.takeoff = False  # si ya hicimos el takeoff
 
         if self.snapshots > 0:
             self.snapshot_delta = 360 / self.snapshots
@@ -46,7 +46,7 @@ class OrbitNavigator:
         if len(center) != 2:
             raise Exception("Expecting '[x,y]' for the center direction vector")
 
-        # center is just a direction vector, so normalize it to compute the actual cx,cy locations.
+        # center es solo un vector de dirección, así que lo normalizamos para calcular las posiciones cx,cy reales.
         cx = float(center[0])
         cy = float(center[1])
         length = math.sqrt((cx * cx) + (cy * cy))
@@ -60,7 +60,7 @@ class OrbitNavigator:
         self.client.enableApiControl(True)
 
         self.home = self.client.getMultirotorState().kinematics_estimated.position
-        # check that our home position is stable
+        # chequea que nuestra posición home sea estable
         start = time.time()
         count = 0
         while count < 100:
@@ -82,11 +82,11 @@ class OrbitNavigator:
         print("arming the drone...")
         self.client.armDisarm(True)
 
-        # AirSim uses NED coordinates so negative axis is up.
+        # AirSim usa coordenadas NED, así que el eje negativo es hacia arriba.
         start = self.client.getMultirotorState().kinematics_estimated.position
 
         print("already flying so we will orbit at current altitude {}".format(start.z_val))
-        z = start.z_val  # use current altitude then
+        z = start.z_val  # usa la altitud actual entonces
 
         print("climbing to position: {},{},{}".format(start.x_val, start.y_val, z))
         self.client.moveToPositionAsync(start.x_val, start.y_val, z, self.speed).join()
@@ -97,14 +97,14 @@ class OrbitNavigator:
         self.start_angle = None
         self.next_snapshot = None
 
-        # ramp up time
+        # tiempo de ramp up
         ramptime = self.radius / 10
         self.start_time = time.time()
 
         while count < self.iterations:
             if 0 < self.snapshots <= self.snapshot_index:
                 break
-            # ramp up to full speed in smooth increments so we don't start too aggressively.
+            # hace ramp up a velocidad completa en incrementos suaves para no arrancar demasiado agresivo.
             now = time.time()
             speed = self.speed
             diff = now - self.start_time
@@ -117,7 +117,7 @@ class OrbitNavigator:
 
             lookahead_angle = speed / self.radius
 
-            # compute current angle
+            # calcula el ángulo actual
             pos = self.client.getMultirotorState().kinematics_estimated.position
             dx = pos.x_val - self.center.x_val
             dy = pos.y_val - self.center.y_val
@@ -126,7 +126,7 @@ class OrbitNavigator:
 
             camera_heading = (angle_to_center - math.pi) * 180 / math.pi
 
-            # compute lookahead
+            # calcula el lookahead
             lookahead_x = self.center.x_val + self.radius * math.cos(angle_to_center + lookahead_angle)
             lookahead_y = self.center.y_val + self.radius * math.sin(angle_to_center + lookahead_angle)
 
@@ -143,8 +143,8 @@ class OrbitNavigator:
         self.client.moveToPositionAsync(start.x_val, start.y_val, z, 2).join()
 
     def track_orbits(self, angle):
-        # tracking # of completed orbits is surprisingly tricky to get right in order to handle random wobbles
-        # about the starting point.  So we watch for complete 1/2 orbits to avoid that problem.
+        # llevar la cuenta de las órbitas completadas es sorprendentemente difícil de lograr bien porque hay que manejar
+        # las oscilaciones al azar alrededor del punto de partida. Por eso vigilamos medias órbitas completas para evitar ese problema.
         if angle < 0:
             angle += 360
 
@@ -159,12 +159,12 @@ class OrbitNavigator:
             self.quarter = False
             return False
 
-        # now we just have to watch for a smooth crossing from negative diff to positive diff
+        # ahora solo hay que vigilar un cruce suave de diff negativo a diff positivo
         if self.previous_angle is None:
             self.previous_angle = angle
             return False
 
-            # ignore the click over from 360 back to 0
+            # ignora el salto de 360 de vuelta a 0
         if self.previous_angle > 350 and angle < 10:
             if self.snapshot_delta and self.next_snapshot >= 360:
                 self.next_snapshot -= 360
@@ -184,8 +184,8 @@ class OrbitNavigator:
             self.quarter = True
 
         if self.quarter and self.previous_diff is not None and diff != self.previous_diff:
-            # watch direction this diff is moving if it switches from shrinking to growing
-            # then we passed the starting point.
+            # vigila la dirección en que se mueve este diff; si pasa de reducirse a crecer
+            # entonces ya pasamos el punto de partida.
             direction = self.sign(self.previous_diff - diff)
             if self.previous_sign is None:
                 self.previous_sign = direction
@@ -200,18 +200,18 @@ class OrbitNavigator:
         return crossing
 
     def take_snapshot(self):
-        # first hold our current position so drone doesn't try and keep flying while we take the picture.
+        # primero mantiene la posición actual para que el drone no siga volando mientras sacamos la foto.
         pos = self.client.getMultirotorState().kinematics_estimated.position
         self.client.moveToPositionAsync(pos.x_val, pos.y_val, self.z, 0.5, 10, airsim.DrivetrainType.MaxDegreeOfFreedom,
                                         airsim.YawMode(False, self.camera_heading)).join()
         responses = self.client.simGetImages(
-            [airsim.ImageRequest(1, airsim.ImageType.Scene)])  # scene vision image in png format
+            [airsim.ImageRequest(1, airsim.ImageType.Scene)])  # imagen de la escena en formato png
         response = responses[0]
         filename = "photo_" + str(self.snapshot_index)
         self.snapshot_index += 1
         airsim.write_file(os.path.normpath(filename + '.png'), response.image_data_uint8)
         print("Saved snapshot: {}".format(filename))
-        self.start_time = time.time()  # cause smooth ramp up to happen again after photo is taken.
+        self.start_time = time.time()  # hace que el ramp up suave vuelva a ocurrir después de sacar la foto.
 
     def sign(self, s):
         if s < 0:
@@ -241,13 +241,13 @@ class SimpleTerminalController:
         self.nav = None
         self.maxmin_vel = maxmin_velocity
 
-        # Inline keyboard listener state (was KeyController)
+        # Estado del listener de teclado inline (antes era KeyController)
         self._pressed_keys: list = []
         self._listener: Listener = None
         self.target_z = None
 
     # -------------------------------------------------------------------------
-    # Connection / setup
+    # Conexión / setup
     # -------------------------------------------------------------------------
 
     def confirm_connection(self):
@@ -255,7 +255,7 @@ class SimpleTerminalController:
         self.client.enableApiControl(True)
 
     def setup_segmentation_colors(self):
-        """Assign segmentation IDs to scene objects."""
+        """Asigna IDs de segmentación a los objetos de la escena."""
         self.set_bg_color(color_id=BG)
         self.change_color("segment_gate", LAND)
 
@@ -267,7 +267,7 @@ class SimpleTerminalController:
             self.change_color(letter, color_id)
 
     # -------------------------------------------------------------------------
-    # Drone actions
+    # Acciones del drone
     # -------------------------------------------------------------------------
 
     def takeoff(self):
@@ -386,20 +386,20 @@ class SimpleTerminalController:
         return np.arctan2(dy, dx) * 180 / np.pi
 
     # -------------------------------------------------------------------------
-    # Velocity / height helpers
+    # Helpers de velocidad / altura
     # -------------------------------------------------------------------------
 
     def _axis_velocity(self, pos_key: str, neg_key: str, current: float) -> float:
-        """Accelerate on key press, dampen on release. Clamps to ±maxmin_vel."""
+        """Acelera al presionar la tecla, amortigua al soltarla. Limita a ±maxmin_vel."""
         pos = KeyCode.from_char(pos_key) in self._pressed_keys
         neg = KeyCode.from_char(neg_key) in self._pressed_keys
-        if pos == neg:          # both or neither → dampen
+        if pos == neg:          # ambas o ninguna → amortigua
             return round(float(np.clip(current * 0.75, -self.maxmin_vel, self.maxmin_vel)), 2)
         delta = 1 if pos else -1
         return round(float(np.clip(current + delta, -self.maxmin_vel, self.maxmin_vel)), 2)
 
     def _axis_yaw(self, pos_key: str, neg_key: str) -> float:
-        """Return yaw rate (deg/s) based on key state."""
+        """Retorna la tasa de yaw (grados/s) según el estado de las teclas."""
         pos = KeyCode.from_char(pos_key) in self._pressed_keys
         neg = KeyCode.from_char(neg_key) in self._pressed_keys
         if pos == neg:
@@ -407,12 +407,12 @@ class SimpleTerminalController:
         return 20.0 if pos else -20.0
 
     def _axis_height(self, pos_key: str, neg_key: str, current_z: float) -> float:
-        """Step height up/down; no change if both or neither pressed."""
+        """Sube/baja la altura de a pasos; no cambia si están ambas o ninguna presionada."""
         pos = KeyCode.from_char(pos_key) in self._pressed_keys
         neg = KeyCode.from_char(neg_key) in self._pressed_keys
         if pos == neg:
             return current_z
-        # In AirSim, Z axis is downwards. Decrease Z to move up, increase to move down.
+        # En AirSim, el eje Z apunta hacia abajo. Hay que disminuir Z para subir y aumentarlo para bajar.
         return current_z - HEIGHT_STEP if pos else current_z + HEIGHT_STEP
 
     @staticmethod
@@ -428,7 +428,7 @@ class SimpleTerminalController:
         return float(np.arctan2(siny, cosy))
 
     # -------------------------------------------------------------------------
-    # Keyboard listener (inlined from KeyController)
+    # Listener de teclado (integrado desde KeyController)
     # -------------------------------------------------------------------------
 
     def _on_press(self, key):
@@ -448,14 +448,14 @@ class SimpleTerminalController:
             self._listener.stop()
 
     # -------------------------------------------------------------------------
-    # Key-control loop
+    # Loop de control por teclado
     # -------------------------------------------------------------------------
 
     def _handle_oneshot_keys(self, previous_keys: set):
         """
-        Execute single-fire actions for keys that were just pressed
-        (i.e. present now but not in the previous frame).
-        Uses a mapping of KeyCode/Key → callable to avoid repetitive if-blocks.
+        Ejecuta acciones de disparo único para teclas recién presionadas
+        (es decir, presentes ahora pero no en el frame anterior).
+        Usa un mapeo de KeyCode/Key → callable para evitar bloques if repetitivos.
         """
         oneshot_actions = {
             KeyCode.from_char('t'): self.takeoff,
@@ -469,7 +469,7 @@ class SimpleTerminalController:
                 action()
 
     def _restart_control(self):
-        """Reset velocity state, show help, and hover."""
+        """Reinicia el estado de velocidad, muestra la ayuda y hace hover."""
         self.clear_terminal()
         self.show_help()
         self.client.hoverAsync().join()
@@ -478,7 +478,7 @@ class SimpleTerminalController:
         print("Keyboard control restarted.")
 
     def _process_movement(self):
-        """Update velocity state and send movement command."""
+        """Actualiza el estado de velocidad y envía el comando de movimiento."""
         if KeyCode.from_char('h') in self._pressed_keys:
             self.client.hoverAsync()
             return
@@ -489,18 +489,18 @@ class SimpleTerminalController:
 
         state = self.client.getMultirotorState()
         
-        # Initialize target_z if not set
+        # Inicializa target_z si no está seteado
         if self.target_z is None:
             self.target_z = state.kinematics_estimated.position.z_val
 
-        # Update target_z via keyboard input (X=up, Z=down)
+        # Actualiza target_z según la entrada de teclado (X=arriba, Z=abajo)
         self.target_z = self._axis_height('x', 'z', self.target_z)
 
-        # Convert body velocity command to world frame
+        # Convierte el comando de velocidad del body frame al frame mundo
         yaw_rad = self._quaternion_to_yaw(state.kinematics_estimated.orientation)
         world_vx, world_vy = self._body_to_world(self.vx, self.vy, yaw_rad)
 
-        # Dynamic tilt compensation to prevent altitude loss during translation
+        # Compensación dinámica de inclinación para evitar la pérdida de altitud durante la traslación
         h_speed = np.sqrt(world_vx**2 + world_vy**2)
         compensation = 0.15 * h_speed
         z_target = self.target_z - compensation
@@ -522,7 +522,7 @@ class SimpleTerminalController:
 
             if Key.esc in keys_set:
                 self._stop_listener()
-                self._pressed_keys.clear()  # Flush pressed keys on exit
+                self._pressed_keys.clear()  # Vacía las teclas presionadas al salir
                 break
             self._handle_oneshot_keys(previous_keys)
             self._process_movement()
@@ -531,7 +531,7 @@ class SimpleTerminalController:
         self.client.hoverAsync().join()
 
     # -------------------------------------------------------------------------
-    # Utility
+    # Utilidades
     # -------------------------------------------------------------------------
 
     def close_connection(self):
@@ -553,7 +553,7 @@ class SimpleTerminalController:
             orient = state.kinematics_estimated.orientation
             gps = state.gps_location
 
-            # Convert quaternion to roll, pitch, yaw (in degrees)
+            # Convierte el quaternion a roll, pitch, yaw (en grados)
             sinr_cosp = 2.0 * (orient.w_val * orient.x_val + orient.y_val * orient.z_val)
             cosr_cosp = 1.0 - 2.0 * (orient.x_val ** 2 + orient.y_val ** 2)
             roll = np.arctan2(sinr_cosp, cosr_cosp) * 180.0 / np.pi
@@ -565,7 +565,7 @@ class SimpleTerminalController:
             cosy_cosp = 1.0 - 2.0 * (orient.y_val ** 2 + orient.z_val ** 2)
             yaw = np.arctan2(siny_cosp, cosy_cosp) * 180.0 / np.pi
 
-            # Map landed state to text
+            # Mapea el landed state a texto
             landed_val = getattr(state, 'landed_state', 0)
             if hasattr(airsim, 'LandedState'):
                 if landed_val == airsim.LandedState.Landed:
@@ -603,11 +603,11 @@ class SimpleTerminalController:
             print(f"Error fetching telemetry: {e}")
 
     def clear_terminal(self):
-        """Clears the terminal screen."""
+        """Limpia la pantalla de la terminal."""
         os.system('cls' if os.name == 'nt' else 'clear')
 
     def show_help(self):
-        """Shows keyboard controls supported."""
+        """Muestra los controles de teclado soportados."""
         print("""
         Keyboard Control:
            [Q] Turn Left    [W] Forward    [E] Turn Right
@@ -623,7 +623,7 @@ class SimpleTerminalController:
         """)
 
     def flush_input_buffer(self):
-        """Flush any pending keyboard inputs from the terminal stdin buffer."""
+        """Vacía cualquier entrada de teclado pendiente en el buffer stdin de la terminal."""
         try:
             if os.name == 'nt':
                 import msvcrt

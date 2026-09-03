@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Enable UTF-8 output on Windows
+# Habilita salida UTF-8 en Windows
 if sys.platform.startswith("win"):
     import io
 
@@ -23,15 +23,15 @@ from KeyController import KeyController
 # TIMEOUT
 from airsim_functions.orbit import OrbitNavigator
 
-TIMEOUT = 1200  # 20 mins
+TIMEOUT = 1200  # 20 minutos
 
-# Mesh ID's
+# ID's de los meshes
 BG = 0
 LAND = 100
 WATER = 200
 SHIP = 300
 
-# Commands:
+# Comandos:
 ARM = "arm"
 CLEAR = "clear"
 DISARM = "disarm"
@@ -52,7 +52,7 @@ RIGHT_FORCE = 1
 LEFT_FORCE = -1
 
 
-# UI Colors and Styles
+# Colores y estilos de la UI
 class UIColors:
     HEADER = "\033[95m"
     BLUE = "\033[94m"
@@ -69,7 +69,7 @@ class UIColors:
 class UIFormatter:
     @staticmethod
     def print_header(text: str):
-        """Print a formatted header"""
+        """Imprime un header formateado"""
         width = 80
         print(f"\n{UIColors.BOLD}{UIColors.CYAN}{'─' * width}{UIColors.END}")
         print(f"{UIColors.BOLD}{UIColors.CYAN}▸ {text}{UIColors.END}")
@@ -77,7 +77,7 @@ class UIFormatter:
 
     @staticmethod
     def print_section(title: str, content: str = ""):
-        """Print a section with title and optional content"""
+        """Imprime una sección con título y contenido opcional"""
         print(f"{UIColors.BOLD}{UIColors.BLUE}┌─ {title}{UIColors.END}")
         if content:
             for line in content.split("\n"):
@@ -87,43 +87,43 @@ class UIFormatter:
 
     @staticmethod
     def print_success(message: str):
-        """Print a success message"""
+        """Imprime un mensaje de éxito"""
         print(f"{UIColors.GREEN}✓ {message}{UIColors.END}")
 
     @staticmethod
     def print_error(message: str):
-        """Print an error message"""
+        """Imprime un mensaje de error"""
         print(f"{UIColors.RED}✗ {message}{UIColors.END}")
 
     @staticmethod
     def print_info(message: str):
-        """Print an info message"""
+        """Imprime un mensaje informativo"""
         print(f"{UIColors.CYAN}ℹ {message}{UIColors.END}")
 
     @staticmethod
     def print_warning(message: str):
-        """Print a warning message"""
+        """Imprime un mensaje de advertencia"""
         print(f"{UIColors.YELLOW}⚠ {message}{UIColors.END}")
 
     @staticmethod
     def format_value(label: str, value, unit: str = ""):
-        """Format a key-value pair for display"""
+        """Formatea un par clave-valor para mostrar"""
         return f"{UIColors.GRAY}{label}:{UIColors.END} {UIColors.BOLD}{value}{UIColors.END} {unit}"
 
     @staticmethod
     def print_table(headers: List[str], rows: List[List[str]]):
-        """Print a formatted table"""
+        """Imprime una tabla formateada"""
         col_widths = [
             max(len(h), max((len(str(r[i])) for r in rows), default=0))
             for i, h in enumerate(headers)
         ]
 
-        # Header
+        # Header (encabezado)
         header_line = " │ ".join(f"{h:<{col_widths[i]}}" for i, h in enumerate(headers))
         print(f"{UIColors.BOLD}{UIColors.BLUE}{header_line}{UIColors.END}")
         print(f"{UIColors.BLUE}{'─' * len(header_line)}{UIColors.END}")
 
-        # Rows
+        # Filas
         for row in rows:
             row_line = " │ ".join(
                 f"{str(r):<{col_widths[i]}}" for i, r in enumerate(row)
@@ -138,7 +138,7 @@ class CommandHistory:
         self.position = 0
 
     def add(self, command: str):
-        """Add a command to history"""
+        """Agrega un comando al historial"""
         if command.strip():
             self.history.append(command)
             if len(self.history) > self.max_size:
@@ -146,14 +146,14 @@ class CommandHistory:
             self.position = len(self.history)
 
     def get_previous(self) -> Optional[str]:
-        """Get previous command from history"""
+        """Obtiene el comando anterior del historial"""
         if self.position > 0:
             self.position -= 1
             return self.history[self.position]
         return None
 
     def get_next(self) -> Optional[str]:
-        """Get next command from history"""
+        """Obtiene el siguiente comando del historial"""
         if self.position < len(self.history) - 1:
             self.position += 1
             return self.history[self.position]
@@ -168,7 +168,7 @@ class AdvancedTerminalController:
         drive_type: airsim.DrivetrainType = airsim.DrivetrainType.ForwardOnly,
         client: airsim.MultirotorClient = None,
     ):
-        # Should this class print to terminal
+        # Si esta clase debe imprimir en la terminal
         self.verbatim = verbatim
         self.DriveType = drive_type
         self.client = client
@@ -180,10 +180,10 @@ class AdvancedTerminalController:
             else:
                 self.client = airsim.MultirotorClient()
         self.confirm_connection()
-        # Segmentation setup
+        # Configuración de la segmentación
         self.setup_segmentation_colors()
 
-        # Movement and constraints:
+        # Movimiento y restricciones:
         self.vx = 0
         self.vy = 0
         self.vz = 0
@@ -195,7 +195,7 @@ class AdvancedTerminalController:
         self.show_welcome()
 
     def show_welcome(self):
-        """Display welcome screen"""
+        """Muestra la pantalla de bienvenida"""
         UIFormatter.print_header("AirSim Advanced Control System")
         print(f"{UIColors.GRAY}Connected to AirSim simulation{UIColors.END}\n")
         self.show_help()
@@ -206,17 +206,17 @@ class AdvancedTerminalController:
 
     def setup_segmentation_colors(self):
         """
-        Find all objects and make them one color
-        then find the specific objects and turn them into different colors.
+        Busca todos los objetos y les asigna un mismo color,
+        luego busca los objetos específicos y los pinta con colores distintos.
         """
         self.set_bg_color(color_id=BG)
         self.change_color("segment_gate", LAND)
 
     def change_color(self, name, id):
         success = self.client.simSetSegmentationObjectID(name + "[\w]*", id, True)
-        # Suppress verbose color change messages during initialization
-        # Only log errors if explicitly requested
-        if False:  # Disabled to reduce startup noise
+        # Suprime los mensajes verbosos de cambio de color durante la inicialización
+        # Solo loguea errores si se pide explícitamente
+        if False:  # Deshabilitado para reducir el ruido en el arranque
             status = (
                 f"{UIColors.GREEN}success{UIColors.END}"
                 if success
@@ -427,7 +427,7 @@ class AdvancedTerminalController:
                 ndigits=2,
             )
 
-        # nothing is pressed, smoothly lowering the value
+        # no se está presionando nada, bajando el valor suavemente
         return round(
             number=float(np.clip(new_vel * 0.75, -self.maxmin_vel, self.maxmin_vel)),
             ndigits=2,
@@ -466,47 +466,47 @@ class AdvancedTerminalController:
         body_vx: float, body_vy: float, yaw_degrees: float
     ) -> tuple:
         """
-        Convert velocity from drone body frame to global frame.
-        body_vx: forward/backward velocity in body frame
-        body_vy: left/right velocity in body frame
-        yaw_degrees: drone heading in degrees (0 = North, 90 = East)
-        Returns: (global_vx, global_vy)
+        Convierte la velocidad del body frame del drone al frame global.
+        body_vx: velocidad adelante/atrás en el body frame
+        body_vy: velocidad izquierda/derecha en el body frame
+        yaw_degrees: heading del drone en grados (0 = Norte, 90 = Este)
+        Retorna: (global_vx, global_vy)
         """
-        # Convert yaw to radians
+        # Convierte el yaw a radianes
         yaw_rad = np.radians(yaw_degrees)
 
-        # Rotation matrix for body frame to global frame
+        # Matriz de rotación de body frame a frame global
         cos_yaw = np.cos(yaw_rad)
         sin_yaw = np.sin(yaw_rad)
 
-        # Apply rotation
+        # Aplica la rotación
         global_vx = body_vx * cos_yaw - body_vy * sin_yaw
         global_vy = body_vx * sin_yaw + body_vy * cos_yaw
 
         return float(global_vx), float(global_vy)
 
     def enter_keyboard_control(self):
-        # Use plain text to avoid ANSI character display issues
+        # Usa texto plano para evitar problemas de visualización con caracteres ANSI
         print("\n" + "=" * 80)
         print("Keyboard Control Mode".center(80))
         print("=" * 80)
         print("Press 't' to return to command mode\n")
 
-        # Disable echo on Windows to prevent key characters from appearing
+        # Deshabilita el echo en Windows para evitar que aparezcan los caracteres de las teclas
         if sys.platform.startswith("win"):
             try:
                 import ctypes
                 from ctypes import wintypes
 
-                # Get handle to stdout
+                # Obtiene el handle de stdout
                 kernel32 = ctypes.windll.kernel32
                 handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE = -11
 
-                # Get current console mode
+                # Obtiene el modo de consola actual
                 mode = wintypes.DWORD()
                 kernel32.GetConsoleMode(handle, ctypes.byref(mode))
 
-                # Disable echo (ENABLE_ECHO_INPUT = 0x0004)
+                # Deshabilita el echo (ENABLE_ECHO_INPUT = 0x0004)
                 ENABLE_ECHO_INPUT = 0x0004
                 mode.value &= ~ENABLE_ECHO_INPUT
                 kernel32.SetConsoleMode(handle, mode)
@@ -536,7 +536,7 @@ class AdvancedTerminalController:
                     quad_vel = self.client.getMultirotorState().kinematics_estimated.linear_velocity
                     quad_state = self.client.getMultirotorState()
 
-                    # Get body frame velocities from keyboard input
+                    # Obtiene las velocidades del body frame a partir de la entrada de teclado
                     body_vx = self.handle_key_pressed(
                         keys_to_check=["w", "s"],
                         pressed_keys=keys,
@@ -548,11 +548,11 @@ class AdvancedTerminalController:
                         current_vel=quad_vel.y_val,
                     )
 
-                    # Get drone orientation to convert body frame to global frame
-                    # Extract yaw from quaternion
+                    # Obtiene la orientación del drone para convertir el body frame a frame global
+                    # Extrae el yaw del quaternion
                     orientation = quad_state.kinematics_estimated.orientation
-                    # Convert quaternion to yaw (simplified - assuming mostly yaw rotation)
-                    # Using standard quaternion to euler angles formula
+                    # Convierte el quaternion a yaw (simplificado - asumiendo rotación mayormente en yaw)
+                    # Usando la fórmula estándar de quaternion a ángulos de Euler
                     qw, qx, qy, qz = (
                         orientation.w_val,
                         orientation.x_val,
@@ -560,13 +560,13 @@ class AdvancedTerminalController:
                         orientation.z_val,
                     )
 
-                    # Calculate yaw from quaternion
+                    # Calcula el yaw a partir del quaternion
                     yaw_rad = np.arctan2(
                         2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz)
                     )
                     yaw_deg = np.degrees(yaw_rad)
 
-                    # Convert body frame velocities to global frame
+                    # Convierte las velocidades del body frame al frame global
                     global_vx, global_vy = self.body_frame_to_global(
                         body_vx, body_vy, yaw_deg
                     )
@@ -584,7 +584,7 @@ class AdvancedTerminalController:
                         self.client.getMultirotorState().kinematics_estimated.position
                     )
 
-                    # Display telemetry in simple format (no colors to avoid escape char issues)
+                    # Muestra la telemetría en formato simple (sin colores para evitar problemas con caracteres de escape)
                     telemetry_line = (
                         f"VX: {self.vx:6.2f} m/s │ "
                         f"VY: {self.vy:6.2f} m/s │ "
@@ -592,7 +592,7 @@ class AdvancedTerminalController:
                         f"Y: {current_pos.y_val:8.2f} m │ "
                         f"Z: {current_pos.z_val:8.2f} m"
                     )
-                    # Pad to clear old content and print on same line
+                    # Rellena para limpiar el contenido anterior e imprime en la misma línea
                     display_line = telemetry_line.ljust(100)
                     print(f"\r{display_line}", end="", flush=True)
 
@@ -605,7 +605,7 @@ class AdvancedTerminalController:
                         airsim.YawMode(True, self.yaw),
                     ).join()
         finally:
-            # Re-enable echo on Windows if it was disabled
+            # Vuelve a habilitar el echo en Windows si se había deshabilitado
             if sys.platform.startswith("win") and echo_disabled:
                 try:
                     import ctypes
@@ -614,11 +614,11 @@ class AdvancedTerminalController:
                     kernel32 = ctypes.windll.kernel32
                     handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE = -11
 
-                    # Get current console mode
+                    # Obtiene el modo de consola actual
                     mode = wintypes.DWORD()
                     kernel32.GetConsoleMode(handle, ctypes.byref(mode))
 
-                    # Re-enable echo (ENABLE_ECHO_INPUT = 0x0004)
+                    # Vuelve a habilitar el echo (ENABLE_ECHO_INPUT = 0x0004)
                     ENABLE_ECHO_INPUT = 0x0004
                     mode.value |= ENABLE_ECHO_INPUT
                     kernel32.SetConsoleMode(handle, mode)
@@ -626,21 +626,21 @@ class AdvancedTerminalController:
                     if self.verbatim:
                         UIFormatter.print_warning(f"Could not re-enable echo: {str(e)}")
 
-            # Clean up after exiting keyboard control
+            # Limpieza al salir del modo de control por teclado
             print(f"\n")
             UIFormatter.print_success("Keyboard control mode exited")
             self.client.hoverAsync().join()
 
-            # Stop the keyboard controller listener and clear key buffer
+            # Detiene el listener del keyboard controller y limpia el buffer de teclas
             kc.listener.stop()
-            kc.key_pressed.clear()  # Clear all remaining pressed keys
+            kc.key_pressed.clear()  # Limpia todas las teclas que quedaron presionadas
 
-            # Wait to let terminal settle and avoid key echo
+            # Espera a que la terminal se estabilice y evita el echo de teclas
             time.sleep(0.5)
 
-            # Clear any leftover input in the buffer
+            # Limpia cualquier entrada remanente en el buffer
             if sys.platform.startswith("win"):
-                # Windows: use Windows API to flush input buffer
+                # Windows: usa la API de Windows para vaciar el buffer de entrada
                 try:
                     import ctypes
 
@@ -653,13 +653,13 @@ class AdvancedTerminalController:
                             f"Could not flush input buffer: {str(e)}"
                         )
             else:
-                # Unix/Linux: use termios to flush input
+                # Unix/Linux: usa termios para vaciar la entrada
                 try:
                     import termios
 
                     termios.tcflush(sys.stdin, termios.TCIFLUSH)
                 except (ImportError, OSError):
-                    # Not on Unix or stdin not a tty, that's ok
+                    # No estamos en Unix o stdin no es una tty, no pasa nada
                     pass
 
     def print_stats(self):
@@ -707,7 +707,7 @@ class AdvancedTerminalController:
             UIFormatter.print_error(f"Failed to retrieve telemetry: {str(e)}")
 
     def clear_terminal(self):
-        """Clears the terminal screen."""
+        """Limpia la pantalla de la terminal."""
         if os.name == "nt":
             _ = os.system("cls")
         else:
@@ -715,7 +715,7 @@ class AdvancedTerminalController:
         self.show_welcome()
 
     def show_help(self):
-        """Shows commands supported with improved formatting"""
+        """Muestra los comandos soportados con formato mejorado"""
         UIFormatter.print_header("Available Commands")
 
         commands = [
@@ -752,7 +752,7 @@ class AdvancedTerminalController:
         UIFormatter.print_success("Simulation reset complete")
 
     def run(self):
-        # Map command strings to lambda functions to normalize the input signature.
+        # Mapea los strings de comando a funciones lambda para normalizar la firma de entrada.
         command_dispatch = {
             ARM: lambda _: self.arm(),
             CLEAR: lambda _: self.clear_terminal(),
@@ -771,7 +771,7 @@ class AdvancedTerminalController:
 
         while True:
             try:
-                # Get input and clean it
+                # Obtiene la entrada y la limpia
                 timestamp = datetime.now().strftime("%H:%M:%S")
                 raw_input = input(
                     f"\n{UIColors.GRAY}[{timestamp}]{UIColors.END} {UIColors.BOLD}›{UIColors.END} "
@@ -783,10 +783,10 @@ class AdvancedTerminalController:
                 args = raw_input.split(" ")
                 command_type = args[0].lower()
 
-                # 1. Look up the function (returns None if not found)
+                # 1. Busca la función (retorna None si no se encuentra)
                 action = command_dispatch.get(command_type)
 
-                # 2. Execute or handle error
+                # 2. Ejecuta o maneja el error
                 if action:
                     action(args)
                 else:
@@ -794,7 +794,7 @@ class AdvancedTerminalController:
                         f"Unknown command: '{command_type}' (type 'help' for available commands)"
                     )
 
-                # 3. Handle loop exit condition
+                # 3. Maneja la condición de salida del loop
                 if command_type == STOP.lower():
                     UIFormatter.print_header("Shutting Down")
                     break

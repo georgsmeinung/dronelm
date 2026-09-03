@@ -1,4 +1,4 @@
-"""Tests for MissionManifest schema validation."""
+"""Tests de validación del schema de MissionManifest."""
 from __future__ import annotations
 
 import json
@@ -75,7 +75,7 @@ def test_save_and_load(tmp_path: Path) -> None:
 
 
 def test_against_bundled_json_schema() -> None:
-    """The Pydantic model must accept what the JSON Schema documents."""
+    """El modelo Pydantic debe aceptar lo que documenta el JSON Schema."""
     schema_path = (
         Path(__file__).resolve().parent.parent
         / "src"
@@ -86,7 +86,7 @@ def test_against_bundled_json_schema() -> None:
     assert schema_path.exists(), "bundled JSON Schema is missing"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     assert "mission_id" in schema["required"]
-    # Manifest should be loadable as JSON and pass validation.
+    # El manifest debe poder cargarse como JSON y pasar la validación.
     manifest = MissionManifest.from_dict(_good_payload())
     decoded = json.loads(manifest.to_json())
     for key in schema["required"]:

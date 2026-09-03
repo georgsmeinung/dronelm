@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Real-time video capture from AirSim with YOLOv8 inference.
+"""Captura de video en tiempo real desde AirSim con inferencia YOLOv8.
 
-This script continuously captures frames from the AirSim simulator, runs the
-YOLOv8 segmentation model on each frame, draws the resulting masks onto the
-frame, displays the annotated video stream, and optionally saves the output to
-a video file.
+Este script captura frames de forma continua desde el simulador AirSim, corre
+el modelo de segmentación YOLOv8 sobre cada frame, dibuja las máscaras
+resultantes sobre el frame, muestra el video anotado y opcionalmente guarda
+la salida en un archivo de video.
 
-Usage:
+Uso:
     python capture_video.py [model_path] [output_video_path]
 
-    model_path        Path to a YOLOv8 model (e.g., "yolov8n-seg.pt").
-                       If omitted, the default "yolov8n-seg.pt" will be used.
-    output_video_path Path to an output video file (e.g., "output.mp4").
-                       If omitted, the video will not be saved.
+    model_path        Ruta a un modelo YOLOv8 (por ej., "yolov8n-seg.pt").
+                       Si se omite, se usa el default "yolov8n-seg.pt".
+    output_video_path Ruta a un archivo de video de salida (por ej., "output.mp4").
+                       Si se omite, el video no se guarda.
 """
 
 import os
@@ -22,18 +22,18 @@ import numpy as np
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Load environment variables from .env if present
+# Carga las variables de entorno desde .env si existe
 load_dotenv()
 
-# Ensure the script directory is on the PYTHONPATH
+# Asegura que el directorio del script esté en el PYTHONPATH
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
     sys.path.append(script_dir)
 
-# Local imports – AirSim client wrapper
+# Imports locales – wrapper del cliente de AirSim
 from src.hardware.airsim_client import AirSimClient
 
-# YOLOv8 – ultralytics package
+# YOLOv8 – paquete ultralytics
 try:
     # pyrefly: ignore [missing-import]
     from ultralytics import YOLO
@@ -44,11 +44,12 @@ except ImportError:
 
 
 def init_yolo(model_path: str = None) -> "YOLO":
-    """Initialise the YOLOv8 model.
+    """Inicializa el modelo YOLOv8.
 
     Args:
-        model_path: Optional path to a custom YOLOv8 model. If ``None`` the
-            default pretrained "yolov8n-seg.pt" (nano‑segment) is loaded.
+        model_path: Ruta opcional a un modelo YOLOv8 personalizado. Si es
+            ``None`` se carga el default preentrenado "yolov8n-seg.pt"
+            (nano-segment).
     """
     if model_path and os.path.isfile(model_path):
         print(f"[+] Loading YOLOv8 model from: {model_path}")
@@ -60,12 +61,13 @@ def init_yolo(model_path: str = None) -> "YOLO":
 
 
 def init_video_writer(frame_width: int, frame_height: int, output_path: str):
-    """Create a ``cv2.VideoWriter`` instance.
+    """Crea una instancia de ``cv2.VideoWriter``.
 
-    The codec used is ``mp4v`` which works with most MP4 players.
+    El códec utilizado es ``mp4v``, que funciona con la mayoría de los
+    reproductores de MP4.
     """
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    fps = 60  # Target frames‑per‑second; adjust if needed
+    fps = 60  # FPS objetivo; ajustar si hace falta
     writer = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
     if not writer.isOpened():
         raise RuntimeError(f"Failed to open video writer for {output_path}")
@@ -74,24 +76,24 @@ def init_video_writer(frame_width: int, frame_height: int, output_path: str):
 
 
 def main():
-    # Parse optional arguments
+    # Parsea los argumentos opcionales
     model_path = sys.argv[1] if len(sys.argv) > 1 else None
     output_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    # Initialise YOLO model
+    # Inicializa el modelo YOLO
     yolo_model = init_yolo(model_path)
 
-    # Initialise AirSim client
+    # Inicializa el cliente de AirSim
     client = AirSimClient()
     print("[+] Connecting to AirSim...")
     if not client.connect():
         print("[!] Could not connect to AirSim – exiting.")
         sys.exit(1)
 
-    # Prepare optional video writer
+    # Prepara el video writer opcional
     video_writer = None
     if output_path:
-        # We'll initialise the writer after the first frame to know the resolution
+        # Inicializamos el writer recién después del primer frame, para conocer la resolución
         video_writer = "pending"
 
     print("[+] Starting real‑time capture. Press 'q' to quit.")
@@ -102,30 +104,30 @@ def main():
                 print("[!] Received empty frame – skipping.")
                 continue
 
-            # ``img`` is a NumPy array in RGB order (as used by PIL). Convert to BGR for OpenCV.
+            # ``img`` es un array de NumPy en orden RGB (como usa PIL). Se convierte a BGR para OpenCV.
             frame_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-            # Run YOLO inference – results is a list with a single element for a single image
+            # Corre la inferencia de YOLO – results es una lista con un único elemento para una sola imagen
             results = yolo_model(frame_bgr)
-            # ``plot`` returns the annotated image as a NumPy array (BGR)
+            # ``plot`` devuelve la imagen anotada como array de NumPy (BGR)
             annotated = results[0].plot()
 
-            # Initialise the video writer now that we know the size
+            # Inicializa el video writer ahora que ya conocemos el tamaño
             if video_writer == "pending":
                 h, w = annotated.shape[:2]
                 video_writer = init_video_writer(w, h, output_path)
 
-            # Show the annotated frame
+            # Muestra el frame anotado
             cv2.imshow("AirSim + YOLOv8", annotated)
             if isinstance(video_writer, cv2.VideoWriter):
                 video_writer.write(annotated)
 
-            # Exit on 'q' key press
+            # Sale al presionar la tecla 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print("[+] 'q' pressed – exiting loop.")
                 break
     finally:
-        # Clean‑up resources
+        # Libera los recursos
         if isinstance(video_writer, cv2.VideoWriter):
             video_writer.release()
             print("[+] Video file saved and writer released.")

@@ -1,14 +1,14 @@
-"""Hands the compiled manifest to ``airsim-loop``.
+"""Le entrega el manifiesto compilado a ``airsim-loop``.
 
-``airsim-loop`` is a separate Python package with its own graph, but it
-exports ``compile_workflow`` and ``DroneState``. We invoke it in-process
-if importable, otherwise we fall back to ``python -m`` as a subprocess.
+``airsim-loop`` es un paquete Python separado con su propio grafo, pero
+exporta ``compile_workflow`` y ``DroneState``. Lo invocamos in-process si
+es importable; si no, caemos a ``python -m`` como subproceso.
 
-The :class:`LoopRunner` centralises three things:
+:class:`LoopRunner` centraliza tres cosas:
 
-* AirSim pre-flight (delegated to :class:`AirSimBridge`).
-* Pre-prompt injection (Step 3 of the pipeline).
-* Running the tactical loop until ``RETURN_TO_LAUNCH`` or KeyboardInterrupt.
+* El pre-vuelo de AirSim (delegado a :class:`AirSimBridge`).
+* La inyección de pre-prompt (paso 3 del pipeline).
+* Correr el lazo táctico hasta ``RETURN_TO_LAUNCH`` o KeyboardInterrupt.
 """
 from __future__ import annotations
 
@@ -25,11 +25,11 @@ from .airsim_bridge import AirSimBridge, BridgeError
 
 
 class LoopRunnerError(RuntimeError):
-    """Raised when the tactical loop cannot be launched."""
+    """Se lanza cuando el lazo táctico no puede iniciarse."""
 
 
 class LoopRunner:
-    """Coordinates AirSim pre-flight + invocation of ``airsim-loop``."""
+    """Coordina el pre-vuelo de AirSim + la invocación de ``airsim-loop``."""
 
     LOOP_PACKAGE = "airsim_loop"
 
@@ -45,11 +45,11 @@ class LoopRunner:
         self._manifest = manifest
         self._settings = settings or get_settings()
         self._bridge = bridge or AirSimBridge(settings=self._settings)
-        self._loop_path = loop_path  # if None we use in-process import
+        self._loop_path = loop_path  # si es None, usamos import in-process
         self._loop_hz = max(loop_hz, 0.05)
 
     # ------------------------------------------------------------------ #
-    # Properties                                                        #
+    # Propiedades                                                       #
     # ------------------------------------------------------------------ #
     @property
     def manifest(self) -> MissionManifest:
@@ -65,20 +65,20 @@ class LoopRunner:
         os.environ[f"STOP_MISSION_{self._manifest.mission_id}"] = "1"
 
     # ------------------------------------------------------------------ #
-    # Pre-prompt injection                                              #
+    # Inyección de pre-prompt                                           #
     # ------------------------------------------------------------------ #
     def build_initial_state(self) -> Dict[str, Any]:
-        """Build the initial ``DroneState`` injected into ``airsim-loop``."""
+        """Arma el ``DroneState`` inicial inyectado en ``airsim-loop``."""
         return {
             "mission_id": self._manifest.mission_id,
             "waypoints": [w.model_dump() for w in self._manifest.waypoints],
         }
 
     # ------------------------------------------------------------------ #
-    # Public API                                                        #
+    # API pública                                                       #
     # ------------------------------------------------------------------ #
     def run(self, *, takeoff_altitude: Optional[float] = None) -> None:
-        """Take off + drive the tactical loop until interrupted."""
+        """Despega y conduce el lazo táctico hasta que se interrumpa."""
         import os
         os.environ.pop(f"STOP_MISSION_{self._manifest.mission_id}", None)
         try:
@@ -100,7 +100,7 @@ class LoopRunner:
             self._bridge.disconnect()
 
     # ------------------------------------------------------------------ #
-    # In-process execution                                              #
+    # Ejecución in-process                                              #
     # ------------------------------------------------------------------ #
     def _run_in_process(self, initial_state: Dict[str, Any]) -> None:
         try:
@@ -141,7 +141,7 @@ class LoopRunner:
             print("\n[LoopRunner] KeyboardInterrupt — stopping loop.")
 
     # ------------------------------------------------------------------ #
-    # Subprocess fallback                                               #
+    # Fallback a subproceso                                             #
     # ------------------------------------------------------------------ #
     def _run_as_subprocess(self, initial_state: Dict[str, Any]) -> None:
         import os
@@ -158,22 +158,22 @@ class LoopRunner:
             self._manifest.to_json(indent=2), encoding="utf-8"
         )
         
-        # Prepare environment variables for the new process
+        # Preparar las variables de entorno para el nuevo proceso
         env = os.environ.copy()
         env["AIRSIM_PLAN_MANIFEST"] = str(env_path)
 
         try:
-            # Launch loop script in a completely isolated OS process with unbuffered output (-u)
+            # Lanzar el script del loop en un proceso del SO completamente aislado, con salida sin buffer (-u)
             process = subprocess.Popen(
                 [sys.executable, "-u", str(script)],
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1  # line buffered
+                bufsize=1  # buffer por línea
             )
-            
-            # Print output in real-time directly to sys.stdout
+
+            # Imprimir la salida en tiempo real directo a sys.stdout
             if process.stdout:
                 for line in process.stdout:
                     sys.stdout.write(line)

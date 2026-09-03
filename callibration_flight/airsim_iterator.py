@@ -4,12 +4,12 @@ import os
 import argparse
 from datetime import datetime
 
-# Default number of iterations
+# Cantidad de iteraciones por defecto
 NUM_ITERATIONS = 10
 
 
 def parse_arguments():
-    """Parse command-line arguments."""
+    """Parsea los argumentos de línea de comandos."""
     parser = argparse.ArgumentParser(
         description="Run airsim_commander.py multiple times for flight simulation recreation."
     )
@@ -27,7 +27,7 @@ def parse_arguments():
     )
     args = parser.parse_args()
     
-    # Validate input
+    # Validar la entrada
     if args.iterations <= 0:
         print(f"Error: Number of iterations must be positive. Got: {args.iterations}")
         sys.exit(1)
@@ -37,22 +37,22 @@ def parse_arguments():
 
 def run_iteration(iteration_num, script_path, path_file):
     """
-    Run a single iteration of airsim_commander.py.
-    
+    Corre una sola iteración de airsim_commander.py.
+
     Args:
-        iteration_num: Current iteration number (1-indexed)
-        script_path: Path to airsim_commander.py
-        path_file: Path to the mission command file passed to airsim_commander.py
-    
+        iteration_num: número de iteración actual (empieza en 1)
+        script_path: ruta a airsim_commander.py
+        path_file: ruta al archivo de comandos de misión que se le pasa a airsim_commander.py
+
     Returns:
-        Tuple (success: bool, error_msg: str or None)
+        Tupla (success: bool, error_msg: str o None)
     """
     try:
         print(f"\n{'='*60}")
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting iteration {iteration_num}")
         print(f"{'='*60}")
         
-        # Run the commander script
+        # Correr el script commander
         result = subprocess.run(
             [sys.executable, script_path, "--path-file", path_file],
             cwd=os.path.dirname(script_path),
@@ -79,14 +79,14 @@ def run_iteration(iteration_num, script_path, path_file):
         return False, error_msg
 
 def main():
-    """Main function to run multiple iterations of airsim_commander.py."""
-    # Parse arguments
+    """Función principal para correr múltiples iteraciones de airsim_commander.py."""
+    # Parsear argumentos
     args = parse_arguments()
     
     print(f"Starting airsim_iterator with {args.iterations} iteration(s)")
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Get path to airsim_commander.py
+    # Obtener la ruta a airsim_commander.py
     script_dir = os.path.dirname(os.path.abspath(__file__))
     commander_path = os.path.join(script_dir, "airsim_commander.py")
     
@@ -94,13 +94,13 @@ def main():
         print(f"Error: {commander_path} not found.")
         sys.exit(1)
     
-    # Run iterations
+    # Correr las iteraciones
     results = []
     for i in range(1, args.iterations + 1):
         success, error_msg = run_iteration(i, commander_path, args.path_file)
         results.append((i, success, error_msg))
     
-    # Summary report
+    # Reporte resumen
     print(f"\n{'='*60}")
     print("SUMMARY")
     print(f"{'='*60}")
@@ -121,7 +121,7 @@ def main():
     print(f"\nEnd time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}\n")
     
-    # Exit with appropriate code
+    # Salir con el código correspondiente
     sys.exit(0 if failed == 0 else 1)
 
 if __name__ == "__main__":

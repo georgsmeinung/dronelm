@@ -7,11 +7,11 @@ import urllib.request
 import urllib.error
 
 def load_env(env_path):
-    """Loads environment variables from a .env file."""
+    """Carga variables de entorno desde un archivo .env."""
     if not os.path.exists(env_path):
         return
-    
-    # Try importing dotenv to parse, or fallback to manual parsing
+
+    # Intentar importar dotenv para parsear, o caer al parseo manual
     try:
         from dotenv import load_dotenv
         load_dotenv(env_path)
@@ -39,7 +39,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # Load environment configuration
+    # Cargar la configuración del entorno
     script_dir = os.path.dirname(os.path.abspath(__file__))
     env_path = os.path.join(script_dir, '.env')
     load_env(env_path)
@@ -52,7 +52,7 @@ def main():
     print(f"Ollama Model: {ollama_model}")
     print("-" * 50)
 
-    # 1. Connection Check via /v1/models
+    # 1. Chequeo de conexión vía /v1/models
     models_url = f"{ollama_host}/v1/models"
     print(f"Checking connection and retrieving models via: {models_url}...")
     try:
@@ -81,7 +81,7 @@ def main():
         print(f"\033[91m[FAILURE]\033[0m An unexpected error occurred: {e}")
         sys.exit(1)
 
-    # 2. Optional Chat Completion Check
+    # 2. Chequeo opcional de chat completions
     if args.prompt:
         print("-" * 50)
         completions_url = f"{ollama_host}/v1/chat/completions"

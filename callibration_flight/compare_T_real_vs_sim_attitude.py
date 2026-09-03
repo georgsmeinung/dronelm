@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Compare derived roll/pitch (mean + variability) between:
-  - "This data": the real T* telemetry.csv from the LoRa avalanche UAV dataset
-    (heading derived from GPS track / course-over-ground)
-  - Simulated: the AirSim calibration flights (telemetry_20260413_*.csv)
+Compara roll/pitch derivados (media + variabilidad) entre:
+  - "Este dato": el telemetry.csv real T* del dataset UAV de avalanchas LoRa
+    (rumbo derivado del track GPS / course-over-ground)
+  - Simulado: los vuelos de calibración de AirSim (telemetry_20260413_*.csv)
 
-Produces tables for means, standard deviations, Welch t-test / Levene / Mann-Whitney / KS
-for both 'Giro' and 'Recta' segments ( |yaw_rate_deg| > 5 deg/s ).
+Produce tablas de medias, desvíos estándar, Welch t-test / Levene / Mann-Whitney / KS
+para los segmentos 'Giro' y 'Recta' ( |yaw_rate_deg| > 5 deg/s ).
 
-Run from the callibration_flight/ directory or adjust paths.
+Correr desde el directorio callibration_flight/ o ajustar las rutas.
 """
 
 import pandas as pd
@@ -20,7 +20,7 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 
-# ----------------- CONFIG -----------------
+# ----------------- CONFIGURACION -----------------
 REAL_BASE = "dataset_using_UAVs/dataset"
 SIM_GLOB = "telemetry_20260413_*.csv"
 MANEUVER_YAW_RATE_THRESH_DEG_S = 5.0
@@ -48,7 +48,7 @@ def estimate_attitude_from_accel(df):
     return df
 
 def process_real_T(t_dir):
-    """Process one T*/ telemetry.csv using track-derived heading."""
+    """Procesa un telemetry.csv de T*/ usando el rumbo derivado del track."""
     tname = os.path.basename(t_dir)
     tel_path = os.path.join(t_dir, "telemetry.csv")
     if not os.path.exists(tel_path):
@@ -71,7 +71,7 @@ def process_real_T(t_dir):
     df['East'] = df['x_local']
     df['time_s'] = (df['timestamp_ms'] - df['timestamp_ms'].iloc[0]) / 1000.0
 
-    # Smooth positions for stable course
+    # Suavizar posiciones para un rumbo estable
     n = len(df)
     w = min(11, n - (1 if n % 2 == 0 else 2)) if n > 10 else 5
     if w >= 3:
@@ -83,7 +83,7 @@ def process_real_T(t_dir):
 
     dN = np.gradient(df['N_s'], df['time_s'])
     dE = np.gradient(df['E_s'], df['time_s'])
-    # course: 0 = North, increases clockwise to East
+    # rumbo: 0 = Norte, crece en sentido horario hacia el Este
     course = np.arctan2(dE, dN)
     df['heading'] = course
 
@@ -122,7 +122,7 @@ def process_sim_file(fpath):
     df['maneuver'] = np.where(df['yaw_rate_deg'].abs() > MANEUVER_YAW_RATE_THRESH_DEG_S, 'Giro', 'Recta')
     return df[['time_s', 'North', 'East', 'roll', 'pitch', 'yaw_rate_deg', 'maneuver']]
 
-# ====================== MAIN ======================
+# ====================== PRINCIPAL ======================
 print("Loading & processing real T* data (track-derived heading as proxy)...")
 real_parts = []
 for tdir in sorted(glob.glob(os.path.join(REAL_BASE, "T*"))):
@@ -145,7 +145,7 @@ for f in sorted(glob.glob(SIM_GLOB)):
 sim = pd.concat(sim_parts, ignore_index=True)
 print(f"Total sim points: {len(sim)}")
 
-# ---- Descriptive ----
+# ---- Descriptiva ----
 def desc(df, name):
     for m in ['Giro', 'Recta']:
         sub = df[df['maneuver'] == m]
@@ -159,7 +159,7 @@ print("="*85)
 desc(real, "Real (T*)")
 desc(sim, "Simulated")
 
-# ---- Mean tests ----
+# ---- Tests de medias ----
 print("\n" + "="*85)
 print("MEAN DIFFERENCE TESTS (Welch + Mann-Whitney + Cohen d)")
 print("="*85)
@@ -181,7 +181,7 @@ for man in ['Giro', 'Recta']:
     for col in ['roll', 'pitch']:
         mean_test(real, sim, man, col)
 
-# ---- Variance tests (Levene) ----
+# ---- Tests de varianza (Levene) ----
 print("\n" + "="*85)
 print("VARIANCE DIFFERENCE TESTS (Levene)")
 print("="*85)
@@ -193,7 +193,7 @@ for man in ['Giro', 'Recta']:
         stat, p = stats.levene(rr, ss)
         print(f"{man:5} {col:5} | Levene stat={stat:8.3f}  p={p:.2e}  {'***' if p < 0.001 else ('**' if p < 0.01 else ('*' if p < 0.05 else ''))}")
 
-# ---- Save summary ----
+# ---- Guardar resumen ----
 summary = []
 for name, df_ in [('Real_T*', real), ('Sim', sim)]:
     for man in ['Giro', 'Recta']:

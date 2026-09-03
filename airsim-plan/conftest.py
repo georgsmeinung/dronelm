@@ -1,11 +1,12 @@
-"""Pytest config shared by the airsim-plan test suite."""
+"""Config de pytest compartida por la suite de tests de airsim-plan."""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-# Ensure `src/` is importable when pytest is run from the repo root without
-# installing the package (so contributors can run tests immediately).
+# Asegurar que `src/` sea importable cuando pytest corre desde la raíz del
+# repo sin instalar el paquete (para que los colaboradores puedan correr los
+# tests de inmediato).
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 if SRC.exists() and str(SRC) not in sys.path:

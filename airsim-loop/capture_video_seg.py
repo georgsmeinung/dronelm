@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Real-time video capture from AirSim with YOLOv8 inference.
+"""Captura de video en tiempo real desde AirSim con inferencia YOLOv8.
 
-This script continuously captures frames from the AirSim simulator, runs the
-YOLOv8 segmentation model on each frame, draws the resulting masks onto the
-frame, displays the annotated video stream, and optionally saves the output to
-a video file.
+Este script captura frames de forma continua desde el simulador AirSim, corre
+el modelo de segmentación YOLOv8 sobre cada frame, dibuja las máscaras
+resultantes sobre el frame, muestra el video anotado y opcionalmente guarda
+la salida en un archivo de video.
 
-Usage:
+Uso:
     python capture_video.py [model_path] [output_video_path]
 
-    model_path          Path to a YOLOv8 model (e.g., "yolov8n-seg.pt").
-                        If omitted, the default "yolov8n-seg.pt" will be used.
-    output_video_path   Path to an output video file (e.g., "output.mp4").
-                        If omitted, the video will not be saved.
+    model_path          Ruta a un modelo YOLOv8 (por ej., "yolov8n-seg.pt").
+                        Si se omite, se usa el default "yolov8n-seg.pt".
+    output_video_path   Ruta a un archivo de video de salida (por ej., "output.mp4").
+                        Si se omite, el video no se guarda.
 """
 
 import os
@@ -22,18 +22,18 @@ import numpy as np
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Load environment variables from .env if present
+# Carga las variables de entorno desde .env si existe
 load_dotenv()
 
-# Ensure the script directory is on the PYTHONPATH
+# Asegura que el directorio del script esté en el PYTHONPATH
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
     sys.path.append(script_dir)
 
-# Local imports – AirSim client wrapper
+# Imports locales – wrapper del cliente de AirSim
 from src.hardware.airsim_client import AirSimClient
 
-# YOLOv8 – ultralytics package
+# YOLOv8 – paquete ultralytics
 try:
     # pyrefly: ignore [missing-import]
     from ultralytics import YOLO
@@ -44,22 +44,22 @@ except ImportError:
 
 
 def init_yolo(model_path: str = None) -> "YOLO":
-    """Initialise the YOLOv8 model.
+    """Inicializa el modelo YOLOv8.
 
     Args:
-        model_path: Optional path to a custom YOLOv8 model. If ``None`` the
-            default pretrained "yolo26n-sem.pt" is loaded.
+        model_path: Ruta opcional a un modelo YOLOv8 personalizado. Si es
+            ``None`` se carga el default preentrenado "yolo26n-sem.pt".
     """
     if model_path and os.path.isfile(model_path):
         print(f"[+] Loading YOLOv8 model from: {model_path}")
         return YOLO(model_path)
     else:
-        # Check if the optimized TensorRT engine exists to avoid exporting every run
+        # Verifica si ya existe el engine de TensorRT optimizado, para evitar exportarlo en cada corrida
         default_engine = "weights/yolo26n-sem.engine"
         if os.path.isfile(default_engine):
             print(f"[+] Loading default TensorRT engine: {default_engine}")
             return YOLO(default_engine)
-            
+
         default_model = "weights/yolo26n-sem.pt"
         print(f"[+] Loading default YOLO segmentation model: {default_model}")
         return YOLO(default_model)
@@ -67,12 +67,13 @@ def init_yolo(model_path: str = None) -> "YOLO":
 
 
 def init_video_writer(frame_width: int, frame_height: int, output_path: str):
-    """Create a ``cv2.VideoWriter`` instance.
+    """Crea una instancia de ``cv2.VideoWriter``.
 
-    The codec used is ``mp4v`` which works with most MP4 players.
+    El códec utilizado es ``mp4v``, que funciona con la mayoría de los
+    reproductores de MP4.
     """
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    fps = 60  # Target frames‑per‑second; adjust if needed
+    fps = 60  # FPS objetivo; ajustar si hace falta
     writer = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
     if not writer.isOpened():
         raise RuntimeError(f"Failed to open video writer for {output_path}")
@@ -80,39 +81,39 @@ def init_video_writer(frame_width: int, frame_height: int, output_path: str):
     return writer
 
 # ---------------------------------------------------------------------------
-# Collision detection configuration — growth-rate (looming) approach
+# Configuración de detección de colisiones — enfoque de tasa de crecimiento (looming)
 # ---------------------------------------------------------------------------
-# Classes to completely ignore (navigable surfaces, background)
+# Clases a ignorar por completo (superficies navegables, fondo)
 IGNORE_CLASSES = frozenset({
     "sky", "road", "sidewalk", "terrain",
     "background", "bg", "void", "unlabeled", "background-unlabeled",
 })
 
-# Per-class growth-rate collision thresholds
-#   min_growth_rate : minimum EMA-smoothed ROI occupancy growth (%/frame) to trigger
-#   min_floor_pct   : minimum current ROI occupancy (%) to even consider (noise filter)
+# Umbrales de colisión por tasa de crecimiento, por clase
+#   min_growth_rate : crecimiento mínimo de ocupación del ROI, suavizado con EMA (%/frame), para disparar
+#   min_floor_pct   : ocupación actual mínima del ROI (%) para siquiera considerarla (filtro de ruido)
 CLASS_CONFIGS = {
-    # Small/narrow critical objects — low floor, sensitive growth rate
+    # Objetos críticos chicos/angostos — piso bajo, tasa de crecimiento sensible
     "traffic light": {"min_growth_rate": 0.8, "min_floor_pct": 0.3},
     "traffic sign":  {"min_growth_rate": 0.8, "min_floor_pct": 0.3},
     "stop sign":     {"min_growth_rate": 0.8, "min_floor_pct": 0.3},
     "pole":          {"min_growth_rate": 0.8, "min_floor_pct": 0.3},
     "fire hydrant":  {"min_growth_rate": 0.8, "min_floor_pct": 0.3},
 
-    # People and riders
+    # Personas y ciclistas/motociclistas
     "person":     {"min_growth_rate": 0.8, "min_floor_pct": 0.5},
     "rider":      {"min_growth_rate": 0.8, "min_floor_pct": 0.5},
     "bicycle":    {"min_growth_rate": 0.8, "min_floor_pct": 0.5},
     "motorcycle": {"min_growth_rate": 0.8, "min_floor_pct": 0.5},
 
-    # Large static structures — higher thresholds (approach must be more aggressive)
+    # Estructuras estáticas grandes — umbrales más altos (el acercamiento debe ser más agresivo)
     "building":   {"min_growth_rate": 1.5, "min_floor_pct": 2.0},
     "wall":       {"min_growth_rate": 1.5, "min_floor_pct": 2.0},
     "fence":      {"min_growth_rate": 1.2, "min_floor_pct": 1.5},
     "vegetation": {"min_growth_rate": 1.5, "min_floor_pct": 2.0},
     "tree":       {"min_growth_rate": 1.5, "min_floor_pct": 2.0},
 
-    # Vehicles
+    # Vehículos
     "car":   {"min_growth_rate": 1.0, "min_floor_pct": 1.0},
     "truck": {"min_growth_rate": 1.0, "min_floor_pct": 1.0},
     "bus":   {"min_growth_rate": 1.0, "min_floor_pct": 1.0},
@@ -121,47 +122,47 @@ CLASS_CONFIGS = {
 
 DEFAULT_CLASS_CONFIG = {"min_growth_rate": 1.0, "min_floor_pct": 0.5}
 
-# EMA smoothing factor for growth rate (0 → full smoothing, 1 → no smoothing)
+# Factor de suavizado EMA para la tasa de crecimiento (0 → suavizado total, 1 → sin suavizado)
 EMA_ALPHA = 0.4
 
 
 def main():
-    # Parse optional arguments
+    # Parsea los argumentos opcionales
     model_path = sys.argv[1] if len(sys.argv) > 1 else None
     output_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    # Initialise YOLO model
+    # Inicializa el modelo YOLO
     yolo_model = init_yolo(model_path)
-    
-    # Export to TensorRT only if a PyTorch model was loaded and no corresponding engine exists yet
+
+    # Exporta a TensorRT solo si se cargó un modelo de PyTorch y todavía no existe el engine correspondiente
     model_name = getattr(yolo_model, "ckpt_path", "") or ""
     if isinstance(model_name, str) and model_name.endswith(".pt"):
         engine_path = model_name.replace(".pt", ".engine")
         if not os.path.isfile(engine_path):
             print(f"[+] Exporting model to TensorRT engine: {engine_path} (this may take a few minutes...)")
             yolo_model.export(format='engine', half=True, imgsz=640, device=0)
-        
-        # Re-initialize the model to use the newly exported engine
+
+        # Reinicializa el modelo para usar el engine recién exportado
         if os.path.isfile(engine_path):
             print(f"[+] Loading optimized TensorRT engine: {engine_path}")
             yolo_model = YOLO(engine_path)
 
 
-    # Initialise AirSim client
+    # Inicializa el cliente de AirSim
     client = AirSimClient()
     print("[+] Connecting to AirSim...")
     if not client.connect():
         print("[!] Could not connect to AirSim – exiting.")
         sys.exit(1)
 
-    # Prepare optional video writer
+    # Prepara el video writer opcional
     video_writer = None
     if output_path:
         video_writer = "pending"
 
-    # Temporal state for growth-rate collision detection
-    prev_class_roi_occupancy = {}   # class_lower -> ROI occupancy % from previous frame
-    ema_growth_rates = {}           # class_lower -> EMA-smoothed growth rate (%/frame)
+    # Estado temporal para la detección de colisiones por tasa de crecimiento
+    prev_class_roi_occupancy = {}   # class_lower -> % de ocupación del ROI del frame anterior
+    ema_growth_rates = {}           # class_lower -> tasa de crecimiento suavizada con EMA (%/frame)
 
     print("[+] Starting real‑time capture. Press 'q' to quit.")
     try:
@@ -177,16 +178,16 @@ def main():
             results = yolo_model(
                 frame_bgr,
                 device=0,
-                imgsz=640,      # Resize internally to standard 640px
-                conf=0.25,      # Filter low-confidence noise boxes early
-                iou=0.45,       # Standard NMS threshold to suppress duplicates
-                max_det=100     # Cap the maximum detections to process
+                imgsz=640,      # Redimensiona internamente al estándar de 640px
+                conf=0.25,      # Filtra temprano las boxes de baja confianza (ruido)
+                iou=0.45,       # Umbral estándar de NMS para suprimir duplicados
+                max_det=100     # Limita la cantidad máxima de detecciones a procesar
             )
 
             annotated = frame_bgr.copy()
             h, w = frame_bgr.shape[:2]
 
-            # Central ROI (Danger Zone) — center 40% of the screen
+            # ROI central (zona de peligro) — 40% central de la pantalla
             dz_x1 = int(w * 0.3)
             dz_x2 = int(w * 0.7)
             dz_y1 = int(h * 0.3)
@@ -202,14 +203,14 @@ def main():
             current_class_roi_occupancy = {}
             dangerous_classes = set()
 
-            # ── Case 1: Instance Segmentation (e.g. yolov8n-seg.pt) ──────
+            # ── Caso 1: Segmentación de instancias (por ej. yolov8n-seg.pt) ──────
             if hasattr(results[0], 'masks') and results[0].masks is not None:
                 classes_arr = results[0].boxes.cls.cpu().numpy()
                 names = results[0].names
 
-                # Phase A — aggregate per-class masks and compute ROI occupancy
-                class_agg_masks = {}    # class_lower -> combined binary mask
-                class_instances = {}    # class_lower -> [(binary_mask, class_name)]
+                # Fase A — agrega las máscaras por clase y calcula la ocupación del ROI
+                class_agg_masks = {}    # class_lower -> máscara binaria combinada
+                class_instances = {}    # class_lower -> [(máscara_binaria, nombre_clase)]
 
                 for i, mask_obj in enumerate(results[0].masks.xy):
                     class_id = int(classes_arr[i])
@@ -229,14 +230,14 @@ def main():
                         class_agg_masks[class_lower], binary_mask)
                     class_instances[class_lower].append((binary_mask, class_name))
 
-                # Phase B — growth-rate collision detection per class
+                # Fase B — detección de colisión por tasa de crecimiento, por clase
                 for class_lower, agg_mask in class_agg_masks.items():
                     roi_slice = agg_mask[dz_y1:dz_y2, dz_x1:dz_x2]
                     roi_area = int(np.sum(roi_slice == 255))
                     occ_pct = (roi_area / roi_total_pixels) * 100
                     current_class_roi_occupancy[class_lower] = occ_pct
 
-                    # First time seeing this class — establish baseline, skip trigger
+                    # Primera vez que se ve esta clase — establece la línea base, no dispara
                     if class_lower not in prev_class_roi_occupancy:
                         ema_growth_rates.pop(class_lower, None)
                         continue
@@ -252,7 +253,7 @@ def main():
                         dangerous_classes.add(class_lower)
                         has_collision_danger = True
 
-                # Phase C — render masks and danger labels
+                # Fase C — renderiza las máscaras y las etiquetas de peligro
                 for class_lower, instances in class_instances.items():
                     is_danger = class_lower in dangerous_classes
                     color = (0, 0, 255) if is_danger else (0, 255, 0)
@@ -278,7 +279,7 @@ def main():
                         cv2.putText(annotated, text, (cx - 80, cy),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
 
-            # ── Case 2: Semantic Segmentation (e.g. yolo26n-sem.pt) ──────
+            # ── Caso 2: Segmentación semántica (por ej. yolo26n-sem.pt) ──────
             elif hasattr(results[0], 'semantic_mask') and results[0].semantic_mask is not None:
                 sem_data = results[0].semantic_mask.data.cpu().numpy()
                 if sem_data.shape[:2] != (h, w):
@@ -287,8 +288,8 @@ def main():
                 names = results[0].names
                 unique_classes = np.unique(sem_data)
 
-                # Phase A — per-class ROI occupancy + growth-rate detection
-                class_render_data = {}   # class_lower -> (class_name, contours, class_mask)
+                # Fase A — ocupación del ROI por clase + detección por tasa de crecimiento
+                class_render_data = {}   # class_lower -> (nombre_clase, contornos, máscara_clase)
 
                 for class_id in unique_classes:
                     class_name = names.get(class_id, f"Class {class_id}")
@@ -298,7 +299,7 @@ def main():
 
                     class_mask = (sem_data == class_id).astype(np.uint8) * 255
 
-                    # Aggregate ROI occupancy for the entire class
+                    # Agrega la ocupación del ROI para la clase completa
                     roi_slice = class_mask[dz_y1:dz_y2, dz_x1:dz_x2]
                     roi_area = int(np.sum(roi_slice == 255))
                     occ_pct = (roi_area / roi_total_pixels) * 100
@@ -308,7 +309,7 @@ def main():
                         class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                     class_render_data[class_lower] = (class_name, contours, class_mask)
 
-                    # First time seeing this class — establish baseline, skip trigger
+                    # Primera vez que se ve esta clase — establece la línea base, no dispara
                     if class_lower not in prev_class_roi_occupancy:
                         ema_growth_rates.pop(class_lower, None)
                         continue
@@ -324,7 +325,7 @@ def main():
                         dangerous_classes.add(class_lower)
                         has_collision_danger = True
 
-                # Phase B — render contours and danger labels
+                # Fase B — renderiza los contornos y las etiquetas de peligro
                 for class_lower, (class_name, contours, class_mask) in class_render_data.items():
                     is_danger = class_lower in dangerous_classes
                     color = (0, 0, 255) if is_danger else (0, 255, 0)
@@ -353,10 +354,10 @@ def main():
                         cv2.putText(annotated, text, (cx - 80, cy),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
 
-            # Update temporal state for the next frame
+            # Actualiza el estado temporal para el próximo frame
             prev_class_roi_occupancy = current_class_roi_occupancy.copy()
 
-            # Put global warning banner and command drone stop if danger detected
+            # Muestra el banner de advertencia global y ordena detener el drone si se detecta peligro
             if has_collision_danger:
                 cv2.rectangle(annotated, (0, 0), (w, 35), (0, 0, 255), -1)
                 cv2.putText(annotated, "PROBABLE COLLISION",
@@ -364,22 +365,22 @@ def main():
                             (255, 255, 255), 1, cv2.LINE_AA)
                 client.execute_velocity(0.0, 0.0, 0.0)
 
-            # Initialise the video writer now that we know the size
+            # Inicializa el video writer ahora que ya conocemos el tamaño
             if video_writer == "pending":
                 h, w = annotated.shape[:2]
                 video_writer = init_video_writer(w, h, output_path)
 
-            # Show the annotated frame
+            # Muestra el frame anotado
             cv2.imshow("AirSim + YOLOv8", annotated)
             if isinstance(video_writer, cv2.VideoWriter):
                 video_writer.write(annotated)
 
-            # Exit on 'q' key press
+            # Sale al presionar la tecla 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print("[+] 'q' pressed – exiting loop.")
                 break
     finally:
-        # Clean‑up resources
+        # Libera los recursos
         if isinstance(video_writer, cv2.VideoWriter):
             video_writer.release()
             print("[+] Video file saved and writer released.")

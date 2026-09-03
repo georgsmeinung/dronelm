@@ -1,8 +1,9 @@
-"""Helpers to coerce SLM output into well-formed JSON.
+"""Helpers para forzar la salida del SLM a un JSON bien formado.
 
-Small local language models (especially Llama-3-8B served by LM Studio)
-often wrap the JSON in ``` fences or add a short preamble. These helpers
-try a few robust extraction strategies before giving up.
+Los modelos de lenguaje locales chicos (en especial Llama-3-8B servido por
+LM Studio) suelen envolver el JSON en fences ``` o agregar un preámbulo
+corto. Estos helpers prueban un par de estrategias de extracción robustas
+antes de darse por vencidos.
 """
 from __future__ import annotations
 
@@ -11,17 +12,17 @@ import re
 from typing import Any, List, Optional
 
 
-# A *balanced* regex would be ideal but Python's ``re`` doesn't support
-# recursive patterns. The trick we use here is greedy-with-overlap: find
-# every opening brace and scan forward, counting nested braces, until we
-# find a balanced substring that ``json.loads`` accepts. Cheap and good
-# enough for model outputs of a few KB.
+# Lo ideal sería un regex *balanceado*, pero el ``re`` de Python no soporta
+# patrones recursivos. El truco que usamos acá es greedy-con-solapamiento:
+# buscar cada llave de apertura y escanear hacia adelante, contando llaves
+# anidadas, hasta encontrar un substring balanceado que ``json.loads``
+# acepte. Barato y suficientemente bueno para salidas de modelo de pocos KB.
 _OPEN_BRACE = re.compile(r"\{")
 _CLOSE_BRACE = re.compile(r"\}")
 
 
 def _balanced_objects(text: str) -> List[str]:
-    """Yield candidate JSON object substrings by tracking brace depth."""
+    """Genera substrings candidatos a objeto JSON siguiendo la profundidad de llaves."""
     out: List[str] = []
     depth = 0
     start: Optional[int] = None
@@ -40,7 +41,7 @@ def _balanced_objects(text: str) -> List[str]:
 
 
 def _strip_code_fence(text: str) -> str:
-    """Remove a leading ```json ...``` fence if present."""
+    """Saca un fence ```json ...``` inicial si está presente."""
     fence = re.match(r"\s*```(?:json|JSON)?\s*([\s\S]*?)```\s*$", text.strip())
     if fence:
         return fence.group(1).strip()
@@ -48,7 +49,7 @@ def _strip_code_fence(text: str) -> str:
 
 
 def _first_parsable_object(text: str) -> Optional[str]:
-    """Return the first balanced substring that ``json.loads`` accepts."""
+    """Devuelve el primer substring balanceado que ``json.loads`` acepta."""
     for candidate in _balanced_objects(text):
         try:
             json.loads(candidate)
@@ -59,7 +60,7 @@ def _first_parsable_object(text: str) -> Optional[str]:
 
 
 def extract_json_object(text: str) -> Optional[dict]:
-    """Best-effort extraction of a JSON object from raw model output."""
+    """Extracción best-effort de un objeto JSON a partir de la salida cruda del modelo."""
     if not text:
         return None
     cleaned = _strip_code_fence(text)
@@ -73,12 +74,12 @@ def extract_json_object(text: str) -> Optional[dict]:
     return data if isinstance(data, dict) else None
 
 
-# Minimal structural fingerprint for our Manifest.
+# Huella estructural mínima de nuestro Manifest.
 _MANIFEST_KEYS = {"mission_id", "waypoints"}
 
 
 def looks_like_manifest(payload: Any) -> bool:
-    """Return ``True`` when ``payload`` has the top-level shape of a manifest."""
+    """Devuelve ``True`` cuando ``payload`` tiene la forma de nivel superior de un manifest."""
     if not isinstance(payload, dict):
         return False
     return _MANIFEST_KEYS.issubset(payload.keys())

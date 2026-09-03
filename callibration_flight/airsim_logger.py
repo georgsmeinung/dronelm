@@ -1,4 +1,4 @@
-# logger.py  -- run this in a separate terminal
+# logger.py -- correr esto en una terminal separada
 import cosysairsim as airsim
 import time
 import csv
@@ -8,23 +8,23 @@ import os
 from dotenv import load_dotenv
 
 def quaternion_to_euler(q):
-    """Convert quaternion to Euler angles (roll, pitch, yaw)"""
-    # Extract quaternion values
+    """Convierte cuaternión a ángulos de Euler (roll, pitch, yaw)"""
+    # Extraer los valores del cuaternión
     w, x, y, z = q.w_val, q.x_val, q.y_val, q.z_val
-    
-    # Roll (x-axis rotation)
+
+    # Roll (rotación sobre el eje x)
     sinr_cosp = 2 * (w * x + y * z)
     cosr_cosp = 1 - 2 * (x * x + y * y)
     roll = math.atan2(sinr_cosp, cosr_cosp)
-    
-    # Pitch (y-axis rotation)
+
+    # Pitch (rotación sobre el eje y)
     sinp = 2 * (w * y - z * x)
     if abs(sinp) >= 1:
         pitch = math.copysign(math.pi / 2, sinp)
     else:
         pitch = math.asin(sinp)
-    
-    # Yaw (z-axis rotation)
+
+    # Yaw (rotación sobre el eje z)
     siny_cosp = 2 * (w * z + x * y)
     cosy_cosp = 1 - 2 * (y * y + z * z)
     yaw = math.atan2(siny_cosp, cosy_cosp)
@@ -37,10 +37,10 @@ airsim_ip = os.getenv("AIRSIM_IP", "")
 if airsim_ip:
     client = airsim.MultirotorClient(ip=airsim_ip)
 else:
-    client = airsim.MultirotorClient()   # defaults to localhost:41451
+    client = airsim.MultirotorClient()   # por defecto usa localhost:41451
 client.confirmConnection()
 
-# No enableApiControl() here!
+# ¡Acá no va enableApiControl()!
 
 csv_file = f"telemetry_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
 with open(csv_file, 'w', newline='') as f:
@@ -56,11 +56,11 @@ with open(csv_file, 'w', newline='') as f:
             state = client.getMultirotorState()
             pos = state.kinematics_estimated.position
 
-            # Track if the drone has left the origin to avoid false positives at startup
+            # Registrar si el dron ya salió del origen, para evitar falsos positivos al arrancar
             if not has_moved and (abs(pos.x_val) > 0.05 or abs(pos.y_val) > 0.05 or abs(pos.z_val) > 0.05):
                 has_moved = True
 
-            # Detect AirSim reset (timestamp drops backward OR position resets to 0,0,0 after moving)
+            # Detectar reset de AirSim (el timestamp retrocede O la posición vuelve a 0,0,0 tras haberse movido)
             is_time_reset = last_timestamp != -1 and state.timestamp < last_timestamp
             is_pos_reset = has_moved and (pos.x_val == 0.0 and pos.y_val == 0.0 and pos.z_val == 0.0)
 
@@ -92,7 +92,7 @@ with open(csv_file, 'w', newline='') as f:
             )
 
             dt = time.time() - start
-            time.sleep(max(0.001, INTERVAL - dt))   # tight loop, still ~accurate rate
+            time.sleep(max(0.001, INTERVAL - dt))   # loop ajustado, la tasa sigue siendo ~precisa
 
     except KeyboardInterrupt:
         print("\nLogging stopped")

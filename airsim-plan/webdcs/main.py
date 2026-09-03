@@ -228,14 +228,6 @@ async def list_maps():
             maps.append(p.name)
     return sorted(maps)
 
-@app.get("/api/planner/status")
-async def planner_status():
-    import asyncio
-    planner = MissionPlanner()
-    is_online = await asyncio.to_thread(planner._client.check_connection)
-    return {"status": "online" if is_online else "offline"}
-
-
 # Servir mapas desde missions/maps
 missions_maps_dir = Path(__file__).resolve().parent.parent / "missions" / "maps"
 app.mount("/maps", StaticFiles(directory=str(missions_maps_dir)), name="maps")

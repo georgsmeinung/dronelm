@@ -12,15 +12,15 @@ from KeyController import KeyController
 # TIMEOUT
 from airsim_functions.orbit import OrbitNavigator
 
-TIMEOUT = 1200  # 20 mins
+TIMEOUT = 1200  # 20 minutos
 
-# Mesh ID's
+# ID's de los meshes
 BG = 0
 LAND = 100
 WATER = 200
 SHIP = 300
 
-# Commands:
+# Comandos:
 ARM = "arm"
 CLEAR = "clear"
 DISARM = "disarm"
@@ -48,7 +48,7 @@ class SimpleTerminalController:
                  maxmin_velocity: float = 10,
                  drive_type: airsim.DrivetrainType = airsim.DrivetrainType.ForwardOnly,
                  client: airsim.MultirotorClient = None):
-        # Should this class print to terminal
+        # Si esta clase debe imprimir en la terminal
         self.verbatim = verbatim
         self.DriveType = drive_type
         self.client = client
@@ -60,10 +60,10 @@ class SimpleTerminalController:
             else:
                 self.client = airsim.MultirotorClient()
         self.confirm_connection()
-        # Segmentation setup
+        # Configuración de la segmentación
         self.setup_segmentation_colors()
 
-        # Movement and constraints:
+        # Movimiento y restricciones:
         self.vx = 0
         self.vy = 0
         self.vz = 0
@@ -78,8 +78,8 @@ class SimpleTerminalController:
 
     def setup_segmentation_colors(self):
         """
-        Find all objects and make them one color
-        then find the specific objects and turn them into different colors.
+        Busca todos los objetos y les asigna un mismo color,
+        luego busca los objetos específicos y los pinta con colores distintos.
         :return:
         """
         self.set_bg_color(color_id=BG)
@@ -129,7 +129,7 @@ class SimpleTerminalController:
         if len(args) % 3 != 2:
             print("Move needs 3 args per position args")
             return
-        # Have to make sure it is enabled:
+        # Hay que asegurarse de que esté habilitado:
         self.client.enableApiControl(True)
         iterations = (len(args) - 2) / 3
         path = []
@@ -167,8 +167,8 @@ class SimpleTerminalController:
             print("need at least speed parameter and iterations")
             return
         if len(args) != 4:  # Name, x,y
-            target_x = float(72.38)  # X coordinate of turbine 1
-            target_y = float(48.92)  # Y coordinate of turbine 1
+            target_x = float(72.38)  # Coordenada X de la turbina 1
+            target_y = float(48.92)  # Coordenada Y de la turbina 1
 
             self.client.enableApiControl(True)
             self.client.moveToPositionAsync(x=float(36.33), y=float(24.32), z=-float(17.33),
@@ -189,7 +189,7 @@ class SimpleTerminalController:
             l = look_at_point - current_pos_np
             radius = np.linalg.norm(l)
             print("Radius:", radius)
-            # Have to make sure it is enabled:
+            # Hay que asegurarse de que esté habilitado:
             self.client.enableApiControl(True)
             self.client.rotateToYawAsync(angle, 20, 0).join()
             print(self.client.getMultirotorState().kinematics_estimated.orientation)
@@ -226,7 +226,7 @@ class SimpleTerminalController:
         if negative_axis_press:
             return round(number=float(np.clip(new_vel - 1, - self.maxmin_vel, self.maxmin_vel)), ndigits=2)
 
-        # nothing is pressed, smoothly lowering the value
+        # no se está presionando nada, bajando el valor suavemente
         return round(number=float(np.clip(new_vel * 0.75, - self.maxmin_vel, self.maxmin_vel)), ndigits=2)
 
     @staticmethod
@@ -308,8 +308,8 @@ class SimpleTerminalController:
         print("gps_data: %s" % s)
 
     def clear_terminal(self):
-        """Clears the terminal screen."""
-        # Check if the operating system is Windows (nt) or POSIX (Linux, macOS, etc.)
+        """Limpia la pantalla de la terminal."""
+        # Chequea si el sistema operativo es Windows (nt) o POSIX (Linux, macOS, etc.)
         if os.name == 'nt':
             _ = os.system('cls')
         else:
@@ -317,7 +317,7 @@ class SimpleTerminalController:
         print("Type 'help' for listing commands.")
 
     def show_help(self):
-        """Shows commands supported."""
+        """Muestra los comandos soportados."""
         print("""
         Commands:
             arm
@@ -349,8 +349,8 @@ class SimpleTerminalController:
         self.client.reset()
 
     def run(self):
-        # Map command strings to lambda functions to normalize the input signature.
-        # All lambdas accept 'args', but only pass them to methods that need them.
+        # Mapea los strings de comando a funciones lambda para normalizar la firma de entrada.
+        # Todas las lambdas aceptan 'args', pero solo se los pasan a los métodos que los necesitan.
         command_dispatch = {
             ARM: lambda _: self.arm(),
             CLEAR: lambda _: self.clear_terminal(),
@@ -370,7 +370,7 @@ class SimpleTerminalController:
 
         while True:
             try:
-                # Get input and clean it
+                # Obtiene la entrada y la limpia
                 raw_input = input("Command: ").strip()
                 if not raw_input: continue
 
@@ -379,16 +379,16 @@ class SimpleTerminalController:
 
                 print("Args given", args)
 
-                # 1. Look up the function (returns None if not found)
+                # 1. Busca la función (retorna None si no se encuentra)
                 action = command_dispatch.get(command_type)
 
-                # 2. Execute or handle error
+                # 2. Ejecuta o maneja el error
                 if action:
                     action(args)
                 else:
                     print("The command given is not a valid command.")
 
-                # 3. Handle loop exit condition
+                # 3. Maneja la condición de salida del loop
                 if command_type == STOP.lower():
                     break
 

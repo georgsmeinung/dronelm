@@ -47,7 +47,7 @@ def test_loop_runner_handles_missing_package(monkeypatch: pytest.MonkeyPatch) ->
     )
     runner = LoopRunner(manifest)
 
-    # Force the import path to fail.
+    # Forzar que falle el import.
     import builtins
 
     orig_import = builtins.__import__
@@ -76,7 +76,7 @@ def test_loop_runner_invokes_graph_then_returns(monkeypatch: pytest.MonkeyPatch)
 
     def invoke(state):  # noqa: ANN001
         calls["n"] += 1
-        # First call: maintain course. Second call: RTL -> loop should exit.
+        # Primer llamado: mantener rumbo. Segundo llamado: RTL -> el loop debe salir.
         if calls["n"] == 2:
             return {
                 "next_action": "RETURN_TO_LAUNCH",
@@ -93,7 +93,7 @@ def test_loop_runner_invokes_graph_then_returns(monkeypatch: pytest.MonkeyPatch)
     fake_module.compile_workflow.return_value = fake_graph
     monkeypatch.setitem(__import__("sys").modules, LR.LOOP_PACKAGE, fake_module)
 
-    # Replace the bridge so we don't actually talk to AirSim.
+    # Reemplazar el bridge para no hablar de verdad con AirSim.
     bridge = MagicMock()
     bridge.hand_off.return_value = True
     bridge.land.return_value = True
@@ -106,9 +106,9 @@ def test_loop_runner_invokes_graph_then_returns(monkeypatch: pytest.MonkeyPatch)
         }
     )
     assert calls["n"] == 2
-    # The runner was run via _run_in_process directly, so the bridge is
-    # only consulted through the explicit run() entrypoint. Verify the
-    # graph and bridge mock are otherwise untouched.
+    # El runner se corrió vía _run_in_process directamente, así que el bridge
+    # solo se consulta a través del entrypoint explícito run(). Verificar que
+    # el mock del grafo y del bridge quedaron intactos por lo demás.
     bridge.hand_off.assert_not_called()
     bridge.land.assert_not_called()
 

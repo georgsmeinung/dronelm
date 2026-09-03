@@ -1,4 +1,4 @@
-"""High-level Mission Planner (NL -> Manifest)."""
+"""Planificador de misiones de alto nivel (lenguaje natural -> Manifest)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -40,12 +40,12 @@ class MissionPlanner:
         self._settings = settings or get_settings()
         self._client = client or LMStudioClient(settings=self._settings)
         self._compiler_prompt = compiler_prompt or self._load_compiler_prompt()
-        # `llm` is injected by tests; otherwise we build a default one per
-        # compile() call so callers can swap the model cheaply.
+        # `llm` lo inyectan los tests; si no, se construye uno por defecto en
+        # cada llamado a compile() para que quien llame pueda cambiar el modelo fácilmente.
         self._llm_override = llm
 
     # ------------------------------------------------------------------ #
-    # Prompt loaders                                                    #
+    # Carga de prompts                                                  #
     # ------------------------------------------------------------------ #
     @staticmethod
     def _package_prompt_path(name: str) -> Path:
@@ -60,7 +60,7 @@ class MissionPlanner:
         return path.read_text(encoding="utf-8")
 
     # ------------------------------------------------------------------ #
-    # Public API                                                        #
+    # API pública                                                       #
     # ------------------------------------------------------------------ #
     @property
     def settings(self) -> Settings:
@@ -108,7 +108,7 @@ class MissionPlanner:
         target_dir.mkdir(parents=True, exist_ok=True)
         name = filename or f"{manifest.mission_id.lower()}.json"
         path = target_dir / name
-        from .manifest import save_manifest  # local import to avoid cycles
+        from .manifest import save_manifest  # import local para evitar ciclos
 
         save_manifest(manifest, path)
         return manifest, path

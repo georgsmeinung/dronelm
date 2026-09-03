@@ -1,4 +1,4 @@
-"""Tests for JSON extraction helpers."""
+"""Tests de los helpers de extracción de JSON."""
 from __future__ import annotations
 
 from airsim_plan.llm import extract_json_object, looks_like_manifest
@@ -44,8 +44,8 @@ def test_extract_picks_first_balanced_object() -> None:
     raw = '{"a": 1} bla bla {"mission_id": "FOO", "waypoints": []}'
     out = extract_json_object(raw)
     assert out is not None
-    # The first balanced object that json.loads accepts is `{a:1}` which
-    # is not a manifest, but looks_like_manifest is the caller's concern.
+    # El primer objeto balanceado que json.loads acepta es `{a:1}`, que no
+    # es un manifest, pero eso es responsabilidad de quien llama a looks_like_manifest.
     assert out == {"a": 1}
 
 

@@ -32,14 +32,14 @@ const elActiveWaypointList = document.getElementById('active-waypoint-list');
 const elBtnBackManifests = document.getElementById('btn-back-manifests');
 const elBtnNewManifest = document.getElementById('btn-new-manifest');
 const elBtnLaunchMission = document.getElementById('btn-launch-mission');
+const elQuickstartCard = document.getElementById('quickstart-card');
+const elMapCard = document.getElementById('map-card');
 
 const elBtnClearRoute = document.getElementById('btn-clear-route');
 
 // Toggle JSON
 const elBtnToggleJson = document.getElementById('btn-toggle-json');
 const elDashboardWorkspace = document.getElementById('dashboard-workspace');
-const elPlannerStatusIndicator = document.getElementById('planner-status-indicator');
-const elPlannerStatusText = document.getElementById('planner-status-text');
 
 // Modales y Nuevo Manifiesto con Mapa
 const elModalNewMission = document.getElementById('modal-new-mission');
@@ -163,14 +163,14 @@ function drawRoute() {
     const homePos = nedToCanvas(homeWp.x, homeWp.y);
     ctx.beginPath();
     ctx.arc(homePos.x, homePos.y, 8, 0, 2 * Math.PI);
-    ctx.fillStyle = '#f59e0b';
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#f59e0b';
+    ctx.fillStyle = '#FFB74D';
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = '#FFB74D';
     ctx.fill();
-    ctx.shadowBlur = 0; 
-    
-    ctx.font = 'bold 10px Outfit';
-    ctx.fillStyle = '#f59e0b';
+    ctx.shadowBlur = 0;
+
+    ctx.font = 'bold 10px Inter';
+    ctx.fillStyle = '#FFB74D';
     ctx.fillText(`${homeWp.label || 'START'} (${homeWp.x.toFixed(1)}, ${homeWp.y.toFixed(1)})`, homePos.x + 12, homePos.y + 4);
 
     // 2. Dibujar líneas de trayectoria si hay más de 1 waypoint
@@ -182,14 +182,14 @@ function drawRoute() {
             const pos = nedToCanvas(wps[i].x, wps[i].y);
             ctx.lineTo(pos.x, pos.y);
         }
-        
-        ctx.strokeStyle = '#06b6d4';
+
+        ctx.strokeStyle = '#03DAC6';
         ctx.lineWidth = 3;
-        ctx.setLineDash([5, 5]); 
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = '#06b6d4';
+        ctx.setLineDash([5, 5]);
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = '#03DAC6';
         ctx.stroke();
-        ctx.setLineDash([]); 
+        ctx.setLineDash([]);
         ctx.shadowBlur = 0;
     }
 
@@ -197,12 +197,12 @@ function drawRoute() {
     for (let i = 1; i < wps.length; i++) {
         const wp = wps[i];
         const pos = nedToCanvas(wp.x, wp.y);
-        
+
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, 6, 0, 2 * Math.PI);
-        ctx.fillStyle = '#6366f1';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#6366f1';
+        ctx.fillStyle = '#BB86FC';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = '#BB86FC';
         ctx.fill();
         ctx.shadowBlur = 0;
 
@@ -210,13 +210,13 @@ function drawRoute() {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        ctx.font = 'bold 11px Outfit';
+        ctx.font = 'bold 11px Inter';
         ctx.fillStyle = '#ffffff';
         const label = wp.label ? `${i + 1}: ${wp.label}` : `WP #${i + 1}`;
         ctx.fillText(label, pos.x + 10, pos.y - 6);
-        
-        ctx.font = '9px Fira Code';
-        ctx.fillStyle = '#a5b4fc';
+
+        ctx.font = '9px JetBrains Mono';
+        ctx.fillStyle = '#BB86FC';
         ctx.fillText(`[${wp.x.toFixed(1)}, ${wp.y.toFixed(1)}, ${wp.z.toFixed(1)}]`, pos.x + 10, pos.y + 6);
     }
 }
@@ -380,16 +380,18 @@ function loadActiveManifest(manifest) {
     updateOriginalState();
     
     elActiveMissionTitle.textContent = manifest.mission_id;
-    
+
     // Cargar mapa correspondiente (por defecto map.png si no tiene)
     const mapFile = manifest.map || "map.png";
     mapImage.src = `/maps/${mapFile}`;
     elMapSelector.value = mapFile;
     elLegendMapName.textContent = mapFile;
-    
+
     elViewManifestsList.classList.add('hidden');
     elViewWaypointsDetail.classList.remove('hidden');
-    
+    elQuickstartCard.classList.add('hidden');
+    elMapCard.classList.remove('hidden');
+
     syncManifestToEditor();
     elBtnResetMap.click();
 }
@@ -406,10 +408,12 @@ elBtnBackManifests.addEventListener('click', () => {
 function goBackToManifestsList() {
     activeManifest = null;
     updateOriginalState();
-    
+
     elViewWaypointsDetail.classList.add('hidden');
     elViewManifestsList.classList.remove('hidden');
-    
+    elMapCard.classList.add('hidden');
+    elQuickstartCard.classList.remove('hidden');
+
     elJsonEditor.value = '';
     elBtnSave.disabled = true;
     
@@ -749,32 +753,4 @@ function setupInteractiveControls() {
         }
     });
 }
-
-// ----------------------------------------------------------------------------
-// Monitoreo del estado del Planificador LLM
-// ----------------------------------------------------------------------------
-async function updatePlannerStatus() {
-    try {
-        const response = await fetch('/api/planner/status');
-        if (!response.ok) throw new Error();
-        const data = await response.json();
-        
-        if (data.status === 'online') {
-            elPlannerStatusIndicator.classList.remove('offline');
-            elPlannerStatusIndicator.classList.add('online');
-            elPlannerStatusText.textContent = 'AirSim Planner Connected';
-        } else {
-            elPlannerStatusIndicator.classList.remove('online');
-            elPlannerStatusIndicator.classList.add('offline');
-            elPlannerStatusText.textContent = 'AirSim Planner Disconnected';
-        }
-    } catch (err) {
-        elPlannerStatusIndicator.classList.remove('online');
-        elPlannerStatusIndicator.classList.add('offline');
-        elPlannerStatusText.textContent = 'AirSim Planner Disconnected';
-    }
-}
-
-// Iniciar monitoreo una sola vez al cargar la página
-updatePlannerStatus();
 

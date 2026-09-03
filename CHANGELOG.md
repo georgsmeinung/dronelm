@@ -1,5 +1,116 @@
 # 2026-0903
 
+## WebDCS: Guía de Inicio Rápido reemplaza a la Carta de Territorio cuando no hay misión activa
+
+<img src="informe/2026-0903 Nueva UX WebDCS.png"/>
+
+Primer intento, a pedido del usuario: mostrar `quickstart.jpg` (ya agregado por el usuario en
+`webdcs/static/`) como `<img>` inicial dentro de la propia card "Carta de Territorio & Ruta". El usuario
+lo vio en el navegador y señaló dos problemas: no tiene sentido llamar "Carta de Territorio" a una guía de
+inicio, y `#map-image` se muestra a **tamaño natural con scroll** (pensado para panear cartas satelitales
+enormes, `max-width:none; max-height:none`) — la infografía quedaba recortada, no entraba en el
+viewport.
+
+Fix real: card nueva y separada, `#quickstart-card` ("Guía de Inicio Rápido", ícono de cohete),
+superpuesta en la misma celda del grid que `#map-card` — se alternan por `.hidden` según haya o no misión
+activa (`loadActiveManifest()` oculta la guía y muestra la carta real; `goBackToManifestsList()` hace lo
+inverso). `#quickstart-image` usa `object-fit: contain` en vez del tamaño natural de `#map-image`, para
+que la infografía entre completa sin recortarse sea cual sea el alto real del viewport. `#map-image`
+volvió a su `src` original (`/maps/map.png`) ya que ahora vive exclusivamente en el visor de mapas real.
+
+Verificado en el navegador en ambos sentidos (listado → misión → volver al listado), sin errores de
+consola.
+
+## WebDCS: `AIRSIM_RUNS_DIR` — el directorio de corridas (`runs/`) estaba hardcodeado en `main.py`
+
+A pedido explícito del usuario ("quiero que los logs de runs se guarden en airsim-loop/airsim-runs y no
+en runs, y no veo forma de cambiarlo en un `.env`"). Confirmado: `main.py` arma el path de cada corrida
+como `os.path.join("runs", run_dir_name, ...)` con `"runs"` literal — la única forma de cambiar algo ahí
+era pisar el path **completo** vía `AIRSIM_FLIGHT_LOG` (lo que también pisa el nombre del archivo, no
+solo el directorio contenedor).
+
+Fix: `AIRSIM_RUNS_DIR = os.getenv("AIRSIM_RUNS_DIR", "airsim-runs")` nuevo en `main.py`, usado en el
+armado del path en vez del string literal. Agregado a `.env` (`AIRSIM_RUNS_DIR = "airsim-runs"`) para que
+quede explícito y configurable ahí sin tocar código. El default en código también apunta a `airsim-runs`
+(no a `runs`, que el usuario ya había renombrado y borrado del disco).
+
+Suite completa: 137/137.
+
+## WebDCS: eliminado el indicador "AirSim Planner Connected/Disconnected" del header
+
+A pedido explícito del usuario ("ya que el AirSim Planner está desactivado no veo sentido que esté el
+indicador"). Confirmado: el indicador consultaba `/api/planner/status`, que chequea conectividad del LLM
+usado específicamente por el AI Planner — la misma feature que ya se había sacado de la UI (ver sección de
+abajo). Sacado de punta a punta: el `<span>` del indicador y su texto en `index.html`, la función
+`updatePlannerStatus()` completa (fetch + manejo online/offline) y su llamada de init en `app.js`, las
+reglas `.status-indicator`/`.online`/`.offline` sin consumidor en `styles.css`, y el endpoint
+`/api/planner/status` en `webdcs/main.py` — `MissionPlanner` se deja intacto (`/api/compile` y
+`/api/launch` lo siguen usando).
+
+Verificado importando la app FastAPI directamente (la ruta ya no aparece en `app.routes`) y en el
+navegador (sin errores de consola, sin requests a `/api/planner/status`). Suite completa: 32/32.
+
+## WebDCS: sacados los botones Manual/AI Planner, y fix de scroll en las listas del sidebar
+
+Dos pedidos explícitos del usuario a partir de una captura de pantalla real: (1) las listas de
+manifiestos y de waypoints se cortaban sin scroll cuando superaban el alto de la página; (2) sacar los
+botones "Manual"/"AI Planner" porque por ahora la planificación va a ser 100% manual.
+
+**Scroll roto**: `#sidebar-missions-card` es un ítem flex-column con `flex-grow:1`, pero sin
+`min-height:0` — por default un ítem flex nunca se achica por debajo de la altura de su contenido
+(`min-height:auto`), así que el contenido se cortaba contra el `overflow:hidden` de `.app-dashboard` en
+vez de scrollear puertas adentro. Un segundo bug relacionado: el contenedor de la planificación manual
+(antes uno de dos `.tab-content` mostrado vía `display:block`) tampoco era un contenedor flex, así que el
+`flex-grow`/`min-height:0` ya declarado en `.waypoint-list` no tenía ningún efecto. Fix: `min-height:0`
+en `#sidebar-missions-card`, y `#tab-content-manual` ahora es
+`display:flex; flex-direction:column; flex-grow:1; min-height:0`. Verificado inyectando 30 manifiestos y
+20 waypoints de prueba en el navegador — ambas listas scrollean sin desbordar el resto de la página.
+
+**Tabs Manual/AI Planner**: sacados de `index.html` — el panel de planificación manual queda siempre
+visible, directo. También se sacó el modal de "estrategia de fusión LLM" (quedaba inalcanzable sin el
+botón de compilar) y los handlers correspondientes en `app.js` — necesario porque
+`elBtnCompile.addEventListener(...)` sobre un elemento inexistente habría roto el script entero al
+cargar la página. El endpoint `/api/compile` del backend se dejó intacto, ya que "por ahora" sugiere que
+la feature puede volver más adelante.
+
+Suite completa: 32/32 (`airsim-plan`).
+
+## WebDCS: eliminado el streaming de video muerto (`stream_hub`, panel `<img>` removido en agosto, `AIRSIM_LOOP_WATCH`)
+
+A partir de una duda del usuario sobre si el mismo `main.py` corre al lanzar una misión desde WebDCS
+(confirmado que sí: `LoopRunner` lo ejecuta como subproceso completo), surgió la pregunta de si
+`AIRSIM_LOOP_WATCH=true` seguía teniendo efecto. Investigación con `git log`/`git show` sobre
+`webdcs/static/index.html`: el panel de video en vivo del navegador
+(`<img id="drone-live-stream" src="/api/stream/video">`) existió hasta el commit `a0b25d6d` (2026-08-20)
+y fue **eliminado** en `fa361559` (2026-08-27, rediseño de la UI) — sin tocar el backend. El backend que
+lo alimentaba seguía vivo y corriendo en cada ciclo sin condicionar nada:
+`stream_hub.publish(frame=..., telemetry=...)` en `main.py` (no estaba adentro de `if watch_mode:`), y el
+endpoint `/api/stream/video` en `webdcs/main.py` seguía expuesto — pero sin ningún `<img>`/`fetch` en el
+frontend actual que lo consumiera. `AIRSIM_LOOP_WATCH` en sí solo controlaba algo distinto y más acotado:
+una ventana nativa de OpenCV (`cv2.imshow("Drone Camera Feed", ...)`) en la máquina donde corre el
+subproceso — coherente con el label del checkbox de la UI, "Ver video en tiempo real **(OpenCV)**", nunca
+fue streaming al navegador.
+
+A pedido explícito del usuario ("eliminar ambos, es código muerto"):
+
+- `src/airsim_plan/bridge/stream_hub.py` borrado entero (singleton MJPEG + telemetría).
+- Sacados los endpoints `/api/stream/video` y `/api/stream/telemetry` de `webdcs/main.py`, su import y el
+  campo `watch` de `SaveRequest`.
+- Sacado el parámetro `watch`/`AIRSIM_LOOP_WATCH` de `loop_runner.py` (constructor, `os.environ`, y el
+  que se pasaba al subproceso) y el setting `airsim_loop_watch` de `config.py`.
+- Sacada la línea `AIRSIM_LOOP_WATCH=true` de `.env` y `.env.copy` (`airsim-plan`).
+- En `main.py` (`airsim-loop`): sacados `watch_mode`, la ventana `cv2.namedWindow`/`imshow`/`waitKey`/
+  `destroyAllWindows`, y los 4 `stream_hub.publish(...)` (por ciclo, misión completada, aterrizaje,
+  cleanup en `finally`) — 109 líneas menos.
+- Sacado el checkbox "Ver video en tiempo real (OpenCV)" de `index.html` y su referencia
+  (`elChkWatchLoop`) + el campo `watch` del payload de `/api/launch` en `app.js`.
+
+Verificado importando la app FastAPI directamente (rutas muertas ya no registradas) y sirviendo el
+frontend estático en el navegador (sin errores de consola ni referencias rotas). Suite completa:
+137/137 (`airsim-loop`) + 32/32 (`airsim-plan`, sin contar 2 fallos preexistentes no relacionados —
+entorno con AirSim real conectado y `.env` pisando un test de `monkeypatch`, confirmado que fallan igual
+en el `HEAD` anterior a este cambio).
+
 ## `viewer.html` por corrida: auditoría detallada con video y CSV sincronizados por slider
 
 A pedido explícito del usuario ("que cada directorio con el log tenga un `viewer.html` donde, a medida

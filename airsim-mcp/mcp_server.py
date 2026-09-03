@@ -9,8 +9,8 @@ import cosysairsim as airsim
 from mcp.server.fastmcp import FastMCP
 from airsim_functions.orbit import OrbitNavigator
 
-# Set up logging to a file for debugging, since stdout is used for MCP messages
-# and LM studio treats stderr as errors.
+# Configura el logging a un archivo para debugging, ya que stdout se usa para los mensajes MCP
+# y LM Studio trata stderr como errores.
 log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mcp_drone.log")
 
 def clean_old_logs(file_path, days=2):
@@ -45,16 +45,16 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path),
-        logging.StreamHandler(sys.stderr) # Keep stderr but only for Warnings/Errors if needed, though we set fastmcp to WARNING below.
+        logging.StreamHandler(sys.stderr) # Mantiene stderr pero solo para Warnings/Errors si hace falta, aunque más abajo dejamos fastmcp en WARNING.
     ]
 )
 logger = logging.getLogger(__name__)
 
-# Redirect standard output to devnull to prevent any random prints (from Airsim) 
-# from corrupting the MCP stdio JSON-RPC transport.
+# Redirige la salida estándar a devnull para evitar que cualquier print suelto (de Airsim)
+# corrompa el transporte JSON-RPC por stdio de MCP.
 class StreamToLogger(object):
     """
-    Fake file-like stream object that redirects writes to a logger instance.
+    Objeto stream tipo archivo falso que redirige las escrituras a una instancia de logger.
     """
     def __init__(self, logger, log_level=logging.INFO):
         self.logger = logger
@@ -74,11 +74,11 @@ class StreamToLogger(object):
 
 sys.stdout = StreamToLogger(logger, logging.DEBUG)
 
-# Configuration
-TIMEOUT = 1200  # 20 mins
+# Configuración
+TIMEOUT = 1200  # 20 minutos
 
-# Initialize the server
-# Suppress INFO logs since LM Studio interprets any stderr output as an [ERROR]
+# Inicializa el server
+# Suprime los logs INFO ya que LM Studio interpreta cualquier salida por stderr como un [ERROR]
 mcp = FastMCP("AirSimDroneController")
 mcp.logger.setLevel(logging.WARNING) if hasattr(mcp, 'logger') else None
 
@@ -94,7 +94,7 @@ class DroneController:
         self.maxmin_vel = maxmin_velocity
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         
-        # Initialize client inside the drone thread to ensure isolation of tornado loops
+        # Inicializa el client dentro del thread del drone para asegurar el aislamiento de los loops de tornado
         self.executor.submit(self._init_drone_sync).result()
 
     def _init_drone_sync(self):
@@ -119,7 +119,7 @@ class DroneController:
         logger.info("Connection confirmed and API control enabled.")
 
     def run_in_drone_thread(self, func, *args, **kwargs):
-        """Helper to run a synchronous function in the dedicated drone thread."""
+        """Helper para correr una función síncrona en el thread dedicado del drone."""
         return self.executor.submit(func, *args, **kwargs).result()
 
     def _takeoff_sync(self) -> str:
@@ -159,7 +159,7 @@ class DroneController:
         return f"Moved to ({x}, {y}, {z}) at velocity {velocity}"
 
     def move_to_position(self, x: float, y: float, z: float, velocity: float) -> str:
-        z *= -1 # Airsim uses NED coordinates, so we need to negate z
+        z *= -1 # Airsim usa coordenadas NED, así que hay que negar z
         return self.run_in_drone_thread(self._move_to_position_sync, x, y, z, velocity)
 
     def _move_on_path_sync(self, path_points: list[dict], velocity: float) -> str:
@@ -255,7 +255,7 @@ class DroneController:
     def reset(self) -> str:
          return self.run_in_drone_thread(self._reset_sync)
 
-# Instantiate drone controller globally
+# Instancia el drone controller globalmente
 drone = DroneController()
 
 @mcp.tool()
@@ -317,5 +317,5 @@ def drone_reset() -> str:
     return drone.reset()
 
 if __name__ == '__main__':
-    # Start the FastMCP server with stdio transport by default
+    # Inicia el server FastMCP con transporte stdio por defecto
     mcp.run(transport='stdio')

@@ -30,7 +30,7 @@ class Settings:
     can be safely shared across modules.
     """
 
-    # LM Studio / OpenAI-compatible ground planner (defaulting to Ollama)
+    # Planificador de tierra LM Studio / compatible con OpenAI (por defecto Ollama)
     lmstudio_base_url: str = field(
         default_factory=lambda: os.getenv("OLLAMA_BASE_URL") or os.getenv("LMSTUDIO_BASE_URL", "http://localhost:11434/v1")
     )
@@ -41,8 +41,8 @@ class Settings:
         default_factory=lambda: os.getenv("OLLAMA_MODEL") or os.getenv("LMSTUDIO_MODEL", "llama3")
     )
 
-    # Tactical SLM (Phi-3) — only used to compose prompts handed to
-    # airsim-loop; the actual call happens there.
+    # SLM táctico (Phi-3) — solo se usa para componer los prompts que se le
+    # pasan a airsim-loop; el llamado en sí ocurre ahí.
     tactical_base_url: str = field(
         default_factory=lambda: os.getenv("TACTICAL_BASE_URL", "http://localhost:11434/v1")
     )
@@ -53,7 +53,7 @@ class Settings:
         default_factory=lambda: os.getenv("TACTICAL_MODEL", "phi3")
     )
 
-    # AirSim (used only for the takeoff hand-off)
+    # AirSim (solo se usa para el hand-off del despegue)
     airsim_host: str = field(default_factory=lambda: os.getenv("AIRSIM_HOST", "127.0.0.1"))
     airsim_vehicle_name: str = field(
         default_factory=lambda: os.getenv("AIRSIM_VEHICLE_NAME", "Drone0")
@@ -62,7 +62,7 @@ class Settings:
         default_factory=lambda: int(os.getenv("AIRSIM_PORT", "41451"))
     )
 
-    # Mission defaults
+    # Valores por defecto de la misión
     default_takeoff_alt: float = field(
         default_factory=lambda: float(os.getenv("DEFAULT_TAKEOFF_ALT", "-10.0"))
     )
@@ -70,12 +70,12 @@ class Settings:
         default_factory=lambda: float(os.getenv("DEFAULT_SPEED", "5.0"))
     )
 
-    # Where compiled manifests land (relative to CWD unless absolute).
+    # Dónde quedan los manifiestos compilados (relativo al CWD salvo que sea absoluto).
     mission_dir: Path = field(
         default_factory=lambda: Path(os.getenv("MISSION_DIR", "missions")).expanduser()
     )
 
-    # LLM sampling
+    # Muestreo del LLM
     planner_temperature: float = field(
         default_factory=lambda: float(os.getenv("PLANNER_TEMPERATURE", "0.2"))
     )
@@ -83,7 +83,7 @@ class Settings:
         default_factory=lambda: int(os.getenv("PLANNER_MAX_TOKENS", "800"))
     )
 
-    # Optional classes that are always considered non-hostile (ROE hints).
+    # Clases opcionales que siempre se consideran no hostiles (sugerencias de ROE).
     default_ignore_classes: List[str] = field(
         default_factory=lambda: _csv(os.getenv("DEFAULT_IGNORE_CLASSES", "person,car"))
     )
