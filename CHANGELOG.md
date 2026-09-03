@@ -1,9 +1,219 @@
 # 2026-0903
 
+## `viewer.html` por corrida: auditoría detallada con video y CSV sincronizados por slider
+
+A pedido explícito del usuario ("que cada directorio con el log tenga un `viewer.html` donde, a medida
+que corrés el fotograma en el video con un slider, se remarque abajo el renglón del CSV correspondiente").
+
+<img src="informe/2026-0903 Informe HTML Auditar Vuelo.png"/>
+
+
+**`src/logging/flight_viewer.py`** (`write_viewer_html`) nuevo: genera un `.html` autocontenido por
+corrida, mismo directorio que el video/CSV/PNGs (`main.py` lo arma automáticamente al cerrar
+`FlightVideoRecorder`, justo después del mensaje de video cerrado). El CSV se embebe **inline** como JSON
+dentro de un `<script>` en vez de vía `fetch()` — abrir el visor con doble clic usa `file://`, y ahí la
+mayoría de los navegadores bloquea `fetch()`/XHR a otro archivo local por CORS (`<video src="...">` a un
+archivo hermano en la misma carpeta sí funciona bajo `file://`, leer el CSV por `fetch` no). Un
+`</script>` que apareciera literalmente dentro de un `slm_prompt`/`slm_raw_response` se escapa antes de
+incrustar (`.replace("</script", "<\\/script")`) para no cortar el bloque de datos a mitad de camino — 2
+tests nuevos en `test_flight_viewer.py`, uno de ellos cubre exactamente ese caso.
+
+Sincronización en ambos sentidos: reproducir el video mueve el slider (`timeupdate` → búsqueda binaria
+del ciclo cuyo `t` está más cerca del tiempo actual del video, la correspondencia es aproximada por tiempo
+de misión, no cuadro-a-cuadro exacto, mismo criterio que ya documenta `flight_video.py`); arrastrar el
+slider mueve el video y resalta + hace scroll a la fila correspondiente en la tabla completa del CSV. El
+panel de detalle del ciclo seleccionado muestra todos los campos no cubiertos por la tabla compacta:
+sectores izquierda/centro/derecha (occ/ttc/conf/bloqueado), `slm_prompt`/`slm_raw_response` completos, y
+los fotogramas enviados al VLM (`slm_frame_paths`) como `<img>` inline.
+
+Suite completa: 137/137.
+
+## bug-fix: el video de las corridas no se veía en ningún navegador — `mp4v` no lo decodifica nadie
+
+Al verificar el `viewer.html` recién armado en un navegador real: el `<video>` mostraba la duración
+correcta (`3:46`) pero pantalla negra, cero fotogramas, en cualquier posición del timeline. Causa:
+`FlightVideoRecorder` (`src/logging/flight_video.py`) usaba el fourcc `mp4v` de `cv2.VideoWriter` — eso es
+MPEG-4 Part 2, un códec que ningún navegador moderno sabe decodificar (a diferencia de H.264/VP8/VP9/AV1).
+El contenedor `.mp4` se lee bien (por eso la duración aparecía), pero el stream de video adentro es
+opaco para Chrome.
+
+Se probó primero `avc1`/`H264` (H.264, universalmente soportado) como reemplazo directo: `cv2.VideoWriter`
+reporta `isOpened() == True`, pero en este entorno el build de OpenCV/FFmpeg necesita la DLL de OpenH264
+de Cisco (`openh264-1.8.0-win64.dll`), que no está instalada — el archivo queda corrupto/vacío en
+silencio, sin que `isOpened()` lo detecte. Instalar esa DLL manualmente habría sido una dependencia
+externa frágil (justo lo que el usuario pidió evitar: "mantengamos ese formato del logger para mayor
+compatibilidad, sin depender de códecs externos").
+
+Fix: cambiar a `.webm` con códec VP8 (fourcc `VP80`) — confirmado escribiendo y re-leyendo un video de
+prueba con `cv2.VideoCapture` antes de adoptarlo, es el único códec que este build de OpenCV/FFmpeg sabe
+codificar de verdad *y* que todo navegador reproduce sin plugins ni DLLs externas. `FlightVideoRecorder`
+ahora fuerza la extensión `.webm` (`Path(out_path).with_suffix(".webm")`), `main.py` graba a
+`<stem>.webm` en vez de `<stem>.mp4`. El video ya grabado de `TOWNSIM_INI-20260903T182151Z` se
+retranscodificó con OpenCV (mp4v → VP8, 3582 frames, sin volver a volar) y su `viewer.html` se regeneró
+apuntando al `.webm` nuevo.
+
+De paso, un falso negativo durante la verificación: probando el seek del slider contra un servidor de
+prueba (`python -m http.server`, usado solo para poder abrir el visor en el navegador de este entorno) el
+video parecía no poder saltar a un punto intermedio del timeline — resultó ser que ese servidor no
+soporta `Range` requests (devuelve `200` en vez de `206`), no un problema del archivo `.webm`. Confirmado
+con un servidor mínimo con soporte de `Range` que tanto el `.webm` generado por `ffmpeg` como el generado
+por `cv2.VideoWriter` permiten seek arbitrario sin problema — y `file://` (la forma real en que se abre el
+visor) ni siquiera pasa por HTTP, así que esto no aplica al uso real, solo a la verificación local. Test
+de `test_flight_video.py` actualizado para confirmar la extensión `.webm`.
+
+Suite completa: 137/137.
+
+## Rediseño del layout de `viewer.html`: la deliberación con varios fotogramas rompía la distribución
+
+A pedido explícito del usuario, tras ver el visor con una deliberación de escaneo profundo (4 fotogramas
+enviados al VLM): el panel de detalle crecía en altura con los `<img>` del prompt y empujaba/desalineaba
+el resto de la página.
+
+Layout nuevo, con altura fija a viewport (`html, body { height: 100% }`, `body` como columna flex sin
+scroll propio): fila superior a 2/3 del alto (`grid-template-columns: 3fr 2fr`) con el video a la
+izquierda ocupando toda la altura disponible (`object-fit: contain`, para que el overlay con las
+anotaciones se vea completo, no recortado) y el panel de detalle a la derecha con su **propio**
+`overflow-y: auto` — así una deliberación con muchos fotogramas scrollea puertas adentro del panel en vez
+de estirar la página. Fila inferior a 1/3 del alto con la tabla del CSV a todo el ancho (antes compartía
+mitad de página con el panel). El grid de campos clave/valor del panel pasó de 2 a 4 columnas
+(`grid-template-columns: max-content 1fr max-content 1fr`, dos pares por renglón) para aprovechar el
+espacio horizontal que antes quedaba vacío.
+
+Verificado en el navegador contra el caso que motivó el cambio (ciclo con `slm_delib_id=4`, 4 fotogramas):
+el panel scrollea internamente (`scrollHeight` 723px vs `clientHeight` 609px) sin desbordar hacia la
+tabla ni romper la distribución general.
+
+Suite completa: 137/137.
+
+## Overlay del video ampliado con más info del `DroneState`, y un bug de fuente encontrado en el camino
+
+A pedido del usuario ("¿es posible anotar cada frame con más info, y es seguro desde el punto de vista de
+auditoría?"): sí es seguro, y por un motivo que vale la pena dejar explícito — `annotated_frame` es una
+**copia** de `frame` hecha en `main.py` *después* de que el original ya viajó (sin tocar) hacia
+`frame_history`/el VLM y hacia el `.png` de auditoría; lo que se dibuje ahí nunca vuelve al pipeline de
+percepción. Fundamentalmente distinto del bug de los marcadores de debug (esos contaminaban la imagen
+**en el simulador**, antes de que el código la viera — la misma imagen iba al VLM y a la pantalla).
+
+Overlay ampliado de 2 a 4 líneas, todo desde el mismo `DroneState` que alimenta el CSV (no hace falta leer
+el CSV de vuelta): tiempo de misión, número de ciclo, posición, velocidad horizontal, `pitch`/`roll`, y
+ocupación/TTC/bloqueo por sector (izquierda/centro/derecha).
+
+**bug-fix de paso**: el símbolo `°` no lo soporta la fuente Hershey de `cv2.putText` — se renderiza como
+`??` en el video. Cambiado a `deg`. Encontrado renderizando un preview sintético antes de gastar otro
+vuelo completo con el bug adentro.
+
+A pedido del usuario, se sumó además la **ruta del grafo** (`route`: `reactive`/`deliberative`/`evasive`/
+`girar_90`/`fsm` — qué nodo de LangGraph decidió ese ciclo) al frente de la primera línea
+(`[DELIBERATIVE] ACT: ...`), mismo formato que ya usa la consola (`route_tag` en `_print_state`) pero
+ausente hasta ahora en el video — antes solo se veía la macro-acción y el `flight_status` narrativo, no
+en qué rama del lazo de control estaba el sistema.
+
+Suite completa: 135/135.
+
+**Validación en vuelo real** (`TOWNSIM_INI-20260903T182151Z`, mismo escenario/brazo/estrategia): éxito, 0
+colisiones, 3582 ciclos/722s, 22/22 atascos resueltos por escaneo profundo. Frame extraído del video
+confirma el overlay completo legible con datos reales: `[REACTIVE] ACT: MANTENER_RUMBO WP 2/7 (15m)` /
+`TTC: inf | vuelo_waypoint` / `t=424.0s cy=2101 | pos=(+47.8,+42.0,-29.7) | v=2.92m/s pitch=-0.6deg
+roll=-1.1deg` / `IZQ occ=0.00 ttc=inf | CEN occ=0.00 ttc=inf | DER occ=0.00 ttc=inf` — de paso, confirma en
+vuelo real que el fix del cuaternión (sección de más abajo) ya reporta `pitch`/`roll` con valores
+distintos de cero. `WP_0_ASCENSO` volvió a dominar la duración de la misión (1955 ciclos, 394.2s — 54.6%
+del total), dentro del rango de variabilidad ya conocido para ese tramo.
+
+## Resumen por waypoint y grabación de video sincronizada con el log
+
+Dos pedidos explícitos para facilitar el análisis de corridas:
+
+- **`<stem>.summary_by_wp.csv`** nuevo, escrito por `FlightLogger.close()` junto al resto de los
+  archivos de la corrida: ciclos consumidos, ciclos en ruta `deliberative` y eventos de escaneo profundo
+  (`deep_vlm`), desagregados por `wp_index`/`wp_label`. Antes había que reconstruir esta tabla a mano
+  parseando el CSV completo cada vez (como se hizo para diagnosticar `WP_0_ASCENSO`, ver secciones de
+  abajo) — ahora queda calculado en cada corrida. 3 tests nuevos.
+- **`src/logging/flight_video.py`** (`FlightVideoRecorder`) nuevo: graba un `.mp4` de la corrida, un
+  frame **anotado** (el mismo overlay de acción/TTC que ya arma `main.py` para el modo watch/WebDCS) por
+  ciclo del lazo táctico, a `fps=LOOP_HZ` — la misma cadencia real del lazo, para que el timeline del
+  video se pueda recorrer en paralelo al timeline del CSV/JSONL (`video_t ≈ frame_index / fps ≈ t` de la
+  fila correspondiente; aproximado por tiempo — el lazo real no corre a `LOOP_HZ` perfectamente constante,
+  así que para una correspondencia exacta hay que cruzar por número de ciclo, no por tiempo de video).
+  Opt-in vía `FLIGHT_RECORD_VIDEO=true` (default `false` — no todo el mundo quiere pagar el costo de
+  escritura en cada ciclo); se guarda como `<stem>.mp4`, mismo directorio que el resto de la corrida. 3
+  tests nuevos (incluye el caso de frame de tamaño distinto al declarado, que `cv2.VideoWriter` no admite
+  sin reescalar).
+
+Suite completa: 135/135.
+
+**Validación en vuelo real** (`FLIGHT_RECORD_VIDEO=true` en `.env`, `TOWNSIM_INI-20260903T165519Z`,
+mismo escenario/brazo/estrategia): éxito, 0 colisiones, 2840 ciclos/572.7s. Video de 2840 frames a 5.0fps
+(213.7 MB — el codec `mp4v` de OpenCV no comprime demasiado, tenerlo en cuenta para corridas largas o
+batches). Un frame extraído a mitad de vuelo confirma overlay legible y colores correctos (`ACT: ESCANEO
+WP 1/7 (17m)` / `TTC: inf | escaneo_profundo`, durante un barrido de escaneo profundo). El
+`summary_by_wp.csv` de esta misma corrida deja el hallazgo de `WP_0_ASCENSO` (CHANGELOG de más abajo)
+mucho más legible que antes: 1207 ciclos, **243.7s — 42% de toda la duración de la misión** — en un solo
+waypoint, 59.8% de tasa deliberativa, 13 de los 14 eventos de escaneo profundo de la corrida.
+
+## bug-fix: `pitch`/`roll` en `0.0°` para SIEMPRE — `cosysairsim` no expone `to_eularian_angles`
+
+Analizando por qué `WP_0_ASCENSO` (el tramo pegado a la esquina de un edificio de 2 pisos con árboles
+maduros encima, ver sección de abajo) concentraba tanta deliberación, se encontró que el prompt del VLM
+mostraba `pitch=+0.0°, roll=+0.0°` en **cada una** de las 16 deliberaciones de ese tramo — sospechoso.
+Causa: `_state_to_telemetry` (`src/hardware/airsim_client.py`) intenta `airsim.to_eularian_angles(orient)`
+y cae a un fallback manual si no existe; `cosysairsim` (el binding en uso) **no** expone esa función
+(`hasattr` da `False`), y el fallback manual solo calculaba `yaw` — dejaba `pitch`/`roll` hardcodeados en
+`0.0` para siempre en este entorno, desde que existe el campo. Fix: `_quaternion_to_euler()` nuevo,
+fórmula estándar aeroespacial (misma convención NED que usa el propio `to_eularian_angles` de AirSim),
+usado en ambos casos (fallback y excepción, antes duplicados). 4 tests de regresión en
+`test_airsim_client_telemetry.py` (roll puro, pitch puro, yaw puro, cuaternión identidad). Explica en
+parte por qué el escenario nunca mostró inclinación real hasta ahora — no específico de esta sesión, el
+bug es tan viejo como el propio campo `orientation`.
+
+**Validación en vuelo real** (`TOWNSIM_INI-20260903T162049Z`, mismo escenario sin modificar — a pedido
+explícito del usuario, la corrección apunta a la información que recibe el VLM, no a facilitar la ruta):
+2737 ciclos / 549.5s, **0 colisiones**, 12/12 atascos resueltos por escaneo profundo, y **26 invocaciones
+al SLM** — la mitad que la corrida anterior (48) y menos de un cuarto que la de dos corridas atrás (108),
+con la duración total más baja de las seis corridas de `TOWNSIM_INI` de la sesión. `WP_0_ASCENSO` (el
+tramo junto al edificio, sin cambios) siguió tardando lo esperado (~1110 ciclos) — es la dificultad real
+del tramo, no algo que este fix debiera cambiar.
+
+## Cuatro mejoras al brazo `slm` a partir del análisis anterior: historial t/t-1, estado de vuelo y motivo de consulta en el prompt, y avance cauteloso en vez de freno total
+
+Acciones concretas a partir del análisis de la sección de abajo:
+
+- **`VLM_FRAME_HISTORY_SIZE`: default `1` → `2`** (`src/agents/graph.py`, `src/agents/deliberative.py`). El
+  mecanismo de etiquetado `[Fotograma t-1]`/`[Fotograma t (actual)]` ya existía (F2.1); solo estaba apagado.
+  Confirmado con el código (`capture_node` corre en cada ciclo del lazo, a `LOOP_HZ`) que t/t-1 son ciclo t
+  y ciclo t-1 reales, separados por ~0.2s — no dos deliberaciones sucesivas, que pueden estar mucho más
+  espaciadas.
+- **Estado de vuelo en el prompt**: nueva `_flight_state_note()` — velocidad horizontal actual (con aviso
+  "prácticamente detenido" si `< 0.3 m/s`) y `pitch`/`roll`. Antes el VLM no tenía forma de saber si la
+  imagen correspondía a crucero normal o a un momento sin traslación.
+- **Motivo de consulta explícito en el prompt**: nueva `_query_reason_note()` — distingue "el sector
+  CENTRO muestra un obstáculo real (TTC=…)" de "la percepción no tiene evidencia suficiente (…) esto NO
+  significa necesariamente que haya un obstáculo real". Directamente a partir del hallazgo de que el
+  82.5% de las deliberaciones de `TOWNSIM_INI` fueron del segundo tipo. Mismo agregado de pitch/roll en el
+  prompt del escaneo profundo (`deep_scan.py`), sin la nota de velocidad (el barrido gira en el lugar por
+  diseño, la velocidad horizontal ahí no aporta).
+- **bug-fix estructural: ya no `FRENAR` total mientras se espera al SLM/VLM, salvo bloqueo confirmado.**
+  Causa raíz identificada en el análisis de abajo: frenar corta la traslación, y sin traslación
+  `FlowTTCEstimator` no puede producir confianza — un bucle que se retroalimenta (poca confianza → deliberar
+  → frenar → sigue sin confianza → vuelve a deliberar). `_wait_command()` nuevo en
+  `make_deliberative_node()`: si `close_structural` (bloqueo central confirmado con TTC bajo) es falso,
+  avanza a `DELIB_WAIT_CREEP_SPEED_MPS` (0.5 m/s por defecto) en vez de frenar del todo; si es verdadero,
+  sigue frenando exactamente como antes — la seguridad no cede ante esta optimización. Dos tests nuevos en
+  `test_deliberative_wait_creep.py` cubren ambas ramas.
+
+Suite completa: 127/127.
+
+**Validación en vuelo real** (`TOWNSIM_INI-20260903T160245Z`, misma ruta, mismo brazo `slm`, `deep_vlm`):
+2878 ciclos / 587.5s, **0 colisiones**, 12 eventos de atasco (12/12 resueltos por escaneo profundo) y solo
+**48 invocaciones al SLM** — contra 4160 ciclos / 838s / 15 eventos / 108 invocaciones de la corrida
+anterior sobre la misma ruta (sin estos cuatro cambios). Prácticamente en línea con la primera corrida
+limpia (`TOWNSIM_INI-20260903T150757Z`: 2771/591s/8 eventos), pese a llevar el doble de fotogramas por
+consulta y prompts más largos. Comparación de una sola corrida por variante — alentador, no concluyente;
+para confirmar el efecto real haría falta un batch multi-semilla con `experiments/runner.py`.
+
 ## Análisis del "porqué" de la deliberación excesiva: no es ruido visual, es falta de traslación durante el propio escape/escaneo — y un bug de CSV más encontrado en el camino
 
 A pedido del usuario, análisis cuantitativo de las 103 deliberaciones de la corrida `TOWNSIM_INI-
-20260903T152759Z` (fotogramas + `field_centro_*` del CSV) para poner a prueba la hipótesis de que la
+0260903T152759Z` (fotogramas + `field_centro_*` del CSV) para poner a prueba la hipótesis de que la
 composición visual en el momento de deliberar explica las "espirales deliberativas":
 
 - **`centro_blocked=True` en solo 1 de 103 deliberaciones (0.97%)** — casi nunca se escala por un
@@ -119,6 +329,8 @@ Suite completa: 122/122 (121 + 1 test nuevo de regresión del conteo de invocaci
 # 2026-0901
 
 ## `PLAN-MEJORAS-3.md` implementado: guardia de no-profundidad, escaneo espacial inicial y profundo, ablation `DEADLOCK_STRATEGY` (H0–H3)
+
+<img src="informe/2026-0901 Plan Mejoras 3.jpg"/>
 
 Implementación completa del plan que discutía el orden de deliberación del grafo de control y la falta de
 una capacidad de análisis espacial más profundo en dos momentos: al despegar, y al detectar un atasco sin
@@ -236,6 +448,8 @@ como default estable para todo el suite — ningún test debe depender del `.env
 <img src="informe/2026-0831 Minimal Scalability Config for Airsim.png"/>
 
 ## bug-fix: overshoot-latch inestable (giro espurio en aproximación final), y dos límites de percepción más confirmados (obstrucción física invisible, poste de semáforo)
+
+<img src="informe/2026-0831 Mejoras en Navegacion y Blindspots.jpg"/>
 
 Retomando `TOWNSIM_DEMO`: la corrida `runs/townsim_demo_validate9` completó bien pero con un giro raro de
 5+ segundos justo en la aproximación final al aterrizaje (el dron se frenaba en el lugar y giraba ~140°

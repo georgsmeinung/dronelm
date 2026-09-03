@@ -174,7 +174,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     deliberation_service = make_deliberation_service()
     deliberative_node = make_deliberative_node(deliberation_service)
 
-    frame_history_size = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "1"))
+    frame_history_size = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "2"))  # 2026-0903: t y t-1, no solo t (pedido explicito)
     girar90_duration_s = float(os.getenv("GIRAR90_DURATION_S", "1.0"))
 
     # 1. Captura sensorial

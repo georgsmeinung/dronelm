@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flight-viewer",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:\\Users\\Jenic\\AppData\\Local\\Temp\\claude\\D--TesisMCD-dronelm\\74687dc2-1a2c-4a66-b8f9-710c9cfad5d9\\scratchpad\\range_server.py", "8934", "airsim-loop/runs/TOWNSIM_INI-20260903T182151Z"],
+      "port": 8934
+    }
+  ]
+}

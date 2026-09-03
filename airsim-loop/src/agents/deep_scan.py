@@ -140,13 +140,22 @@ def _build_deep_scan_prompt(
         wp_str = f"Meta ({label}): {dist:.1f}m hacia {direction} ({err:+.0f}°)"
 
     max_escape_alt = float(os.getenv("MAX_ESCAPE_ALT_M", "20.0"))
+    # Inclinacion actual (2026-0903, mismo pedido que deliberative.py): el
+    # barrido gira en el lugar por diseno (nunca traslacion, ver §0.3 del
+    # plan), asi que no tiene sentido reportar velocidad horizontal aca --
+    # pero el pitch/roll ayuda a distinguir un barrido estable de uno con
+    # oscilacion fisica real (rafagas, choque leve con follaje).
+    orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+    pitch_deg = math.degrees(float(orient.get("pitch", 0.0))) if isinstance(orient, dict) else 0.0
+    roll_deg = math.degrees(float(orient.get("roll", 0.0))) if isinstance(orient, dict) else 0.0
     return (
         f"{field.summary_text()}\n\n"
         f"ATASCO: {deadlock_cycles} ciclos sin progresar hacia el waypoint.\n"
         f"Escapes verticales ya intentados en este atasco: {consecutive_escapes}.\n"
         f"OBJETIVO Y ALTITUD:\n"
         f"- {wp_str}\n"
-        f"- Altitud actual: {altitude:.1f}m (Cota maxima de escape: {max_escape_alt:.1f}m)\n\n"
+        f"- Altitud actual: {altitude:.1f}m (Cota maxima de escape: {max_escape_alt:.1f}m)\n"
+        f"- Inclinacion actual: pitch={pitch_deg:+.1f}°, roll={roll_deg:+.1f}°.\n\n"
         "INSTRUCCION:\n"
         "Elegi la macro_action que mejor resuelva el atasco a partir del panorama mostrado.\n"
         "Responde SOLO con este JSON:\n"

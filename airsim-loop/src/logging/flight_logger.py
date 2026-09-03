@@ -35,7 +35,7 @@ _CSV_SECTORS = ("izquierda", "centro", "derecha")
 _CSV_FIELDNAMES = [
     "t", "cycle", "arm", "scenario", "seed",
     "route", "action", "wp_index", "dist_to_wp_m", "degraded",
-    "pos_x", "pos_y", "pos_z", "vel_x", "vel_y", "vel_z", "yaw_deg",
+    "pos_x", "pos_y", "pos_z", "vel_x", "vel_y", "vel_z", "yaw_deg", "pitch_deg", "roll_deg",
     "has_collided", "collision_object", "min_obstacle_dist_m",
     "latency_ms_json",
     "slm_invoked", "slm_latency_ms", "slm_fallback", "slm_timeout", "slm_adherent",
@@ -102,6 +102,26 @@ class FlightLogger:
         # H3.2 (PLAN-MEJORAS-3): eventos de resolucion de atasco (blind vs.
         # deep_vlm, ver src/agents/deep_scan.py), para el ablation de H3.
         self._deadlock_events: list = []
+        # Resumen por waypoint (2026-0903, pedido explicito): ciclos
+        # consumidos y uso del nodo deliberativo/escaneo profundo por cada
+        # tramo de la mision, para identificar de un vistazo cual waypoint
+        # concentra la dificultad (ver hallazgo de WP_0_ASCENSO en
+        # TOWNSIM_INI, CHANGELOG.md 2026-0903) sin tener que analizar el CSV
+        # entero a mano cada vez.
+        self._wp_stats: Dict[int, Dict[str, Any]] = {}
+
+    def _wp_entry(self, wp_index: int, wp_label: Optional[str], t: float) -> Dict[str, Any]:
+        entry = self._wp_stats.get(wp_index)
+        if entry is None:
+            entry = {
+                "wp_index": wp_index, "wp_label": wp_label, "cycles": 0,
+                "deliberative_cycles": 0, "deep_scan_events": 0,
+                "first_t": t, "last_t": t,
+            }
+            self._wp_stats[wp_index] = entry
+        if wp_label and not entry.get("wp_label"):
+            entry["wp_label"] = wp_label
+        return entry
 
     def _save_delib_frames(self, delib_id: Any, frames_with_ts: list) -> list:
         """Guarda a PNG los fotogramas RAW efectivamente enviados al VLM en la
@@ -180,6 +200,22 @@ class FlightLogger:
         if deadlock_event is not None:
             self._deadlock_events.append(deadlock_event)
 
+        # Resumen por waypoint: acumular ANTES de que "route"/"t" cambien de
+        # sentido mas abajo -- self._cycle ya se incremento arriba, y "t" se
+        # calcula recien al armar `record`, asi que se replica aca (barato,
+        # un round() sobre un float).
+        wp_index = state.get("current_wp_index", 0)
+        target_wp = state.get("target_waypoint")
+        wp_label = target_wp.get("label") if isinstance(target_wp, dict) else None
+        t_now = round(time.time() - self._t0, 3)
+        wp_entry = self._wp_entry(wp_index, wp_label, t_now)
+        wp_entry["cycles"] += 1
+        wp_entry["last_t"] = t_now
+        if route == "deliberative":
+            wp_entry["deliberative_cycles"] += 1
+        if deadlock_event is not None and deadlock_event.get("strategy") == "deep_vlm":
+            wp_entry["deep_scan_events"] += 1
+
         if min_obstacle_dist_m is not None:
             if self._min_obstacle_dist is None or min_obstacle_dist_m < self._min_obstacle_dist:
                 self._min_obstacle_dist = min_obstacle_dist_m
@@ -239,7 +275,13 @@ class FlightLogger:
             "seed": self.seed,
             "pos": pos,
             "vel": vel,
+            # Orientacion completa en los tres ejes (2026-0903, pedido
+            # explicito -- antes solo se guardaba yaw_deg, e igual que con
+            # vel_x/y/z hacia falta pitch/roll para poder analizar el
+            # momento de inercia rotacional, no solo el rumbo horizontal).
             "yaw_deg": round(__import__("math").degrees(float(orient.get("yaw", 0.0))), 2),
+            "pitch_deg": round(__import__("math").degrees(float(orient.get("pitch", 0.0))), 2),
+            "roll_deg": round(__import__("math").degrees(float(orient.get("roll", 0.0))), 2),
             "route": state.get("route", ""),
             "action": state.get("next_action", ""),
             "obstacle_field": field.to_dict() if field is not None else None,
@@ -275,6 +317,8 @@ class FlightLogger:
             # (2026-0828). Encontrado analizando el CSV de TOWNSIM_INI.
             "vel_x": vel.get("vx"), "vel_y": vel.get("vy"), "vel_z": vel.get("vz"),
             "yaw_deg": record["yaw_deg"],
+            "pitch_deg": record["pitch_deg"],
+            "roll_deg": record["roll_deg"],
             "has_collided": record["collision"]["has_collided"],
             "collision_object": record["collision"]["object"],
             "min_obstacle_dist_m": record["min_obstacle_dist_m"],
@@ -344,6 +388,39 @@ class FlightLogger:
         summary_path = self.out_path.with_name(self.out_path.stem + ".summary.json")
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, default=str)
+
+        self._write_wp_summary_csv()
+
         self._fh.close()
         self._csv_fh.close()
         return summary
+
+    def _write_wp_summary_csv(self) -> None:
+        """Resumen por waypoint (2026-0903, pedido explicito): ciclos
+
+        consumidos y uso del nodo deliberativo/escaneo profundo por cada
+        tramo de la mision, en `<stem>.summary_by_wp.csv` junto al resto de
+        los archivos de esta corrida. Permite ver de un vistazo cual tramo
+        concentro la dificultad sin tener que reconstruir la tabla a mano
+        desde el CSV completo cada vez (ver hallazgo de WP_0_ASCENSO en
+        TOWNSIM_INI, CHANGELOG.md 2026-0903).
+        """
+        wp_summary_path = self.out_path.with_name(self.out_path.stem + ".summary_by_wp.csv")
+        fieldnames = [
+            "wp_index", "wp_label", "cycles", "duration_s",
+            "deliberative_cycles", "deliberative_rate", "deep_scan_events",
+        ]
+        with open(wp_summary_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            for wp_index in sorted(self._wp_stats.keys()):
+                e = self._wp_stats[wp_index]
+                writer.writerow({
+                    "wp_index": e["wp_index"],
+                    "wp_label": e["wp_label"] or "",
+                    "cycles": e["cycles"],
+                    "duration_s": round(e["last_t"] - e["first_t"], 2),
+                    "deliberative_cycles": e["deliberative_cycles"],
+                    "deliberative_rate": round(e["deliberative_cycles"] / e["cycles"], 4) if e["cycles"] else 0.0,
+                    "deep_scan_events": e["deep_scan_events"],
+                })

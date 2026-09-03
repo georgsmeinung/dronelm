@@ -9,6 +9,7 @@ import csv
 import json
 
 import numpy as np
+import pytest
 
 from src.logging.flight_logger import FlightLogger, _format_ts_for_filename
 
@@ -228,3 +229,91 @@ def test_csv_velocity_columns_read_the_right_telemetry_keys(tmp_path):
     assert float(rows[0]["vel_x"]) == 3.5
     assert float(rows[0]["vel_y"]) == -1.5
     assert float(rows[0]["vel_z"]) == 0.25
+
+
+def test_csv_logs_full_three_axis_orientation(tmp_path):
+    """2026-0903, pedido explicito: antes solo se guardaba yaw_deg -- para
+
+    analizar el momento de inercia rotacional hace falta pitch/roll tambien,
+    no solo el rumbo horizontal.
+    """
+    import math
+
+    run_dir = tmp_path / "TEST_RUN7-20260901T120000Z"
+    out_path = run_dir / "TEST_RUN7-20260901T120000Z.jsonl"
+    logger = FlightLogger(str(out_path), scenario="test", seed=1, arm="reactive")
+    state = {
+        "telemetry": {
+            "position": {"x": 0.0, "y": 0.0, "z": -10.0},
+            "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0},
+            "orientation": {"yaw": math.radians(30.0), "pitch": math.radians(-5.0), "roll": math.radians(8.0)},
+            "collision": {"has_collided": False, "object_name": ""},
+        },
+        "waypoint_guidance": {"distance": 10.0},
+        "obstacle_field": None, "route": "reactive", "next_action": "MANTENER_RUMBO",
+        "current_wp_index": 0, "degraded": False, "deliberations": [],
+    }
+    logger.log_cycle(state, latency_ms={"graph": 5.0})
+    logger.close()
+
+    with open(logger.csv_path, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    assert float(rows[0]["yaw_deg"]) == pytest.approx(30.0, abs=0.01)
+    assert float(rows[0]["pitch_deg"]) == pytest.approx(-5.0, abs=0.01)
+    assert float(rows[0]["roll_deg"]) == pytest.approx(8.0, abs=0.01)
+
+
+def test_per_waypoint_summary_csv(tmp_path):
+    """2026-0903, pedido explicito: un CSV de resumen que muestre ciclos
+
+    consumidos por waypoint y uso del nodo deliberativo/escaneo profundo,
+    para identificar de un vistazo cual tramo concentra la dificultad (ver
+    hallazgo de WP_0_ASCENSO en TOWNSIM_INI).
+    """
+    run_dir = tmp_path / "TEST_RUN8-20260901T120000Z"
+    out_path = run_dir / "TEST_RUN8-20260901T120000Z.jsonl"
+    logger = FlightLogger(str(out_path), scenario="test", seed=1, arm="slm")
+
+    def _state(wp_index, wp_label, route):
+        return {
+            "telemetry": {
+                "position": {"x": 0.0, "y": 0.0, "z": -10.0},
+                "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0},
+                "orientation": {"yaw": 0.0},
+                "collision": {"has_collided": False, "object_name": ""},
+            },
+            "waypoint_guidance": {"distance": 10.0},
+            "obstacle_field": None, "route": route, "next_action": "MANTENER_RUMBO",
+            "current_wp_index": wp_index, "target_waypoint": {"label": wp_label},
+            "degraded": False, "deliberations": [],
+        }
+
+    # WP 0: 3 ciclos, 1 deliberativo, 1 evento de escaneo profundo.
+    logger.log_cycle(_state(0, "WP_0", "reactive"), latency_ms={"graph": 5.0})
+    logger.log_cycle(
+        _state(0, "WP_0", "deliberative"), latency_ms={"graph": 5.0},
+        deadlock_event={"strategy": "deep_vlm", "resolved_by_scan": True, "cycles_to_resolve": 1, "fell_back_to_blind": False},
+    )
+    logger.log_cycle(_state(0, "WP_0", "reactive"), latency_ms={"graph": 5.0})
+    # WP 1: 2 ciclos, sin deliberacion.
+    logger.log_cycle(_state(1, "WP_1", "reactive"), latency_ms={"graph": 5.0})
+    logger.log_cycle(_state(1, "WP_1", "reactive"), latency_ms={"graph": 5.0})
+
+    logger.close()
+
+    wp_summary_path = out_path.with_name(out_path.stem + ".summary_by_wp.csv")
+    with open(wp_summary_path, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    assert len(rows) == 2
+    assert rows[0]["wp_index"] == "0"
+    assert rows[0]["wp_label"] == "WP_0"
+    assert rows[0]["cycles"] == "3"
+    assert rows[0]["deliberative_cycles"] == "1"
+    assert rows[0]["deep_scan_events"] == "1"
+
+    assert rows[1]["wp_index"] == "1"
+    assert rows[1]["wp_label"] == "WP_1"
+    assert rows[1]["cycles"] == "2"
+    assert rows[1]["deliberative_cycles"] == "0"
+    assert rows[1]["deep_scan_events"] == "0"

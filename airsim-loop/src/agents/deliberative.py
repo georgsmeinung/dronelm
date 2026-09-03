@@ -41,11 +41,16 @@ LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "ollama")
 LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi3")
 VLM_VISION_ENABLED = os.getenv("VLM_VISION_ENABLED", "true").lower() == "true"
 VLM_IMAGE_MAX_SIZE = int(os.getenv("VLM_IMAGE_MAX_SIZE", "384"))
-VLM_FRAME_HISTORY_SIZE = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "1"))
+VLM_FRAME_HISTORY_SIZE = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "2"))  # 2026-0903: t y t-1, no solo t (pedido explicito)
 VLM_USE_JSON_SCHEMA = os.getenv("VLM_USE_JSON_SCHEMA", "true").lower() == "true"
 
 MANEUVER_DURATION_S = float(os.getenv("MANEUVER_DURATION_S", "1.0"))
 ESCAPE_MANEUVER_DURATION_S = float(os.getenv("ESCAPE_MANEUVER_DURATION_S", "1.6"))
+# 2026-0903 (pedido explicito, ver CHANGELOG.md): tope de velocidad mientras
+# se espera la respuesta del SLM/VLM, cuando no hay bloqueo central
+# confirmado (close_structural). Reemplaza el FRENAR total anterior -- ver
+# _wait_command() en make_deliberative_node().
+DELIB_WAIT_CREEP_SPEED_MPS = float(os.getenv("DELIB_WAIT_CREEP_SPEED_MPS", "0.5"))
 
 # Macro-acciones que el SLM puede elegir. GIRAR_90 queda fuera: es un bypass
 # determinista (ver policy_router en graph.py), nunca una eleccion del modelo.
@@ -137,6 +142,56 @@ SYSTEM_PROMPT_VISION = (
 SYSTEM_PROMPT = SYSTEM_PROMPT_VISION if VLM_VISION_ENABLED else SYSTEM_PROMPT_TEXT
 
 
+# Velocidad horizontal (m/s) por debajo de la cual se considera que el dron
+# esta "practicamente detenido" para el texto del prompt -- mismo orden de
+# magnitud que MIN_PROGRESS_SPEED_MPS (waypoint_tracker.py), reutilizado
+# aca solo como umbral de redaccion, no de control.
+PROMPT_STATIONARY_SPEED_MPS = float(os.getenv("PROMPT_STATIONARY_SPEED_MPS", "0.3"))
+
+
+def _flight_state_note(telemetry: Dict[str, Any]) -> str:
+    """Bloque de texto con velocidad e inclinacion actuales (2026-0903,
+
+    pedido explicito): un frame estatico no le dice al VLM si el dron esta
+    en crucero normal o practicamente detenido -- y, segun el analisis de
+    TOWNSIM_INI del 2026-0903, la inmensa mayoria de las deliberaciones
+    ocurren justo en el segundo caso (sin traslacion, evidencia de
+    percepcion colapsada a ~0 por diseno del estimador de flujo, no porque
+    haya un obstaculo real). Explicitarlo evita que el modelo sobre-
+    interprete una imagen que en el momento no tiene mucho que ofrecer.
+    """
+    vel = telemetry.get("velocity", {}) if isinstance(telemetry, dict) else {}
+    orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+    speed = math.hypot(float(vel.get("vx", 0.0)), float(vel.get("vy", 0.0))) if isinstance(vel, dict) else 0.0
+    pitch_deg = math.degrees(float(orient.get("pitch", 0.0))) if isinstance(orient, dict) else 0.0
+    roll_deg = math.degrees(float(orient.get("roll", 0.0))) if isinstance(orient, dict) else 0.0
+    stationary_note = " (practicamente detenido)" if speed < PROMPT_STATIONARY_SPEED_MPS else ""
+    return f"- Velocidad horizontal: {speed:.2f} m/s{stationary_note}. Inclinacion: pitch={pitch_deg:+.1f}°, roll={roll_deg:+.1f}°."
+
+
+def _query_reason_note(field: ObstacleField) -> str:
+    """Por que se esta consultando al VLM en este ciclo (2026-0903, pedido
+
+    explicito): distingue "el ObstacleField detecto un bloqueo real" de
+    "la percepcion no tiene evidencia suficiente" -- son causas MUY
+    distintas (la segunda no implica que haya nada bloqueando de verdad,
+    ver PLAN-MEJORAS-3.md y el analisis de TOWNSIM_INI) y el prompt anterior
+    no se lo decia al modelo, dejandolo tratar ambos casos igual.
+    """
+    if field.is_blocked("centro"):
+        ttc = field.sector_ttc("centro")
+        ttc_str = f"{ttc:.1f}s" if ttc != float("inf") else "inf"
+        return f"- Motivo de consulta: el sector CENTRO muestra un obstaculo real (TTC={ttc_str})."
+    if not field.has_evidence():
+        return (
+            "- Motivo de consulta: la percepcion NO tiene evidencia suficiente en este ciclo "
+            "(confianza baja, probablemente por falta de traslacion o rotacion reciente) -- "
+            "esto NO significa necesariamente que haya un obstaculo real, solo que el sistema "
+            "no puede confirmar que el camino este despejado."
+        )
+    return "- Motivo de consulta: bloqueo lateral o corredor cerrado, sin peligro central inmediato."
+
+
 def _build_user_prompt(
     field: ObstacleField,
     telemetry: Dict[str, Any],
@@ -180,7 +235,9 @@ def _build_user_prompt(
         f"{sector_summary}\n\n"
         f"OBJETIVO Y ALTITUD:\n"
         f"- {wp_str}\n"
-        f"- Altitud actual: {altitude:.1f}m (Cota segura: 10.0m){stuck_note}"
+        f"- Altitud actual: {altitude:.1f}m (Cota segura: 10.0m){stuck_note}\n"
+        f"{_flight_state_note(telemetry)}\n"
+        f"{_query_reason_note(field)}"
         f"{history_note}\n\n"
         "INSTRUCCION:\n"
         "Elige la macro_action ('EVADIR_IZQUIERDA', 'EVADIR_DERECHA', 'GANAR_ALTURA' o 'MANTENER_RUMBO').\n"
@@ -571,6 +628,31 @@ def make_deliberative_node(service: DeliberationService):
 
         close_structural = field.is_blocked("centro") and field.sector_ttc("centro") <= SAFE_MARGIN_TTC_S
 
+        def _wait_command(reason: str) -> Tuple[str, Dict[str, Any]]:
+            """Comando mientras se espera al SLM/VLM (2026-0903, cambio
+
+            estructural pedido explicitamente): antes SIEMPRE FRENAR, lo que
+            corta la traslacion y con ella la confianza del estimador de
+            flujo (ver analisis de TOWNSIM_INI, 2026-0903 en CHANGELOG.md) --
+            un bucle que se retroalimenta: poca confianza -> deliberar ->
+            frenar -> sigue sin traslacion -> sigue sin confianza -> vuelve a
+            deliberar. Ahora, si NO hay un bloqueo central confirmado con
+            TTC bajo (close_structural), avanza despacio en vez de frenar
+            del todo, para no perder la evidencia de percepcion que depende
+            de la traslacion. Si SI hay un bloqueo confirmado, sigue
+            frenando -- la seguridad no cede ante esta optimizacion.
+            """
+            if close_structural:
+                cmd = action_to_command("FRENAR", guidance=guidance, telemetry=telemetry)
+                macro = "FRENAR"
+            else:
+                cmd = action_to_command("MANTENER_RUMBO", guidance=guidance, telemetry=telemetry)
+                raw_vx = float(cmd.get("vx", 0.0))
+                cmd["vx"] = max(-DELIB_WAIT_CREEP_SPEED_MPS, min(DELIB_WAIT_CREEP_SPEED_MPS, raw_vx))
+                macro = "MANTENER_RUMBO"
+            cmd["rationale"] = reason
+            return macro, cmd
+
         pending_id = state.get("slm_request_id")
         result, age_ms, has_pending = service.poll()
 
@@ -646,10 +728,10 @@ def make_deliberative_node(service: DeliberationService):
                 decision = _fallback_decision(field, guidance)
                 return _finalize(decision, "", age_ms, is_fallback=True, err="timeout", timed_out=True)
 
-            # Sigue pendiente y dentro del watchdog: frenar este ciclo sin re-encolar.
-            cmd = action_to_command("FRENAR", guidance=guidance, telemetry=telemetry)
-            cmd["rationale"] = f"Esperando respuesta del SLM ({age_ms:.0f}ms)."
-            state["next_action"] = "FRENAR"
+            # Sigue pendiente y dentro del watchdog: no re-encolar, pero ya no
+            # frena del todo (ver _wait_command arriba) salvo bloqueo confirmado.
+            macro, cmd = _wait_command(f"Esperando respuesta del SLM ({age_ms:.0f}ms).")
+            state["next_action"] = macro
             state["velocity_command"] = cmd
             state["route"] = "deliberative"
             state["flight_status"] = "hover_slm"
@@ -683,9 +765,8 @@ def make_deliberative_node(service: DeliberationService):
             list(zip(frame_history, frame_history_ts)) if VLM_VISION_ENABLED and frame_history else []
         )
 
-        cmd = action_to_command("FRENAR", guidance=guidance, telemetry=telemetry)
-        cmd["rationale"] = "Frenando: pedido de deliberación recién encolado."
-        state["next_action"] = "FRENAR"
+        macro, cmd = _wait_command("Pedido de deliberación recién encolado.")
+        state["next_action"] = macro
         state["velocity_command"] = cmd
         state["route"] = "deliberative"
         state["flight_status"] = "hover_slm"

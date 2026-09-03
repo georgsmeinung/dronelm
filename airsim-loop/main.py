@@ -29,6 +29,15 @@ FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # F3.2: override manual de la 
 FLIGHT_LOG_DISABLED = (FLIGHT_LOG_PATH or "").strip().lower() == "none"
 MISSION_MAX_SECONDS = float(os.getenv("MISSION_MAX_SECONDS", "0.0"))  # 0 = sin límite de tiempo
 MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límite de ciclos
+# 2026-0903, pedido explicito: grabar un .webm (VP8, ver flight_video.py
+# sobre por que no .mp4) de la corrida, un frame ANOTADO
+# (el mismo que ya arma el bloque de watch_mode/stream_hub mas abajo) por
+# ciclo del lazo, a fps=LOOP_HZ -- permite recorrer el timeline del video en
+# paralelo al timeline del CSV/JSONL (ver src/logging/flight_video.py para
+# el detalle de la sincronizacion, que es aproximada por tiempo, exacta por
+# numero de ciclo). Opt-in (default off): no todo el mundo quiere pagar el
+# costo de escritura en cada ciclo.
+FLIGHT_RECORD_VIDEO = os.getenv("FLIGHT_RECORD_VIDEO", "false").lower() == "true"
 
 
 def _print_state(state: DroneState, cycle_num: int = 0) -> None:
@@ -240,6 +249,18 @@ def main() -> None:
         print(f"[FlightLogger] Telemetria de esta corrida en {flight_logger.out_path} "
               f"(y {flight_logger.csv_path} para inspeccion en planilla).")
 
+    video_recorder = None
+    if FLIGHT_RECORD_VIDEO and flight_logger is not None:
+        from src.logging import FlightVideoRecorder
+
+        video_path = flight_logger.out_path.with_suffix(".webm")
+        video_recorder = FlightVideoRecorder(
+            str(video_path),
+            frame_size=(airsim_client.frame_width, airsim_client.frame_height),
+            fps=DEFAULT_LOOP_HZ,
+        )
+        print(f"[FlightVideoRecorder] Grabando video de esta corrida en {video_path}.")
+
     cycle_count = 0
     mission_start_time = time.time()
     mission_termination_reason = None
@@ -381,22 +402,74 @@ def main() -> None:
 
                 decision = final_state.get("next_action", "MANTENER_RUMBO")
                 flight_status = final_state.get("flight_status", "vuelo")
+                # Ruta del grafo (que nodo de LangGraph decidio este ciclo:
+                # reactive/deliberative/evasive/girar_90/fsm) -- mismo dato
+                # que ya imprime la consola (route_tag, ver _print_state
+                # mas abajo), pedido explicito para que el video tambien lo
+                # muestre y quede claro en que estado del lazo de control
+                # esta el sistema en cada instante, no solo que accion tomo.
+                route_ov = final_state.get("route", "")
+                route_tag_ov = route_ov.upper() if route_ov else "DIRECT"
                 ttc_val = final_state.get("estimated_ttc", float("inf"))
                 ttc_str = f"{ttc_val:.1f}s" if ttc_val != float("inf") else "inf"
 
                 h, w = annotated_frame.shape[:2]
-                cv2.rectangle(annotated_frame, (0, 0), (w, 42), (10, 10, 15), -1)
+                # 2026-0903 (pedido explicito): overlay ampliado a 4 lineas
+                # con mas info del propio DroneState -- MISMA fuente que
+                # alimenta el CSV, ver src/logging/flight_logger.py, no hace
+                # falta leerlo de vuelta. Seguro desde el punto de vista de
+                # auditoria: se dibuja sobre `annotated_frame`, una COPIA de
+                # `frame` hecha DESPUES de que el original ya viajo (sin
+                # tocar) hacia frame_history/el VLM y hacia el .png de
+                # auditoria -- nunca vuelve al pipeline de percepcion,
+                # fundamentalmente distinto del bug de los marcadores de
+                # debug (esos contaminaban la imagen en el simulador, antes
+                # de que el codigo la viera).
+                cv2.rectangle(annotated_frame, (0, 0), (w, 88), (10, 10, 15), -1)
 
                 dec_color = (0, 255, 100) if "MANTENER" in decision else (0, 165, 255)
                 if "SLM" in decision or "PARADA" in decision or "FRENAR" in decision:
                     dec_color = (255, 100, 200)
 
                 wp_str = f"WP {waypoint_tracker.current_index + 1}/{len(waypoints_list)} ({guidance.get('distance', 0.0):.0f}m)" if waypoints_list else ""
-                cv2.putText(annotated_frame, f"ACT: {decision} {wp_str}", (10, 26),
+                cv2.putText(annotated_frame, f"[{route_tag_ov}] ACT: {decision} {wp_str}", (10, 26),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.52, dec_color, 2, cv2.LINE_AA)
 
                 cv2.putText(annotated_frame, f"TTC: {ttc_str} | {flight_status}", (w - 280, 26),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
+
+                telem_ov = final_state.get("telemetry") or {}
+                pos_ov = telem_ov.get("position", {}) or {}
+                vel_ov = telem_ov.get("velocity", {}) or {}
+                orient_ov = telem_ov.get("orientation", {}) or {}
+                speed_ov = math.hypot(float(vel_ov.get("vx", 0.0)), float(vel_ov.get("vy", 0.0)))
+                cv2.putText(
+                    annotated_frame,
+                    f"t={time.time() - mission_start_time:6.1f}s cy={cycle_count} | "
+                    f"pos=({pos_ov.get('x', 0.0):+.1f},{pos_ov.get('y', 0.0):+.1f},{pos_ov.get('z', 0.0):+.1f}) | "
+                    # "°" no lo soporta la fuente Hershey de cv2.putText (sale
+                    # "??" en el video) -- "deg" en su lugar.
+                    f"v={speed_ov:.2f}m/s pitch={math.degrees(float(orient_ov.get('pitch', 0.0))):+.1f}deg "
+                    f"roll={math.degrees(float(orient_ov.get('roll', 0.0))):+.1f}deg",
+                    (10, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1, cv2.LINE_AA,
+                )
+
+                field_ov = final_state.get("obstacle_field")
+                if field_ov is not None:
+                    sector_bits = []
+                    for sector, code in (("izquierda", "IZQ"), ("centro", "CEN"), ("derecha", "DER")):
+                        occ = field_ov.sector_occupancy(sector)
+                        ttc = field_ov.sector_ttc(sector)
+                        ttc_txt = f"{ttc:.1f}s" if ttc != float("inf") else "inf"
+                        bloq_txt = "!" if field_ov.is_blocked(sector) else ""
+                        sector_bits.append(f"{code} occ={occ:.2f} ttc={ttc_txt}{bloq_txt}")
+                    cv2.putText(
+                        annotated_frame, " | ".join(sector_bits),
+                        (10, 76), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1, cv2.LINE_AA,
+                    )
+
+                if video_recorder is not None:
+                    video_recorder.write_frame(annotated_frame)
 
                 try:
                     # pyrefly: ignore [missing-import]
@@ -521,6 +594,30 @@ def main() -> None:
             if mission_termination_reason and mission_termination_reason != "completed":
                 summary["termination_reason"] = mission_termination_reason
                 print(f"[Misión] Terminada: {mission_termination_reason}")
+
+        if video_recorder is not None:
+            n_frames = video_recorder.close()
+            print(f"[FlightVideoRecorder] Video cerrado ({n_frames} frames a {DEFAULT_LOOP_HZ:.1f} fps).")
+
+            if flight_logger is not None:
+                # 2026-0903, pedido explicito: viewer.html autocontenido en
+                # el mismo directorio de la corrida -- CSV embebido inline
+                # (no via fetch(), que file:// bloquea por CORS), video
+                # referenciado por nombre relativo (eso si funciona bajo
+                # file:// para archivos hermanos). Solo tiene sentido si
+                # hubo video que recorrer.
+                from src.logging import write_viewer_html
+
+                viewer_path = flight_logger.out_path.with_name(flight_logger.out_path.stem + ".viewer.html")
+                try:
+                    write_viewer_html(
+                        str(viewer_path),
+                        video_filename=video_recorder.out_path.name,
+                        csv_path=str(flight_logger.csv_path),
+                    )
+                    print(f"[FlightViewer] Herramienta de auditoria en {viewer_path} (abrir con doble clic).")
+                except Exception as exc:
+                    print(f"[FlightViewer] Error generando el visor: {exc}")
 
         deliberation_service.stop()
 

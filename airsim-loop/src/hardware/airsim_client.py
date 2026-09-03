@@ -561,6 +561,36 @@ def _resize_depth(image: np.ndarray, width: int, height: int) -> np.ndarray:
     return image[np.ix_(y_idx, x_idx)]
 
 
+def _quaternion_to_euler(orient: Any) -> Tuple[float, float, float]:
+    """Cuaternion (w,x,y,z) a angulos de Euler (pitch, roll, yaw) en radianes,
+
+    convencion aeroespacial NED -- misma formula que usa `airsim.
+    to_eularian_angles` (bug-fix 2026-0903: `cosysairsim` NO expone esa
+    funcion, `hasattr(airsim, "to_eularian_angles")` da False, asi que
+    `_state_to_telemetry` caia siempre en el fallback manual -- que hasta
+    ahora solo calculaba `yaw` y dejaba `pitch`/`roll` hardcodeados en 0.0
+    para SIEMPRE en este entorno. Encontrado al revisar por que el prompt
+    del VLM mostraba pitch/roll en 0.0 en cada deliberacion real).
+    """
+    w = getattr(orient, "w_val", 1.0)
+    x = getattr(orient, "x_val", 0.0)
+    y = getattr(orient, "y_val", 0.0)
+    z = getattr(orient, "z_val", 0.0)
+
+    sinr_cosp = 2.0 * (w * x + y * z)
+    cosr_cosp = 1.0 - 2.0 * (x * x + y * y)
+    roll = math.atan2(sinr_cosp, cosr_cosp)
+
+    sinp = 2.0 * (w * y - z * x)
+    pitch = math.copysign(math.pi / 2.0, sinp) if abs(sinp) >= 1.0 else math.asin(sinp)
+
+    siny_cosp = 2.0 * (w * z + x * y)
+    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+    yaw = math.atan2(siny_cosp, cosy_cosp)
+
+    return pitch, roll, yaw
+
+
 def _state_to_telemetry(state: Any, timestamp_s: Optional[float] = None) -> Dict[str, Any]:
     """Adapta un MultirotorState de AirSim a un dict simple en marco NED.
 
@@ -581,21 +611,9 @@ def _state_to_telemetry(state: Any, timestamp_s: Optional[float] = None) -> Dict
             if airsim is not None and hasattr(airsim, "to_eularian_angles"):
                 pitch, roll, yaw = airsim.to_eularian_angles(orient)
             else:
-                w = getattr(orient, "w_val", 1.0)
-                x = getattr(orient, "x_val", 0.0)
-                y = getattr(orient, "y_val", 0.0)
-                z = getattr(orient, "z_val", 0.0)
-                siny_cosp = 2.0 * (w * z + x * y)
-                cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-                yaw = math.atan2(siny_cosp, cosy_cosp)
+                pitch, roll, yaw = _quaternion_to_euler(orient)
         except Exception:
-            w = getattr(orient, "w_val", 1.0)
-            x = getattr(orient, "x_val", 0.0)
-            y = getattr(orient, "y_val", 0.0)
-            z = getattr(orient, "z_val", 0.0)
-            siny_cosp = 2.0 * (w * z + x * y)
-            cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-            yaw = math.atan2(siny_cosp, cosy_cosp)
+            pitch, roll, yaw = _quaternion_to_euler(orient)
 
     collision_info = getattr(state, "collision", None)
     has_collided = False
