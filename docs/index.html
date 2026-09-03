@@ -75,7 +75,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Versión: 2026-08-27</span>
+          <span class="badge-pill badge-teal">Versión: 2026-09-03</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -86,23 +86,23 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-08-27)</h2>
+        <h2>Actualizaciones Recientes (2026-09-03)</h2>
         <div class="card-grid">
           <div class="card">
-            <h4>Estabilidad en Vuelo Sin Obstáculos</h4>
-            <p>Mejorada la trayectoria y estabilización cuando no hay obstáculos en el camino. Optimización de la cinemática nominal y reducción de oscilaciones.</p>
+            <h4>Escalación ante Atascos: Barrido Panorámico + Consulta al Modelo de Visión</h4>
+            <p>Ante un atasco duro sin corredor visible, el sistema ejecuta un barrido de rumbos con captura de fotogramas y una única consulta al VLM con el panorama completo, antes de recurrir al escape ciego determinista como red de seguridad.</p>
           </div>
           <div class="card">
-            <h4>Ciclo de Corrección y Optimización</h4>
-            <p>Nuevo ciclo de calibración de vuelo con ajustes en los umbrales de TTC y persistencia de maniobras para mejor eficiencia táctica.</p>
+            <h4>Auditoría de Vuelo: Video Sincronizado con la Traza de Decisiones</h4>
+            <p>Cada corrida genera un visor HTML autocontenido que sincroniza en ambos sentidos la reproducción del video anotado con la fila correspondiente del CSV, incluyendo el prompt y la respuesta exactos de cada consulta al modelo.</p>
           </div>
           <div class="card">
-            <h4>Sincronización de Waypoints</h4>
-            <p>Corrección de sincronización entre el tracker y el estado del runner. El índice de waypoint activo se mantiene coherente en todo el ciclo.</p>
+            <h4>Registro de Vuelo por Corrida y Resumen por Waypoint</h4>
+            <p>Cada ejecución del lazo táctico queda en una carpeta autocontenida (JSONL, CSV, fotogramas, video) con un resumen agregado de ciclos y tasa deliberativa por tramo de la misión.</p>
           </div>
           <div class="card">
-            <h4>Configuración del Entorno Virtual</h4>
-            <p>Uso correcto de venv en procesos subprocesados del batch runner. Mejor gestión de dependencias en ejecuciones paralelas.</p>
+            <h4>WebDCS: Planificación Manual Simplificada y Saneamiento de Código</h4>
+            <p>Interfaz rediseñada con foco en la edición manual de waypoints; eliminado un mecanismo de streaming de video en vivo que había quedado sin uso tras un rediseño previo del frontend.</p>
           </div>
         </div>
       </section>
@@ -165,9 +165,10 @@
         </p>
         <p>
           La suite incluye <strong>WebDCS (Ground Control Station Web)</strong> sobre FastAPI, que provee renderizado de
-          cartas 2D en Canvas interactivo, streaming de video en vivo de la cámara frontal, gestión de manifiestos y un
-          <strong>Panel de Auditoría de Decisiones SLM en tiempo real</strong> para supervisar prompts, respuestas
-          estructuradas crudas y latencias de inferencia.
+          cartas 2D en Canvas interactivo, gestión de manifiestos y edición manual de waypoints. Cada corrida del lazo
+          táctico se audita <em>post-vuelo</em> mediante un visor HTML autocontenido que sincroniza el video anotado del
+          vuelo con la traza completa de decisiones (prompt, respuesta estructurada cruda y latencia de inferencia de
+          cada consulta al SLM).
         </p>
 
         <h3>2. Lazo Táctico Autónomo en Vuelo (<code>airsim-loop</code>)</h3>
@@ -329,7 +330,7 @@
           <div class="timeline-item">
             <div class="timeline-badge"></div>
             <div class="timeline-date">
-              <span>Agost 2024</span>
+              <span>Agosto 2024</span>
               <span class="tag">Inicio</span>
             </div>
             <div class="timeline-content">
@@ -389,18 +390,18 @@
           <div class="timeline-item current">
             <div class="timeline-badge"></div>
             <div class="timeline-date">
-              <span>Julio - Agosto 2026</span>
+              <span>Julio - Septiembre 2026</span>
               <span class="tag">Finalización</span>
             </div>
             <div class="timeline-content">
               <h4>Documentación Final y Validación (Actual)</h4>
-              <p>Redacción de informe, documentación técnica completa, publicación de resultados y preparación para defensa. Últimos ajustes de estabilidad y optimización.</p>
+              <p>Redacción de informe, documentación técnica completa, publicación de resultados y preparación para defensa. Endurecimiento de la escalación ante atascos, herramientas de auditoría post-vuelo y saneamiento de la estación de control en tierra.</p>
             </div>
           </div>
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-08-27):</strong> Sistema operacional en simulación. Navegación autónoma validada con AUC TTC de 0.96–0.97. Documentación y análisis finalizados.</p>
+          <p><strong>Estado actual (2026-09-03):</strong> Sistema operacional en simulación. Navegación autónoma validada con AUC TTC de 0.96–0.97. Documentación y análisis finalizados.</p>
         </div>
       </section>
 
@@ -445,7 +446,7 @@
               <tr>
                 <td><strong>Ground Control Station</strong></td>
                 <td>FastAPI + WebDCS (HTML5 / Canvas 2D / JS)</td>
-                <td>Planificación previa en lenguaje natural, streaming de video y panel de auditoría SLM en vivo.</td>
+                <td>Planificación manual de waypoints y auditoría post-vuelo con video sincronizado a la traza de decisiones.</td>
               </tr>
               <tr>
                 <td><strong>Orquestación Táctica</strong></td>
@@ -574,14 +575,14 @@ conda activate airsimenv</code></pre>
         <p>Inicie el servidor web FastAPI de WebDCS para planificar misiones y supervisar el vuelo:</p>
         <pre><code>cd airsim-plan
 python -m uvicorn webdcs.main:app --reload</code></pre>
-        <p>Acceda a <code>http://localhost:8000</code> en su navegador para interactuar con la plataforma de vuelo y
-          auditar en tiempo real las decisiones del SLM.</p>
+        <p>Acceda a <code>http://localhost:8000</code> en su navegador para planificar misiones manualmente; la
+          auditoría de las decisiones del SLM se hace post-vuelo con el visor HTML generado en cada corrida.</p>
       </section>
 
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>Repositorio: georgsmeinung/dronelm</p>
-        <p>Fecha de actualización: 2026-08-27</p>
+        <p>Fecha de actualización: 2026-09-03</p>
       </footer>
     </main>
   </div>

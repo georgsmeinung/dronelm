@@ -1,8 +1,8 @@
 # Configuración del Grafo de Control
 
-> Estado del lazo táctico de `airsim-loop` al **2026-08-24**, después de la implementación de `PLAN-MEJORAS.md` (F0–F4) y de la corrección del deadlock del escape por altura. Este documento describe la configuración **tal como está en el código**, no un diseño propuesto: cada umbral, cada orden de evaluación y cada nombre de variable son verificables en los archivos referenciados.
+> Estado del lazo táctico de `airsim-loop` al **2026-09-03**, después de la implementación de `PLAN-MEJORAS.md` (F0–F4), la corrección del deadlock del escape por altura y la escalación ante atasco por barrido panorámico + consulta al modelo de visión (`src/agents/deep_scan.py`, §7). Este documento describe la configuración **tal como está en el código**, no un diseño propuesto: cada umbral, cada orden de evaluación y cada nombre de variable son verificables en los archivos referenciados.
 >
-> Para el porqué histórico de cada decisión ver `CHANGELOG.md` (2026-0824) y `legacy/README.md`; para el detalle de lo retirado, `legacy/`.
+> Para el porqué histórico de cada decisión ver `CHANGELOG.md` (2026-0824, 2026-0903) y `legacy/README.md`; para el detalle de lo retirado, `legacy/`.
 
 ---
 
@@ -128,7 +128,7 @@ No todo vive en el grafo. El orden por ciclo en [`main.py`](main.py) es:
 6. **`pop("_escape_reset")`** → si estaba marcado, `waypoint_tracker.reset_progress()`.
 7. `_update_delib_outcomes()` — mide el efecto de la decisión deliberativa anterior (Δdistancia, ΔTTC) para realimentarlo al prompt.
 8. `inject_corner` → `waypoint_tracker.inject_corner_waypoint()` si el grafo lo propuso.
-9. Impresión de estado, logging JSONL, publicación al stream de WebDCS, chequeo de fin de misión.
+9. Impresión de estado, logging JSONL/CSV/video (`FlightLogger`/`FlightVideoRecorder`), chequeo de fin de misión.
 10. `sleep` hasta completar el período de `LOOP_HZ`.
 
 Los pasos 6 y 8 son exactamente los que dependen de la regla de declaración de la §3.
@@ -221,6 +221,17 @@ El requisito (1) es deliberado: *"sin evidencia" no es lo mismo que "despejado"*
                                    │ sí
                          ESCAPE DE DEADLOCK
                                    │
+                    DEADLOCK_STRATEGY = deep_vlm (default)
+                                   │
+                    ┌──────────────▼───────────────┐
+                    │  ESCANEO PANORÁMICO:          │
+                    │  girar en el lugar N rumbos,  │─resuelto─►  macro-acción elegida,
+                    │  1 consulta al VLM con el     │             _deadlock_cycles = 0
+                    │  panorama completo             │
+                    └──────────────┬───────────────┘
+                                   │ timeout / sin acción viable
+                                   │ (o DEADLOCK_STRATEGY = blind)
+                                   ▼
               ┌────────────────────┴────────────────────┐
               │ escapes consecutivos ≤ MAX              │  ► GANAR_ALTURA
               │ y altitud ≤ MAX_ESCAPE_ALT_M            │    (maniobra de 1.6 s)
@@ -234,6 +245,16 @@ El requisito (1) es deliberado: *"sin evidencia" no es lo mismo que "despejado"*
                                    ▼
                   ciclos siguientes → DELIBERACIÓN NORMAL
 ```
+
+### Escalación por barrido panorámico (`DEADLOCK_STRATEGY=deep_vlm`, default) — [`deep_scan.py`](src/agents/deep_scan.py)
+
+Al entrar en "ESCAPE DE DEADLOCK", antes de forzar el escape ciego por altura, el sistema intenta primero resolver el atasco con evidencia visual real en vez de alternar `GANAR_ALTURA`/`PERDER_ALTURA` a ciegas:
+
+1. **Barrido de rumbos:** giro puro en el lugar (sin traslación, `yaw_rate=0` + `target_yaw` absoluto) hacia `SCAN_HEADING_COUNT_DEEP` rumbos equiespaciados alrededor del rumbo actual, con `SCAN_SETTLE_CYCLES_DEEP` ciclos de asentamiento antes de capturar el fotograma de cada rumbo. Reutiliza el fotograma que `capture_node` ya produjo ese ciclo — nunca vuelve a capturar.
+2. **Una única consulta al VLM** con el panorama completo (hasta `MAX_DEEP_SCAN_IMAGES` fotogramas, etiquetados por rumbo, el primero marcado como "el que viene fallando"). El modelo elige una macro-acción del mismo vocabulario que la deliberación normal (`MANTENER_RUMBO`, `EVADIR_IZQUIERDA/DERECHA`, `GANAR_ALTURA`, `PERDER_ALTURA`, `FRENAR`) — el barrido no agrega acciones nuevas, solo una vista panorámica de la evidencia.
+3. **Resuelto** → se aplica la macro-acción elegida, se resetea `_deadlock_cycles` y el contador de atasco (mismo mecanismo de reset que el escape exitoso). **No resuelto** (timeout `SLM_DEEP_WATCHDOG_MS`, respuesta no parseable o `DEADLOCK_STRATEGY=blind`) → cae exactamente al escape ciego por altura ya documentado, sin cambios en esa rama.
+
+Corre **dentro del mismo ciclo del grafo**, nunca en un loop aparte: reemite su propio `velocity_command` cada ciclo vía `motor_node` como cualquier otro nodo de política, y el gatekeeper del `policy_router` sigue vigilando durante todo el barrido — sin traslación, `FlowTTCEstimator` no produce evidencia (`foe_confidence=0`), así que `has_open_corridor()` da `False` y el router sigue enrutando hacia acá. Nunca consulta el canal de profundidad del simulador: opera solo sobre los mismos fotogramas RGB monoculares del resto del lazo. Compartido por los brazos `slm` y `fsm`.
 
 ### Deliberación normal (asíncrona)
 
@@ -308,6 +329,11 @@ El *snap* Manhattan redondea el rumbo objetivo al múltiplo de 90° más cercano
 | `STUCK_HARD_FACTOR` | 3.0 | Multiplicador del umbral duro |
 | `MAX_CONSECUTIVE_ESCAPES` | 2 | Ascensos consecutivos sin progreso antes de enclavar |
 | `MAX_ESCAPE_ALT_M` | 30.0 m | Techo del escape por altura |
+| `DEADLOCK_STRATEGY` | `deep_vlm` | `blind` \| `deep_vlm` — si se intenta el barrido panorámico antes del escape ciego (§7) |
+| `SCAN_HEADING_COUNT_DEEP` | 4 | Rumbos equiespaciados del barrido panorámico |
+| `SCAN_SETTLE_CYCLES_DEEP` | 2 | Ciclos de asentamiento antes de capturar cada rumbo |
+| `SLM_DEEP_WATCHDOG_MS` | 12000 ms | Watchdog de la consulta única al VLM del barrido |
+| `MAX_DEEP_SCAN_IMAGES` | 5 | Tope de fotogramas enviados en la consulta panorámica |
 
 El umbral efectivo **no** es el configurado: se deriva para que sea coherente con la métrica que lo alimenta.
 
@@ -376,8 +402,10 @@ Lo que la configuración actual garantiza, y dónde se verifica:
 | Sin AirSim, hover explícito y sin deliberación | `test_degraded_mode.py` |
 | El giro puro no dispara freno espurio | `test_flow_ttc.py` |
 | El prompt no inventa historia temporal | `test_prompt_invariants.py` |
+| El barrido panorámico resuelve el atasco o cae al escape ciego sin romper la rama existente | `test_deep_scan.py` |
+| Ningún componente del lazo consulta el canal de profundidad del simulador | `test_no_depth_in_flight_path.py` |
 
-**94 tests**, sin AirSim (stub con la misma interfaz):
+**137 tests**, sin AirSim (stub con la misma interfaz):
 
 ```bash
 pytest tests/ -q
@@ -393,12 +421,14 @@ Los tests que cubren la frontera del grafo corren el **grafo compilado**, no el 
 - **La derotación no está validada para yaw fuerte** (caveat F1.3): el dataset de calibración quedó casi todo en el bin `|yaw_rate| ∈ [0, 0.05)` rad/s.
 - **`main.py` no tiene tope de duración de misión.** `experiments/runner.py` sí (`max_cycles` / `max_seconds`): un atasco genuinamente irresoluble no termina la corrida por sí solo en vuelo interactivo.
 - **`vy` es siempre 0 en el guiado nominal.** El desplazamiento es puramente frontal + yaw (estrategia *car-like*); no hay vuelo lateral coordinado.
+- **El barrido panorámico depende de una única consulta al VLM, sin verificación cruzada.** El watchdog y el parser tolerante cubren timeout y formato inválido, pero una macro-acción sintácticamente válida y semánticamente errónea (el modelo "ve" un corredor que no existe) se ejecuta igual — la red de seguridad es el resto de los mecanismos del lazo (TTC, override de seguridad), no una segunda opinión del propio barrido.
 
 ---
 
 ## 12. Referencias
 
 - [`README.md`](README.md) — mapeo de código a grafo, ejecución, experimentos.
-- `CHANGELOG.md` (2026-0824) — historia y evidencia medida de cada decisión.
+- `CHANGELOG.md` (2026-0824, 2026-0903) — historia y evidencia medida de cada decisión.
 - `PLAN-MEJORAS.md` — plan F0–F4 del que sale esta arquitectura.
+- [`src/agents/deep_scan.py`](src/agents/deep_scan.py) — escalación por barrido panorámico + VLM (§7).
 - [`legacy/README.md`](legacy/README.md) — módulos retirados (YOLO, IPM, TTC anterior, gate XOR) con la justificación de cada retiro.

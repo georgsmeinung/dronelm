@@ -41,7 +41,7 @@
         </div>
         <div class="thesis-meta-item">
           <span class="meta-label">Documento</span>
-          <span class="meta-value">Referencia técnica<br />Estado al 2026-08-27</span>
+          <span class="meta-value">Referencia técnica<br />Estado al 2026-09-03</span>
         </div>
       </div>
 
@@ -67,11 +67,11 @@
     <!-- Main Content Area -->
     <main>
       <header>
-        <p class="eyebrow">airsim-loop · lazo táctico · 2026-08-27</p>
+        <p class="eyebrow">airsim-loop · lazo táctico · 2026-09-03</p>
         <h1>Configuración del grafo de control</h1>
         <p class="lead-subtitle">
-          Referencia técnica actualizada del lazo de navegación autónoma <strong>tal como está en el código</strong> (2026-08-27): topología, esquema de
-          estado, cascada de decisión, máquina de escape y la tabla completa de umbrales con su origen. Cada valor es
+          Referencia técnica actualizada del lazo de navegación autónoma <strong>tal como está en el código</strong> (2026-09-03): topología, esquema de
+          estado, cascada de decisión, escalación por barrido panorámico, máquina de escape y la tabla completa de umbrales con su origen. Cada valor es
           verificable en el archivo que se cita.
         </p>
         <dl class="readout">
@@ -82,7 +82,7 @@
           <div><dt>Umbral atasco</dt><dd>10 <span>ciclos</span></dd></div>
           <div><dt>Escapes máx</dt><dd>2</dd></div>
           <div><dt>Watchdog SLM</dt><dd>6000 <span>ms</span></dd></div>
-          <div><dt>Tests</dt><dd>94</dd></div>
+          <div><dt>Tests</dt><dd>137</dd></div>
         </dl>
         <div class="badges-row">
           <a class="badge-pill badge-blue"
@@ -396,7 +396,7 @@
               <tr>
                 <td class="step">9</td>
                 <td>Salidas</td>
-                <td>Estado por consola, logging JSONL, streaming a WebDCS, chequeo de fin de misión</td>
+                <td>Estado por consola, logging JSONL/CSV/video (<code>FlightLogger</code>/<code>FlightVideoRecorder</code>), chequeo de fin de misión</td>
               </tr>
               <tr>
                 <td class="step">10</td>
@@ -621,8 +621,51 @@
             anterior ponía el contador de escapes en cero al agotarse, de modo que el ciclo siguiente volvía a subir: la
             salvaguarda se reseteaba a sí misma y producía un ciclo límite de período 3 (SUBIR, SUBIR, FRENAR) que en
             vuelo real duró hasta el final del log. Nótese que el único arco de retorno a <code>NAVEGANDO</code> está
-            condicionado a distancia medida, no al contador de atasco.</figcaption>
+            condicionado a distancia medida, no al contador de atasco. <strong>Esta figura documenta el escape ciego</strong>
+            (<code>DEADLOCK_STRATEGY=blind</code>): con el default actual (<code>deep_vlm</code>), antes de este camino
+            se intenta primero la escalación por barrido panorámico descripta a continuación, y solo se cae acá si esa
+            escalación no resuelve el atasco.</figcaption>
         </figure>
+
+        <h3>Escalación por barrido panorámico (<code>DEADLOCK_STRATEGY=deep_vlm</code>, default) — <a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/deep_scan.py"><code>deep_scan.py</code></a></h3>
+        <p>
+          Al entrar en “ESCAPE DE DEADLOCK”, antes de forzar el escape ciego por altura de la figura anterior, el
+          sistema intenta primero resolver el atasco con evidencia visual real en vez de alternar
+          <code>GANAR_ALTURA</code>/<code>PERDER_ALTURA</code> a ciegas:
+        </p>
+        <ol>
+          <li><strong>Barrido de rumbos:</strong> giro puro en el lugar (sin traslación, <code>yaw_rate=0</code> +
+            <code>target_yaw</code> absoluto) hacia <code>SCAN_HEADING_COUNT_DEEP</code> rumbos equiespaciados
+            alrededor del rumbo actual, con <code>SCAN_SETTLE_CYCLES_DEEP</code> ciclos de asentamiento antes de
+            capturar el fotograma de cada rumbo. Reutiliza el fotograma que <code>capture_node</code> ya produjo ese
+            ciclo — nunca vuelve a capturar.</li>
+          <li><strong>Una única consulta al VLM</strong> con el panorama completo (hasta
+            <code>MAX_DEEP_SCAN_IMAGES</code> fotogramas, etiquetados por rumbo, el primero marcado como “el que viene
+            fallando”). El modelo elige una macro-acción del mismo vocabulario que la deliberación normal — el barrido
+            no agrega acciones nuevas, solo una vista panorámica de la evidencia.</li>
+          <li><strong>Resuelto</strong> → se aplica la macro-acción elegida y se resetea el contador de atasco (mismo
+            mecanismo de reset que el escape exitoso). <strong>No resuelto</strong> (timeout
+            <code>SLM_DEEP_WATCHDOG_MS</code>, respuesta no parseable, o <code>DEADLOCK_STRATEGY=blind</code>) → cae
+            exactamente al escape ciego por altura ya documentado, sin cambios en esa rama.</li>
+        </ol>
+        <p>
+          Corre <strong>dentro del mismo ciclo del grafo</strong>, nunca en un loop aparte: reemite su propio
+          <code>velocity_command</code> cada ciclo vía <code>motor_node</code> como cualquier otro nodo de política, y
+          el gatekeeper del <code>policy_router</code> sigue vigilando durante todo el barrido — sin traslación,
+          <code>FlowTTCEstimator</code> no produce evidencia (<code>foe_confidence=0</code>), así que
+          <code>has_open_corridor()</code> da <code>False</code> y el router sigue enrutando hacia acá. Nunca consulta
+          el canal de profundidad del simulador: opera solo sobre los mismos fotogramas RGB monoculares del resto del
+          lazo. Compartido por los brazos <code>slm</code> y <code>fsm</code>.
+        </p>
+
+        <div class="note caution">
+          <span class="tag">Limitación</span>
+          <p>El barrido depende de una única consulta al VLM, sin verificación cruzada. El watchdog y el parser
+            tolerante cubren timeout y formato inválido, pero una macro-acción sintácticamente válida y
+            semánticamente errónea (el modelo “ve” un corredor que no existe) se ejecuta igual — la red de seguridad
+            es el resto de los mecanismos del lazo (TTC, override de seguridad), no una segunda opinión del propio
+            barrido.</p>
+        </div>
 
         <h3>Deliberación normal, asíncrona</h3>
         <div class="table-container">
@@ -888,6 +931,31 @@
                 <td class="num">30.0 m</td>
                 <td>Techo del escape por altura</td>
               </tr>
+              <tr>
+                <td class="mono">DEADLOCK_STRATEGY</td>
+                <td class="num">deep_vlm</td>
+                <td><code>blind</code> · <code>deep_vlm</code> — si se intenta el barrido panorámico antes del escape ciego (sección 7)</td>
+              </tr>
+              <tr>
+                <td class="mono">SCAN_HEADING_COUNT_DEEP</td>
+                <td class="num">4</td>
+                <td>Rumbos equiespaciados del barrido panorámico</td>
+              </tr>
+              <tr>
+                <td class="mono">SCAN_SETTLE_CYCLES_DEEP</td>
+                <td class="num">2</td>
+                <td>Ciclos de asentamiento antes de capturar cada rumbo</td>
+              </tr>
+              <tr>
+                <td class="mono">SLM_DEEP_WATCHDOG_MS</td>
+                <td class="num">12000 ms</td>
+                <td>Watchdog de la consulta única al VLM del barrido</td>
+              </tr>
+              <tr>
+                <td class="mono">MAX_DEEP_SCAN_IMAGES</td>
+                <td class="num">5</td>
+                <td>Tope de fotogramas enviados en la consulta panorámica</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1127,11 +1195,19 @@
                 <td>El prompt no inventa historia temporal</td>
                 <td class="mono wrap">test_prompt_invariants.py</td>
               </tr>
+              <tr>
+                <td>El barrido panorámico resuelve el atasco o cae al escape ciego sin romper la rama existente</td>
+                <td class="mono wrap">test_deep_scan.py</td>
+              </tr>
+              <tr>
+                <td>Ningún componente del lazo consulta el canal de profundidad del simulador</td>
+                <td class="mono wrap">test_no_depth_in_flight_path.py</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
-        <p><strong>94 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
+        <p><strong>137 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
         <pre><code>pytest tests/ -q</code></pre>
 
         <div class="note">
@@ -1158,6 +1234,10 @@
             genuinamente irresoluble no termina la corrida por sí solo en vuelo interactivo.</li>
           <li><strong><code>vy</code> es siempre 0 en el guiado nominal.</strong> El desplazamiento es puramente frontal
             + yaw (estrategia <em>car-like</em>); no hay vuelo lateral coordinado.</li>
+          <li><strong>El barrido panorámico depende de una única consulta al VLM, sin verificación cruzada.</strong> El
+            watchdog y el parser tolerante cubren timeout y formato inválido, pero una macro-acción sintácticamente
+            válida y semánticamente errónea se ejecuta igual — la red de seguridad es el resto de los mecanismos del
+            lazo, no una segunda opinión del propio barrido.</li>
         </ul>
 
         <h3>Referencias</h3>
@@ -1170,6 +1250,8 @@
             historia y evidencia medida de cada decisión.</li>
           <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/PLAN-MEJORAS.md"><code>PLAN-MEJORAS.md</code></a>
             — plan F0–F4 del que sale esta arquitectura.</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/deep_scan.py"><code>src/agents/deep_scan.py</code></a>
+            — escalación por barrido panorámico + VLM (sección 7).</li>
           <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/legacy/README.md"><code>legacy/README.md</code></a>
             — módulos retirados (YOLO, IPM, TTC anterior, gate XOR) con la justificación de cada retiro.</li>
         </ul>
@@ -1178,7 +1260,7 @@
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>airsim-loop · lazo táctico</p>
-        <p>Estado al 2026-08-27</p>
+        <p>Estado al 2026-09-03</p>
       </footer>
     </main>
   </div>
