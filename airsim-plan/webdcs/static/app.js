@@ -7,12 +7,8 @@ let mapCenter = { x: 0, y: 0 };
 let activeManifest = null;
 let originalManifestString = ''; // Para control de cambios (dirty state)
 let savedManifests = [];
-let compiledManifestTemp = null; // Temp para fusionar waypoints de LLM
 let manifestToDeleteFilename = ''; // Temp para guardar el nombre del archivo a eliminar
 // Elementos del DOM
-const elNlInstruction = document.getElementById('nl-instruction');
-const elBtnCompile = document.getElementById('btn-compile');
-const elCompileSpinner = document.getElementById('compile-spinner');
 const elSavedList = document.getElementById('saved-manifests-list');
 const elJsonEditor = document.getElementById('json-viewer-textarea'); // Se sincroniza con el visor del modal
 const elBtnSave = document.getElementById('btn-save'); // Botón guardar en el Header
@@ -36,13 +32,7 @@ const elActiveWaypointList = document.getElementById('active-waypoint-list');
 const elBtnBackManifests = document.getElementById('btn-back-manifests');
 const elBtnNewManifest = document.getElementById('btn-new-manifest');
 const elBtnLaunchMission = document.getElementById('btn-launch-mission');
-const elChkWatchLoop = document.getElementById('chk-watch-loop');
 
-// Tabs & Nuevos Botones Manual / AI
-const elTabBtnManual = document.getElementById('tab-btn-manual');
-const elTabBtnAi = document.getElementById('tab-btn-ai');
-const elTabContentManual = document.getElementById('tab-content-manual');
-const elTabContentAi = document.getElementById('tab-content-ai');
 const elBtnClearRoute = document.getElementById('btn-clear-route');
 
 // Toggle JSON
@@ -63,12 +53,6 @@ const elModalSaveConfirm = document.getElementById('modal-save-confirm');
 const elBtnModalSave = document.getElementById('btn-modal-save');
 const elBtnModalDiscard = document.getElementById('btn-modal-discard');
 const elBtnModalCancelSave = document.getElementById('btn-modal-cancel-save');
-
-const elModalMergeStrategy = document.getElementById('modal-merge-strategy');
-const elBtnMergeOverwrite = document.getElementById('btn-merge-overwrite');
-const elBtnMergeAppend = document.getElementById('btn-merge-append');
-const elBtnMergePrepend = document.getElementById('btn-merge-prepend');
-const elBtnMergeCancel = document.getElementById('btn-merge-cancel');
 
 const elModalDeleteConfirm = document.getElementById('modal-delete-confirm');
 const elDeleteManifestName = document.getElementById('delete-manifest-name');
@@ -284,52 +268,6 @@ canvas.addEventListener('click', (e) => {
 
 elBtnResetMap.addEventListener('click', () => {
     centerMapInViewport();
-});
-
-// ----------------------------------------------------------------------------
-// Compilación por Lenguaje Natural
-// ----------------------------------------------------------------------------
-elBtnCompile.addEventListener('click', async () => {
-    const text = elNlInstruction.value.trim();
-    if (!text) {
-        showToast('Escribí una instrucción de misión primero.', 'error');
-        return;
-    }
-
-    elBtnCompile.disabled = true;
-    elCompileSpinner.classList.remove('hidden');
-    
-    try {
-        const response = await fetch('/api/compile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ instruction: text })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.detail || 'Error en la compilación.');
-        }
-        
-        // Fusión inteligente: Si ya hay un manifiesto activo, preguntar fusión
-        if (activeManifest && activeManifest.waypoints && activeManifest.waypoints.length > 0) {
-            compiledManifestTemp = data;
-            elModalMergeStrategy.classList.remove('hidden');
-        } else {
-            // Cargar directamente
-            loadActiveManifest(data);
-            showToast('Misión compilada con éxito por el LLM', 'success');
-        }
-        
-    } catch (err) {
-        console.error(err);
-        showToast(err.message, 'error');
-        elValidationStatus.innerHTML = `<span class="status-text error"><i class="fa-solid fa-triangle-exclamation"></i> Error: ${err.message}</span>`;
-    } finally {
-        elBtnCompile.disabled = false;
-        elCompileSpinner.classList.add('hidden');
-    }
 });
 
 // ----------------------------------------------------------------------------
@@ -572,40 +510,7 @@ function setupModalListeners() {
         elModalSaveConfirm.classList.add('hidden');
     });
 
-    // 2. Modal Estrategia de Fusión LLM
-    elBtnMergeOverwrite.addEventListener('click', () => {
-        elModalMergeStrategy.classList.add('hidden');
-        loadActiveManifest(compiledManifestTemp);
-        showToast('Trayectoria sobrescrita con los nuevos waypoints', 'success');
-        compiledManifestTemp = null;
-    });
-
-    elBtnMergeAppend.addEventListener('click', () => {
-        elModalMergeStrategy.classList.add('hidden');
-        if (activeManifest && compiledManifestTemp) {
-            activeManifest.waypoints = activeManifest.waypoints.concat(compiledManifestTemp.waypoints);
-            syncManifestToEditor();
-            showToast('Nuevos waypoints agregados al final de la trayectoria', 'success');
-        }
-        compiledManifestTemp = null;
-    });
-
-    elBtnMergePrepend.addEventListener('click', () => {
-        elModalMergeStrategy.classList.add('hidden');
-        if (activeManifest && compiledManifestTemp) {
-            activeManifest.waypoints = compiledManifestTemp.waypoints.concat(activeManifest.waypoints);
-            syncManifestToEditor();
-            showToast('Nuevos waypoints agregados al principio de la trayectoria', 'success');
-        }
-        compiledManifestTemp = null;
-    });
-
-    elBtnMergeCancel.addEventListener('click', () => {
-        elModalMergeStrategy.classList.add('hidden');
-        compiledManifestTemp = null;
-    });
-
-    // 3. Modal Confirmación de Eliminación
+    // 2. Modal Confirmación de Eliminación
     elBtnModalDeleteConfirm.addEventListener('click', async () => {
         elModalDeleteConfirm.classList.add('hidden');
         if (!manifestToDeleteFilename) return;
@@ -769,24 +674,7 @@ function showToast(message, type = 'info') {
 // Rediseño: Inicializar Controles Interactivos de Pestañas y Modos
 // ----------------------------------------------------------------------------
 function setupInteractiveControls() {
-    // 1. Manejo de Pestañas (Manual vs AI)
-    elTabBtnManual.addEventListener('click', () => {
-        elTabBtnManual.classList.add('active');
-        elTabBtnAi.classList.remove('active');
-        elTabContentManual.classList.add('active-content');
-        elTabContentAi.classList.remove('active-content');
-    });
-
-    elTabBtnAi.addEventListener('click', () => {
-        elTabBtnManual.classList.remove('active');
-        elTabBtnAi.classList.add('active');
-        elTabContentManual.classList.remove('active-content');
-        elTabContentAi.classList.add('active-content');
-    });
-
-    // 2. Modos de Diseño Manual (Removidos Inicio y Waypoints)
-
-    // 3. Limpiar Trayectoria
+    // 1. Limpiar Trayectoria
     elBtnClearRoute.addEventListener('click', () => {
         if (!activeManifest) return;
         activeManifest.waypoints = [];
@@ -837,9 +725,8 @@ function setupInteractiveControls() {
             const response = await fetch('/api/launch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    manifest: activeManifest,
-                    watch: elChkWatchLoop.checked
+                body: JSON.stringify({
+                    manifest: activeManifest
                 })
             });
 

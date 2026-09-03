@@ -30,9 +30,9 @@ FLIGHT_LOG_DISABLED = (FLIGHT_LOG_PATH or "").strip().lower() == "none"
 MISSION_MAX_SECONDS = float(os.getenv("MISSION_MAX_SECONDS", "0.0"))  # 0 = sin límite de tiempo
 MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límite de ciclos
 # 2026-0903, pedido explicito: grabar un .webm (VP8, ver flight_video.py
-# sobre por que no .mp4) de la corrida, un frame ANOTADO
-# (el mismo que ya arma el bloque de watch_mode/stream_hub mas abajo) por
-# ciclo del lazo, a fps=LOOP_HZ -- permite recorrer el timeline del video en
+# sobre por que no .mp4) de la corrida, un frame ANOTADO (el mismo overlay
+# de accion/TTC que se arma mas abajo para cada ciclo) por ciclo del lazo,
+# a fps=LOOP_HZ -- permite recorrer el timeline del video en
 # paralelo al timeline del CSV/JSONL (ver src/logging/flight_video.py para
 # el detalle de la sincronizacion, que es aproximada por tiempo, exacta por
 # numero de ciclo). Opt-in (default off): no todo el mundo quiere pagar el
@@ -171,14 +171,6 @@ def main() -> None:
 
     mission_id = manifest_data.get("mission_id", "MOCK_MISSION")
     os.environ.pop(f"STOP_MISSION_{mission_id}", None)
-
-    watch_mode = (os.getenv("AIRSIM_LOOP_WATCH") or globals().get("AIRSIM_LOOP_WATCH", "false")).lower() == "true"
-    if watch_mode:
-        # pyrefly: ignore [missing-import]
-        import cv2
-        cv2.namedWindow("Drone Camera Feed", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Drone Camera Feed", 640, 480)
-        print("[Watch] Modo visualización activado. Mostrando señal de video nativa.")
 
     # F0.3: un unico cliente de AirSim para todo el proceso.
     airsim_client = AirSimClient(loop_hz=DEFAULT_LOOP_HZ)
@@ -471,95 +463,14 @@ def main() -> None:
                 if video_recorder is not None:
                     video_recorder.write_frame(annotated_frame)
 
-                try:
-                    # pyrefly: ignore [missing-import]
-                    from airsim_plan.bridge.stream_hub import stream_hub
-                    field = final_state.get("obstacle_field")
-                    stream_hub.publish(
-                        frame=annotated_frame,
-                        telemetry={
-                            "connected": True,
-                            "mission_id": manifest_data.get("mission_id", "MISION_ACTIVA"),
-                            "decision": decision,
-                            "flight_status": flight_status,
-                            "estimated_ttc": ttc_val if ttc_val != float("inf") else None,
-                            "obstacle_field": field.to_dict() if field is not None else None,
-                            "scene_summary": final_state.get("scene_summary", ""),
-                            "velocity": final_state.get("velocity_command", {}),
-                            "target_waypoint": target_wp,
-                            "waypoint_index": waypoint_tracker.current_index,
-                            "waypoint_total": len(waypoints_list),
-                            "waypoint_distance": guidance.get("distance", 0.0),
-                            "last_deliberation": final_state.get("last_deliberation"),
-                            "deliberations": final_state.get("deliberations", []),
-                            "timestamp": time.time(),
-                        }
-                    )
-                except Exception:
-                    pass
-
-                if watch_mode:
-                    cv2.imshow("Drone Camera Feed", annotated_frame)
-                    key = cv2.waitKey(1) & 0xFF
-                    if key == ord('q') or key == 27:
-                        print("[Watch] Bucle detenido desde la ventana de video.")
-                        break
-
             if waypoint_tracker.is_completed and waypoints_list:
                 print("\n[Misión] ¡Misión completada exitosamente! Iniciando secuencia de aterrizaje autónomo...")
                 mission_termination_reason = "completed"
                 if flight_logger is not None:
                     flight_logger.mark_success(True)
-                try:
-                    # pyrefly: ignore [missing-import]
-                    from airsim_plan.bridge.stream_hub import stream_hub
-                    stream_hub.publish(
-                        frame=annotated_frame,
-                        telemetry={
-                            "connected": True,
-                            "mission_id": manifest_data.get("mission_id", "MISION_ACTIVA"),
-                            "decision": "ATERRIZANDO",
-                            "flight_status": "aterrizando",
-                            "estimated_ttc": None,
-                            "obstacle_field": None,
-                            "scene_summary": "Misión completada con éxito. Aterrizando...",
-                            "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
-                            "target_waypoint": None,
-                            "waypoint_index": len(waypoints_list),
-                            "waypoint_total": len(waypoints_list),
-                            "waypoint_distance": 0.0,
-                            "timestamp": time.time(),
-                        },
-                    )
-                except Exception:
-                    pass
 
                 airsim_client.land()
                 print("[Misión] Aterrizaje completado y motores desarmados. Devolviendo control a WebDCS.\n")
-
-                try:
-                    # pyrefly: ignore [missing-import]
-                    from airsim_plan.bridge.stream_hub import stream_hub
-                    stream_hub.publish(
-                        frame=None,
-                        telemetry={
-                            "connected": False,
-                            "mission_id": manifest_data.get("mission_id", "MISION_ACTIVA"),
-                            "decision": "MISIÓN_COMPLETADA",
-                            "flight_status": "completada_en_tierra",
-                            "estimated_ttc": None,
-                            "obstacle_field": None,
-                            "scene_summary": "Dron en tierra. Control disponible en WebDCS.",
-                            "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0},
-                            "target_waypoint": None,
-                            "waypoint_index": len(waypoints_list),
-                            "waypoint_total": len(waypoints_list),
-                            "waypoint_distance": 0.0,
-                            "timestamp": time.time(),
-                        },
-                    )
-                except Exception:
-                    pass
 
                 break
 
@@ -570,16 +481,6 @@ def main() -> None:
         print("\nApagando sistema de navegacion.")
         mission_termination_reason = "interrupted"
     finally:
-        try:
-            # pyrefly: ignore [missing-import]
-            from airsim_plan.bridge.stream_hub import stream_hub
-            stream_hub.publish(
-                frame=None,
-                telemetry={"connected": False, "status": "idle", "flight_status": "detenido", "timestamp": time.time()},
-            )
-        except Exception:
-            pass
-
         # Detectar colisión si no se documentó otra razón (G3.2).
         if mission_termination_reason is None:
             collision = drone_state.get("telemetry", {}).get("collision", {})
@@ -621,10 +522,6 @@ def main() -> None:
 
         deliberation_service.stop()
 
-        if watch_mode:
-            # pyrefly: ignore [missing-import]
-            import cv2
-            cv2.destroyAllWindows()
         if airsim_client is not None:
             try:
                 airsim_client.disconnect()

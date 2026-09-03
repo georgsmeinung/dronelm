@@ -75,22 +75,8 @@
                             <i class="fa-solid fa-paper-plane"></i> Lanzar Misión
                         </button>
                         
-                        <!-- Watch Loop Checkbox -->
-                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.2rem; font-size: 0.85rem; color: var(--text-muted);">
-                            <input type="checkbox" id="chk-watch-loop" style="cursor: pointer;" />
-                            <label for="chk-watch-loop" style="cursor: pointer; user-select: none;">Ver video en tiempo real (OpenCV)</label>
-                        </div>
-
-                        <!-- Tabs Headers -->
-                        <div class="tabs-header">
-                            <button id="tab-btn-manual" class="tab-btn active"><i class="fa-solid fa-hand-pointer"></i>
-                                Manual</button>
-                            <button id="tab-btn-ai" class="tab-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> AI
-                                Planner</button>
-                        </div>
-
-                        <!-- Tab 1: Manual Design -->
-                        <div id="tab-content-manual" class="tab-content active-content">
+                        <!-- Planificación manual (AI Planner sacado por ahora, ver CHANGELOG) -->
+                        <div id="tab-content-manual">
                             <!-- Se removieron los botones de selección de modo (Inicio y Waypoints) -->
 
                             <div class="action-row" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
@@ -102,21 +88,6 @@
                             <div class="waypoint-list" id="active-waypoint-list">
                                 <!-- Los items se inyectan dinámicamente -->
                             </div>
-                        </div>
-
-                        <!-- Tab 2: AI Planner -->
-                        <div id="tab-content-ai" class="tab-content">
-                            <p class="card-desc">Redactá la instrucción de vuelo en lenguaje natural para que el LLM
-                                local planifique la ruta.</p>
-                            <div class="input-group">
-                                <textarea id="nl-instruction"
-                                    placeholder="Ej: Recorrer el perimetro norte a una altitud de -15 metros yendo a 4 m/s. Ignorar personas y autos..."></textarea>
-                            </div>
-                            <button id="btn-compile" class="btn btn-primary btn-glow" style="width: 100%;">
-                                <i class="fa-solid fa-microchip"></i>
-                                <span>Planificar con LLM</span>
-                                <div class="spinner hidden" id="compile-spinner"></div>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -174,23 +145,6 @@
                 <button id="btn-modal-discard" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i>
                     Descartar</button>
                 <button id="btn-modal-cancel-save" class="btn btn-secondary">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Estrategia de Fusión LLM -->
-    <div id="modal-merge-strategy" class="modal-overlay hidden">
-        <div class="modal-content glass">
-            <h3><i class="fa-solid fa-code-merge"></i> Integrar Nuevos Waypoints</h3>
-            <p>El LLM generó nuevos puntos de trayectoria. ¿Cómo deseas integrarlos con el plan de vuelo actual?</p>
-            <div class="modal-actions-vertical">
-                <button id="btn-merge-overwrite" class="btn btn-primary"><i class="fa-solid fa-rotate"></i> Sobrescribir
-                    lista actual</button>
-                <button id="btn-merge-append" class="btn btn-success"><i class="fa-solid fa-arrow-down-long"></i>
-                    Agregar al final (Append)</button>
-                <button id="btn-merge-prepend" class="btn btn-glow"><i class="fa-solid fa-arrow-up-long"></i> Agregar al
-                    principio (Prepend)</button>
-                <button id="btn-merge-cancel" class="btn btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>

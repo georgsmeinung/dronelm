@@ -61,9 +61,6 @@ class Settings:
     airsim_port: int = field(
         default_factory=lambda: int(os.getenv("AIRSIM_PORT", "41451"))
     )
-    airsim_loop_watch: bool = field(
-        default_factory=lambda: os.getenv("AIRSIM_LOOP_WATCH", "false").lower() == "true"
-    )
 
     # Mission defaults
     default_takeoff_alt: float = field(

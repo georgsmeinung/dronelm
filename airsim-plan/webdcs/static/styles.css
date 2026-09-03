@@ -198,6 +198,15 @@ body {
     flex-grow: 1;
 }
 
+/* Ítem flex-column con flex-grow: sin min-height:0 explícito, un flex item
+   nunca se achica por debajo de la altura de su contenido (min-height:auto
+   por default) -- las listas largas (manifiestos, waypoints) quedaban
+   cortadas contra el overflow:hidden de .app-dashboard en vez de scrollear
+   puertas adentro. */
+#sidebar-missions-card {
+    min-height: 0;
+}
+
 /* ----------------------------------------------------------------------------
    Forms & Controls
    ---------------------------------------------------------------------------- */
@@ -635,6 +644,17 @@ textarea:focus {
     overflow: hidden;
     text-overflow: ellipsis;
     margin-bottom: 0;
+}
+
+/* Contenedor de la planificacion manual (antes uno de dos .tab-content con
+   display:block via .active-content -- .waypoint-list de abajo necesita un
+   padre flex-column con altura acotada para que su flex-grow/min-height:0
+   realmente scrollee en vez de desbordar la sidebar). */
+#tab-content-manual {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
 }
 
 /* Lista de Waypoints en Sidebar */

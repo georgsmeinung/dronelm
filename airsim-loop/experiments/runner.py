@@ -1,6 +1,6 @@
 """F3.3: runner batch headless para comparar los 3 brazos (slm/fsm/reactive).
 
-N misiones x M escenarios x K semillas, sin ventana cv2 ni stream_hub.
+N misiones x M escenarios x K semillas, sin ventana cv2 ni overhead de UI.
 Escribe un JSONL por corrida via FlightLogger.
 
 Uso:

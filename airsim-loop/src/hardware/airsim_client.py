@@ -297,9 +297,9 @@ class AirSimClient:
                 image = img_1d.reshape(response.height, response.width, 3)
                 # simGetImages(ImageType.Scene) devuelve el buffer en orden RGB,
                 # pero TODO el resto del pipeline (cv2.imencode hacia el VLM,
-                # cv2.imwrite de FlightLogger, cv2.imshow/rectangle/putText del
-                # modo watch, stream_hub de WebDCS) asume BGR, la convencion de
-                # OpenCV -- sin esta conversion, cada consumidor cv2 ve rojo y
+                # cv2.imwrite de FlightLogger, cv2.rectangle/putText del overlay
+                # anotado) asume BGR, la convencion de OpenCV -- sin esta
+                # conversion, cada consumidor cv2 ve rojo y
                 # azul invertidos (confirmado visualmente 2026-0903: el
                 # empedrado calido de la plaza se veia azulado en los .png de
                 # auditoria del VLM). El VLM recibia esta misma imagen con los

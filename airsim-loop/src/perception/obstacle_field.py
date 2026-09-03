@@ -128,7 +128,7 @@ class ObstacleField:
         return "\n".join(lines)
 
     def to_dict(self) -> dict:
-        """Unica fuente de la representacion serializable (JSONL, stream_hub)."""
+        """Unica fuente de la representacion serializable (JSONL)."""
         return {
             "source": self.source,
             "dt_s": self.dt_s,
