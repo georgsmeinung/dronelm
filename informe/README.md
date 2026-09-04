@@ -12,15 +12,15 @@ reescribir la estructura cada vez.
 | 0 | [`00-COVER.md`](00-COVER.md) | Redactado — Carátula, resumen ejecutivo y palabras clave | — |
 | 1 | [`01-INTRODUCCION.md`](01-INTRODUCCION.md) | Redactado — Introducción, motivación, objetivos y desvíos | — |
 | 2 | [`02-ESTADO-DEL-ARTE.md`](02-ESTADO-DEL-ARTE.md) | Redactado — Estado del arte y trabajos relacionados | — |
-| 3 | [`03-ENTORNO-SIMULACION.md`](03-ENTORNO-SIMULACION.md) | Redactado — Unreal Engine 5.5 + Cosys-AirSim, CitySim y telemetría Zenodo | — |
+| 3 | [`03-ENTORNO-SIMULACION.md`](03-ENTORNO-SIMULACION.md) | Redactado — Unreal Engine 5.5 + Cosys-AirSim, jerarquía de 3 Tiers (MiniSim, TownSim, CitySim) y telemetría Zenodo | — |
 | 4 | [`04-PLANIFICACION-MISION-GCS.md`](04-PLANIFICACION-MISION-GCS.md) | Redactado — Planificación en tierra antes del vuelo y GCS WebDCS | — |
 | 5 | [`05-ARQUITECTURA-LAZO-TACTICO.md`](05-ARQUITECTURA-LAZO-TACTICO.md) | Redactado — Grafo de decisión por tick (`airsim-loop`) | — |
 | 6 | [`06-PERCEPCION-MONOCULAR.md`](06-PERCEPCION-MONOCULAR.md) | Redactado — Percepción monocular sin redes neuronales (flujo óptico y TTC) | — |
 | 7 | [`07-ESTIMACION-TTC.md`](07-ESTIMACION-TTC.md) | Redactado (parcial: §7.3–7.4 pendientes de datos) | validación de calibración de ocupación, giros agresivos |
-| 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Ingeniería de decisiones del SLM, `json_schema` y macro-acciones | — |
-| 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — Modos de falla de lazos de control híbridos con LLM | — |
-| 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo) | — |
-| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Pendiente — corrida experimental completa | corrida con servidor LLM activo |
+| 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Ingeniería de decisiones del SLM/VLM, `json_schema` y macro-acciones | — |
+| 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — Modos de falla de lazos de control híbridos con LLM/VLM (5 instancias) | — |
+| 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo en 3 Tiers) | — |
+| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Pendiente — corrida experimental final batch G4 (Brazo × Atasco × Tier × Semillas) | corrida batch G4 |
 | 12 | [`12-CONCLUSIONES.md`](12-CONCLUSIONES.md) | ⏳ Pendiente | capítulo 11 |
 | 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado — pendiente de depuración manual (duplicados, entradas no citadas en el texto final) | — |
 | — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia (no es capítulo) | — |
@@ -60,5 +60,5 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
   encontrada en `informe/bibliografia/`; falta eliminar lo no citado en el texto final y
   resolver los pocos casos con metadata incompleta (marcados en la sección 13.3).
 - El capítulo 3 (§3.2) documenta como desvío de hecho la sustitución del pipeline de fotogrametría de Buenos Aires
-  (RealityCapture + OpenStreetMap + Blender) del plan aprobado por entornos urbanos
-  genéricos de Unreal Engine (`CitySim`).
+  (RealityCapture + OpenStreetMap + Blender) del plan aprobado por la jerarquía de tres Tiers en
+  Unreal Engine (`MiniSim`, `TownSim` y `CitySim`).

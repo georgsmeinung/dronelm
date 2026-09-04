@@ -1,11 +1,6 @@
 # 13. Referencias
 
-Bibliografía compilada a partir de dos fuentes del proyecto: la citada en el plan de trabajo aprobado
-(`plan_tesis/plan-tesis.md`) y la disponible como archivos (PDF/BibTeX) en `plan_tesis/bibliografia/`
-y en `informe/bibliografia/`. Se organiza en cuatro secciones según su origen, para que la revisión y
-depuración posterior (eliminar entradas no citadas en el texto final, resolver duplicados menores de
-formato) sea trazable. El formato sigue el usado en el plan de trabajo aprobado (APA, con DOI o URL
-cuando está disponible).
+Bibliografía compilada a partir de dos fuentes del proyecto: la citada en el plan de trabajo aprobado(`plan_tesis/plan-tesis.md`) y la disponible como archivos (PDF/BibTeX) en `plan_tesis/bibliografia/` y en `informe/bibliografia/`. Se organiza en cuatro secciones según su origen, para que la revisión y depuración posterior (eliminar entradas no citadas en el texto final, resolver duplicados menores de formato) sea trazable. El formato sigue el usado en el plan de trabajo aprobado (APA, con DOI o URL cuando está disponible).
 
 ## 13.1 Bibliografía citada en el plan de trabajo aprobado
 
@@ -142,9 +137,7 @@ Zhu, Y., Moniz, J. R. A., Bhargava, S., Lu, J., Piraviperumal, D., Li, S., Zhang
 
 ## 13.3 PDFs en `plan_tesis/bibliografia/` sin metadata bibliográfica estructurada
 
-Sin archivo `.bib` asociado ni metadata completa embebida en el PDF; título tomado del nombre de
-archivo (convención "Autor - Título.pdf" ya usada en la carpeta). Año, autoría completa y venue de
-publicación quedan pendientes de completar durante la depuración.
+Sin archivo `.bib` asociado ni metadata completa embebida en el PDF; título tomado del nombre de archivo (convención "Autor - Título.pdf" ya usada en la carpeta). Año, autoría completa y venue de publicación quedan pendientes de completar durante la depuración.
 
 - Comas (s.f., PDF fechado ~2020). *Modelado e implementación de sistemas de navegación aérea autónoma*. [Ver `plan_tesis/bibliografia/Comas - Modelado e implementación de sistemas de navegación aérea autónoma.pdf`; sin metadata de autoría/venue.]
 - Presidencia de la Nación Argentina. Decreto 663/2024 — Aviación No Tripulada. [Ver `plan_tesis/bibliografia/Decreto 663-2024 Presidencia - Aviacion No tripulada.pdf`.]

@@ -12,10 +12,10 @@ La arquitectura general del sistema responde a un principio de diseño fundament
 El desacoplamiento permite que la misión sea validada, persistida y versionada de forma determinista antes de iniciar los motores. Asimismo, garantiza que el lazo táctico a bordo no dependa de una conexión de red permanente con la estación terrena: una vez transmitido el manifiesto de vuelo, el dron opera de forma enteramente autónoma, protegiendo la seguridad del vuelo ante eventuales pérdidas de enlace de radio o telemetría.
 
 ## 4.2 Compilación de misiones desde lenguaje natural
-
 El módulo de planificación en tierra integra un modelo de lenguaje (LLM) que actúa como compilador semántico. Su objetivo es transformar directivas operativas de alto nivel expresadas en lenguaje natural por un operador humano (por ejemplo, *"recorrer el perímetro norte a 10 metros de altura evitando zonas de alta densidad vehicular"*) en un artefacto estructurado y ejecutable por el piloto automático.
 
 Para garantizar la fiabilidad del proceso de compilación sin incurrir en alucinaciones o errores de sintaxis:
+
 - Se utiliza un cliente local compatible con la API de OpenAI (conectado a instancias locales de LM Studio u Ollama), ejecutando modelos orientados a seguimiento de instrucciones (tales como Llama-3-8B, Qwen-7B o Phi-4).
 - Se define un *System Prompt* formalizado (`compiler_system.md`) que instruye al modelo sobre las dimensiones del entorno de simulación, las restricciones del espacio aéreo urbano y el formato de salida requerido.
 - Se implementa una capa de coerción y extracción de JSON (`json_extract.py`) respaldada por esquemas de validación estricta en **Pydantic** (`manifest.py`). Si la salida generada por el LLM no cumple con los tipos de datos o las restricciones cinemáticas impuestas, el compilador rechaza el plan y solicita una reevaluación antes de comprometer el vuelo.
@@ -50,13 +50,13 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 - **`waypoints`:** lista ordenada de puntos de paso tridimensionales expresados en el marco de coordenadas estándar aeronáutico **NED** (*North-East-Down*, donde $z < 0$ representa altitud sobre el punto de despegue).
 - **`rules_of_engagement`:** parámetros operacionales y límites cinemáticos globales, tales como velocidad máxima de crucero (`max_speed_mps`), rangos de altitud permitidos y umbrales de seguridad para retorno automático al punto de lanzamiento (*Return-to-Launch*).
 
-En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la **reproducibilidad experimental**: los escenarios de benchmark (`manhattan_a` y `manhattan_b`) se definen a través de manifiestos fijos, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.
+En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la **reproducibilidad experimental**: los escenarios de benchmark por Tiers (`minisim_clear`, `townsim_ini`, `citymap_pilot`) se definen a través de manifiestos fijos e inmutables, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.
 
 ## 4.4 Estación Terrena WebDCS: planificación y auditoría post-vuelo
 
 Para facilitar la interacción operativa y el análisis experimental posterior, se desarrolló **WebDCS** (*Web-based Drone Control Station*), una estación de control en tierra construida sobre **FastAPI** y tecnologías web estándar (HTML5, Vanilla CSS y JavaScript).
 
-![Interfaz de la Estación Terrena WebDCS](2026-0805%20New%20WebDCS.png)
+![Interfaz de la Estación Terrena WebDCS](2026-0903%20Nueva%20UX%20WebDCS.png)
 
 ### Funcionalidades de WebDCS:
 
