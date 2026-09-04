@@ -1,3 +1,14 @@
+# 2026-0904
+
+* Actualizado borrado de [informe](informe/README.md) de tesis.
+* Subido Video [Cosys-AirSim Plugin on UE 5.5 2026/0904 TOWNSIM_CALIB_O footage](https://www.youtube.com/watch?v=jHStHN6iHEo) mostrando experimento de vuelo básico controlado con el grafo de control actualizado.
+
+<img src="informe/2026-0904 Captura Video Footage.png"/>
+
+* Subido Video [Cosys-AirSim Plugin on UE 5.5 2026/0904 TOWNSIM_CALIB_O audit](https://www.youtube.com/watch?v=A4YwvJpBE44) mostrando la información de auditoría del experimento de vuelo básico controlado con el grafo de control actualizado incluyendo telemetria, captura de frames anotados visualización sincronizada del dataset.
+
+<img src="informe/2026-0904 Captura Video Audit.png"/>
+
 # 2026-0903
 
 ## WebDCS: Guía de Inicio Rápido reemplaza a la Carta de Territorio cuando no hay misión activa
