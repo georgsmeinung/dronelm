@@ -16,5 +16,7 @@ venv.bak/
 
 # Datos generados por experiments/runner.py y collect_ttc_dataset.py (F3.3/F1.3)
 airsim-loop/airsim-runs/
+airsim-plan/airsim-runs/
 
 .claude/settings.local.json
+
