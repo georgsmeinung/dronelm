@@ -1,0 +1,13 @@
+{
+  "mission_id": "TOWNSIM_CLEAR",
+  "summary": "Tier 1 (escenario base): perímetro completo de townsim_calib.png a altitud de tránsito (-30m), sin cruzar ninguna fachada. Vuelo ya validado en dos corridas manuales (2026-08-31 y 2026-09-01, pre-fix) con success=True y 0 colisiones. Derivado directamente de TOWNSIM_CALIB_0 — mismos 6 waypoints, misma geometría verificada por vuelo real. Rol análogo a minisim_clear para Tier 0: control/smoke-test de crucero largo sin obstáculos deliberativos. 77% reactive en corridas previas (vuela por encima de los edificios, no los negocia).",
+  "map": "townsim_calib.png",
+  "waypoints": [
+    { "x": 0.0,    "y": 0.4,   "z": -10.0, "label": "WP_1" },
+    { "x": 0.4,    "y": -71.6, "z": -30.0, "label": "WP_2" },
+    { "x": -145.2, "y": -70.8, "z": -30.0, "label": "WP_3" },
+    { "x": -146.8, "y": 83.6,  "z": -30.0, "label": "WP_4" },
+    { "x": 1.2,    "y": 84.8,  "z": -30.0, "label": "WP_5" },
+    { "x": 0.0,    "y": 27.2,  "z": 0.0,   "label": "WP_6" }
+  ]
+}
