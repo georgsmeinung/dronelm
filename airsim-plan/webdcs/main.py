@@ -5,6 +5,12 @@ import os
 import sys
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parents[2] / "config" / ".env")
+except Exception:
+    pass
+
 # Desactivar logs de acceso HTTP repetitivos de uvicorn
 logging.getLogger("uvicorn.access").disabled = True
 
