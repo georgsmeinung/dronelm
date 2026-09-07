@@ -97,7 +97,7 @@ def main():
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3, 4, 5])
-    parser.add_argument("--out-dir", default="airsim-runs/tesis")
+    parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-runs"))
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])

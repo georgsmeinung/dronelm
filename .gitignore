@@ -18,7 +18,10 @@ airsim-settings/.tmp.driveupload
 venv/
 venv.bak/
 
-# Datos generados por experiments/runner.py y collect_ttc_dataset.py (F3.3/F1.3)
+# Datos de vuelo generados por experiments/runner.py, batch_runner.py y main.py.
+# Directorio único en la raíz: todos los subproyectos escriben aquí.
+airsim-runs/
+# Legacy: las rutas anteriores quedan ignoradas por si aún existen localmente.
 airsim-loop/airsim-runs/
 airsim-loop/runs/
 airsim-plan/airsim-runs/

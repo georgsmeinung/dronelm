@@ -8,9 +8,9 @@ import math
 import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 try:
-    from pathlib import Path
     from dotenv import load_dotenv
 
     load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
@@ -33,7 +33,11 @@ FLIGHT_LOG_DISABLED = (FLIGHT_LOG_PATH or "").strip().lower() == "none"
 # el path via AIRSIM_FLIGHT_LOG (lo que tambien pisa el nombre de archivo, no
 # solo el directorio contenedor). AIRSIM_RUNS_DIR solo controla el directorio;
 # default "airsim-runs" (la carpeta "runs" vieja ya no existe, se renombro).
-AIRSIM_RUNS_DIR = os.getenv("AIRSIM_RUNS_DIR", "airsim-runs")
+# Resolver AIRSIM_RUNS_DIR desde la raíz del repo, no desde el CWD.
+# Si es un path absoluto se usa tal cual; si es relativo se ancla al repo.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_runs_dir_raw = os.getenv("AIRSIM_RUNS_DIR", "airsim-runs")
+AIRSIM_RUNS_DIR = _runs_dir_raw if Path(_runs_dir_raw).is_absolute() else str(_REPO_ROOT / _runs_dir_raw)
 MISSION_MAX_SECONDS = float(os.getenv("MISSION_MAX_SECONDS", "0.0"))  # 0 = sin límite de tiempo
 MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límite de ciclos
 # 2026-0903, pedido explicito: grabar un .webm (VP8, ver flight_video.py
