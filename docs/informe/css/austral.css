@@ -34,6 +34,18 @@
   --md-primary-fg-color--dark:  #0F29A2;
 }
 
+/* --- Logo Austral en el header ---
+   mix-blend-mode: screen funde el fondo blanco de la imagen con el header azul
+   y deja visible el sello en tono claro sin mostrar el cuadrado blanco */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  /* Logo horizontal Austral: más ancho que alto — controlar por height */
+  height: 1.6rem;
+  width: auto;
+  /* Convierte azul → blanco para que sea legible sobre el header #0F29A2 */
+  filter: brightness(0) invert(1);
+}
+
 /* --- Headings en Montserrat (todo lo demás queda en Inter) --- */
 .md-typeset h1,
 .md-typeset h2,
@@ -82,20 +94,40 @@
   [data-md-component="skip"],
   .md-announce { display: none !important; }
 
-  /* Contenido a ancho completo */
+  /* Contenido a ancho completo — eliminar padding/margin del tema */
   .md-main,
   .md-content,
-  .md-grid {
+  .md-grid,
+  .md-content__inner,
+  #print-site-page {
     max-width: 100% !important;
+    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
   }
-  .md-content__inner { padding: 0 2cm !important; }
 
-  /* Página A4 con márgenes */
+  /* Página A4 — sobreescribir @page del plugin (print-site-material.css)
+     Chrome sí renderiza margin boxes (@bottom-right / @bottom-center) */
   @page {
     size: A4 portrait;
-    margin: 2.5cm 2cm 2.5cm 2.5cm;
+    /* Mantener margen inferior generoso para que quepa el número de página */
+    margin: 2cm 1.5cm 2.5cm 2cm;
+
+    /* Quitar el "Page N" del plugin (bottom-right) */
+    @bottom-right {
+      content: none;
+    }
+    /* Quitar el chapter string del centro (si lo hay) */
+    @bottom-left {
+      content: none;
+    }
+    /* Número solo, centrado, en Inter, tamaño menor al cuerpo */
+    @bottom-center {
+      content: counter(page);
+      font-family: "Inter", sans-serif;
+      font-size: 8.5pt;
+      color: #666;
+    }
   }
 
   /* Evitar cortes dentro de bloques de código y figuras */

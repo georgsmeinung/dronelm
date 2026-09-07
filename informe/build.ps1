@@ -8,23 +8,9 @@ param(
     [int]$Port = 8765
 )
 
-$repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
-$chrome   = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+$repoRoot  = (Resolve-Path "$PSScriptRoot\..").Path
+$makePdf   = Join-Path $repoRoot "informe\make_pdf.py"
 Push-Location $repoRoot
-
-function Wait-Port {
-    param([int]$P, [int]$MaxSeconds = 12)
-    for ($i = 0; $i -lt ($MaxSeconds * 2); $i++) {
-        Start-Sleep -Milliseconds 500
-        $tcp = New-Object System.Net.Sockets.TcpClient
-        try {
-            $tcp.Connect("127.0.0.1", $P)
-            $tcp.Close()
-            return $true
-        } catch { }
-    }
-    return $false
-}
 
 try {
     # ------------------------------------------------------------------ HTML --
@@ -36,57 +22,15 @@ try {
     if ($HtmlOnly) { return }
 
     # ------------------------------------------------------------------ PDF ---
-    Write-Host "`n[2/2] Generating PDF via Chrome headless..." -ForegroundColor Cyan
-
-    if (-not (Test-Path $chrome)) {
-        Write-Warning "Chrome not found at '$chrome' — skipping PDF. Instala Chrome o ajusta la ruta."
-        return
-    }
-
-    $docsDir  = Join-Path $repoRoot "docs"
-    $printUrl = "http://localhost:$Port/informe/print_page.html"
-    $pdfOut   = Join-Path $repoRoot "docs\informe\tesis-dronelm.pdf"
-
-    # Levantar HTTP server con Start-Process (no Start-Job, mas confiable)
-    Write-Host "      Starting HTTP server on port $Port..." -ForegroundColor Gray
-    $server = Start-Process `
-        -FilePath "python" `
-        -ArgumentList "-m http.server $Port --bind 127.0.0.1" `
-        -WorkingDirectory $docsDir `
-        -NoNewWindow `
-        -PassThru
-
-    # Esperar a que el puerto este escuchando
-    $ready = Wait-Port -P $Port -MaxSeconds 12
-    if (-not $ready) {
-        Write-Warning "HTTP server (port $Port) no respondio — abortando PDF."
-        $server | Stop-Process -Force -ErrorAction SilentlyContinue
-        return
-    }
-    Write-Host "      Server ready. Printing $printUrl ..." -ForegroundColor Gray
-
-    # Chrome headless: imprime desde HTTP (no file://) para que cargue todo el CSS/JS
-    & $chrome `
-        --headless=new `
-        --disable-gpu `
-        "--print-to-pdf=$pdfOut" `
-        --no-pdf-header-footer `
-        --run-all-compositor-stages-before-draw `
-        --disable-extensions `
-        --no-sandbox `
-        --print-to-pdf-no-header `
-        $printUrl
-
-    $chromeExit = $LASTEXITCODE
-
-    # Parar HTTP server
-    $server | Stop-Process -Force -ErrorAction SilentlyContinue
-
-    if ($chromeExit -ne 0) {
-        Write-Warning "Chrome exited with code $chromeExit"
-    } else {
-        $sizeKB = [math]::Round((Get-Item $pdfOut).Length / 1KB)
-        Write-Host "      OK -> docs\informe\tesis-dronelm.pdf ($sizeKB KB)" -ForegroundColor Green
+    Write-Host "`n[2/2] Generating PDF (Playwright + Chromium)..." -ForegroundColor Cyan
+    python $makePdf --port $Port
+    if ($LASTEXITCODE -ne 0) { Write-Warning "PDF generation failed (exit $LASTEXITCODE)" }
+    else {
+        $pdf = Join-Path $repoRoot "docs\informe\tesis-dronelm.pdf"
+        if (Test-Path $pdf) {
+            $kb = [math]::Round((Get-Item $pdf).Length / 1KB)
+            Write-Host "      OK -> docs\informe\tesis-dronelm.pdf ($kb KB)" -ForegroundColor Green
+        }
     }
 
 } finally {

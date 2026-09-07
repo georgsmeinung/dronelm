@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Austral-Ingenieria.png" width="20%" alt="Universidad Austral - Facultad de Ingeniería">
+  <img src="Austral-Ingenieria.png" width="33%" alt="Universidad Austral - Facultad de Ingeniería">
 </div>
 
 # Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)

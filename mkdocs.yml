@@ -8,6 +8,7 @@ use_directory_urls: false
 theme:
   name: material
   language: es
+  logo: img/logo-austral-horizontal.png
   font:
     text: Inter
     code: JetBrains Mono
