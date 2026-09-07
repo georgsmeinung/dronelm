@@ -130,8 +130,46 @@
     }
   }
 
+  /* Tablas: quitar el contenedor de scroll horizontal para que no se corten */
+  .md-typeset__scrollwrap {
+    overflow: visible !important;
+    margin: 0 !important;
+  }
+
+  /* Las tablas se ajustan al ancho de la página */
+  .md-typeset table:not([class]),
+  .md-typeset__scrollwrap table {
+    display: table !important;
+    width: 100% !important;
+    table-layout: auto !important;
+    font-size: 0.78em;    /* ligeramente más pequeño para que entren columnas anchas */
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Celdas: texto siempre envuelto, sin truncar */
+  .md-typeset table:not([class]) td,
+  .md-typeset table:not([class]) th,
+  .md-typeset__scrollwrap td,
+  .md-typeset__scrollwrap th {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
   /* Evitar cortes dentro de bloques de código y figuras */
-  pre, figure, img, table {
+  pre, figure, img {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Las tablas pueden cortarse entre páginas (necesario para tablas largas) */
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
     page-break-inside: avoid;
     break-inside: avoid;
   }
