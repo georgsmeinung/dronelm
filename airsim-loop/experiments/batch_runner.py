@@ -44,14 +44,14 @@ def _get_code_version() -> str:
 
 
 def run_experiment(
-    scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: int, max_seconds: float
+    scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: int, max_seconds: float,
+    deadlock_strategy: str = "deep_vlm",
 ) -> tuple[bool, Dict[str, Any]]:
     """Ejecuta una corrida individual del runner.py en subproceso.
 
     Returns:
         (success, summary_dict)
     """
-    # Detectar si estamos en Windows y usar el ejecutable del venv correctamente
     import platform
     project_root = Path(__file__).resolve().parent.parent
     if platform.system() == "Windows":
@@ -70,19 +70,20 @@ def run_experiment(
         "--out-dir", out_dir,
         "--max-cycles", str(max_cycles),
         "--max-seconds", str(max_seconds),
+        "--deadlock-strategy", deadlock_strategy,
     ]
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=max_seconds + 60.0)
         if result.returncode == 0:
-            # Parsear el summary.json generado
             scenario_name = Path(scenario_path).stem
-            summary_path = Path(out_dir) / scenario_name / arm / f"seed_{seed}.summary.json"
+            # runner.py escribe bajo out_dir/scenario/arm/deadlock_strategy/
+            summary_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / f"seed_{seed}.summary.json"
             if summary_path.exists():
                 with open(summary_path, "r") as f:
                     summary = json.load(f)
                 return True, summary
-            return False, {"error": "No summary.json found"}
+            return False, {"error": f"No summary.json found at {summary_path}"}
         else:
             return False, {"error": result.stderr or f"Exit code {result.returncode}"}
     except subprocess.TimeoutExpired:
@@ -96,9 +97,10 @@ def main():
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3, 4, 5])
-    parser.add_argument("--out-dir", default="runs/tesis")
+    parser.add_argument("--out-dir", default="airsim-runs/tesis")
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
+    parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])
     args = parser.parse_args()
 
     out_dir_path = Path(args.out_dir)
@@ -124,7 +126,8 @@ def main():
 
                 t_start = time.time()
                 success, summary = run_experiment(
-                    scenario_path, arm, seed, args.out_dir, args.max_cycles, args.max_seconds
+                    scenario_path, arm, seed, args.out_dir, args.max_cycles, args.max_seconds,
+                    deadlock_strategy=args.deadlock_strategy,
                 )
                 elapsed = time.time() - t_start
 

@@ -265,7 +265,7 @@ def main():
              "brazo reactive (nunca declara atasco/escape).",
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
-    parser.add_argument("--out-dir", default="runs")
+    parser.add_argument("--out-dir", default="airsim-runs")
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--seed-jitter", action="store_true",
@@ -315,7 +315,7 @@ def _single_main():
     parser.add_argument("--scenario", required=True)
     parser.add_argument("--arm", required=True)
     parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--out-dir", default="runs")
+    parser.add_argument("--out-dir", default="airsim-runs")
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--seed-jitter", action="store_true")
