@@ -1,7 +1,7 @@
 # 11. Resultados comparativos SLM vs. FSM
 
-> **Estado (2026-09-07):** corridas piloto de Tier 0 y Tier 1 base completadas (1 semilla, ilustrativo).
-> El batch estadístico G4 (≥5 semillas, análisis Mann-Whitney) está pendiente de la finalización de Tier 2.
+> **Estado (2026-09-07):** corridas piloto de Tier 0, Tier 1 base y Tier 2 base completadas (1 semilla, ilustrativo).
+> El batch estadístico G4 (≥5 semillas, análisis Mann-Whitney) está pendiente de `townsim_ini` y `citymap_a`.
 > Las tablas de esta sección presentan datos reales de las corridas piloto en §11.1 y marcadores de
 > posición para G4 en §11.2–11.4.
 >
@@ -59,11 +59,35 @@ inicial, colisión estática con el suelo), no una aproximación peligrosa en vu
 
 ---
 
+### Tier 2 — `citysim_clear` · CitySim (citysim_calib.png)
+
+Escenario: perímetro de una manzana del grid regular, 7 WPs, ~430m, altitud de tránsito −70m
+(climb-first: WP_1→WP_2 sube vertical puro antes de mover en horizontal). Fecha: 2026-09-07.
+
+| Brazo | Éxito | Ciclos | Duración (s) | Distancia (m) | Colisiones | Invoc. SLM | Deliberación | Fallback SLM | Deadlocks | Res. atasco VLM |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `slm` | ✅ | 628 | 174 | 427.2 | 0 | 5 | 0.80% | 0% | 0 | — |
+| `fsm` | ✅ | 641 | 182 | 447.2 | 0 | — | — | — | 0 | — |
+| `reactive` | ✅ | 541 | 159 | 431.2 | 0 | — | — | — | 0 | — |
+
+*Dist. mín. al obstáculo:* `slm` 0.77m · `fsm` 11.0m · `reactive` 9.43m
+
+**Observación:** Los tres brazos completan el perímetro sin colisiones ni deadlocks — el escenario
+base a −70m está por encima de la línea de tejados de CitySim. La arquitectura climb-first
+(near_vertical fix, 2026-09-07) evita el problema de la primera corrida (z=-50m, rampa diagonal
+que atravesaba edificios). Con 0 deadlocks en los tres brazos, `citysim_clear` confirma el mismo
+rol que `minisim_clear` y `townsim_clear`: escenario de control a altitud de tránsito libre,
+cota inferior para el análisis del brazo `slm` en Tier 2.
+La dist. mín. del `slm` (0.77m) es probable artefacto del segmento de climb cerca del spawn;
+no se registró ninguna evasión activa durante el vuelo horizontal.
+
+---
+
 ## 11.2 Tabla de resultados agregados G4 (placeholder — pendiente batch completo)
 
 La siguiente tabla se llenará con el batch G4: 3 brazos × 3 escenarios × ≥5 semillas.
 Los escenarios definitivos son `minisim_clear` (Tier 0), `townsim_ini` (Tier 1 con obstáculos
-reales), y `citymap_a` (Tier 2, pendiente de creación del manifiesto).
+reales), y `citysim_clear` (Tier 2 base, validado) / `citymap_a` (Tier 2 con obstáculos, pendiente).
 
 | Brazo | Tier / Escenario | Estrategia Atasco | Tasa de éxito | Colisiones/km | DistMin p5 (m) | Tiempo med. (s) | `deliberation_rate` | Fallback SLM | Res. Atasco VLM |
 |---|---|---|---|---|---|---|---|---|---|
@@ -105,7 +129,9 @@ la heurística rígida de la FSM?
   introduce obstáculos deliberativos reales (árboles, fachadas); aquí se espera que la
   ventaja del escaneo profundo (`deep_vlm`) sobre el escape ciego (`blind`) sea más visible.
 
-- **Tier 2 (Cañones urbanos / `citymap_a`):** pendiente de creación y validación del manifiesto.
-  Es el escenario donde la hipótesis predice mayor ventaja del brazo `slm`: corredores angostos
-  entre edificios altos requieren decisiones de rodeo que ni el `reactive` ni el `fsm` resuelven
-  con una heurística fija.
+- **Tier 2 base (Control / `citysim_clear`):** los datos piloto confirman que a −70m los tres
+  brazos completan el perímetro sin deliberación activa (0 deadlocks, histograma dominado por
+  `reactive`). Rol análogo al de `minisim_clear`: cota inferior para el análisis del brazo `slm`
+  en entorno urbano denso. El escenario con obstáculos reales (`citymap_a`, pendiente) es donde
+  se espera mayor ventaja del brazo `slm`: corredores angostos entre edificios altos requieren
+  decisiones de rodeo que ni el `reactive` ni el `fsm` resuelven con una heurística fija.
