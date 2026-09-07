@@ -34,9 +34,9 @@ acumuló (Tier 1).
 | **I0** Cuarentena de datos pre-fix + trazabilidad de versión | Que cualquier corrida usada en la tesis sea auditable por commit | Runs manuales previos al 3-sep documentados como no comparables; `summary.json` incluye el hash de código |
 | **I1** Revalidación de Tier 0 | Confianza de que los fixes de esta semana no rompieron el caso base | 3 brazos, 1 semilla, verde, con video de referencia |
 | **I2** Cierre de Tier 1 | El tier con más evidencia queda demo-ready y batch-ready | T-CALIB-2/3 pasan el protocolo §5; `TOWNSIM_INI` grabado con los 3 brazos |
-| **I3** Bootstrap de Tier 2 | El tier que hoy es el riesgo real de toda la demo | `citymap_pilot` piloteado con el código actual; `citymap_a.json` creado y validado |
+| **I3** Bootstrap de Tier 2 | El tier que hoy es el riesgo real de toda la demo | `citymap_pilot` piloteado con el código actual; riesgo de fachadas de baja textura diagnosticado; parámetros de navegación Manhattan (`MAX_CONSECUTIVE_ESCAPES`, `CORNER_OFFSET_M`) revalidados a escala de manzana; `citymap_a.json` creado y validado |
 | **I4** Empaquetado de la demo | El entregable en sí | 1 video+viewer por brazo relevante por tier, guión de presentación |
-| **I5** Ablation del brazo `slm` (4 mejoras del 3-sep) | Saber si el efecto medido es real o ruido de una corrida | Comparación multi-semilla antes/después de los 4 cambios sobre el mismo escenario |
+| **I5** Ablation del brazo `slm` (4 mejoras del 3-sep) | Saber si el efecto medido es real o ruido de una corrida, y si queda un residuo no-mecánico del bucle de confianza | Comparación multi-semilla antes/después de los 4 cambios; residuo del bucle de confianza clasificado por causa |
 | **I6** Corrida de tesis G4 | El cap. 11 del informe, con datos reales | 3×3×5 corridas posteriores a los fixes del 3-sep, `ANALYSIS.json` con Mann-Whitney |
 | **I7** Deuda de escritura | Coherencia del informe con el código actual | Cap. 09 documenta el hallazgo de color invertido; cap. 11 remapeado; prosa `manhattan_a/b` limpia |
 | **I8** Deuda menor | Higiene | Política de `FLIGHT_RECORD_VIDEO` para batches grandes; versión de paquete unificada |
@@ -173,7 +173,25 @@ bug de color invertido, activo hasta ayer. Antes de cualquier otra cosa:
 fallo instructivo, no tiene sentido avanzar a I3.2 — el problema es de geometría o presupuesto, no de
 política de decisión, y hay que resolverlo antes de construir nada nuevo sobre este mapa.
 
-### I3.2 — `citymap_a.json`: el escenario con bloqueo real
+### I3.2 — Diagnóstico de textura en fachadas planas (riesgo distinto al bucle mecánico del 3-sep)
+
+Tier 2 introduce un tipo de superficie que Tier 0/1 apenas tuvieron: fachadas grandes, planas y de baja
+textura (hormigón pintado, vidrio). `flow_ttc.py` ya documenta que el cielo/nubes —misma categoría de
+superficie, poquísima textura— producían flujo óptico ruidoso leído como obstáculo falso (bug del
+2026-0826), mitigado hoy solo para rotación fuerte (`FLOW_MAX_ROTATION_DEG=2.0`). Una fachada lisa
+encontrada en **crucero recto** (no girando) no está cubierta por ese fix, y el creep-speed del 3-sep
+tampoco la resuelve: más traslación hacia una superficie sin textura no sube la confianza, solo acerca
+más rápido al obstáculo sin nunca resolver la duda — es un modo de falla estructural, no mecánico.
+
+En el piloto de I3.1, además de `success=True`, revisar explícitamente `centro_conf` del CSV en los
+tramos donde el dron cruza cerca de una fachada — mismo método que el análisis de deliberación excesiva
+del 3-sep. Si aparece confianza baja sostenida pese a traslación confirmada, documentar el hallazgo antes
+de I3.3: la corrección ahí no es de velocidad (ya se probó esa vía), sino de qué hacer cuando la
+confianza se mantiene baja sin evidencia de peligro real — una estrategia de degradación explícita
+(p. ej. tope de ciclos con confianza baja + traslación confirmada, antes de forzar una decisión distinta
+a seguir escalando) que no existe todavía porque nunca hizo falta.
+
+### I3.3 — `citymap_a.json`: el escenario con bloqueo real
 
 `G4_THESIS_RUN.md` lo marca pendiente desde el 28-08. Mismo patrón que T-CALIB-2 en TownSim: identificar
 por inspección directa del viewport (nunca por lectura de píxeles del PNG, misma regla que
@@ -183,10 +201,46 @@ altos, corredores angostos" vs. "vegetación, obstáculos orgánicos"). Construi
 iterativa (un tramo, confirmar en el viewport, agregar el siguiente), igual que se hizo con
 `TOWNSIM_DEMO` — no de una sola vez.
 
-### I3.3 — Comparación de brazos
+### I3.4 — Comparación de brazos
 
-Con I3.2 en verde, repetir el patrón de I2.2 sobre `citymap_a.json`: 3 brazos, 1 semilla, video por
+Con I3.3 en verde, repetir el patrón de I2.2 sobre `citymap_a.json`: 3 brazos, 1 semilla, video por
 corrida.
+
+### I3.5 — Re-validar parámetros de navegación Manhattan a escala de manzana
+
+`compute_corner_waypoint`/`CORNER_OFFSET_M`/`MAX_CONSECUTIVE_ESCAPES` están calibrados sobre Tier 1
+(obstáculos puntuales tipo árbol, un solo giro de 90° suele bastar). Rodear un bloque rectangular
+completo en Tier 2 puede necesitar 3-4 giros encadenados solo por geometría — potencialmente al límite
+de `MAX_CONSECUTIVE_ESCAPES=3` (hoy), lo que puede leer un desvío largo pero legítimo como un atasco real
+y forzar la caída a escape ciego innecesariamente (mismo tipo de falso positivo que ya se corrigió una
+vez con `progress_stall_cycles`). Medir en `citymap_a.json`:
+
+- Cuántos giros consecutivos hace falta encadenar para completar un desvío real de manzana; subir
+  `MAX_CONSECUTIVE_ESCAPES` si el dato lo justifica, documentando la medición (misma disciplina de
+  "todo umbral sale de una medición" de `PLAN-MEJORAS-2.md`).
+- Si `CORNER_OFFSET_M=12.0` es compatible con el ancho de calle real de `citymap.png` — si las calles son
+  más angostas, el offset puede depositar al dron cerca de la fachada opuesta. Ajustar contra el ancho
+  medido, no contra el valor que funcionó en TownSim.
+
+### I3.6 — Retener la intención de rodeo a través de varias esquinas, no re-deliberar en cada una
+
+Hoy cada esquina de un desvío se trata como un evento independiente: si rodear una manzana requiere
+varios `CORNER_WP` encadenados, cada uno puede disparar una deliberación completa del SLM, generando el
+mismo efecto de "idas y vueltas" que ya se identificó en el bucle de confianza, pero por una causa
+distinta (re-litigar una decisión ya tomada, no falta de confianza). Extender el `MANEUVER_LOCK` ya
+existente en `main.py` para que, decidido un rodeo, la intención se retenga a través de toda la secuencia
+de esquinas (no solo los 4-5 ciclos de una maniobra), y solo se re-invoque al SLM ante una obstrucción
+nueva no prevista por esa intención. No requiere memoria espacial ni cambios a `DroneState` — es una
+generalización del enclavamiento de "una maniobra" a "una secuencia de maniobras" ya prevista por el
+mecanismo actual.
+
+### I3.7 — Adaptar el prompt del escaneo inicial (H1) para lectura de cuadrícula
+
+Una manzana es geometría rectangular predecible — mucho más legible desde una foto aérea que un dosel de
+vegetación orgánico. Revisar si el prompt de H1 pregunta explícitamente por orientación de calle/corredor
+por rumbo ("¿hacia dónde corre la calle visible acá?"), no solo clear/blocked/sin evidencia — es
+aprovechar la herramienta que ya construye el equivalente cualitativo de un mapa, específicamente donde
+más rinde: geometría urbana rectilínea, no vegetación dispersa.
 
 ---
 
@@ -202,7 +256,7 @@ Duración estimada: medio día. Depende de I1, I2, I3.
   razón de ser del proyecto).
 - Para demo en vivo: la tarjeta "Guía de Inicio Rápido" de WebDCS (agregada el 3-sep) sirve para lanzar
   misiones frente a audiencia sin depender de la línea de comandos.
-- Para versión grabada/offline: los `viewer.html` generados en I1.2/I2.3/I3.3, con video y CSV
+- Para versión grabada/offline: los `viewer.html` generados en I1.2/I2.3/I3.4, con video y CSV
   sincronizados por slider.
 - Etiquetar explícitamente cada resultado mostrado como **1 semilla, ilustrativo** — la tabla con
   significancia estadística es I6, no esta fase.
@@ -233,6 +287,24 @@ escenario, mismas semillas, para que la comparación sea limpia. Si la reducció
 varianza entre semillas, el hallazgo pasa de anecdótico a reportable en cap. 11/H4; si no, es un
 resultado negativo válido igual (mismo criterio que G4.3).
 
+### I5.1 — Diagnóstico del residuo: ¿cuánto del bucle de confianza sigue vivo después del creep-speed?
+
+El análisis del 3-sep sobre 103 deliberaciones de `TOWNSIM_INI` encontró que el 82.5% se disparaba por
+`centro_conf < 0.1` sin obstáculo real (`centro_blocked=True` en solo 0.97%), y atribuyó la causa a un
+bucle mecánico auto-inducido (frenar/rotar mata la traslación que el propio estimador necesita para
+recuperar confianza) — ya parchado con el avance cauteloso. Sobre las 5 semillas de este mismo I5,
+repetir esa clasificación (`centro_conf`/`centro_blocked`/velocidad horizontal en los ciclos previos a
+cada disparo) para separar, del total de deliberaciones que sobrevivan:
+
+- las que siguen siendo mecánicas (traslación insuficiente pese al creep-speed — señal de que el parche
+  necesita ajuste fino, no de que el enfoque esté mal);
+- las que ya no lo son (traslación confirmada, confianza baja igual) — candidatas a la causa de textura
+  de I3.2, no al bucle mecánico.
+
+Este número es el que decide si vale la pena diseñar algo más allá de lo ya hecho: si el residuo es
+chico, no hay mucho margen para una mejora adicional; si es grande y de causa no-mecánica, es la
+confirmación de que el hallazgo de I3.2 (fachadas de baja textura) es un problema real y no solo teórico.
+
 ---
 
 ## Fase I6 — Corrida de tesis G4 (la real, no la demo)
@@ -247,7 +319,7 @@ Retoma el diseño de `G4_THESIS_RUN.md`/`PLAN-MEJORAS-2.md §G4.1`, ahora comple
 
 - **Brazos:** `slm`, `fsm`, `reactive`.
 - **Escenarios:** `minisim_clear` (Tier 0), el escenario T-CALIB validado en I2 o `townsim_ini` (Tier
-  1), `citymap_a` de I3.2 (Tier 2) — el "tercer escenario con bloqueo frontal masivo" que pide el cap.
+  1), `citymap_a` de I3.3 (Tier 2) — el "tercer escenario con bloqueo frontal masivo" que pide el cap.
   10.1 del informe queda cubierto por Tier 1 y reforzado por Tier 2.
 - **Semillas:** 5 (1–5).
 - **`DEADLOCK_STRATEGY`:** aprovechar la misma tanda para correr el ablation `blind` vs `deep_vlm` de
@@ -353,8 +425,10 @@ I7.1, I7.3, I8 corren en paralelo desde el día 1.
 | Tier 2 (`citymap.png`) resulta geométricamente distinto de lo que sugiere el nombre (edificios más separados/juntos) | I3 se estira mucho más de lo estimado, retrasa I6 | Mismo principio que TownSim: nunca inventar geometría, iterar tramo a tramo con confirmación visual; si el mapa no da un bloqueo real, usar `citymap_pilot` solo como escenario de crucero y documentar la limitación en vez de forzar un escenario que no existe |
 | El ablation I5 no confirma el efecto de las 4 mejoras del 3-sep | Hay que reportar el hallazgo como no concluyente, no como mejora validada | Es un resultado válido igual — mismo espíritu que G4.3/H3: riesgo negativo medido, no ocultado |
 | El batch I6 corre antes de que I0.2 esté mergeado | Datos sin `code_version`, hay que re-correr el batch completo | I6.2 lo verifica explícitamente antes de tocar `analyze_tesis_results.py` |
-| Grabar video en las 45 corridas de I6 llena el disco o degrada el rendimiento de la corrida | Corridas fallan a mitad de camino por espacio, o los tiempos dejan de ser comparables entre corridas con/sin grabación | I8 lo resuelve por diseño: video solo opt-in en corridas seleccionadas (I1.2/I2.3/I3.3/I4), nunca en el batch estadístico completo |
+| Grabar video en las 45 corridas de I6 llena el disco o degrada el rendimiento de la corrida | Corridas fallan a mitad de camino por espacio, o los tiempos dejan de ser comparables entre corridas con/sin grabación | I8 lo resuelve por diseño: video solo opt-in en corridas seleccionadas (I1.2/I2.3/I3.4/I4), nunca en el batch estadístico completo |
 | Tier 2 nunca llega a `success=True` ni con presupuesto generoso | I6 queda con solo 2 tiers reales | Documentarlo como resultado honesto (mismo criterio que G4.3): "el sistema no completa el escenario de mayor dificultad" es información, no un fallo del plan — decidir en ese momento si I6 corre con 2 escenarios y Tier 2 queda para trabajo futuro, explícitamente marcado así en el informe |
+| Fachadas planas de baja textura reproducen (en crucero recto) el mismo síntoma que el bug de cielo/nubes del 26-08, sin que el fix de rotación (`FLOW_MAX_ROTATION_DEG`) ni el creep-speed del 3-sep lo cubran | El sistema se queda "dudando" indefinidamente frente a una pared sin obstáculo real que lo justifique, en vez de resolver y seguir | I3.2 lo mide explícitamente antes de I3.4; si aparece, es un hallazgo de diseño para el informe (mismo género que los ya documentados en cap. 09), no algo a ocultar |
+| `MAX_CONSECUTIVE_ESCAPES=3` (calibrado sobre obstáculos puntuales de Tier 1) resulta insuficiente para rodear una manzana rectangular completa en Tier 2 | Desvíos legítimos y largos se clasifican como atasco y caen a escape ciego innecesariamente | I3.5 lo mide contra `citymap_a.json` antes de correr I3.4/I6, mismo criterio que ya se aplicó una vez con `progress_stall_cycles` |
 
 ---
 
@@ -372,7 +446,7 @@ Fortalezas ya construidas que este plan debe **preservar**:
 4. **`DEADLOCK_STRATEGY=deep_vlm` como default de producción**, con `blind` como red de seguridad — I6
    lo pone a prueba estadísticamente (H3), no lo cambia.
 5. **El formato único de misión** (`airsim-plan/missions/*.json`, consolidado el 31-08) — los
-   manifiestos nuevos de I3.2 y cualquier ajuste de I2.1 lo respetan, sin reintroducir el formato
+   manifiestos nuevos de I3.3 y cualquier ajuste de I2.1 lo respetan, sin reintroducir el formato
    `.preloop.json` divergente.
 6. **`deliberations[]` como contrato congelado** y toda la instrumentación de auditoría del 3-sep
    (`viewer.html`, `summary_by_wp.csv`, overlay de video) — I4 las usa tal cual están, no las modifica.

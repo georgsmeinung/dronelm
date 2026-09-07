@@ -31,6 +31,18 @@ from typing import Any, Dict, List
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
+def _get_code_version() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        v = result.stdout.strip()
+        return v if v else "unknown"
+    except Exception:
+        return "unknown"
+
+
 def run_experiment(
     scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: int, max_seconds: float
 ) -> tuple[bool, Dict[str, Any]]:
@@ -138,8 +150,12 @@ def main():
 
     # Guardar resultados consolidados
     results_summary_path = out_dir_path / "RESULTS_SUMMARY.json"
+    results_summary = {
+        "code_version": _get_code_version(),
+        "results": results,
+    }
     with open(results_summary_path, "w") as f:
-        json.dump(results, f, indent=2, default=str)
+        json.dump(results_summary, f, indent=2, default=str)
 
     print()
     print(f"[G4] Corrida completada. Resultados en {results_summary_path}")

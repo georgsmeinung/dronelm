@@ -317,3 +317,20 @@ def test_per_waypoint_summary_csv(tmp_path):
     assert rows[1]["cycles"] == "2"
     assert rows[1]["deliberative_cycles"] == "0"
     assert rows[1]["deep_scan_events"] == "0"
+
+
+def test_summary_includes_code_version_from_git(tmp_path):
+    """I0.2 (PLAN-MEJORAS-4): summary.json debe incluir code_version con el
+    hash corto de git para que cada corrida sea auditable por commit. En un
+    repo con .git, el valor no debe ser None ni 'unknown'."""
+    run_dir = tmp_path / "TEST_CV-20260904T000000Z"
+    out_path = run_dir / "TEST_CV-20260904T000000Z.jsonl"
+    logger = FlightLogger(str(out_path), scenario="test_cv", seed=1, arm="slm")
+    summary = logger.close()
+
+    assert "code_version" in summary, "summary.json debe incluir el campo code_version"
+    assert summary["code_version"] is not None
+    # En un repo con .git activo, el hash no debe ser 'unknown'
+    assert summary["code_version"] != "unknown", (
+        f"code_version='unknown' indica que git rev-parse falló; valor: {summary['code_version']!r}"
+    )

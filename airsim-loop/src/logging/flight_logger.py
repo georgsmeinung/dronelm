@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -345,6 +346,18 @@ class FlightLogger:
     def mark_success(self, success: bool) -> None:
         self._success = success
 
+    @staticmethod
+    def _get_code_version() -> str:
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                capture_output=True, text=True, timeout=5,
+            )
+            v = result.stdout.strip()
+            return v if v else "unknown"
+        except Exception:
+            return "unknown"
+
     def close(self) -> Dict[str, Any]:
         # H3.2/H3.3 (PLAN-MEJORAS-3): agregado del ablation blind vs. deep_vlm,
         # desagregable despues por AGENT_ARM x DEADLOCK_STRATEGY (experiments/
@@ -359,6 +372,7 @@ class FlightLogger:
             "scenario": self.scenario,
             "seed": self.seed,
             "arm": self.arm,
+            "code_version": self._get_code_version(),
             "cycles": self._cycle,
             "duration_s": round(time.time() - self._t0, 2),
             "success": self._success,

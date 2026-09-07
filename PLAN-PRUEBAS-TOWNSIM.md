@@ -61,11 +61,28 @@ complejo.
 
 ### 1.2 — La corrida ya volada: `TOWNSIM_CALIB_0`
 
+> **⚠ CUARENTENA — corridas anteriores al 2026-09-03 no aptas para comparación `slm` vs. `fsm`/`reactive`**
+>
+> Las dos corridas manuales de este escenario (`TOWNSIM_CALIB_0_20260831T234305Z.*` y
+> `TOWNSIM_CALIB_0_20260901T001142Z.*`) son anteriores a dos fixes del 2026-09-03 que afectan
+> directamente lo que el VLM vio en cada ciclo:
+> 1. **Canales de color R/B invertidos en toda captura de AirSim** — el modelo tomó decisiones
+>    sobre imágenes con los canales rojo y azul intercambiados durante toda la vida del proyecto.
+> 2. **Marcadores de debug contaminando la captura del VLM** — los overlays de diagnóstico
+>    aparecían en el fotograma enviado al modelo.
+>
+> Estas corridas **no se descartan**: siguen siendo evidencia válida de que la geometría
+> T-CALIB-0 es volable y que el corredor central es transitable a -30m. Pero sus métricas de
+> `slm_invocations`, `deliberation_rate` e histograma de rutas **no son comparables** con
+> corridas posteriores al fix. Para el cap. 11 del informe, usar solo corridas con
+> `code_version` posterior al commit del 2026-09-03.
+
 `airsim-plan/missions/flightplans/townsim_calib_0.json` (mismo contenido que
 `TOWNSIM_CALIB_0.preloop.json`) ya se voló manualmente dos veces; la corrida más reciente
 (`airsim-plan/runs/manual/TOWNSIM_CALIB_0_20260901T001142Z.summary.json`) terminó **exitosa,
 sin colisiones**: 656.35m, 1748 ciclos, 361.92s, brazo `slm`, `deliberation_rate=15.4%`.
 Histograma de rutas: `reactive` 77%, `deliberative` 16%, `evasive` 6%, `girar_90` 0.2%.
+**(Pre-fix: ver nota de cuarentena arriba.)**
 
 ```
 WP_1: (0.0,    0.4,  -10)
