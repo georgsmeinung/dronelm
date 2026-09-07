@@ -1,8 +1,8 @@
 # Configuración del Grafo de Control
 
-> Estado del lazo táctico de `airsim-loop` al **2026-09-03**, después de la implementación de `PLAN-MEJORAS.md` (F0–F4), la corrección del deadlock del escape por altura y la escalación ante atasco por barrido panorámico + consulta al modelo de visión (`src/agents/deep_scan.py`, §7). Este documento describe la configuración **tal como está en el código**, no un diseño propuesto: cada umbral, cada orden de evaluación y cada nombre de variable son verificables en los archivos referenciados.
+> Estado del lazo táctico de `airsim-loop` al **2026-09-07**, después de la implementación de `PLAN-MEJORAS.md` (F0–F4), `PLAN-MEJORAS-3.md` (H1: escaneo espacial pre-vuelo), la corrección del deadlock del escape por altura y la escalación ante atasco por barrido panorámico + consulta al modelo de visión (`src/agents/deep_scan.py`, §7). Este documento describe la configuración **tal como está en el código**, no un diseño propuesto: cada umbral, cada orden de evaluación y cada nombre de variable son verificables en los archivos referenciados.
 >
-> Para el porqué histórico de cada decisión ver `CHANGELOG.md` (2026-0824, 2026-0903) y `legacy/README.md`; para el detalle de lo retirado, `legacy/`.
+> Para el porqué histórico de cada decisión ver `../CHANGELOG.md` (2026-0824, 2026-0903, 2026-0907).
 
 ---
 
@@ -162,6 +162,9 @@ Ver §7. Nunca bloquea: encola el pedido y frena ese ciclo; en ciclos siguientes
 
 ### `fsm_node` (brazo `fsm`)
 Máquina de estados determinista (`CRUISE`, `AVOID_LEFT`, `AVOID_RIGHT`, `CLIMB`, `BRAKE`) sobre el **mismo** `ObstacleField` y la **misma** `action_to_command()` que usa el brazo SLM. Tiene la misma persistencia de maniobra y el mismo enclavamiento de escape, para que la comparación no mida quién tiene mejor puesta la salvaguarda sino quién elige mejor la acción.
+
+### `spatial_scan_node` (pre-vuelo, fuera del grafo)
+Escaneo espacial inicial — función de una sola vez llamada desde `main.py` entre `airsim_client.connect()` y la entrada al lazo táctico (`src/agents/spatial_scan.py`). Hace un barrido de yaw en el lugar (sin traslación), captura N fotogramas en N rumbos distintos y los envía en una única consulta al VLM, que devuelve un contexto cualitativo del entorno inicial. Es **advisory, no safety-critical**: el `ObstacleField` por ciclo sigue siendo la única autoridad de seguridad una vez que el dron se mueve. Si el VLM falla o expira el watchdog, la misión arranca igual sin contexto inicial.
 
 ### `motor_node`
 Emite el comando final. Dos responsabilidades adicionales:
@@ -378,6 +381,8 @@ El tope diferenciado existe porque con un único tope de 15 °/s realinear un de
 
 `AIRSIM_IP=127.0.0.1` (mismo host que Unreal Engine), `AIRSIM_RPC_TIMEOUT=8 s`, `AIRSIM_STRICT=true`, `LOOP_HZ=5.0`, `GRAPH_TIMEOUT_S=30.0`.
 
+> **Configuración unificada (2026-09-07):** todos los subproyectos leen de `config/.env` en la raíz del repo (`D:\TesisMCD\dronelm\config\.env`). La regla de carga es `load_dotenv(Path(__file__).resolve().parents[N] / "config" / ".env")`, con N = profundidad desde la raíz (N=3 para `src/**/*.py`). `config/.env.example` es el template committeable.
+
 > El simulador corre **local** y el servidor del SLM **remoto**: la latencia de red del modelo está absorbida por diseño (servicio asíncrono), la del RPC de AirSim no. Sobre LAN, `simGetImages` daba timeout de 8–9 s en **todas** las resoluciones por igual — independiente de la resolución, o sea el socket RPC, no el ancho de banda.
 
 ---
@@ -405,7 +410,7 @@ Lo que la configuración actual garantiza, y dónde se verifica:
 | El barrido panorámico resuelve el atasco o cae al escape ciego sin romper la rama existente | `test_deep_scan.py` |
 | Ningún componente del lazo consulta el canal de profundidad del simulador | `test_no_depth_in_flight_path.py` |
 
-**137 tests**, sin AirSim (stub con la misma interfaz):
+**138 tests**, sin AirSim (stub con la misma interfaz):
 
 ```bash
 pytest tests/ -q
@@ -428,7 +433,9 @@ Los tests que cubren la frontera del grafo corren el **grafo compilado**, no el 
 ## 12. Referencias
 
 - [`README.md`](README.md) — mapeo de código a grafo, ejecución, experimentos.
-- `CHANGELOG.md` (2026-0824, 2026-0903) — historia y evidencia medida de cada decisión.
-- `PLAN-MEJORAS.md` — plan F0–F4 del que sale esta arquitectura.
+- [`../CHANGELOG.md`](../CHANGELOG.md) (2026-0824, 2026-0903, 2026-0907) — historia y evidencia medida de cada decisión.
+- [`../PLAN-MEJORAS.md`](../PLAN-MEJORAS.md) — plan F0–F4 del que sale esta arquitectura.
+- [`../PLAN-MEJORAS-3.md`](../PLAN-MEJORAS-3.md) — plan H1 (escaneo espacial pre-vuelo, `spatial_scan.py`).
+- [`../PLAN-MEJORAS-4.md`](../PLAN-MEJORAS-4.md) — plan activo: revalidación de tiers, corrida G4, deuda de escritura.
 - [`src/agents/deep_scan.py`](src/agents/deep_scan.py) — escalación por barrido panorámico + VLM (§7).
-- [`legacy/README.md`](legacy/README.md) — módulos retirados (YOLO, IPM, TTC anterior, gate XOR) con la justificación de cada retiro.
+- [`src/agents/spatial_scan.py`](src/agents/spatial_scan.py) — escaneo espacial pre-vuelo, advisory (§5).

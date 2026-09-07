@@ -2,7 +2,7 @@
 
 Este submódulo (`airsim-loop`) implementa el bucle de control reactivo/deliberativo de navegación autónoma para drones cuadricópteros usando **LangGraph**, estimación de **TTC (Time-To-Collision) por flujo óptico** con derotación y estimación del FOE, y un **SLM/VLM Local** (Small/Vision Language Model) que corre de forma asíncrona respecto del lazo de control.
 
-> **Nota de arquitectura (2026-08):** este README fue reescrito para reflejar el estado real del código tras la implementación de `PLAN-MEJORAS.md`. La versión anterior describía YOLO + ROI 62° + IoU/area_ratio, que fueron retirados (ver [`legacy/README.md`](legacy/README.md) para la justificación medida de cada retiro) y reemplazados por el contrato único de percepción `ObstacleField`.
+> **Nota de arquitectura (2026-08/09):** este README fue reescrito para reflejar el estado real del código tras la implementación de `PLAN-MEJORAS.md` (F0–F4) y `PLAN-MEJORAS-3.md` (H1: escaneo espacial pre-vuelo). La versión anterior describía YOLO + ROI 62° + IoU/area_ratio, que fueron retirados (justificación medida en [`../CHANGELOG.md`](../CHANGELOG.md) 2026-0824) y reemplazados por el contrato único de percepción `ObstacleField`.
 
 > 📄 **Referencia detallada:** [`GRAFO-DE-CONTROL.md`](GRAFO-DE-CONTROL.md) documenta la configuración completa del grafo tal como está en el código — topología, esquema de estado, cascada de decisión del router, máquina de escape de deadlock, cinemática por macro-acción, tabla completa de umbrales con su origen, e invariantes con el test que verifica cada uno. Este README es el mapa; ese documento es el detalle.
 
@@ -37,7 +37,7 @@ El pipeline sigue un gating multinivel para economizar recursos y maximizar el v
                         END
 ```
 
-> **Nodo retirado (F0.4, 2026-0824):** `canny_xor_gate` + `xor_router` (gate de bordes Canny+XOR que bypaseaba `perception` cuando la escena no cambiaba visualmente) se sacaron del grafo con evidencia medida en vuelo real — ver [`legacy/README.md`](legacy/README.md) y `CHANGELOG.md` 2026-0824. Resumen: a la frecuencia de vuelo el bypass casi nunca disparaba, y en el puñado de ciclos donde sí disparaba (hover post-`FRENAR`) saltaba `policy_router` entero, evitando re-evaluar el campo de obstáculos justo en el momento donde más importaba hacerlo.
+> **Nodo retirado (F0.4, 2026-0824):** `canny_xor_gate` + `xor_router` (gate de bordes Canny+XOR que bypaseaba `perception` cuando la escena no cambiaba visualmente) se sacaron del grafo con evidencia medida en vuelo real — ver [`../CHANGELOG.md`](../CHANGELOG.md) 2026-0824. Resumen: a la frecuencia de vuelo el bypass casi nunca disparaba, y en el puñado de ciclos donde sí disparaba (hover post-`FRENAR`) saltaba `policy_router` entero, evitando re-evaluar el campo de obstáculos justo en el momento donde más importaba hacerlo.
 
 ---
 
@@ -66,7 +66,7 @@ El orden de evaluación **es** la política; la cascada completa, con el raciona
 ### `deliberative` (brazo `slm`)
 Corre en un hilo aparte (`DeliberationService`, `src/agents/deliberation_service.py`): el nodo **nunca bloquea** el lazo de control. El ciclo en que se encola el pedido (o mientras se espera respuesta) el comando es `FRENAR`; si el SLM no responde dentro de `SLM_WATCHDOG_MS` (6000 ms, calibrado sobre latencias reales de LM Studio), se aplica el fallback determinista y se marca `timeout=True` en `deliberations[]`. Usa decodificación restringida (`response_format=json_schema`) cuando el servidor la soporta, con el parser tolerante como red de seguridad.
 
-Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos sin progreso real hacia el waypoint, fuerza `GANAR_ALTURA` sin consultar al modelo. El escape está acotado por tres guardas — umbral coherente con la métrica que lo alimenta, chequeo de corredor visible, y enclavamiento tras `MAX_CONSECUTIVE_ESCAPES` intentos sin progreso horizontal medido — cuya ausencia produjo el estado absorbente documentado en `CHANGELOG.md` (2026-0824). Ver [`GRAFO-DE-CONTROL.md` §7](GRAFO-DE-CONTROL.md).
+Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos sin progreso real hacia el waypoint, fuerza `GANAR_ALTURA` sin consultar al modelo. El escape está acotado por tres guardas — umbral coherente con la métrica que lo alimenta, chequeo de corredor visible, y enclavamiento tras `MAX_CONSECUTIVE_ESCAPES` intentos sin progreso horizontal medido — cuya ausencia produjo el estado absorbente documentado en [`../CHANGELOG.md`](../CHANGELOG.md) (2026-0824). Ver [`GRAFO-DE-CONTROL.md` §7](GRAFO-DE-CONTROL.md).
 
 ### `evasive`, `fsm`, `girar_90`, `motor`
 `evasive_node` y `fsm_node` comparten `action_to_command()` (`src/agents/action_map.py`) con `deliberative_node`: es la única fuente de verdad de la cinemática por macro-acción, para que ninguna tenga dos definiciones distintas según quién la ejecute. `motor_node` envía el comando final a `AirSimClient.execute_velocity()`, que ya no bloquea (`moveByVelocityBodyFrameAsync` es last-command-wins; antes un `.join()` fijaba el período del lazo en 2 s).
@@ -76,25 +76,28 @@ Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos
 ## Estructura del Código
 
 - [`GRAFO-DE-CONTROL.md`](GRAFO-DE-CONTROL.md): referencia detallada de la configuración del grafo (topología, estado, routers, escape, umbrales, invariantes).
-- [`main.py`](main.py): punto de entrada. Crea el único `AirSimClient` del proceso y lo inyecta en `compile_workflow()`.
+- [`main.py`](main.py): punto de entrada. Crea el único `AirSimClient` del proceso y lo inyecta en `compile_workflow()`; llama al escaneo espacial pre-vuelo (`spatial_scan_node`) antes de entrar al lazo.
 - [`src/agents/graph.py`](src/agents/graph.py): `DroneState`, nodos, `policy_router`, `degraded_router`.
 - [`src/agents/action_map.py`](src/agents/action_map.py): cinemática única por macro-acción.
 - [`src/agents/deliberation_service.py`](src/agents/deliberation_service.py): worker asíncrono para la consulta al SLM.
 - [`src/agents/deliberative.py`](src/agents/deliberative.py), [`evasive.py`](src/agents/evasive.py), [`fsm.py`](src/agents/fsm.py), [`reactive.py`](src/agents/reactive.py): los tres brazos de política + el guiado nominal.
+- [`src/agents/deep_scan.py`](src/agents/deep_scan.py): barrido panorámico + consulta al VLM para el escape de deadlock (§7 de GRAFO-DE-CONTROL.md).
+- [`src/agents/spatial_scan.py`](src/agents/spatial_scan.py): escaneo espacial pre-vuelo (PLAN-MEJORAS-3 H1) — advisory, fuera del StateGraph.
 - [`src/perception/obstacle_field.py`](src/perception/obstacle_field.py): contrato único de percepción.
 - [`src/perception/flow_ttc.py`](src/perception/flow_ttc.py): derotación + FOE + TTC.
 - [`src/hardware/airsim_client.py`](src/hardware/airsim_client.py): cliente AirSim, actuador no bloqueante, modo estricto.
-- [`src/navigation/waypoint_tracker.py`](src/navigation/waypoint_tracker.py): guiado a waypoint + seguimiento de progreso real (`progress_stall_cycles`).
-- [`src/logging/flight_logger.py`](src/logging/flight_logger.py): JSONL estructurado por ciclo, para `experiments/`.
-- [`legacy/`](legacy/): módulos retirados (YOLO, IPM, estimador de TTC anterior, gate de bordes XOR), con la justificación medida de cada retiro.
-- [`experiments/`](experiments/): `runner.py` + `analyze.py` (comparación batch SLM/FSM/reactivo), `collect_ttc_dataset.py` + `analyze_ttc.py` (validación de TTC contra el canal depth).
+- [`src/navigation/waypoint_tracker.py`](src/navigation/waypoint_tracker.py): guiado a waypoint + seguimiento de progreso real (`progress_stall_cycles`); soporta movimiento vertical puro (`near_vertical`) para el patrón climb-first de CitySim.
+- [`src/logging/flight_logger.py`](src/logging/flight_logger.py): JSONL estructurado por ciclo, incluye `code_version` (hash de commit) en el summary para trazabilidad de corridas.
+- [`experiments/`](experiments/): `runner.py` + `analyze.py` (comparación batch SLM/FSM/reactivo), `collect_ttc_dataset.py` + `analyze_ttc.py` (validación de TTC contra el canal depth), `batch_runner.py` (corridas paralelas multi-seed).
 - [`scripts/bench_capture.py`](scripts/bench_capture.py): mide el techo real de `simGetImages` sobre la conexión al simulador, para elegir `LOOP_HZ` con evidencia.
 
 ---
 
 ## Configuración y Ejecución
 
-### **1. Variables de Entorno (`.env`)**
+### **1. Variables de Entorno**
+
+> **Fuente única (2026-09-07):** toda la configuración vive en `config/.env` en la **raíz del repo** (`D:\TesisMCD\dronelm\config\.env`). El archivo local `airsim-loop/.env` queda como stub vacío; no lo edites. El template committeable es `config/.env.example`.
 
 ```ini
 AIRSIM_MODE=Drone
@@ -146,6 +149,13 @@ pytest tests/ -q
 No requieren AirSim: usan un `AirSimClient` stub con la misma interfaz (`capture`/`execute_velocity`/`get_telemetry`).
 
 ### **4. Experimentos (requieren AirSim corriendo)**
+
+Los escenarios de misión viven en `airsim-plan/missions/flightplans/`. El formato `.preloop.json` fue eliminado (2026-09-07); `loop_runner.py` apunta directamente al archivo canónico en `flightplans/`.
+
+Tiers validados hasta la fecha:
+- **Tier 0** (MiniSim): revalidación pendiente post-fix color (I1).
+- **Tier 1** (TownSim `townsim_clear.json`): T-CALIB-2/3 pendiente (I2).
+- **Tier 2** (CitySim `citysim_clear.json`): pilot I3 validado (`code_version=2d75ae56`, seed=1, 3/3 success, 0 colisiones).
 
 ```bash
 python experiments/runner.py --scenarios missions/*.json --arms slm fsm reactive --seeds 1 2 3
