@@ -149,13 +149,14 @@ def main():
                     })
 
     # Guardar resultados consolidados
+    # code_version ya viene en cada entrada via **summary.items() (FlightLogger
+    # lo agrega al summary.json de cada corrida). batch_version registra el
+    # hash del proceso que orquesto el batch en si (puede diferir si se corre
+    # analyze despues de un re-deploy).
     results_summary_path = out_dir_path / "RESULTS_SUMMARY.json"
-    results_summary = {
-        "code_version": _get_code_version(),
-        "results": results,
-    }
+    results_summary_path.with_suffix(".batch_version.txt").write_text(_get_code_version())
     with open(results_summary_path, "w") as f:
-        json.dump(results_summary, f, indent=2, default=str)
+        json.dump(results, f, indent=2, default=str)
 
     print()
     print(f"[G4] Corrida completada. Resultados en {results_summary_path}")
