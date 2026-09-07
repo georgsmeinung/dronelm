@@ -1,11 +1,57 @@
 # 2026-0907
 
+## Corridas de tesis I3 — Tier 2 base (`citysim_clear`, 3 brazos, seed=1)
+
+Primer escenario de Tier 2 (CitySim) validado con los tres brazos: `slm`, `fsm` y `reactive`.
+Resultados: 3/3 `success=True`, 0 colisiones, 0 deadlocks. `code_version=2d75ae56`.
+
+## `citysim_clear.json` — diseño climb-first a −70 m AGL
+
+El escenario CITYSIM_CLEAR quedó definitivamente con:
+- **WP_1 → WP_2**: mismo x,y (26, −78), sube de −10 m a −70 m en vertical puro (near_vertical activo).
+- **WP_2 → WP_6**: perímetro horizontal a −70 m (por encima de los rascacielos del mapa CitySim).
+- **WP_6 → WP_7**: descenso vertical puro desde −70 m hasta 0 m (near_vertical activo).
+
+Altitud de tránsito elevada de −50 m a −70 m tras verificar que los edificios de CitySim alcanzan
+50–100 m y la primera corrida (z=−50 m) colisionó.
+
+## fix(waypoint_tracker): movimiento vertical puro (`near_vertical`)
+
+Cuando el siguiente waypoint está casi directamente arriba o abajo del dron
+(`dist_xy < 1 m` AND `|dz| > 0.3 m`), se fuerza `vx = 0` para que el dron suba/baje en
+vertical en vez de describir una rampa diagonal. Esto habilita el patrón climb-first.
+
+## Directorio único de misiones: `missions/flightplans/`
+
+Consolidados todos los manifiestos a `missions/flightplans/`. WebDCS, `loop_runner.py` y
+`batch_runner.py` leen exclusivamente de este directorio. Eliminado el formato `.preloop.json`
+(archivos temporales): `loop_runner.py` ahora apunta directamente al archivo canónico en
+`flightplans/` sin generar ningún archivo de trabajo intermediario.
+
+## `MISSION_DIR` configurable sólo desde `config/.env`
+
+`config.py` ancla la ruta relativa al root de `airsim-plan/` via `_AIRSIM_PLAN_ROOT =
+Path(__file__).resolve().parents[2]`, eliminando la dependencia del CWD al lanzar WebDCS.
+
+## Limpieza de código legacy
+
+- Eliminado `airsim-loop/debug_tracker.py` (crasheaba sobre rutas inexistentes).
+- Eliminado `airsim-poc/.env.copy` (config obsoleta con IP 192.168.110.110 y modelo incorrecto).
+- `check_slm.py` línea 159: sustituidas refs a `LOOP_ENV`/`POC_ENV` (ya no existen) por `CONFIG_ENV`.
+- `plot_mission_route.py`: eliminada mención de `.preloop.json` en argparse.
+- `.claude/launch.json`: reescrito con config WebDCS correcta (uvicorn, port 8000).
+- 5 manifiestos en `flightplans/`: campo `map` actualizado de `citymap.png` a `citysim_calib.png`
+  (`citymap_pilot`, `a_basic_city`, `a_city`, `nueva_mision_5`, `nueva_mision_6`).
+
+---
+
 * Nueva configuración de Unreal Engine Scalabilitu asegura:
 > 1. Captura de video desde AirSim (con Effects=Epic)
 > 2. Sombras en las texturas necesarias para capturar los gradientes usados para el cálculo del TTC con el flujo visual.
 
 <img src="informe/2026-0907 Scalability Config for Airsim and Shadows needed for TTC estimation.png"/>
 
+* Reunión de seguimiento con el tutor [Ezequile Nuske](https://www.linkedin.com/in/ezequiel-nuske-15137862/). Decidimos que voy a correr los experimentos en los 3 escenarios con dificultad creciente (0: base, 1: con vegetacion, 2: urbano) y voy a comenzar a redactar el informe de tesis con los resultados obtenidos.
 
 # 2026-0904
 
