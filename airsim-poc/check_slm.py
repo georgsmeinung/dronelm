@@ -156,7 +156,7 @@ def main():
     print("=" * 60)
     print(" Verificación del Servidor SLM (OpenAI-compatible API)")
     print("=" * 60)
-    print(f" Archivo .env usado: {LOOP_ENV if LOOP_ENV.exists() else POC_ENV}")
+    print(f" Archivo .env usado: {CONFIG_ENV}")
     print(f" Endpoint Base URL : {LOCAL_LLM_URL}")
     print(f" Modelo Solicitado : {LOCAL_LLM_MODEL_NAME}")
     print(f" API Key           : {'*' * len(LOCAL_LLM_API_KEY) if LOCAL_LLM_API_KEY else '(none)'}")

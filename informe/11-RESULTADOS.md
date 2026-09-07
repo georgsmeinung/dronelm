@@ -93,15 +93,15 @@ reales), y `citysim_clear` (Tier 2 base, validado) / `citymap_a` (Tier 2 con obs
 |---|---|---|---|---|---|---|---|---|---|
 | `slm` | Tier 0 (`minisim_clear`) | `deep_vlm` | | | | | | | — |
 | `slm` | Tier 0 (`minisim_clear`) | `blind` | | | | | | | — |
-| `slm` | Tier 1 (`townsim_ini`) | `deep_vlm` | | | | | | | |
-| `slm` | Tier 1 (`townsim_ini`) | `blind` | | | | | | | — |
-| `slm` | Tier 2 (`citymap_a`) | `deep_vlm` | | | | | | | |
+| `slm` | Tier 1 (`townsim_clear`) | `deep_vlm` | | | | | | | |
+| `slm` | Tier 1 (`townsim_clear`) | `blind` | | | | | | | — |
+| `slm` | Tier 2 (`citysim_clear`) | `deep_vlm` | | | | | | | |
 | `fsm` | Tier 0 (`minisim_clear`) | `deep_vlm` | | | | | — | — | — |
-| `fsm` | Tier 1 (`townsim_ini`) | `deep_vlm` | | | | | — | — | |
-| `fsm` | Tier 2 (`citymap_a`) | `deep_vlm` | | | | | — | — | |
+| `fsm` | Tier 1 (`townsim_clear`) | `deep_vlm` | | | | | — | — | |
+| `fsm` | Tier 2 (`citysim_clear`) | `deep_vlm` | | | | | — | — | |
 | `reactive` | Tier 0 (`minisim_clear`) | — | | | | | — | — | — |
-| `reactive` | Tier 1 (`townsim_ini`) | — | | | | | — | — | — |
-| `reactive` | Tier 2 (`citymap_a`) | — | | | | | — | — | — |
+| `reactive` | Tier 1 (`townsim_clear`) | — | | | | | — | — | — |
+| `reactive` | Tier 2 (`citysim_clear`) | — | | | | | — | — | — |
 
 ---
 
@@ -125,13 +125,13 @@ la heurística rígida de la FSM?
   visible (235s vs 84s). El batch G4 con ≥5 semillas confirmaría si esta diferencia es
   estadísticamente significativa.
 
-- **Tier 1 (Bloqueo frontal y vegetación / `townsim_ini`):** pendiente. El escenario `townsim_ini`
+- **Tier 1 (Bloqueo frontal y vegetación / `townsim_clear`):** pendiente. El escenario `townsim_clear`
   introduce obstáculos deliberativos reales (árboles, fachadas); aquí se espera que la
   ventaja del escaneo profundo (`deep_vlm`) sobre el escape ciego (`blind`) sea más visible.
 
 - **Tier 2 base (Control / `citysim_clear`):** los datos piloto confirman que a −70m los tres
   brazos completan el perímetro sin deliberación activa (0 deadlocks, histograma dominado por
   `reactive`). Rol análogo al de `minisim_clear`: cota inferior para el análisis del brazo `slm`
-  en entorno urbano denso. El escenario con obstáculos reales (`citymap_a`, pendiente) es donde
+  en entorno urbano denso. El escenario con obstáculos urbanods (`citysim_clear`) es donde
   se espera mayor ventaja del brazo `slm`: corredores angostos entre edificios altos requieren
   decisiones de rodeo que ni el `reactive` ni el `fsm` resuelven con una heurística fija.

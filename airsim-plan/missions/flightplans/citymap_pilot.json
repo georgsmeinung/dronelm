@@ -11,5 +11,5 @@
     { "x": -17.9, "y": -78.6, "z": -10.0, "label": "WP_6" },
     { "x": 12.5, "y": -78.6, "z": -10.0, "label": "WP_7" }
   ],
-  "map": "citymap.png"
+  "map": "citysim_calib.png"
 }

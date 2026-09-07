@@ -76,7 +76,7 @@ def load_waypoints(mission_path: str) -> List[Dict[str, Any]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("mission", help="Ruta al manifiesto de mision (.json o .preloop.json)")
+    parser.add_argument("mission", help="Ruta al manifiesto de mision (.json)")
     parser.add_argument("--color", nargs=4, type=float, default=[1.0, 0.0, 0.0, 1.0], metavar=("R", "G", "B", "A"),
                          help="Color RGBA de la linea/puntos de RUTA PLANIFICADA, 0.0-1.0 (default: rojo opaco)")
     parser.add_argument("--thickness", type=float, default=12.0, help="Grosor de la linea de ruta")
