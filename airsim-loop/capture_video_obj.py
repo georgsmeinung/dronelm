@@ -20,10 +20,10 @@ import sys
 import cv2
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Carga las variables de entorno desde .env si existe
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
 
 # Asegura que el directorio del script esté en el PYTHONPATH
 script_dir = os.path.dirname(os.path.abspath(__file__))

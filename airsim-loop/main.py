@@ -10,9 +10,10 @@ import time
 from datetime import datetime, timezone
 
 try:
+    from pathlib import Path
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
 except Exception:  # pragma: no cover
     pass
 

@@ -100,7 +100,8 @@ class DroneController:
     def _init_drone_sync(self):
         try:
             logger.info("Connecting to AirSim MultirotorClient in dedicated thread...")
-            load_dotenv()
+            from pathlib import Path
+            load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
             airsim_ip = os.getenv("AIRSIM_IP", "")
             if airsim_ip:
                 self.client = airsim.MultirotorClient(ip=airsim_ip)

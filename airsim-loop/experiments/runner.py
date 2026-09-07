@@ -33,9 +33,10 @@ SEED_JITTER_YAW_DEG = 10.0
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 try:
+    from pathlib import Path
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(Path(__file__).resolve().parents[2] / "config" / ".env")
 except Exception:
     pass
 

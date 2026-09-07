@@ -39,9 +39,9 @@ def main():
     )
     args = parser.parse_args()
 
-    # Cargar la configuración del entorno
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    env_path = os.path.join(script_dir, '.env')
+    # Cargar la configuración del entorno desde config/.env (fuente única del proyecto)
+    from pathlib import Path
+    env_path = str(Path(__file__).resolve().parents[1] / "config" / ".env")
     load_env(env_path)
 
     ollama_host = os.environ.get('OLLAMA_HOST', 'http://localhost:11434').rstrip('/')

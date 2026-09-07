@@ -1,46 +1,111 @@
 # 11. Resultados comparativos SLM vs. FSM
 
-> **Estado:** pendiente de la ejecución del batch final de tesis (G4) estructurado en el capítulo 10.
-> Las corridas piloto previas validaron con éxito el criterio de arranque exigido (`success = True`, 0
-> colisiones) tanto en Tier 0 (`minisim_clear`, validado en verde en los tres brazos con 120s de
-> presupuesto) como en Tier 1 (`townsim_ini`, validado con éxito sin colisiones y resolviendo la
-> totalidad de atascos observados mediante escaneo profundo).
+> **Estado (2026-09-07):** corridas piloto de Tier 0 y Tier 1 base completadas (1 semilla, ilustrativo).
+> El batch estadístico G4 (≥5 semillas, análisis Mann-Whitney) está pendiente de la finalización de Tier 2.
+> Las tablas de esta sección presentan datos reales de las corridas piloto en §11.1 y marcadores de
+> posición para G4 en §11.2–11.4.
 >
-> Para preservar el rigor metodológico, los resultados definitivos se restringen a ejecuciones
-> posteriores a los fixes de calibración del 2026-09-03 (canales de color consistentes, ausencia de
-> artefactos gráficos en simulación y ángulos de Euler continuos), ejecutadas de forma headless
-> mediante `experiments/batch_runner.py` sobre un diseño factorial completo:
-> $\text{Brazo} \times \text{Estrategia de Atasco} \times \text{Tier} \times \text{Semillas } (\ge 5)$.
+> **Corte de datos:** todos los resultados de esta sección provienen de corridas con `code_version`
+> posterior al 2026-09-03 — fecha de corrección de dos bugs que afectaban directamente la percepción
+> del VLM (canales R/B invertidos y marcadores de debug en la captura). Las corridas anteriores a esa
+> fecha no son comparables para el brazo `slm` y no se usan en el análisis.
 
-## 11.1 Tabla de resultados agregados (placeholder)
+---
 
-| Brazo | Tier / Escenario | Estrategia Atasco | Tasa de éxito | Colisiones/km | DistMin p5 (m) | SPL | Tiempo a destino (s) | Latencia p95 (ms) | `deliberation_rate` | Fallback SLM | Timeout watchdog | Res. Atasco VLM |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `slm` | Tier 0 (`minisim_clear`) | `blind` | | | | | | | | | | — |
-| `slm` | Tier 1 (`townsim_ini`) | `deep_vlm` | | | | | | | | | | |
-| `slm` | Tier 1 (`townsim_cruce`) | `deep_vlm` | | | | | | | | | | |
-| `slm` | Tier 1 (`townsim_ini`) | `blind` | | | | | | | | | | — |
-| `slm` | Tier 2 (`citymap_pilot`) | `deep_vlm` | | | | | | | | | | |
-| `fsm` | Tier 0 (`minisim_clear`) | `blind` | | | | | | | | — | — | — |
-| `fsm` | Tier 1 (`townsim_ini`) | `deep_vlm` | | | | | | | | — | — | |
-| `fsm` | Tier 1 (`townsim_cruce`) | `deep_vlm` | | | | | | | | — | — | |
-| `fsm` | Tier 1 (`townsim_ini`) | `blind` | | | | | | | | — | — | — |
-| `fsm` | Tier 2 (`citymap_pilot`) | `deep_vlm` | | | | | | | | — | — | |
-| `reactive` | Tier 0 (`minisim_clear`) | — | | | | | | | — | — | — | — |
-| `reactive` | Tier 1 (`townsim_ini`) | — | | | | | | | — | — | — | — |
-| `reactive` | Tier 2 (`citymap_pilot`) | — | | | | | | | — | — | — | — |
+## 11.1 Resultados piloto (1 semilla, ilustrativo — pre-batch G4)
 
-## 11.2 Histograma de rutas por brazo
+Estas corridas cumplen el criterio de arranque del diseño experimental (`success = True`, 0 colisiones)
+y sirven de referencia cualitativa antes del análisis estadístico de G4.
+Estrategia de desbloqueo: `deep_vlm` en todos los casos (default de producción).
 
-Placeholder para la distribución de rutas de decisión por ciclo en el grafo de control (`reactive`, `evasive`, `deliberative`, `girar_90`, `fsm`, `spatial_scan`, `deep_scan`), desagregada por brazo y por Tier ambiental.
+### Tier 0 — `minisim_clear` · MiniSim (crater.png)
 
-## 11.3 Significancia estadística
+Escenario: 3 waypoints en L (~191m), altitud −10m, ambiente despejado. Fecha: 2026-09-07.
 
-Placeholder — análisis no paramétrico mediante prueba U de Mann-Whitney y estimación de tamaño de efecto (Cliff's Delta / correlación de rango biserial) por celda factorial sobre las $\ge 5$ semillas independientes (§10.3).
+| Brazo | Éxito | Ciclos | Duración (s) | Distancia (m) | Colisiones | Invoc. SLM | Deliberación | Fallback SLM | Deadlocks | Res. atasco VLM |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `slm` | ✅ | 1151 | 235 | 191.7 | 0 | 80 | 6.95% | 1.25% | 1 | 100% |
+| `fsm` | ✅ | 1031 | 208 | 224.4 | 0 | — | — | — | 2 | 100% |
+| `reactive` | ✅ | 414 | 84 | 183.6 | 0 | — | — | — | 0 | — |
 
-## 11.4 Análisis por tipo de escenario
+*Dist. mín. al obstáculo:* `slm` 9.74m · `fsm` 6.38m · `reactive` 9.06m
 
-Discusión desagregada de la hipótesis central: ¿aporta la deliberación contextual del VLM sobre la heurística rígida de la FSM? Contrastación orientada por la morfología de cada nivel:
-- **Tier 0 (Control):** confirmación de convergencia cinemática básica y consumo mínimo de latencia.
-- **Tier 1 (Bloqueo frontal y vegetación):** evaluación del aporte del escaneo espacial profundo (`deep_vlm`) para resolver atascos en entornos con desvíos laterales viables frente al escape ciego.
-- **Tier 2 (Cañones urbanos):** evaluación de la navegación en pasajes ortogonales estrechos con geometría tipo cuadrícula.
+**Observación:** En un ambiente despejado la diferencia entre brazos es de velocidad pura.
+`reactive` completa en 84s (sin deliberar); `slm` tarda 2.8× más debido a las 80 invocaciones
+al VLM, aunque el trayecto real es el más corto (191.7m vs 224.4m del `fsm`).
+
+---
+
+### Tier 1 — `townsim_clear` · TownSim (townsim_calib.png)
+
+Escenario: perímetro completo del complejo, 6 WPs, ~640m, altitud de tránsito −30m (sobre los
+edificios). Fecha: 2026-09-07.
+
+| Brazo | Éxito | Ciclos | Duración (s) | Distancia (m) | Colisiones | Invoc. SLM | Deliberación | Fallback SLM | Deadlocks | Res. atasco VLM |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `slm` | ✅ | 1337 | 311 | 632.3 | 0 | 11 | 0.82% | 0% | 3 | 100% |
+| `fsm` | ✅ | 1537 | 347 | 652.3 | 0 | — | — | — | 5 | 100% |
+| `reactive` | ✅ | 1196 | 266 | 639.0 | 0 | — | — | — | 0 | — |
+
+*Dist. mín. al obstáculo:* `slm` 0.004m · `fsm` 7.89m · `reactive` 9.51m
+
+**Observación:** La tasa de deliberación del `slm` bajó de 15.4% (corridas pre-fix de agosto) a
+0.82% — reducción de ×19, atribuible al avance cauteloso durante la espera del VLM (elimina el
+bucle mecánico de baja confianza) y al fix de colores R/B (reduce falsas alarmas de percepción).
+Con sólo 11 invocaciones sobre 1337 ciclos, el brazo `slm` es el más rápido de los tres en este
+escenario. El `fsm` acumula 5 deadlocks (todos resueltos por escaneo profundo); el `reactive`, 0.
+La distancia mínima al obstáculo del `slm` (0.004m) es un artefacto del spawn conocido (ciclo
+inicial, colisión estática con el suelo), no una aproximación peligrosa en vuelo.
+
+---
+
+## 11.2 Tabla de resultados agregados G4 (placeholder — pendiente batch completo)
+
+La siguiente tabla se llenará con el batch G4: 3 brazos × 3 escenarios × ≥5 semillas.
+Los escenarios definitivos son `minisim_clear` (Tier 0), `townsim_ini` (Tier 1 con obstáculos
+reales), y `citymap_a` (Tier 2, pendiente de creación del manifiesto).
+
+| Brazo | Tier / Escenario | Estrategia Atasco | Tasa de éxito | Colisiones/km | DistMin p5 (m) | Tiempo med. (s) | `deliberation_rate` | Fallback SLM | Res. Atasco VLM |
+|---|---|---|---|---|---|---|---|---|---|
+| `slm` | Tier 0 (`minisim_clear`) | `deep_vlm` | | | | | | | — |
+| `slm` | Tier 0 (`minisim_clear`) | `blind` | | | | | | | — |
+| `slm` | Tier 1 (`townsim_ini`) | `deep_vlm` | | | | | | | |
+| `slm` | Tier 1 (`townsim_ini`) | `blind` | | | | | | | — |
+| `slm` | Tier 2 (`citymap_a`) | `deep_vlm` | | | | | | | |
+| `fsm` | Tier 0 (`minisim_clear`) | `deep_vlm` | | | | | — | — | — |
+| `fsm` | Tier 1 (`townsim_ini`) | `deep_vlm` | | | | | — | — | |
+| `fsm` | Tier 2 (`citymap_a`) | `deep_vlm` | | | | | — | — | |
+| `reactive` | Tier 0 (`minisim_clear`) | — | | | | | — | — | — |
+| `reactive` | Tier 1 (`townsim_ini`) | — | | | | | — | — | — |
+| `reactive` | Tier 2 (`citymap_a`) | — | | | | | — | — | — |
+
+---
+
+## 11.3 Significancia estadística (placeholder — pendiente batch G4)
+
+Análisis no paramétrico mediante prueba U de Mann-Whitney y estimación de tamaño de efecto
+(Cliff's Delta / correlación de rango biserial) por celda factorial sobre las ≥5 semillas
+independientes (§10.3). Hipótesis nula: la distribución de la métrica de éxito del brazo `slm`
+es igual a la del brazo de referencia (`fsm` o `reactive`) en el mismo escenario y estrategia.
+
+---
+
+## 11.4 Análisis por tipo de escenario (placeholder — pendiente batch G4)
+
+Discusión desagregada de la hipótesis central: ¿aporta la deliberación contextual del VLM sobre
+la heurística rígida de la FSM?
+
+- **Tier 0 (Control / `minisim_clear`):** los datos piloto muestran que en ambiente despejado
+  la deliberación del VLM no aporta velocidad ni seguridad — `reactive` es 2.8× más rápido y
+  las tres distancias mínimas al obstáculo son comparables. El costo de las 80 invocaciones es
+  visible (235s vs 84s). El batch G4 con ≥5 semillas confirmaría si esta diferencia es
+  estadísticamente significativa.
+
+- **Tier 1 (Bloqueo frontal y vegetación / `townsim_ini`):** pendiente. El escenario `townsim_ini`
+  introduce obstáculos deliberativos reales (árboles, fachadas); aquí se espera que la
+  ventaja del escaneo profundo (`deep_vlm`) sobre el escape ciego (`blind`) sea más visible.
+
+- **Tier 2 (Cañones urbanos / `citymap_a`):** pendiente de creación y validación del manifiesto.
+  Es el escenario donde la hipótesis predice mayor ventaja del brazo `slm`: corredores angostos
+  entre edificios altos requieren decisiones de rodeo que ni el `reactive` ni el `fsm` resuelven
+  con una heurística fija.

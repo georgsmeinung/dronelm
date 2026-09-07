@@ -1,3 +1,12 @@
+# 2026-0907
+
+* Nueva configuración de Unreal Engine Scalabilitu asegura:
+> 1. Captura de video desde AirSim (con Effects=Epic)
+> 2. Sombras en las texturas necesarias para capturar los gradientes usados para el cálculo del TTC con el flujo visual.
+
+<img src="informe/2026-0907 Scalability Config for Airsim and Shadows needed for TTC estimation.png"/>
+
+
 # 2026-0904
 
 * Actualizado borrado de [informe](informe/README.md) de tesis.

@@ -229,7 +229,8 @@ class SimpleTerminalController:
         self.DriveType = drive_type
         self.client = client
         if client is None:
-            load_dotenv()
+            from pathlib import Path
+            load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
             airsim_ip = os.getenv("AIRSIM_IP", "")
             self.client = airsim.MultirotorClient(ip=airsim_ip) if airsim_ip else airsim.MultirotorClient()
         self.confirm_connection()

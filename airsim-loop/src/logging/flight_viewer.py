@@ -133,7 +133,13 @@ const detailPanel = document.getElementById('detailPanel');
 const tableHead = document.getElementById('tableHead');
 const tableBody = document.getElementById('tableBody');
 
-slider.max = String(ROWS.length - 1);
+// Slider en espacio de tiempo de mision (igual que vid.currentTime) para
+// que coincida visualmente con el slider nativo del video.
+const T_MIN = parseFloat(ROWS[0].t) || 0;
+const T_MAX = parseFloat(ROWS[ROWS.length - 1].t) || (ROWS.length - 1);
+slider.min = String(T_MIN);
+slider.max = String(T_MAX);
+slider.step = "0.05";
 
 // Header de la tabla compacta.
 tableHead.innerHTML = TABLE_COLUMNS.map(c => `<th>${c}</th>`).join('');
@@ -200,7 +206,7 @@ function render(idx) {
   idx = Math.max(0, Math.min(ROWS.length - 1, idx));
   const row = ROWS[idx];
   idxLabel.textContent = `ciclo ${row.cycle ?? idx} (t=${row.t ?? '?'}s)`;
-  slider.value = String(idx);
+  slider.value = String(parseFloat(row.t) || T_MIN);
   renderDetail(row);
   highlightRow(idx);
 }
@@ -221,7 +227,10 @@ vid.addEventListener('timeupdate', () => {
 });
 
 slider.addEventListener('input', () => {
-  seekToIndex(parseInt(slider.value, 10));
+  const t = parseFloat(slider.value);
+  const idx = nearestIndexForTime(t);
+  vid.currentTime = t;
+  render(idx);
 });
 
 function seekToIndex(idx) {

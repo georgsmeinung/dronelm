@@ -32,7 +32,8 @@ def quaternion_to_euler(q):
     return roll, pitch, yaw
 
 INTERVAL = 0.1          # 10 Hz
-load_dotenv()
+from pathlib import Path
+load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
 airsim_ip = os.getenv("AIRSIM_IP", "")
 if airsim_ip:
     client = airsim.MultirotorClient(ip=airsim_ip)

@@ -12,9 +12,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple
 
 try:
+    from pathlib import Path
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(Path(__file__).resolve().parents[3] / "config" / ".env")
 except Exception:  # pragma: no cover
     pass
 

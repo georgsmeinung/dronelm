@@ -5,10 +5,10 @@ import os
 import tempfile
 import pprint
 import cv2
+from pathlib import Path
 from dotenv import load_dotenv
 
-# conectar al simulador AirSim
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
 airsim_ip = os.getenv("AIRSIM_IP", "")
 if airsim_ip:
     client = airsim.MultirotorClient(ip=airsim_ip)

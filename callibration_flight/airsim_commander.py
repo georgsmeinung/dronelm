@@ -65,7 +65,8 @@ def main():
     time.sleep(2)
 
     # Conectarse a AirSim y preparar el dron para recibir comandos
-    load_dotenv()
+    from pathlib import Path
+    load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
     airsim_ip = os.getenv("AIRSIM_IP", "")
     if airsim_ip:
         client = airsim.MultirotorClient(ip=airsim_ip)

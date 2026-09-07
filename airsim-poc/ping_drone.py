@@ -1,8 +1,9 @@
 import cosysairsim as airsim
+from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
 
 airsim_ip = os.getenv("AIRSIM_IP", "")
 if airsim_ip:

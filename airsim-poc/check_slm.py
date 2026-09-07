@@ -1,7 +1,6 @@
 """Verificación de conectividad y respuesta del servidor SLM (OpenAI-compatible).
 
-Utiliza la configuración definida en airsim-loop/.env (con fallback a airsim-poc/.env
-o variables de entorno ya cargadas).
+Utiliza la configuración definida en config/.env en la raíz del repositorio.
 """
 
 from __future__ import annotations
@@ -15,10 +14,9 @@ from typing import Any, Dict, Optional
 import urllib.error
 import urllib.request
 
-# 1. Cargar variables de entorno desde airsim-loop/.env
-BASE_DIR = Path(__file__).resolve().parent.parent
-LOOP_ENV = BASE_DIR / "airsim-loop" / ".env"
-POC_ENV = Path(__file__).resolve().parent / ".env"
+# 1. Cargar variables de entorno desde config/.env (fuente única del proyecto)
+BASE_DIR = Path(__file__).resolve().parents[1]
+CONFIG_ENV = BASE_DIR / "config" / ".env"
 
 
 def load_env_file(path: Path) -> None:
@@ -46,17 +44,9 @@ def load_env_file(path: Path) -> None:
 try:
     from dotenv import load_dotenv
 
-    if LOOP_ENV.exists():
-        load_dotenv(dotenv_path=LOOP_ENV)
-    elif POC_ENV.exists():
-        load_dotenv(dotenv_path=POC_ENV)
-    else:
-        load_dotenv()
+    load_dotenv(dotenv_path=CONFIG_ENV)
 except ImportError:
-    if LOOP_ENV.exists():
-        load_env_file(LOOP_ENV)
-    elif POC_ENV.exists():
-        load_env_file(POC_ENV)
+    load_env_file(CONFIG_ENV)
 
 
 # Configuración del LLM

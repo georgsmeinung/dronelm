@@ -1,3 +1,7 @@
+# Configuración unificada del proyecto (IPs, tokens, URLs de servidor)
+# Copiar config/.env.example → config/.env y editar valores locales.
+# config/.env
+
 airsim-mcp/mcp_drone.log
 airsim-settings/.tmp.driveupload
 # Archivos de telemetría de vuelo de calibración
