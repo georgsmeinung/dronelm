@@ -207,58 +207,24 @@ alta significancia estadística (Cliff's δ cercano a 1.0 en favor de `reactive`
 `slm` vs. `fsm` puede ser más variable porque depende de cuántos deadlocks acumule la FSM por
 corrida.
 
-### 11.4.2 Tier 1 — Perímetro urbano con vegetación (`townsim_clear` / `townsim_ini`)
+### 11.4.2 Tier 1 — Perímetro urbano con vegetación (`townsim_clear`)
 
-El escenario `townsim_clear` es el análogo de `minisim_clear` para Tier 1: vuela el perímetro a
-−30m (sobre la línea de tejados), sin obstáculos en la trayectoria de crucero. A diferencia de
-Tier 0, la longitud de la ruta (~640m vs. ~191m) diluye el overhead por invocación, y el brazo
-`slm` resulta el más rápido de los tres en el piloto (311s vs. 347s `fsm` vs. 266s `reactive`).
-La tasa de deliberación de 0.82% (11 invocaciones / 1337 ciclos) representa una reducción de
-×19 respecto a las corridas pre-fix de agosto (15.4%), directamente atribuible al avance cauteloso
-durante la espera del VLM y al fix de canales de color que reduce las falsas alarmas.
+El escenario `townsim_clear` para Tier 1: vuela el perímetro a −30m (sobre la línea de tejados), sin obstáculos en la trayectoria de crucero. A diferencia de Tier 0, la longitud de la ruta (~640m vs. ~191m) diluye el overhead por invocación, y el brazo `slm` resulta el más rápido de los tres en el piloto (311s vs. 347s `fsm` vs. 266s `reactive`). La tasa de deliberación de 0.82% (11 invocaciones / 1337 ciclos) representa una reducción de ×19 respecto a las corridas pre-fix de agosto (15.4%), directamente atribuible al avance cauteloso durante la espera del VLM y al fix de canales de color que reduce las falsas alarmas.
 
-El dato más significativo de Tier 1 piloto no es la velocidad sino los deadlocks: el `fsm` acumula
-5 (todos resueltos por escaneo profundo `deep_vlm`); el `slm`, 3; el `reactive`, 0. Con 1 semilla
-este patrón es indicativo pero no concluyente — puede reflejar diferencias en la gestión de
-atascos entre brazos, o simplemente la varianza de una única semilla.
+El dato más significativo de Tier 1 piloto no es la velocidad sino los deadlocks: el `fsm` acumula 5 (todos resueltos por escaneo profundo `deep_vlm`); el `slm`, 3; el `reactive`, 0. Con 1 semilla, este patrón es indicativo pero no concluyente — puede reflejar diferencias en la gestión de atascos entre brazos, o simplemente la varianza de una única semilla.
 
-El escenario de **interés real** para Tier 1 es `townsim_ini`: un recorrido que cruza el interior
-del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí
-donde el escaneo deliberativo profundo (`deep_vlm`) tiene un caso de uso genuino frente al escape
-ciego (`blind`): la FSM y el `reactive` deben bordear obstáculos por heurística, mientras el `slm`
-puede consultar al VLM para elegir el corredor. Los datos de `townsim_clear` solo establecen la
-cota de partida.
+El escenario de interés real para Tier 1 es `townsim_clear`: un recorrido que cruza el interior del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí donde el escaneo deliberativo profundo (`deep_vlm`) tiene un caso de uso genuino frente al escape ciego (`blind`): la FSM y el `reactive` deben bordear obstáculos por heurística, mientras el `slm` puede consultar al VLM para elegir el corredor. Los datos de `townsim_clear` solo establecen la cota de partida.
 
-### 11.4.3 Tier 2 — Entorno urbano denso (`citysim_clear` / `citymap_a`)
+### 11.4.3 Tier 2 — Entorno urbano denso (`citysim_clear`)
 
-El escenario base `citysim_clear` funciona como el tercer escenario de control: los tres brazos
-completan el perímetro en ~159–182s, sin colisiones ni deadlocks, con tiempos comparables entre sí
-(ratio `slm`/`reactive` = 1.09×). A −70m, el dron vuela por encima de la línea de tejados de
-CitySim; la deliberación del VLM no tiene obstáculo real que analizar.
+El escenario base `citysim_clear` funciona como el tercer escenario de control: los tres brazos completan el perímetro en ~159–182s, sin colisiones ni deadlocks, con tiempos comparables entre sí (ratio `slm`/`reactive` = 1.09×). A −70m, el dron vuela por encima de la línea de tejados de CitySim; la deliberación del VLM no tiene obstáculo real que analizar.
 
 Tres observaciones son relevantes para el análisis posterior:
 
-1. **`fsm` conservador, `reactive` agresivo**: el `fsm` registra la mayor distancia mínima al
-   obstáculo (11.0m) y el mayor tiempo (182s); el `reactive` el menor (9.43m, 159s). El `slm`
-   queda entre ambos (0.77m en climb inicial, 174s). En un entorno donde no hay obstáculos
-   activos, la heurística conservadora de la FSM penaliza velocidad sin ganar seguridad.
+1. **`fsm` conservador, `reactive` agresivo**: el `fsm` registra la mayor distancia mínima al obstáculo (11.0m) y el mayor tiempo (182s); el `reactive` el menor (9.43m, 159s). El `slm` queda entre ambos (0.77m en climb inicial, 174s). En un entorno donde no hay obstáculos activos, la heurística conservadora de la FSM penaliza velocidad sin ganar seguridad.
 
-2. **Altitud como variable crítica de diseño**: la primera corrida a z=−50m falló (success=False,
-   colisión) porque la altitud insuficiente hacía que la ruta de climb desde el spawn atravesara
-   edificios. El fix de near_vertical (2026-09-07) permite el patrón climb-first, pero la
-   variable determinante fue la elección de −70m > altura de tejados. Este parámetro no es
-   generalizable a `citymap_a` sin inspección visual: el mapa puede tener edificios de altura
-   distinta.
+2. **Altitud como variable crítica de diseño**: la primera corrida a z=−50m falló (success=False, colisión) porque la altitud insuficiente hacía que la ruta de climb desde el spawn atravesara edificios. El fix de near_vertical (2026-09-07) permite el patrón climb-first, pero la variable determinante fue la elección de −70m > altura de tejados.
 
-3. **Cero deadlocks en los tres brazos**: confirma que la ruta de crucero no presenta obstrucciones
-   reales a −70m. Cualquier deadlock que aparezca en `citymap_a` — donde la ruta sí cruza
-   corredores entre edificios — será atribuible a la geometría del escenario, no a artefactos de
-   la altitud.
+3. **Cero deadlocks en los tres brazos**: confirma que la ruta de crucero no presenta obstrucciones reales a −70m. Cualquier deadlock que aparezca en `citymap_clear` — donde la ruta sí cruza corredores entre edificios — será atribuible a la geometría del escenario, no a artefactos de la altitud.
 
-El escenario `citymap_a` (pendiente de construcción) es el experimento central de Tier 2: un
-recorrido que atraviesa corredores angostos entre edificios altos, donde ni el `reactive` ni el
-`fsm` tienen información semántica para elegir entre dos calles de ancho similar. La hipótesis es
-que el brazo `slm`, al consultar al VLM con una imagen aérea del corredor, podrá elegir la ruta
-más despejada con mayor consistencia que una heurística basada en distancia pura o en flujo óptico.
-El resultado negativo también es válido: si el VLM no aporta información útil en un entorno de
-alta textura urbana uniforme, es un hallazgo de diseño relevante para el capítulo 09.
+El escenario `citymap_clear` es el experimento inicial de Tier 2: un recorrido que atraviesa corredores angostos entre edificios altos, donde ni el `reactive` ni el `fsm` tienen información semántica para elegir entre dos calles de ancho similar. La hipótesis es que el brazo `slm`, al consultar al VLM con una imagen aérea del corredor, podrá elegir la ruta más despejada con mayor consistencia que una heurística basada en distancia pura o en flujo óptico. El resultado negativo también es válido: si el VLM no aporta información útil en un entorno de alta textura urbana uniforme, es un hallazgo de diseño relevante para el capítulo 09.
