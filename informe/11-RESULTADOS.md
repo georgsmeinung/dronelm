@@ -83,25 +83,36 @@ no se registró ninguna evasión activa durante el vuelo horizontal.
 
 ---
 
-## 11.2 Tabla de resultados agregados G4 (placeholder — pendiente batch completo)
+## 11.2 Tabla de resultados por brazo y escenario
 
-La siguiente tabla se llenará con el batch G4: 3 brazos × 3 escenarios × ≥5 semillas.
-Los escenarios definitivos son `minisim_clear` (Tier 0), `townsim_ini` (Tier 1 con obstáculos
-reales), y `citysim_clear` (Tier 2 base, validado) / `citymap_a` (Tier 2 con obstáculos, pendiente).
+Datos de corridas piloto (seed=1, `deep_vlm`). La columna "DistMin" es el valor observado en
+la corrida única; el percentil p5 se calculará sobre ≥5 semillas en el batch G4.
+Las filas marcadas **[pendiente G4]** corresponden a condiciones no corridas aún.
 
-| Brazo | Tier / Escenario | Estrategia Atasco | Tasa de éxito | Colisiones/km | DistMin p5 (m) | Tiempo med. (s) | `deliberation_rate` | Fallback SLM | Res. Atasco VLM |
+> **Escenarios definitivos G4:** `minisim_clear` (Tier 0), `townsim_ini` (Tier 1 con obstáculos
+> reales) / `townsim_calib_cruce_frontal` (T-CALIB-2), `citysim_clear` (Tier 2 base) /
+> `citymap_a` (Tier 2 con obstáculos — pendiente construcción). Las filas de `townsim_clear`
+> corresponden al escenario base (sin obstáculos a altitud de tránsito), equivalente al rol de
+> `minisim_clear` en Tier 0.
+
+| Brazo | Tier / Escenario | Estrategia Atasco | Éxito (1 sem.) | Col./km | DistMin (m) | Tiempo (s) | Deliberación | Fallback SLM | Res. Atasco VLM |
 |---|---|---|---|---|---|---|---|---|---|
-| `slm` | Tier 0 (`minisim_clear`) | `deep_vlm` | | | | | | | — |
-| `slm` | Tier 0 (`minisim_clear`) | `blind` | | | | | | | — |
-| `slm` | Tier 1 (`townsim_clear`) | `deep_vlm` | | | | | | | |
-| `slm` | Tier 1 (`townsim_clear`) | `blind` | | | | | | | — |
-| `slm` | Tier 2 (`citysim_clear`) | `deep_vlm` | | | | | | | |
-| `fsm` | Tier 0 (`minisim_clear`) | `deep_vlm` | | | | | — | — | — |
-| `fsm` | Tier 1 (`townsim_clear`) | `deep_vlm` | | | | | — | — | |
-| `fsm` | Tier 2 (`citysim_clear`) | `deep_vlm` | | | | | — | — | |
-| `reactive` | Tier 0 (`minisim_clear`) | — | | | | | — | — | — |
-| `reactive` | Tier 1 (`townsim_clear`) | — | | | | | — | — | — |
-| `reactive` | Tier 2 (`citysim_clear`) | — | | | | | — | — | — |
+| `slm` | Tier 0 (`minisim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 9.74 | 235 | 6.95% | 1.25% | 100% (1/1) |
+| `slm` | Tier 0 (`minisim_clear`) | `blind` | — | — | — | — | — | — | — |
+| `slm` | Tier 1 (`townsim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 0.004* | 311 | 0.82% | 0% | 100% (3/3) |
+| `slm` | Tier 1 (`townsim_clear`) | `blind` | — | — | — | — | — | — | — |
+| `slm` | Tier 2 (`citysim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 0.77† | 174 | 0.80% | 0% | — (0 deadlocks) |
+| `fsm` | Tier 0 (`minisim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 6.38 | 208 | — | — | 100% (2/2) |
+| `fsm` | Tier 1 (`townsim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 7.89 | 347 | — | — | 100% (5/5) |
+| `fsm` | Tier 2 (`citysim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 11.0 | 182 | — | — | — (0 deadlocks) |
+| `reactive` | Tier 0 (`minisim_clear`) | — | 1/1 ✅ | 0 | 9.06 | 84 | — | — | — |
+| `reactive` | Tier 1 (`townsim_clear`) | — | 1/1 ✅ | 0 | 9.51 | 266 | — | — | — |
+| `reactive` | Tier 2 (`citysim_clear`) | — | 1/1 ✅ | 0 | 9.43 | 159 | — | — | — |
+| **[pendiente G4]** | Tier 1 (`townsim_ini`) | todos | | | | | | | |
+| **[pendiente G4]** | Tier 2 (`citymap_a`) | todos | | | | | | | |
+
+\* DistMin Tier 1 `slm` = 0.004m: artefacto del ciclo de spawn (contacto estático con suelo), no aproximación en vuelo.
+† DistMin Tier 2 `slm` = 0.77m: probable artefacto del segmento climb-first cerca del spawn; sin evasión activa registrada en vuelo horizontal.
 
 ---
 
@@ -125,13 +136,18 @@ la heurística rígida de la FSM?
   visible (235s vs 84s). El batch G4 con ≥5 semillas confirmaría si esta diferencia es
   estadísticamente significativa.
 
-- **Tier 1 (Bloqueo frontal y vegetación / `townsim_clear`):** pendiente. El escenario `townsim_clear`
-  introduce obstáculos deliberativos reales (árboles, fachadas); aquí se espera que la
-  ventaja del escaneo profundo (`deep_vlm`) sobre el escape ciego (`blind`) sea más visible.
+- **Tier 1 (Perímetro urbano con vegetación / `townsim_clear`):** los datos piloto muestran una
+  reducción de ×19 en la tasa de deliberación del `slm` respecto a las corridas pre-fix de agosto
+  (0.82% vs. 15.4%), con 0 colisiones y 3 deadlocks resueltos al 100% por escaneo profundo.
+  El `fsm` registra 5 deadlocks (todos resueltos); el `reactive`, 0. La diferencia de tiempos
+  entre brazos es pequeña (~45s sobre 300s), consistente con un escenario donde los obstáculos
+  se pueden bordear con heurística fija. El batch G4 con `townsim_ini` (con obstáculos en el
+  camino directo) es donde se espera que la ventaja del escaneo profundo (`deep_vlm`) sobre el
+  escape ciego (`blind`) sea más visible.
 
 - **Tier 2 base (Control / `citysim_clear`):** los datos piloto confirman que a −70m los tres
-  brazos completan el perímetro sin deliberación activa (0 deadlocks, histograma dominado por
-  `reactive`). Rol análogo al de `minisim_clear`: cota inferior para el análisis del brazo `slm`
-  en entorno urbano denso. El escenario con obstáculos urbanods (`citysim_clear`) es donde
-  se espera mayor ventaja del brazo `slm`: corredores angostos entre edificios altos requieren
+  brazos completan el perímetro sin deliberación activa (0 deadlocks en los tres). Rol análogo
+  al de `minisim_clear`: cota inferior para el análisis del brazo `slm` en entorno urbano denso.
+  El escenario con obstáculos reales (`citymap_a`, pendiente de construcción) es donde se
+  espera mayor ventaja del brazo `slm`: corredores angostos entre edificios altos requieren
   decisiones de rodeo que ni el `reactive` ni el `fsm` resuelven con una heurística fija.
