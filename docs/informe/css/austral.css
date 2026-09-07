@@ -12,26 +12,26 @@
 
 /* --- Color primario (cabecera, nav activo, botones) --- */
 [data-md-color-primary="custom"] {
-  --md-primary-fg-color:        #0F29A2;
+  --md-primary-fg-color: #0F29A2;
   --md-primary-fg-color--light: #2B45CC;
-  --md-primary-fg-color--dark:  #001D9C;
-  --md-primary-bg-color:        #ffffff;
+  --md-primary-fg-color--dark: #001D9C;
+  --md-primary-bg-color: #ffffff;
   --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
 }
 
 /* --- Color de acento (links, highlights, search) --- */
 [data-md-color-accent="custom"] {
-  --md-accent-fg-color:              #348ADA;
+  --md-accent-fg-color: #348ADA;
   --md-accent-fg-color--transparent: rgba(52, 138, 218, 0.1);
-  --md-accent-bg-color:              #ffffff;
-  --md-accent-bg-color--light:       rgba(255, 255, 255, 0.7);
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: rgba(255, 255, 255, 0.7);
 }
 
 /* --- Modo oscuro: cabecera en azul más iluminado --- */
 [data-md-color-scheme="slate"][data-md-color-primary="custom"] {
-  --md-primary-fg-color:        #1A3FD0;
+  --md-primary-fg-color: #1A3FD0;
   --md-primary-fg-color--light: #4A6FDB;
-  --md-primary-fg-color--dark:  #0F29A2;
+  --md-primary-fg-color--dark: #0F29A2;
 }
 
 /* --- Logo Austral en el header ---
@@ -58,21 +58,33 @@
   font-family: "Montserrat", sans-serif;
 }
 
-.md-typeset h1 { font-weight: 700; }
-.md-typeset h2 { font-weight: 600; }
-.md-typeset h3 { font-weight: 600; }
-.md-typeset h4 { font-weight: 500; }
+.md-typeset h1 {
+  font-weight: 700;
+}
+
+.md-typeset h2 {
+  font-weight: 600;
+}
+
+.md-typeset h3 {
+  font-weight: 600;
+}
+
+.md-typeset h4 {
+  font-weight: 500;
+}
 
 /* --- Links --- */
 .md-typeset a {
   color: #0F29A2;
 }
+
 .md-typeset a:hover {
   color: #348ADA;
 }
 
 /* --- Nav lateral: item activo --- */
-.md-nav__item--active > .md-nav__link {
+.md-nav__item--active>.md-nav__link {
   color: #0F29A2;
   font-weight: 600;
 }
@@ -82,6 +94,20 @@
    Se aplican sobre la print_page.html de mkdocs-print-site
    ============================================================ */
 @media print {
+
+  /* Fuente base y párrafos para A4 */
+  body,
+  .md-typeset {
+    font-size: 14pt !important;
+    line-height: 1.65 !important;
+  }
+
+  /* Párrafos justificados (solo en impresión) */
+  .md-typeset p {
+    text-align: justify !important;
+    hyphens: none !important;
+  }
+
   /* Ocultar toda la navegación, cabecera y barra de búsqueda */
   .md-header,
   .md-sidebar,
@@ -92,7 +118,9 @@
   .md-top,
   .md-content__button,
   [data-md-component="skip"],
-  .md-announce { display: none !important; }
+  .md-announce {
+    display: none !important;
+  }
 
   /* Contenido a ancho completo — eliminar padding/margin del tema */
   .md-main,
@@ -117,10 +145,12 @@
     @bottom-right {
       content: none;
     }
+
     /* Quitar el chapter string del centro (si lo hay) */
     @bottom-left {
       content: none;
     }
+
     /* Número solo, centrado, en Inter, tamaño menor al cuerpo */
     @bottom-center {
       content: counter(page);
@@ -128,6 +158,26 @@
       font-size: 8.5pt;
       color: #666;
     }
+  }
+
+  /* Suprimir la renumeración automática del plugin (h1/h2/h3::before con content:'N ')
+     Los capítulos ya llevan sus propios números en el título — la doble numeración
+     produce "2 1. Introducción", "15.1 A1. Exploración…", etc.
+     !important gana a cualquier especificidad sin !important del plugin */
+  .print-site-enumerate-headings h1::before,
+  .print-site-enumerate-headings h2::before,
+  .print-site-enumerate-headings h3::before,
+  .print-site-enumerate-headings h4::before {
+    content: none !important;
+  }
+
+  /* TOC: quitar numeración del <ol>/<ul> generado por generate_toc() */
+  .print-page-toc-nav ol,
+  .print-page-toc-nav ul,
+  #print-page-toc ol,
+  #print-page-toc ul {
+    list-style: none !important;
+    padding-left: 1em !important;
   }
 
   /* Tablas: quitar el contenedor de scroll horizontal para que no se corten */
@@ -142,7 +192,8 @@
     display: table !important;
     width: 100% !important;
     table-layout: auto !important;
-    font-size: 0.78em;    /* ligeramente más pequeño para que entren columnas anchas */
+    font-size: 0.78em;
+    /* ligeramente más pequeño para que entren columnas anchas */
     word-break: break-word;
     overflow-wrap: break-word;
   }
@@ -159,7 +210,9 @@
   }
 
   /* Evitar cortes dentro de bloques de código y figuras */
-  pre, figure, img {
+  pre,
+  figure,
+  img {
     page-break-inside: avoid;
     break-inside: avoid;
   }
@@ -175,21 +228,40 @@
   }
 
   /* Headings: no cortar justo antes de un título */
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     page-break-after: avoid;
     break-after: avoid;
   }
 
   /* Salto de página antes de cada capítulo (h1) en la print_page */
-  .print-page-chapter { page-break-before: always; break-before: page; }
-  .print-page-chapter:first-child { page-break-before: avoid; break-before: avoid; }
+  .print-page-chapter {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .print-page-chapter:first-child {
+    page-break-before: avoid;
+    break-before: avoid;
+  }
 
   /* Colores planos para impresión (ahorrar tinta, mantener legibilidad) */
-  a { color: #0F29A2 !important; text-decoration: none; }
-  a[href]::after { content: ""; } /* no mostrar URLs inline */
+  a {
+    color: #0F29A2 !important;
+    text-decoration: none;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+
+  /* no mostrar URLs inline */
 
   /* Bloques de código: fondo gris claro, sin borde decorativo */
-  code, pre {
+  code,
+  pre {
     background: #f5f5f5 !important;
     color: #222 !important;
     border: 1px solid #ddd !important;

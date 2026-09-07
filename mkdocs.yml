@@ -1,6 +1,7 @@
 site_name: "Tesis MCD — Navegación Autónoma de Drones"
 site_description: "Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)"
 site_author: "Jorge Nicolau"
+site_url: "https://jorgenicolau.ar/dronelm/"
 docs_dir: informe
 site_dir: docs/informe
 use_directory_urls: false
@@ -36,6 +37,9 @@ theme:
 
 extra_css:
   - css/austral.css
+
+extra_javascript:
+  - js/logo-link.js
 
 markdown_extensions:
   - toc:

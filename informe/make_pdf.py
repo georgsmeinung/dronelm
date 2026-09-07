@@ -60,8 +60,30 @@ def make_pdf(url: str, output: Path) -> None:
             if (sections.length < 2) return;
             const tocSection   = sections[0];   // TOC
             const coverSection = sections[1];   // Cover
+
             // Mover TOC para que quede inmediatamente después del Cover
             coverSection.insertAdjacentElement('afterend', tocSection);
+
+            // Renombrar "Table of Contents" → "Índice"
+            const tocTitle = tocSection.querySelector('.print-page-toc-title, h1, h2');
+            if (tocTitle) tocTitle.textContent = 'Índice';
+
+            // Quitar la numeración automática de la lista del TOC
+            // generate_toc() copia el sidebar con texto ya numerado ("2 1. Introducción")
+            // → stripar el prefijo "N " o "N.M " hardcodeado en cada span
+            tocSection.querySelectorAll('span.md-ellipsis').forEach(span => {
+                span.textContent = span.textContent.trim().replace(/^\\d+(\\.\\d+)?\\s+/, '');
+            });
+            tocSection.querySelectorAll('ol, ul').forEach(list => {
+                list.style.listStyleType = 'none';
+                list.style.paddingLeft = '0';
+            });
+
+            // Quitar la renumeración de headings del plugin
+            // (belt-and-suspenders con el !important de austral.css)
+            document.querySelectorAll('.print-site-enumerate-headings').forEach(el => {
+                el.classList.remove('print-site-enumerate-headings');
+            });
         }""")
 
         # --- Generar PDF con márgenes moderados ---
