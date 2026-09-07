@@ -22,7 +22,7 @@ Para responder con rigor al protocolo experimental de la tesis (capítulo 10), l
 
 2. **Tier 1 — Intermedio / Morfología orgánica y vegetación (`TownSim`):** Entorno semiurbano desarrollado sobre `townsim.png` y refinado en el mapa calibrado `townsim_calib.png`. Presenta calles de ancho variable, fachadas intermedias, mobiliario y arboledas densas. Constituye el banco de pruebas central para la batería de calibración `T-CALIB-0` a `T-CALIB-5` y la misión de recorrido perimetral `townsim_ini`, albergando el escenario de bloqueo frontal masivo genuino (`T-CALIB-2`).
 
-3. **Tier 2 — Complejo / Cañones urbanos de gran densidad (`CitySim` / `CityParkSim`):** Proyecto de Unreal Engine 5.5 con tejido edilicio masivo (`citymap.png`), rascacielos, pasos restringidos y disposición en cuadrícula ortogonal. Aloja las misiones de estrés en corredores angostos (`citymap_pilot.json` y `citymap_a.json`).
+3. **Tier 2 — Complejo / Cañones urbanos de gran densidad (`CitySim` / `CityParkSim`):** Proyecto de Unreal Engine 5.5 con tejido edilicio masivo (`citysim_calib.png`), rascacielos, pasos restringidos y disposición en cuadrícula ortogonal. El escenario base validado para el batch G4 es `citysim_clear.json`: perímetro de manzana con patrón *climb-first*, ascenso vertical puro hasta −70 m AGL antes de moverse horizontalmente. La altitud de tránsito de −70 m es un dato de diseño del entorno: la primera corrida a −50 m falló porque la ruta de ascenso atravesaba edificios; a −70 m el dron vuela por encima de la línea de tejados. Los escenarios con corredores angostos (`citymap_pilot.json` y `citymap_a.json`) corresponden a la fase siguiente del batch.
 
 ### Entornos adicionales evaluados en fases exploratorias
 

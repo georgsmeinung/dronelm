@@ -41,7 +41,7 @@
         </div>
         <div class="thesis-meta-item">
           <span class="meta-label">Documento</span>
-          <span class="meta-value">Referencia técnica<br />Estado al 2026-09-03</span>
+          <span class="meta-value">Referencia técnica<br />Estado al 2026-09-07</span>
         </div>
       </div>
 
@@ -67,11 +67,11 @@
     <!-- Main Content Area -->
     <main>
       <header>
-        <p class="eyebrow">airsim-loop · lazo táctico · 2026-09-03</p>
+        <p class="eyebrow">airsim-loop · lazo táctico · 2026-09-07</p>
         <h1>Configuración del grafo de control</h1>
         <p class="lead-subtitle">
-          Referencia técnica actualizada del lazo de navegación autónoma <strong>tal como está en el código</strong> (2026-09-03): topología, esquema de
-          estado, cascada de decisión, escalación por barrido panorámico, máquina de escape y la tabla completa de umbrales con su origen. Cada valor es
+          Referencia técnica actualizada del lazo de navegación autónoma <strong>tal como está en el código</strong> (2026-09-07): topología, esquema de
+          estado, cascada de decisión, escaneo espacial pre-vuelo, escalación por barrido panorámico, máquina de escape y la tabla completa de umbrales con su origen. Cada valor es
           verificable en el archivo que se cita.
         </p>
         <dl class="readout">
@@ -82,7 +82,7 @@
           <div><dt>Umbral atasco</dt><dd>10 <span>ciclos</span></dd></div>
           <div><dt>Escapes máx</dt><dd>2</dd></div>
           <div><dt>Watchdog SLM</dt><dd>6000 <span>ms</span></dd></div>
-          <div><dt>Tests</dt><dd>137</dd></div>
+          <div><dt>Tests</dt><dd>138</dd></div>
         </dl>
         <div class="badges-row">
           <a class="badge-pill badge-blue"
@@ -414,6 +414,16 @@
       <!-- 5 -->
       <section id="nodos">
         <h2 class="numbered"><span class="sec-n">05</span><span>Nodos</span></h2>
+
+        <h3><code>spatial_scan</code> · pre-vuelo, fuera del grafo</h3>
+        <p>Función de una sola vez llamada desde <code>main.py</code> <strong>antes</strong> del lazo táctico
+          (<code>src/agents/spatial_scan.py</code>, PLAN-MEJORAS-3 H1). Hace un barrido de yaw en el lugar (sin
+          traslación) hacia un conjunto de rumbos equiespaciados, captura un fotograma en cada uno tras un breve período
+          de asentamiento y envía todas las imágenes en una única consulta al VLM, que devuelve un contexto
+          cualitativo del entorno visible desde el punto de despegue. Es <strong>advisory, no safety-critical</strong>:
+          el <code>ObstacleField</code> por ciclo sigue siendo la única autoridad de seguridad una vez que el dron
+          se mueve. Si el VLM falla o expira el watchdog, la misión arranca sin contexto inicial. Nunca consulta el
+          canal de profundidad del simulador.</p>
 
         <h3><code>capture_node</code></h3>
         <p>Un único <code>AirSimClient</code> por proceso, inyectado en <code>compile_workflow()</code>. Con
@@ -1116,6 +1126,14 @@
         <p><code>AIRSIM_IP=127.0.0.1</code> · <code>AIRSIM_RPC_TIMEOUT=8 s</code> · <code>AIRSIM_STRICT=true</code> ·
           <code>LOOP_HZ=5.0</code> · <code>GRAPH_TIMEOUT_S=30.0</code></p>
         <div class="note">
+          <span class="tag">Config unificada (2026-09-07)</span>
+          <p>Toda la configuración vive en <code>config/.env</code> en la raíz del repo. Antes cada subproyecto tenía
+            su propio <code>.env</code> con valores distintos para las mismas variables. La regla de carga es
+            <code>load_dotenv(Path(__file__).resolve().parents[N] / "config" / ".env")</code> (N=3 para
+            <code>src/**/*.py</code>). El template committeable es <code>config/.env.example</code>.
+          </p>
+        </div>
+        <div class="note">
           <span class="tag">Topología de despliegue</span>
           <p>El simulador corre <strong>local</strong> y el servidor del SLM <strong>remoto</strong>: la latencia de red
             del modelo está absorbida por diseño (servicio asíncrono), la del RPC de AirSim no. Sobre LAN,
@@ -1207,7 +1225,7 @@
           </table>
         </div>
 
-        <p><strong>137 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
+        <p><strong>138 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
         <pre><code>pytest tests/ -q</code></pre>
 
         <div class="note">
@@ -1252,15 +1270,19 @@
             — plan F0–F4 del que sale esta arquitectura.</li>
           <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/deep_scan.py"><code>src/agents/deep_scan.py</code></a>
             — escalación por barrido panorámico + VLM (sección 7).</li>
-          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/legacy/README.md"><code>legacy/README.md</code></a>
-            — módulos retirados (YOLO, IPM, TTC anterior, gate XOR) con la justificación de cada retiro.</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/spatial_scan.py"><code>src/agents/spatial_scan.py</code></a>
+            — escaneo espacial pre-vuelo, advisory (sección 5).</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/PLAN-MEJORAS-3.md"><code>PLAN-MEJORAS-3.md</code></a>
+            — plan H1 (escaneo espacial pre-vuelo).</li>
+          <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/PLAN-MEJORAS-4.md"><code>PLAN-MEJORAS-4.md</code></a>
+            — plan activo: revalidación de tiers, corrida G4, deuda de escritura.</li>
         </ul>
       </section>
 
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>airsim-loop · lazo táctico</p>
-        <p>Estado al 2026-09-03</p>
+        <p>Estado al 2026-09-07</p>
       </footer>
     </main>
   </div>

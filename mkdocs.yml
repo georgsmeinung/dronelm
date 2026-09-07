@@ -1,0 +1,80 @@
+site_name: "Tesis MCD — Navegación Autónoma de Drones"
+site_description: "Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)"
+site_author: "Jorge Nicolau"
+docs_dir: informe
+site_dir: docs/informe
+use_directory_urls: false
+
+theme:
+  name: material
+  language: es
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a modo oscuro
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Cambiar a modo claro
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+extra_css:
+  - css/austral.css
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search:
+      lang: es
+  - print-site:
+      add_to_navigation: false
+      print_page_title: "Informe completo"
+      add_print_site_banner: false
+      path_to_pdf: "tesis-dronelm.pdf"
+      include_css: true
+      enabled: true
+
+nav:
+  - Carátula y Resumen: 00-COVER.md
+  - "1. Introducción": 01-INTRODUCCION.md
+  - "2. Estado del Arte": 02-ESTADO-DEL-ARTE.md
+  - "3. Entorno de Simulación": 03-ENTORNO-SIMULACION.md
+  - "4. Planificación de Misión (WebDCS)": 04-PLANIFICACION-MISION-GCS.md
+  - "5. Arquitectura del Lazo Táctico": 05-ARQUITECTURA-LAZO-TACTICO.md
+  - "6. Percepción Monocular": 06-PERCEPCION-MONOCULAR.md
+  - "7. Estimación TTC": 07-ESTIMACION-TTC.md
+  - "8. Decisiones SLM": 08-DECISIONES-SLM.md
+  - "9. Modos de Falla LLM": 09-MODOS-DE-FALLA-LLM.md
+  - "10. Metodología Experimental": 10-METODOLOGIA-EXPERIMENTAL.md
+  - "11. Resultados": 11-RESULTADOS.md
+  - "12. Conclusiones": 12-CONCLUSIONES.md
+  - "13. Referencias": 13-REFERENCIAS.md
+  - Anexos:
+    - "A1. Exploración SLM / GGUF": anexos/A1-EXPLORACION-SLM-GGUF.md
+    - "A2. SLM — Concepto y Ventajas": anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md
+    - "A3. SLM — Optimización y Desafíos": anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md
+    - "A4. LoRA (Alternativa No Adoptada)": anexos/A4-OPTIMIZACION-LORA.md
+    - "A5. Decodificación Restringida": anexos/A5-DECODIFICACION-RESTRINGIDA.md

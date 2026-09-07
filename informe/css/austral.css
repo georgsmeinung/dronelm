@@ -1,0 +1,127 @@
+/* ============================================================
+   Identidad visual — Universidad Austral
+   Azul institucional : #0F29A2
+   Azul secundario    : #348ADA
+   Display / headings : Montserrat  (Google Fonts, libre)
+   Cuerpo / UI        : Inter       (reemplaza Gotham, libre)
+   Código             : JetBrains Mono
+   ============================================================ */
+
+/* Cargar Montserrat para headings (Inter lo carga mkdocs-material) */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap");
+
+/* --- Color primario (cabecera, nav activo, botones) --- */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color:        #0F29A2;
+  --md-primary-fg-color--light: #2B45CC;
+  --md-primary-fg-color--dark:  #001D9C;
+  --md-primary-bg-color:        #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
+}
+
+/* --- Color de acento (links, highlights, search) --- */
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color:              #348ADA;
+  --md-accent-fg-color--transparent: rgba(52, 138, 218, 0.1);
+  --md-accent-bg-color:              #ffffff;
+  --md-accent-bg-color--light:       rgba(255, 255, 255, 0.7);
+}
+
+/* --- Modo oscuro: cabecera en azul más iluminado --- */
+[data-md-color-scheme="slate"][data-md-color-primary="custom"] {
+  --md-primary-fg-color:        #1A3FD0;
+  --md-primary-fg-color--light: #4A6FDB;
+  --md-primary-fg-color--dark:  #0F29A2;
+}
+
+/* --- Headings en Montserrat (todo lo demás queda en Inter) --- */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6,
+.md-header__topic,
+.md-nav__title {
+  font-family: "Montserrat", sans-serif;
+}
+
+.md-typeset h1 { font-weight: 700; }
+.md-typeset h2 { font-weight: 600; }
+.md-typeset h3 { font-weight: 600; }
+.md-typeset h4 { font-weight: 500; }
+
+/* --- Links --- */
+.md-typeset a {
+  color: #0F29A2;
+}
+.md-typeset a:hover {
+  color: #348ADA;
+}
+
+/* --- Nav lateral: item activo --- */
+.md-nav__item--active > .md-nav__link {
+  color: #0F29A2;
+  font-weight: 600;
+}
+
+/* ============================================================
+   ESTILOS DE IMPRESIÓN / PDF
+   Se aplican sobre la print_page.html de mkdocs-print-site
+   ============================================================ */
+@media print {
+  /* Ocultar toda la navegación, cabecera y barra de búsqueda */
+  .md-header,
+  .md-sidebar,
+  .md-nav,
+  .md-search,
+  .md-tabs,
+  .md-footer,
+  .md-top,
+  .md-content__button,
+  [data-md-component="skip"],
+  .md-announce { display: none !important; }
+
+  /* Contenido a ancho completo */
+  .md-main,
+  .md-content,
+  .md-grid {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .md-content__inner { padding: 0 2cm !important; }
+
+  /* Página A4 con márgenes */
+  @page {
+    size: A4 portrait;
+    margin: 2.5cm 2cm 2.5cm 2.5cm;
+  }
+
+  /* Evitar cortes dentro de bloques de código y figuras */
+  pre, figure, img, table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Headings: no cortar justo antes de un título */
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Salto de página antes de cada capítulo (h1) en la print_page */
+  .print-page-chapter { page-break-before: always; break-before: page; }
+  .print-page-chapter:first-child { page-break-before: avoid; break-before: avoid; }
+
+  /* Colores planos para impresión (ahorrar tinta, mantener legibilidad) */
+  a { color: #0F29A2 !important; text-decoration: none; }
+  a[href]::after { content: ""; } /* no mostrar URLs inline */
+
+  /* Bloques de código: fondo gris claro, sin borde decorativo */
+  code, pre {
+    background: #f5f5f5 !important;
+    color: #222 !important;
+    border: 1px solid #ddd !important;
+  }
+}

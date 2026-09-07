@@ -1,4 +1,4 @@
-> **Nota de ubicación:** este documento es material exploratorio de la etapa de planificación (selección de modelos SLM en formato GGUF, técnicas de gramática restringida, evaluación del nivel de innovación de la arquitectura). No es un capítulo de la tesis; se conserva como anexo de referencia para la sección de selección de modelo en `07-DECISIONES-SLM.md`. Reubicado desde `informe/01-INTRO.md` el 2026-08-25.
+> **Nota de ubicación:** este documento es material exploratorio de la etapa de planificación (selección de modelos SLM en formato GGUF, técnicas de gramática restringida, evaluación del nivel de innovación de la arquitectura). No es un capítulo de la tesis; se conserva como anexo de referencia para la sección de selección de modelo en `08-DECISIONES-SLM.md`. Reubicado desde `informe/01-INTRO.md` el 2026-08-25.
 
 ---
 

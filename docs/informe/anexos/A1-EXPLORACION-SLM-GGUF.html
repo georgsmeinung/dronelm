@@ -1,0 +1,1538 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+      
+        <link rel="prev" href="../13-REFERENCIAS.html">
+      
+      
+        <link rel="next" href="A2-SLM-CONCEPTO-Y-VENTAJAS.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A1. Exploración SLM / GGUF - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#limitaciones-de-hardware" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A1. Exploración SLM / GGUF
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#limitaciones-de-hardware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitaciones de hardware
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Limitaciones de hardware">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Razones por las que un SLM con salida restringida se ajusta al escenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modelos recomendados (febrero 2026, en formato GGUF para llama.cpp / LM Studio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Métodos para imponer “gramática limitada” o formato de salida estricto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#procedimiento-practico-de-configuracion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Procedimiento práctico de configuración
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sobre-la-innovacion-de-la-solucion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sobre la innovación de la solución
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sobre la innovación de la solución">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Razones por las que ya no se considera una solución de vanguardia
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ámbitos en los que la propuesta sí presenta solidez y utilidad
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conclusion-evaluacion-general" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusión (evaluación general)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sobre innovar sobre una arquitectura ya extensamente utilizada
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sobre innovar sobre una arquitectura ya extensamente utilizada">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        “Combinación ganadora” más prometedora para innovación + hardware disponible
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#razones-por-las-que-este-enfoque-si-se-considera-innovador" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Razones por las que este enfoque sí se considera innovador
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. SLM — Concepto y Ventajas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. SLM — Optimización y Desafíos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. LoRA (Alternativa No Adoptada)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#limitaciones-de-hardware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitaciones de hardware
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Limitaciones de hardware">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Razones por las que un SLM con salida restringida se ajusta al escenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modelos recomendados (febrero 2026, en formato GGUF para llama.cpp / LM Studio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Métodos para imponer “gramática limitada” o formato de salida estricto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#procedimiento-practico-de-configuracion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Procedimiento práctico de configuración
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sobre-la-innovacion-de-la-solucion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sobre la innovación de la solución
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sobre la innovación de la solución">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Razones por las que ya no se considera una solución de vanguardia
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ámbitos en los que la propuesta sí presenta solidez y utilidad
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conclusion-evaluacion-general" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusión (evaluación general)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sobre innovar sobre una arquitectura ya extensamente utilizada
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sobre innovar sobre una arquitectura ya extensamente utilizada">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        “Combinación ganadora” más prometedora para innovación + hardware disponible
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#razones-por-las-que-este-enfoque-si-se-considera-innovador" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Razones por las que este enfoque sí se considera innovador
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+  <h1>A1. Exploración SLM / GGUF</h1>
+
+<blockquote>
+<p><strong>Nota de ubicación:</strong> este documento es material exploratorio de la etapa de planificación (selección de modelos SLM en formato GGUF, técnicas de gramática restringida, evaluación del nivel de innovación de la arquitectura). No es un capítulo de la tesis; se conserva como anexo de referencia para la sección de selección de modelo en <code>08-DECISIONES-SLM.md</code>. Reubicado desde <code>informe/01-INTRO.md</code> el 2026-08-25.</p>
+</blockquote>
+<hr />
+<h2 id="limitaciones-de-hardware">Limitaciones de hardware<a class="headerlink" href="#limitaciones-de-hardware" title="Permanent link">&para;</a></h2>
+<p>Para una configuración compuesta por una RTX 5060 con 8 GB de VRAM, en la que es necesario compartir recursos de GPU con una simulación de Unreal Engine 5.5, la opción más realista consiste en emplear un <em>Small Language Model (SLM)</em>. Se requiere un modelo <em>instruct‑tuned</em>, capaz de seguir instrucciones de manera fiable y, al mismo tiempo, producir una salida con <strong>gramática muy restringida o limitada</strong>; es decir, un modelo que genere texto estrictamente conforme a un formato, esquema o gramática predefinida (por ejemplo, JSON siempre válido, pares clave‑valor específicos o una sintaxis personalizada mínima sin variación libre).</p>
+<p>Esta configuración resulta adecuada para una solución local basada en <em>MCP</em> (Model Context Protocol), el estándar abierto (propuesto por Anthropic a partir de 2024) que permite a los modelos de lenguaje conectarse con herramientas y datos externos mediante un protocolo uniforme. Un cliente MCP, un LLM local y servidores MCP locales (por ejemplo, para acceso a archivos, ejecución de código o consultas relacionadas con Unreal Engine) pueden ejecutarse completamente sin conexión.</p>
+<h3 id="razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario">Razones por las que un SLM con salida restringida se ajusta al escenario<a class="headerlink" href="#razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Presupuesto de VRAM</strong>: una simulación de UE5 probablemente utiliza entre 4 y 6 GB, lo que deja aproximadamente 2–4 GB disponibles para la inferencia del LLM (considerando el overhead de la KV cache).</li>
+<li><strong>Gramática restringida</strong>: reduce alucinaciones y verbosidad, generando una salida pequeña, rápida y fácil de interpretar (crítico para llamadas a herramientas MCP o respuestas estructuradas).</li>
+<li><strong>Ejecución local</strong>: elimina dependencias de la nube y permite baja latencia en la integración con la simulación.</li>
+</ul>
+<h3 id="modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio">Modelos recomendados (febrero 2026, en formato GGUF para llama.cpp / LM Studio)<a class="headerlink" href="#modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio" title="Permanent link">&para;</a></h3>
+<p>Se recomienda centrarse en modelos instruct de <strong>3B a 8B</strong> parámetros, ya que ofrecen la capacidad suficiente para seguir instrucciones y manejar patrones de uso de herramientas en 2026. Las cuantizaciones <em>Q5_K_M</em> o <em>Q4_K_M</em> permiten ajustar el modelo a \~2–4.5 GB de VRAM manteniendo una calidad elevada.</p>
+<table>
+<thead>
+<tr>
+<th>Modelo</th>
+<th>Tamaño (quant)</th>
+<th>VRAM aprox. (full offload)</th>
+<th>Fortalezas</th>
+<th>Razones para uso con gramática restringida</th>
+<th>Disponibilidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Qwen3-4B-Instruct</em> / <em>Qwen3-7B-Instruct</em></td>
+<td>\~3–5 GB</td>
+<td>\~2.5–4 GB</td>
+<td>Razonamiento sólido, seguimiento de instrucciones, function-calling</td>
+<td>Cumplimiento fiable de formatos; variantes 2026 con buen soporte JSON</td>
+<td>Qwen/Qwen3-4B-Instruct-GGUF</td>
+</tr>
+<tr>
+<td><em>Phi-4-mini-instruct</em></td>
+<td>\~3–4 GB</td>
+<td>\~2–3.5 GB</td>
+<td>Ajustado por Microsoft para datos sintéticos de alta calidad; muy eficaz en tareas estructuradas</td>
+<td>Muy alta adherencia a esquemas y salida de baja variación</td>
+<td>microsoft/Phi-4-mini-instruct-GGUF</td>
+</tr>
+<tr>
+<td><em>SmolLM3-3B-Instruct</em></td>
+<td>\~2–3 GB</td>
+<td>\~1.8–3 GB</td>
+<td>Modelo compacto con rendimiento superior al de muchos 4–7B</td>
+<td>Fácil de forzar en formatos rígidos mediante prompt</td>
+<td>HuggingFaceTB/SmolLM3-3B-GGUF</td>
+</tr>
+<tr>
+<td><em>Gemma-3-4B-IT</em></td>
+<td>\~3 GB</td>
+<td>\~2.5 GB</td>
+<td>Ajustado por Google; fuerte rendimiento textual</td>
+<td>Buena salida estructurada y soporte de function-calling</td>
+<td>google/gemma-3-4b-it-GGUF</td>
+</tr>
+<tr>
+<td><em>Ministral-3-3B-Instruct</em></td>
+<td>\~2.5 GB</td>
+<td>\~2 GB</td>
+<td>Modelo compacto optimizado para edge</td>
+<td>Diseñado para uso restringido; seguimiento estable de formatos</td>
+<td>mistralai/Ministral-3-3B-Instruct-GGUF</td>
+</tr>
+</tbody>
+</table>
+<p>La opción preferente suele ser <em>Phi‑4‑mini‑instruct</em>, mientras que <em>Qwen3‑4B/7B</em> puede utilizarse cuando se dispone de aproximadamente 1 GB adicional de VRAM.</p>
+<h3 id="metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto">Métodos para imponer “gramática limitada” o formato de salida estricto<a class="headerlink" href="#metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto" title="Permanent link">&para;</a></h3>
+<p>Los siguientes métodos, compatibles con backends locales como llama.cpp, LM Studio u Ollama, permiten controlar estrictamente la estructura de la salida:</p>
+<ol>
+<li>
+<p><strong>Prompt del sistema con instrucciones estrictas</strong> (método más simple, sin costo computacional significativo)<br />
+    Ejemplo:
+        Eres un respondedor MCP estricto. Produce ÚNICAMENTE JSON válido que coincida con este esquema. Sin explicaciones, sin texto adicional, sin markdown.
+        Esquema: { "tool_call": {"name": str, "args": dict}, "response": str o null }
+        Si no se necesita herramienta, usar tool_call = null. Escapar correctamente todas las cadenas.</p>
+</li>
+<li>
+<p><strong>Gramáticas / GBNF en llama.cpp</strong> (confiabilidad alta)</p>
+<ul>
+<li>Definir una gramática libre de contexto mínima (GBNF) obliga al modelo a ajustarse exactamente al formato requerido.</li>
+<li>Compatible nativamente con llama.cpp y expuesto en diversas interfaces como LM Studio.</li>
+<li>Suele reducir la velocidad de generación en un 10–30%, pero garantiza validez estructural completa.</li>
+</ul>
+</li>
+<li>
+<p><strong>Outlines / Guidance / llguidance</strong> (métodos avanzados)</p>
+<ul>
+<li>Permiten imponer esquemas JSON, expresiones regulares o gramáticas personalizadas a nivel de token.</li>
+<li>Garantizan salida estructurada incluso en modelos pequeños.</li>
+</ul>
+</li>
+</ol>
+<p>Para MCP, estos métodos resultan especialmente relevantes, ya que numerosas implementaciones locales (por ejemplo, clientes y servidores MCP publicados en GitHub) requieren formatos fijos como JSON o XML estilo Anthropic.</p>
+<h3 id="procedimiento-practico-de-configuracion">Procedimiento práctico de configuración<a class="headerlink" href="#procedimiento-practico-de-configuracion" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Instalación de LM Studio</strong></p>
+<ul>
+<li>Descargar un modelo GGUF entre los recomendados (desde el buscador integrado o Hugging Face).</li>
+<li>Configurar entre 20 y 35 capas en GPU, ajustando según el comportamiento de Unreal Engine.</li>
+<li>Activar el modo de gramática si está disponible o utilizar un prompt de sistema personalizado.</li>
+</ul>
+</li>
+<li>
+<p><strong>Implementación basada en MCP</strong></p>
+<ul>
+<li>Iniciar con servidores MCP locales básicos (acceso a archivos, shell, etc.).</li>
+<li>Utilizar un cliente MCP compatible con modelos locales (Ollama con plugins MCP o implementaciones Python como mcp‑agent).</li>
+<li>Proporcionar las descripciones de herramientas MCP mediante el prompt del sistema.</li>
+</ul>
+</li>
+<li>
+<p><strong>Integración con Unreal Engine 5</strong></p>
+<ul>
+<li>Implementar un servidor MCP que lea/escriba logs, datos de Blueprints o estados de simulación.</li>
+<li>El modelo produce comandos estructurados que pueden ser interpretados y aplicados por la aplicación anfitriona.</li>
+</ul>
+</li>
+</ol>
+<h2 id="sobre-la-innovacion-de-la-solucion">Sobre la innovación de la solución<a class="headerlink" href="#sobre-la-innovacion-de-la-solucion" title="Permanent link">&para;</a></h2>
+<p>De manera general, la <em>arquitectura en bucle</em> descrita —un lazo cerrado simple y compacto donde:</p>
+<ol>
+<li>AirSim proporciona el estado actual (posición, velocidad, datos de sensores, etc.),</li>
+<li>Un SLM local y de pequeño tamaño procesa dicha información junto con el objetivo o las instrucciones,</li>
+<li>Se genera un comando estructurado (por ejemplo, un JSON con parámetros de movimiento, guiñada o empuje),</li>
+<li>El comando se ejecuta mediante la API de AirSim,</li>
+<li>El proceso se repite a una frecuencia utilizable (por ejemplo, 2–20 Hz),</li>
+</ol>
+<p>— resulta <em>sólida, práctica y adecuada para las restricciones planteadas</em> (RTX 5060 con 8 GB de VRAM compartida con una simulación en UE 5.5, y uso de modelos pequeños con gramática o salida restringida).</p>
+<p>No obstante, en términos de <em>verdadera innovación</em> dentro del panorama 2025–2026 sobre control de drones/UAV impulsado por LLMs, dicha arquitectura <em>ya no se considera especialmente novedosa</em>. Se trata más bien de uno de los enfoques base que se han estandarizado tanto en investigación como en prototipos aplicados.</p>
+<h3 id="razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia">Razones por las que ya no se considera una solución de vanguardia<a class="headerlink" href="#razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia" title="Permanent link">&para;</a></h3>
+<p>A partir de artículos, tesis, proyectos y experimentos recientes (principalmente entre 2025 y principios de 2026), se observa que:</p>
+<ul>
+<li>
+<p>El <em>control en bucle cerrado mediante LLMs</em> para UAVs/drones en simuladores como AirSim se ha vuelto <em>muy común</em>. La mayoría de los trabajos emplea alguna variante del ciclo de retroalimentación.</p>
+<ul>
+<li>Muchos lo denominan explícitamente “<em>closed-loop</em>” (por ejemplo, “LLM-driven closed-loop UAV operation”, “closed-loop reasoning/refinement”, “closed user-on-the-loop”).</li>
+<li>La idea básica de alimentar el estado → LLM → comando → ejecutar → observar → repetir se ha demostrado repetidamente desde aproximadamente 2023–2024 y se generalizó en contextos UAV hacia 2025.</li>
+</ul>
+</li>
+<li>
+<p>La combinación <em>AirSim + LLM</em> se ha convertido en una opción <em>muy utilizada</em>, debido a que AirSim (basado en Unreal Engine) proporciona un entorno realista para probar física, visión y control de drones. Entre las variantes exploradas se encuentran:</p>
+<ul>
+<li>Bucles de generación y ejecución de código.</li>
+<li>Transformación semántica de observaciones (telemetría → descripciones textuales).</li>
+<li>Configuraciones multi‑agente con RAG.</li>
+<li>Tuberías voz‑a‑comando.</li>
+<li>Evaluación de ataques adversarios orientados a medir la robustez de LLMs en lazo cerrado.</li>
+</ul>
+</li>
+<li>
+<p>Las propuestas consideradas “innovadoras” en 2025–2026 suelen ir <em>más allá</em> del simple bucle estado → SLM → comando, e incluyen:</p>
+<ul>
+<li>Diseños <em>dual‑LLM</em> (uno genera código/acciones y otro evalúa/refina dentro de la simulación antes de ejecutar).</li>
+<li><em>Mejoras semánticas</em> para traducir telemetría en descripciones más comprensibles para modelos pequeños.</li>
+<li>Enfoques <em>multi‑agente</em> o <em>jerárquicos</em> (planificador + ejecutor + crítico).</li>
+<li><em>Visión en el bucle</em> (uso de VLMs pequeños como MiniCPM‑V para evitar obstáculos).</li>
+<li><em>Síntesis de código en tiempo real</em> con módulos de corrección o RAG adaptativo.</li>
+<li>Inferencia en <em>edge</em> para reducir aún más la latencia.</li>
+</ul>
+</li>
+</ul>
+<p>En consecuencia, la arquitectura propuesta se corresponde con el patrón básico ampliamente difundido en investigación sobre robótica/UAV basada en LLMs.</p>
+<h3 id="ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad">Ámbitos en los que la propuesta sí presenta solidez y utilidad<a class="headerlink" href="#ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Se adecúa de forma precisa a las limitaciones del hardware disponible: un SLM pequeño + inferencia rápida mediante llama.cpp permiten mantener latencias suficientemente bajas para tasas de control significativas, mientras que arquitecturas más complejas superarían el límite práctico de 8 GB de VRAM compartida con UE.</li>
+<li>La imposición de <em>salida estrictamente estructurada</em> (por ejemplo, JSON mediante gramáticas GBNF) constituye un enfoque actual y recomendable, utilizado en numerosos trabajos posteriores a 2025 para reducir alucinaciones en señales de control.</li>
+<li>Conseguir una operación totalmente local/offline dentro de UE5.5 + AirSim sigue siendo un reto para usuarios no especializados; muchos ejemplos conocidos emplean LLMs en la nube o hardware de mayor capacidad.</li>
+</ul>
+<h3 id="conclusion-evaluacion-general">Conclusión (evaluación general)<a class="headerlink" href="#conclusion-evaluacion-general" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Nivel de innovación</strong>: aproximadamente 3–4/10. Se trata de una solución práctica y bien formulada, pero no representa una arquitectura novedosa en el contexto de 2026. Se ajusta más al ámbito de <em>ingeniería sólida basada en patrones establecidos</em> que a propuestas conceptualmente nuevas.</li>
+<li>No obstante, una implementación exitosa (vuelo estable, navegación reactiva, baja tasa de fallos en la simulación) constituye un logro destacable, especialmente bajo restricciones de VRAM y con un entorno UE ejecutándose de forma simultánea.</li>
+<li>Si se busca añadir un componente más innovador, es posible incorporar una de las extensiones comunes en 2025–2026, como un resumen semántico del estado, un pequeño evaluador para autocorrección o algún canal de retroalimentación visual, siempre que el presupuesto de VRAM y velocidad lo permita.</li>
+</ul>
+<p>REFERENCIA: (Large Language Model-Driven Closed-Loop UAV Operation with Semantinc Observations)[https://arxiv.org/html/2507.01930v1]  </p>
+<h2 id="sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada">Sobre innovar sobre una arquitectura ya extensamente utilizada<a class="headerlink" href="#sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada" title="Permanent link">&para;</a></h2>
+<p>Para que un bucle de control de cuadricóptero en AirSim basado en un SLM resulte <em>genuinamente innovador</em> en 2026 —especialmente bajo la fuerte restricción de hardware impuesta por una RTX 5060 con 8 GB de VRAM compartida con una simulación en UE 5.5— es necesario ir más allá del patrón estándar “estado → prompt → salida estructurada → actuar → repetir”. Dicho patrón ya constituye la base común en prototipos de investigación actuales.</p>
+<p>A continuación se presentan los <em>giros de procesamiento/software</em> más prometedores que pueden situar la propuesta en el terreno de una contribución novedosa, ordenados aproximadamente según viabilidad en el hardware disponible y posible impacto:</p>
+<table>
+<thead>
+<tr>
+<th>Técnica / Enfoque</th>
+<th>Nivel de innovación (2026)</th>
+<th>Impacto en VRAM / Velocidad (8GB compartidos)</th>
+<th>Razón por la que puede ser novedosa en este contexto</th>
+<th>Dificultad de implementación</th>
+<th>Beneficio realista para la autonomía del dron</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Compresión semántica del estado + alimentación en lenguaje natural</em></td>
+<td>Alta</td>
+<td>Baja (añade \~0.2–0.5 GB de KV cache)</td>
+<td>La mayoría de los trabajos usa telemetría cruda; los SLM pequeños razonan mejor con descripciones ricas (“deriva 0.8 m/s hacia la izquierda, obstáculo rojo a 2.1 m, batería 67%”).</td>
+<td>Media</td>
+<td>20–50% de mejora en calidad de decisiones / menos choques</td>
+</tr>
+<tr>
+<td><em>Autocorrección / refinamiento en bucle cerrado en una sola pasada</em></td>
+<td>Muy alta</td>
+<td>Media (prompts más largos)</td>
+<td>Permite incluir un campo “crítico” en la salida: el modelo propone acción + evalúa riesgos en la misma inferencia. Pocas implementaciones en entornos de baja VRAM.</td>
+<td>Media–Alta</td>
+<td>Aumento notable de confiabilidad (80–95% de acciones válidas)</td>
+</tr>
+<tr>
+<td><em>Speculative decoding / borradores asistidos (con cabeza ligera)</em></td>
+<td>Alta</td>
+<td>Baja–Media (si se usa estilo EAGLE)</td>
+<td>Acelera la generación 1.8–3× sin pérdida de calidad. Muy poco explorado en drones con baja VRAM.</td>
+<td>Media–Alta</td>
+<td>2–3× más frecuencia de bucle (p. ej., 10–15 Hz en lugar de 3–5 Hz)</td>
+</tr>
+<tr>
+<td><em>Híbrido reactivo + LLM (PID a sub‑ms + LLM solo para nivel alto)</em></td>
+<td>Media–Alta</td>
+<td>Muy baja</td>
+<td>El LLM se utiliza solo para metas/replanificación; la estabilización se delega a controladores reactivos. Reduce dependencia de latencia.</td>
+<td>Baja–Media</td>
+<td>Vuelo más estable; narrativa innovadora de “control híbrido confiable”</td>
+</tr>
+<tr>
+<td><em>Fine‑tuning diminuto en tiempo real / cambio de adaptadores LoRA</em></td>
+<td>Muy alta</td>
+<td>Media–Alta (100–300 MB por adaptador)</td>
+<td>Conjunto de LoRAs pequeños (“evitación agresiva”, “crucero eficiente”, etc.) con carga dinámica. Pocas demostraciones en simulación de baja capacidad.</td>
+<td>Alta</td>
+<td>Adaptación gradual al entorno en UE → efecto de “aprendizaje”</td>
+</tr>
+<tr>
+<td><em>Chain‑of‑thought multietapa con muestreo en árbol / batching</em></td>
+<td>Media–Alta</td>
+<td>Media</td>
+<td>Se fuerzan 2–3 futuros posibles en una sola salida; una heurística rápida elige el más seguro. Reduce latencia efectiva.</td>
+<td>Media</td>
+<td>Mejor manejo de incertidumbre / ráfagas de viento en AirSim</td>
+</tr>
+</tbody>
+</table>
+<h3 id="combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible">“Combinación ganadora” más prometedora para innovación + hardware disponible<a class="headerlink" href="#combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible" title="Permanent link">&para;</a></h3>
+<p>Se recomienda apuntar a la siguiente arquitectura, factible dentro del límite de 8 GB de VRAM compartidos:</p>
+<ol>
+<li><strong>Base:</strong> Phi‑4‑mini‑Instruct o Qwen3‑4B/7B en Q5_K_M GGUF (\~2.5–4 GB cargados; offload parcial si fuera necesario).</li>
+<li><strong>Giro central A:</strong> Preprocesamiento mediante <em>compresión semántica</em>. Una función Python ligera convierte telemetría de AirSim + objetivo en una descripción vívida en lenguaje natural. Esto potencia significativamente la capacidad de razonamiento de un SLM pequeño.</li>
+<li><strong>Giro central B:</strong> Salida con <em>autocorrección forzada por gramática</em>:
+    <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;proposed_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;thrust&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.72</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;yaw_delta&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">-12</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;move_vector&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.2</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.4</span><span class="p">,</span><span class="w"> </span><span class="mf">0.8</span><span class="p">]},</span>
+<span class="w">  </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.89</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;risks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;batería baja → reducir velocidad si &lt;30%&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;alternative_if_risk_high&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;thrust&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.55</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;hover&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+    La salida se analiza y se aplica la acción más segura o con mayor confianza. Una sola inferencia gestiona propuesta + crítica.</li>
+<li><strong>Aceleración:</strong> Activar <em>speculative decoding</em> si la versión de llama.cpp o LM Studio lo permite (implementaciones estilo EAGLE o Medusa; comunes en 2026). Puede reducir la latencia por decisión entre 40–200%.</li>
+<li><strong>Red de seguridad híbrida:</strong> El LLM produce intención de alto nivel cada 0.5–2 s; un controlador PID rápido en C++/Blueprints opera a 100–200 Hz. Si el LLM falla o se ralentiza → activación de “hover seguro + retorno a casa”.</li>
+</ol>
+<h3 id="razones-por-las-que-este-enfoque-si-se-considera-innovador">Razones por las que este enfoque sí se considera innovador<a class="headerlink" href="#razones-por-las-que-este-enfoque-si-se-considera-innovador" title="Permanent link">&para;</a></h3>
+<ul>
+<li>La mayoría de los trabajos entre 2025 y 2026 siguen recurriendo a LLMs en la nube, hardware más potente o alimentaciones de estado sin tratamiento semántico.</li>
+<li>La combinación de <em>compresión semántica + autocorrección con gramática + aceleración especulativa + control híbrido</em> ejecutada en solo 8 GB de VRAM compartidos con una simulación UE es poco habitual, y potencialmente publicable como una aproximación de <em>control agente de dron en simulación de alta fidelidad con recursos limitados</em>.</li>
+<li>Si se logra una navegación estable y reactiva (evitación de obstáculos, búsqueda de objetivos, comportamiento dependiente de batería) con latencias por decisión inferiores a 500 ms, se trataría de una demostración sólida.</li>
+</ul>
+<p>Se recomienda comenzar por implementar la <em>compresión semántica</em> y la <em>salida con gramática</em>, medir tasa de fallos y comparar con el bucle base. Posteriormente, incorporar speculative decoding como mejora incremental.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+    
+  </body>
+</html>

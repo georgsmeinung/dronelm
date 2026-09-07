@@ -1,5 +1,15 @@
 # 5. Arquitectura del lazo táctico
 
+## 5.0 Escaneo espacial pre-vuelo (`spatial_scan`)
+
+Antes de que el grafo de decisión empiece a ejecutarse, `main.py` llama de forma bloqueante a la función `spatial_scan()` (`src/agents/spatial_scan.py`), implementada como parte de PLAN-MEJORAS-3 (H1). Esta función no es un nodo del `StateGraph`: se ejecuta una sola vez, entre la conexión con AirSim y la construcción del estado inicial del grafo.
+
+El escaneo realiza un barrido de yaw en el lugar (sin traslación) hacia un conjunto de rumbos equiespaciados alrededor del rumbo inicial, captura un fotograma en cada rumbo tras un breve período de asentamiento y envía todas las imágenes en una única consulta al VLM. El modelo devuelve un contexto cualitativo del entorno visible desde el punto de despegue (obstáculos prominentes, corredores potenciales, densidad general de la escena). Este contexto es **advisory, no safety-critical**: el `ObstacleField` por ciclo sigue siendo la única autoridad de seguridad una vez que el dron está en movimiento.
+
+Si el VLM no responde dentro del watchdog del escaneo, o devuelve una respuesta no parseable, la misión arranca igualmente sin contexto inicial — un VLM caído nunca impide el despegue. Al igual que el resto del sistema de percepción (cap. 6), el escaneo pre-vuelo opera exclusivamente sobre fotogramas RGB monoculares y nunca consulta el canal de profundidad del simulador.
+
+La latencia de `spatial_scan` es un costo de inicialización de única vez, no un costo por ciclo; se mide y registra separadamente del presupuesto de latencia táctica (§10.2).
+
 ## 5.1 Visión general del lazo
 
 El lazo descrito en este capítulo se ejecuta sobre el entorno de simulación construido y validado en el capítulo 3 (Unreal Engine 5.5 con Cosys-AirSim), ejecutando los manifiestos compilados previamente por la estación terrena (capítulo 4). El sistema implementado es un grafo de decisión por ciclo (`StateGraph` de LangGraph) que se ejecuta a una frecuencia objetivo de `LOOP_HZ` (5–10 Hz según la resolución de captura elegida). Cada ciclo recorre el mismo grafo desde `capture` hasta `motor` y llega a un estado terminal (`__end__`); la naturaleza cíclica de la navegación la aporta el bucle externo de `main.py`, no el grafo en sí, que por diseño no tiene aristas de retorno. Conviene describir esta arquitectura como un **grafo de decisión por tick** y no como un "grafo cíclico de navegación": es una distinción defendible y no una mera cuestión de vocabulario, porque el grafo se recompila y evalúa desde cero en cada ciclo.
@@ -26,7 +36,7 @@ Tres estructuras de datos funcionan como contratos estables de la arquitectura, 
 
 - **`deliberations[]`** es el registro de evidencia primaria de cada decisión del modelo de lenguaje (prompt enviado, respuesta cruda, modelo, latencia, si hubo fallback). Es un contrato de solo agregado: se le suman campos (por ejemplo `timeout`, `adherent`) pero nunca se le quitan, porque es la evidencia auditable de la que depende buena parte del capítulo de resultados.
 - **`ObstacleField`** (cap. 6) es el único objeto que consumen el enrutador de política, el nodo de evasión, el nodo deliberativo, la FSM y el registro de vuelo. Ningún consumidor accede a campos crudos de flujo óptico: toda lectura pasa por su API pública (`is_blocked`, `blocked_fraction`, `sector_ttc`, `summary_text`, `to_dict`).
-- **`WaypointTracker`**, con corrección de rumbo por *cross-track error*, zona muerta angular, saturación de tasa de guiñada e histéresis con suavizado exponencial (EMA) sobre los umbrales de giro brusco, aproximación final y zona muerta de guiñada, agregados para reducir cabeceos visibles en el vuelo.
+- **`WaypointTracker`**, con corrección de rumbo por *cross-track error*, zona muerta angular, saturación de tasa de guiñada e histéresis con suavizado exponencial (EMA) sobre los umbrales de giro brusco, aproximación final y zona muerta de guiñada, agregados para reducir cabeceos visibles en el vuelo. Incluye además comportamiento de movimiento vertical puro (`near_vertical`): cuando el siguiente waypoint está directamente arriba o abajo del dron (`dist_xy < 1 m` AND `|dz| > 0.3 m`), se fuerza `vx = 0` para un ascenso o descenso estrictamente vertical. Este comportamiento es el que hace posible el patrón *climb-first* de Tier 2 (§3.2): sin él, el tracker intenta moverse horizontalmente mientras sube, generando una trayectoria diagonal que puede atravesar edificios.
 
 ## 5.4 Modo degradado
 

@@ -1,0 +1,1165 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+      
+        <link rel="prev" href="04-PLANIFICACION-MISION-GCS.html">
+      
+      
+        <link rel="next" href="06-PERCEPCION-MONOCULAR.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>5. Arquitectura del Lazo Táctico - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="css/print-site.css">
+    
+      <link rel="stylesheet" href="css/print-site-material.css">
+    
+      <link rel="stylesheet" href="css/austral.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#5-arquitectura-del-lazo-tactico" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              5. Arquitectura del Lazo Táctico
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#50-escaneo-espacial-pre-vuelo-spatial_scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.0 Escaneo espacial pre-vuelo (spatial_scan)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#51-vision-general-del-lazo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Visión general del lazo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#52-deliberacion-por-excepcion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Deliberación por excepción
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#53-salvaguardas-y-contratos-congelados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Salvaguardas y contratos congelados
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#54-modo-degradado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Modo degradado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#55-escalacion-ante-atasco-persistente-barrido-panoramico-y-consulta-puntual-al-modelo-de-vision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Escalación ante atasco persistente: barrido panorámico y consulta puntual al modelo de visión
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#56-registro-de-vuelo-y-auditoria-post-vuelo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 Registro de vuelo y auditoría post-vuelo
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. SLM — Concepto y Ventajas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. SLM — Optimización y Desafíos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. LoRA (Alternativa No Adoptada)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#50-escaneo-espacial-pre-vuelo-spatial_scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.0 Escaneo espacial pre-vuelo (spatial_scan)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#51-vision-general-del-lazo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Visión general del lazo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#52-deliberacion-por-excepcion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Deliberación por excepción
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#53-salvaguardas-y-contratos-congelados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Salvaguardas y contratos congelados
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#54-modo-degradado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Modo degradado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#55-escalacion-ante-atasco-persistente-barrido-panoramico-y-consulta-puntual-al-modelo-de-vision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Escalación ante atasco persistente: barrido panorámico y consulta puntual al modelo de visión
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#56-registro-de-vuelo-y-auditoria-post-vuelo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 Registro de vuelo y auditoría post-vuelo
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="5-arquitectura-del-lazo-tactico">5. Arquitectura del lazo táctico<a class="headerlink" href="#5-arquitectura-del-lazo-tactico" title="Permanent link">&para;</a></h1>
+<h2 id="50-escaneo-espacial-pre-vuelo-spatial_scan">5.0 Escaneo espacial pre-vuelo (<code>spatial_scan</code>)<a class="headerlink" href="#50-escaneo-espacial-pre-vuelo-spatial_scan" title="Permanent link">&para;</a></h2>
+<p>Antes de que el grafo de decisión empiece a ejecutarse, <code>main.py</code> llama de forma bloqueante a la función <code>spatial_scan()</code> (<code>src/agents/spatial_scan.py</code>), implementada como parte de PLAN-MEJORAS-3 (H1). Esta función no es un nodo del <code>StateGraph</code>: se ejecuta una sola vez, entre la conexión con AirSim y la construcción del estado inicial del grafo.</p>
+<p>El escaneo realiza un barrido de yaw en el lugar (sin traslación) hacia un conjunto de rumbos equiespaciados alrededor del rumbo inicial, captura un fotograma en cada rumbo tras un breve período de asentamiento y envía todas las imágenes en una única consulta al VLM. El modelo devuelve un contexto cualitativo del entorno visible desde el punto de despegue (obstáculos prominentes, corredores potenciales, densidad general de la escena). Este contexto es <strong>advisory, no safety-critical</strong>: el <code>ObstacleField</code> por ciclo sigue siendo la única autoridad de seguridad una vez que el dron está en movimiento.</p>
+<p>Si el VLM no responde dentro del watchdog del escaneo, o devuelve una respuesta no parseable, la misión arranca igualmente sin contexto inicial — un VLM caído nunca impide el despegue. Al igual que el resto del sistema de percepción (cap. 6), el escaneo pre-vuelo opera exclusivamente sobre fotogramas RGB monoculares y nunca consulta el canal de profundidad del simulador.</p>
+<p>La latencia de <code>spatial_scan</code> es un costo de inicialización de única vez, no un costo por ciclo; se mide y registra separadamente del presupuesto de latencia táctica (§10.2).</p>
+<h2 id="51-vision-general-del-lazo">5.1 Visión general del lazo<a class="headerlink" href="#51-vision-general-del-lazo" title="Permanent link">&para;</a></h2>
+<p>El lazo descrito en este capítulo se ejecuta sobre el entorno de simulación construido y validado en el capítulo 3 (Unreal Engine 5.5 con Cosys-AirSim), ejecutando los manifiestos compilados previamente por la estación terrena (capítulo 4). El sistema implementado es un grafo de decisión por ciclo (<code>StateGraph</code> de LangGraph) que se ejecuta a una frecuencia objetivo de <code>LOOP_HZ</code> (5–10 Hz según la resolución de captura elegida). Cada ciclo recorre el mismo grafo desde <code>capture</code> hasta <code>motor</code> y llega a un estado terminal (<code>__end__</code>); la naturaleza cíclica de la navegación la aporta el bucle externo de <code>main.py</code>, no el grafo en sí, que por diseño no tiene aristas de retorno. Conviene describir esta arquitectura como un <strong>grafo de decisión por tick</strong> y no como un "grafo cíclico de navegación": es una distinción defendible y no una mera cuestión de vocabulario, porque el grafo se recompila y evalúa desde cero en cada ciclo.</p>
+<p>La estructura actual del grafo, exportada directamente desde el código compilado (<code>scripts/export_graph_mmd.py</code>, sin conexión a AirSim ni efectos secundarios), es la siguiente:</p>
+<p><img src="./2026-0904_grafo_control_dronelm_horizontal.png"/></p>
+<p>Cada ciclo captura un fotograma y telemetría (<code>capture</code>); si la fuente de datos no es AirSim (modo degradado, ver más abajo), el ciclo va directo a <code>degraded_hover</code> sin pasar por percepción. En caso contrario, <code>perception</code> produce el <code>ObstacleField</code> del ciclo (cap. 6) y un enrutador de política (<code>policy_router</code>) decide, sobre esa evidencia, a cuál de cinco nodos de acción dirigir el ciclo: <code>keep_going</code> (crucero sin novedad), <code>evasive</code> (evasión reactiva de corto plazo), <code>girar_90</code> (bypass determinista ante bloqueo severo), <code>fsm</code> (política de máquina de estados, cuando ese es el brazo activo) o <code>deliberative</code> (consulta al modelo de lenguaje). Todos los nodos de acción convergen en <code>motor</code>, que traduce la macro-acción elegida a un comando cinemático concreto y lo emite a AirSim.</p>
+<h2 id="52-deliberacion-por-excepcion">5.2 Deliberación por excepción<a class="headerlink" href="#52-deliberacion-por-excepcion" title="Permanent link">&para;</a></h2>
+<p>El principio de diseño central de la arquitectura es que la consulta al modelo de lenguaje es la <strong>excepción</strong>, no la regla: la mayoría de los ciclos deben resolverse por rutas deterministas y baratas (<code>keep_going</code>, <code>evasive</code>, <code>girar_90</code>), y solo una fracción acotada de los ciclos debería requerir la latencia y el costo de una inferencia de lenguaje. Ese principio se sostiene con varias salvaguardas explícitas:</p>
+<ul>
+<li><strong>Avance cauteloso y frenado condicional por seguridad.</strong> Durante la espera asíncrona de la resolución del modelo, el sistema comanda un avance a velocidad mínima de arrastre (<code>DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s</code>) en lugar de frenar a cero incondicionalmente. Esta distinción cinemática es fundamental: detener por completo la traslación anula la señal del flujo óptico y destruye la confianza del estimador de TTC, desencadenando espirales deliberativas artificiales. Sin embargo, si el sector frontal registra un bloqueo estructural inminente (<code>close_structural = True</code>), el sistema comanda detención total inmediata (<code>FRENAR</code>), anteponiendo la seguridad física a la preservación del flujo.</li>
+<li><strong>Deliberación asíncrona con watchdog.</strong> La consulta al modelo corre en un hilo aparte (<code>DeliberationService</code>, con una cola de tamaño 1) para no bloquear el lazo de percepción mientras se espera la respuesta. Si el pedido excede <code>SLM_WATCHDOG_MS</code>, se marca <code>timeout</code> y decide la política de respaldo determinista — el ciclo de control nunca queda a merced de la latencia del modelo.</li>
+<li><strong>Parser tolerante como red de seguridad.</strong> La respuesta del modelo se solicita con <code>response_format=json_schema</code> (decodificación restringida) pero se conserva un parser tolerante a texto conversacional, JSON truncado o markdown como camino de respaldo — nunca se descarta un ciclo completo solo porque la salida no fue perfectamente estructurada (cap. 8).</li>
+<li><strong>Fallback determinista.</strong> Ante timeout, respuesta no parseable o acción fuera de la lista blanca, el sistema recurre a una política de respaldo determinista, nunca a un valor por defecto arbitrario.</li>
+<li><strong>Persistencia de maniobra y enclavamiento anti-flip-flop.</strong> Una vez iniciada una maniobra de evasión o escape, el sistema evita revertirla ciclo a ciclo por pequeñas variaciones de la evidencia; y un mecanismo de escape que agota sus reintentos permitidos queda enclavado y cambia de estrategia en lugar de repetir indefinidamente la misma acción fallida.</li>
+</ul>
+<h2 id="53-salvaguardas-y-contratos-congelados">5.3 Salvaguardas y contratos congelados<a class="headerlink" href="#53-salvaguardas-y-contratos-congelados" title="Permanent link">&para;</a></h2>
+<p>Tres estructuras de datos funcionan como contratos estables de la arquitectura, en el sentido de que su superficie de API no cambia aunque cambie su implementación interna:</p>
+<ul>
+<li><strong><code>deliberations[]</code></strong> es el registro de evidencia primaria de cada decisión del modelo de lenguaje (prompt enviado, respuesta cruda, modelo, latencia, si hubo fallback). Es un contrato de solo agregado: se le suman campos (por ejemplo <code>timeout</code>, <code>adherent</code>) pero nunca se le quitan, porque es la evidencia auditable de la que depende buena parte del capítulo de resultados.</li>
+<li><strong><code>ObstacleField</code></strong> (cap. 6) es el único objeto que consumen el enrutador de política, el nodo de evasión, el nodo deliberativo, la FSM y el registro de vuelo. Ningún consumidor accede a campos crudos de flujo óptico: toda lectura pasa por su API pública (<code>is_blocked</code>, <code>blocked_fraction</code>, <code>sector_ttc</code>, <code>summary_text</code>, <code>to_dict</code>).</li>
+<li><strong><code>WaypointTracker</code></strong>, con corrección de rumbo por <em>cross-track error</em>, zona muerta angular, saturación de tasa de guiñada e histéresis con suavizado exponencial (EMA) sobre los umbrales de giro brusco, aproximación final y zona muerta de guiñada, agregados para reducir cabeceos visibles en el vuelo. Incluye además comportamiento de movimiento vertical puro (<code>near_vertical</code>): cuando el siguiente waypoint está directamente arriba o abajo del dron (<code>dist_xy &lt; 1 m</code> AND <code>|dz| &gt; 0.3 m</code>), se fuerza <code>vx = 0</code> para un ascenso o descenso estrictamente vertical. Este comportamiento es el que hace posible el patrón <em>climb-first</em> de Tier 2 (§3.2): sin él, el tracker intenta moverse horizontalmente mientras sube, generando una trayectoria diagonal que puede atravesar edificios.</li>
+</ul>
+<h2 id="54-modo-degradado">5.4 Modo degradado<a class="headerlink" href="#54-modo-degradado" title="Permanent link">&para;</a></h2>
+<p>Cuando la fuente de datos no es AirSim (<code>source != "airsim"</code>), el sistema no sustituye el fotograma o la telemetría faltante por datos sintéticos plausibles: el ciclo se dirige directo a <code>degraded_hover</code>, se comanda hover explícito y se omiten percepción y deliberación por completo. La razón de este diseño es la misma que motiva el capítulo 9: un dato sintético "razonable" en lugar de un dato ausente es indistinguible, para el resto del sistema, de un dato real, y esconde exactamente el tipo de fallo silencioso que este trabajo documenta en otros componentes.</p>
+<h2 id="55-escalacion-ante-atasco-persistente-barrido-panoramico-y-consulta-puntual-al-modelo-de-vision">5.5 Escalación ante atasco persistente: barrido panorámico y consulta puntual al modelo de visión<a class="headerlink" href="#55-escalacion-ante-atasco-persistente-barrido-panoramico-y-consulta-puntual-al-modelo-de-vision" title="Permanent link">&para;</a></h2>
+<p>Cuando el mecanismo de evasión de corto plazo (<code>evasive</code>) no logra restablecer el progreso hacia el waypoint objetivo durante un número sostenido de ciclos — un atasco duro, en el sentido de que ninguna dirección inmediata frente al dron ofrece un corredor despejado según el <code>ObstacleField</code> (cap. 6) — el sistema no recurre de inmediato al escape ciego (alternancia determinista entre ganar y perder altitud). En su lugar, ejecuta primero un barrido panorámico: una secuencia de giros puros en el lugar (sin traslación) hacia un conjunto fijo de rumbos equiespaciados alrededor del rumbo actual, capturando un fotograma en cada uno tras un breve período de asentamiento.</p>
+<p>Con el panorama completo capturado, se realiza una única consulta al modelo de visión, presentando las imágenes de todos los rumbos explorados — etiquetadas explícitamente como direcciones distintas desde el mismo punto, no como fotogramas consecutivos en el tiempo — junto con el estado del atasco (ciclos sin progreso, escapes verticales ya intentados, distancia y rumbo al objetivo). El modelo elige una única macro-acción de la misma lista blanca que usa el nodo deliberativo ordinario (cap. 8): el barrido no introduce vocabulario de decisión nuevo, solo una vista panorámica de la evidencia. Si la respuesta no llega dentro del plazo del watchdog o no resulta en una acción viable, el sistema cae al escape ciego determinista como red de seguridad final, garantizando que el mecanismo de escalación nunca deje al vehículo sin una decisión.</p>
+<p>Todo el barrido se ejecuta dentro del mismo ciclo del grafo de decisión, nunca en un bucle separado: reutiliza el fotograma que el nodo <code>capture</code> ya produjo ese ciclo y reemite su propio comando de velocidad a través de <code>motor</code> como cualquier otro nodo de política, sin desactivar la vigilancia del enrutador de política mientras dura. Al igual que el resto de la percepción del sistema (cap. 6), el barrido nunca consulta el canal de profundidad del simulador: opera exclusivamente sobre los mismos fotogramas RGB monoculares que alimentan el resto del lazo.</p>
+<p>Este mecanismo de escalación es controlable como variable experimental (<code>DEADLOCK_STRATEGY=blind|deep_vlm</code>, adoptando <code>deep_vlm</code> como valor por defecto en producción): el sistema puede configurarse para omitirlo y recurrir directamente al escape ciego (<code>blind</code>), lo que permite comparar de forma factorial ambas estrategias de resolución de atasco bajo idénticas condiciones de vuelo (cap. 10). En corridas de validación sobre el escenario urbano de referencia, la variante con consulta al modelo de visión (<code>deep_vlm</code>) resolvió la totalidad de los eventos de atasco duro observados (12/12) sin recurrir al escape ciego de respaldo.</p>
+<h2 id="56-registro-de-vuelo-y-auditoria-post-vuelo">5.6 Registro de vuelo y auditoría post-vuelo<a class="headerlink" href="#56-registro-de-vuelo-y-auditoria-post-vuelo" title="Permanent link">&para;</a></h2>
+<p>Cada ejecución del lazo táctico — interactiva o lanzada desde la estación terrena (cap. 4) — genera, salvo que se desactive explícitamente, una carpeta autocontenida identificada por el nombre de la misión y una marca de tiempo ISO de inicio. Dentro de ella conviven: una traza en formato JSONL con el estado completo de cada ciclo, la misma traza en CSV para inspección tabular directa, los fotogramas enviados al modelo de lenguaje en cada consulta deliberativa (nombrados por su marca de tiempo real de captura), un resumen agregado por waypoint (ciclos consumidos, proporción de ciclos deliberativos y eventos de escalación por atasco de cada tramo de la misión) y, opcionalmente, un video del vuelo completo con overlay de la acción tomada en cada ciclo.</p>
+<p>La traza CSV/JSONL es el contrato de evidencia primaria del sistema: cada fila conserva el prompt exacto y la respuesta cruda de toda consulta al modelo de lenguaje, la telemetría completa del vehículo, el estado del campo de obstáculos por sector y la ruta del grafo de decisión que resolvió ese ciclo — es la fuente de la que se derivan las métricas del capítulo 10 y el análisis de modos de falla del capítulo 9.</p>
+<p>Para la inspección cualitativa del comportamiento del sistema en un vuelo particular, cada corrida incluye además un visor HTML autocontenido que sincroniza en ambos sentidos la reproducción del video con la fila correspondiente de la traza: avanzar el video actualiza automáticamente el panel de detalle del ciclo correspondiente (incluyendo el prompt, la respuesta y los fotogramas enviados al modelo en ese instante), y seleccionar una fila de la tabla salta el video al momento correspondiente. Esta herramienta permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema y por qué tomó la decisión que tomó.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="js/print-site.js"></script>
+      
+    
+  </body>
+</html>

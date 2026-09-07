@@ -213,7 +213,7 @@ El escenario `townsim_clear` para Tier 1: vuela el perímetro a −30m (sobre la
 
 El dato más significativo de Tier 1 piloto no es la velocidad sino los deadlocks: el `fsm` acumula 5 (todos resueltos por escaneo profundo `deep_vlm`); el `slm`, 3; el `reactive`, 0. Con 1 semilla, este patrón es indicativo pero no concluyente — puede reflejar diferencias en la gestión de atascos entre brazos, o simplemente la varianza de una única semilla.
 
-El escenario de interés real para Tier 1 es `townsim_clear`: un recorrido que cruza el interior del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí donde el escaneo deliberativo profundo (`deep_vlm`) tiene un caso de uso genuino frente al escape ciego (`blind`): la FSM y el `reactive` deben bordear obstáculos por heurística, mientras el `slm` puede consultar al VLM para elegir el corredor. Los datos de `townsim_clear` solo establecen la cota de partida.
+El escenario de interés real para Tier 1 es `townsim_ini`: un recorrido que cruza el interior del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí donde el escaneo deliberativo profundo (`deep_vlm`) tiene un caso de uso genuino frente al escape ciego (`blind`): la FSM y el `reactive` deben bordear obstáculos por heurística, mientras el `slm` puede consultar al VLM para elegir el corredor. Los datos de `townsim_clear` solo establecen la cota de partida.
 
 ### 11.4.3 Tier 2 — Entorno urbano denso (`citysim_clear`)
 

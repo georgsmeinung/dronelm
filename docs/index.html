@@ -41,7 +41,7 @@
         </div>
         <div class="thesis-meta-item">
           <span class="meta-label">Período</span>
-          <span class="meta-value">2024 / 2025</span>
+          <span class="meta-value">2024 / 2026</span>
         </div>
       </div>
 
@@ -57,8 +57,11 @@
           <li><a href="#stack">Stack Tecnológico</a></li>
           <li><a href="#evaluacion">Evaluación y Calibración</a></li>
           <li><a href="#instalacion">Instalación y Uso</a></li>
+          <li><a href="#informe">Informe de Tesis</a></li>
         </ul>
         <a class="nav-page" href="grafo-de-control.html">Grafo de Control Táctico</a>
+        <a class="nav-page" href="informe/00-COVER.html">Informe de Tesis (HTML)</a>
+        <a class="nav-page" href="informe/tesis-dronelm.pdf">Informe de Tesis (PDF)</a>
       </nav>
     </aside>
 
@@ -75,7 +78,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Versión: 2026-09-03</span>
+          <span class="badge-pill badge-teal">Versión: 2026-09-07</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -86,23 +89,31 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-09-03)</h2>
+        <h2>Actualizaciones Recientes (2026-09-07)</h2>
         <div class="card-grid">
           <div class="card">
-            <h4>Escalación ante Atascos: Barrido Panorámico + Consulta al Modelo de Visión</h4>
-            <p>Ante un atasco duro sin corredor visible, el sistema ejecuta un barrido de rumbos con captura de fotogramas y una única consulta al VLM con el panorama completo, antes de recurrir al escape ciego determinista como red de seguridad.</p>
+            <h4>Tier 2 / CitySim Validado — Corridas Piloto I3</h4>
+            <p>Primer escenario de Tier 2 (<code>citysim_clear</code>) validado con los tres brazos: patrón <em>climb-first</em> a −70 m AGL (por encima de la línea de tejados). 3/3 <code>success=True</code>, 0 colisiones, 0 deadlocks en seed=1.</p>
           </div>
           <div class="card">
-            <h4>Auditoría de Vuelo: Video Sincronizado con la Traza de Decisiones</h4>
-            <p>Cada corrida genera un visor HTML autocontenido que sincroniza en ambos sentidos la reproducción del video anotado con la fila correspondiente del CSV, incluyendo el prompt y la respuesta exactos de cada consulta al modelo.</p>
+            <h4>Configuración Unificada: <code>config/.env</code> como Fuente Única</h4>
+            <p>Todos los subproyectos leen de <code>config/.env</code> en la raíz del repo. Antes cada subproyecto tenía su propio <code>.env</code> con valores distintos para las mismas variables (p. ej. el umbral de atasco difería entre el VLM y el planificador de misión).</p>
           </div>
           <div class="card">
-            <h4>Registro de Vuelo por Corrida y Resumen por Waypoint</h4>
-            <p>Cada ejecución del lazo táctico queda en una carpeta autocontenida (JSONL, CSV, fotogramas, video) con un resumen agregado de ciclos y tasa deliberativa por tramo de la misión.</p>
+            <h4>Escaneo Espacial Pre-vuelo (<code>spatial_scan</code>)</h4>
+            <p>Barrido de yaw antes de iniciar el lazo táctico: captura fotogramas en N rumbos y los envía en una única consulta al VLM para obtener un contexto cualitativo del entorno de despegue. Advisory — no safety-critical; un VLM caído nunca impide el despegue.</p>
           </div>
           <div class="card">
-            <h4>WebDCS: Planificación Manual Simplificada y Saneamiento de Código</h4>
-            <p>Interfaz rediseñada con foco en la edición manual de waypoints; eliminado un mecanismo de streaming de video en vivo que había quedado sin uso tras un rediseño previo del frontend.</p>
+            <h4>Trazabilidad de Corridas: <code>code_version</code> en <code>summary.json</code></h4>
+            <p><code>FlightLogger.close()</code> ahora escribe el hash de commit Git en el resumen de cada corrida. La política de cuarentena establece que solo corridas con <code>code_version</code> posterior al 2026-09-03 (fix de canales de color R/B) son válidas para el análisis estadístico.</p>
+          </div>
+          <div class="card">
+            <h4>Movimiento Vertical Puro (<code>near_vertical</code>) en WaypointTracker</h4>
+            <p>Cuando el siguiente waypoint está directamente arriba o abajo (<code>dist_xy &lt; 1 m</code>, <code>|dz| &gt; 0.3 m</code>), se fuerza <code>vx = 0</code> para ascenso o descenso estrictamente vertical. Necesario para el patrón <em>climb-first</em> de Tier 2.</p>
+          </div>
+          <div class="card">
+            <h4>Limpieza de Código Legacy y Formato Preloop</h4>
+            <p>Eliminados <code>debug_tracker.py</code>, <code>airsim-poc/.env.copy</code> y el formato <code>.preloop.json</code>; <code>loop_runner.py</code> ahora apunta directamente al manifiesto canónico en <code>missions/flightplans/</code>.</p>
           </div>
         </div>
       </section>
@@ -401,7 +412,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-09-03):</strong> Sistema operacional en simulación. Navegación autónoma validada con AUC TTC de 0.96–0.97. Documentación y análisis finalizados.</p>
+          <p><strong>Estado actual (2026-09-07):</strong> Sistema operacional en simulación. Los tres Tiers validados en corridas piloto (seed=1): Tier 0 MiniSim, Tier 1 TownSim, Tier 2 CitySim (<code>citysim_clear</code>, patrón <em>climb-first</em> −70 m AGL). 138 pruebas unitarias. Configuración unificada en <code>config/.env</code>. Trazabilidad de corridas con <code>code_version</code> (hash Git). Pendiente: batch G4 completo (≥5 semillas por celda factorial).</p>
         </div>
       </section>
 
@@ -579,10 +590,29 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
           auditoría de las decisiones del SLM se hace post-vuelo con el visor HTML generado en cada corrida.</p>
       </section>
 
+      <!-- Informe de Tesis -->
+      <section id="informe">
+        <h2>Informe de Tesis</h2>
+        <p>El informe completo está disponible como sitio HTML navegable (generado con MkDocs Material) y como PDF de impresión. Ambos se generan desde los fuentes en <code>informe/</code> ejecutando el script <code>informe/build.ps1</code>.</p>
+        <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+          <div class="card" style="text-align:center;">
+            <h4>Informe HTML</h4>
+            <p>Navegación lateral completa, búsqueda integrada y modo oscuro/claro. Incluye todos los capítulos (00–13) y cinco anexos.</p>
+            <a href="informe/00-COVER.html" class="badge-pill badge-teal" style="display:inline-block;margin-top:8px;">Abrir Informe (HTML)</a>
+          </div>
+          <div class="card" style="text-align:center;">
+            <h4>Informe PDF</h4>
+            <p>Versión de impresión generada por Chrome headless a partir de la página de impresión unificada de MkDocs.</p>
+            <a href="informe/tesis-dronelm.pdf" class="badge-pill badge-blue" style="display:inline-block;margin-top:8px;">Descargar PDF</a>
+          </div>
+        </div>
+        <p style="margin-top:1rem;font-size:0.875rem;color:var(--text-muted,#888);">Para regenerar: <code>.\informe\build.ps1</code> desde la raíz del repositorio.</p>
+      </section>
+
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>Repositorio: georgsmeinung/dronelm</p>
-        <p>Fecha de actualización: 2026-09-03</p>
+        <p>Fecha de actualización: 2026-09-07</p>
       </footer>
     </main>
   </div>

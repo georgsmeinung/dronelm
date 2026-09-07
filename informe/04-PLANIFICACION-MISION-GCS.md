@@ -50,7 +50,7 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 - **`waypoints`:** lista ordenada de puntos de paso tridimensionales expresados en el marco de coordenadas estándar aeronáutico **NED** (*North-East-Down*, donde $z < 0$ representa altitud sobre el punto de despegue).
 - **`rules_of_engagement`:** parámetros operacionales y límites cinemáticos globales, tales como velocidad máxima de crucero (`max_speed_mps`), rangos de altitud permitidos y umbrales de seguridad para retorno automático al punto de lanzamiento (*Return-to-Launch*).
 
-En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la **reproducibilidad experimental**: los escenarios de benchmark por Tiers (`minisim_clear`, `townsim_ini`, `citymap_pilot`) se definen a través de manifiestos fijos e inmutables, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.
+En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la **reproducibilidad experimental**: los escenarios de benchmark por Tiers (`minisim_clear`, `townsim_ini`, `citysim_clear`) se definen a través de manifiestos fijos e inmutables, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.
 
 ## 4.4 Estación Terrena WebDCS: planificación y auditoría post-vuelo
 

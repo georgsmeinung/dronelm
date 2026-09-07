@@ -53,8 +53,11 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
 
 - Completar §7.3 (calibración del canal de ocupación) y §7.4 (validación de derotación
   con giros agresivos) una vez disponibles esos datos.
-- Escribir los capítulos 11 (Resultados) y 12 (Conclusiones) con la corrida experimental
-  completa (actualmente solo hay corridas preliminares sin servidor LLM activo).
+- Completar los capítulos 11 (Resultados) y 12 (Conclusiones) con el batch G4 completo
+  (≥5 semillas por celda factorial). Corridas piloto con servidor LLM activo completas:
+  Tier 0 (`minisim_clear`), Tier 1 (`townsim_clear`), Tier 2 (`citysim_clear`), seed=1
+  para los tres brazos en cada escenario. Pendiente: semillas 2–5, escenarios con
+  obstáculos (`townsim_ini`, `citymap_a`).
 - Depurar `13-REFERENCIAS.md`: es una compilación exhaustiva de la bibliografía del plan
   de tesis aprobado (`plan_tesis/plan-tesis.md` y `plan_tesis/bibliografia/`) más la
   encontrada en `informe/bibliografia/`; falta eliminar lo no citado en el texto final y

@@ -1,0 +1,6 @@
+graph LR
+    A["Fotograma RGB<br/>1080×720 = 777,600 px"] --> B["YOLO Detect<br/>~5-15 bboxes"]
+    B --> C["translator.py<br/>Heurística monocular"]
+    C --> D["3 Sectores<br/>DESPEJADO/BLOQUEADO"]
+    D --> E["~80 tokens texto<br/>al SLM"]
+    E --> F["macro_action<br/>1 de 5 opciones"]

@@ -18,7 +18,7 @@ Superando las formulaciones exploratorias preliminares (como los borradores `man
 
 - **Tier 0 (Línea de base / Control):** Escenario `minisim_clear` sobre el mapa `crater.png` (MiniSim). Terreno despejado sin obstáculos para cuantificar el guiado puro, la cota inferior de latencia de ciclo y el consumo cinemático ideal.
 - **Tier 1 (Entorno intermedio / Vegetación y morfología orgánica):** Escenarios sobre el mapa `townsim_calib.png` (TownSim), abarcando la suite de pruebas `T-CALIB-0` a `T-CALIB-5` y la misión de recorrido perimetral `townsim_ini`. Incluye específicamente el escenario `T-CALIB-2` (`townsim_calib_cruce_frontal.json`), diseñado para imponer un **bloqueo frontal masivo genuino** frente a una fachada continua, forzando la activación de las ramas deliberativas y de resolución de atascos.
-- **Tier 2 (Entorno complejo / Cañones urbanos y corredores angostos):** Escenarios sobre `citymap.png` (CitySim, ej. `citymap_pilot.json` y `citymap_a.json`), con edificaciones de gran altura, mobiliario urbano denso y pasos restringidos tipo cuadrícula.
+- **Tier 2 (Entorno complejo / Cañones urbanos y corredores angostos):** Escenarios sobre `citysim_calib.png` (CitySim). El escenario base validado para el batch G4 es `citysim_clear.json` (perímetro de manzana con patrón *climb-first* a −70 m AGL); los escenarios con corredores angostos (`citymap_pilot.json` y `citymap_a.json`) corresponden a la fase siguiente del batch.
 
 Como principio metodológico estricto, **se descarta el teletransporte cinemático** (`start_pose` inhabilitado): todas las misiones despegan desde el *PlayerStart* nativo del nivel en Unreal Engine y ejecutan un ascenso vertical controlado previo a la navegación horizontal. A partir de las velocidades medidas en vuelo real (~2 a 3 m/s) y la cadencia táctica (5 Hz), el presupuesto temporal por corrida se dimensiona entre **600 y 900 segundos** para permitir la resolución completa de tramos complejos sin truncamiento artificial.
 
@@ -35,7 +35,7 @@ El sistema registra y evalúa las siguientes métricas cuantitativas:
   - SPL (*Success weighted by Path Length*): éxito ponderado por la razón entre la longitud de la trayectoria óptima y la efectivamente recorrida.
   - Tiempo y ciclos totales a destino.
 - **Dinámica del lazo táctico y latencias:**
-  - Latencia total por ciclo ($p50$ y $p95$), desagregada por brazo y por nodo activo del grafo de control (`reactive`, `evasive`, `deliberative`, `girar_90`, `fsm`, `spatial_scan`, `deep_scan`).
+  - Latencia total por ciclo ($p50$ y $p95$), desagregada por brazo y por nodo activo del grafo de control (`reactive`, `evasive`, `deliberative`, `girar_90`, `fsm`, `deep_scan`). La latencia del escaneo espacial pre-vuelo (`spatial_scan`, §5.0) es un costo de inicialización de única vez, registrado por separado del presupuesto por ciclo.
   - `deliberation_rate` (fracción de ciclos tácticos que invocan activamente al modelo de lenguaje) e histograma integral de rutas por corrida.
 - **Comportamiento del modelo de lenguaje (SLM/VLM):**
   - Número de invocaciones efectivas por misión (contabilizadas por transición de identificador único).

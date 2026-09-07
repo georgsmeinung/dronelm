@@ -1,0 +1,1169 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+      
+        <link rel="prev" href="08-DECISIONES-SLM.html">
+      
+      
+        <link rel="next" href="10-METODOLOGIA-EXPERIMENTAL.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>9. Modos de Falla LLM - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="css/print-site.css">
+    
+      <link rel="stylesheet" href="css/print-site-material.css">
+    
+      <link rel="stylesheet" href="css/austral.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#9-modos-de-falla-de-lazos-de-control-hibridos-con-llm" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              9. Modos de Falla LLM
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="09-MODOS-DE-FALLA-LLM.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#91-el-patron-comun-integridad-de-contratos-de-interfaz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 El patrón común: integridad de contratos de interfaz
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Instancia 1 — Desincronización de esquemas y campos ciegos (Schema Drift)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#93-instancia-2-desalineacion-temporal-en-secuencias-contextuales" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 Instancia 2 — Desalineación temporal en secuencias contextuales
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Instancia 3 — Descalibración de escala en operadores diferenciales y saturación disyuntiva
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5 Instancia 4 — Fallas compuestas en orquestadores de grafos (State Clipping y Ciclos Límite)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6 Instancia 5 — Degradaciones silenciosas en el canal de visión y telemetría de actitud
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.7 Por qué el sistema seguía volando y el modelo seguía respondiendo
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. SLM — Concepto y Ventajas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. SLM — Optimización y Desafíos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. LoRA (Alternativa No Adoptada)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#91-el-patron-comun-integridad-de-contratos-de-interfaz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 El patrón común: integridad de contratos de interfaz
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Instancia 1 — Desincronización de esquemas y campos ciegos (Schema Drift)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#93-instancia-2-desalineacion-temporal-en-secuencias-contextuales" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 Instancia 2 — Desalineación temporal en secuencias contextuales
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Instancia 3 — Descalibración de escala en operadores diferenciales y saturación disyuntiva
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5 Instancia 4 — Fallas compuestas en orquestadores de grafos (State Clipping y Ciclos Límite)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6 Instancia 5 — Degradaciones silenciosas en el canal de visión y telemetría de actitud
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.7 Por qué el sistema seguía volando y el modelo seguía respondiendo
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="9-modos-de-falla-de-lazos-de-control-hibridos-con-llm">9. Modos de falla de lazos de control híbridos con LLM<a class="headerlink" href="#9-modos-de-falla-de-lazos-de-control-hibridos-con-llm" title="Permanent link">&para;</a></h1>
+<h2 id="91-el-patron-comun-integridad-de-contratos-de-interfaz">9.1 El patrón común: integridad de contratos de interfaz<a class="headerlink" href="#91-el-patron-comun-integridad-de-contratos-de-interfaz" title="Permanent link">&para;</a></h2>
+<p>Este capítulo desarrolla el argumento central declarado en la introducción (§1.4): en un sistema robótico híbrido donde un modelo de lenguaje consume descripciones estructuradas del entorno para emitir decisiones de control, el modo de falla más crítico no radica en el razonamiento sintáctico del modelo, sino en la <strong>consistencia e integridad del contrato de datos</strong> que lo alimenta. </p>
+<p>Los modelos de lenguaje poseen una notable capacidad para racionalizar cualquier entrada estructurada y emitir respuestas plausibles, bien formadas y ejecutables, aun cuando las premisas subyacentes provengan de campos nulos, sensores degradados o datos descalibrados. Este capítulo documenta una taxonomía de cinco modos de falla estructurales identificados
+experimentalmente en la arquitectura híbrida, analizando su origen, su impacto en la toma de decisiones
+y los mecanismos de contención implementados.</p>
+<h2 id="92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift">9.2 Instancia 1 — Desincronización de esquemas y campos ciegos (Schema Drift)<a class="headerlink" href="#92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift" title="Permanent link">&para;</a></h2>
+<p>Una de las fallas más críticas en pipelines multimodales ocurre cuando existe una desincronización de contrato (<em>contract drift</em>) entre los productores de percepción y los módulos consumidores (enrutador de política, mecanismo de respaldo determinista y constructor del prompt del SLM).</p>
+<p>Cuando un campo de estado de obstáculos permanece en un valor nulo por defecto (por ejemplo, una lista vacía <code>detected_obstacles = []</code>), los módulos consumidores interpretan semánticamente ese valor como <em>"espacio aéreo totalmente despejado"</em> en lugar de <em>"sensor no disponible o no calibrado"</em>. En consecuencia:
+1. El generador de contexto construye un prompt que afirma al modelo de lenguaje que la trayectoria frontal carece de obstáculos.
+2. El SLM, actuando con perfecta coherencia lógica respecto de la información provista, comanda velocidad de crucero constante (<code>keep_going</code>).
+3. El sistema no genera excepciones de ejecución ni errores en los registros, pero el dron navega a ciegas hacia los obstáculos físicos de la escena.</p>
+<p><strong>Mecanismo de contención:</strong> La arquitectura resuelve este modo de falla unificando toda la percepción en el contrato tipado <code>ObstacleField</code> (capítulo 6). Si la estimación de flujo o telemetría no es confiable, el campo reporta explícitamente <code>confidence = 0</code> y <code>ttc_s = inf</code>, forzando al lazo de control a ingresar en modo de maniobra determinista segura o <code>degraded_hover</code> (capítulo 5), impidiendo que la ausencia de señal se disfrace de ausencia de peligro.</p>
+<h2 id="93-instancia-2-desalineacion-temporal-en-secuencias-contextuales">9.3 Instancia 2 — Desalineación temporal en secuencias contextuales<a class="headerlink" href="#93-instancia-2-desalineacion-temporal-en-secuencias-contextuales" title="Permanent link">&para;</a></h2>
+<p>El constructor de prompts para modelos de lenguaje multimodales o secuenciales frecuentemente incluye etiquetas temporales relativas (<code>[Fotograma t-2]</code>, <code>[Fotograma t-1]</code>, <code>[Fotograma t]</code>) para facilitar el análisis de velocidad de aproximación. Si el buffer histórico subyacente (<code>frame_history</code>) no se gestiona como una estructura de anillo sincrónica con marcas de tiempo verificadas, pueden inyectarse fotogramas estáticos duplicados o no sincronizados bajo rótulos de secuencia temporal activa.</p>
+<p>En este escenario, el modelo de lenguaje intenta inferir vectores de movimiento a partir de una secuencia temporal inexistente o artificialmente congelada.</p>
+<p><strong>Mecanismo de contención:</strong> Implementación de un <em>ring buffer</em> estricto con validación de estampas de tiempo ($\Delta t &gt; 0$) y adaptación dinámica del prompt: las etiquetas secuenciales solo se generan si el buffer cuenta con fotogramas temporales efectivamente diferenciados y verificados.</p>
+<h2 id="94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva">9.4 Instancia 3 — Descalibración de escala en operadores diferenciales y saturación disyuntiva<a class="headerlink" href="#94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva" title="Permanent link">&para;</a></h2>
+<p>Como se documenta en el capítulo 6 (§6.3) y el capítulo 7 (§7.3), el cálculo de derivadas espaciales mediante operadores de gradiente discretos (como Sobel de 3×3 sin factor de normalización $1/8$) induce un factor de escala de amplificación sobre la divergencia estimada.</p>
+<p>Cuando la regla de decisión integra la ocupación y el Tiempo-a-Colisión mediante una compuerta lógica disyuntiva ($OR$):
+$$\text{is_blocked} = (\text{occupancy} \ge \tau_{\text{occ}}) \lor (\text{ttc_s} \le \tau_{\text{ttc}})$$
+la saturación artificial del canal de ocupación anula la influencia del canal de TTC calibrado, provocando declaraciones sistemáticas de bloqueo ante variaciones menores de textura visual.</p>
+<p><strong>Mecanismo de contención:</strong> Normalización analítica de los kernels diferenciales y calibración cruzada de los umbrales de activación mediante curvas ROC contra canales de profundidad de referencia (capítulo 7).</p>
+<h2 id="95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite">9.5 Instancia 4 — Fallas compuestas en orquestadores de grafos (State Clipping y Ciclos Límite)<a class="headerlink" href="#95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite" title="Permanent link">&para;</a></h2>
+<p>El análisis de ejecución del grafo de control por ciclo identificó cuatro vulnerabilidades estructurales en la propagación de variables de estado entre nodos, ninguna de las cuales arrojaba excepciones en tiempo de ejecución:</p>
+<ol>
+<li><strong>Claves de control descartadas silenciosamente por el esquema del grafo.</strong> LangGraph construye los canales de estado a partir de un <code>TypedDict</code> y descarta, sin aviso, cualquier clave que un nodo escriba pero que no esté declarada en ese esquema. Tres claves de control —una que debía reiniciar el contador de progreso estancado, una que acumulaba la memoria corta de resultados de decisiones previas, y una que inyectaba sub-waypoints de esquina— cruzaban la frontera entre nodo y lazo sin estar declaradas, y se perdían en cada invocación del grafo. La consecuencia más grave fue que el contador de ciclos sin progreso nunca se reiniciaba, y crecía de forma monótona.</li>
+<li><strong>Un ciclo límite de período 3 en la propia red de seguridad.</strong> El mecanismo pensado para limitar los reintentos de una maniobra de escape frenaba el vuelo pero, en la misma rama de código, también reseteaba a cero el contador de reintentos — es decir, la red de seguridad se reseteaba a sí misma, convirtiendo lo que debía ser un estado terminal en un ciclo que se repetía indefinidamente.</li>
+<li><strong>Una métrica de progreso auto-inconsistente por unidades mezcladas.</strong> El umbral de "ciclos sin progreso" se expresaba en ciclos, y el umbral de distancia mínima de progreso se expresaba en metros, definidos de forma independiente entre sí; combinados, exigían una velocidad de acercamiento sostenida mayor a la que el guiado en un giro cerrado podía físicamente entregar. El resultado era que el mecanismo de "atasco" se disparaba de forma prácticamente garantizada a los pocos ciclos de iniciar la misión, sin que hubiera ningún obstáculo real de por medio.</li>
+<li><strong>Un mecanismo de escape ciego a la percepción.</strong> El enrutador de decisiones activaba la rama de escape por atasco antes de consultar el campo de obstáculos, así que en varios ciclos consecutivos en los que la percepción reportaba con evidencia válida un sector lateral despejado, el dron siguió ascendiendo de todos modos: la evidencia de que existía una salida disponible no llegaba a considerarse antes de decidir.</li>
+</ol>
+<p>La combinación de estos cuatro problemas, más una macro-acción de ascenso con una deriva lateral no justificada en su definición cinemática (corregida junto con el resto de esta cadena; ver §8.4), produjo en una corrida de validación un ascenso acumulado del orden de 356 metros en una sola misión, sin que el sistema lo reportara como una falla — desde la perspectiva de las métricas agregadas de esa corrida, era simplemente una misión que no llegó a destino, no un ciclo de control atrapado en un estado absorbente. La corrección de estos cuatro problemas —declarar explícitamente las claves de estado, hacer que el reintento agotado enclave y cambie de estrategia en lugar de resetearse, medir el progreso por distancia horizontal en vez de tridimensional, y consultar la evidencia de percepción antes de decidir el escape— está incorporada en la arquitectura descrita en el capítulo 5.</p>
+<h2 id="96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud">9.6 Instancia 5 — Degradaciones silenciosas en el canal de visión y telemetría de actitud<a class="headerlink" href="#96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud" title="Permanent link">&para;</a></h2>
+<p>La transición hacia una deliberación multimodal directa (VLM) expuso una quinta categoría de fallas de contrato, vinculadas a la fidelidad sensorial de los datos crudos presentados al modelo:</p>
+<ol>
+<li><strong>Inversión cromática persistente (RGB vs. BGR):</strong> Durante meses de experimentación, el cliente de captura de simulación entregó el buffer de imagen de Unreal Engine en formato RGB nativo a un pipeline que asumía la convención BGR de OpenCV. En consecuencia, el modelo de visión deliberó sistemáticamente sobre imágenes con canales rojo y azul invertidos (fachadas terracota observadas en tonos fríos azulados y cielos amarillentos). El VLM jamás emitió una queja sintáctica ni interrumpió su servicio: procesaba los fotogramas y emitía decisiones plausibles a partir de un espectro cromático falso.</li>
+<li><strong>Contaminación por primitivas de depuración en el espacio 3D:</strong> Trazas visuales dibujadas en el mundo virtual por scripts de inspección previa (<code>simPlotLineStrip</code> en Unreal Engine) no se limpiaban al iniciar el vuelo. La cámara a bordo las capturaba como franjas geométricas reales en la escena, induciendo al VLM a interpretar líneas de depuración como cables u obstáculos físicos delante del dron.</li>
+<li><strong>Supresión espuria de ángulos de actitud:</strong> Debido a que el binding <code>cosysairsim</code> no implementaba <code>to_eularian_angles</code>, los ángulos de <em>pitch</em> y <em>roll</em> permanecían fijados en $0.0^\circ$ en cada prompt, privando al modelo de conocer la inclinación física real del vehículo durante maniobras de aceleración.</li>
+</ol>
+<p><strong>Mecanismos de contención:</strong> Corrección de la transposición de canales en memoria en el punto de captura (<code>AirSimClient.capture()</code>), llamada obligatoria de limpieza de primitivas (<code>simFlushPersistentMarkers()</code>) al inicializar la conexión, y cálculo matemático directo de ángulos de Euler a partir del cuaternión de orientación.</p>
+<h2 id="97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo">9.7 Por qué el sistema seguía volando y el modelo seguía respondiendo<a class="headerlink" href="#97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo" title="Permanent link">&para;</a></h2>
+<p>Ninguno de los cinco modos de falla descritos en este capítulo se manifestó como un error visible en tiempo de ejecución: en las instancias multimodales y de prompt, el modelo de lenguaje seguía recibiendo entradas bien formadas y devolvía decisiones estructuradas y plausibles; en la orquestación del grafo, el lazo táctico seguía ejecutándose sin excepciones, ciclo tras ciclo. En todos los casos, el sistema "funcionaba" en el sentido más superficial de la palabra — no se caía, no arrojaba errores — mientras tomaba decisiones sistemáticamente equivocadas por razones que solo se hacían visibles leyendo el contrato entre quien produce un dato y quien lo consume, nunca observando el comportamiento agregado del vuelo. Es, en conjunto, un resultado metodológico sobre cómo depurar lazos de control híbridos con modelos de lenguaje, no una lista de anécdotas de desarrollo: la observación del comportamiento —la herramienta de depuración más natural para un sistema que "parece" razonar— es precisamente la que menos sirve para encontrar esta clase de error.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="js/print-site.js"></script>
+      
+    
+  </body>
+</html>

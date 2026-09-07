@@ -1,0 +1,1154 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+      
+        <link rel="prev" href="09-MODOS-DE-FALLA-LLM.html">
+      
+      
+        <link rel="next" href="11-RESULTADOS.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>10. Metodología Experimental - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="css/print-site.css">
+    
+      <link rel="stylesheet" href="css/print-site-material.css">
+    
+      <link rel="stylesheet" href="css/austral.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#10-metodologia-experimental" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              10. Metodología Experimental
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#101-diseno-experimental" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 Diseño experimental
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10.1 Diseño experimental">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#escenarios-de-prueba-y-jerarquia-de-tiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Escenarios de prueba y jerarquía de Tiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#102-metricas-reportadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 Métricas reportadas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#103-protocolo-estadistico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.3 Protocolo estadístico
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#104-reproducibilidad-auditoria-y-cuarentena-de-datos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4 Reproducibilidad, auditoría y cuarentena de datos
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. SLM — Concepto y Ventajas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. SLM — Optimización y Desafíos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. LoRA (Alternativa No Adoptada)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#101-diseno-experimental" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 Diseño experimental
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10.1 Diseño experimental">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#escenarios-de-prueba-y-jerarquia-de-tiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Escenarios de prueba y jerarquía de Tiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#102-metricas-reportadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 Métricas reportadas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#103-protocolo-estadistico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.3 Protocolo estadístico
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#104-reproducibilidad-auditoria-y-cuarentena-de-datos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4 Reproducibilidad, auditoría y cuarentena de datos
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="10-metodologia-experimental">10. Metodología experimental<a class="headerlink" href="#10-metodologia-experimental" title="Permanent link">&para;</a></h1>
+<h2 id="101-diseno-experimental">10.1 Diseño experimental<a class="headerlink" href="#101-diseno-experimental" title="Permanent link">&para;</a></h2>
+<p>La evaluación compara tres brazos de decisión sobre el mismo <code>ObstacleField</code> (cap. 6), el mismo espacio de macro-acciones y el mismo traductor a comandos cinemáticos (<code>action_to_command</code>, cap. 8):</p>
+<ul>
+<li><strong><code>slm</code></strong> — el modelo de lenguaje multimodal (VLM, típicamente Qwen2.5-VL-3B) como capa táctica y deliberativa (cap. 8). Durante la espera de respuesta del modelo, el sistema aplica un avance cauto a velocidad reducida (<code>DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s</code>) en lugar de un frenado total, preservando la traslación necesaria para que el estimador de flujo óptico mantenga confianza; solo se comanda detención total incondicional ante un bloqueo frontal inminente y confirmado (<code>close_structural</code>). El modelo delibera de forma asíncrona bajo un watchdog de seguridad con respaldo determinista ante timeout o respuestas no conformes, recibiendo un historial temporal de fotogramas ($t$ y $t-1$), notas cinemáticas (<code>pitch</code>, <code>roll</code>, velocidad) y el motivo explícito de la consulta.</li>
+<li><strong><code>fsm</code></strong> — una máquina de estados finitos explícita (<code>CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE</code>), con transiciones gobernadas por umbrales fijos sobre el mismo <code>ObstacleField</code>. Es la línea de base directa contra la que se evalúa la hipótesis de la tesis: alta predictibilidad y costo computacional mínimo, pero sin capacidad de razonamiento contextual ni interpretación semántica del entorno.</li>
+<li><strong><code>reactive</code></strong> — navegación guiada al waypoint sin evasión de obstáculos: cota inferior de rendimiento para desacoplar qué porción del desempeño proviene del lazo táctico de evasión y cuánto del seguimiento cinemático de base.</li>
+</ul>
+<p>Adicionalmente, el diseño incorpora como factor experimental cruzado la <strong>estrategia de resolución de atascos</strong> (<code>DEADLOCK_STRATEGY</code>, cap. 5), compartida por los brazos <code>slm</code> y <code>fsm</code>:
+- <strong><code>blind</code></strong>: maniobra reactiva de escape cinemático tradicional (ganancia de altura o rotaciones de desenganche en bucle abierto).
+- <strong><code>deep_vlm</code></strong>: barrido panorámico espacial multifotograma ejecutado dentro del lazo y consulta deliberativa al VLM para identificar visualmente un corredor despejado antes de forzar el escape ciego como último recurso.</p>
+<h3 id="escenarios-de-prueba-y-jerarquia-de-tiers">Escenarios de prueba y jerarquía de Tiers<a class="headerlink" href="#escenarios-de-prueba-y-jerarquia-de-tiers" title="Permanent link">&para;</a></h3>
+<p>Superando las formulaciones exploratorias preliminares (como los borradores <code>manhattan_a</code> y <code>manhattan_b</code>, descartados por inconsistencias topográficas y de mapas en el simulador), el protocolo define una jerarquía formal en tres niveles crecientes de dificultad ambiental:</p>
+<ul>
+<li><strong>Tier 0 (Línea de base / Control):</strong> Escenario <code>minisim_clear</code> sobre el mapa <code>crater.png</code> (MiniSim). Terreno despejado sin obstáculos para cuantificar el guiado puro, la cota inferior de latencia de ciclo y el consumo cinemático ideal.</li>
+<li><strong>Tier 1 (Entorno intermedio / Vegetación y morfología orgánica):</strong> Escenarios sobre el mapa <code>townsim_calib.png</code> (TownSim), abarcando la suite de pruebas <code>T-CALIB-0</code> a <code>T-CALIB-5</code> y la misión de recorrido perimetral <code>townsim_ini</code>. Incluye específicamente el escenario <code>T-CALIB-2</code> (<code>townsim_calib_cruce_frontal.json</code>), diseñado para imponer un <strong>bloqueo frontal masivo genuino</strong> frente a una fachada continua, forzando la activación de las ramas deliberativas y de resolución de atascos.</li>
+<li><strong>Tier 2 (Entorno complejo / Cañones urbanos y corredores angostos):</strong> Escenarios sobre <code>citysim_calib.png</code> (CitySim). El escenario base validado para el batch G4 es <code>citysim_clear.json</code> (perímetro de manzana con patrón <em>climb-first</em> a −70 m AGL); los escenarios con corredores angostos (<code>citymap_pilot.json</code> y <code>citymap_a.json</code>) corresponden a la fase siguiente del batch.</li>
+</ul>
+<p>Como principio metodológico estricto, <strong>se descarta el teletransporte cinemático</strong> (<code>start_pose</code> inhabilitado): todas las misiones despegan desde el <em>PlayerStart</em> nativo del nivel en Unreal Engine y ejecutan un ascenso vertical controlado previo a la navegación horizontal. A partir de las velocidades medidas en vuelo real (~2 a 3 m/s) y la cadencia táctica (5 Hz), el presupuesto temporal por corrida se dimensiona entre <strong>600 y 900 segundos</strong> para permitir la resolución completa de tramos complejos sin truncamiento artificial.</p>
+<p>El criterio de arranque para el batch completo exige la validación previa de misiones piloto exitosas (<code>success = True</code>, 0 colisiones) en cada nivel. Se ejecutan al menos <strong>cinco semillas por celda factorial</strong> ($\text{Brazo} \times \text{Estrategia de Atasco} \times \text{Tier}$) mediante el runner automatizado headless (<code>experiments/runner.py</code>).</p>
+<h2 id="102-metricas-reportadas">10.2 Métricas reportadas<a class="headerlink" href="#102-metricas-reportadas" title="Permanent link">&para;</a></h2>
+<p>El sistema registra y evalúa las siguientes métricas cuantitativas:</p>
+<ul>
+<li><strong>Eficacia y seguridad de vuelo:</strong></li>
+<li>Tasa de éxito de misión (<code>success_rate</code>, arribo a todos los waypoints dentro del presupuesto).</li>
+<li>Tasa de colisiones totales por misión y normalizadas por kilómetro recorrido.</li>
+<li>Distancia mínima a obstáculo, percentil 5 (<code>min_obstacle_dist_m</code>), medida mediante el canal de profundidad a cadencia reducida con guardia arquitectónica de no contaminación sobre el lazo de control (cap. 5).</li>
+<li>SPL (<em>Success weighted by Path Length</em>): éxito ponderado por la razón entre la longitud de la trayectoria óptima y la efectivamente recorrida.</li>
+<li>Tiempo y ciclos totales a destino.</li>
+<li><strong>Dinámica del lazo táctico y latencias:</strong></li>
+<li>Latencia total por ciclo ($p50$ y $p95$), desagregada por brazo y por nodo activo del grafo de control (<code>reactive</code>, <code>evasive</code>, <code>deliberative</code>, <code>girar_90</code>, <code>fsm</code>, <code>deep_scan</code>). La latencia del escaneo espacial pre-vuelo (<code>spatial_scan</code>, §5.0) es un costo de inicialización de única vez, registrado por separado del presupuesto por ciclo.</li>
+<li><code>deliberation_rate</code> (fracción de ciclos tácticos que invocan activamente al modelo de lenguaje) e histograma integral de rutas por corrida.</li>
+<li><strong>Comportamiento del modelo de lenguaje (SLM/VLM):</strong></li>
+<li>Número de invocaciones efectivas por misión (contabilizadas por transición de identificador único).</li>
+<li>Tasa de <em>fallback</em> determinista ante respuestas inválidas o fuera de esquema.</li>
+<li>Tasa de <em>timeout</em> del watchdog asíncrono.</li>
+<li>Tasa de adherencia sintáctica (<code>adherence_rate</code>), con y sin decodificación gramatical estructurada
+    (§8.2).</li>
+<li><strong>Resolución de atascos (Ablation H2/H3):</strong></li>
+<li>Tasa de resolución de atascos mediante escaneo profundo (<code>deep_scan_resolution_rate</code>).</li>
+<li>Promedio de ciclos consumidos para resolver el atasco (<code>deep_scan_avg_cycles_to_resolve</code>).</li>
+<li>Tasa de caída a escape ciego de respaldo (<code>deep_scan_fallback_rate</code>).</li>
+<li><strong>Desglose espacial por Waypoint:</strong></li>
+<li>Métricas segmentadas por tramo de misión (<code>&lt;stem&gt;.summary_by_wp.csv</code>), permitiendo aislar el comportamiento en tramos de ascenso inicial vertical de las fases de crucero y maniobra horizontal.</li>
+</ul>
+<h2 id="103-protocolo-estadistico">10.3 Protocolo estadístico<a class="headerlink" href="#103-protocolo-estadistico" title="Permanent link">&para;</a></h2>
+<p>La comparación entre brazos y configuraciones se realiza mediante pruebas no paramétricas (prueba U de Mann-Whitney para comparaciones pareadas y Kruskal-Wallis para factores múltiples) calculadas sobre las distribuciones de las semillas de cada combinación, reportando además el tamaño de efecto (Cliff's Delta o correlación de rango biserial). </p>
+<p>El análisis no se limita a valores agregados globales, sino que evalúa el rendimiento <strong>desagregado por tipo de escenario y morfología de obstáculo</strong>. Esta formulación permite discernir con precisión cuándo la capacidad de interpretación contextual del VLM proporciona ventajas medibles (por ejemplo, al anticipar salidas en pasajes bloqueados o seleccionar corredores abiertos entre vegetación) y en qué situaciones una heurística rígida (FSM) alcanza un rendimiento equivalente a una fracción mínima del costo computacional.</p>
+<h2 id="104-reproducibilidad-auditoria-y-cuarentena-de-datos">10.4 Reproducibilidad, auditoría y cuarentena de datos<a class="headerlink" href="#104-reproducibilidad-auditoria-y-cuarentena-de-datos" title="Permanent link">&para;</a></h2>
+<p>El subsistema de registro (<code>src/logging/flight_logger.py</code>, <code>flight_video.py</code>, <code>flight_viewer.py</code>) genera por cada misión un directorio autónomo de auditoría (<code>airsim-runs/&lt;mission_id&gt;-&lt;timestamp&gt;/</code>) que comprende:</p>
+<ol>
+<li><strong>Telemetría granular:</strong> Archivo <code>JSONL</code> estructurado ciclo a ciclo y archivo <code>CSV</code> correspondiente para análisis tabular directo.</li>
+<li><strong>Resúmenes agregados:</strong> <code>summary.json</code> con los indicadores globales de la corrida y <code>summary_by_wp.csv</code> con el desglose por waypoint.</li>
+<li><strong>Auditoría visual forense del VLM:</strong> Almacenamiento individual en formato <code>PNG</code> (<code>photo-&lt;timestamp_ISO&gt;.png</code>) de cada fotograma exacto presentado al modelo, preservando el timestamp de captura real y evitando discrepancias de inferencia.</li>
+<li><strong>Grabación de video continua sincronizada:</strong> Archivo <code>.webm</code> (códec VP8 sin dependencias de licencias propietarias) grabado a la tasa nominal <code>LOOP_HZ</code>, con superposición en pantalla de la telemetría cinemática, lecturas sectoriales de TTC y el nodo activo del grafo.</li>
+<li><strong>Visor interactivo offline (<code>viewer.html</code>):</strong> Aplicación web embebida en la carpeta de la corrida que vincula un deslizador temporal con el video y la tabla de telemetría, permitiendo inspeccionar sincronizadamente el prompt textual, los fotogramas y la respuesta del modelo en cada decisión.</li>
+</ol>
+<p><strong>Trazabilidad y cuarentena experimental:</strong> Cada corrida incorpora automáticamente el hash de commit de Git (<code>code_version</code>) en <code>summary.json</code>. Para garantizar la validez científica de los resultados, se establece una <strong>política estricta de cuarentena</strong>: ningún vuelo anterior al 2026-09-03 se incluye en el análisis estadístico formal del capítulo 11, dado que los registros previos estuvieron expuestos a artefactos instrumentales ya corregidos (inversión de canales de color R/B en la captura, persistencia de líneas de depuración en el visor 3D y supresión espuria de los ángulos de <em>pitch</em> y <em>roll</em>).</p>
+<p>El conjunto de validación de TTC (cap. 7), junto con los archivos de telemetría y configuración del batch definitivo, serán archivados y publicados con un identificador digital persistente (DOI vía Zenodo), garantizando la completa auditabilidad y reproducibilidad de la tesis.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="js/print-site.js"></script>
+      
+    
+  </body>
+</html>

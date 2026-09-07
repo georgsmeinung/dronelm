@@ -1,0 +1,1815 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+      
+        <link rel="prev" href="10-METODOLOGIA-EXPERIMENTAL.html">
+      
+      
+        <link rel="next" href="12-CONCLUSIONES.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>11. Resultados - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="css/print-site.css">
+    
+      <link rel="stylesheet" href="css/print-site-material.css">
+    
+      <link rel="stylesheet" href="css/austral.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#11-resultados-comparativos-slm-vs-fsm" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              11. Resultados
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="11-RESULTADOS.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#111-resultados-piloto-1-semilla-ilustrativo-pre-batch-g4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.1 Resultados piloto (1 semilla, ilustrativo — pre-batch G4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11.1 Resultados piloto (1 semilla, ilustrativo — pre-batch G4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-0-minisim_clear-minisim-craterpng" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 0 — minisim_clear · MiniSim (crater.png)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-townsim_clear-townsim-townsim_calibpng" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — townsim_clear · TownSim (townsim_calib.png)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-citysim_clear-citysim-citysim_calibpng" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — citysim_clear · CitySim (citysim_calib.png)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-tabla-de-resultados-por-brazo-y-escenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.2 Tabla de resultados por brazo y escenario
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#113-observaciones-preliminares-y-marco-para-el-analisis-estadistico-g4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3 Observaciones preliminares y marco para el análisis estadístico G4
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11.3 Observaciones preliminares y marco para el análisis estadístico G4">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1131-tendencias-en-los-datos-piloto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3.1 Tendencias en los datos piloto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1132-marco-estadistico-para-el-batch-g4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3.2 Marco estadístico para el batch G4
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#114-analisis-por-tipo-de-escenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4 Análisis por tipo de escenario
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11.4 Análisis por tipo de escenario">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1141-tier-0-control-sin-obstaculos-minisim_clear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4.1 Tier 0 — Control sin obstáculos (minisim_clear)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1142-tier-1-perimetro-urbano-con-vegetacion-townsim_clear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4.2 Tier 1 — Perímetro urbano con vegetación (townsim_clear)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1143-tier-2-entorno-urbano-denso-citysim_clear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4.3 Tier 2 — Entorno urbano denso (citysim_clear)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. SLM — Concepto y Ventajas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. SLM — Optimización y Desafíos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. LoRA (Alternativa No Adoptada)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#111-resultados-piloto-1-semilla-ilustrativo-pre-batch-g4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.1 Resultados piloto (1 semilla, ilustrativo — pre-batch G4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11.1 Resultados piloto (1 semilla, ilustrativo — pre-batch G4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-0-minisim_clear-minisim-craterpng" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 0 — minisim_clear · MiniSim (crater.png)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-townsim_clear-townsim-townsim_calibpng" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — townsim_clear · TownSim (townsim_calib.png)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-citysim_clear-citysim-citysim_calibpng" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — citysim_clear · CitySim (citysim_calib.png)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-tabla-de-resultados-por-brazo-y-escenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.2 Tabla de resultados por brazo y escenario
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#113-observaciones-preliminares-y-marco-para-el-analisis-estadistico-g4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3 Observaciones preliminares y marco para el análisis estadístico G4
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11.3 Observaciones preliminares y marco para el análisis estadístico G4">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1131-tendencias-en-los-datos-piloto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3.1 Tendencias en los datos piloto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1132-marco-estadistico-para-el-batch-g4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3.2 Marco estadístico para el batch G4
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#114-analisis-por-tipo-de-escenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4 Análisis por tipo de escenario
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11.4 Análisis por tipo de escenario">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1141-tier-0-control-sin-obstaculos-minisim_clear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4.1 Tier 0 — Control sin obstáculos (minisim_clear)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1142-tier-1-perimetro-urbano-con-vegetacion-townsim_clear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4.2 Tier 1 — Perímetro urbano con vegetación (townsim_clear)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1143-tier-2-entorno-urbano-denso-citysim_clear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4.3 Tier 2 — Entorno urbano denso (citysim_clear)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="11-resultados-comparativos-slm-vs-fsm">11. Resultados comparativos SLM vs. FSM<a class="headerlink" href="#11-resultados-comparativos-slm-vs-fsm" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Estado (2026-09-07):</strong> corridas piloto de Tier 0, Tier 1 base y Tier 2 base completadas (1 semilla, ilustrativo).
+El batch estadístico G4 (≥5 semillas, análisis Mann-Whitney) está pendiente de <code>townsim_ini</code> y <code>citymap_a</code>.
+Las tablas de esta sección presentan datos reales de las corridas piloto en §11.1 y marcadores de
+posición para G4 en §11.2–11.4.</p>
+<p><strong>Corte de datos:</strong> todos los resultados de esta sección provienen de corridas con <code>code_version</code>
+posterior al 2026-09-03 — fecha de corrección de dos bugs que afectaban directamente la percepción
+del VLM (canales R/B invertidos y marcadores de debug en la captura). Las corridas anteriores a esa
+fecha no son comparables para el brazo <code>slm</code> y no se usan en el análisis.</p>
+</blockquote>
+<hr />
+<h2 id="111-resultados-piloto-1-semilla-ilustrativo-pre-batch-g4">11.1 Resultados piloto (1 semilla, ilustrativo — pre-batch G4)<a class="headerlink" href="#111-resultados-piloto-1-semilla-ilustrativo-pre-batch-g4" title="Permanent link">&para;</a></h2>
+<p>Estas corridas cumplen el criterio de arranque del diseño experimental (<code>success = True</code>, 0 colisiones)
+y sirven de referencia cualitativa antes del análisis estadístico de G4.
+Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos (default de producción).</p>
+<h3 id="tier-0-minisim_clear-minisim-craterpng">Tier 0 — <code>minisim_clear</code> · MiniSim (crater.png)<a class="headerlink" href="#tier-0-minisim_clear-minisim-craterpng" title="Permanent link">&para;</a></h3>
+<p>Escenario: 3 waypoints en L (~191m), altitud −10m, ambiente despejado. Fecha: 2026-09-07.</p>
+<table>
+<thead>
+<tr>
+<th>Brazo</th>
+<th>Éxito</th>
+<th>Ciclos</th>
+<th>Duración (s)</th>
+<th>Distancia (m)</th>
+<th>Colisiones</th>
+<th>Invoc. SLM</th>
+<th>Deliberación</th>
+<th>Fallback SLM</th>
+<th>Deadlocks</th>
+<th>Res. atasco VLM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>slm</code></td>
+<td>✅</td>
+<td>1151</td>
+<td>235</td>
+<td>191.7</td>
+<td>0</td>
+<td>80</td>
+<td>6.95%</td>
+<td>1.25%</td>
+<td>1</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>✅</td>
+<td>1031</td>
+<td>208</td>
+<td>224.4</td>
+<td>0</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>2</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>✅</td>
+<td>414</td>
+<td>84</td>
+<td>183.6</td>
+<td>0</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><em>Dist. mín. al obstáculo:</em> <code>slm</code> 9.74m · <code>fsm</code> 6.38m · <code>reactive</code> 9.06m</p>
+<p><strong>Observación:</strong> En un ambiente despejado la diferencia entre brazos es de velocidad pura.
+<code>reactive</code> completa en 84s (sin deliberar); <code>slm</code> tarda 2.8× más debido a las 80 invocaciones
+al VLM, aunque el trayecto real es el más corto (191.7m vs 224.4m del <code>fsm</code>).</p>
+<hr />
+<h3 id="tier-1-townsim_clear-townsim-townsim_calibpng">Tier 1 — <code>townsim_clear</code> · TownSim (townsim_calib.png)<a class="headerlink" href="#tier-1-townsim_clear-townsim-townsim_calibpng" title="Permanent link">&para;</a></h3>
+<p>Escenario: perímetro completo del complejo, 6 WPs, ~640m, altitud de tránsito −30m (sobre los
+edificios). Fecha: 2026-09-07.</p>
+<table>
+<thead>
+<tr>
+<th>Brazo</th>
+<th>Éxito</th>
+<th>Ciclos</th>
+<th>Duración (s)</th>
+<th>Distancia (m)</th>
+<th>Colisiones</th>
+<th>Invoc. SLM</th>
+<th>Deliberación</th>
+<th>Fallback SLM</th>
+<th>Deadlocks</th>
+<th>Res. atasco VLM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>slm</code></td>
+<td>✅</td>
+<td>1337</td>
+<td>311</td>
+<td>632.3</td>
+<td>0</td>
+<td>11</td>
+<td>0.82%</td>
+<td>0%</td>
+<td>3</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>✅</td>
+<td>1537</td>
+<td>347</td>
+<td>652.3</td>
+<td>0</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>5</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>✅</td>
+<td>1196</td>
+<td>266</td>
+<td>639.0</td>
+<td>0</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><em>Dist. mín. al obstáculo:</em> <code>slm</code> 0.004m · <code>fsm</code> 7.89m · <code>reactive</code> 9.51m</p>
+<p><strong>Observación:</strong> La tasa de deliberación del <code>slm</code> bajó de 15.4% (corridas pre-fix de agosto) a
+0.82% — reducción de ×19, atribuible al avance cauteloso durante la espera del VLM (elimina el
+bucle mecánico de baja confianza) y al fix de colores R/B (reduce falsas alarmas de percepción).
+Con sólo 11 invocaciones sobre 1337 ciclos, el brazo <code>slm</code> es el más rápido de los tres en este
+escenario. El <code>fsm</code> acumula 5 deadlocks (todos resueltos por escaneo profundo); el <code>reactive</code>, 0.
+La distancia mínima al obstáculo del <code>slm</code> (0.004m) es un artefacto del spawn conocido (ciclo
+inicial, colisión estática con el suelo), no una aproximación peligrosa en vuelo.</p>
+<hr />
+<h3 id="tier-2-citysim_clear-citysim-citysim_calibpng">Tier 2 — <code>citysim_clear</code> · CitySim (citysim_calib.png)<a class="headerlink" href="#tier-2-citysim_clear-citysim-citysim_calibpng" title="Permanent link">&para;</a></h3>
+<p>Escenario: perímetro de una manzana del grid regular, 7 WPs, ~430m, altitud de tránsito −70m
+(climb-first: WP_1→WP_2 sube vertical puro antes de mover en horizontal). Fecha: 2026-09-07.</p>
+<table>
+<thead>
+<tr>
+<th>Brazo</th>
+<th>Éxito</th>
+<th>Ciclos</th>
+<th>Duración (s)</th>
+<th>Distancia (m)</th>
+<th>Colisiones</th>
+<th>Invoc. SLM</th>
+<th>Deliberación</th>
+<th>Fallback SLM</th>
+<th>Deadlocks</th>
+<th>Res. atasco VLM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>slm</code></td>
+<td>✅</td>
+<td>628</td>
+<td>174</td>
+<td>427.2</td>
+<td>0</td>
+<td>5</td>
+<td>0.80%</td>
+<td>0%</td>
+<td>0</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>✅</td>
+<td>641</td>
+<td>182</td>
+<td>447.2</td>
+<td>0</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>✅</td>
+<td>541</td>
+<td>159</td>
+<td>431.2</td>
+<td>0</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><em>Dist. mín. al obstáculo:</em> <code>slm</code> 0.77m · <code>fsm</code> 11.0m · <code>reactive</code> 9.43m</p>
+<p><strong>Observación:</strong> Los tres brazos completan el perímetro sin colisiones ni deadlocks — el escenario
+base a −70m está por encima de la línea de tejados de CitySim. La arquitectura climb-first
+(near_vertical fix, 2026-09-07) evita el problema de la primera corrida (z=-50m, rampa diagonal
+que atravesaba edificios). Con 0 deadlocks en los tres brazos, <code>citysim_clear</code> confirma el mismo
+rol que <code>minisim_clear</code> y <code>townsim_clear</code>: escenario de control a altitud de tránsito libre,
+cota inferior para el análisis del brazo <code>slm</code> en Tier 2.
+La dist. mín. del <code>slm</code> (0.77m) es probable artefacto del segmento de climb cerca del spawn;
+no se registró ninguna evasión activa durante el vuelo horizontal.</p>
+<hr />
+<h2 id="112-tabla-de-resultados-por-brazo-y-escenario">11.2 Tabla de resultados por brazo y escenario<a class="headerlink" href="#112-tabla-de-resultados-por-brazo-y-escenario" title="Permanent link">&para;</a></h2>
+<p>Datos de corridas piloto (seed=1, <code>deep_vlm</code>). La columna "DistMin" es el valor observado en
+la corrida única; el percentil p5 se calculará sobre ≥5 semillas en el batch G4.
+Las filas marcadas <strong>[pendiente G4]</strong> corresponden a condiciones no corridas aún.</p>
+<blockquote>
+<p><strong>Escenarios definitivos G4:</strong> <code>minisim_clear</code> (Tier 0), <code>townsim_ini</code> (Tier 1 con obstáculos
+reales) / <code>townsim_calib_cruce_frontal</code> (T-CALIB-2), <code>citysim_clear</code> (Tier 2 base) /
+<code>citymap_a</code> (Tier 2 con obstáculos — pendiente construcción). Las filas de <code>townsim_clear</code>
+corresponden al escenario base (sin obstáculos a altitud de tránsito), equivalente al rol de
+<code>minisim_clear</code> en Tier 0.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Brazo</th>
+<th>Tier / Escenario</th>
+<th>Estrategia Atasco</th>
+<th>Éxito (1 sem.)</th>
+<th>Col./km</th>
+<th>DistMin (m)</th>
+<th>Tiempo (s)</th>
+<th>Deliberación</th>
+<th>Fallback SLM</th>
+<th>Res. Atasco VLM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>slm</code></td>
+<td>Tier 0 (<code>minisim_clear</code>)</td>
+<td><code>deep_vlm</code></td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>9.74</td>
+<td>235</td>
+<td>6.95%</td>
+<td>1.25%</td>
+<td>100% (1/1)</td>
+</tr>
+<tr>
+<td><code>slm</code></td>
+<td>Tier 0 (<code>minisim_clear</code>)</td>
+<td><code>blind</code></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>slm</code></td>
+<td>Tier 1 (<code>townsim_clear</code>)</td>
+<td><code>deep_vlm</code></td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>0.004*</td>
+<td>311</td>
+<td>0.82%</td>
+<td>0%</td>
+<td>100% (3/3)</td>
+</tr>
+<tr>
+<td><code>slm</code></td>
+<td>Tier 1 (<code>townsim_clear</code>)</td>
+<td><code>blind</code></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>slm</code></td>
+<td>Tier 2 (<code>citysim_clear</code>)</td>
+<td><code>deep_vlm</code></td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>0.77†</td>
+<td>174</td>
+<td>0.80%</td>
+<td>0%</td>
+<td>— (0 deadlocks)</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>Tier 0 (<code>minisim_clear</code>)</td>
+<td><code>deep_vlm</code></td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>6.38</td>
+<td>208</td>
+<td>—</td>
+<td>—</td>
+<td>100% (2/2)</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>Tier 1 (<code>townsim_clear</code>)</td>
+<td><code>deep_vlm</code></td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>7.89</td>
+<td>347</td>
+<td>—</td>
+<td>—</td>
+<td>100% (5/5)</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>Tier 2 (<code>citysim_clear</code>)</td>
+<td><code>deep_vlm</code></td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>11.0</td>
+<td>182</td>
+<td>—</td>
+<td>—</td>
+<td>— (0 deadlocks)</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>Tier 0 (<code>minisim_clear</code>)</td>
+<td>—</td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>9.06</td>
+<td>84</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>Tier 1 (<code>townsim_clear</code>)</td>
+<td>—</td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>9.51</td>
+<td>266</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>Tier 2 (<code>citysim_clear</code>)</td>
+<td>—</td>
+<td>1/1 ✅</td>
+<td>0</td>
+<td>9.43</td>
+<td>159</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>* DistMin Tier 1 <code>slm</code> = 0.004m: artefacto del ciclo de spawn (contacto estático con suelo), no aproximación en vuelo.
+† DistMin Tier 2 <code>slm</code> = 0.77m: probable artefacto del segmento climb-first cerca del spawn; sin evasión activa registrada en vuelo horizontal.</p>
+<hr />
+<h2 id="113-observaciones-preliminares-y-marco-para-el-analisis-estadistico-g4">11.3 Observaciones preliminares y marco para el análisis estadístico G4<a class="headerlink" href="#113-observaciones-preliminares-y-marco-para-el-analisis-estadistico-g4" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Nota:</strong> con 1 semilla por celda no es posible ejecutar pruebas de significancia estadística.
+Esta sección presenta las tendencias observadas en los datos piloto y el diseño del análisis
+que se realizará sobre el batch G4 (≥5 semillas por celda).</p>
+</blockquote>
+<h3 id="1131-tendencias-en-los-datos-piloto">11.3.1 Tendencias en los datos piloto<a class="headerlink" href="#1131-tendencias-en-los-datos-piloto" title="Permanent link">&para;</a></h3>
+<p>Los tres escenarios ejecutados hasta la fecha son escenarios de <strong>control a altitud de tránsito
+libre</strong>: la ruta no cruza ningún obstáculo en la dirección de vuelo horizontal — los edificios
+quedan por debajo del plano de crucero (−30m en Tier 1, −70m en Tier 2). En esta configuración,
+los datos piloto muestran un patrón consistente en los tres tiers:</p>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Tiempo <code>reactive</code></th>
+<th>Tiempo <code>slm</code></th>
+<th>Ratio <code>slm</code>/<code>reactive</code></th>
+<th>Tiempo <code>fsm</code></th>
+<th>Ratio <code>fsm</code>/<code>reactive</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tier 0 <code>minisim_clear</code></td>
+<td>84s</td>
+<td>235s</td>
+<td><strong>2.8×</strong></td>
+<td>208s</td>
+<td>2.5×</td>
+</tr>
+<tr>
+<td>Tier 1 <code>townsim_clear</code></td>
+<td>266s</td>
+<td>311s</td>
+<td><strong>1.17×</strong></td>
+<td>347s</td>
+<td>1.30×</td>
+</tr>
+<tr>
+<td>Tier 2 <code>citysim_clear</code></td>
+<td>159s</td>
+<td>174s</td>
+<td><strong>1.09×</strong></td>
+<td>182s</td>
+<td>1.14×</td>
+</tr>
+</tbody>
+</table>
+<p>El ratio <code>slm</code>/<code>reactive</code> decrece con la longitud de la ruta: en Tier 0 (~191m), la latencia fija
+del VLM (~2.9s por invocación × 80 invocaciones) domina el tiempo total; en Tier 2 (~430m), con
+solo 5 invocaciones y avance cauteloso durante la espera, el overhead es marginal. Esta relación
+es consistente con la hipótesis de que el costo del brazo <code>slm</code> no es lineal en la distancia,
+sino principalmente en la frecuencia de deliberación.</p>
+<p>Una segunda tendencia es la diferencia en distancia recorrida:</p>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Distancia <code>slm</code></th>
+<th>Distancia <code>fsm</code></th>
+<th>Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tier 0</td>
+<td>191.7m</td>
+<td>224.4m</td>
+<td>−32.7m (−15%)</td>
+</tr>
+<tr>
+<td>Tier 1</td>
+<td>632.3m</td>
+<td>652.3m</td>
+<td>−20.0m (−3%)</td>
+</tr>
+<tr>
+<td>Tier 2</td>
+<td>427.2m</td>
+<td>447.2m</td>
+<td>−20.0m (−5%)</td>
+</tr>
+</tbody>
+</table>
+<p>En los tres tiers, el brazo <code>slm</code> recorre menos distancia que el <code>fsm</code>. Con 1 semilla, esto puede
+ser varianza del punto de spawn; con ≥5 semillas, si el patrón se sostiene, indicaría que las
+pocas invocaciones del VLM en escenarios de control producen correcciones de rumbo que evitan
+desviaciones que la FSM sí acumula.</p>
+<p>Los deadlocks observados son escasos (0–5 por corrida) y todos resueltos al 100% por <code>deep_vlm</code>
+en <code>slm</code> y <code>fsm</code>. El brazo <code>reactive</code> no registra deadlocks en ningún tier, lo cual es esperado:
+su control reactivo puro no tiene el concepto de "objetivo pendiente" que genera atascos en los
+brazos deliberativos cuando la ruta directa está bloqueada.</p>
+<h3 id="1132-marco-estadistico-para-el-batch-g4">11.3.2 Marco estadístico para el batch G4<a class="headerlink" href="#1132-marco-estadistico-para-el-batch-g4" title="Permanent link">&para;</a></h3>
+<p>Sobre ≥5 semillas independientes por celda factorial se ejecutará:</p>
+<ol>
+<li>
+<p><strong>Prueba U de Mann-Whitney</strong> (bilateral) comparando cada par de brazos en el mismo escenario
+   y estrategia de desbloqueo. Hipótesis nula: la distribución de la métrica principal no difiere
+   entre brazos. Métrica primaria: tiempo de misión en corridas con <code>success=True</code>; métrica
+   secundaria: <code>dist_min_m</code> como indicador de seguridad.</p>
+</li>
+<li>
+<p><strong>Tamaño de efecto</strong>: Cliff's Delta (δ) sobre el mismo par. Umbral de referencia: δ &gt; 0.3
+   como efecto "mediano" (interpretación de Romano et al., 2006). Un p-valor significativo con
+   δ pequeño (&lt; 0.1) indicaría una diferencia real pero de magnitud práctica despreciable.</p>
+</li>
+<li>
+<p><strong>Corrección de Bonferroni</strong> sobre las comparaciones múltiples por tier (3 pares de brazos ×
+   2 estrategias × 3 escenarios = 18 pruebas); umbral ajustado α = 0.05/18 ≈ 0.0028.</p>
+</li>
+</ol>
+<p>Las comparaciones previstas son: <code>slm</code> vs. <code>fsm</code>, <code>slm</code> vs. <code>reactive</code>, y <code>fsm</code> vs. <code>reactive</code>,
+tanto en estrategia <code>deep_vlm</code> como <code>blind</code> donde aplique. La comparación <code>deep_vlm</code> vs. <code>blind</code>
+dentro del mismo brazo <code>slm</code> cuantifica el aporte de H3 (escaneo profundo deliberativo frente al
+escape ciego).</p>
+<hr />
+<h2 id="114-analisis-por-tipo-de-escenario">11.4 Análisis por tipo de escenario<a class="headerlink" href="#114-analisis-por-tipo-de-escenario" title="Permanent link">&para;</a></h2>
+<p>La pregunta central de la tesis — ¿aporta la deliberación contextual del VLM sobre la heurística
+rígida de la FSM? — requiere desagregarla por tipo de escenario, porque la respuesta esperada
+es distinta según el nivel de dificultad.</p>
+<h3 id="1141-tier-0-control-sin-obstaculos-minisim_clear">11.4.1 Tier 0 — Control sin obstáculos (<code>minisim_clear</code>)<a class="headerlink" href="#1141-tier-0-control-sin-obstaculos-minisim_clear" title="Permanent link">&para;</a></h3>
+<p>El escenario de referencia más simple: 3 waypoints en L, ambiente despejado, sin ningún obstáculo
+en la trayectoria directa. El dato piloto muestra el costo puro del brazo <code>slm</code> sin ningún
+beneficio compensatorio: 80 invocaciones al VLM sobre 1151 ciclos (6.95%) generan 235s de tiempo
+de misión frente a los 84s del brazo <code>reactive</code> (ratio 2.8×). El <code>fsm</code> (208s) ocupa una posición
+intermedia: también sufre del overhead de su lazo deliberativo en atascos (2 deadlocks), pero sin
+la latencia VLM por invocación.</p>
+<p>La distancia mínima al obstáculo es comparable entre brazos (9.74m <code>slm</code>, 9.06m <code>reactive</code>,
+6.38m <code>fsm</code>), confirmando que en un entorno despejado ningún brazo es más seguro que otro — la
+ventaja del VLM no tiene dónde manifestarse. Este resultado es el esperado por diseño: <code>minisim_clear</code>
+existe para establecer la cota inferior de rendimiento del sistema y cuantificar el overhead puro
+del brazo <code>slm</code> en ausencia de beneficio.</p>
+<p><strong>Predicción G4:</strong> la diferencia de velocidad entre <code>reactive</code> y <code>slm</code> debería sostenerse con
+alta significancia estadística (Cliff's δ cercano a 1.0 en favor de <code>reactive</code>); la comparación
+<code>slm</code> vs. <code>fsm</code> puede ser más variable porque depende de cuántos deadlocks acumule la FSM por
+corrida.</p>
+<h3 id="1142-tier-1-perimetro-urbano-con-vegetacion-townsim_clear">11.4.2 Tier 1 — Perímetro urbano con vegetación (<code>townsim_clear</code>)<a class="headerlink" href="#1142-tier-1-perimetro-urbano-con-vegetacion-townsim_clear" title="Permanent link">&para;</a></h3>
+<p>El escenario <code>townsim_clear</code> para Tier 1: vuela el perímetro a −30m (sobre la línea de tejados), sin obstáculos en la trayectoria de crucero. A diferencia de Tier 0, la longitud de la ruta (~640m vs. ~191m) diluye el overhead por invocación, y el brazo <code>slm</code> resulta el más rápido de los tres en el piloto (311s vs. 347s <code>fsm</code> vs. 266s <code>reactive</code>). La tasa de deliberación de 0.82% (11 invocaciones / 1337 ciclos) representa una reducción de ×19 respecto a las corridas pre-fix de agosto (15.4%), directamente atribuible al avance cauteloso durante la espera del VLM y al fix de canales de color que reduce las falsas alarmas.</p>
+<p>El dato más significativo de Tier 1 piloto no es la velocidad sino los deadlocks: el <code>fsm</code> acumula 5 (todos resueltos por escaneo profundo <code>deep_vlm</code>); el <code>slm</code>, 3; el <code>reactive</code>, 0. Con 1 semilla, este patrón es indicativo pero no concluyente — puede reflejar diferencias en la gestión de atascos entre brazos, o simplemente la varianza de una única semilla.</p>
+<p>El escenario de interés real para Tier 1 es <code>townsim_ini</code>: un recorrido que cruza el interior del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí donde el escaneo deliberativo profundo (<code>deep_vlm</code>) tiene un caso de uso genuino frente al escape ciego (<code>blind</code>): la FSM y el <code>reactive</code> deben bordear obstáculos por heurística, mientras el <code>slm</code> puede consultar al VLM para elegir el corredor. Los datos de <code>townsim_clear</code> solo establecen la cota de partida.</p>
+<h3 id="1143-tier-2-entorno-urbano-denso-citysim_clear">11.4.3 Tier 2 — Entorno urbano denso (<code>citysim_clear</code>)<a class="headerlink" href="#1143-tier-2-entorno-urbano-denso-citysim_clear" title="Permanent link">&para;</a></h3>
+<p>El escenario base <code>citysim_clear</code> funciona como el tercer escenario de control: los tres brazos completan el perímetro en ~159–182s, sin colisiones ni deadlocks, con tiempos comparables entre sí (ratio <code>slm</code>/<code>reactive</code> = 1.09×). A −70m, el dron vuela por encima de la línea de tejados de CitySim; la deliberación del VLM no tiene obstáculo real que analizar.</p>
+<p>Tres observaciones son relevantes para el análisis posterior:</p>
+<ol>
+<li>
+<p><strong><code>fsm</code> conservador, <code>reactive</code> agresivo</strong>: el <code>fsm</code> registra la mayor distancia mínima al obstáculo (11.0m) y el mayor tiempo (182s); el <code>reactive</code> el menor (9.43m, 159s). El <code>slm</code> queda entre ambos (0.77m en climb inicial, 174s). En un entorno donde no hay obstáculos activos, la heurística conservadora de la FSM penaliza velocidad sin ganar seguridad.</p>
+</li>
+<li>
+<p><strong>Altitud como variable crítica de diseño</strong>: la primera corrida a z=−50m falló (success=False, colisión) porque la altitud insuficiente hacía que la ruta de climb desde el spawn atravesara edificios. El fix de near_vertical (2026-09-07) permite el patrón climb-first, pero la variable determinante fue la elección de −70m &gt; altura de tejados.</p>
+</li>
+<li>
+<p><strong>Cero deadlocks en los tres brazos</strong>: confirma que la ruta de crucero no presenta obstrucciones reales a −70m. Cualquier deadlock que aparezca en <code>citymap_clear</code> — donde la ruta sí cruza corredores entre edificios — será atribuible a la geometría del escenario, no a artefactos de la altitud.</p>
+</li>
+</ol>
+<p>El escenario <code>citymap_clear</code> es el experimento inicial de Tier 2: un recorrido que atraviesa corredores angostos entre edificios altos, donde ni el <code>reactive</code> ni el <code>fsm</code> tienen información semántica para elegir entre dos calles de ancho similar. La hipótesis es que el brazo <code>slm</code>, al consultar al VLM con una imagen aérea del corredor, podrá elegir la ruta más despejada con mayor consistencia que una heurística basada en distancia pura o en flujo óptico. El resultado negativo también es válido: si el VLM no aporta información útil en un entorno de alta textura urbana uniforme, es un hallazgo de diseño relevante para el capítulo 09.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="js/print-site.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,4 +1,4 @@
-> **Nota de ubicación:** notas de investigación sobre LoRA (Low-Rank Adaptation) aplicado a SLM. No hay evidencia en el código actual de que LoRA se haya implementado en el pipeline final; tratar como exploración de alternativas, no como decisión adoptada, salvo que `07-DECISIONES-SLM.md` documente lo contrario. Reubicado desde `informe/Optimización de Modelos de Lenguaje Pequeños mediante LoRA.md` el 2026-08-25.
+> **Nota de ubicación:** notas de investigación sobre LoRA (Low-Rank Adaptation) aplicado a SLM. No hay evidencia en el código actual de que LoRA se haya implementado en el pipeline final; tratar como exploración de alternativas, no como decisión adoptada, salvo que `08-DECISIONES-SLM.md` documente lo contrario. Reubicado desde `informe/Optimización de Modelos de Lenguaje Pequeños mediante LoRA.md` el 2026-08-25.
 
 ---
 

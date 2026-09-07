@@ -1,0 +1,1162 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+      
+        <link rel="prev" href="12-CONCLUSIONES.html">
+      
+      
+        <link rel="next" href="anexos/A1-EXPLORACION-SLM-GGUF.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>13. Referencias - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="css/print-site.css">
+    
+      <link rel="stylesheet" href="css/print-site-material.css">
+    
+      <link rel="stylesheet" href="css/austral.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#13-referencias" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              13. Referencias
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="13-REFERENCIAS.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#131-bibliografia-citada-en-el-plan-de-trabajo-aprobado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.1 Bibliografía citada en el plan de trabajo aprobado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#132-bibliografia-adicional-en-plan_tesisbibliografia-con-archivo-bibtex-no-citada-arriba" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.2 Bibliografía adicional en plan_tesis/bibliografia/ (con archivo BibTeX, no citada arriba)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#133-pdfs-en-plan_tesisbibliografia-sin-metadata-bibliografica-estructurada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.3 PDFs en plan_tesis/bibliografia/ sin metadata bibliográfica estructurada
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#134-bibliografia-adicional-en-informebibliografia-no-incluida-en-el-plan-de-trabajo-aprobado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.4 Bibliografía adicional en informe/bibliografia/ (no incluida en el plan de trabajo aprobado)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. SLM — Concepto y Ventajas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. SLM — Optimización y Desafíos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. LoRA (Alternativa No Adoptada)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#131-bibliografia-citada-en-el-plan-de-trabajo-aprobado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.1 Bibliografía citada en el plan de trabajo aprobado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#132-bibliografia-adicional-en-plan_tesisbibliografia-con-archivo-bibtex-no-citada-arriba" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.2 Bibliografía adicional en plan_tesis/bibliografia/ (con archivo BibTeX, no citada arriba)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#133-pdfs-en-plan_tesisbibliografia-sin-metadata-bibliografica-estructurada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.3 PDFs en plan_tesis/bibliografia/ sin metadata bibliográfica estructurada
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#134-bibliografia-adicional-en-informebibliografia-no-incluida-en-el-plan-de-trabajo-aprobado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13.4 Bibliografía adicional en informe/bibliografia/ (no incluida en el plan de trabajo aprobado)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="13-referencias">13. Referencias<a class="headerlink" href="#13-referencias" title="Permanent link">&para;</a></h1>
+<p>Bibliografía compilada a partir de dos fuentes del proyecto: la citada en el plan de trabajo aprobado(<code>plan_tesis/plan-tesis.md</code>) y la disponible como archivos (PDF/BibTeX) en <code>plan_tesis/bibliografia/</code> y en <code>informe/bibliografia/</code>. Se organiza en cuatro secciones según su origen, para que la revisión y depuración posterior (eliminar entradas no citadas en el texto final, resolver duplicados menores de formato) sea trazable. El formato sigue el usado en el plan de trabajo aprobado (APA, con DOI o URL cuando está disponible).</p>
+<h2 id="131-bibliografia-citada-en-el-plan-de-trabajo-aprobado">13.1 Bibliografía citada en el plan de trabajo aprobado<a class="headerlink" href="#131-bibliografia-citada-en-el-plan-de-trabajo-aprobado" title="Permanent link">&para;</a></h2>
+<p><em>Alarm as estate agent's drone crashes into house - Property Industry Eye</em>. (s. f.). Recuperado 29 de junio de 2025, de <a href="https://propertyindustryeye.com/alarm-as-estate-agents-drone-crashes-into-house/?utm_source=chatgpt.com">https://propertyindustryeye.com/alarm-as-estate-agents-drone-crashes-into-house/?utm_source=chatgpt.com</a></p>
+<p>Aldao, E., González-de Santos, L. M., &amp; González-Jorge, H. (2022). LiDAR Based Detect and Avoid System for UAV Navigation in UAM Corridors. <em>Drones</em>, <em>6</em>(8). <a href="https://doi.org/10.3390/drones6080185">https://doi.org/10.3390/drones6080185</a></p>
+<p>Aliane, N. (2024). A Survey of Open-Source UAV Autopilots. <em>Electronics</em>, <em>13</em>(23). <a href="https://doi.org/10.3390/electronics13234785">https://doi.org/10.3390/electronics13234785</a></p>
+<p>Arnold, R., Yamaguchi, H., &amp; Tanaka, T. (2018). Search and rescue with autonomous flying robots through behavior-based cooperative intelligence. <em>Journal of International Humanitarian Action</em>, <em>3</em>. <a href="https://doi.org/10.1186/s41018-018-0045-4">https://doi.org/10.1186/s41018-018-0045-4</a></p>
+<p>Broggi, A., Bertozzi, M., Fascioli, A., Guarino, C., Guarino Lo Bianco, C., &amp; Piazzi, A. (2000). The Argo Autonomous Vehicle's Vision And Control Systems. <em>Int. J. Intelligent. Control. Syst.</em>, <em>3</em>.</p>
+<p>Cangahuala, L. A., Campagnola, S., Bradley, B. K., Boone, D. R., Buffington, B. B., Ludwinski, J. M., Nandi, S., &amp; Scott, C. J. (2025). Europa Clipper Mission Design, Mission Plan, and Navigation. <em>Space Science Reviews</em>, <em>221</em>(1), 22. <a href="https://doi.org/10.1007/s11214-025-01140-2">https://doi.org/10.1007/s11214-025-01140-2</a></p>
+<p>Castelli, T., Sharghi, A., Harper, D., Trémeau, A., &amp; Shah, M. (2016). Autonomous navigation for low-altitude UAVs in urban areas. <em>CoRR</em>, <em>abs/1602.08141</em>. <a href="http://arxiv.org/abs/1602.08141">http://arxiv.org/abs/1602.08141</a></p>
+<p>Castro, W., Marcato Junior, J., Polidoro, C., Osco, L. P., Gonçalves, W., Rodrigues, L., Santos, M., Jank, L., Barrios, S., Valle, C., Simeão, R., Carromeu, C., Silveira, E., Jorge, L. A. de C., &amp; Matsubara, E. (2020). Deep Learning Applied to Phenotyping of Biomass in Forages with UAV-Based RGB Imagery. <em>Sensors</em>, <em>20</em>(17). <a href="https://doi.org/10.3390/s20174802">https://doi.org/10.3390/s20174802</a></p>
+<p>Chahine, M., Hasani, R., Kao, P., Ray, A., Shubert, R., Lechner, M., Amini, A., &amp; Rus, D. (2023). Robust flight navigation out of distribution with liquid neural networks. <em>Science Robotics</em>, <em>8</em>(77). <a href="https://doi.org/10.1126/scirobotics.adc8892">https://doi.org/10.1126/scirobotics.adc8892</a></p>
+<p>Chen, F., Wu, Q., Tao, G., &amp; Jiang, B. (2014). A Reconfiguration Control Scheme for a Quadrotor Helicopter via Combined Multiple Models. <em>International Journal of Advanced Robotic Systems</em>, <em>11</em>(8), 122. <a href="https://doi.org/10.5772/58833">https://doi.org/10.5772/58833</a></p>
+<p>Chen, W., Shang, G., Hu, K., Zhou, C., Wang, X., Fang, G., &amp; Ji, A. (2022). A Monocular-Visual SLAM System with Semantic and Optical-Flow Fusion for Indoor Dynamic Environments. <em>Micromachines</em>, <em>13</em>(11). <a href="https://doi.org/10.3390/mi13112006">https://doi.org/10.3390/mi13112006</a></p>
+<p>Collier, J., Trentini, M., Giesbrecht, J., Mcmanus, C., Furgale, P., Stenning, B., Barfoot, T., Se, S., Kotamraju, V., Jasiobedzki, P., Shang, L., Chan, B., Harmat, A., &amp; Sharf, I. (2012, enero). Autonomous Navigation and Mapping in GPS-Denied Environments at Defence R&amp;D Canada. <em>NATO Symposium SET 168: Navigation Sensor and Systems in GNSS Denied Environments</em>.</p>
+<p>Da Silva, A., Fernández, S., Vidal, B., Sodre, H., Moraes, P., Peters, C., Barcelona, S., Sandin, V., Moraes, W., Mazondo, A., Macedo, B., Assunção, N., de Vargas, B., Kelbouscas, A., &amp; Grando, R. (2024). <em>Implementación de Navegación en Plataforma Robótica Móvil Basada en ROS y Gazebo</em>. <a href="http://arxiv.org/abs/2410.19972">http://arxiv.org/abs/2410.19972</a></p>
+<p>Dickmanns, E. D. (2024). Evolution of the "4-D Approach" to Dynamic Vision for Vehicles. <em>Electronics</em>, <em>13</em>(20), 4133.</p>
+<p><em>Drone Silo Inspections - Case Study - Horus Drones</em>. (s. f.). Recuperado 29 de junio de 2025, de <a href="https://horusdrones.com/home/drone-insights/case-studies/drone-silo-inspection/?utm_source=chatgpt.com">https://horusdrones.com/home/drone-insights/case-studies/drone-silo-inspection/?utm_source=chatgpt.com</a></p>
+<p>Giacomossi Jr, L., Maximo, M., Sundelius, N., Funk, P., Brancalion, J. F. B., &amp; Sohlberg, R. (2024). <em>Cooperative Search and Rescue with Drone Swarm</em> (pp. 381-393). <a href="https://doi.org/10.1007/978-3-031-39619-9_28">https://doi.org/10.1007/978-3-031-39619-9_28</a></p>
+<p>Goel, A., Tung, C., Hu, X., Thiruvathukal, G. K., Davis, J. C., &amp; Lu, Y.-H. (2021). Efficient Computer Vision on Edge Devices with Pipeline-Parallel Hierarchical Neural Networks. <em>CoRR</em>, <em>abs/2109.13356</em>. <a href="https://arxiv.org/abs/2109.13356">https://arxiv.org/abs/2109.13356</a></p>
+<p>Graf, M., Speidel, O., Ruof, J., &amp; Dietmayer, K. (2021). <em>On-Road Motion Planning for Automated Vehicles at Ulm University</em>. <a href="http://arxiv.org/abs/2012.04028">http://arxiv.org/abs/2012.04028</a></p>
+<p>Hoang, V. D., Nyboe, F. F., Malle, N. H., &amp; Ebeid, E. (2024). <em>Autonomous Overhead Powerline Recharging for Uninterrupted Drone Operations</em>. <a href="https://arxiv.org/abs/2403.06533">https://arxiv.org/abs/2403.06533</a></p>
+<p>Hu, J., Ren, Z., &amp; Cheng, W. (2024). <em>Finite State Machines-Based Path-Following Collaborative Computing Strategy for Emergency UAV Swarms</em>. <a href="https://arxiv.org/abs/2407.11531">https://arxiv.org/abs/2407.11531</a></p>
+<p>Hughes, M., &amp; Engelbrecht, J. (2023). Autonomous navigation for multiple unmanned aerial vehicles (UAVs) in urban environments. <em>MATEC Web of Conferences</em>, <em>388</em>. <a href="https://doi.org/10.1051/matecconf/202338804011">https://doi.org/10.1051/matecconf/202338804011</a></p>
+<p>Hwang, J.-J., Xu, R., Lin, H., Hung, W.-C., Ji, J., Choi, K., Huang, D., He, T., Covington, P., Sapp, B., Zhou, Y., Guo, J., Anguelov, D., &amp; Tan, M. (2024). <em>EMMA: End-to-End Multimodal Model for Autonomous Driving</em>. <a href="https://arxiv.org/abs/2410.23262">https://arxiv.org/abs/2410.23262</a></p>
+<p>Infocampo. (s. f.). <em>Renova amplió su planta de procesamiento y construirá una nueva terminal en Timbués</em>. INFOCAMPO Noticias del campo en el momento justo. Recuperado 25 de junio de 2025, de <a href="https://www.infocampo.com.ar/renova-amplio-su-planta-de-procesamiento-y-construira-una-nueva-terminal-en-timbues/">https://www.infocampo.com.ar/renova-amplio-su-planta-de-procesamiento-y-construira-una-nueva-terminal-en-timbues/</a></p>
+<p>Kemeny, A., &amp; Panerai, F. (2003). Evaluating perception in driving simulation experiments. <em>Trends in Cognitive Sciences</em>, <em>7</em>(1), 31-37. <a href="https://doi.org/10.1016/S1364-6613(02)00011-6">https://doi.org/10.1016/S1364-6613(02)00011-6</a></p>
+<p>Koubaa, A., Allouch, A., Alajlan, M., Javed, Y., Belghith, A., &amp; Khalgui, M. (2019). Micro Air Vehicle Link (MAVLink) in a Nutshell: A Survey. <em>CoRR</em>, <em>abs/1906.10641</em>. <a href="http://arxiv.org/abs/1906.10641">http://arxiv.org/abs/1906.10641</a></p>
+<p>Langåker, H.-A., Kjerkreit, H., Syversen, C. L., Moore, R. J. D., Holhjem, Ø. H., Jensen, I., Morrison, A., Transeth, A. A., Kvien, O., Berg, G., Olsen, T. A., Hatlestad, A., Negård, T., Broch, R., &amp; Johnsen, J. E. (2021). An autonomous drone-based system for inspection of electrical substations. <em>International Journal of Advanced Robotic Systems</em>, <em>18</em>(2), 17298814211002972. <a href="https://doi.org/10.1177/17298814211002973">https://doi.org/10.1177/17298814211002973</a></p>
+<p>Li, Q., Yu, W., &amp; Jiang, S. (2022). <em>Optimized Views Photogrammetry: Precision Analysis and A Large-scale Case Study in Qingdao</em>. <a href="https://arxiv.org/abs/2206.12216">https://arxiv.org/abs/2206.12216</a></p>
+<p>Madridano Carrasco, Á. (2020). <em>Arquitectura de software para navegación autónoma y coordinada de enjambres de drones en labores de lucha contra incendios forestales y urbanos</em> [Tesis doctoral, Universidad Carlos III de Madrid]. <a href="https://hdl.handle.net/10016/32463">https://hdl.handle.net/10016/32463</a></p>
+<p>Marazzato, R., &amp; Sparavigna, A. C. (2015). Retinex filtering of foggy images: generation of a bulk set with selection and ranking. <em>CoRR</em>, <em>abs/1509.08715</em>. <a href="http://arxiv.org/abs/1509.08715">http://arxiv.org/abs/1509.08715</a></p>
+<p>Martin, P. G., Scott, T. B., Payton, O. D., &amp; Fardoulis, J. S. (2017). <em>High-Resolution Aerial Radiation Mapping for Nuclear Decontamination and Decommissioning-17371</em>.</p>
+<p>Matej, J. (2016). <em>Simulation of vehicle in Unreal Game Engine using equations of motion, Runge-Kutta and line tracing methods to solve motion and scan Unreal Engine terrain under wheel</em>. Publishing House at the Technical University in Zvolen. <a href="https://doi.org/10.5281/zenodo.55806">https://doi.org/10.5281/zenodo.55806</a></p>
+<p>Miranda, V., Rezende, A., Rocha, T., Azpúrua, H., Pimenta, L., &amp; Freitas, G. (2021). Autonomous Navigation System for a Delivery Drone. <em>Journal of Control, Automation and Electrical Systems</em>, <em>33</em>. <a href="https://doi.org/10.1007/s40313-021-00828-4">https://doi.org/10.1007/s40313-021-00828-4</a></p>
+<p>Mur-Artal, R., Montiel, J. M. M., &amp; Tardós, J. D. (2015). ORB-SLAM: a Versatile and Accurate Monocular SLAM System. <em>CoRR</em>, <em>abs/1502.00956</em>. <a href="http://arxiv.org/abs/1502.00956">http://arxiv.org/abs/1502.00956</a></p>
+<p>Nguyen, D. D., Rohacs, J., &amp; Rohacs, D. (2021). Autonomous Flight Trajectory Control System for Drones in Smart City Traffic Management. <em>ISPRS International Journal of Geo-Information</em>, <em>10</em>(5). <a href="https://doi.org/10.3390/ijgi10050338">https://doi.org/10.3390/ijgi10050338</a></p>
+<p>Nothdurft, T., Hecker, P., Ohl, S., Saust, F., Maurer, M., Reschka, A., &amp; Rüdiger Böhmer, J. (2011). <em>Stadtpilot: First Fully Autonomous Test Drives in Urban Traffic</em>. <a href="https://www.tu-braunschweig.de/fileadmin/Redaktionsgruppen/Institute_Fakultaet_5/IFR/Dateien_EFS/Publikationen/Stadtpilot_FirstFullyAutonomous.pdf">https://www.tu-braunschweig.de/fileadmin/Redaktionsgruppen/Institute_Fakultaet_5/IFR/Dateien_EFS/Publikationen/Stadtpilot_FirstFullyAutonomous.pdf</a></p>
+<p>NVIDIA. (2025). <em>Jetson Nano Brings the Power of Modern AI to Edge Devices</em>. <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-nano/product-development/">https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-nano/product-development/</a></p>
+<p><em>Open Source Autopilot for Drones - PX4 Autopilot</em>. (s. f.). Recuperado 29 de junio de 2025, de <a href="https://px4.io/">https://px4.io/</a></p>
+<p>Pestana Puerta, J. (2017). <em>Vision-Based Autonomous Navigation of Multirotor Micro Aerial Vehicles</em> [PhD Thesis, Universidad Politécnica de Madrid]. <a href="https://doi.org/10.20868/UPM.thesis.47726">https://doi.org/10.20868/UPM.thesis.47726</a></p>
+<p>Pomerleau, D. A. (1988). ALVINN: An Autonomous Land Vehicle in a Neural Network. En D. Touretzky (Ed.), <em>Advances in Neural Information Processing Systems</em> (Vol. 1). Morgan-Kaufmann. <a href="https://proceedings.neurips.cc/paper_files/paper/1988/file/812b4ba287f5ee0bc9d43bbf5bbe87fb-Paper.pdf">https://proceedings.neurips.cc/paper_files/paper/1988/file/812b4ba287f5ee0bc9d43bbf5bbe87fb-Paper.pdf</a></p>
+<p>Redmon, J., Divvala, S. K., Girshick, R. B., &amp; Farhadi, A. (2015). You Only Look Once: Unified, Real-Time Object Detection. <em>CoRR</em>, <em>abs/1506.02640</em>. <a href="http://arxiv.org/abs/1506.02640">http://arxiv.org/abs/1506.02640</a></p>
+<p>Resolución ANAC - Reglamento de Vehículos Aéreos No tripulados, Pub. L. No. 880/2019 (2019). <a href="https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-880-2019-333259">https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-880-2019-333259</a></p>
+<p>Samy, M., Amer, K., Shaker, M., &amp; ElHelw, M. (2019). <em>Drone Path-Following in GPS-Denied Environments using Convolutional Networks</em>. <a href="https://arxiv.org/abs/1905.01658">https://arxiv.org/abs/1905.01658</a></p>
+<p>Shah, S., Dey, D., Lovett, C., &amp; Kapoor, A. (2017). <em>AirSim: High-Fidelity Visual and Physical Simulation for Autonomous Vehicles</em>. <a href="http://arxiv.org/abs/1705.05065">http://arxiv.org/abs/1705.05065</a></p>
+<p>Shin, Y.-S., &amp; Kim, A. (2019). Sparse Depth Enhanced Direct Thermal-infrared SLAM Beyond the Visible Spectrum. <em>IEEE Robotics and Automation Letters</em>, <em>4</em>(3), 2918-2925. <a href="https://arxiv.org/abs/1902.10892">https://arxiv.org/abs/1902.10892</a></p>
+<p>Song, C., Guo, X., &amp; Sui, J. (2025). Improved Model Predictive Control Algorithm for the Path Tracking Control of Ship Autonomous Berthing. <em>Journal of Marine Science and Engineering</em>, <em>13</em>(7). <a href="https://doi.org/10.3390/jmse13071273">https://doi.org/10.3390/jmse13071273</a></p>
+<p>Thorpe, C., Hebert, M. H., Kanade, T., &amp; Shafer, S. A. (1988). Vision and navigation for the Carnegie-Mellon Navlab. <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em>, <em>10</em>(3), 362-373. <a href="https://doi.org/10.1109/34.3900">https://doi.org/10.1109/34.3900</a></p>
+<p>Turco, L., Zhao, J., Xu, Y., &amp; Tsourdos, A. (2024). A Study on Co-simulation Digital Twin with MATLAB and AirSim for Future Advanced Air Mobility. <em>2024 IEEE Aerospace Conference</em>, 1-18. <a href="https://doi.org/10.1109/AERO58975.2024.10521333">https://doi.org/10.1109/AERO58975.2024.10521333</a></p>
+<p>UMILES GROUP. (2024, diciembre 20). <em>LiDAR y Fotogrametría: Las armas secretas de los drones en la topografía moderna</em>. <a href="https://umilesgroup.com/drones-lidar-y-fotogrametria-cambiando-la-topografia-moderna/">https://umilesgroup.com/drones-lidar-y-fotogrametria-cambiando-la-topografia-moderna/</a></p>
+<p>Vipparla, C., Krock, T., Nouduri, K., Fraser, J., AliAkbarpour, H., Sagan, V., Cheng, J.-R. C., &amp; Kannappan, P. (2024). Fusion of Visible and Infrared Aerial Images from Uncalibrated Sensors Using Wavelet Decomposition and Deep Learning. <em>Sensors</em>, <em>24</em>(24). <a href="https://doi.org/10.3390/s24248217">https://doi.org/10.3390/s24248217</a></p>
+<p>Wahba, G. (1965). A Least Squares Estimate of Satellite Attitude. <em>SIAM Review</em>, <em>7</em>(3), 409. <a href="https://doi.org/10.1137/1007077">https://doi.org/10.1137/1007077</a></p>
+<p>Shi, Y., Li, X., &amp; Zhang, J. (2024). Real-time obstacle avoidance for UAVs using lightweight deep learning. <em>IEEE Transactions on Industrial Electronics</em>, <em>71</em>(8), 9123-9132.</p>
+<p>Vera-Yanez, R., Maza, I., &amp; Ollero, A. (2024). Optical-Flow-Based Air-to-Air Detection of Airborne Obstacles for Autonomous Drones. <em>Drones</em>, <em>8</em>(12), 705. <a href="https://doi.org/10.3390/drones8120705">https://doi.org/10.3390/drones8120705</a></p>
+<p>Wang, H., Zhang, X., &amp; Liu, C. (2023). Urban infrastructure inspection using autonomous UAVs: A review. <em>Automation in Construction</em>, <em>154</em>, 105020.</p>
+<p>World Health Organization. (2023). <em>Global status report on road safety 2023</em>. WHO Guidelines Approved by the Guidelines Review Committee. World Health Organization.</p>
+<p>Yang, Y., &amp; Wei, P. (2024). Autonomous eVTOL trajectory optimization for urban air mobility. <em>Transportation Research Part C: Emerging Technologies</em>, <em>158</em>, 104423.</p>
+<p>Zhang, T., &amp; Wu, Q. (2023). Vision-based power line inspection with UAVs: Methods and challenges. <em>IEEE Geoscience and Remote Sensing Magazine</em>, <em>11</em>(2), 78-95.</p>
+<p>Zhao, K., Liu, Z., &amp; Chen, X. (2024). Deep reinforcement learning for UAV autonomous navigation in GPS-denied environments. <em>IEEE Transactions on Intelligent Transportation Systems</em>, <em>25</em>(3), 2890-2902.</p>
+<p>Zhou, Y., Bautista, J., Yao, W., &amp; de Marina, H. G. (2025). <em>Inverse Kinematics on Guiding Vector Fields for Robot Path Following</em>. <a href="https://arxiv.org/abs/2502.17313">https://arxiv.org/abs/2502.17313</a></p>
+<p>Zhu, Y., Moniz, J. R. A., Bhargava, S., Lu, J., Piraviperumal, D., Li, S., Zhang, Y., Yu, H., &amp; Tseng, B.-H. (2024). <em>Can Large Language Models Understand Context?</em>. <a href="https://arxiv.org/abs/2402.00858">https://arxiv.org/abs/2402.00858</a></p>
+<h2 id="132-bibliografia-adicional-en-plan_tesisbibliografia-con-archivo-bibtex-no-citada-arriba">13.2 Bibliografía adicional en <code>plan_tesis/bibliografia/</code> (con archivo BibTeX, no citada arriba)<a class="headerlink" href="#132-bibliografia-adicional-en-plan_tesisbibliografia-con-archivo-bibtex-no-citada-arriba" title="Permanent link">&para;</a></h2>
+<ul>
+<li>AlMahamid, F., &amp; Grolinger, K. (2022). Autonomous unmanned aerial vehicle navigation using reinforcement learning: A systematic review. <em>Engineering Applications of Artificial Intelligence</em>, <em>115</em>, 105321.</li>
+<li>Baheri, A. (2020). <em>Safe Reinforcement Learning with Mixture Density Network: A Case Study in Autonomous Highway Driving</em>. <a href="https://arxiv.org/abs/2007.01698">https://arxiv.org/abs/2007.01698</a></li>
+<li>Bouhamed, O., Ghazzai, H., Besbes, H., &amp; Massoud, Y. (2020). <em>Autonomous UAV Navigation: A DDPG-based Deep Reinforcement Learning Approach</em>. <em>CoRR</em>, <em>abs/2003.10923</em>. <a href="https://arxiv.org/abs/2003.10923">https://arxiv.org/abs/2003.10923</a></li>
+<li>Fabra, F., Zamora, W., Sangüesa, J., Calafate, C. T., Cano, J. C., &amp; Manzoni, P. (2019). A Distributed Approach for Collision Avoidance between Multirotor UAVs Following Planned Missions. <em>Sensors</em>, <em>19</em>(10), 2404. <a href="https://doi.org/10.3390/s19102404">https://doi.org/10.3390/s19102404</a></li>
+<li>Grando, R. B., Pinheiro, P. M., Bortoluzzi, N. P., da Silva, C. B., Zauk, O. F., Piñeiro, M. O., Aoki, V. M., Kelbouscas, A. L., Lima, Y. B., Drews, P. L., &amp; Neto, A. A. (2020). Visual-based Autonomous Unmanned Aerial Vehicle for Inspection in Indoor Environments. <em>2020 Latin American Robotics Symposium (LARS) / 2020 Brazilian Symposium on Robotics (SBR) / 2020 Workshop on Robotics in Education (WRE)</em>, 1-6. <a href="https://doi.org/10.1109/LARS/SBR/WRE51543.2020.9307024">https://doi.org/10.1109/LARS/SBR/WRE51543.2020.9307024</a></li>
+<li>Jwo, D. J., Biswal, A., &amp; Mir, I. A. (2023). Artificial Neural Networks for Navigation Systems: A Review of Recent Research. <em>Applied Sciences</em>, <em>13</em>(7), 4475. <a href="https://doi.org/10.3390/app13074475">https://doi.org/10.3390/app13074475</a></li>
+<li>Li, M., Li, J., Cao, Y., &amp; Chen, G. (2024). A Dynamic Visual SLAM System Incorporating Object Tracking for UAVs. <em>Drones</em>, <em>8</em>(6), 222. <a href="https://doi.org/10.3390/drones8060222">https://doi.org/10.3390/drones8060222</a></li>
+<li>Li, X., &amp; Xiang, L. (2024). <em>Photorealistic Robotic Simulation using Unreal Engine 5 for Agricultural Applications</em>. <a href="https://arxiv.org/abs/2405.18551">https://arxiv.org/abs/2405.18551</a></li>
+<li>Polvara, R., Patacchiola, M., Sharma, S., Wan, J., Manning, A., Sutton, R., &amp; Cangelosi, A. (2017). <em>Autonomous Quadrotor Landing using Deep Reinforcement Learning</em>. <a href="https://doi.org/10.48550/arXiv.1709.03339">https://doi.org/10.48550/arXiv.1709.03339</a></li>
+<li>Saxena, P., Raghuvanshi, N., &amp; Goveas, N. (2025). <em>UAV-VLN: End-to-End Vision Language guided Navigation for UAVs</em>. <a href="https://arxiv.org/abs/2504.21432">https://arxiv.org/abs/2504.21432</a></li>
+</ul>
+<h2 id="133-pdfs-en-plan_tesisbibliografia-sin-metadata-bibliografica-estructurada">13.3 PDFs en <code>plan_tesis/bibliografia/</code> sin metadata bibliográfica estructurada<a class="headerlink" href="#133-pdfs-en-plan_tesisbibliografia-sin-metadata-bibliografica-estructurada" title="Permanent link">&para;</a></h2>
+<p>Sin archivo <code>.bib</code> asociado ni metadata completa embebida en el PDF; título tomado del nombre de archivo (convención "Autor - Título.pdf" ya usada en la carpeta). Año, autoría completa y venue de publicación quedan pendientes de completar durante la depuración.</p>
+<ul>
+<li>Comas (s.f., PDF fechado ~2020). <em>Modelado e implementación de sistemas de navegación aérea autónoma</em>. [Ver <code>plan_tesis/bibliografia/Comas - Modelado e implementación de sistemas de navegación aérea autónoma.pdf</code>; sin metadata de autoría/venue.]</li>
+<li>Presidencia de la Nación Argentina. Decreto 663/2024 — Aviación No Tripulada. [Ver <code>plan_tesis/bibliografia/Decreto 663-2024 Presidencia - Aviacion No tripulada.pdf</code>.]</li>
+<li>Nielsen, S. M. (2022). <em>A Visually Realistic Simulator for Autonomous eVTOL Aircraft</em>. [Ver <code>plan_tesis/bibliografia/</code>; venue de publicación pendiente de confirmar.]</li>
+<li>Ramezani, M. (s.f., PDF fechado ~2023). <em>UAV Path Planning Employing MPC Reinforcement</em>. [Ver <code>plan_tesis/bibliografia/Ramezani - UAV Path Planning Employing MPC Reinforcement.pdf</code>; venue pendiente.]</li>
+<li>Revista Seguros AAPAS. (2025). <em>Drones: todo lo que necesitas saber sobre regulaciones y seguros</em>.</li>
+<li>Sánchez Rodríguez (s.f., PDF fechado ~2019). <em>Navegación autónoma de un dron hexacóptero con visión estereoscópica</em>. [Autoría completa pendiente de confirmar.]</li>
+<li>Zhen (s.f., PDF fechado ~2025). <em>Training-efficient deep reinforcement learning for autonomous driving</em>. [Metadata de autor del PDF no confiable (aparenta ser el editor del documento, no el autor del paper); verificar durante la depuración.]</li>
+</ul>
+<h2 id="134-bibliografia-adicional-en-informebibliografia-no-incluida-en-el-plan-de-trabajo-aprobado">13.4 Bibliografía adicional en <code>informe/bibliografia/</code> (no incluida en el plan de trabajo aprobado)<a class="headerlink" href="#134-bibliografia-adicional-en-informebibliografia-no-incluida-en-el-plan-de-trabajo-aprobado" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Badrloo, S., &amp; Varshosaz, M. (2017). Monocular vision based obstacle detection. <em>International Journal of Earth Observation and Geomatics Engineering</em>, <em>1</em>(2), 122-130.</li>
+<li>Chen, X., Kundu, K., Zhang, Z., Ma, H., Fidler, S., &amp; Urtasun, R. (2016). Monocular 3D Object Detection for Autonomous Driving. <em>2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</em>.</li>
+<li>Geng, S., Cooper, H., Moskal, M., Jenkins, S., Berman, J., Ranchin, N., West, R., Horvitz, E., &amp; Nori, H. (2025). <em>Generating Structured Outputs from Language Models: Benchmark and Studies</em>. <a href="https://arxiv.org/abs/2501.10868">https://arxiv.org/abs/2501.10868</a></li>
+<li>Jansen, W., Verreycken, E., Schenck, A., Blanquart, J.-E., Verhulst, C., Huebel, N., &amp; Steckel, J. (2023). <em>Cosys-AirSim: A Real-Time Simulation Framework Expanded for Complex Industrial Applications</em>. <a href="https://arxiv.org/abs/2303.13381">https://arxiv.org/abs/2303.13381</a></li>
+<li>Kaneko, N., Yoshida, T., &amp; Sumi, K. (2017). Fast Obstacle Detection for Monocular Autonomous Mobile Robots. <em>SICE Journal of Control, Measurement, and System Integration</em>, <em>10</em>(5), 370-377.</li>
+<li>Molineros, J., Cheng, S. Y., Owechko, Y., Levi, D., &amp; Zhang, W. (2012). Monocular Rear-View Obstacle Detection Using Residual Flow. <em>Computer Vision – ECCV 2012 Workshops and Demonstrations</em>, LNCS 7584. Springer.</li>
+<li>Al-Kaff, A., García, F., Martín, D., De La Escalera, A., &amp; Armingol, J. M. (2017). Obstacle Detection and Avoidance System Based on Monocular Camera and Size Expansion Algorithm for UAVs. <em>Sensors</em>, <em>17</em>(5), 1061.</li>
+<li>Raspanti, F., Ozcelebi, T., &amp; Holenderski, M. (2025). Grammar-Constrained Decoding Makes Large Language Models Better Logical Parsers. <em>ACL 2025 Industry Track</em>.</li>
+<li>Rill, R.-A., &amp; Faragó, K. B. (2021). Collision Avoidance Using Deep Learning-Based Monocular Vision. <em>SN Computer Science</em>, <em>2</em>, 375. <a href="https://doi.org/10.1007/s42979-021-00759-6">https://doi.org/10.1007/s42979-021-00759-6</a></li>
+<li>Shi, S., Ni, J., Kong, X., Zhu, H., Zhan, J., Sun, Q., &amp; Xu, Y. (2024). An Obstacle Detection Method Based on Longitudinal Active Vision. <em>Sensors</em>, <em>24</em>(14), 4407.</li>
+<li>Vera-Yanez, D., Pereira, A., Rodrigues, N., Molina, J. P., García, A. S., &amp; Fernández-Caballero, A. (2024). Optical Flow-Based Obstacle Detection for Mid-Air Collision Avoidance. <em>Sensors</em>, <em>24</em>(9), 3016.</li>
+<li>Zhou, Z., Liao, Y., Wang, B., Wang, M., Fu, M., &amp; Hu, Z. (2026). Near obstacles detection by inverse perspective mapping of AVM for intelligent vehicles. <em>PLOS ONE</em>, <em>21</em>(1), e0336851.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="js/print-site.js"></script>
+      
+    
+  </body>
+</html>
