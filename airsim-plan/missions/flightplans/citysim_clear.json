@@ -1,14 +1,31 @@
 {
   "mission_id": "CITYSIM_CLEAR",
   "summary": "Tier 2 (escenario base): perímetro de una manzana del grid regular en citysim_calib.png. Altitud de tránsito -70m (70m AGL) para superar edificios altos de CitySim. Estructura climb-first: WP_2 sube vertical puro (mismo x,y que spawn, near_vertical fix 2026-09-07) antes de mover en horizontal. Descenso vertical final desde esquina NW (WP_6 -> WP_7). Análogo a TOWNSIM_CLEAR (Tier 1) y MINISIM_CLEAR (Tier 0).",
-  "map": "citysim_calib.png",
   "waypoints": [
-    { "x":  26.0, "y":  -78.0, "z": -10.0, "label": "WP_1" },
-    { "x":  26.0, "y":  -78.0, "z": -70.0, "label": "WP_2" },
-    { "x":  68.0, "y":  -78.0, "z": -70.0, "label": "WP_3" },
-    { "x":  68.0, "y": -145.0, "z": -70.0, "label": "WP_4" },
-    { "x": -16.0, "y": -145.0, "z": -70.0, "label": "WP_5" },
-    { "x": -16.0, "y":  -78.0, "z": -70.0, "label": "WP_6" },
-    { "x": -16.0, "y":  -78.0, "z":   0.0, "label": "WP_7" }
-  ]
+    {
+      "x": 0.0,
+      "y": 75.0,
+      "z": -10.0,
+      "label": "WP_1"
+    },
+    {
+      "x": 130.0,
+      "y": 75.0,
+      "z": -30.0,
+      "label": "WP_2"
+    },
+    {
+      "x": 130.0,
+      "y": 0.0,
+      "z": -50.0,
+      "label": "WP_3"
+    },
+    {
+      "x": 0.0,
+      "y": 0.0,
+      "z": -10.0,
+      "label": "WP_4"
+    }
+  ],
+  "map": "citysim_calib.png"
 }

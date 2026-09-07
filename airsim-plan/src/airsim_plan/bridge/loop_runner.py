@@ -151,16 +151,18 @@ class LoopRunner:
         script = Path(self._loop_path).resolve()
         if not script.exists():
             raise LoopRunnerError(f"loop script not found: {script}")
-            
-        env_path = self._settings.mission_dir / f"{self._manifest.mission_id}.preloop.json"
-        env_path.parent.mkdir(parents=True, exist_ok=True)
-        env_path.write_text(
-            self._manifest.to_json(indent=2), encoding="utf-8"
-        )
-        
+
+        # Usar el manifiesto ya guardado en flightplans/ — no crear archivo temporal.
+        flightplans_dir = self._settings.mission_dir / "flightplans"
+        manifest_path = flightplans_dir / f"{self._manifest.mission_id.lower()}.json"
+        if not manifest_path.exists():
+            # Fallback: escribir directamente en flightplans/ si no existe aún.
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.write_text(self._manifest.to_json(indent=2), encoding="utf-8")
+
         # Preparar las variables de entorno para el nuevo proceso
         env = os.environ.copy()
-        env["AIRSIM_PLAN_MANIFEST"] = str(env_path)
+        env["AIRSIM_PLAN_MANIFEST"] = str(manifest_path)
 
         try:
             # Lanzar el script del loop en un proceso del SO completamente aislado, con salida sin buffer (-u)
