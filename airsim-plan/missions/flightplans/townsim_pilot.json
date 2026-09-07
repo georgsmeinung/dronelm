@@ -1,0 +1,10 @@
+{
+  "mission_id": "TOWNSIM_PILOT",
+  "summary": "Tier 1 (escenario intermedio, piloto): primer tramo de townsim_a.json (WP_1->WP_2, ~143m), mapa townsim.png (proyecto UE TownSim, pocas cuadras con mucha vegetacion). Formato unico (2026-0828): antes existia por duplicado como townsim_pilot.json (airsim-loop) y TOWNSIM_PILOT.preloop.json (airsim-plan).",
+  "start_pose": { "x": 0.4, "y": 5.3, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 0.4, "y": 5.3, "z": -10.0, "label": "WP_1" },
+    { "x": 1.6, "y": -137.9, "z": -10.0, "label": "WP_2" }
+  ],
+  "map": "townsim.png"
+}

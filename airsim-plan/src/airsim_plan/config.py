@@ -14,6 +14,9 @@ try:
 except Exception:  # pragma: no cover
     pass
 
+# Raíz de airsim-plan/ — anchora MISSION_DIR independientemente del CWD.
+_AIRSIM_PLAN_ROOT = Path(__file__).resolve().parents[2]
+
 
 def _csv(value: Optional[str]) -> List[str]:
     if not value:
@@ -70,9 +73,14 @@ class Settings:
         default_factory=lambda: float(os.getenv("DEFAULT_SPEED", "5.0"))
     )
 
-    # Dónde quedan los manifiestos compilados (relativo al CWD salvo que sea absoluto).
+    # Dónde quedan los manifiestos compilados. Si MISSION_DIR es relativo, se
+    # ancla a airsim-plan/ (no al CWD). Absoluto → se usa tal cual.
     mission_dir: Path = field(
-        default_factory=lambda: Path(os.getenv("MISSION_DIR", "missions")).expanduser()
+        default_factory=lambda: (
+            Path(os.getenv("MISSION_DIR", "missions"))
+            if Path(os.getenv("MISSION_DIR", "missions")).is_absolute()
+            else _AIRSIM_PLAN_ROOT / os.getenv("MISSION_DIR", "missions")
+        )
     )
 
     # Muestreo del LLM

@@ -4,10 +4,10 @@ N misiones x M escenarios x K semillas, sin ventana cv2 ni overhead de UI.
 Escribe un JSONL por corrida via FlightLogger.
 
 Uso:
-    python experiments/runner.py --scenarios ../airsim-plan/missions/minisim_clear.json ../airsim-plan/missions/citymap_pilot.json \
+    python experiments/runner.py --scenarios ../airsim-plan/missions/flightplans/minisim_clear.json ../airsim-plan/missions/flightplans/citysim_clear.json \
         --arms slm fsm reactive --seeds 1 2 3 --out-dir runs/
 
-Cada archivo de escenario es el manifiesto unico de airsim-plan/missions/
+Cada archivo de escenario es el manifiesto unico de airsim-plan/missions/flightplans/
 (2026-0828, ver CHANGELOG.md): mission_id en MAYUSCULAS, waypoints, y
 opcionalmente "start_pose": {"x":.., "y":.., "z":.., "yaw_deg":..} -- si no
 esta declarado, se usa el primer waypoint como pose de partida.

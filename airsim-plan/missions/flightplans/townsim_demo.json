@@ -1,0 +1,13 @@
+{
+  "mission_id": "TOWNSIM_DEMO",
+  "summary": "Mision demo para video de avance (2026-0828, v6): circuito de 4 waypoints alrededor de la manzana de TownSim, cada tramo confirmado visualmente en el viewport de UE antes de darlo por bueno (calle sur, giro este, tramo norte, aterrizaje). Tramo sur desplazado en x (0.4->4.0) para dar margen a un poste de luz. Punto de aterrizaje final en (0.0, 5.0) tras varios intentos fallidos evitando una obstruccion fisica cerca del punto de partida original y la barrera de un semaforo. Formato unico (2026-0828): antes existia por duplicado como townsim_demo.json (airsim-loop) y TOWNSIM_DEMO.preloop.json (airsim-plan).",
+  "start_pose": { "x": 0.4, "y": 5.3, "z": -10.0, "yaw_deg": 0.0 },
+  "waypoints": [
+    { "x": 0.4, "y": 5.3, "z": -10.0, "label": "START" },
+    { "x": 4.0, "y": -30.0, "z": -10.0, "label": "WP_1" },
+    { "x": 25.0, "y": -30.0, "z": -10.0, "label": "WP_2" },
+    { "x": 25.0, "y": 5.3, "z": -20.0, "label": "WP_3" },
+    { "x": 0.0, "y": 5.0, "z": 0.0, "label": "WP_D_RETORNO" }
+  ],
+  "map": "townsim.png"
+}

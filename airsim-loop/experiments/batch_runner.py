@@ -5,7 +5,7 @@ corre en un subproceso separado. Agrupa resultados por escenario para análisis.
 
 Uso:
     python experiments/batch_runner.py \
-        --scenarios ../airsim-plan/missions/minisim_clear.json ../airsim-plan/missions/townsim_a.json ../airsim-plan/missions/citymap_pilot.json \
+        --scenarios ../airsim-plan/missions/flightplans/minisim_clear.json ../airsim-plan/missions/flightplans/townsim_ini.json ../airsim-plan/missions/flightplans/citysim_clear.json \
         --arms slm fsm reactive \
         --seeds 1 2 3 4 5 \
         --out-dir runs/tesis \

@@ -192,10 +192,9 @@ async def list_manifests():
     mission_dir = settings.mission_dir / "flightplans"
     if not mission_dir.exists():
         return []
-    
+
     manifests = []
-    for path in mission_dir.glob("*.json"):
-        # Ignorar archivos temporales
+    for path in sorted(mission_dir.glob("*.json")):
         if ".preloop" in path.name:
             continue
         try:
@@ -205,7 +204,6 @@ async def list_manifests():
                 "manifest": manifest.model_dump()
             })
         except Exception:
-            # Si el JSON es corrupto o antiguo, ignorar o cargar lo básico
             pass
     return manifests
 

@@ -329,6 +329,11 @@ class WaypointTracker:
 
         dist_xy = math.hypot(dx, dy)
         dist_3d = math.sqrt(dx**2 + dy**2 + dz**2)
+        # Waypoint casi directamente arriba/abajo: suprimir vx para que el
+        # movimiento sea vertical puro en vez de una rampa diagonal. dist_3d
+        # sigue decrementando durante el descenso/ascenso, por lo que el
+        # contador de progreso no se dispara.
+        near_vertical = dist_xy < BEARING_UNSTABLE_DIST_XY_M and abs(dz) > 0.3
 
         # Identificar el waypoint de partida del segmento actual
         prev_idx = max(0, self.current_index - 1)
@@ -450,6 +455,8 @@ class WaypointTracker:
         elif self._orient_settle_cycles_left > 0:
             vx = 0.0
             self._orient_settle_cycles_left -= 1
+        elif near_vertical:
+            vx = 0.0  # Movimiento vertical puro; dz cubre todo el desplazamiento
         elif self._final_approach_active:
             vx = 1.2 * math.cos(delta_yaw)  # Aproximación suave en metros finales
         else:
