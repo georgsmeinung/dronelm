@@ -86,14 +86,14 @@ Para ilustrar el flujo completo:
 El código del proyecto se organiza en los siguientes componentes:
 
 *   **[`airsim-plan`](./airsim-plan):** Planificador de misiones y Ground Control Station. Contiene el CLI `airsim-plan` y el servidor web **WebDCS** para planificación manual de waypoints.
-*   **[`airsim-loop`](./airsim-loop):** Lazo de control táctico autónomo del dron. Implementa el grafo de navegación en LangGraph (Captura, Percepción por Flujo Óptico/TTC, Router Táctico, brazos SLM/FSM/Reactivo y Control de Waypoints), el registro de vuelo por corrida (JSONL/CSV, resumen por waypoint, video `.webm` anotado y visor HTML de auditoría post-vuelo), la suite de tests (137 tests) y el framework de experimentación (`experiments/runner.py` y `experiments/analyze.py` para corridas batch N misiones × M escenarios × K semillas comparando los tres brazos; `experiments/collect_ttc_dataset.py` y `experiments/analyze_ttc.py` para calibrar los umbrales de TTC contra el canal depth).
+*   **[`airsim-loop`](./airsim-loop):** Lazo de control táctico autónomo del dron. Implementa el grafo de navegación en LangGraph (Captura, Percepción por Flujo Óptico/TTC, Router Táctico, brazos SLM/FSM/Reactivo y Control de Waypoints), el registro de vuelo por corrida (JSONL/CSV, resumen por waypoint, video `.webm` anotado y visor HTML de auditoría post-vuelo), la suite de tests (138 tests) y el framework de experimentación (`experiments/runner.py` y `experiments/analyze.py` para corridas batch N misiones × M escenarios × K semillas comparando los tres brazos; `experiments/collect_ttc_dataset.py` y `experiments/analyze_ttc.py` para calibrar los umbrales de TTC contra el canal depth).
 *   **[`airsim-mcp`](./airsim-mcp):** Servidor de Model Context Protocol (MCP) que expone herramientas de telemetría y control de AirSim para interactuar con agentes autónomos externos.
 *   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`kc_control.py`) para pilotaje directo y configuración de segmentación en AirSim.
 *   **[`airsim-poc`](./airsim-poc):** Pruebas de concepto iniciales de conexión, telemetría y maniobras básicas.
 *   **[`airsim-settings`](./airsim-settings):** Archivos de configuración de AirSim / Cosys-AirSim (`settings.json`, perfiles predefinidos y guía de enlaces).
 *   **[`callibration_flight`](./callibration_flight):** Scripts de calibración y notebooks estadísticos que comparan la variabilidad inercial y física del simulador vs. drones reales (DJI).
 *   **[`local-llm-eval`](./local-llm-eval):** Suite de benchmarking para evaluar latencias (ms), tokens/segundo y adherencia a esquemas JSON de modelos locales (Phi-3, Qwen 2.5, Gemma 2, Llama 3.2, Liquid LFM).
-*   **[`plan_tesis`](./plan_tesis), [`docs`](./docs) e [`informe`](./informe):** Documentación del plan de tesis, objetivos aprobados, changelogs e informes gráficos de resultados.
+*   **[`plan_tesis`](./plan_tesis), [`docs`](./docs) e [`informe`](./informe):** Documentación del plan de tesis, objetivos aprobados y changelogs. `informe/` contiene los capítulos de la tesis en Markdown (caps. 01–12 en redacción activa); `docs/` aloja el sitio de documentación construido con **MkDocs** (tema personalizado Universidad Austral, build automatizado con script de PDF).
 
 ---
 
@@ -102,7 +102,7 @@ El código del proyecto se organiza en los siguientes componentes:
 *   **Simulación:** Unreal Engine 5.5 + Cosys-AirSim.
 *   **Lenguajes y Entorno:** Python 3.10+, Conda / Miniconda.
 *   **Visión por Computadora:** OpenCV (flujo óptico denso Farnebäck/DIS) para estimación de `ObstacleField` y TTC; sin red de detección.
-*   **Modelos de Lenguaje (SLM):** LM Studio / Ollama (API local compatible con OpenAI) para inferencia local de `qwen2.5`, `phi-3/phi-4`, `llama3.2`, `gemma2`.
+*   **Modelos de Lenguaje (SLM/VLM):** LM Studio / Ollama (API local compatible con OpenAI) para inferencia local. Modelo adoptado: **`Qwen2.5-VL-3B`** (VLM, 3B parámetros, cabe en 2–3.5 GB de VRAM dejando margen para UE5.5). Candidatos evaluados y descartados: `Phi-4-mini`, `Qwen3-4B`, `SmolLM3`, `Qwen2.5-VL-7B` (excede VRAM). Decodificación restringida con `json_schema` eleva la tasa de adherencia al esquema de 73% → 98%.
 *   **Control y Orquestación:** LangGraph (grafo de decisión por tick), Pydantic (validación de esquemas JSON).
 *   **Ground Control Station:** FastAPI, HTML5, Vanilla CSS / JS (Inter + JetBrains Mono).
 *   **Evaluación y Calibración:** Promptfoo (benchmarking de prompts) y Jupyter Notebooks (SciPy / NumPy / Matplotlib).
@@ -132,7 +132,7 @@ conda activate airsimenv
 ```
 
 ### 2. Preparar el Simulador (Cosys-AirSim en Unreal Engine 5.5)
-*   Abre y ejecuta el proyecto de Unreal Engine o el binario precompilado (ej. `CitySim` / `CityParkSim`, disponible en [Google Drive](https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7)) en modo **Play**.
+*   Abre y ejecuta el proyecto de Unreal Engine o el binario precompilado (ej. `CitySim` o `TownSim`, disponibles en [Google Drive](https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7)) en modo **Play**.
 *   Asegúrate de que la configuración en `%USERPROFILE%\Documents\AirSim\settings.json` (ver [`airsim-settings/settings.json`](airsim-settings/settings.json)) apunte a la IP y puertos correctos (`41451`) con `SimMode: "Multirotor"`.
 *   Detalles de instalación del plugin y ajustes de UE en [CREATEENV.md](CREATEENV.md).
 
@@ -156,7 +156,8 @@ En [`callibration_flight`](./callibration_flight) y [`CHANGELOG.md`](CHANGELOG.m
 *   **Robustez de Visión Monocular Pura:** Desacople del Time-To-Collision de la distancia estática, eliminando oscilaciones en zigzag (*slalom*) y adaptando el crucero al ancho de calle.
 *   **Calibración de TTC contra el canal depth:** `TTC_EVASION_THRESHOLD`/`TTC_SAFE_THRESHOLD` calibrados con 3735 registros de vuelo real (aproximación frontal, cañón recto, giros de yaw) — AUC 0.96–0.97 para el evento "colisión dentro de τ segundos" pese a correlación puntual baja del valor estimado.
 *   **Benchmark de Inferencia Local:** Tiempos de respuesta de modelos compactos de 2B-4B parámetros corriendo en paralelo con el lazo de percepción por flujo óptico.
-*   **Comparación de brazos (SLM vs FSM vs Reactivo):** primeros batches end-to-end con `experiments/runner.py` validaron el pipeline de instrumentación (logging, latencias por ciclo, SPL) y expusieron y corrigieron un deadlock real en el mecanismo de escape por altura. La corrida comparativa final de la tesis, con el servidor SLM disponible durante toda la corrida, está pendiente.
+*   **Integridad de datos — corte 2026-09-03:** Dos bugs críticos corregidos en esa fecha afectan toda corrida anterior: (1) canales R/B invertidos en capturas de AirSim (el VLM veía colores erróneos); (2) marcadores de debug superpuestos en el fotograma enviado al modelo. **Cualquier corrida anterior al 2026-09-03 no es comparable** para métricas del brazo `slm`. El campo `code_version` en `summary.json` permite identificar la versión que generó cada corrida.
+*   **Comparación de brazos (SLM vs FSM vs Reactivo):** primeros batches end-to-end con `experiments/runner.py` validaron el pipeline de instrumentación (logging, latencias por ciclo, SPL) y expusieron y corrigieron un deadlock real en el mecanismo de escape por altura. La corrida comparativa final de la tesis (Tier 2 / CitySim, protocolo G4: 3 brazos × 3 escenarios × 5 semillas), con el servidor SLM disponible durante toda la corrida, está pendiente.
 *   **Auditoría de Vuelo Post-Corrida:** cada ejecución queda en una carpeta autocontenida (JSONL/CSV, fotogramas, video `.webm` anotado) con un visor HTML que sincroniza en ambos sentidos la reproducción del video con la fila correspondiente de la traza — permite reconstruir, para cualquier instante del vuelo, qué fotograma vio el modelo y qué decisión tomó.
 
 ---
