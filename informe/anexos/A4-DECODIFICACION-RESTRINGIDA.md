@@ -18,10 +18,10 @@ En la generación autorregresiva convencional, un modelo autoregresivo produce u
 
 $$y_t \sim P(y_t \mid y_{<t}, x)$$
 
-donde $x$ representa la secuencia del prompt de entrada e $y_{<t} = (y_1, \dots, y_{t-1})$ los tokens generados previamente. Para un modelo contemporáneo como **Qwen2.5-VL-3B-Instruct** (Qwen Team, 2025), el tamaño del vocabulario asciende a $|V| = 152\,064$ tokens.
+donde $x$ representa la secuencia del prompt de entrada e $y_{<t} = (y_1, \dots, y_{t-1})$ los tokens generados previamente. Para un modelo contemporáneo como **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)), el tamaño del vocabulario asciende a $|V| = 152\,064$ tokens.
 
 ### A4.1.1 Modos de falla de la decodificación libre en DroneLM
-Cuando se solicita una salida JSON únicamente mediante instrucciones en el *system prompt* (*prompt engineering* puro), los modelos de 3B parámetros exhiben una tasa de incumplimiento sintáctico de entre el 20% y el 35% en condiciones de vuelo continuo (Geng et al., 2025; Raspanti et al., 2025). Los modos de falla documentados en DroneLM incluyen:
+Cuando se solicita una salida JSON únicamente mediante instrucciones en el *system prompt* (*prompt engineering* puro), los modelos de 3B parámetros exhiben una tasa de incumplimiento sintáctico de entre el 20% y el 35% en condiciones de vuelo continuo ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025)). Los modos de falla documentados en DroneLM incluyen:
 1. **Preámbulos y epílogos conversacionales:** emisión de frases introductorias (*«Sure, here is the drone decision:»*) o explicaciones finales que rompen `json.loads()`.
 2. **Encapsulamiento en Markdown irregular:** uso intermitente de triples comillas invertidas (```` ```json ... ``` ````), a menudo con saltos de línea mal posicionados.
 3. **Malformación sintáctica:** comas terminales huérfanas (*trailing commas*), omisión de llaves de cierre `}` por corte de contexto o escape defectuoso de caracteres en cadenas.
@@ -43,7 +43,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 
 ## A4.2 Fundamentos matemáticos y formales de la decodificación restringida
 
-La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (*logits*) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible (Willard & Louf, 2023; Ugare et al., 2024; Dong et al., 2024).
+La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (*logits*) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023); [Ugare et al., 2024](../13-REFERENCIAS.md#ref-ugare-2024); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)).
 
 ```
                       ┌─────────────────────────────────┐
@@ -104,7 +104,7 @@ Cualquier token $v_j$ que conduzca a una violación de la gramática recibe un l
 
 ### A4.2.2 Modelado mediante Autómatas Finitos (DFA) y Autómatas de Pila (PDA)
 La complejidad del analizador depende de la expresividad de la restricción:
-1. **Autómatas Finitos Deterministas (DFA):** aplicables a expresiones regulares, listas cerradas de cadenas y enumeraciones fijas (`enum`). Willard y Louf (2023) demuestran que un esquema JSON con campos de profundidad fija puede compilarse directamente en un DFA. En este caso, la transición entre estados se resuelve en tiempo constante $\mathcal{O}(1)$.
+1. **Autómatas Finitos Deterministas (DFA):** aplicables a expresiones regulares, listas cerradas de cadenas y enumeraciones fijas (`enum`). [Willard y Louf (2023)](../13-REFERENCIAS.md#ref-willard-2023) demuestran que un esquema JSON con campos de profundidad fija puede compilarse directamente en un DFA. En este caso, la transición entre estados se resuelve en tiempo constante $\mathcal{O}(1)$.
 2. **Autómatas de Pila (PDA):** requeridos para gramáticas independientes del contexto (*Context-Free Grammars*, CFG) que admiten anidamientos arbitrarios de llaves, corchetes o estructuras recursivas (formato GBNF en `llama.cpp` y SynCode; Ugare et al., 2024). El PDA mantiene una pila de símbolos para validar el balanceo estricto de la sintaxis.
 
 ### A4.2.3 El desafío de la tokenización sub-palabra (*Tokenization Boundary Problem*)
@@ -112,13 +112,13 @@ Un obstáculo fundamental en la decodificación restringida radica en que los mo
 
 Un token individual puede cruzar la frontera entre la sintaxis estática y el valor dinámico. Por ejemplo, el token `"action":` puede estar codificado como una única entrada léxica en el vocabulario, mientras que en otros tokenizadores se divide en `"` + `action` + `":`. 
 
-Los motores modernos (Outlines, XGrammar, llama.cpp) resuelven esto construyendo un árbol de prefijos (*Trie*) sobre el vocabulario de sub-palabras indexado contra el autómata de la gramática. Durante la compilación previa, se identifican todos los tokens cuya secuencia de bytes constituye un prefijo válido para el estado actual del autómata, garantizando que el filtrado sea exacto a nivel de byte (Willard & Louf, 2023; Dong et al., 2024).
+Los motores modernos (Outlines, XGrammar, llama.cpp) resuelven esto construyendo un árbol de prefijos (*Trie*) sobre el vocabulario de sub-palabras indexado contra el autómata de la gramática. Durante la compilación previa, se identifican todos los tokens cuya secuencia de bytes constituye un prefijo válido para el estado actual del autómata, garantizando que el filtrado sea exacto a nivel de byte ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)).
 
 ---
 
 ## A4.3 Mecanismos de aceleración: ¿por qué la decodificación restringida es más rápida?
 
-Existe una concepción errónea de que evaluar una gramática formal en cada paso de inferencia añade una sobrecarga computacional prohibitiva para sistemas en tiempo real. Si bien una implementación ingenua que verifique $150\,000$ tokens en CPU de forma secuencial introduciría una latencia sustancial, los motores optimizados de última generación **pueden acelerar la generación global entre un 50% y un 80%** en comparación con la inferencia en texto libre (Dong et al., 2024; Lundberg et al., 2023).
+Existe una concepción errónea de que evaluar una gramática formal en cada paso de inferencia añade una sobrecarga computacional prohibitiva para sistemas en tiempo real. Si bien una implementación ingenua que verifique $150\,000$ tokens en CPU de forma secuencial introduciría una latencia sustancial, los motores optimizados de última generación **pueden acelerar la generación global entre un 50% y un 80%** en comparación con la inferencia en texto libre ([Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024); [Lundberg et al., 2023](../13-REFERENCIAS.md#ref-lundberg-2023)).
 
 Esta ganancia de eficiencia se sustenta en cuatro pilares de ingeniería:
 
@@ -132,7 +132,7 @@ En una GPU de consumo cohabitada con simulación 3D (como la NVIDIA RTX 5060 de 
 * Con decodificación restringida estricta, la salida se acota a exactamente la estructura mínima requerida (por ejemplo, 16 a 22 tokens en DroneLM). El tiempo de decodificación colapsa a **$300 - 450\text{ ms}$**, permitiendo al lazo deliberativo operar holgadamente dentro de su ventana temporal de seguridad.
 
 ### A4.3.2 Avance rápido de tokens (*Token Fast-Forwarding / Token Jumping*)
-Marcos de trabajo como **Guidance** (Lundberg et al., 2023) y **Outlines** (Willard & Louf, 2023) implementan una técnica crítica: **el salto de tokens deterministas**. 
+Marcos de trabajo como **Guidance** ([Lundberg et al., 2023](../13-REFERENCIAS.md#ref-lundberg-2023)) y **Outlines** ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)) implementan una técnica crítica: **el salto de tokens deterministas**. 
 
 Cuando el autómata de la gramática se encuentra en un estado donde la única continuación sintáctica posible es una secuencia fija de caracteres (por ejemplo, los caracteres sintácticos `{"action":"` o la clave `, "reason":"`), **no existe incertidumbre probabilística**. El motor de inferencia omite por completo el paso hacia adelante (*forward pass*) de la red neuronal para esos tokens. En su lugar:
 1. Concatena directamente los tokens estáticos en la secuencia generada.
@@ -142,14 +142,14 @@ Cuando el autómata de la gramática se encuentra en un estado donde la única c
 Al saltarse entre 8 y 12 pasos de cómputo en la GPU por cada llamada deliberativa, la latencia neta cae drásticamente.
 
 ### A4.3.3 Partición de vocabulario y pre-cálculo de máscaras (XGrammar)
-El motor **XGrammar** (Dong et al., 2024) optimiza la ejecución de gramáticas independientes del contexto dividiendo los tokens del vocabulario en dos categorías durante una fase de compilación inicial:
+El motor **XGrammar** ([Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)) optimiza la ejecución de gramáticas independientes del contexto dividiendo los tokens del vocabulario en dos categorías durante una fase de compilación inicial:
 * **Tokens independientes del contexto:** tokens cuyos patrones de aceptación dependen únicamente de reglas locales de caracteres y pueden precalcularse y almacenarse en mapas de bits compactos.
 * **Tokens dependientes del contexto:** aquellos que interactúan con la profundidad de la pila sintáctica (e.g., llaves y comillas anidadas).
 
 Durante la inferencia en tiempo real, XGrammar ejecuta el filtrado de máscaras en paralelo con el cómputo de la GPU o durante la fase de pre-llenado (*pre-fill*), reduciendo la sobrecarga de CPU a **menos de 0.05 ms por token** (prácticamente nula).
 
 ### A4.3.4 Decodificación especulativa basada en gramáticas
-En sistemas avanzados, las restricciones gramaticales se combinan con **decodificación especulativa** (Leviathan et al., 2023; Dong et al., 2024). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo `action`, solo 5 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de $2\times$ a $3\times$.
+En sistemas avanzados, las restricciones gramaticales se combinan con **decodificación especulativa** ([Leviathan et al., 2023](../13-REFERENCIAS.md#ref-leviathan-2023); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo `action`, solo 5 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de $2\times$ a $3\times$.
 
 ---
 
@@ -243,7 +243,7 @@ Para servidores de inferencia que exponen APIs compatibles con OpenAI/vLLM/LM St
 ```
 
 ### A4.5.2 Definición mediante gramática GBNF (*Gerganov BNF*)
-En entornos basados directamente en `llama.cpp` (Gerganov, 2023) o en nodos de computación embebidos sin servidor REST intermedio, las gramáticas se definen en formato GBNF. GBNF es una extensión de la forma Backus-Naur que opera a nivel de caracteres y expresiones regulares:
+En entornos basados directamente en `llama.cpp` ([Gerganov, 2023](../13-REFERENCIAS.md#ref-gerganov-2023)) o en nodos de computación embebidos sin servidor REST intermedio, las gramáticas se definen en formato GBNF. GBNF es una extensión de la forma Backus-Naur que opera a nivel de caracteres y expresiones regulares:
 
 ```bnf
 # Archivo: drone_decision.gbnf
@@ -386,7 +386,7 @@ En `deliberative_node`, la integración con la temporalidad del lazo de control 
 
 ## A4.7 Comparativa de motores y ecosistemas de decodificación estructurada
 
-Para seleccionar la infraestructura de inferencia más eficiente para DroneLM en función del hardware disponible, se evaluaron los cuatro marcos de trabajo líderes en el estado del arte (Willard & Louf, 2023; Dong et al., 2024; Lundberg et al., 2023; Gerganov, 2023):
+Para seleccionar la infraestructura de inferencia más eficiente para DroneLM en función del hardware disponible, se evaluaron los cuatro marcos de trabajo líderes en el estado del arte ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024); [Lundberg et al., 2023](../13-REFERENCIAS.md#ref-lundberg-2023); [Gerganov, 2023](../13-REFERENCIAS.md#ref-gerganov-2023)):
 
 | Dimensión de Análisis | `llama.cpp` (GBNF) | Outlines | XGrammar | Guidance |
 |---|---|---|---|---|

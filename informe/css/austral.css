@@ -89,6 +89,28 @@
   font-weight: 600;
 }
 
+/* --- Referencias APA: sangría francesa y anclas interactivas --- */
+.ref-anchor {
+  scroll-margin-top: 5.5rem;
+  display: inline;
+}
+
+.md-typeset p:has(> .ref-anchor) {
+  padding-left: 2.2em;
+  text-indent: -2.2em;
+  margin-bottom: 1.1em;
+  line-height: 1.6;
+}
+
+/* Resaltado interactivo cuando se salta a una referencia desde un capítulo */
+.md-typeset p:has(> .ref-anchor:target) {
+  background-color: rgba(52, 138, 218, 0.12);
+  border-left: 3px solid #0F29A2;
+  padding-left: calc(2.2em + 8px);
+  border-radius: 0 4px 4px 0;
+  transition: background-color 0.4s ease;
+}
+
 /* ============================================================
    ESTILOS DE IMPRESIÓN / PDF
    Se aplican sobre la print_page.html de mkdocs-print-site

@@ -1501,7 +1501,7 @@
 <p>Diferenciando las coordenadas proyectivas normalizadas $x = \frac{X_c}{Z_c}$ e $y = \frac{Y_c}{Z_c}$ con respecto al tiempo:</p>
 <p>$$\dot{x} = \frac{\dot{X}_c Z_c - X_c \dot{Z}_c}{Z_c^2} = \frac{\dot{X}_c}{Z_c} - x \frac{\dot{Z}_c}{Z_c}$$</p>
 <p>$$\dot{y} = \frac{\dot{Y}_c Z_c - Y_c \dot{Z}_c}{Z_c^2} = \frac{\dot{Y}_c}{Z_c} - y \frac{\dot{Z}_c}{Z_c}$$</p>
-<p>Sustituyendo las componentes de $\dot{P}_c$, se obtienen las <strong>ecuaciones fundamentales del flujo óptico continuo</strong> (Longuet-Higgins &amp; Prazdny, 1980):</p>
+<p>Sustituyendo las componentes de $\dot{P}_c$, se obtienen las <strong>ecuaciones fundamentales del flujo óptico continuo</strong> (<a href="../13-REFERENCIAS.html#ref-longuet-higgins-1980">Longuet-Higgins &amp; Prazdny, 1980</a>):</p>
 <p>$$\dot{x} = \underbrace{\frac{-V_x + x V_z}{Z_c}}<em _text_trans="\text{trans">{\dot{x}</em>}}} + \underbrace{\left[ x y \, \Omega_x - (1 + x^2) \, \Omega_y + y \, \Omega_z \right]<em _text_rot="\text{rot">{\dot{x}</em>$$}}</p>
 <p>$$\dot{y} = \underbrace{\frac{-V_y + y V_z}{Z_c}}<em _text_trans="\text{trans">{\dot{y}</em>}}} + \underbrace{\left[ (1 + y^2) \, \Omega_x - x y \, \Omega_y - x \, \Omega_z \right]<em _text_rot="\text{rot">{\dot{y}</em>$$}}</p>
 <h3 id="a521-el-dilema-de-la-contaminacion-rotacional">A5.2.1 El dilema de la contaminación rotacional<a class="headerlink" href="#a521-el-dilema-de-la-contaminacion-rotacional" title="Permanent link">&para;</a></h3>
@@ -1575,14 +1575,14 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 3. Si la cantidad de <em>inliers</em> supera 30, el sistema normal $A \cdot \text{FOE} = b$ se re-resuelve exclusivamente sobre el subconjunto de <em>inliers</em>, refinando las coordenadas.
 4. <strong>Verificación de plausibilidad física:</strong> Si el FOE resultante queda fuera del encuadre visual ($x_{\text{FOE}} &lt; 0$, $x_{\text{FOE}} &gt; W'$, $y_{\text{FOE}} &lt; 0$ o $y_{\text{FOE}} &gt; H'$), el estimado se descarta categóricamente ($\text{confidence} = 0$), pues un punto de fuga fuera del sensor indica ausencia de avance frontal o dominancia de ruido cinemático.</p>
 <hr />
-<h2 id="a55-teoria-del-tau-de-lee-1976-y-deduccion-del-ttc-como-observable-optico-directo">A5.5 Teoría del $\tau$ de Lee (1976) y deducción del TTC como observable óptico directo<a class="headerlink" href="#a55-teoria-del-tau-de-lee-1976-y-deduccion-del-ttc-como-observable-optico-directo" title="Permanent link">&para;</a></h2>
+<h2 id="a55-teoria-del-tau-de-lee-1976-y-deduccion-del-ttc-como-observable-optico-directo">A5.5 Teoría del $\tau$ de <a href="../13-REFERENCIAS.html#ref-lee-1976">Lee (1976)</a> y deducción del TTC como observable óptico directo<a class="headerlink" href="#a55-teoria-del-tau-de-lee-1976-y-deduccion-del-ttc-como-observable-optico-directo" title="Permanent link">&para;</a></h2>
 <p>La gran potencia teórica de la percepción monocular radica en que <strong>no es necesario conocer la distancia métrica $Z_c$ ni la velocidad absoluta $V_z$ para calcular el tiempo hasta el impacto</strong>.</p>
 <h3 id="a551-deduccion-matematica">A5.5.1 Deducción matemática<a class="headerlink" href="#a551-deduccion-matematica" title="Permanent link">&para;</a></h3>
 <p>Tomando la magnitud del vector de flujo traslacional derotado para un píxel $p = (x, y)$:</p>
 <p>$$|v_{\text{trans}}| = \sqrt{u_{\text{trans}}^2 + v_{\text{trans}}^2} = \frac{V_z}{Z_c} \sqrt{(x - x_{\text{FOE}})^2 + (y - y_{\text{FOE}})^2} = \frac{V_z}{Z_c} |p - \text{FOE}|$$</p>
 <p>Reorganizando los términos:</p>
 <p>$$\frac{Z_c}{V_z} = \frac{|p - \text{FOE}|}{|v_{\text{trans}}|}$$</p>
-<p>Por definición física, si el vehículo continúa su aproximación hacia una superficie plana ortogonal con velocidad constante $V_z$, el <strong>Tiempo hasta la Colisión (<em>Time-to-Collision</em>, TTC)</strong>, formalizado originalmente como la variable biológica $\tau$ por Lee (1976), es:</p>
+<p>Por definición física, si el vehículo continúa su aproximación hacia una superficie plana ortogonal con velocidad constante $V_z$, el <strong>Tiempo hasta la Colisión (<em>Time-to-Collision</em>, TTC)</strong>, formalizado originalmente como la variable biológica $\tau$ por <a href="../13-REFERENCIAS.html#ref-lee-1976">Lee (1976)</a>, es:</p>
 <p>$$\text{TTC} = \tau = \frac{Z_c}{V_z}$$</p>
 <p>Dado que el flujo medido en píxeles representa la tasa discreta por fotograma $|v_{\text{trans}}| = \frac{\Delta s}{\Delta t}$, se tiene:</p>
 <p>$$\text{TTC}(x, y) = \frac{|p - \text{FOE}| \cdot \Delta t}{|v_{\text{trans}}(x, y)|}$$</p>
@@ -1656,7 +1656,7 @@ La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el 
 <tr>
 <th>Criterio</th>
 <th>Gunnar Farnebäck (2003)</th>
-<th>Dense Inverse Search (DIS; Kroeger et al., 2016)</th>
+<th>Dense Inverse Search (DIS; <a href="../13-REFERENCIAS.html#ref-kroeger-2016">Kroeger et al., 2016</a>)</th>
 </tr>
 </thead>
 <tbody>

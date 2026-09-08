@@ -10,7 +10,7 @@ Si bien esta configuración resuelve con éxito la extracción de semántica vis
 1. **Sobrecarga de latencia por longitud de contexto (*prompt overhead*):** verbalizar la telemetría, el resumen del campo de obstáculos (`ObstacleField`), el historial de maniobras y las instrucciones sintácticas insume entre 400 y 600 tokens de entrada por ciclo. Esto eleva la fase de pre-llenado (*pre-fill*), empujando la latencia de inferencia hacia la frontera del perro guardián del sistema (`SLM_WATCHDOG_MS = 1500 ms`).
 2. **Dependencia de restricciones externas de muestreo:** el modelo preentrenado retiene sesgos conversacionales y un amplio espacio léxico generalista, lo que exige filtrar activamente sus *logits* en cada token mediante gramáticas para asegurar el cumplimiento de la lista blanca de macro-acciones (§8.3).
 
-Este anexo desarrolla los fundamentos matemáticos y metodológicos de **Adaptación de Bajo Rango (LoRA; Hu et al., 2022)** y sus extensiones contemporáneas (**QLoRA; Dettmers et al., 2024** y **DoRA; Liu et al., 2024**) como línea de trabajo futuro (§12.4): internalizar el dominio físico-espacial y el formato estricto directamente en los tensores de ponderación de la red, habilitando respuestas en tiempo real (< 500 ms) sin alterar la arquitectura base ni requerir hardware de nivel servidor.
+Este anexo desarrolla los fundamentos matemáticos y metodológicos de **Adaptación de Bajo Rango (LoRA; [Hu et al., 2022](../13-REFERENCIAS.md#ref-hu-2022))** y sus extensiones contemporáneas (**QLoRA; Dettmers et al., 2024** y **DoRA; Liu et al., 2024**) como línea de trabajo futuro (§12.4): internalizar el dominio físico-espacial y el formato estricto directamente en los tensores de ponderación de la red, habilitando respuestas en tiempo real (< 500 ms) sin alterar la arquitectura base ni requerir hardware de nivel servidor.
 
 ---
 
@@ -44,7 +44,7 @@ Las técnicas de Ajuste Fino Eficiente en Parámetros (*Parameter-Efficient Fine
 ```
 
 ### A3.1.1 Formulación matemática de LoRA
-La premisa matemática de LoRA (Hu et al., 2022) se basa en la hipótesis de que las actualizaciones de peso $\Delta W$ durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (*low intrinsic dimension*). Para una matriz lineal preentrenada $W_0 \in \mathbb{R}^{d \times k}$, la actualización se descompone como el producto de dos matrices de bajo rango:
+La premisa matemática de LoRA ([Hu et al., 2022](../13-REFERENCIAS.md#ref-hu-2022)) se basa en la hipótesis de que las actualizaciones de peso $\Delta W$ durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (*low intrinsic dimension*). Para una matriz lineal preentrenada $W_0 \in \mathbb{R}^{d \times k}$, la actualización se descompone como el producto de dos matrices de bajo rango:
 
 $$W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)$$
 
@@ -66,7 +66,7 @@ Para modelos multimodales (sVLMs como Qwen2.5-VL), existe una disyuntiva de dise
 2. **Proyector multimodal y capas del LLM autorregresivo:** adaptar $W_q, W_v$ y las capas lineales del MLP permite al modelo remapear las representaciones visuales hacia la lógica de control del dron. La literatura empírica demuestra que incorporar tanto los módulos de atención como los del bloque MLP ($W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}$) con rangos moderados ($r=16$) supera consistentemente a adaptar únicamente $W_q$ con rangos mayores ($r=64$).
 
 ### A3.1.3 QLoRA: cuantización en 4 bits y optimizadores paginados
-Para posibilitar la sintonización en hardware de desarrollo restringido, Dettmers et al. (2024) introdujeron **QLoRA**, una extensión que combina tres innovaciones clave:
+Para posibilitar la sintonización en hardware de desarrollo restringido, [Dettmers et al. (2024)](../13-REFERENCIAS.md#ref-dettmers-2024) introdujeron **QLoRA**, una extensión que combina tres innovaciones clave:
 * **Formato NormalFloat4 (NF4):** un tipo de datos no lineal de 4 bits con espaciado óptimo para representar tensores con distribución normal estándar centrada en cero, conservando un error de cuantización teóricamente menor que el formato entero uniforme INT4.
 * **Doble Cuantización (*Double Quantization*):** proceso que cuantiza las propias constantes de escala de cuantización del modelo (de FP32 a FP8 en bloques de 256 elementos), ahorrando un promedio de 0.37 bits por parámetro (~370 MB en un modelo de 3B).
 * **Optimizadores Paginados (*Paged Optimizers*):** integración con CUDA Memory Management para trasladar dinámicamente los estados de memoria de la GPU a la memoria RAM del sistema operativo durante picos transitorios de gradientes, previniendo fallos por memoria agotada (*Out-Of-Memory*, OOM).
@@ -74,7 +74,7 @@ Para posibilitar la sintonización en hardware de desarrollo restringido, Dettme
 En este esquema, el modelo base $W_0$ reside en VRAM cuantizado en 4 bits NF4 ($~1.8\text{ GB}$ para 3B), mientras que los adaptadores $A$ y $B$ se mantienen y optimizan en precisión bfloat16 ($~25\text{ MB}$).
 
 ### A3.1.4 DoRA: adaptación desacoplada en magnitud y dirección
-Liu et al. (2024) observaron una discrepancia estructural en la dinámica de gradientes: mientras que el ajuste completo (FFT) modifica tanto la magnitud como la dirección de los vectores de pesos de forma desbalanceada e independiente, LoRA exhibe un acoplamiento simétrico entre ambas dimensiones.
+[Liu et al. (2024)](../13-REFERENCIAS.md#ref-liu-dora-2024) observaron una discrepancia estructural en la dinámica de gradientes: mientras que el ajuste completo (FFT) modifica tanto la magnitud como la dirección de los vectores de pesos de forma desbalanceada e independiente, LoRA exhibe un acoplamiento simétrico entre ambas dimensiones.
 
 Para solventar esta limitación, **DoRA (*Weight-Decomposed Low-Rank Adaptation*)** factoriza cada columna de la matriz de ponderación $W \in \mathbb{R}^{d \times k}$ en su vector de magnitud de norma euclidiana $m \in \mathbb{R}^{1 \times k}$ y su matriz direccional unitaria normalizada $V \in \mathbb{R}^{d \times k}$:
 
@@ -175,7 +175,7 @@ donde:
 * $r_t^*$ es una cadena de justificación condensada (< 120 caracteres) que verbaliza el razonamiento causal subyacente (e.g., `"TTC crítico de 1.2s en cuadrante frontal-izquierdo; espacio despejado a la derecha; iniciar maniobra evasiva"`).
 
 ### A3.3.2 Mitigación de la deriva cinemática mediante DAgger
-El entrenamiento mediante simple Clonación de Comportamiento (*Behavioral Cloning*, BC) a partir de vuelos nominales perfectos sufre del problema de **deriva covariada (*Covariate Shift*)** (Codevilla et al., 2019): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.
+El entrenamiento mediante simple Clonación de Comportamiento (*Behavioral Cloning*, BC) a partir de vuelos nominales perfectos sufre del problema de **deriva covariada (*Covariate Shift*)** ([Codevilla et al., 2019](../13-REFERENCIAS.md#ref-codevilla-2019)): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.
 
 Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo **DAgger (*Dataset Aggregation*; Ross et al., 2011)** adaptado a simulación en AirSim / Unreal Engine 5:
 1. **Vuelo con política actual** $\pi_{\text{LoRA}}$ en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
@@ -205,7 +205,7 @@ $$W_{\text{despliegue}} = W_0 + \frac{\alpha}{r} (B \cdot A)$$
 
 Al realizar la fusión de tensores en punto flotante previo (FP16 o BF16), la matriz resultante $W_{\text{despliegue}}$ adquiere exactamente las mismas dimensiones y topología que la red preentrenada original. No existe ninguna bifurcación de memoria ni sobrecarga computacional adicional durante la inferencia. 
 
-Posteriormente, el modelo fusionado se compila a formato **GGUF** cuantizado (`Q4_K_M`) mediante `llama.cpp` (Gerganov, 2023), produciendo un binario de ~2.0 GB listo para ejecución local embebida sin dependencias de librerías de entrenamiento.
+Posteriormente, el modelo fusionado se compila a formato **GGUF** cuantizado (`Q4_K_M`) mediante `llama.cpp` ([Gerganov, 2023](../13-REFERENCIAS.md#ref-gerganov-2023)), produciendo un binario de ~2.0 GB listo para ejecución local embebida sin dependencias de librerías de entrenamiento.
 
 ### A3.4.2 Sinergia entre LoRA y decodificación restringida (`json_schema`)
 El ajuste fino no reemplaza la decodificación restringida por gramáticas (§8.2, Anexo 4), sino que la complementa:

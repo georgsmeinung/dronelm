@@ -85,7 +85,7 @@ $$\dot{x} = \frac{\dot{X}_c Z_c - X_c \dot{Z}_c}{Z_c^2} = \frac{\dot{X}_c}{Z_c} 
 
 $$\dot{y} = \frac{\dot{Y}_c Z_c - Y_c \dot{Z}_c}{Z_c^2} = \frac{\dot{Y}_c}{Z_c} - y \frac{\dot{Z}_c}{Z_c}$$
 
-Sustituyendo las componentes de $\dot{P}_c$, se obtienen las **ecuaciones fundamentales del flujo óptico continuo** (Longuet-Higgins & Prazdny, 1980):
+Sustituyendo las componentes de $\dot{P}_c$, se obtienen las **ecuaciones fundamentales del flujo óptico continuo** ([Longuet-Higgins & Prazdny, 1980](../13-REFERENCIAS.md#ref-longuet-higgins-1980)):
 
 $$\dot{x} = \underbrace{\frac{-V_x + x V_z}{Z_c}}_{\dot{x}_{\text{trans}}} + \underbrace{\left[ x y \, \Omega_x - (1 + x^2) \, \Omega_y + y \, \Omega_z \right]}_{\dot{x}_{\text{rot}}}$$
 
@@ -201,7 +201,7 @@ Debido a reflejos, texturas repetitivas o imprecisiones locales, una fracción d
 
 ---
 
-## A5.5 Teoría del $\tau$ de Lee (1976) y deducción del TTC como observable óptico directo
+## A5.5 Teoría del $\tau$ de [Lee (1976)](../13-REFERENCIAS.md#ref-lee-1976) y deducción del TTC como observable óptico directo
 
 La gran potencia teórica de la percepción monocular radica en que **no es necesario conocer la distancia métrica $Z_c$ ni la velocidad absoluta $V_z$ para calcular el tiempo hasta el impacto**.
 
@@ -214,7 +214,7 @@ Reorganizando los términos:
 
 $$\frac{Z_c}{V_z} = \frac{\|p - \text{FOE}\|}{\|v_{\text{trans}}\|}$$
 
-Por definición física, si el vehículo continúa su aproximación hacia una superficie plana ortogonal con velocidad constante $V_z$, el **Tiempo hasta la Colisión (*Time-to-Collision*, TTC)**, formalizado originalmente como la variable biológica $\tau$ por Lee (1976), es:
+Por definición física, si el vehículo continúa su aproximación hacia una superficie plana ortogonal con velocidad constante $V_z$, el **Tiempo hasta la Colisión (*Time-to-Collision*, TTC)**, formalizado originalmente como la variable biológica $\tau$ por [Lee (1976)](../13-REFERENCIAS.md#ref-lee-1976), es:
 
 $$\text{TTC} = \tau = \frac{Z_c}{V_z}$$
 
@@ -308,7 +308,7 @@ Este desacoplamiento evita que detecciones marginales o artefactos aislados gene
 
 El pipeline permite seleccionar dinámicamente el backend algorítmico mediante la variable de entorno `FLOW_ALGORITHM` (`dis` | `farneback`).
 
-| Criterio | Gunnar Farnebäck (2003) | Dense Inverse Search (DIS; Kroeger et al., 2016) |
+| Criterio | Gunnar Farnebäck (2003) | Dense Inverse Search (DIS; [Kroeger et al., 2016](../13-REFERENCIAS.md#ref-kroeger-2016)) |
 |---|---|---|
 | **Principio Algorítmico** | Expansión cuadrática polinómica por ventanas | Búsqueda inversa en parches con refinamiento variacional |
 | **Complejidad Computacional** | Alta ($O(W \cdot H \cdot \text{iter})$) | Baja a Media (acelerada por descenso de gradiente inverso) |

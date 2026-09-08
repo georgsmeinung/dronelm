@@ -169,7 +169,7 @@ Sobre ≥5 semillas independientes por celda se ejecutará:
    escenarios con bloqueo. Métrica secundaria: `dist_min_m` como indicador de seguridad.
 
 2. **Tamaño de efecto**: Cliff's Delta (δ) sobre el mismo par. Umbral de referencia: δ > 0.3
-   como efecto "mediano" (Romano et al., 2006). Un p-valor significativo con δ pequeño (< 0.1)
+   como efecto "mediano" ([Romano et al., 2006](13-REFERENCIAS.md#ref-romano-2006)). Un p-valor significativo con δ pequeño (< 0.1)
    indicaría una diferencia real pero de magnitud práctica despreciable.
 
 3. **Corrección de Bonferroni** sobre las comparaciones múltiples (3 pares de brazos × 6
