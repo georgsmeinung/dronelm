@@ -10,6 +10,7 @@ theme:
   name: material
   language: es
   logo: img/logo-austral-horizontal.png
+  favicon: img/favicon.svg
   font:
     text: Inter
     code: JetBrains Mono

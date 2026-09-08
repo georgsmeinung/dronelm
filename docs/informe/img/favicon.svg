@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A1118" />
+      <stop offset="50%" stop-color="#101B2B" />
+      <stop offset="100%" stop-color="#08101D" />
+    </linearGradient>
+
+    <!-- Main Cyan-Blue Accent Gradient -->
+    <linearGradient id="droneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="50%" stop-color="#0077FF" />
+      <stop offset="100%" stop-color="#7000FF" />
+    </linearGradient>
+
+    <!-- Rotor Glow Gradient -->
+    <radialGradient id="rotorGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#0088FF" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#0066FF" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Camera Lens AI Glow -->
+    <radialGradient id="lensGrad" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#E6FFFF" />
+      <stop offset="35%" stop-color="#00E5FF" />
+      <stop offset="75%" stop-color="#0052CC" />
+      <stop offset="100%" stop-color="#001F4D" />
+    </radialGradient>
+
+    <!-- Rotor Blades Gradient -->
+    <linearGradient id="bladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#818CF8" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter for depth -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Base with Rounded Border -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="url(#droneGrad)" stroke-width="6" stroke-opacity="0.45" />
+
+  <!-- Vision FOV / Perception Cone (TTC & Monocular Camera) -->
+  <path d="M 256 256 L 160 50 L 352 50 Z" fill="url(#droneGrad)" opacity="0.12" />
+  <path d="M 256 256 L 190 70 L 322 70 Z" fill="url(#droneGrad)" opacity="0.15" />
+  <line x1="256" y1="256" x2="256" y2="46" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6 6" opacity="0.6" />
+
+  <!-- Drone Diagonal Arms Structure -->
+  <!-- Arm Top-Left to Bottom-Right -->
+  <line x1="120" y1="120" x2="392" y2="392" stroke="#1E293B" stroke-width="26" stroke-linecap="round" />
+  <line x1="120" y1="120" x2="392" y2="392" stroke="url(#droneGrad)" stroke-width="14" stroke-linecap="round" />
+
+  <!-- Arm Top-Right to Bottom-Left -->
+  <line x1="392" y1="120" x2="120" y2="392" stroke="#1E293B" stroke-width="26" stroke-linecap="round" />
+  <line x1="392" y1="120" x2="120" y2="392" stroke="url(#droneGrad)" stroke-width="14" stroke-linecap="round" />
+
+  <!-- Quadcopter Rotors (4 corners) -->
+  <!-- Top Left Rotor (120, 120) -->
+  <circle cx="120" cy="120" r="62" fill="url(#rotorGlow)" />
+  <circle cx="120" cy="120" r="46" fill="none" stroke="#38BDF8" stroke-width="4.5" stroke-dasharray="14 10" opacity="0.85" />
+  <ellipse cx="120" cy="120" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(-30 120 120)" opacity="0.9" />
+  <ellipse cx="120" cy="120" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(60 120 120)" opacity="0.9" />
+  <circle cx="120" cy="120" r="10" fill="#0F172A" stroke="#38BDF8" stroke-width="4" />
+
+  <!-- Top Right Rotor (392, 120) -->
+  <circle cx="392" cy="120" r="62" fill="url(#rotorGlow)" />
+  <circle cx="392" cy="120" r="46" fill="none" stroke="#38BDF8" stroke-width="4.5" stroke-dasharray="14 10" opacity="0.85" />
+  <ellipse cx="392" cy="120" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(30 392 120)" opacity="0.9" />
+  <ellipse cx="392" cy="120" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(-60 392 120)" opacity="0.9" />
+  <circle cx="392" cy="120" r="10" fill="#0F172A" stroke="#38BDF8" stroke-width="4" />
+
+  <!-- Bottom Left Rotor (120, 392) -->
+  <circle cx="120" cy="392" r="62" fill="url(#rotorGlow)" />
+  <circle cx="120" cy="392" r="46" fill="none" stroke="#38BDF8" stroke-width="4.5" stroke-dasharray="14 10" opacity="0.85" />
+  <ellipse cx="120" cy="392" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(30 120 392)" opacity="0.9" />
+  <ellipse cx="120" cy="392" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(-60 120 392)" opacity="0.9" />
+  <circle cx="120" cy="392" r="10" fill="#0F172A" stroke="#38BDF8" stroke-width="4" />
+
+  <!-- Bottom Right Rotor (392, 392) -->
+  <circle cx="392" cy="392" r="62" fill="url(#rotorGlow)" />
+  <circle cx="392" cy="392" r="46" fill="none" stroke="#38BDF8" stroke-width="4.5" stroke-dasharray="14 10" opacity="0.85" />
+  <ellipse cx="392" cy="392" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(-30 392 392)" opacity="0.9" />
+  <ellipse cx="392" cy="392" rx="38" ry="11" fill="url(#bladeGrad)" transform="rotate(60 392 392)" opacity="0.9" />
+  <circle cx="392" cy="392" r="10" fill="#0F172A" stroke="#38BDF8" stroke-width="4" />
+
+  <!-- Central Fuselage / SLM AI Core Base -->
+  <circle cx="256" cy="256" r="68" fill="#0B132B" stroke="#1E293B" stroke-width="8" />
+  <circle cx="256" cy="256" r="54" fill="#0F172A" stroke="url(#droneGrad)" stroke-width="5" />
+
+  <!-- Neural Net / AI Edge Accents connecting to Core -->
+  <circle cx="256" cy="188" r="4.5" fill="#00E5FF" />
+  <circle cx="256" cy="324" r="4.5" fill="#7000FF" />
+  <circle cx="188" cy="256" r="4.5" fill="#00E5FF" />
+  <circle cx="324" cy="256" r="4.5" fill="#7000FF" />
+
+  <!-- Front Monocular Camera / Visual AI Core Eye -->
+  <circle cx="256" cy="256" r="36" fill="url(#lensGrad)" filter="url(#glow)" />
+  <circle cx="256" cy="256" r="22" fill="#050C1A" opacity="0.8" />
+  
+  <!-- Optical Aperture & Reflection -->
+  <circle cx="256" cy="256" r="12" fill="#00F0FF" />
+  <circle cx="248" cy="248" r="5" fill="#FFFFFF" opacity="0.9" />
+  <circle cx="262" cy="262" r="2.5" fill="#FFFFFF" opacity="0.6" />
+
+  <!-- Status / Navigation Horizon HUD Indicator -->
+  <path d="M 230 256 L 242 256 M 270 256 L 282 256" stroke="#00E5FF" stroke-width="3.5" stroke-linecap="round" opacity="0.9" />
+</svg>
