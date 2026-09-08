@@ -1,7 +1,3 @@
-> **Nota de ubicación:** este documento constituye el estudio técnico exploratorio sobre selección de modelos SLM/sVLM, cuantización GGUF, decodificación estructurada y posicionamiento arquitectónico. Sirve como referencia técnica complementaria para el capítulo 8 (`08-DECISIONES-SLM.md`, §8.1) y los anexos A2, A3 y A4.
-
----
-
 # Anexo 1: Exploración técnica de Small Language Models (SLM), cuantización GGUF y análisis de innovación arquitectónica
 
 La integración de modelos de lenguaje en plataformas robóticas autónomas exige resolver un compromiso riguroso entre capacidad representacional, latencia de inferencia y consumo de recursos computacionales. En el contexto de esta investigación, el objetivo es dotar a un vehículo aéreo no tripulado (UAV) de capacidad deliberativa de alto nivel mientras opera en simulación fotorrealista bajo hardware de consumo. 
@@ -91,33 +87,14 @@ En arquitecturas modulares, la interacción entre el modelo deliberativo y las h
 
 La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                   NVIDIA RTX 5060 (8 GB)                 │
-│                                                          │
-│  ┌────────────────────────────┐  ┌────────────────────┐  │
-│  │   Unreal Engine 5.5 /      │  │  LM Studio Server  │  │
-│  │         AirSim             │  │   (llama.cpp core) │  │
-│  │   (4.5 – 5.5 GB VRAM)      │  │  (2.0 – 2.5 GB)    │  │
-│  └─────────────┬──────────────┘  └─────────▲──────────┘  │
-└────────────────┼───────────────────────────┼─────────────┘
-                 │ Telemetría /              │ Macro-acción
-                 │ Fotogramas                │ JSON estructurado
-                 ▼                           │
-   ┌─────────────────────────────────────────┴─────────────┐
-   │        Nodo Deliberativo / FSM (Python)               │
-   │  - Resumen semántico & preprocesamiento               │
-   │  - Inferencia con decodificación json_schema         │
-   │  - Parser tolerante & traducción action_to_command    │
-   └───────────────────────────────────────────────────────┘
-```
+<img src="a1-integracion-local.jpg"/>
 
-1. **Gestión de capas en GPU (*GPU Layer Offloading*)**:
-   * En el servidor local de inferencia (LM Studio / `llama.cpp`), el modelo Qwen2.5-VL-3B en cuantización Q4_K_M se aloja en VRAM configurando el traspaso completo (*full offload*) de sus 36 bloques de capas Transformer, además del codificador visual ligero.
-   * La reserva de VRAM se monitoriza dinámicamente mediante la interfaz NVML (`nvidia-smi`) para garantizar un margen libre (*headroom*) de al menos 500 MB, evitando contingencias de falta de memoria (*Out of Memory*, OOM) cuando el simulador genera escenarios de alta densidad poligonal.
+1. **Gestión de capas y memoria en Apple Silicon (*Metal Offloading* en Mac mini M4)**:
+   * En el servidor dedicado de inferencia (Apple Mac mini M4 con 16 GB de memoria unificada), LM Studio ejecuta el núcleo de `llama.cpp` compilado con aceleración por hardware sobre Apple Metal (MPS). El modelo multimodal Qwen2.5-VL-3B en cuantización Q4_K_M se aloja configurando el traspaso completo (*full offload*) de sus 36 bloques de capas Transformer y su codificador visual ViT directamente en la memoria unificada accesible por la GPU integrada de 10 núcleos, con una huella de ~2.0 a 2.5 GB.
+   * La arquitectura desacoplada en dos nodos físicos (la estación de simulación con GPU NVIDIA RTX 5060 de 8 GB dedicada exclusivamente a Unreal Engine 5.5 / AirSim, y el Mac mini M4 dedicado a la inferencia) elimina por completo la contienda de recursos de VRAM entre el renderizado 3D y el modelo de lenguaje. En el Mac mini, la memoria se administra mediante la arquitectura de memoria unificada (*Unified Memory Architecture*, UMA) de macOS, manteniendo un margen libre (*headroom*) superior a 10 GB y suprimiendo de raíz contingencias de falta de memoria (*Out of Memory*, OOM) provocadas por picos de carga poligonal en el simulador.
 
-2. **Inferencia desacoplada mediante API HTTP local**:
-   * El motor de inferencia expone un punto de conexión compatible con OpenAI (`http://localhost:1234/v1/chat/completions`).
+2. **Inferencia desacoplada mediante API HTTP en red local**:
+   * El motor de inferencia expone un punto de conexión compatible con OpenAI en el puerto 1234 (`http://<ip-servidor>:1234/v1/chat/completions`, configurado en la variable `LOCAL_LLM_URL`, e.g., `http://192.168.110.101:1234/v1` a través de un enlace Ethernet directo).
    * El cliente de navegación serializa el estado perceptual y el fotograma codificado en base64, solicitando la respuesta con el parámetro `response_format` en modo `json_schema`.
 
 3. **Puente bidireccional con AirSim**:

@@ -1,7 +1,3 @@
-> **Nota de ubicación:** este documento constituye el desarrollo matemático formal y la especificación algorítmica de la percepción visual monocular, la derotación cinemática por IMU, la estimación del Foco de Expansión (FOE) y el cálculo del Tiempo hasta la Colisión (*Time-to-Collision*, TTC). Sirve como referencia analítica complementaria para el capítulo 6 (`06-PERCEPCION-MONOCULAR.md`), el capítulo 7 (`07-ESTIMACION-TTC.md`) y el capítulo 10 (`10-METODOLOGIA-EXPERIMENTAL.md`, §10.2).
-
----
-
 # Anexo 5: Fundamentos matemáticos de percepción monocular, flujo óptico y estimación de tiempo hasta la colisión (TTC)
 
 La premisa sensorial sobre la que se fundamenta DroneLM es la autosuficiencia perceptiva bajo restricciones severas de costo y carga útil (§1.2): gobernar un vehículo aéreo no tripulado (UAV) en entornos urbanos y suburbanos tridimensionales utilizando exclusivamente una **cámara monocular RGB convencional** y la **telemetría de actitud angular** provista por una unidad de medición inercial (IMU) estándar, prescindiendo por diseño de sensores activos pesados o costosos (LiDAR, radar, sonar) y de cámaras estereoscópicas calibradas.
@@ -16,24 +12,7 @@ Este anexo formaliza la matemática subyacente al pipeline de percepción implem
 
 Se modela la cámara monocular frontal del dron mediante la aproximación de cámara oscura o estenopeica (*pin-hole camera model*) con proyección en perspectiva central.
 
-```
-       Eje Y (abajo)
-          │
-          │      Plano de Imagen
-          │      ┌────────────────────────┐
-          │      │   (0,0)                │
-          │      │     ┌───────┐          │
-          │      │     │ (u,v) │          │
-          │      │     └───────┘          │
-          │      │            (cx, cy)    │
-          │      │               •        │
-          │      └───────────────┼────────┘
-          │                      │
-          └──────────────────────┼─────────────► Eje X (derecha)
-                                ╱
-                               ╱  Eje Óptico Z (hacia adelante)
-                              ▼
-```
+<img src="a5-modelo-geometrico-de-camara.jpg">
 
 ### A5.1.1 Sistemas de coordenadas y matriz intrínseca
 Sea $P_c = (X_c, Y_c, Z_c)^T \in \mathbb{R}^3$ la posición de un punto del entorno físico en el sistema de coordenadas de la cámara, donde el eje $Z_c$ coincide con el eje óptico apuntando hacia adelante, $X_c$ apunta hacia la derecha del dron e $Y_c$ apunta hacia abajo (convención visual estándar).
@@ -126,16 +105,7 @@ $$u_{\text{trans}}(x, y) = u_{\text{raw}}(x, y) - u_{\text{rot}}(x, y)$$
 
 $$v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)$$
 
-```
-  Flujo Crudo (u_raw, v_raw)        Flujo Rotacional Sintético (IMU)     Flujo Traslacional Derotado
-  ┌────────────────────────┐         ┌────────────────────────┐         ┌────────────────────────┐
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │ ╲                    ╱ │
-  │ ──► ──► ──► ──► ──► ──►│    -    │ ──► ──► ──► ──► ──► ──►│    =    │   ╲       FOE      ╱   │
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │     ╲      •     ╱     │
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │   ╱                ╲   │
-  └────────────────────────┘         └────────────────────────┘         └────────────────────────┘
-  (Giro de Yaw domina escena)       (Calculado con pitch/yaw/roll)     (Patrón radial puro al obstáculo)
-```
+<img src="a5-campo-de-velocidad-rotacional.jpg"/>
 
 ### A5.3.3 Tratamiento de discontinuidades y límite de linealización
 Durante giros bruscos, se presentan dos restricciones de ingeniería:
@@ -227,7 +197,7 @@ donde:
 * $\|v_{\text{trans}}(x, y)\|$ es la magnitud del flujo traslacional en píxeles.
 * $\Delta t$ es el intervalo temporal medido entre fotogramas sucesivos a partir de la telemetría real.
 
-> [!IMPORTANT]
+> [!IMPORTANTE]
 > La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el cociente. El TTC resultante se expresa estrictamente en **segundos**, constituyendo un observable cinemático directo, invariante y absoluto.
 
 ### A5.5.2 Verificación complementaria por divergencia del flujo
@@ -253,26 +223,7 @@ sirviendo como canal de auditoría cruzada contra colapsos locales de la estimac
 
 Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y modelo de lenguaje) razonen eficazmente sin procesar decenas de miles de valores por segundo, el mapa de TTC continuo se reduce espacialmente en una estructura discreta y tipada: el **`ObstacleField`** (`airsim-loop/src/perception/obstacle_field.py`).
 
-```
-┌────────────────────────────────────────────────────────┐
-│              GRILLA 3x3 DEL OBSTACLEFIELD             │
-├───────────────────┬───────────────────┬────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Superior          │ Superior          │ Superior       │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: 0..H/3)       │  y: 0..H/3)       │  y: 0..H/3)    │
-├───────────────────┼───────────────────┼────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Medio             │ Medio             │ Medio          │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: H/3..2H/3)    │  y: H/3..2H/3)    │  y: H/3..2H/3) │
-├───────────────────┼───────────────────┼────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Inferior          │ Inferior          │ Inferior       │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: 2H/3..H)      │  y: 2H/3..H)      │  y: 2H/3..H)   │
-└───────────────────┴───────────────────┴────────────────┘
-```
+<img src="a5-agregación-espacial-robusta.jpg"/>
 
 ### A5.6.1 Estadísticos de agregación por celda
 Para cada celda $C_{s,b}$ (donde $s \in \{\text{izquierda}, \text{centro}, \text{derecha}\}$ y $b \in \{\text{superior}, \text{medio}, \text{inferior}\}$):

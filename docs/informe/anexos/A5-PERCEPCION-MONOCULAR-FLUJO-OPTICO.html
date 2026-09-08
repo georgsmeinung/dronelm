@@ -1446,10 +1446,6 @@
 
 
 
-<blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el desarrollo matemático formal y la especificación algorítmica de la percepción visual monocular, la derotación cinemática por IMU, la estimación del Foco de Expansión (FOE) y el cálculo del Tiempo hasta la Colisión (<em>Time-to-Collision</em>, TTC). Sirve como referencia analítica complementaria para el capítulo 6 (<code>06-PERCEPCION-MONOCULAR.md</code>), el capítulo 7 (<code>07-ESTIMACION-TTC.md</code>) y el capítulo 10 (<code>10-METODOLOGIA-EXPERIMENTAL.md</code>, §10.2).</p>
-</blockquote>
-<hr />
 <h1 id="anexo-5-fundamentos-matematicos-de-percepcion-monocular-flujo-optico-y-estimacion-de-tiempo-hasta-la-colision-ttc">Anexo 5: Fundamentos matemáticos de percepción monocular, flujo óptico y estimación de tiempo hasta la colisión (TTC)<a class="headerlink" href="#anexo-5-fundamentos-matematicos-de-percepcion-monocular-flujo-optico-y-estimacion-de-tiempo-hasta-la-colision-ttc" title="Permanent link">&para;</a></h1>
 <p>La premisa sensorial sobre la que se fundamenta DroneLM es la autosuficiencia perceptiva bajo restricciones severas de costo y carga útil (§1.2): gobernar un vehículo aéreo no tripulado (UAV) en entornos urbanos y suburbanos tridimensionales utilizando exclusivamente una <strong>cámara monocular RGB convencional</strong> y la <strong>telemetría de actitud angular</strong> provista por una unidad de medición inercial (IMU) estándar, prescindiendo por diseño de sensores activos pesados o costosos (LiDAR, radar, sonar) y de cámaras estereoscópicas calibradas.</p>
 <p>El desafío físico de este enfoque radica en la <strong>ambigüedad proyectiva</strong>: una cámara proyecta el mundo tridimensional $\mathbb{R}^3$ sobre un plano bidimensional $\mathbb{R}^2$, perdiendo la escala métrica absoluta de distancia ($Z$). Para recuperar la información de proximidad de manera pasiva y reactiva, el sistema explota el <strong>flujo óptico</strong>, es decir, el patrón aparente de movimiento de las intensidades lumínicas en el plano de la imagen inducido por el movimiento relativo entre la cámara y la escena.</p>
@@ -1457,23 +1453,7 @@
 <hr />
 <h2 id="a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim">A5.1 Modelo geométrico de cámara pin-hole y calibración en AirSim<a class="headerlink" href="#a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim" title="Permanent link">&para;</a></h2>
 <p>Se modela la cámara monocular frontal del dron mediante la aproximación de cámara oscura o estenopeica (<em>pin-hole camera model</em>) con proyección en perspectiva central.</p>
-<div class="highlight"><pre><span></span><code>       Eje Y (abajo)
-          │
-          │      Plano de Imagen
-          │      ┌────────────────────────┐
-          │      │   (0,0)                │
-          │      │     ┌───────┐          │
-          │      │     │ (u,v) │          │
-          │      │     └───────┘          │
-          │      │            (cx, cy)    │
-          │      │               •        │
-          │      └───────────────┼────────┘
-          │                      │
-          └──────────────────────┼─────────────► Eje X (derecha)
-                                ╱
-                               ╱  Eje Óptico Z (hacia adelante)
-                              ▼
-</code></pre></div>
+<p><img src="a5-modelo-geometrico-de-camara.jpg"></p>
 <h3 id="a511-sistemas-de-coordenadas-y-matriz-intrinseca">A5.1.1 Sistemas de coordenadas y matriz intrínseca<a class="headerlink" href="#a511-sistemas-de-coordenadas-y-matriz-intrinseca" title="Permanent link">&para;</a></h3>
 <p>Sea $P_c = (X_c, Y_c, Z_c)^T \in \mathbb{R}^3$ la posición de un punto del entorno físico en el sistema de coordenadas de la cámara, donde el eje $Z_c$ coincide con el eje óptico apuntando hacia adelante, $X_c$ apunta hacia la derecha del dron e $Y_c$ apunta hacia abajo (convención visual estándar).</p>
 <p>La proyección en perspectiva de $P_c$ sobre el plano de imagen produce coordenadas métricas normalizadas $(x, y)$:</p>
@@ -1528,15 +1508,7 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <p>El campo traslacional puro se obtiene restando algebraicamente el campo teórico rotacional del flujo total calculado por el algoritmo de visión:</p>
 <p>$$u_{\text{trans}}(x, y) = u_{\text{raw}}(x, y) - u_{\text{rot}}(x, y)$$</p>
 <p>$$v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)$$</p>
-<div class="highlight"><pre><span></span><code>  Flujo Crudo (u_raw, v_raw)        Flujo Rotacional Sintético (IMU)     Flujo Traslacional Derotado
-  ┌────────────────────────┐         ┌────────────────────────┐         ┌────────────────────────┐
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │ ╲                    ╱ │
-  │ ──► ──► ──► ──► ──► ──►│    -    │ ──► ──► ──► ──► ──► ──►│    =    │   ╲       FOE      ╱   │
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │     ╲      •     ╱     │
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │   ╱                ╲   │
-  └────────────────────────┘         └────────────────────────┘         └────────────────────────┘
-  (Giro de Yaw domina escena)       (Calculado con pitch/yaw/roll)     (Patrón radial puro al obstáculo)
-</code></pre></div>
+<p><img src="a5-campo-de-velocidad-rotacional.jpg"/></p>
 <h3 id="a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion">A5.3.3 Tratamiento de discontinuidades y límite de linealización<a class="headerlink" href="#a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion" title="Permanent link">&para;</a></h3>
 <p>Durante giros bruscos, se presentan dos restricciones de ingeniería:
 1. <strong>Normalización de ángulo de guiñada:</strong> ante cruces del límite $\pm 180^\circ$ ($\pm \pi$), el incremento se desenvuelve modularmente:
@@ -1591,7 +1563,7 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 * $|v_{\text{trans}}(x, y)|$ es la magnitud del flujo traslacional en píxeles.
 * $\Delta t$ es el intervalo temporal medido entre fotogramas sucesivos a partir de la telemetría real.</p>
 <blockquote>
-<p>[!IMPORTANT]
+<p>[!IMPORTANTE]
 La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el cociente. El TTC resultante se expresa estrictamente en <strong>segundos</strong>, constituyendo un observable cinemático directo, invariante y absoluto.</p>
 </blockquote>
 <h3 id="a552-verificacion-complementaria-por-divergencia-del-flujo">A5.5.2 Verificación complementaria por divergencia del flujo<a class="headerlink" href="#a552-verificacion-complementaria-por-divergencia-del-flujo" title="Permanent link">&para;</a></h3>
@@ -1606,25 +1578,7 @@ La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el 
 <hr />
 <h2 id="a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield">A5.6 Agregación espacial robusta y contrato de percepción <code>ObstacleField</code><a class="headerlink" href="#a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield" title="Permanent link">&para;</a></h2>
 <p>Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y modelo de lenguaje) razonen eficazmente sin procesar decenas de miles de valores por segundo, el mapa de TTC continuo se reduce espacialmente en una estructura discreta y tipada: el <strong><code>ObstacleField</code></strong> (<code>airsim-loop/src/perception/obstacle_field.py</code>).</p>
-<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────────────┐
-│              GRILLA 3x3 DEL OBSTACLEFIELD             │
-├───────────────────┬───────────────────┬────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Superior          │ Superior          │ Superior       │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: 0..H/3)       │  y: 0..H/3)       │  y: 0..H/3)    │
-├───────────────────┼───────────────────┼────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Medio             │ Medio             │ Medio          │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: H/3..2H/3)    │  y: H/3..2H/3)    │  y: H/3..2H/3) │
-├───────────────────┼───────────────────┼────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Inferior          │ Inferior          │ Inferior       │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: 2H/3..H)      │  y: 2H/3..H)      │  y: 2H/3..H)   │
-└───────────────────┴───────────────────┴────────────────┘
-</code></pre></div>
+<p><img src="a5-agregación-espacial-robusta.jpg"/></p>
 <h3 id="a561-estadisticos-de-agregacion-por-celda">A5.6.1 Estadísticos de agregación por celda<a class="headerlink" href="#a561-estadisticos-de-agregacion-por-celda" title="Permanent link">&para;</a></h3>
 <p>Para cada celda $C_{s,b}$ (donde $s \in {\text{izquierda}, \text{centro}, \text{derecha}}$ y $b \in {\text{superior}, \text{medio}, \text{inferior}}$):
 1. <strong>Fracción de Píxeles Válidos (Confianza):</strong>

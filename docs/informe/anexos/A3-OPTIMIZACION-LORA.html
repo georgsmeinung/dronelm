@@ -1356,10 +1356,6 @@
 
 
 
-<blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el estudio formal y la especificación metodológica de la especialización de Modelos de Visión y Lenguaje Pequeños (<em>Small Vision-Language Models</em>, sVLMs) mediante técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT / LoRA / QLoRA). Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.7), el capítulo 12 (<code>12-CONCLUSIONES.md</code>, §12.4) y los anexos A1, A2 y A4. Estructurado como la especificación de trabajo futuro y hoja de ruta de optimización del nodo deliberativo de DroneLM.</p>
-</blockquote>
-<hr />
 <h1 id="anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma">Anexo 3: Optimización y especialización de modelos de visión-lenguaje mediante LoRA/QLoRA para navegación aérea autónoma<a class="headerlink" href="#anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma" title="Permanent link">&para;</a></h1>
 <p>La arquitectura deliberativa desarrollada en esta tesis adopta un modelo multimodal de pesos abiertos de 3 mil millones de parámetros (<strong>Qwen2.5-VL-3B-Instruct</strong>; Qwen Team, 2025) ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (§8.1). En la versión evaluada en el lazo táctico de control, dicho modelo opera en régimen <em>zero-shot / in-context learning</em>, guiado por un prompt estructurado de cinco componentes (§8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (§8.2, Anexo 4; Willard &amp; Louf, 2023).</p>
 <p>Si bien esta configuración resuelve con éxito la extracción de semántica visual y el rescate ante fallas del estimador de flujo óptico (§6.12), introduce dos limitaciones operativas para el vuelo reactivo:
@@ -1370,27 +1366,7 @@
 <h2 id="a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft">A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT<a class="headerlink" href="#a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" title="Permanent link">&para;</a></h2>
 <p>El ajuste fino completo (<em>Full Fine-Tuning</em>, FFT) de una red neuronal profunda requiere actualizar y almacenar en memoria los gradientes y momentos del optimizador (e.g., AdamW en precisión simple FP32) para la totalidad de los parámetros entrenables $\Phi_0$. Para un modelo de 3B parámetros, esto demanda más de 24 GB de VRAM únicamente para el estado del optimizador, tornando inviable el entrenamiento en GPUs de escritorio (tales como la NVIDIA RTX 5060 de 8 GB utilizada en este proyecto).</p>
 <p>Las técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT; Mangrulkar et al., 2022) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.</p>
-<div class="highlight"><pre><span></span><code>       Flujo de Inferencia Estándar                Adaptación de Bajo Rango (LoRA)
-
-              Entrada: x                                    Entrada: x
-                  │                                             ├─────────────────────┐
-                  ▼                                             ▼                     ▼
-         ┌─────────────────┐                           ┌─────────────────┐   ┌─────────────────┐
-         │  Matriz Base    │                           │  Matriz Base    │   │ Adaptador A     │
-         │  W₀ ∈ ℝ^(d×k)   │ (Congelada)               │  W₀ ∈ ℝ^(d×k)   │   │ A ∈ ℝ^(r×k)     │
-         └────────┬────────┘                           └────────┬────────┘   └────────┬────────┘
-                  │                                             │                     │
-                  ▼                                             │                     ▼
-              Salida: h                                         │            ┌─────────────────┐
-               h = W₀·x                                         │            │ Adaptador B     │
-                                                                │            │ B ∈ ℝ^(d×r)     │
-                                                                │            └────────┬────────┘
-                                                                │                     │ Escala: (α/r)
-                                                                ▼                     ▼
-                                                               ┌────────────────────────┐
-                                                               │  Suma: h = W₀·x + ΔW·x │
-                                                               └────────────────────────┘
-</code></pre></div>
+<p><img src="a3-fundamentos-de-peft.jpg"/></p>
 <h3 id="a311-formulacion-matematica-de-lora">A3.1.1 Formulación matemática de LoRA<a class="headerlink" href="#a311-formulacion-matematica-de-lora" title="Permanent link">&para;</a></h3>
 <p>La premisa matemática de LoRA (<a href="../13-REFERENCIAS.html#ref-hu-2022">Hu et al., 2022</a>) se basa en la hipótesis de que las actualizaciones de peso $\Delta W$ durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (<em>low intrinsic dimension</em>). Para una matriz lineal preentrenada $W_0 \in \mathbb{R}^{d \times k}$, la actualización se descompone como el producto de dos matrices de bajo rango:</p>
 <p>$$W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)$$</p>
@@ -1477,40 +1453,7 @@
 <hr />
 <h2 id="a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm">A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM<a class="headerlink" href="#a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" title="Permanent link">&para;</a></h2>
 <p>La integración de un adaptador LoRA en el nodo deliberativo transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
-<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        ARQUITECTURA DEL NODO DELIBERATIVO                              │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│   FASE ACTUAL (In-Context Zero-Shot + Gramáticas):                                     │
-│   [ Telemetría + Resumen ObstacleField + Historial + Instrucción Schema ] ~500 tokens  │
-│                                       │                                                │
-│                                       ▼                                                │
-│                 [ Qwen2.5-VL-3B Base (Pesos Genéricos Congelados) ]                    │
-│                                       │ (Logits dispersos)                             │
-│                                       ▼                                                │
-│                 [ Filtro de Gramática json_schema (Outlines/GBNF) ]                    │
-│                                       │ (Forzado externo)                              │
-│                                       ▼                                                │
-│                       { &quot;action&quot;: &quot;evasive&quot;, &quot;reason&quot;: &quot;...&quot; }                         │
-│                               Latencia: 850 - 1400 ms                                  │
-│                                                                                        │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│   FASE PROPUESTA OPTIMIZADA (Adaptador LoRA / QLoRA Fusionado):                        │
-│   [ Frames (t, t-1) + Tupla Compacta de Estado + TTC ]                    ~90 tokens   │
-│                                       │                                                │
-│                                       ▼                                                │
-│                 [ Qwen2.5-VL-3B + Adaptador LoRA Especializado ]                       │
-│                                       │ (Logits intrínsecamente alineados)             │
-│                                       ▼                                                │
-│                 [ Verificación Pasiva de Esquema (json_schema) ]                       │
-│                                       │                                                │
-│                                       ▼                                                │
-│                       { &quot;action&quot;: &quot;evasive&quot;, &quot;reason&quot;: &quot;...&quot; }                         │
-│                               Latencia: 300 - 550 ms                                   │
-│                                                                                        │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-</code></pre></div>
+<p><img src="a3-impacto-lora.jpg"/></p>
 <h3 id="a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia">A3.2.1 Reducción del presupuesto de tokens y compresión de latencia<a class="headerlink" href="#a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" title="Permanent link">&para;</a></h3>
 <p>En la implementación <em>zero-shot</em> de referencia (§8.5), el prompt de usuario debe reiterar en cada invocación:
 * Las definiciones semánticas de los sectores del sensor (<code>SECTOR_FRONTAL</code>, <code>SECTOR_LATERAL</code>).

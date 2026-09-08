@@ -4325,11 +4325,7 @@ corrida.</p>
                     <section class='print-page md-section' id='section-15' heading-number='15'>
                         <h1>Anexos<a class='headerlink' href='#section-15' title='Permanent link'></a>
                         </h1>
-                    <section class="print-page" id="anexos-a1-exploracion-slm-gguf" heading-number="15.1"><blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el estudio técnico exploratorio sobre selección de modelos SLM/sVLM, cuantización GGUF, decodificación estructurada y posicionamiento arquitectónico. Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.1) y los anexos A2, A3 y A4.</p>
-</blockquote>
-<hr />
-<h1 id="anexos-a1-exploracion-slm-gguf-anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica">Anexo 1: Exploración técnica de Small Language Models (SLM), cuantización GGUF y análisis de innovación arquitectónica<a class="headerlink" href="#anexos-a1-exploracion-slm-gguf-anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica" title="Permanent link">&para;</a></h1>
+                    <section class="print-page" id="anexos-a1-exploracion-slm-gguf" heading-number="15.1"><h1 id="anexos-a1-exploracion-slm-gguf-anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica">Anexo 1: Exploración técnica de Small Language Models (SLM), cuantización GGUF y análisis de innovación arquitectónica<a class="headerlink" href="#anexos-a1-exploracion-slm-gguf-anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica" title="Permanent link">&para;</a></h1>
 <p>La integración de modelos de lenguaje en plataformas robóticas autónomas exige resolver un compromiso riguroso entre capacidad representacional, latencia de inferencia y consumo de recursos computacionales. En el contexto de esta investigación, el objetivo es dotar a un vehículo aéreo no tripulado (UAV) de capacidad deliberativa de alto nivel mientras opera en simulación fotorrealista bajo hardware de consumo. </p>
 <p>Un <strong>Modelo de Lenguaje Pequeño</strong> (<em>Small Language Model</em>, SLM) —y su extensión multimodal, <em>Small Vision-Language Model</em> (sVLM)— se define operativamente por tres criterios: <strong>(1)</strong> un conteo de parámetros en el rango de 1B a 10B (<a href="#13-referencias-ref-abdin-2024">Abdin et al., 2024</a>; <a href="#13-referencias-ref-zhang-tinyllama-2024">Zhang et al., 2024</a>), que conserva competencia notable para razonamiento simbólico, comprensión sintáctica y extracción de relaciones complejas a pesar de su escala relativa (<a href="#13-referencias-ref-nguyen-2024">Nguyen et al., 2024</a>); <strong>(2)</strong> la factibilidad de despliegue local (<em>on-device</em>) en hardware de consumo común (tarjetas gráficas de gama media como la NVIDIA RTX 5060 de 8 GB) o procesadores embebidos (NVIDIA Jetson; <a href="#13-referencias-ref-nvidia-2025">NVIDIA, 2025</a>); y <strong>(3)</strong> una latencia de inferencia determinista de subsegundos a pocos segundos, compatible con los márgenes de los lazos de control en robótica móvil (<a href="#13-referencias-ref-tian-2025">Tian et al., 2025</a>; <a href="#13-referencias-ref-vemprala-2023">Vemprala et al., 2023</a>). Frente a los LLMs de frontera (GPT-4o, Claude 3.5, Gemini 1.5 — decenas a cientos de miles de millones de parámetros, 24–80 GB de VRAM), los SLMs ofrecen ventajas determinantes para sistemas embarcados: autonomía operativa sin conexión a la nube, supresión de la variabilidad de red, eficiencia energética en plataformas alimentadas por batería (<a href="#13-referencias-ref-goel-2021">Goel et al., 2021</a>) y compatibilidad con decodificación restringida por gramáticas en motores locales como <code>llama.cpp</code> (<a href="#13-referencias-ref-willard-2023">Willard &amp; Louf, 2023</a>).</p>
 <p>Este anexo documenta el estudio exploratorio previo a las decisiones finales de implementación: delimita las restricciones físicas de memoria de video (VRAM), evalúa de forma comparativa los modelos compactos candidatos en formato GGUF, analiza los mecanismos para garantizar salidas estructuradas deterministas, y examina críticamente el nivel de novedad de la arquitectura frente al estado del arte reciente (2024–2026), identificando los ejes de ingeniería que aportan valor genuino al control autónomo.</p>
@@ -4439,35 +4435,17 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <hr />
 <h2 id="anexos-a1-exploracion-slm-gguf-a14-procedimiento-practico-de-configuracion-e-integracion-local">A1.4 Procedimiento práctico de configuración e integración local<a class="headerlink" href="#anexos-a1-exploracion-slm-gguf-a14-procedimiento-practico-de-configuracion-e-integracion-local" title="Permanent link">&para;</a></h2>
 <p>La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:</p>
-<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
-│                   NVIDIA RTX 5060 (8 GB)                 │
-│                                                          │
-│  ┌────────────────────────────┐  ┌────────────────────┐  │
-│  │   Unreal Engine 5.5 /      │  │  LM Studio Server  │  │
-│  │         AirSim             │  │   (llama.cpp core) │  │
-│  │   (4.5 – 5.5 GB VRAM)      │  │  (2.0 – 2.5 GB)    │  │
-│  └─────────────┬──────────────┘  └─────────▲──────────┘  │
-└────────────────┼───────────────────────────┼─────────────┘
-                 │ Telemetría /              │ Macro-acción
-                 │ Fotogramas                │ JSON estructurado
-                 ▼                           │
-   ┌─────────────────────────────────────────┴─────────────┐
-   │        Nodo Deliberativo / FSM (Python)               │
-   │  - Resumen semántico &amp; preprocesamiento               │
-   │  - Inferencia con decodificación json_schema         │
-   │  - Parser tolerante &amp; traducción action_to_command    │
-   └───────────────────────────────────────────────────────┘
-</code></pre></div>
+<p><img src="anexos/a1-integracion-local.jpg"/></p>
 <ol>
-<li><strong>Gestión de capas en GPU (<em>GPU Layer Offloading</em>)</strong>:</li>
-<li>En el servidor local de inferencia (LM Studio / <code>llama.cpp</code>), el modelo Qwen2.5-VL-3B en cuantización Q4_K_M se aloja en VRAM configurando el traspaso completo (<em>full offload</em>) de sus 36 bloques de capas Transformer, además del codificador visual ligero.</li>
+<li><strong>Gestión de capas y memoria en Apple Silicon (<em>Metal Offloading</em> en Mac mini M4)</strong>:</li>
+<li>En el servidor dedicado de inferencia (Apple Mac mini M4 con 16 GB de memoria unificada), LM Studio ejecuta el núcleo de <code>llama.cpp</code> compilado con aceleración por hardware sobre Apple Metal (MPS). El modelo multimodal Qwen2.5-VL-3B en cuantización Q4_K_M se aloja configurando el traspaso completo (<em>full offload</em>) de sus 36 bloques de capas Transformer y su codificador visual ViT directamente en la memoria unificada accesible por la GPU integrada de 10 núcleos, con una huella de ~2.0 a 2.5 GB.</li>
 <li>
-<p>La reserva de VRAM se monitoriza dinámicamente mediante la interfaz NVML (<code>nvidia-smi</code>) para garantizar un margen libre (<em>headroom</em>) de al menos 500 MB, evitando contingencias de falta de memoria (<em>Out of Memory</em>, OOM) cuando el simulador genera escenarios de alta densidad poligonal.</p>
+<p>La arquitectura desacoplada en dos nodos físicos (la estación de simulación con GPU NVIDIA RTX 5060 de 8 GB dedicada exclusivamente a Unreal Engine 5.5 / AirSim, y el Mac mini M4 dedicado a la inferencia) elimina por completo la contienda de recursos de VRAM entre el renderizado 3D y el modelo de lenguaje. En el Mac mini, la memoria se administra mediante la arquitectura de memoria unificada (<em>Unified Memory Architecture</em>, UMA) de macOS, manteniendo un margen libre (<em>headroom</em>) superior a 10 GB y suprimiendo de raíz contingencias de falta de memoria (<em>Out of Memory</em>, OOM) provocadas por picos de carga poligonal en el simulador.</p>
 </li>
 <li>
-<p><strong>Inferencia desacoplada mediante API HTTP local</strong>:</p>
+<p><strong>Inferencia desacoplada mediante API HTTP en red local</strong>:</p>
 </li>
-<li>El motor de inferencia expone un punto de conexión compatible con OpenAI (<code>http://localhost:1234/v1/chat/completions</code>).</li>
+<li>El motor de inferencia expone un punto de conexión compatible con OpenAI en el puerto 1234 (<code>http://&lt;ip-servidor&gt;:1234/v1/chat/completions</code>, configurado en la variable <code>LOCAL_LLM_URL</code>, e.g., <code>http://192.168.110.101:1234/v1</code> a través de un enlace Ethernet directo).</li>
 <li>
 <p>El cliente de navegación serializa el estado perceptual y el fotograma codificado en base64, solicitando la respuesta con el parámetro <code>response_format</code> en modo <code>json_schema</code>.</p>
 </li>
@@ -4547,11 +4525,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 </tbody>
 </table>
 <h3 id="anexos-a1-exploracion-slm-gguf-conclusion-sintetica">Conclusión sintética<a class="headerlink" href="#anexos-a1-exploracion-slm-gguf-conclusion-sintetica" title="Permanent link">&para;</a></h3>
-<p>La exploración realizada confirma que la combinación de <strong>compresión perceptiva estructurada</strong>, <strong>decodificación restringida por gramáticas</strong> y <strong>arquitectura híbrida deliberativa-reactiva</strong> permite ejecutar un agente de navegación visual robusto, completamente desconectado de la nube y contenido en 8 GB de VRAM compartidos con Unreal Engine 5.5. Esta solución traslada el foco desde la especulación de modelos masivos hacia la ingeniería rigurosa de sistemas autónomos embebidos.</p></section><section class="print-page" id="anexos-a2-slm-optimizacion-y-desafios" heading-number="15.2"><blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye material de investigación sobre técnicas de optimización, compresión y mitigación de desafíos operativos en Small Language Models (SLM). Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.1) y los anexos A1, A3 y A4. Reubicado desde <code>informe/SLM Optimización y Desafíos.md</code> el 2026-08-25.</p>
-</blockquote>
-<hr />
-<h1 id="anexos-a2-slm-optimizacion-y-desafios-anexo-2-tecnicas-de-optimizacion-compresion-y-mitigacion-de-desafios-en-small-language-models-slm">Anexo 2: Técnicas de optimización, compresión y mitigación de desafíos en Small Language Models (SLM)<a class="headerlink" href="#anexos-a2-slm-optimizacion-y-desafios-anexo-2-tecnicas-de-optimizacion-compresion-y-mitigacion-de-desafios-en-small-language-models-slm" title="Permanent link">&para;</a></h1>
+<p>La exploración realizada confirma que la combinación de <strong>compresión perceptiva estructurada</strong>, <strong>decodificación restringida por gramáticas</strong> y <strong>arquitectura híbrida deliberativa-reactiva</strong> permite ejecutar un agente de navegación visual robusto, completamente desconectado de la nube y contenido en 8 GB de VRAM compartidos con Unreal Engine 5.5. Esta solución traslada el foco desde la especulación de modelos masivos hacia la ingeniería rigurosa de sistemas autónomos embebidos.</p></section><section class="print-page" id="anexos-a2-slm-optimizacion-y-desafios" heading-number="15.2"><h1 id="anexos-a2-slm-optimizacion-y-desafios-anexo-2-tecnicas-de-optimizacion-compresion-y-mitigacion-de-desafios-en-small-language-models-slm">Anexo 2: Técnicas de optimización, compresión y mitigación de desafíos en Small Language Models (SLM)<a class="headerlink" href="#anexos-a2-slm-optimizacion-y-desafios-anexo-2-tecnicas-de-optimizacion-compresion-y-mitigacion-de-desafios-en-small-language-models-slm" title="Permanent link">&para;</a></h1>
 <p>La viabilidad de los modelos de lenguaje pequeños (<em>Small Language Models</em>, SLMs) y sus variantes multimodales de visión (<em>Small Vision-Language Models</em>, sVLMs) en plataformas robóticas autónomas reside en su capacidad para aproximar la competencia de razonamiento de los grandes modelos fundacionales bajo presupuestos severamente restringidos de cómputo, memoria y energía (<a href="#13-referencias-ref-abdin-2024">Abdin et al., 2024</a>; <a href="#13-referencias-ref-nguyen-2024">Nguyen et al., 2024</a>).</p>
 <p>Este anexo sistematiza los principios teóricos y metodológicos de optimización que hacen posible este equilibrio: examina los tres pilares de compresión (destilación, poda y cuantización), revisa los avances arquitectónicos en eficiencia y adaptación en borde, analiza críticamente la propensión a alucinaciones en modelos compactos, y detalla los mecanismos de ingeniería adoptados en esta tesis para mitigar dichos riesgos en el lazo de navegación de un vehículo aéreo no tripulado (UAV).</p>
 <hr />
@@ -4607,35 +4581,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <hr />
 <h2 id="anexos-a2-slm-optimizacion-y-desafios-a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis">A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis<a class="headerlink" href="#anexos-a2-slm-optimizacion-y-desafios-a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis" title="Permanent link">&para;</a></h2>
 <p>Para hacer viable el despliegue de un modelo compacto (Qwen2.5-VL-3B-Instruct; <a href="#13-referencias-ref-qwen-team-2025">Qwen Team, 2025</a>) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:</p>
-<div class="highlight"><pre><span></span><code>                  ┌─────────────────────────────────────────┐
-                  │      Cámara Monocular + Telemetría      │
-                  └────────────────────┬────────────────────┘
-                                       │
-                     ┌─────────────────┴─────────────────┐
-                     ▼                                   ▼
-        ┌─────────────────────────┐         ┌─────────────────────────┐
-        │  Percepción Monocular   │         │    Inspección Visual    │
-        │   - Flujo óptico DIS    │         │      Directa sVLM       │
-        │   - Derotación IMU      │         │   - Fotogramas t, t-1   │
-        │   - ObstacleField       │         │   - Semántica visual    │
-        └────────────┬────────────┘         └────────────┬────────────┘
-                     │                                   │
-                     │ Resumen sensorial                 │ Prompts contextuales
-                     ▼                                   ▼
-        ┌─────────────────────────────────────────────────────────────┐
-        │          Nodo Deliberativo / Decodificación json_schema     │
-        │   - Restricción formal de logits ([Willard &amp; Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023))     │
-        │   - Espacio discreto cerrado (5 macro-acciones)             │
-        └──────────────────────────────┬──────────────────────────────┘
-                                       │ Macro-acción JSON
-                                       ▼
-        ┌─────────────────────────────────────────────────────────────┐
-        │     Red de Seguridad Híbrida / FSM Determinista (§5.2)      │
-        │   - Parser tolerante de 3 etapas                            │
-        │   - Validación de consistencia cinemática                   │
-        │   - Fallback conservador (hover seguro / bypass FSM)       │
-        └─────────────────────────────────────────────────────────────┘
-</code></pre></div>
+<p><img src="anexos/a2-estrategias-mitigacion.jpg"></p>
 <ol>
 <li>
 <p><strong>Decodificación restringida a nivel de logits (<code>json_schema</code>)</strong>:
@@ -4655,11 +4601,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 </li>
 </ol>
 <h3 id="anexos-a2-slm-optimizacion-y-desafios-conclusion-sintetica">Conclusión sintética<a class="headerlink" href="#anexos-a2-slm-optimizacion-y-desafios-conclusion-sintetica" title="Permanent link">&para;</a></h3>
-<p>Los desafíos de capacidad limitada y susceptibilidad a alucinaciones propios de los SLMs no deben resolverse mediante el escalado indiscriminado de parámetros —inviable en hardware de borde—, sino a través de una <strong>estricta disciplina de ingeniería de sistemas</strong>: decodificación gramaticalmente guiada, discretización del espacio de decisión y acoplamiento jerárquico con supervisores deterministas en tiempo real.</p></section><section class="print-page" id="anexos-a3-optimizacion-lora" heading-number="15.3"><blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el estudio formal y la especificación metodológica de la especialización de Modelos de Visión y Lenguaje Pequeños (<em>Small Vision-Language Models</em>, sVLMs) mediante técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT / LoRA / QLoRA). Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.7), el capítulo 12 (<code>12-CONCLUSIONES.md</code>, §12.4) y los anexos A1, A2 y A4. Estructurado como la especificación de trabajo futuro y hoja de ruta de optimización del nodo deliberativo de DroneLM.</p>
-</blockquote>
-<hr />
-<h1 id="anexos-a3-optimizacion-lora-anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma">Anexo 3: Optimización y especialización de modelos de visión-lenguaje mediante LoRA/QLoRA para navegación aérea autónoma<a class="headerlink" href="#anexos-a3-optimizacion-lora-anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma" title="Permanent link">&para;</a></h1>
+<p>Los desafíos de capacidad limitada y susceptibilidad a alucinaciones propios de los SLMs no deben resolverse mediante el escalado indiscriminado de parámetros —inviable en hardware de borde—, sino a través de una <strong>estricta disciplina de ingeniería de sistemas</strong>: decodificación gramaticalmente guiada, discretización del espacio de decisión y acoplamiento jerárquico con supervisores deterministas en tiempo real.</p></section><section class="print-page" id="anexos-a3-optimizacion-lora" heading-number="15.3"><h1 id="anexos-a3-optimizacion-lora-anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma">Anexo 3: Optimización y especialización de modelos de visión-lenguaje mediante LoRA/QLoRA para navegación aérea autónoma<a class="headerlink" href="#anexos-a3-optimizacion-lora-anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma" title="Permanent link">&para;</a></h1>
 <p>La arquitectura deliberativa desarrollada en esta tesis adopta un modelo multimodal de pesos abiertos de 3 mil millones de parámetros (<strong>Qwen2.5-VL-3B-Instruct</strong>; Qwen Team, 2025) ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (§8.1). En la versión evaluada en el lazo táctico de control, dicho modelo opera en régimen <em>zero-shot / in-context learning</em>, guiado por un prompt estructurado de cinco componentes (§8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (§8.2, Anexo 4; Willard &amp; Louf, 2023).</p>
 <p>Si bien esta configuración resuelve con éxito la extracción de semántica visual y el rescate ante fallas del estimador de flujo óptico (§6.12), introduce dos limitaciones operativas para el vuelo reactivo:
 1. <strong>Sobrecarga de latencia por longitud de contexto (<em>prompt overhead</em>):</strong> verbalizar la telemetría, el resumen del campo de obstáculos (<code>ObstacleField</code>), el historial de maniobras y las instrucciones sintácticas insume entre 400 y 600 tokens de entrada por ciclo. Esto eleva la fase de pre-llenado (<em>pre-fill</em>), empujando la latencia de inferencia hacia la frontera del perro guardián del sistema (<code>SLM_WATCHDOG_MS = 1500 ms</code>).
@@ -4669,27 +4611,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <h2 id="anexos-a3-optimizacion-lora-a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft">A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT<a class="headerlink" href="#anexos-a3-optimizacion-lora-a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" title="Permanent link">&para;</a></h2>
 <p>El ajuste fino completo (<em>Full Fine-Tuning</em>, FFT) de una red neuronal profunda requiere actualizar y almacenar en memoria los gradientes y momentos del optimizador (e.g., AdamW en precisión simple FP32) para la totalidad de los parámetros entrenables $\Phi_0$. Para un modelo de 3B parámetros, esto demanda más de 24 GB de VRAM únicamente para el estado del optimizador, tornando inviable el entrenamiento en GPUs de escritorio (tales como la NVIDIA RTX 5060 de 8 GB utilizada en este proyecto).</p>
 <p>Las técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT; Mangrulkar et al., 2022) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.</p>
-<div class="highlight"><pre><span></span><code>       Flujo de Inferencia Estándar                Adaptación de Bajo Rango (LoRA)
-
-              Entrada: x                                    Entrada: x
-                  │                                             ├─────────────────────┐
-                  ▼                                             ▼                     ▼
-         ┌─────────────────┐                           ┌─────────────────┐   ┌─────────────────┐
-         │  Matriz Base    │                           │  Matriz Base    │   │ Adaptador A     │
-         │  W₀ ∈ ℝ^(d×k)   │ (Congelada)               │  W₀ ∈ ℝ^(d×k)   │   │ A ∈ ℝ^(r×k)     │
-         └────────┬────────┘                           └────────┬────────┘   └────────┬────────┘
-                  │                                             │                     │
-                  ▼                                             │                     ▼
-              Salida: h                                         │            ┌─────────────────┐
-               h = W₀·x                                         │            │ Adaptador B     │
-                                                                │            │ B ∈ ℝ^(d×r)     │
-                                                                │            └────────┬────────┘
-                                                                │                     │ Escala: (α/r)
-                                                                ▼                     ▼
-                                                               ┌────────────────────────┐
-                                                               │  Suma: h = W₀·x + ΔW·x │
-                                                               └────────────────────────┘
-</code></pre></div>
+<p><img src="anexos/a3-fundamentos-de-peft.jpg"/></p>
 <h3 id="anexos-a3-optimizacion-lora-a311-formulacion-matematica-de-lora">A3.1.1 Formulación matemática de LoRA<a class="headerlink" href="#anexos-a3-optimizacion-lora-a311-formulacion-matematica-de-lora" title="Permanent link">&para;</a></h3>
 <p>La premisa matemática de LoRA (<a href="#13-referencias-ref-hu-2022">Hu et al., 2022</a>) se basa en la hipótesis de que las actualizaciones de peso $\Delta W$ durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (<em>low intrinsic dimension</em>). Para una matriz lineal preentrenada $W_0 \in \mathbb{R}^{d \times k}$, la actualización se descompone como el producto de dos matrices de bajo rango:</p>
 <p>$$W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)$$</p>
@@ -4776,40 +4698,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <hr />
 <h2 id="anexos-a3-optimizacion-lora-a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm">A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM<a class="headerlink" href="#anexos-a3-optimizacion-lora-a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" title="Permanent link">&para;</a></h2>
 <p>La integración de un adaptador LoRA en el nodo deliberativo transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
-<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        ARQUITECTURA DEL NODO DELIBERATIVO                              │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│   FASE ACTUAL (In-Context Zero-Shot + Gramáticas):                                     │
-│   [ Telemetría + Resumen ObstacleField + Historial + Instrucción Schema ] ~500 tokens  │
-│                                       │                                                │
-│                                       ▼                                                │
-│                 [ Qwen2.5-VL-3B Base (Pesos Genéricos Congelados) ]                    │
-│                                       │ (Logits dispersos)                             │
-│                                       ▼                                                │
-│                 [ Filtro de Gramática json_schema (Outlines/GBNF) ]                    │
-│                                       │ (Forzado externo)                              │
-│                                       ▼                                                │
-│                       { &quot;action&quot;: &quot;evasive&quot;, &quot;reason&quot;: &quot;...&quot; }                         │
-│                               Latencia: 850 - 1400 ms                                  │
-│                                                                                        │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│   FASE PROPUESTA OPTIMIZADA (Adaptador LoRA / QLoRA Fusionado):                        │
-│   [ Frames (t, t-1) + Tupla Compacta de Estado + TTC ]                    ~90 tokens   │
-│                                       │                                                │
-│                                       ▼                                                │
-│                 [ Qwen2.5-VL-3B + Adaptador LoRA Especializado ]                       │
-│                                       │ (Logits intrínsecamente alineados)             │
-│                                       ▼                                                │
-│                 [ Verificación Pasiva de Esquema (json_schema) ]                       │
-│                                       │                                                │
-│                                       ▼                                                │
-│                       { &quot;action&quot;: &quot;evasive&quot;, &quot;reason&quot;: &quot;...&quot; }                         │
-│                               Latencia: 300 - 550 ms                                   │
-│                                                                                        │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-</code></pre></div>
+<p><img src="anexos/a3-impacto-lora.jpg"/></p>
 <h3 id="anexos-a3-optimizacion-lora-a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia">A3.2.1 Reducción del presupuesto de tokens y compresión de latencia<a class="headerlink" href="#anexos-a3-optimizacion-lora-a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" title="Permanent link">&para;</a></h3>
 <p>En la implementación <em>zero-shot</em> de referencia (§8.5), el prompt de usuario debe reiterar en cada invocación:
 * Las definiciones semánticas de los sectores del sensor (<code>SECTOR_FRONTAL</code>, <code>SECTOR_LATERAL</code>).
@@ -4898,11 +4787,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 1. <strong>Supervisión Jerárquica por FSM:</strong> la máquina de estados retiene la potestad para anular cualquier macro-acción deliberativa ante condiciones de riesgo inminente ($TTC &lt; 1.0\text{ s}$).
 2. <strong>Parser Tolerante de Tres Etapas:</strong> permanece activo en <code>_parse_decision()</code> como red de contención frente a anomalías de serialización.
 3. <strong>Perro Guardián Temporal (<code>SLM_WATCHDOG_MS = 1500 ms</code>):</strong> cualquier sobrepaso temporal fuerza el retorno inmediato al régimen conservador de sustentación.</p>
-<p>Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia del nodo deliberativo a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.</p></section><section class="print-page" id="anexos-a4-decodificacion-restringida" heading-number="15.4"><blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el estudio formal y la especificación técnica de los mecanismos de decodificación restringida (<em>constrained decoding</em>), gramáticas formales independientes del contexto (CFG / GBNF) y esquemas estructurados (<code>json_schema</code>). Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.2), el capítulo 5 (<code>05-ARQUITECTURA-LAZO-TACTICO.md</code>, §5.10), el capítulo 9 (<code>09-MODOS-DE-FALLA-LLM.md</code>) y los anexos A1, A2 y A3. Reubicado, reestructurado y ampliado como la guía integral de optimización del nodo deliberativo de DroneLM.</p>
-</blockquote>
-<hr />
-<h1 id="anexos-a4-decodificacion-restringida-anexo-4-decodificacion-restringida-gramaticas-formales-y-generacion-estructurada-para-el-control-tactico-del-slm">Anexo 4: Decodificación restringida, gramáticas formales y generación estructurada para el control táctico del SLM<a class="headerlink" href="#anexos-a4-decodificacion-restringida-anexo-4-decodificacion-restringida-gramaticas-formales-y-generacion-estructurada-para-el-control-tactico-del-slm" title="Permanent link">&para;</a></h1>
+<p>Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia del nodo deliberativo a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.</p></section><section class="print-page" id="anexos-a4-decodificacion-restringida" heading-number="15.4"><h1 id="anexos-a4-decodificacion-restringida-anexo-4-decodificacion-restringida-gramaticas-formales-y-generacion-estructurada-para-el-control-tactico-del-slm">Anexo 4: Decodificación restringida, gramáticas formales y generación estructurada para el control táctico del SLM<a class="headerlink" href="#anexos-a4-decodificacion-restringida-anexo-4-decodificacion-restringida-gramaticas-formales-y-generacion-estructurada-para-el-control-tactico-del-slm" title="Permanent link">&para;</a></h1>
 <p>La incorporación de modelos de lenguaje pequeños (<em>Small Language Models</em>, SLMs) y modelos multimodales compactos (<em>Small Vision-Language Models</em>, sVLMs) en el lazo de control táctico de un vehículo aéreo no tripulado (UAV) introduce una paradoja arquitectónica fundamental: <strong>la naturaleza probabilística y estocástica de los modelos neuronales frente a los requerimientos deterministas, de baja latencia y tolerancia cero a fallas de sintaxis propios de la robótica aérea</strong>.</p>
 <p>En el diseño de DroneLM, el nodo deliberativo (<code>deliberative_node</code>, §5.10) está encargado de desempatar maniobras de evasión complejas, resolver atascos cinemáticos (<em>deadlocks</em>) e interpretar escenas visuales ambiguas cuando el estimador de flujo óptico colapsa (§6.12). Sin embargo, si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador sintáctico del lazo de control colapsa. En versiones tempranas del sistema, este modo de fallo provocaba la pérdida de 3 a 5 ciclos consecutivos de control mientras el dron avanzaba a ciegas o caía en modos de emergencia espurios (§8.2, §9.1).</p>
 <p>Este anexo desarrolla los fundamentos teóricos, los mecanismos algorítmicos y el procedimiento exhaustivo de ingeniería para implementar <strong>decodificación restringida (<em>constrained decoding</em>) basada en gramáticas formales y esquemas estrictos (<code>json_schema</code> / GBNF)</strong>. Se demuestra cómo esta técnica erradica las alucinaciones estructurales, comprime el tiempo de inferencia hasta en un 60–80% y optimiza el grafo de control (<code>StateGraph</code>) de DroneLM mediante gramáticas acotadas dinámicas adaptadas al contexto de vuelo.</p>
@@ -4930,44 +4815,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 <hr />
 <h2 id="anexos-a4-decodificacion-restringida-a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida">A4.2 Fundamentos matemáticos y formales de la decodificación restringida<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida" title="Permanent link">&para;</a></h2>
 <p>La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (<em>logits</em>) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible (<a href="#13-referencias-ref-willard-2023">Willard &amp; Louf, 2023</a>; <a href="#13-referencias-ref-ugare-2024">Ugare et al., 2024</a>; <a href="#13-referencias-ref-dong-2024">Dong et al., 2024</a>).</p>
-<div class="highlight"><pre><span></span><code>                      ┌─────────────────────────────────┐
-                      │ Contexto / Prompt x + y_{&lt;t}    │
-                      └────────────────┬────────────────┘
-                                       │
-                                       ▼
-                      ┌─────────────────────────────────┐
-                      │   Paso Forward del Transformer  │
-                      └────────────────┬────────────────┘
-                                       │
-                                       ▼
-                       Logits crudos: z_t ∈ ℝ^|V|
-                                       │
-      ┌────────────────────────────────┼────────────────────────────────┐
-      │                                │                                │
-      │                                ▼                                │
-      │                     ┌────────────────────┐                      │
-      │                     │  Enmascaramiento   │                      │
-      │                     │  z&#39;_t = z_t + log M│                      │
-      │                     └─────────┬──────────┘                      │
-      │                               │                                 │
-      │                               ▼                                 │
-      │                     Logits filtrados z&#39;_t                       │
-      │                               │                                 │
-      │                               ▼                                 │
-      │                     Softmax / Argmax / Top-p                    │
-      │                               │                                 │
-      │                               ▼                                 │
-      │                     Token emitido: y_t ∈ V_válidos              │
-      │                               │                                 │
-      │                               ▼                                 │
-      │  ┌───────────────────────────────────────────────────────────┐  │
-      │  │      Motor de Gramática (Autómata Finito / Pushdown)      │  │
-      │  │  Actualiza estado s_{t+1} = δ(s_t, y_t)                   │  │
-      │  │  Calcula máscara booleana M(s_{t+1}) ∈ {0, 1}^|V|          │  │
-      │  └────────────────────────────┬──────────────────────────────┘  │
-      │                               │ Siguiente token                 │
-      └───────────────────────────────┴─────────────────────────────────┘
-</code></pre></div>
+<p><img src="anexos/a4-decodificacion-restringida.jpg"/></p>
 <h3 id="anexos-a4-decodificacion-restringida-a421-formulacion-del-enmascaramiento-de-logits">A4.2.1 Formulación del enmascaramiento de logits<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a421-formulacion-del-enmascaramiento-de-logits" title="Permanent link">&para;</a></h3>
 <p>Sea $z_t \in \mathbb{R}^{|V|}$ el vector de <em>logits</em> no normalizados producido por la última capa lineal del transformer en el paso $t$. Sea $s_t \in \mathcal{S}$ el estado actual del analizador sintáctico o autómata formal.</p>
 <p>La gramática define una función de transición de estados $\delta: \mathcal{S} \times V \to \mathcal{S} \cup {\text{error}}$ y una función de aceptación que determina qué tokens del vocabulario son continuaciones válidas:</p>
@@ -5014,31 +4862,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 <p>La interacción entre el modelo de lenguaje y el grafo de control táctico (<code>src/agents/graph.py</code>) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una <strong>arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo</strong>.</p>
 <h3 id="anexos-a4-decodificacion-restringida-a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica">A4.4.1 Invariantes del lazo táctico garantizados por la gramática<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica" title="Permanent link">&para;</a></h3>
 <p>En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los nodos de política (<code>reactive_node</code>, <code>evasive_node</code>, <code>deliberative_node</code>, <code>girar_90_node</code>) convergen en una interfaz estricta gobernada por <code>action_to_command()</code> (§8.4):</p>
-<div class="highlight"><pre><span></span><code>                                  ┌───────────────────────────┐
-                                  │      policy_router        │
-                                  └─────────────┬─────────────┘
-                                                │
-                 ┌──────────────────────────────┼──────────────────────────────┐
-                 ▼                              ▼                              ▼
-        ┌──────────────────┐           ┌──────────────────┐           ┌──────────────────┐
-        │  reactive_node   │           │   evasive_node   │           │ deliberative_node│
-        │  MANTENER_RUMBO  │           │ EVADIR_IZQ / DER │           │ (VLM + Gramática)│
-        └────────┬─────────┘           └────────┬─────────┘           └────────┬─────────┘
-                 │                              │                              │
-                 └──────────────────────────────┼──────────────────────────────┘
-                                                │
-                                                ▼
-                                 ┌─────────────────────────────┐
-                                 │      action_to_command      │
-                                 │   (Frontera Lenguaje-Física)│
-                                 └──────────────┬──────────────┘
-                                                │
-                                                ▼
-                                 ┌─────────────────────────────┐
-                                 │         motor_node          │
-                                 │  (vx, vy, vz, yaw_rate)     │
-                                 └─────────────────────────────┘
-</code></pre></div>
+<p><img src="anexos/a4-invariante-lazo-tactico.jpg"/></p>
 <p>Al imponer decodificación restringida en <code>deliberative_node</code>, se garantizan tres invariantes operativas fundamentales:
 1. <strong>Ausencia total de fallas de parseo en el lazo:</strong> se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un <strong>98%–100%</strong>, como se verifica empíricamente en el informe (§8.2, §11).
 2. <strong>Determinismo en el espacio de acción:</strong> el campo <code>action</code> se constriñe a la enumeración canónica:
@@ -5300,34 +5124,14 @@ ws <span class="o">::=</span> [ \t\n]*
 <p>Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se resumen en tres puntos esenciales:
 1. <strong>Fiabilidad operacional categórica:</strong> erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de atascos y degradaciones espurias del sistema.
 2. <strong>Eficiencia temporal crítica:</strong> al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, contrae la latencia de inferencia a un rango de 300 a 450 ms, asegurando que las decisiones deliberativas se entreguen con un margen de holgura superior al 60% respecto al perro guardián del sistema.
-3. <strong>Acoplamiento formal con el grafo de control:</strong> permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.</p></section><section class="print-page" id="anexos-a5-percepcion-monocular-flujo-optico" heading-number="15.5"><blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el desarrollo matemático formal y la especificación algorítmica de la percepción visual monocular, la derotación cinemática por IMU, la estimación del Foco de Expansión (FOE) y el cálculo del Tiempo hasta la Colisión (<em>Time-to-Collision</em>, TTC). Sirve como referencia analítica complementaria para el capítulo 6 (<code>06-PERCEPCION-MONOCULAR.md</code>), el capítulo 7 (<code>07-ESTIMACION-TTC.md</code>) y el capítulo 10 (<code>10-METODOLOGIA-EXPERIMENTAL.md</code>, §10.2).</p>
-</blockquote>
-<hr />
-<h1 id="anexos-a5-percepcion-monocular-flujo-optico-anexo-5-fundamentos-matematicos-de-percepcion-monocular-flujo-optico-y-estimacion-de-tiempo-hasta-la-colision-ttc">Anexo 5: Fundamentos matemáticos de percepción monocular, flujo óptico y estimación de tiempo hasta la colisión (TTC)<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-anexo-5-fundamentos-matematicos-de-percepcion-monocular-flujo-optico-y-estimacion-de-tiempo-hasta-la-colision-ttc" title="Permanent link">&para;</a></h1>
+3. <strong>Acoplamiento formal con el grafo de control:</strong> permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.</p></section><section class="print-page" id="anexos-a5-percepcion-monocular-flujo-optico" heading-number="15.5"><h1 id="anexos-a5-percepcion-monocular-flujo-optico-anexo-5-fundamentos-matematicos-de-percepcion-monocular-flujo-optico-y-estimacion-de-tiempo-hasta-la-colision-ttc">Anexo 5: Fundamentos matemáticos de percepción monocular, flujo óptico y estimación de tiempo hasta la colisión (TTC)<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-anexo-5-fundamentos-matematicos-de-percepcion-monocular-flujo-optico-y-estimacion-de-tiempo-hasta-la-colision-ttc" title="Permanent link">&para;</a></h1>
 <p>La premisa sensorial sobre la que se fundamenta DroneLM es la autosuficiencia perceptiva bajo restricciones severas de costo y carga útil (§1.2): gobernar un vehículo aéreo no tripulado (UAV) en entornos urbanos y suburbanos tridimensionales utilizando exclusivamente una <strong>cámara monocular RGB convencional</strong> y la <strong>telemetría de actitud angular</strong> provista por una unidad de medición inercial (IMU) estándar, prescindiendo por diseño de sensores activos pesados o costosos (LiDAR, radar, sonar) y de cámaras estereoscópicas calibradas.</p>
 <p>El desafío físico de este enfoque radica en la <strong>ambigüedad proyectiva</strong>: una cámara proyecta el mundo tridimensional $\mathbb{R}^3$ sobre un plano bidimensional $\mathbb{R}^2$, perdiendo la escala métrica absoluta de distancia ($Z$). Para recuperar la información de proximidad de manera pasiva y reactiva, el sistema explota el <strong>flujo óptico</strong>, es decir, el patrón aparente de movimiento de las intensidades lumínicas en el plano de la imagen inducido por el movimiento relativo entre la cámara y la escena.</p>
 <p>Este anexo formaliza la matemática subyacente al pipeline de percepción implementado en <code>airsim-loop/src/perception/flow_ttc.py</code> y <code>obstacle_field.py</code>, deduciendo paso a paso las ecuaciones de derotación analítica, la estimación robusta del Foco de Expansión por mínimos cuadrados ponderados con recorte de valores atípicos (<em>RANSAC-lite</em>), y la teoría óptica del tiempo hasta la colisión ($\tau$).</p>
 <hr />
 <h2 id="anexos-a5-percepcion-monocular-flujo-optico-a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim">A5.1 Modelo geométrico de cámara pin-hole y calibración en AirSim<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim" title="Permanent link">&para;</a></h2>
 <p>Se modela la cámara monocular frontal del dron mediante la aproximación de cámara oscura o estenopeica (<em>pin-hole camera model</em>) con proyección en perspectiva central.</p>
-<div class="highlight"><pre><span></span><code>       Eje Y (abajo)
-          │
-          │      Plano de Imagen
-          │      ┌────────────────────────┐
-          │      │   (0,0)                │
-          │      │     ┌───────┐          │
-          │      │     │ (u,v) │          │
-          │      │     └───────┘          │
-          │      │            (cx, cy)    │
-          │      │               •        │
-          │      └───────────────┼────────┘
-          │                      │
-          └──────────────────────┼─────────────► Eje X (derecha)
-                                ╱
-                               ╱  Eje Óptico Z (hacia adelante)
-                              ▼
-</code></pre></div>
+<p><img src="anexos/a5-modelo-geometrico-de-camara.jpg"></p>
 <h3 id="anexos-a5-percepcion-monocular-flujo-optico-a511-sistemas-de-coordenadas-y-matriz-intrinseca">A5.1.1 Sistemas de coordenadas y matriz intrínseca<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a511-sistemas-de-coordenadas-y-matriz-intrinseca" title="Permanent link">&para;</a></h3>
 <p>Sea $P_c = (X_c, Y_c, Z_c)^T \in \mathbb{R}^3$ la posición de un punto del entorno físico en el sistema de coordenadas de la cámara, donde el eje $Z_c$ coincide con el eje óptico apuntando hacia adelante, $X_c$ apunta hacia la derecha del dron e $Y_c$ apunta hacia abajo (convención visual estándar).</p>
 <p>La proyección en perspectiva de $P_c$ sobre el plano de imagen produce coordenadas métricas normalizadas $(x, y)$:</p>
@@ -5382,15 +5186,7 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <p>El campo traslacional puro se obtiene restando algebraicamente el campo teórico rotacional del flujo total calculado por el algoritmo de visión:</p>
 <p>$$u_{\text{trans}}(x, y) = u_{\text{raw}}(x, y) - u_{\text{rot}}(x, y)$$</p>
 <p>$$v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)$$</p>
-<div class="highlight"><pre><span></span><code>  Flujo Crudo (u_raw, v_raw)        Flujo Rotacional Sintético (IMU)     Flujo Traslacional Derotado
-  ┌────────────────────────┐         ┌────────────────────────┐         ┌────────────────────────┐
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │ ╲                    ╱ │
-  │ ──► ──► ──► ──► ──► ──►│    -    │ ──► ──► ──► ──► ──► ──►│    =    │   ╲       FOE      ╱   │
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │     ╲      •     ╱     │
-  │ ──► ──► ──► ──► ──► ──►│         │ ──► ──► ──► ──► ──► ──►│         │   ╱                ╲   │
-  └────────────────────────┘         └────────────────────────┘         └────────────────────────┘
-  (Giro de Yaw domina escena)       (Calculado con pitch/yaw/roll)     (Patrón radial puro al obstáculo)
-</code></pre></div>
+<p><img src="anexos/a5-campo-de-velocidad-rotacional.jpg"/></p>
 <h3 id="anexos-a5-percepcion-monocular-flujo-optico-a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion">A5.3.3 Tratamiento de discontinuidades y límite de linealización<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion" title="Permanent link">&para;</a></h3>
 <p>Durante giros bruscos, se presentan dos restricciones de ingeniería:
 1. <strong>Normalización de ángulo de guiñada:</strong> ante cruces del límite $\pm 180^\circ$ ($\pm \pi$), el incremento se desenvuelve modularmente:
@@ -5445,7 +5241,7 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 * $|v_{\text{trans}}(x, y)|$ es la magnitud del flujo traslacional en píxeles.
 * $\Delta t$ es el intervalo temporal medido entre fotogramas sucesivos a partir de la telemetría real.</p>
 <blockquote>
-<p>[!IMPORTANT]
+<p>[!IMPORTANTE]
 La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el cociente. El TTC resultante se expresa estrictamente en <strong>segundos</strong>, constituyendo un observable cinemático directo, invariante y absoluto.</p>
 </blockquote>
 <h3 id="anexos-a5-percepcion-monocular-flujo-optico-a552-verificacion-complementaria-por-divergencia-del-flujo">A5.5.2 Verificación complementaria por divergencia del flujo<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a552-verificacion-complementaria-por-divergencia-del-flujo" title="Permanent link">&para;</a></h3>
@@ -5460,25 +5256,7 @@ La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el 
 <hr />
 <h2 id="anexos-a5-percepcion-monocular-flujo-optico-a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield">A5.6 Agregación espacial robusta y contrato de percepción <code>ObstacleField</code><a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield" title="Permanent link">&para;</a></h2>
 <p>Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y modelo de lenguaje) razonen eficazmente sin procesar decenas de miles de valores por segundo, el mapa de TTC continuo se reduce espacialmente en una estructura discreta y tipada: el <strong><code>ObstacleField</code></strong> (<code>airsim-loop/src/perception/obstacle_field.py</code>).</p>
-<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────────────┐
-│              GRILLA 3x3 DEL OBSTACLEFIELD             │
-├───────────────────┬───────────────────┬────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Superior          │ Superior          │ Superior       │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: 0..H/3)       │  y: 0..H/3)       │  y: 0..H/3)    │
-├───────────────────┼───────────────────┼────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Medio             │ Medio             │ Medio          │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: H/3..2H/3)    │  y: H/3..2H/3)    │  y: H/3..2H/3) │
-├───────────────────┼───────────────────┼────────────────┤
-│ IZQUIERDA         │ CENTRO            │ DERECHA        │
-│ Inferior          │ Inferior          │ Inferior       │
-│ (x: 0..W/3,       │ (x: W/3..2W/3,    │ (x: 2W/3..W,   │
-│  y: 2H/3..H)      │  y: 2H/3..H)      │  y: 2H/3..H)   │
-└───────────────────┴───────────────────┴────────────────┘
-</code></pre></div>
+<p><img src="anexos/a5-agregación-espacial-robusta.jpg"/></p>
 <h3 id="anexos-a5-percepcion-monocular-flujo-optico-a561-estadisticos-de-agregacion-por-celda">A5.6.1 Estadísticos de agregación por celda<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a561-estadisticos-de-agregacion-por-celda" title="Permanent link">&para;</a></h3>
 <p>Para cada celda $C_{s,b}$ (donde $s \in {\text{izquierda}, \text{centro}, \text{derecha}}$ y $b \in {\text{superior}, \text{medio}, \text{inferior}}$):
 1. <strong>Fracción de Píxeles Válidos (Confianza):</strong>
@@ -5551,11 +5329,7 @@ La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el 
 </tr>
 </tbody>
 </table>
-<p>El motor <strong>DIS (Preset MEDIUM)</strong> permite ejecutar el pipeline de percepción completo (escalado, cálculo de flujo, derotación, FOE, TTC e instanciación de <code>ObstacleField</code>) en menos de <strong>25 ms por ciclo</strong> en la CPU del sistema, permitiendo operar con soltura dentro del período nominal del lazo táctico de control a 5 Hz ($200\text{ ms}$).</p></section><section class="print-page" id="anexos-a6-configuracion-entorno-reproducibilidad" heading-number="15.6"><blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el manual de configuración técnica, diccionario de parámetros de sistema y especificación de reproducibilidad experimental de DroneLM. Sirve como referencia documental complementaria para el capítulo 3 (<code>03-ENTORNO-SIMULACION.md</code>), el capítulo 10 (<code>10-METODOLOGIA-EXPERIMENTAL.md</code>) y el capítulo 11 (<code>11-RESULTADOS.md</code>).</p>
-</blockquote>
-<hr />
-<h1 id="anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad">Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" title="Permanent link">&para;</a></h1>
+<p>El motor <strong>DIS (Preset MEDIUM)</strong> permite ejecutar el pipeline de percepción completo (escalado, cálculo de flujo, derotación, FOE, TTC e instanciación de <code>ObstacleField</code>) en menos de <strong>25 ms por ciclo</strong> en la CPU del sistema, permitiendo operar con soltura dentro del período nominal del lazo táctico de control a 5 Hz ($200\text{ ms}$).</p></section><section class="print-page" id="anexos-a6-configuracion-entorno-reproducibilidad" heading-number="15.6"><h1 id="anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad">Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" title="Permanent link">&para;</a></h1>
 <p>La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (§10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / <code>llama.cpp</code>)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.</p>
 <p>Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (§10.3).</p>
 <hr />
@@ -5870,7 +5644,8 @@ La variable métrica desconocida de escala ($Z_c$) se cancela formalmente en el 
 └── CITYSIM_CLEAR-20260907T191226Z/
     ├── CITYSIM_CLEAR-20260907T191226Z.summary.json    &lt;- Métricas consolidadas
     ├── CITYSIM_CLEAR-20260907T191226Z.jsonl           &lt;- Telemetría ciclo a ciclo
-    └── CITYSIM_CLEAR-20260907T191226Z.mp4             &lt;- Video de auditoría con HUD (opcional)
+    ├── CITYSIM_CLEAR-20260907T191226Z.csv             &lt;- Dataset con Telemetría 
+    └── CITYSIM_CLEAR-20260907T191226Z.webmp           &lt;- Video de auditoría con HUD 
 </code></pre></div>
 <h3 id="anexos-a6-configuracion-entorno-reproducibilidad-a641-estructura-del-archivo-de-resumen-summaryjson">A6.4.1 Estructura del archivo de resumen (<code>.summary.json</code>)<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-a641-estructura-del-archivo-de-resumen-summaryjson" title="Permanent link">&para;</a></h3>
 <p>Contiene los metadatos globales del experimento y los indicadores clave de rendimiento (KPIs):</p>

@@ -1554,10 +1554,6 @@
 
 
 
-<blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el manual de configuración técnica, diccionario de parámetros de sistema y especificación de reproducibilidad experimental de DroneLM. Sirve como referencia documental complementaria para el capítulo 3 (<code>03-ENTORNO-SIMULACION.md</code>), el capítulo 10 (<code>10-METODOLOGIA-EXPERIMENTAL.md</code>) y el capítulo 11 (<code>11-RESULTADOS.md</code>).</p>
-</blockquote>
-<hr />
 <h1 id="anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad">Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad<a class="headerlink" href="#anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" title="Permanent link">&para;</a></h1>
 <p>La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (§10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / <code>llama.cpp</code>)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.</p>
 <p>Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (§10.3).</p>
@@ -1873,7 +1869,8 @@
 └── CITYSIM_CLEAR-20260907T191226Z/
     ├── CITYSIM_CLEAR-20260907T191226Z.summary.json    &lt;- Métricas consolidadas
     ├── CITYSIM_CLEAR-20260907T191226Z.jsonl           &lt;- Telemetría ciclo a ciclo
-    └── CITYSIM_CLEAR-20260907T191226Z.mp4             &lt;- Video de auditoría con HUD (opcional)
+    ├── CITYSIM_CLEAR-20260907T191226Z.csv             &lt;- Dataset con Telemetría 
+    └── CITYSIM_CLEAR-20260907T191226Z.webmp           &lt;- Video de auditoría con HUD 
 </code></pre></div>
 <h3 id="a641-estructura-del-archivo-de-resumen-summaryjson">A6.4.1 Estructura del archivo de resumen (<code>.summary.json</code>)<a class="headerlink" href="#a641-estructura-del-archivo-de-resumen-summaryjson" title="Permanent link">&para;</a></h3>
 <p>Contiene los metadatos globales del experimento y los indicadores clave de rendimiento (KPIs):</p>

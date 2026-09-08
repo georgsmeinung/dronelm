@@ -1,8 +1,4 @@
-﻿> **Nota de ubicación:** este documento constituye el estudio formal y la especificación técnica de los mecanismos de decodificación restringida (*constrained decoding*), gramáticas formales independientes del contexto (CFG / GBNF) y esquemas estructurados (`json_schema`). Sirve como referencia técnica complementaria para el capítulo 8 (`08-DECISIONES-SLM.md`, §8.2), el capítulo 5 (`05-ARQUITECTURA-LAZO-TACTICO.md`, §5.10), el capítulo 9 (`09-MODOS-DE-FALLA-LLM.md`) y los anexos A1, A2 y A3. Reubicado, reestructurado y ampliado como la guía integral de optimización del nodo deliberativo de DroneLM.
-
----
-
-# Anexo 4: Decodificación restringida, gramáticas formales y generación estructurada para el control táctico del SLM
+﻿# Anexo 4: Decodificación restringida, gramáticas formales y generación estructurada para el control táctico del SLM
 
 La incorporación de modelos de lenguaje pequeños (*Small Language Models*, SLMs) y modelos multimodales compactos (*Small Vision-Language Models*, sVLMs) en el lazo de control táctico de un vehículo aéreo no tripulado (UAV) introduce una paradoja arquitectónica fundamental: **la naturaleza probabilística y estocástica de los modelos neuronales frente a los requerimientos deterministas, de baja latencia y tolerancia cero a fallas de sintaxis propios de la robótica aérea**.
 
@@ -45,45 +41,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 
 La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (*logits*) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023); [Ugare et al., 2024](../13-REFERENCIAS.md#ref-ugare-2024); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)).
 
-```
-                      ┌─────────────────────────────────┐
-                      │ Contexto / Prompt x + y_{<t}    │
-                      └────────────────┬────────────────┘
-                                       │
-                                       ▼
-                      ┌─────────────────────────────────┐
-                      │   Paso Forward del Transformer  │
-                      └────────────────┬────────────────┘
-                                       │
-                                       ▼
-                       Logits crudos: z_t ∈ ℝ^|V|
-                                       │
-      ┌────────────────────────────────┼────────────────────────────────┐
-      │                                │                                │
-      │                                ▼                                │
-      │                     ┌────────────────────┐                      │
-      │                     │  Enmascaramiento   │                      │
-      │                     │  z'_t = z_t + log M│                      │
-      │                     └─────────┬──────────┘                      │
-      │                               │                                 │
-      │                               ▼                                 │
-      │                     Logits filtrados z'_t                       │
-      │                               │                                 │
-      │                               ▼                                 │
-      │                     Softmax / Argmax / Top-p                    │
-      │                               │                                 │
-      │                               ▼                                 │
-      │                     Token emitido: y_t ∈ V_válidos              │
-      │                               │                                 │
-      │                               ▼                                 │
-      │  ┌───────────────────────────────────────────────────────────┐  │
-      │  │      Motor de Gramática (Autómata Finito / Pushdown)      │  │
-      │  │  Actualiza estado s_{t+1} = δ(s_t, y_t)                   │  │
-      │  │  Calcula máscara booleana M(s_{t+1}) ∈ {0, 1}^|V|          │  │
-      │  └────────────────────────────┬──────────────────────────────┘  │
-      │                               │ Siguiente token                 │
-      └───────────────────────────────┴─────────────────────────────────┘
-```
+<img src="a4-decodificacion-restringida.jpg"/>
 
 ### A4.2.1 Formulación del enmascaramiento de logits
 Sea $z_t \in \mathbb{R}^{|V|}$ el vector de *logits* no normalizados producido por la última capa lineal del transformer en el paso $t$. Sea $s_t \in \mathcal{S}$ el estado actual del analizador sintáctico o autómata formal.
@@ -160,32 +118,7 @@ La interacción entre el modelo de lenguaje y el grafo de control táctico (`src
 ### A4.4.1 Invariantes del lazo táctico garantizados por la gramática
 En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los nodos de política (`reactive_node`, `evasive_node`, `deliberative_node`, `girar_90_node`) convergen en una interfaz estricta gobernada por `action_to_command()` (§8.4):
 
-```
-                                  ┌───────────────────────────┐
-                                  │      policy_router        │
-                                  └─────────────┬─────────────┘
-                                                │
-                 ┌──────────────────────────────┼──────────────────────────────┐
-                 ▼                              ▼                              ▼
-        ┌──────────────────┐           ┌──────────────────┐           ┌──────────────────┐
-        │  reactive_node   │           │   evasive_node   │           │ deliberative_node│
-        │  MANTENER_RUMBO  │           │ EVADIR_IZQ / DER │           │ (VLM + Gramática)│
-        └────────┬─────────┘           └────────┬─────────┘           └────────┬─────────┘
-                 │                              │                              │
-                 └──────────────────────────────┼──────────────────────────────┘
-                                                │
-                                                ▼
-                                 ┌─────────────────────────────┐
-                                 │      action_to_command      │
-                                 │   (Frontera Lenguaje-Física)│
-                                 └──────────────┬──────────────┘
-                                                │
-                                                ▼
-                                 ┌─────────────────────────────┐
-                                 │         motor_node          │
-                                 │  (vx, vy, vz, yaw_rate)     │
-                                 └─────────────────────────────┘
-```
+<img src="a4-invariante-lazo-tactico.jpg"/>
 
 Al imponer decodificación restringida en `deliberative_node`, se garantizan tres invariantes operativas fundamentales:
 1. **Ausencia total de fallas de parseo en el lazo:** se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un **98%–100%**, como se verifica empíricamente en el informe (§8.2, §11).

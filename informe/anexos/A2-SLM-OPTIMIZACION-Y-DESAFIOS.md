@@ -1,7 +1,3 @@
-> **Nota de ubicación:** este documento constituye material de investigación sobre técnicas de optimización, compresión y mitigación de desafíos operativos en Small Language Models (SLM). Sirve como referencia técnica complementaria para el capítulo 8 (`08-DECISIONES-SLM.md`, §8.1) y los anexos A1, A3 y A4. Reubicado desde `informe/SLM Optimización y Desafíos.md` el 2026-08-25.
-
----
-
 # Anexo 2: Técnicas de optimización, compresión y mitigación de desafíos en Small Language Models (SLM)
 
 La viabilidad de los modelos de lenguaje pequeños (*Small Language Models*, SLMs) y sus variantes multimodales de visión (*Small Vision-Language Models*, sVLMs) en plataformas robóticas autónomas reside en su capacidad para aproximar la competencia de razonamiento de los grandes modelos fundacionales bajo presupuestos severamente restringidos de cómputo, memoria y energía ([Abdin et al., 2024](../13-REFERENCIAS.md#ref-abdin-2024); [Nguyen et al., 2024](../13-REFERENCIAS.md#ref-nguyen-2024)).
@@ -80,36 +76,7 @@ En una misión de navegación aérea autónoma, los efectos de una alucinación 
 
 Para hacer viable el despliegue de un modelo compacto (Qwen2.5-VL-3B-Instruct; [Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:
 
-```
-                  ┌─────────────────────────────────────────┐
-                  │      Cámara Monocular + Telemetría      │
-                  └────────────────────┬────────────────────┘
-                                       │
-                     ┌─────────────────┴─────────────────┐
-                     ▼                                   ▼
-        ┌─────────────────────────┐         ┌─────────────────────────┐
-        │  Percepción Monocular   │         │    Inspección Visual    │
-        │   - Flujo óptico DIS    │         │      Directa sVLM       │
-        │   - Derotación IMU      │         │   - Fotogramas t, t-1   │
-        │   - ObstacleField       │         │   - Semántica visual    │
-        └────────────┬────────────┘         └────────────┬────────────┘
-                     │                                   │
-                     │ Resumen sensorial                 │ Prompts contextuales
-                     ▼                                   ▼
-        ┌─────────────────────────────────────────────────────────────┐
-        │          Nodo Deliberativo / Decodificación json_schema     │
-        │   - Restricción formal de logits ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023))     │
-        │   - Espacio discreto cerrado (5 macro-acciones)             │
-        └──────────────────────────────┬──────────────────────────────┘
-                                       │ Macro-acción JSON
-                                       ▼
-        ┌─────────────────────────────────────────────────────────────┐
-        │     Red de Seguridad Híbrida / FSM Determinista (§5.2)      │
-        │   - Parser tolerante de 3 etapas                            │
-        │   - Validación de consistencia cinemática                   │
-        │   - Fallback conservador (hover seguro / bypass FSM)       │
-        └─────────────────────────────────────────────────────────────┘
-```
+<img src="a2-estrategias-mitigacion.jpg">
 
 1. **Decodificación restringida a nivel de logits (`json_schema`)**:
    En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025); [Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (§8.2.1).

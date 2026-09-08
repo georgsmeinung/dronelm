@@ -1268,10 +1268,6 @@
 
 
 
-<blockquote>
-<p><strong>Nota de ubicación:</strong> este documento constituye el estudio técnico exploratorio sobre selección de modelos SLM/sVLM, cuantización GGUF, decodificación estructurada y posicionamiento arquitectónico. Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.1) y los anexos A2, A3 y A4.</p>
-</blockquote>
-<hr />
 <h1 id="anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica">Anexo 1: Exploración técnica de Small Language Models (SLM), cuantización GGUF y análisis de innovación arquitectónica<a class="headerlink" href="#anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica" title="Permanent link">&para;</a></h1>
 <p>La integración de modelos de lenguaje en plataformas robóticas autónomas exige resolver un compromiso riguroso entre capacidad representacional, latencia de inferencia y consumo de recursos computacionales. En el contexto de esta investigación, el objetivo es dotar a un vehículo aéreo no tripulado (UAV) de capacidad deliberativa de alto nivel mientras opera en simulación fotorrealista bajo hardware de consumo. </p>
 <p>Un <strong>Modelo de Lenguaje Pequeño</strong> (<em>Small Language Model</em>, SLM) —y su extensión multimodal, <em>Small Vision-Language Model</em> (sVLM)— se define operativamente por tres criterios: <strong>(1)</strong> un conteo de parámetros en el rango de 1B a 10B (<a href="../13-REFERENCIAS.html#ref-abdin-2024">Abdin et al., 2024</a>; <a href="../13-REFERENCIAS.html#ref-zhang-tinyllama-2024">Zhang et al., 2024</a>), que conserva competencia notable para razonamiento simbólico, comprensión sintáctica y extracción de relaciones complejas a pesar de su escala relativa (<a href="../13-REFERENCIAS.html#ref-nguyen-2024">Nguyen et al., 2024</a>); <strong>(2)</strong> la factibilidad de despliegue local (<em>on-device</em>) en hardware de consumo común (tarjetas gráficas de gama media como la NVIDIA RTX 5060 de 8 GB) o procesadores embebidos (NVIDIA Jetson; <a href="../13-REFERENCIAS.html#ref-nvidia-2025">NVIDIA, 2025</a>); y <strong>(3)</strong> una latencia de inferencia determinista de subsegundos a pocos segundos, compatible con los márgenes de los lazos de control en robótica móvil (<a href="../13-REFERENCIAS.html#ref-tian-2025">Tian et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-vemprala-2023">Vemprala et al., 2023</a>). Frente a los LLMs de frontera (GPT-4o, Claude 3.5, Gemini 1.5 — decenas a cientos de miles de millones de parámetros, 24–80 GB de VRAM), los SLMs ofrecen ventajas determinantes para sistemas embarcados: autonomía operativa sin conexión a la nube, supresión de la variabilidad de red, eficiencia energética en plataformas alimentadas por batería (<a href="../13-REFERENCIAS.html#ref-goel-2021">Goel et al., 2021</a>) y compatibilidad con decodificación restringida por gramáticas en motores locales como <code>llama.cpp</code> (<a href="../13-REFERENCIAS.html#ref-willard-2023">Willard &amp; Louf, 2023</a>).</p>
@@ -1382,35 +1378,17 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <hr />
 <h2 id="a14-procedimiento-practico-de-configuracion-e-integracion-local">A1.4 Procedimiento práctico de configuración e integración local<a class="headerlink" href="#a14-procedimiento-practico-de-configuracion-e-integracion-local" title="Permanent link">&para;</a></h2>
 <p>La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:</p>
-<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
-│                   NVIDIA RTX 5060 (8 GB)                 │
-│                                                          │
-│  ┌────────────────────────────┐  ┌────────────────────┐  │
-│  │   Unreal Engine 5.5 /      │  │  LM Studio Server  │  │
-│  │         AirSim             │  │   (llama.cpp core) │  │
-│  │   (4.5 – 5.5 GB VRAM)      │  │  (2.0 – 2.5 GB)    │  │
-│  └─────────────┬──────────────┘  └─────────▲──────────┘  │
-└────────────────┼───────────────────────────┼─────────────┘
-                 │ Telemetría /              │ Macro-acción
-                 │ Fotogramas                │ JSON estructurado
-                 ▼                           │
-   ┌─────────────────────────────────────────┴─────────────┐
-   │        Nodo Deliberativo / FSM (Python)               │
-   │  - Resumen semántico &amp; preprocesamiento               │
-   │  - Inferencia con decodificación json_schema         │
-   │  - Parser tolerante &amp; traducción action_to_command    │
-   └───────────────────────────────────────────────────────┘
-</code></pre></div>
+<p><img src="a1-integracion-local.jpg"/></p>
 <ol>
-<li><strong>Gestión de capas en GPU (<em>GPU Layer Offloading</em>)</strong>:</li>
-<li>En el servidor local de inferencia (LM Studio / <code>llama.cpp</code>), el modelo Qwen2.5-VL-3B en cuantización Q4_K_M se aloja en VRAM configurando el traspaso completo (<em>full offload</em>) de sus 36 bloques de capas Transformer, además del codificador visual ligero.</li>
+<li><strong>Gestión de capas y memoria en Apple Silicon (<em>Metal Offloading</em> en Mac mini M4)</strong>:</li>
+<li>En el servidor dedicado de inferencia (Apple Mac mini M4 con 16 GB de memoria unificada), LM Studio ejecuta el núcleo de <code>llama.cpp</code> compilado con aceleración por hardware sobre Apple Metal (MPS). El modelo multimodal Qwen2.5-VL-3B en cuantización Q4_K_M se aloja configurando el traspaso completo (<em>full offload</em>) de sus 36 bloques de capas Transformer y su codificador visual ViT directamente en la memoria unificada accesible por la GPU integrada de 10 núcleos, con una huella de ~2.0 a 2.5 GB.</li>
 <li>
-<p>La reserva de VRAM se monitoriza dinámicamente mediante la interfaz NVML (<code>nvidia-smi</code>) para garantizar un margen libre (<em>headroom</em>) de al menos 500 MB, evitando contingencias de falta de memoria (<em>Out of Memory</em>, OOM) cuando el simulador genera escenarios de alta densidad poligonal.</p>
+<p>La arquitectura desacoplada en dos nodos físicos (la estación de simulación con GPU NVIDIA RTX 5060 de 8 GB dedicada exclusivamente a Unreal Engine 5.5 / AirSim, y el Mac mini M4 dedicado a la inferencia) elimina por completo la contienda de recursos de VRAM entre el renderizado 3D y el modelo de lenguaje. En el Mac mini, la memoria se administra mediante la arquitectura de memoria unificada (<em>Unified Memory Architecture</em>, UMA) de macOS, manteniendo un margen libre (<em>headroom</em>) superior a 10 GB y suprimiendo de raíz contingencias de falta de memoria (<em>Out of Memory</em>, OOM) provocadas por picos de carga poligonal en el simulador.</p>
 </li>
 <li>
-<p><strong>Inferencia desacoplada mediante API HTTP local</strong>:</p>
+<p><strong>Inferencia desacoplada mediante API HTTP en red local</strong>:</p>
 </li>
-<li>El motor de inferencia expone un punto de conexión compatible con OpenAI (<code>http://localhost:1234/v1/chat/completions</code>).</li>
+<li>El motor de inferencia expone un punto de conexión compatible con OpenAI en el puerto 1234 (<code>http://&lt;ip-servidor&gt;:1234/v1/chat/completions</code>, configurado en la variable <code>LOCAL_LLM_URL</code>, e.g., <code>http://192.168.110.101:1234/v1</code> a través de un enlace Ethernet directo).</li>
 <li>
 <p>El cliente de navegación serializa el estado perceptual y el fotograma codificado en base64, solicitando la respuesta con el parámetro <code>response_format</code> en modo <code>json_schema</code>.</p>
 </li>

@@ -1,7 +1,3 @@
-> **Nota de ubicación:** este documento constituye el manual de configuración técnica, diccionario de parámetros de sistema y especificación de reproducibilidad experimental de DroneLM. Sirve como referencia documental complementaria para el capítulo 3 (`03-ENTORNO-SIMULACION.md`), el capítulo 10 (`10-METODOLOGIA-EXPERIMENTAL.md`) y el capítulo 11 (`11-RESULTADOS.md`).
-
----
-
 # Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad
 
 La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (§10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / `llama.cpp`)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.
@@ -181,7 +177,8 @@ airsim-runs/
 └── CITYSIM_CLEAR-20260907T191226Z/
     ├── CITYSIM_CLEAR-20260907T191226Z.summary.json    <- Métricas consolidadas
     ├── CITYSIM_CLEAR-20260907T191226Z.jsonl           <- Telemetría ciclo a ciclo
-    └── CITYSIM_CLEAR-20260907T191226Z.mp4             <- Video de auditoría con HUD (opcional)
+    ├── CITYSIM_CLEAR-20260907T191226Z.csv             <- Dataset con Telemetría 
+    └── CITYSIM_CLEAR-20260907T191226Z.webmp           <- Video de auditoría con HUD 
 ```
 
 ### A6.4.1 Estructura del archivo de resumen (`.summary.json`)
