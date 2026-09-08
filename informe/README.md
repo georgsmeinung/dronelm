@@ -20,7 +20,7 @@ reescribir la estructura cada vez.
 | 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Selección de modelo (Qwen2.5-VL-3B), decodificación restringida + parser tolerante, espacio de acción discreto, 5 componentes del prompt, gestión de latencia, LoRA no adoptado | — |
 | 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — 5 modos de falla documentados (schema drift, desalineación temporal, divergencia descalibrada, state clipping en LangGraph, degradaciones sensoriales); metodología de diagnóstico; riesgos residuales | — |
 | 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo en 3 Tiers) | — |
-| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Parcial — corridas piloto seed=1 completas (3 brazos × 3 Tiers). **Pendiente:** semillas 2–5, escenarios con obstáculos (`townsim_ini`, `citymap_a`), batch G4 completo | corrida batch G4 |
+| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Parcial — corridas piloto seed=1 completas (3 brazos × 3 Tiers). **Pendiente:** semillas 2–5 y escenarios con obstáculos (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`) | lote estadístico completo |
 | 12 | [`12-CONCLUSIONES.md`](12-CONCLUSIONES.md) | ⏳ Pendiente | capítulo 11 |
 | 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado — pendiente de depuración final (eliminar entradas no citadas en texto, resolver metadata incompleta §13.3) | — |
 | — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia — selección de modelos GGUF y evaluación de nivel de innovación | — |
@@ -60,8 +60,8 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
 
 ### Capítulos pendientes de redactar
 - **Cap. 11 (Resultados)**: corridas piloto seed=1 completas para los tres brazos en 3 Tiers.
-  Falta: semillas 2–5 y escenarios con obstáculos (`townsim_ini`, `citymap_a`). El batch G4
-  completo (Brazo × Atasco × Tier × Semillas ≥ 5) es el prerequisito para las conclusiones.
+  Falta: semillas 2–5 y escenarios con obstáculos (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`).
+  El lote estadístico completo (Brazo × Escenario × Semillas ≥ 5) es el prerequisito para las conclusiones.
 - **Cap. 12 (Conclusiones)**: bloquea en cap. 11.
 
 ### Revisión final

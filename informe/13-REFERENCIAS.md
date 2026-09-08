@@ -181,7 +181,6 @@ Dosovitskiy, A., Ros, G., Codevilla, F., López, A., & Koltun, V. (2017). CARLA:
 [Organización de tareas en cuatro niveles crecientes de dificultad sobre un mismo simulador.]
 
 Loquercio, A., Kaufmann, E., Ranftl, R., Müller, M., Koltun, V., & Scaramuzza, D. (2021). Learning high-speed flight in the wild. *Science Robotics*, *6*(59), eabg5810. <https://doi.org/10.1126/scirobotics.abg5810>
-[Reporte de desempeño de vuelo autónomo en función de la densidad de obstáculos en lugar de agregado; referencia del experimento extendido E2.1.]
 
 Machado, M. C., Bellemare, M. G., Talvitie, E., Veness, J., Hausknecht, M., & Bowling, M. (2018). Revisiting the Arcade Learning Environment: Evaluation Protocols and Open Problems for General Agents. *Journal of Artificial Intelligence Research*, *61*, 523-562. arXiv:1709.06009. <https://doi.org/10.1613/jair.5699>
 [Inyección de estocasticidad controlada (*sticky actions*) para evaluar robustez en lugar de memorización de trayectoria; análogo del modo `--seed-jitter` discutido en §10.4.3.]

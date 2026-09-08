@@ -1,9 +1,9 @@
 # 11. Resultados comparativos SLM vs. FSM
 
 > **Estado (2026-09-07):** corridas piloto de Tier 0, Tier 1 base y Tier 2 base completadas (1 semilla, ilustrativo).
-> El batch estadístico G4 (≥5 semillas, análisis Mann-Whitney) está pendiente de `townsim_ini` y `citymap_a`.
+> El lote estadístico completo (≥5 semillas, análisis Mann-Whitney) está pendiente.
 > Las tablas de esta sección presentan datos reales de las corridas piloto en §11.1 y marcadores de
-> posición para G4 en §11.2–11.4.
+> posición para el lote completo en §11.2–11.4.
 >
 > **Corte de datos:** todos los resultados de esta sección provienen de corridas con `code_version`
 > posterior al 2026-09-03 — fecha de corrección de dos bugs que afectaban directamente la percepción
@@ -12,10 +12,10 @@
 
 ---
 
-## 11.1 Resultados piloto (1 semilla, ilustrativo — pre-batch G4)
+## 11.1 Resultados piloto (1 semilla, ilustrativo)
 
 Estas corridas cumplen el criterio de arranque del diseño experimental (`success = True`, 0 colisiones)
-y sirven de referencia cualitativa antes del análisis estadístico de G4.
+y sirven de referencia cualitativa antes del análisis estadístico completo.
 Estrategia de desbloqueo: `deep_vlm` en todos los casos (default de producción).
 
 ### Tier 0 — `minisim_clear` · MiniSim (crater.png)
@@ -85,29 +85,30 @@ no se registró ninguna evasión activa durante el vuelo horizontal.
 
 ## 11.2 Tabla de resultados por brazo y escenario
 
-Datos de corridas piloto (seed=1, `deep_vlm`). La columna "DistMin" es el valor observado en
-la corrida única; el percentil p5 se calculará sobre ≥5 semillas en el batch G4.
-Las filas marcadas **[pendiente G4]** corresponden a condiciones no corridas aún.
+Datos de corridas piloto (seed=1). La columna "DistMin" es el valor observado en la corrida única;
+el percentil p5 se calculará sobre ≥5 semillas en el lote estadístico completo.
+Las filas marcadas **[pendiente]** corresponden a condiciones no corridas aún.
 
-> **Escenarios definitivos G4:** `minisim_clear` (Tier 0), `townsim_ini` (Tier 1 con obstáculos
-> reales) / `townsim_calib_cruce_frontal` (T-CALIB-2), `citysim_clear` (Tier 2 base) /
-> `citymap_a` (Tier 2 con obstáculos — pendiente construcción). Las filas de `townsim_clear`
-> corresponden al escenario base (sin obstáculos a altitud de tránsito), equivalente al rol de
-> `minisim_clear` en Tier 0.
-
-| Brazo | Tier / Escenario | Estrategia Atasco | Éxito (1 sem.) | Col./km | DistMin (m) | Tiempo (s) | Deliberación | Fallback SLM | Res. Atasco VLM |
-|---|---|---|---|---|---|---|---|---|---|
-| `slm` | Tier 0 (`minisim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 9.74 | 235 | 6.95% | 1.25% | 100% (1/1) |
-| `slm` | Tier 0 (`minisim_clear`) | `blind` | — | — | — | — | — | — | — |
-| `slm` | Tier 1 (`townsim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 0.004* | 311 | 0.82% | 0% | 100% (3/3) |
-| `slm` | Tier 1 (`townsim_clear`) | `blind` | — | — | — | — | — | — | — |
-| `slm` | Tier 2 (`citysim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 0.77† | 174 | 0.80% | 0% | — (0 deadlocks) |
-| `fsm` | Tier 0 (`minisim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 6.38 | 208 | — | — | 100% (2/2) |
-| `fsm` | Tier 1 (`townsim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 7.89 | 347 | — | — | 100% (5/5) |
-| `fsm` | Tier 2 (`citysim_clear`) | `deep_vlm` | 1/1 ✅ | 0 | 11.0 | 182 | — | — | — (0 deadlocks) |
-| `reactive` | Tier 0 (`minisim_clear`) | — | 1/1 ✅ | 0 | 9.06 | 84 | — | — | — |
-| `reactive` | Tier 1 (`townsim_clear`) | — | 1/1 ✅ | 0 | 9.51 | 266 | — | — | — |
-| `reactive` | Tier 2 (`citysim_clear`) | — | 1/1 ✅ | 0 | 9.43 | 159 | — | — | — |
+| Brazo | Tier / Escenario | Éxito (1 sem.) | Col./km | DistMin (m) | Tiempo (s) | Deliberación | Fallback SLM | Res. Atasco VLM |
+|---|---|---|---|---|---|---|---|---|
+| `slm` | Tier 0 (`minisim_clear`) | 1/1 ✅ | 0 | 9.74 | 235 | 6.95% | 1.25% | 100% (1/1) |
+| `slm` | Tier 1 (`townsim_clear`) | 1/1 ✅ | 0 | 0.004* | 311 | 0.82% | 0% | 100% (3/3) |
+| `slm` | Tier 1 (`townsim_ini`) | [pendiente] | | | | | | |
+| `slm` | Tier 1 (`townsim_calib_cruce_frontal`) | [pendiente] | | | | | | |
+| `slm` | Tier 2 (`citysim_clear`) | 1/1 ✅ | 0 | 0.77† | 174 | 0.80% | 0% | — (0 deadlocks) |
+| `slm` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | |
+| `fsm` | Tier 0 (`minisim_clear`) | 1/1 ✅ | 0 | 6.38 | 208 | — | — | 100% (2/2) |
+| `fsm` | Tier 1 (`townsim_clear`) | 1/1 ✅ | 0 | 7.89 | 347 | — | — | 100% (5/5) |
+| `fsm` | Tier 1 (`townsim_ini`) | [pendiente] | | | | | | |
+| `fsm` | Tier 1 (`townsim_calib_cruce_frontal`) | [pendiente] | | | | | | |
+| `fsm` | Tier 2 (`citysim_clear`) | 1/1 ✅ | 0 | 11.0 | 182 | — | — | — (0 deadlocks) |
+| `fsm` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | |
+| `reactive` | Tier 0 (`minisim_clear`) | 1/1 ✅ | 0 | 9.06 | 84 | — | — | — |
+| `reactive` | Tier 1 (`townsim_clear`) | 1/1 ✅ | 0 | 9.51 | 266 | — | — | — |
+| `reactive` | Tier 1 (`townsim_ini`) | [pendiente] | | | | | | |
+| `reactive` | Tier 1 (`townsim_calib_cruce_frontal`) | [pendiente] | | | | | | |
+| `reactive` | Tier 2 (`citysim_clear`) | 1/1 ✅ | 0 | 9.43 | 159 | — | — | — |
+| `reactive` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | |
 
 
 \* DistMin Tier 1 `slm` = 0.004m: artefacto del ciclo de spawn (contacto estático con suelo), no aproximación en vuelo.
@@ -115,11 +116,11 @@ Las filas marcadas **[pendiente G4]** corresponden a condiciones no corridas aú
 
 ---
 
-## 11.3 Observaciones preliminares y marco para el análisis estadístico G4
+## 11.3 Observaciones preliminares y marco para el análisis estadístico
 
 > **Nota:** con 1 semilla por celda no es posible ejecutar pruebas de significancia estadística.
 > Esta sección presenta las tendencias observadas en los datos piloto y el diseño del análisis
-> que se realizará sobre el batch G4 (≥5 semillas por celda).
+> que se realizará sobre el lote estadístico completo (≥5 semillas por celda).
 
 ### 11.3.1 Tendencias en los datos piloto
 
@@ -158,26 +159,24 @@ en `slm` y `fsm`. El brazo `reactive` no registra deadlocks en ningún tier, lo 
 su control reactivo puro no tiene el concepto de "objetivo pendiente" que genera atascos en los
 brazos deliberativos cuando la ruta directa está bloqueada.
 
-### 11.3.2 Marco estadístico para el batch G4
+### 11.3.2 Marco estadístico para el lote completo
 
-Sobre ≥5 semillas independientes por celda factorial se ejecutará:
+Sobre ≥5 semillas independientes por celda se ejecutará:
 
-1. **Prueba U de Mann-Whitney** (bilateral) comparando cada par de brazos en el mismo escenario
-   y estrategia de desbloqueo. Hipótesis nula: la distribución de la métrica principal no difiere
-   entre brazos. Métrica primaria: tiempo de misión en corridas con `success=True`; métrica
-   secundaria: `dist_min_m` como indicador de seguridad.
+1. **Prueba U de Mann-Whitney** (bilateral) comparando cada par de brazos en el mismo escenario.
+   Hipótesis nula: la distribución de la métrica principal no difiere entre brazos. Métrica
+   primaria: tiempo de misión en corridas con `success=True` para escenarios de control; SPL para
+   escenarios con bloqueo. Métrica secundaria: `dist_min_m` como indicador de seguridad.
 
 2. **Tamaño de efecto**: Cliff's Delta (δ) sobre el mismo par. Umbral de referencia: δ > 0.3
-   como efecto "mediano" (interpretación de Romano et al., 2006). Un p-valor significativo con
-   δ pequeño (< 0.1) indicaría una diferencia real pero de magnitud práctica despreciable.
+   como efecto "mediano" (Romano et al., 2006). Un p-valor significativo con δ pequeño (< 0.1)
+   indicaría una diferencia real pero de magnitud práctica despreciable.
 
-3. **Corrección de Bonferroni** sobre las comparaciones múltiples por tier (3 pares de brazos ×
-   2 estrategias × 3 escenarios = 18 pruebas); umbral ajustado α = 0.05/18 ≈ 0.0028.
+3. **Corrección de Bonferroni** sobre las comparaciones múltiples (3 pares de brazos × 6
+   escenarios = 18 pruebas); umbral ajustado α = 0.05/18 ≈ 0.0028.
 
-Las comparaciones previstas son: `slm` vs. `fsm`, `slm` vs. `reactive`, y `fsm` vs. `reactive`,
-tanto en estrategia `deep_vlm` como `blind` donde aplique. La comparación `deep_vlm` vs. `blind`
-dentro del mismo brazo `slm` cuantifica el aporte de H3 (escaneo profundo deliberativo frente al
-escape ciego).
+Las comparaciones previstas son: `slm` vs. `fsm`, `slm` vs. `reactive`, y `fsm` vs. `reactive`
+en cada escenario.
 
 ---
 
@@ -202,7 +201,7 @@ ventaja del VLM no tiene dónde manifestarse. Este resultado es el esperado por 
 existe para establecer la cota inferior de rendimiento del sistema y cuantificar el overhead puro
 del brazo `slm` en ausencia de beneficio.
 
-**Predicción G4:** la diferencia de velocidad entre `reactive` y `slm` debería sostenerse con
+**Predicción:** la diferencia de velocidad entre `reactive` y `slm` debería sostenerse con
 alta significancia estadística (Cliff's δ cercano a 1.0 en favor de `reactive`); la comparación
 `slm` vs. `fsm` puede ser más variable porque depende de cuántos deadlocks acumule la FSM por
 corrida.
@@ -213,7 +212,7 @@ El escenario `townsim_clear` para Tier 1: vuela el perímetro a −30m (sobre la
 
 El dato más significativo de Tier 1 piloto no es la velocidad sino los deadlocks: el `fsm` acumula 5 (todos resueltos por escaneo profundo `deep_vlm`); el `slm`, 3; el `reactive`, 0. Con 1 semilla, este patrón es indicativo pero no concluyente — puede reflejar diferencias en la gestión de atascos entre brazos, o simplemente la varianza de una única semilla.
 
-El escenario de interés real para Tier 1 es `townsim_ini`: un recorrido que cruza el interior del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí donde el escaneo deliberativo profundo (`deep_vlm`) tiene un caso de uso genuino frente al escape ciego (`blind`): la FSM y el `reactive` deben bordear obstáculos por heurística, mientras el `slm` puede consultar al VLM para elegir el corredor. Los datos de `townsim_clear` solo establecen la cota de partida.
+El escenario de interés real para Tier 1 es `townsim_ini`: un recorrido que cruza el interior del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí donde el escaneo deliberativo tiene un caso de uso genuino: la FSM y el `reactive` deben bordear obstáculos por heurística, mientras el `slm` puede consultar al VLM para elegir el corredor. Los datos de `townsim_clear` solo establecen la cota de partida.
 
 ### 11.4.3 Tier 2 — Entorno urbano denso (`citysim_clear`)
 

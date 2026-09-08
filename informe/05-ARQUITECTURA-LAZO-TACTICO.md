@@ -220,7 +220,7 @@ El nodo ejecuta una de tres rutas en cada ciclo:
 
 Antes de ejecutar el escape, el nodo evalúa si el escape previo resolvió el atasco comparando `dist_xy` actual con `_escape_baseline_dist`. Si hubo progreso real (`dist_xy < baseline - WAYPOINT_PROGRESS_EPS_M`), resetea `_consecutive_escapes`, `_escape_locked`, `_escape_baseline_dist` y `_deadlock_cycles`.
 
-Si el atasco persiste y `DEADLOCK_STRATEGY = "deep_vlm"` (default), delega al módulo `deep_scan` antes de forzar el escape ciego (§5.12). Si `deep_scan` resuelve el ciclo, retorna; si falla (timeout o respuesta no válida), continúa hacia el escape sincrónico.
+Si el atasco persiste, delega al módulo `deep_scan` (§5.12) antes de forzar el escape cinemático. Si `deep_scan` resuelve el ciclo, retorna; si falla (timeout o respuesta no válida), continúa hacia el escape sincrónico.
 
 El escape sincrónico **alterna** entre `GANAR_ALTURA` (intentos impares) y `PERDER_ALTURA` (intentos pares) para no insistir hacia arriba si el obstáculo bloquea también por encima. Guarda `_escape_baseline_dist = dist_xy` actual y la acción como maniobra comprometida (`ESCAPE_MANEUVER_DURATION_S` × `LOOP_HZ` ciclos).
 
