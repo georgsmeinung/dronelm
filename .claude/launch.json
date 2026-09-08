@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "webdcs",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uvicorn", "main:app", "--reload", "--port", "8000"],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d D:\\TesisMCD\\dronelm\\airsim-plan && D:\\TesisMCD\\airsimenv\\python.exe -m uvicorn webdcs.main:app --no-access-log --port 8000"],
       "port": 8000,
       "url": "http://localhost:8000"
     }

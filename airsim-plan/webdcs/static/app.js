@@ -1,8 +1,13 @@
 // ----------------------------------------------------------------------------
 // Configuración de visualización del mapa
 // ----------------------------------------------------------------------------
-let mapScale = 2.5; 
-let mapCenter = { x: 0, y: 0 }; 
+// mapScale: píxeles por metro.  mapNedOffset: posición NED del centro de la imagen.
+// Ambos se actualizan desde map_scales.json vía /api/map-config al cambiar de mapa.
+let mapScale = 2.5;
+let mapNedOffset = { x: 0, y: 0 };
+let mapConfigs = {};        // datos cargados desde /api/map-config
+let currentMapFile = '';    // nombre del archivo de mapa activo
+let mapCenter = { x: 0, y: 0 };
 
 let activeManifest = null;
 let originalManifestString = ''; // Para control de cambios (dirty state)
@@ -70,7 +75,7 @@ const mapImage = document.getElementById('map-image');
 window.addEventListener('load', () => {
     resizeCanvas();
     loadSavedManifests();
-    loadAvailableMaps();
+    loadMapConfig().then(() => loadAvailableMaps());
     setupModalListeners();
     setupNewManifestListener();
     setupInteractiveControls();
@@ -131,18 +136,19 @@ function updateOriginalState() {
 
 // ----------------------------------------------------------------------------
 // Conversión de Coordenadas (NED -> Pixels y viceversa)
+// mapNedOffset: coordenadas NED que corresponden al CENTRO de la imagen.
 // ----------------------------------------------------------------------------
 function nedToCanvas(nedX, nedY) {
     return {
-        x: mapCenter.x + (nedY * mapScale),
-        y: mapCenter.y - (nedX * mapScale)
+        x: mapCenter.x + (nedY - mapNedOffset.y) * mapScale,
+        y: mapCenter.y - (nedX - mapNedOffset.x) * mapScale
     };
 }
 
 function canvasToNed(canvasX, canvasY) {
     return {
-        x: (mapCenter.y - canvasY) / mapScale,
-        y: (canvasX - mapCenter.x) / mapScale
+        x: mapNedOffset.x + (mapCenter.y - canvasY) / mapScale,
+        y: mapNedOffset.y + (canvasX - mapCenter.x) / mapScale
     };
 }
 
@@ -378,7 +384,7 @@ function deleteWaypoint(idx) {
 function loadActiveManifest(manifest) {
     activeManifest = manifest;
     updateOriginalState();
-    
+
     elActiveMissionTitle.textContent = manifest.mission_id;
 
     // Cargar mapa correspondiente (por defecto map.png si no tiene)
@@ -386,6 +392,7 @@ function loadActiveManifest(manifest) {
     mapImage.src = `/maps/${mapFile}`;
     elMapSelector.value = mapFile;
     elLegendMapName.textContent = mapFile;
+    applyMapConfig(mapFile);
 
     elViewManifestsList.classList.add('hidden');
     elViewWaypointsDetail.classList.remove('hidden');
@@ -424,12 +431,65 @@ function goBackToManifestsList() {
 // ----------------------------------------------------------------------------
 let availableMaps = [];
 
+async function loadMapConfig() {
+    try {
+        const response = await fetch('/api/map-config');
+        if (response.ok) {
+            mapConfigs = await response.json();
+        }
+    } catch (err) {
+        console.error('Error cargando configuración de mapas:', err);
+    }
+}
+
+function applyMapConfig(mapFile) {
+    currentMapFile = mapFile;
+    const cfg = mapConfigs[mapFile];
+    if (cfg) {
+        mapScale = cfg.scale;
+        mapNedOffset = cfg.ned_offset ? { x: cfg.ned_offset.x, y: cfg.ned_offset.y } : { x: 0, y: 0 };
+    } else {
+        // Sin config → mantener escala actual (no resetear a 2.5 por defecto)
+    }
+    syncScaleInput();
+    drawRoute();
+}
+
+function syncScaleInput() {
+    const inp = document.getElementById('map-scale-input');
+    const offX = document.getElementById('map-ned-offset-x');
+    const offY = document.getElementById('map-ned-offset-y');
+    if (inp) inp.value = mapScale;
+    if (offX) offX.value = mapNedOffset.x;
+    if (offY) offY.value = mapNedOffset.y;
+}
+
+async function saveCurrentMapConfig() {
+    if (!currentMapFile) return;
+    const existing = mapConfigs[currentMapFile] || {};
+    mapConfigs[currentMapFile] = {
+        ...existing,
+        scale: mapScale,
+        ned_offset: { x: mapNedOffset.x, y: mapNedOffset.y }
+    };
+    try {
+        await fetch('/api/map-config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config: mapConfigs })
+        });
+        showToast(`Escala de "${currentMapFile}" guardada (${mapScale} px/m).`, 'success');
+    } catch (err) {
+        showToast('Error al guardar la configuración del mapa.', 'error');
+    }
+}
+
 async function loadAvailableMaps() {
     try {
         const response = await fetch('/api/maps');
         if (!response.ok) return;
         availableMaps = await response.json();
-        
+
         // Llenar selectores de mapas (modal y cabecera del mapa)
         elNewMissionMap.innerHTML = '';
         elMapSelector.innerHTML = '';
@@ -705,15 +765,43 @@ function setupInteractiveControls() {
         const selectedMap = elMapSelector.value;
         mapImage.src = `/maps/${selectedMap}`;
         elLegendMapName.textContent = selectedMap;
+        applyMapConfig(selectedMap);
         if (activeManifest) {
             activeManifest.map = selectedMap;
             syncManifestToEditor();
         } else {
-            // Si no hay misión, redimensionar de todos modos al cargar el nuevo mapa
             resizeCanvas();
         }
         showToast(`Mapa cambiado a: ${selectedMap}`, 'success');
     });
+
+    // 7. Controles de escala por mapa
+    const elScaleInput = document.getElementById('map-scale-input');
+    const elOffsetX = document.getElementById('map-ned-offset-x');
+    const elOffsetY = document.getElementById('map-ned-offset-y');
+    const elBtnSaveScale = document.getElementById('btn-save-scale');
+
+    if (elScaleInput) {
+        elScaleInput.addEventListener('input', () => {
+            const v = parseFloat(elScaleInput.value);
+            if (v > 0) { mapScale = v; drawRoute(); }
+        });
+    }
+    if (elOffsetX) {
+        elOffsetX.addEventListener('input', () => {
+            const v = parseFloat(elOffsetX.value);
+            if (!isNaN(v)) { mapNedOffset.x = v; drawRoute(); }
+        });
+    }
+    if (elOffsetY) {
+        elOffsetY.addEventListener('input', () => {
+            const v = parseFloat(elOffsetY.value);
+            if (!isNaN(v)) { mapNedOffset.y = v; drawRoute(); }
+        });
+    }
+    if (elBtnSaveScale) {
+        elBtnSaveScale.addEventListener('click', saveCurrentMapConfig);
+    }
 
     // 6. Lanzamiento de Misión
     elBtnLaunchMission.addEventListener('click', async () => {

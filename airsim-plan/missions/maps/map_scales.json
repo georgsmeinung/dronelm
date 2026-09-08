@@ -1,0 +1,27 @@
+{
+  "crater.png": {
+    "scale": 8.0,
+    "ned_offset": { "x": 0, "y": 0 },
+    "notes": "MiniSim / Tier 0 — crater ~200m de diámetro"
+  },
+  "townsim.png": {
+    "scale": 4.5,
+    "ned_offset": { "x": 0, "y": 0 },
+    "notes": "TownSim / Tier 1 — pueblo, ~400m de extensión"
+  },
+  "townsim_calib.png": {
+    "scale": 6.5,
+    "ned_offset": { "x": 0, "y": 0 },
+    "notes": "TownSim calib / Tier 1 — misma escena, imagen de calibración 2000×2000"
+  },
+  "citymap.png": {
+    "scale": 3.8,
+    "ned_offset": { "x": 0, "y": 0 },
+    "notes": "CitySim / Tier 2 — mapa amplio 3847×2095 px"
+  },
+  "citysim_calib.png": {
+    "scale": 25.0,
+    "ned_offset": { "x": 0, "y": 0 },
+    "notes": "CitySim calib / Tier 2 — imagen de alta resolución 7680×7680 px, área reducida"
+  }
+}

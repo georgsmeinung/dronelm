@@ -117,6 +117,28 @@
                                     class="fa-solid fa-compress"></i></button>
                         </div>
                     </div>
+                    <!-- Controles de escala por mapa -->
+                    <div id="map-scale-controls" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 1rem; background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--border-color); font-size: 0.78rem; flex-wrap: wrap;">
+                        <span style="color: var(--text-muted); white-space: nowrap;"><i class="fa-solid fa-ruler"></i> Escala:</span>
+                        <input type="number" id="map-scale-input" value="2.5" min="0.1" step="0.1"
+                            title="Píxeles por metro (px/m). Ajustá hasta que los waypoints coincidan con el mapa."
+                            style="width: 62px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px; padding: 0.2rem 0.4rem; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">
+                        <span style="color: var(--text-muted);">px/m</span>
+                        <span style="color: var(--text-muted); margin-left: 0.6rem; white-space: nowrap;">Origen NED:</span>
+                        <span style="color: var(--text-muted);">N</span>
+                        <input type="number" id="map-ned-offset-x" value="0" step="1"
+                            title="Coordenada NED-X (norte) del centro de la imagen"
+                            style="width: 58px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px; padding: 0.2rem 0.4rem; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">
+                        <span style="color: var(--text-muted);">E</span>
+                        <input type="number" id="map-ned-offset-y" value="0" step="1"
+                            title="Coordenada NED-Y (este) del centro de la imagen"
+                            style="width: 58px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px; padding: 0.2rem 0.4rem; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace;">
+                        <span style="color: var(--text-muted);">m</span>
+                        <button id="btn-save-scale" class="btn btn-secondary" title="Guardar escala para este mapa"
+                            style="padding: 0.2rem 0.55rem; font-size: 0.78rem; height: auto; display: flex; align-items: center; gap: 0.3rem;">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar escala
+                        </button>
+                    </div>
 
                     <div class="map-wrapper" id="map-container">
                         <img src="/maps/map.png" alt="Carta de Territorio Satelital" id="map-image">

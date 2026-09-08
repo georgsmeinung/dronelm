@@ -232,6 +232,31 @@ async def list_maps():
             maps.append(p.name)
     return sorted(maps)
 
+
+_MAP_SCALES_PATH = Path(__file__).resolve().parent.parent / "missions" / "maps" / "map_scales.json"
+
+
+@app.get("/api/map-config")
+async def get_map_config():
+    import json
+    if not _MAP_SCALES_PATH.exists():
+        return {}
+    return json.loads(_MAP_SCALES_PATH.read_text(encoding="utf-8"))
+
+
+class MapConfigRequest(BaseModel):
+    config: dict
+
+
+@app.put("/api/map-config")
+async def save_map_config(req: MapConfigRequest):
+    import json
+    _MAP_SCALES_PATH.write_text(
+        json.dumps(req.config, indent=2, ensure_ascii=False),
+        encoding="utf-8"
+    )
+    return {"status": "success"}
+
 # Servir mapas desde missions/maps
 missions_maps_dir = Path(__file__).resolve().parent.parent / "missions" / "maps"
 app.mount("/maps", StaticFiles(directory=str(missions_maps_dir)), name="maps")
