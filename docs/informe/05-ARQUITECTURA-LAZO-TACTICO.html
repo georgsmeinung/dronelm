@@ -1071,14 +1071,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+      <a href="anexos/A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A2. SLM — Concepto y Ventajas
+    A2. Técnicas de Optimización en SLM
   
 
     
@@ -1099,14 +1099,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+      <a href="anexos/A3-OPTIMIZACION-LORA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A3. SLM — Optimización y Desafíos
+    A3. Optimización LoRA / QLoRA
   
 
     
@@ -1127,14 +1127,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+      <a href="anexos/A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A4. LoRA (Alternativa No Adoptada)
+    A4. Decodificación Restringida
   
 
     
@@ -1155,14 +1155,42 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+      <a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A5. Decodificación Restringida
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
   
 
     
@@ -1948,7 +1976,7 @@
 <h3 id="ruta-1-escape-de-deadlock-sincronico-sin-consultar-el-vlm">Ruta 1 — Escape de deadlock (sincrónico, sin consultar el VLM)<a class="headerlink" href="#ruta-1-escape-de-deadlock-sincronico-sin-consultar-el-vlm" title="Permanent link">&para;</a></h3>
 <p><strong>Condición de activación:</strong> <code>evasion_stuck_cycles &gt;= effective_stall_threshold()</code> <strong>y</strong> <code>_escape_locked = False</code> <strong>y</strong> sin corredor transitable (<code>not has_open_corridor(field, guidance)</code>).</p>
 <p>Antes de ejecutar el escape, el nodo evalúa si el escape previo resolvió el atasco comparando <code>dist_xy</code> actual con <code>_escape_baseline_dist</code>. Si hubo progreso real (<code>dist_xy &lt; baseline - WAYPOINT_PROGRESS_EPS_M</code>), resetea <code>_consecutive_escapes</code>, <code>_escape_locked</code>, <code>_escape_baseline_dist</code> y <code>_deadlock_cycles</code>.</p>
-<p>Si el atasco persiste y <code>DEADLOCK_STRATEGY = "deep_vlm"</code> (default), delega al módulo <code>deep_scan</code> antes de forzar el escape ciego (§5.12). Si <code>deep_scan</code> resuelve el ciclo, retorna; si falla (timeout o respuesta no válida), continúa hacia el escape sincrónico.</p>
+<p>Si el atasco persiste, delega al módulo <code>deep_scan</code> (§5.12) antes de forzar el escape cinemático. Si <code>deep_scan</code> resuelve el ciclo, retorna; si falla (timeout o respuesta no válida), continúa hacia el escape sincrónico.</p>
 <p>El escape sincrónico <strong>alterna</strong> entre <code>GANAR_ALTURA</code> (intentos impares) y <code>PERDER_ALTURA</code> (intentos pares) para no insistir hacia arriba si el obstáculo bloquea también por encima. Guarda <code>_escape_baseline_dist = dist_xy</code> actual y la acción como maniobra comprometida (<code>ESCAPE_MANEUVER_DURATION_S</code> × <code>LOOP_HZ</code> ciclos).</p>
 <p><strong>Agotamiento del escape</strong> (<code>_consecutive_escapes &gt; MAX_CONSECUTIVE_ESCAPES = 3</code> o altitud &gt; <code>MAX_ESCAPE_ALT_M = 20 m</code>): en vez de frenar indefinidamente (el comportamiento anterior, que producía un ciclo límite documentado), el nodo <strong>enclava</strong> el escape (<code>_escape_locked = True</code>) y cambia de estrategia: emite un <code>GIRAR_90</code> hacia el lado del waypoint e inyecta un waypoint de desvío temporal (<code>inject_corner</code>) a <code>CORNER_OFFSET_M</code> metros en esa dirección, para que <code>WaypointTracker</code> apunte al corredor lateral en vez de insistir hacia la línea bloqueada.</p>
 <h3 id="ruta-2-poll-de-pedido-vlm-pendiente">Ruta 2 — Poll de pedido VLM pendiente<a class="headerlink" href="#ruta-2-poll-de-pedido-vlm-pendiente" title="Permanent link">&para;</a></h3>

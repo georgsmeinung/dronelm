@@ -501,6 +501,8 @@ Las corridas en cuarentena **no se descartan como evidencia**: siguen siendo vá
 
 El conjunto de validación de TTC (cap. 7, 3735 registros), los archivos de telemetría del batch definitivo, los manifiestos de misión y la configuración completa (`config/.env`) serán archivados y publicados con un identificador digital persistente (DOI vía Zenodo), acompañados del hash de commit correspondiente, garantizando la auditabilidad y reproducibilidad de los resultados.
 
+*(Para la especificación formal del archivo `settings.json`, el perfil de escalabilidad, la estructura detallada de los manifiestos de misión JSON y el protocolo de ejecución paso a paso, véase el [Anexo 6](anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md)).*
+
 ---
 
 ## 10.10 Plan extendido de pruebas

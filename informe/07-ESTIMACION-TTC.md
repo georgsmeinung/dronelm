@@ -14,6 +14,8 @@ donde $Z_{\text{celda}}$ es la distribución de profundidades de los píxeles de
 
 **Una limitación de diseño del ground truth:** la profundidad planar mide la distancia perpendicular al plano focal, no la distancia euclidiana al obstáculo más cercano en cada dirección de la cámara. Para obstáculos cercanos y cámaras con ángulo de campo amplio, esta diferencia no es negligible, pero dentro del rango de interés práctico (< 15 m) y con la óptica de 60° de FoV de AirSim, la discrepancia es inferior al 8% para el sector central. Se acepta como buena aproximación para la validación.
 
+*(Para el desarrollo formal del TTC como observable óptico directo $\tau$, la formulación de divergencia y el cálculo por percentil 20 en la grilla $3 \times 3$, véase el [Anexo 5](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md), §A5.5–A5.6).*
+
 ## 7.2 Diseño del conjunto de datos de validación
 
 `experiments/collect_ttc_dataset.py` recolecta, por ciclo y por celda, el conjunto de variables listado en la tabla siguiente, generando registros JSONL en `runs/ttc/`:

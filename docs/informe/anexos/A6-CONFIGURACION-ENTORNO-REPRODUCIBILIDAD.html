@@ -1,0 +1,2075 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html">
+      
+      
+        <link rel="prev" href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A6. Entorno y Reproducibilidad - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A6. Entorno y Reproducibilidad
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a61-archivo-de-configuracion-de-airsim-settingsjson-anotado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.1 Archivo de configuración de AirSim (settings.json) anotado
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.1 Archivo de configuración de AirSim (settings.json) anotado">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anotaciones-de-ingenieria-del-archivo-de-configuracion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anotaciones de ingeniería del archivo de configuración:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a62-perfil-de-escalabilidad-grafica-de-unreal-engine-55-y-preservacion-de-gradientes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.2 Perfil de escalabilidad gráfica de Unreal Engine 5.5 y preservación de gradientes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.2 Perfil de escalabilidad gráfica de Unreal Engine 5.5 y preservación de gradientes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a621-configuracion-forzada-en-configdefaultscalabilityini" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.2.1 Configuración forzada en Config/DefaultScalability.ini
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a622-preset-de-escalabilidad-en-el-editor-de-unreal-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.2.2 Preset de escalabilidad en el Editor de Unreal Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a63-especificacion-exhaustiva-de-variables-de-entorno-configenv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.3 Especificación exhaustiva de variables de entorno (config/.env)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.3 Especificación exhaustiva de variables de entorno (config/.env)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-hardware-y-conexion-rpc-airsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Hardware y Conexión RPC AirSim
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-servidor-de-inferencia-local-vlm-slm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Servidor de Inferencia Local (VLM / SLM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-lazo-de-control-tactico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Lazo de Control Táctico
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-percepcion-flujo-optico-y-ttc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Percepción, Flujo Óptico y TTC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-umbrales-del-obstaclefield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Umbrales del ObstacleField
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.4 Estructura del repositorio y artefactos de corrida (airsim-runs/)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.4 Estructura del repositorio y artefactos de corrida (airsim-runs/)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a641-estructura-del-archivo-de-resumen-summaryjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.4.1 Estructura del archivo de resumen (.summary.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.4.2 Estructura del log de telemetría ciclo a ciclo (.jsonl)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a65-manifiestos-de-mision-y-diseno-de-escenarios-evaluados-tiers-0-1-y-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5 Manifiestos de misión y diseño de escenarios evaluados (Tiers 0, 1 y 2)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.5 Manifiestos de misión y diseño de escenarios evaluados (Tiers 0, 1 y 2)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a651-manifiesto-tier-1-perimetro-semiurbano-townsim_clearjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.1 Manifiesto Tier 1: Perímetro semiurbano (townsim_clear.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a652-manifiesto-tier-1-bloqueo-frontal-forzado-townsim_calib_cruce_frontaljson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.2 Manifiesto Tier 1: Bloqueo frontal forzado (townsim_calib_cruce_frontal.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (citysim_clear.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a66-protocolo-de-reproduccion-experimental-paso-a-paso" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.6 Protocolo de reproducción experimental paso a paso
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.6 Protocolo de reproducción experimental paso a paso">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-1-verificacion-de-software-y-dependencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 1: Verificación de software y dependencias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-2-instalacion-del-archivo-settingsjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 2: Instalación del archivo settings.json
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-3-inicializacion-del-servidor-de-modelos-lm-studio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 3: Inicialización del servidor de modelos (LM Studio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-4-lanzamiento-de-la-simulacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 4: Lanzamiento de la simulación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-5-ejecucion-del-lote-de-pruebas-runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 5: Ejecución del lote de pruebas (Runner)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-6-procesamiento-de-datos-y-consolidacion-estadistica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 6: Procesamiento de datos y consolidación estadística
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a61-archivo-de-configuracion-de-airsim-settingsjson-anotado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.1 Archivo de configuración de AirSim (settings.json) anotado
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.1 Archivo de configuración de AirSim (settings.json) anotado">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anotaciones-de-ingenieria-del-archivo-de-configuracion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anotaciones de ingeniería del archivo de configuración:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a62-perfil-de-escalabilidad-grafica-de-unreal-engine-55-y-preservacion-de-gradientes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.2 Perfil de escalabilidad gráfica de Unreal Engine 5.5 y preservación de gradientes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.2 Perfil de escalabilidad gráfica de Unreal Engine 5.5 y preservación de gradientes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a621-configuracion-forzada-en-configdefaultscalabilityini" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.2.1 Configuración forzada en Config/DefaultScalability.ini
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a622-preset-de-escalabilidad-en-el-editor-de-unreal-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.2.2 Preset de escalabilidad en el Editor de Unreal Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a63-especificacion-exhaustiva-de-variables-de-entorno-configenv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.3 Especificación exhaustiva de variables de entorno (config/.env)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.3 Especificación exhaustiva de variables de entorno (config/.env)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-hardware-y-conexion-rpc-airsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Hardware y Conexión RPC AirSim
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-servidor-de-inferencia-local-vlm-slm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Servidor de Inferencia Local (VLM / SLM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-lazo-de-control-tactico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Lazo de Control Táctico
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-percepcion-flujo-optico-y-ttc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Percepción, Flujo Óptico y TTC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-umbrales-del-obstaclefield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Umbrales del ObstacleField
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.4 Estructura del repositorio y artefactos de corrida (airsim-runs/)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.4 Estructura del repositorio y artefactos de corrida (airsim-runs/)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a641-estructura-del-archivo-de-resumen-summaryjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.4.1 Estructura del archivo de resumen (.summary.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.4.2 Estructura del log de telemetría ciclo a ciclo (.jsonl)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a65-manifiestos-de-mision-y-diseno-de-escenarios-evaluados-tiers-0-1-y-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5 Manifiestos de misión y diseño de escenarios evaluados (Tiers 0, 1 y 2)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.5 Manifiestos de misión y diseño de escenarios evaluados (Tiers 0, 1 y 2)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a651-manifiesto-tier-1-perimetro-semiurbano-townsim_clearjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.1 Manifiesto Tier 1: Perímetro semiurbano (townsim_clear.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a652-manifiesto-tier-1-bloqueo-frontal-forzado-townsim_calib_cruce_frontaljson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.2 Manifiesto Tier 1: Bloqueo frontal forzado (townsim_calib_cruce_frontal.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (citysim_clear.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a66-protocolo-de-reproduccion-experimental-paso-a-paso" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.6 Protocolo de reproducción experimental paso a paso
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A6.6 Protocolo de reproducción experimental paso a paso">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-1-verificacion-de-software-y-dependencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 1: Verificación de software y dependencias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-2-instalacion-del-archivo-settingsjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 2: Instalación del archivo settings.json
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-3-inicializacion-del-servidor-de-modelos-lm-studio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 3: Inicialización del servidor de modelos (LM Studio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-4-lanzamiento-de-la-simulacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 4: Lanzamiento de la simulación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-5-ejecucion-del-lote-de-pruebas-runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 5: Ejecución del lote de pruebas (Runner)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-6-procesamiento-de-datos-y-consolidacion-estadistica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 6: Procesamiento de datos y consolidación estadística
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<blockquote>
+<p><strong>Nota de ubicación:</strong> este documento constituye el manual de configuración técnica, diccionario de parámetros de sistema y especificación de reproducibilidad experimental de DroneLM. Sirve como referencia documental complementaria para el capítulo 3 (<code>03-ENTORNO-SIMULACION.md</code>), el capítulo 10 (<code>10-METODOLOGIA-EXPERIMENTAL.md</code>) y el capítulo 11 (<code>11-RESULTADOS.md</code>).</p>
+</blockquote>
+<hr />
+<h1 id="anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad">Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad<a class="headerlink" href="#anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" title="Permanent link">&para;</a></h1>
+<p>La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (§10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / <code>llama.cpp</code>)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.</p>
+<p>Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (§10.3).</p>
+<hr />
+<h2 id="a61-archivo-de-configuracion-de-airsim-settingsjson-anotado">A6.1 Archivo de configuración de AirSim (<code>settings.json</code>) anotado<a class="headerlink" href="#a61-archivo-de-configuracion-de-airsim-settingsjson-anotado" title="Permanent link">&para;</a></h2>
+<p>El plugin Cosys-AirSim lee su configuración al inicio desde el archivo <code>settings.json</code>, ubicado en Windows en <code>%USERPROFILE%\Documents\AirSim\settings.json</code>. La siguiente es la configuración formal utilizada durante los vuelos de calibración y experimentación de la tesis:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;SeeDocsAt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docs/settings.md&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;SettingsVersion&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;LogMessagesVisible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;SimMode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Multirotor&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;LocalHostIp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;ApiServerPort&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">41451</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;RecordUIVisible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;ClockType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SteppableClock&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;OriginGeopoint&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;Latitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">47.641468</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;Longitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-122.140165</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;Altitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">122</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;CameraDefaults&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;CaptureSettings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1080</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">720</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1080</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">720</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1080</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">720</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1080</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;Height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">720</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;SubWindows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;WindowID&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;CameraName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Front Camera&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;Visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="anotaciones-de-ingenieria-del-archivo-de-configuracion">Anotaciones de ingeniería del archivo de configuración:<a class="headerlink" href="#anotaciones-de-ingenieria-del-archivo-de-configuracion" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong><code>SimMode: "Multirotor"</code></strong>: instruye a AirSim a instanciar el modelo físico cinemático de cuadricóptero gobernado por el controlador interno <code>SimpleFlight</code>, con dinámica de 6 grados de libertad (6-DoF).</li>
+<li><strong><code>ClockType: "SteppableClock"</code></strong>: sincroniza el paso temporal de la simulación física con las consultas RPC de la API. A diferencia de <code>ScalableClock</code> o el reloj de pared del sistema, <code>SteppableClock</code> garantiza que cuando la GPU experimenta caídas momentáneas de tasa de cuadros por la inferencia del modelo multimodal, la física de vuelo no sufra aceleraciones destructivas ni inestabilidades de integración numérica en el estimador inercial.</li>
+<li><strong><code>ApiServerPort: 41451</code></strong>: puerto TCP de enlace Msgpack-RPC por el que se comunican <code>AirSimClient</code> y el motor de Unreal Engine.</li>
+<li><strong><code>CameraDefaults.CaptureSettings</code></strong>:</li>
+<li><code>ImageType 0</code> (<code>Scene</code>): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (<code>FlowTTCEstimator</code>) y por el modelo deliberativo (<code>Qwen2.5-VL-3B</code>).</li>
+<li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente para la validación cruzada del TTC monocular (§10.2).</li>
+<li><code>ImageType 5</code> (<code>Segmentation</code>): canal de segmentación semántica de mallas para auditoría visual.</li>
+<li><code>Width: 1080, Height: 720</code>: resolución nativa del render target frontal.</li>
+<li><strong><code>SubWindows</code></strong>: habilita una ventana secundaria flotante en el visor de Unreal Engine mostrando la cámara frontal a bordo en tiempo real, facilitando la supervisión visual del operador durante las corridas experimentales.</li>
+</ol>
+<hr />
+<h2 id="a62-perfil-de-escalabilidad-grafica-de-unreal-engine-55-y-preservacion-de-gradientes">A6.2 Perfil de escalabilidad gráfica de Unreal Engine 5.5 y preservación de gradientes<a class="headerlink" href="#a62-perfil-de-escalabilidad-grafica-de-unreal-engine-55-y-preservacion-de-gradientes" title="Permanent link">&para;</a></h2>
+<p>En estaciones de trabajo con una única GPU de consumo (NVIDIA GeForce RTX 5060 de 8 GB de VRAM), la simulación gráfica fotorrealista compite directamente por la memoria de video con los tensores del modelo de lenguaje (§8.1). Para permitir la coexistencia de ambos procesos sin provocar desbordamientos (<em>Out-Of-Memory</em>), es imperativo optimizar el rendimiento gráfico del motor.</p>
+<p>Sin embargo, reducir indiscriminadamente la calidad gráfica introduce un problema crítico en la visión artificial: <strong>los algoritmos de flujo óptico denso (Farnebäck y DIS) requieren textura visual y gradientes de intensidad espacial para calcular correspondencias entre fotogramas</strong>. Si se desactivan las sombras o se aplica un desenfoque excesivo en las texturas de los edificios y el suelo, el flujo óptico decae por debajo del piso de ruido (<code>0.35 px</code>), dejando ciego al estimador de colisión.</p>
+<h3 id="a621-configuracion-forzada-en-configdefaultscalabilityini">A6.2.1 Configuración forzada en <code>Config/DefaultScalability.ini</code><a class="headerlink" href="#a621-configuracion-forzada-en-configdefaultscalabilityini" title="Permanent link">&para;</a></h3>
+<p>Para impedir que Unreal Engine 5.5 reduzca dinámicamente la resolución interna de los búferes de captura de cámara al aplicar presets bajos, se fijó el modo de detalle en el archivo de configuración del proyecto:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[EffectsQuality@0]</span>
+<span class="na">r.DetailMode</span><span class="o">=</span><span class="s">2</span>
+<span class="k">[EffectsQuality@1]</span>
+<span class="na">r.DetailMode</span><span class="o">=</span><span class="s">2</span>
+<span class="k">[EffectsQuality@2]</span>
+<span class="na">r.DetailMode</span><span class="o">=</span><span class="s">2</span>
+<span class="k">[EffectsQuality@3]</span>
+<span class="na">r.DetailMode</span><span class="o">=</span><span class="s">2</span>
+<span class="k">[EffectsQuality@Cine]</span>
+<span class="na">r.DetailMode</span><span class="o">=</span><span class="s">2</span>
+</code></pre></div>
+<h3 id="a622-preset-de-escalabilidad-en-el-editor-de-unreal-engine">A6.2.2 Preset de escalabilidad en el Editor de Unreal Engine<a class="headerlink" href="#a622-preset-de-escalabilidad-en-el-editor-de-unreal-engine" title="Permanent link">&para;</a></h3>
+<p>Para las corridas de producción se configuró el siguiente perfil dentro del editor de Unreal Engine:
+* <strong>Resolution Scale:</strong> 100% (sin reescalado espacial en el motor).
+* <strong>View Distance:</strong> Medium (suficiente para el horizonte visual del dron).
+* <strong>Anti-Aliasing:</strong> TSR (Temporal Super Resolution) en Medium.
+* <strong>Post-Processing:</strong> Low (suprime desenfoques cinemáticos artificiales).
+* <strong>Shadows:</strong> <strong>Epic</strong> (crucial para proyectar sombras nítidas sobre el pavimento, proporcionando los gradientes texturales que explota el flujo óptico).
+* <strong>Global Illumination:</strong> Lumen en Low / Screen Space.
+* <strong>Reflections:</strong> Screen Space.
+* <strong>Effects:</strong> <strong>Epic</strong> (garantiza la resolución completa del render target de la cámara virtual de AirSim).</p>
+<p><em>(Véase captura de referencia en el repositorio: <code>informe/2026-0907 Scalability Config for Airsim and Shadows needed for TTC estimation.png</code>).</em></p>
+<hr />
+<h2 id="a63-especificacion-exhaustiva-de-variables-de-entorno-configenv">A6.3 Especificación exhaustiva de variables de entorno (<code>config/.env</code>)<a class="headerlink" href="#a63-especificacion-exhaustiva-de-variables-de-entorno-configenv" title="Permanent link">&para;</a></h2>
+<p>Toda la configuración operativa de DroneLM está centralizada en un único archivo de configuración (<code>config/.env</code>, basado en la plantilla committeable <code>config/.env.example</code>). Los submódulos acceden a estas variables con ruta absoluta resuelta desde la raíz del repositorio.</p>
+<p>A continuación se detalla el diccionario completo de variables y su impacto de ingeniería:</p>
+<h3 id="1-hardware-y-conexion-rpc-airsim">1. Hardware y Conexión RPC AirSim<a class="headerlink" href="#1-hardware-y-conexion-rpc-airsim" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valor Nominal</th>
+<th>Justificación y Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AIRSIM_IP</code></td>
+<td><code>"127.0.0.1"</code></td>
+<td>Dirección loopback local. En pruebas sobre LAN (<code>192.168.110.110</code>), la latencia RPC superaba los 8 s por congestión en <code>simGetImages</code>; ejecutar en localhost redujo la llamada a &lt; 45 ms.</td>
+</tr>
+<tr>
+<td><code>AIRSIM_PORT</code></td>
+<td><code>41451</code></td>
+<td>Puerto TCP estándar de la API de AirSim.</td>
+</tr>
+<tr>
+<td><code>AIRSIM_VEHICLE_NAME</code></td>
+<td><code>"SimpleFlight"</code> / <code>"Drone1"</code></td>
+<td>Nombre del vehículo en el árbol de actores de Unreal Engine.</td>
+</tr>
+<tr>
+<td><code>AIRSIM_CAMERA_NAME</code></td>
+<td><code>"0"</code></td>
+<td>Identificador de la cámara frontal montada en el fuselaje.</td>
+</tr>
+<tr>
+<td><code>DEFAULT_FRAME_WIDTH</code></td>
+<td><code>1080</code></td>
+<td>Ancho de captura nativo devuelto por el sensor virtual.</td>
+</tr>
+<tr>
+<td><code>DEFAULT_FRAME_HEIGHT</code></td>
+<td><code>720</code></td>
+<td>Alto de captura nativo devuelto por el sensor virtual.</td>
+</tr>
+<tr>
+<td><code>AIRSIM_RPC_TIMEOUT</code></td>
+<td><code>8</code></td>
+<td>Segundos de espera máxima por llamada RPC antes de declarar timeout.</td>
+</tr>
+<tr>
+<td><code>AIRSIM_STRICT</code></td>
+<td><code>true</code></td>
+<td>Si es <code>true</code>, la falla de conexión con AirSim marca <code>degraded=True</code> y entra en hover de seguridad; si es <code>false</code> (solo en tests unitarios), permite generar fotogramas sintéticos.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-servidor-de-inferencia-local-vlm-slm">2. Servidor de Inferencia Local (VLM / SLM)<a class="headerlink" href="#2-servidor-de-inferencia-local-vlm-slm" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valor Nominal</th>
+<th>Justificación y Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LOCAL_LLM_URL</code></td>
+<td><code>"http://192.168.110.101:1234/v1"</code></td>
+<td>Endpoint OpenAI-compatible del servidor local de inferencia (LM Studio / <code>llama.cpp</code>).</td>
+</tr>
+<tr>
+<td><code>LOCAL_LLM_MODEL_NAME</code></td>
+<td><code>"qwen/qwen2.5-vl-3b"</code></td>
+<td>Identificador del modelo cuantizado cargado en VRAM (<code>Qwen2.5-VL-3B-Instruct.Q4_K_M</code>).</td>
+</tr>
+<tr>
+<td><code>VLM_VISION_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Habilita el envío del fotograma visual en base64 en el prompt multimodal.</td>
+</tr>
+<tr>
+<td><code>VLM_IMAGE_MAX_SIZE</code></td>
+<td><code>384</code></td>
+<td>Resolución máxima de la imagen enviada al VLM. Limita la cantidad de tokens visuales generados por el codificador ViT, manteniendo la latencia acotada.</td>
+</tr>
+<tr>
+<td><code>VLM_USE_JSON_SCHEMA</code></td>
+<td><code>true</code></td>
+<td>Activa la decodificación gramaticalmente restringida por esquema JSON (Anexo 4).</td>
+</tr>
+<tr>
+<td><code>SLM_WATCHDOG_MS</code></td>
+<td><code>6000</code></td>
+<td>Tiempo límite del perro guardián (en ms) para la respuesta del SLM en hilo asíncrono. Si expira, se cancela y se aplica el fallback determinista.</td>
+</tr>
+<tr>
+<td><code>DEADLOCK_STRATEGY</code></td>
+<td><code>"deep_vlm"</code></td>
+<td>Estrategia ante atasco: <code>"deep_vlm"</code> ejecuta barrido panorámico de 6 rumbos con consulta VLM; <code>"blind"</code> realiza escape puramente vertical por FSM.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-lazo-de-control-tactico">3. Lazo de Control Táctico<a class="headerlink" href="#3-lazo-de-control-tactico" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valor Nominal</th>
+<th>Justificación y Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LOOP_HZ</code></td>
+<td><code>5.0</code></td>
+<td>Frecuencia objetivo del bucle de control ($200\text{ ms}$ por ciclo). Calibrada para absorber la captura y el flujo óptico con margen holgado.</td>
+</tr>
+<tr>
+<td><code>AGENT_ARM</code></td>
+<td><code>slm</code></td>
+<td>Brazo de política activo en el lazo de control: <code>slm</code> (deliberativo jerárquico), <code>fsm</code> (máquina de estados determinista) o <code>reactive</code> (línea base).</td>
+</tr>
+<tr>
+<td><code>AIRSIM_SEED</code></td>
+<td><code>1</code></td>
+<td>Semilla de aleatoriedad para la corrida. En modo <code>--seed-jitter</code>, perturba levemente la pose inicial ($\pm 1.5\text{ m}$, $\pm 10^\circ$).</td>
+</tr>
+<tr>
+<td><code>CMD_DURATION_S</code></td>
+<td><code>120.0</code></td>
+<td>Vigencia asignada al comando de velocidad en AirSim. Previene cabeceos parásitos (<em>pitch jerk</em>) causados por reemisiones continuas de comandos idénticos al PID interno de SimpleFlight.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-percepcion-flujo-optico-y-ttc">4. Percepción, Flujo Óptico y TTC<a class="headerlink" href="#4-percepcion-flujo-optico-y-ttc" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valor Nominal</th>
+<th>Justificación y Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FLOW_ALGORITHM</code></td>
+<td><code>"dis"</code></td>
+<td>Backend de flujo óptico: <code>"dis"</code> (Dense Inverse Search, rápido) o <code>"farneback"</code>.</td>
+</tr>
+<tr>
+<td><code>FLOW_DOWNSCALE_WIDTH</code></td>
+<td><code>320</code></td>
+<td>Ancho al que se reduce el fotograma antes de calcular el flujo óptico ($320 \times 213\text{ px}$).</td>
+</tr>
+<tr>
+<td><code>CAMERA_FX</code> / <code>CAMERA_FY</code></td>
+<td><code>554.0</code></td>
+<td>Distancia focal calibrada de la cámara en píxeles.</td>
+</tr>
+<tr>
+<td><code>FLOW_NOISE_FLOOR_PX</code></td>
+<td><code>0.35</code></td>
+<td>Magnitud mínima en píxeles para considerar que un vector es señal física y no ruido numérico.</td>
+</tr>
+<tr>
+<td><code>FOE_OUTLIER_ANGLE_RAD</code></td>
+<td><code>0.35</code></td>
+<td>Umbral angular en radianes ($\approx 20^\circ$) para el filtro de consistencia <em>RANSAC-lite</em> del FOE.</td>
+</tr>
+<tr>
+<td><code>TTC_AGGREGATION_PERCENTILE</code></td>
+<td><code>20</code></td>
+<td>Percentil espacial de orden utilizado para resumir el TTC de una celda ($P_{20}$).</td>
+</tr>
+<tr>
+<td><code>FLOW_MAX_ROTATION_DEG</code></td>
+<td><code>2.0</code></td>
+<td>Rotación angular máxima admisible entre cuadros sucesivos antes de declarar flujo degradado.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5-umbrales-del-obstaclefield">5. Umbrales del <code>ObstacleField</code><a class="headerlink" href="#5-umbrales-del-obstaclefield" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valor Nominal</th>
+<th>Justificación y Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OBSTACLE_OCCUPANCY_BLOCKED</code></td>
+<td><code>0.35</code></td>
+<td>Fracción mínima de la celda con TTC $&lt; 2.5\text{ s}$ para declarar bloqueo por ocupación.</td>
+</tr>
+<tr>
+<td><code>OBSTACLE_TTC_BLOCKED_S</code></td>
+<td><code>2.5</code></td>
+<td>Umbral temporal de TTC (en segundos) por debajo del cual una celda se considera en colisión inminente.</td>
+</tr>
+<tr>
+<td><code>OBSTACLE_MIN_CONFIDENCE</code></td>
+<td><code>0.15</code></td>
+<td>Piso de píxeles válidos para que una celda participe en la votación.</td>
+</tr>
+<tr>
+<td><code>OBSTACLE_MIN_CONFIDENCE_TTC</code></td>
+<td><code>0.35</code></td>
+<td>Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs">A6.4 Estructura del repositorio y artefactos de corrida (<code>airsim-runs/</code>)<a class="headerlink" href="#a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs" title="Permanent link">&para;</a></h2>
+<p>Cada vuelo ejecutado en simulación (sea manual o en batch mediante el runner experimental) genera un registro inmutable en el directorio <code>airsim-runs/&lt;MISSION_ID&gt;-&lt;TIMESTAMP&gt;/</code>.</p>
+<div class="highlight"><pre><span></span><code>airsim-runs/
+└── CITYSIM_CLEAR-20260907T191226Z/
+    ├── CITYSIM_CLEAR-20260907T191226Z.summary.json    &lt;- Métricas consolidadas
+    ├── CITYSIM_CLEAR-20260907T191226Z.jsonl           &lt;- Telemetría ciclo a ciclo
+    └── CITYSIM_CLEAR-20260907T191226Z.mp4             &lt;- Video de auditoría con HUD (opcional)
+</code></pre></div>
+<h3 id="a641-estructura-del-archivo-de-resumen-summaryjson">A6.4.1 Estructura del archivo de resumen (<code>.summary.json</code>)<a class="headerlink" href="#a641-estructura-del-archivo-de-resumen-summaryjson" title="Permanent link">&para;</a></h3>
+<p>Contiene los metadatos globales del experimento y los indicadores clave de rendimiento (KPIs):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CITYSIM_CLEAR&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;arm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;slm&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;seed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;code_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a37b7030&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;start_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-09-07T19:12:26.104Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;end_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-09-07T19:14:18.420Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;duration_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">112.316</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total_cycles&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">561</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;collision_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;total_distance_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">312.45</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;average_speed_mps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.78</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;waypoints_reached&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;waypoints_total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deliberations_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deliberations_timeout_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deadlock_escapes_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action_distribution&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;keep_going&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">482</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;evasive&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">61</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;girar_90&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;deliberative&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><em>Nota sobre trazabilidad:</em> el campo <code>code_version</code> almacena el hash SHA-1 de Git del commit exacto sobre el que se ejecutó el vuelo, asegurando trazabilidad matemática estricta con el código fuente.</p>
+<h3 id="a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl">A6.4.2 Estructura del log de telemetría ciclo a ciclo (<code>.jsonl</code>)<a class="headerlink" href="#a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl" title="Permanent link">&para;</a></h3>
+<p>Cada línea del archivo es un registro JSON generado a la frecuencia de 5 Hz por <code>FlightLogger</code>, capturando el estado completo del sistema:
+* <code>timestamp</code>: tiempo Unix en segundos con precisión de microsegundos.
+* <code>cycle</code>: índice secuencial del bucle.
+* <code>pose</code>: posición $(X, Y, Z)$ en marco local NED y ángulos de Euler (pitch, roll, yaw).
+* <code>velocity</code>: velocidades lineales $(v_x, v_y, v_z)$ en m/s.
+* <code>active_waypoint</code>: índice y distancia euclidiana hacia el waypoint objetivo.
+* <code>obstacle_field</code>: matriz de TTC, ocupación y confianza por celda sector $\times$ banda.
+* <code>policy_decision</code>: macro-acción seleccionada, justificación textual y tiempo de cómputo del ciclo.</p>
+<hr />
+<h2 id="a65-manifiestos-de-mision-y-diseno-de-escenarios-evaluados-tiers-0-1-y-2">A6.5 Manifiestos de misión y diseño de escenarios evaluados (Tiers 0, 1 y 2)<a class="headerlink" href="#a65-manifiestos-de-mision-y-diseno-de-escenarios-evaluados-tiers-0-1-y-2" title="Permanent link">&para;</a></h2>
+<p>Los planes de vuelo se definen como manifiestos JSON ubicados en <code>airsim-plan/missions/flightplans/</code>. A continuación se especifican los escenarios representativos empleados en la tesis:</p>
+<h3 id="a651-manifiesto-tier-1-perimetro-semiurbano-townsim_clearjson">A6.5.1 Manifiesto Tier 1: Perímetro semiurbano (<code>townsim_clear.json</code>)<a class="headerlink" href="#a651-manifiesto-tier-1-perimetro-semiurbano-townsim_clearjson" title="Permanent link">&para;</a></h3>
+<p>Evalúa el crucero perimetral sobre el mapa <code>TownSim</code> (Downtown West Modular Pack) a una altitud de tránsito de $-30\text{ m}$ (30 m AGL):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_CLEAR&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 1: perímetro completo de townsim_calib.png a altitud de tránsito (-30m), sin cruzar ninguna fachada. Rol análogo a minisim_clear para Tier 0: control/smoke-test de crucero largo sin obstáculos deliberativos.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">    </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.4</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.4</span><span class="p">,</span><span class="w">    </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-71.6</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-145.2</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-70.8</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_3&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-146.8</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">83.6</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_4&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.2</span><span class="p">,</span><span class="w">    </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">84.8</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_5&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">    </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">27.2</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_6&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="a652-manifiesto-tier-1-bloqueo-frontal-forzado-townsim_calib_cruce_frontaljson">A6.5.2 Manifiesto Tier 1: Bloqueo frontal forzado (<code>townsim_calib_cruce_frontal.json</code>)<a class="headerlink" href="#a652-manifiesto-tier-1-bloqueo-frontal-forzado-townsim_calib_cruce_frontaljson" title="Permanent link">&para;</a></h3>
+<p>Diseñado para forzar una colisión inminente contra un edificio alto con aproximación frontal ortogonal:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_CALIB_CRUCE_FRONTAL&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 1: trayectoria ortogonal directa hacia la fachada principal de la manzana central. Obliga al lazo táctico a detectar TTC crítico, disparar giro o evasión de 90° o deliberar con el SLM para rodear la estructura.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_START&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-72.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_OBSTACULO_FRONTAL&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-72.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">80.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_DESVIO_LATERAL&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson">A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (<code>citysim_clear.json</code>)<a class="headerlink" href="#a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson" title="Permanent link">&para;</a></h3>
+<p>El mapa <code>CitySim</code> presenta rascacielos masivos. Para evitar atravesar estructuras en el despegue, la misión implementa un patrón <strong>climb-first</strong> (ascenso vertical puro en el mismo punto de coordenadas horizontales hasta $-70\text{ m}$ AGL antes de iniciar el crucero horizontal):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CITYSIM_CLEAR&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 2: perímetro de una manzana del grid regular en citysim_calib.png. Altitud de tránsito -70m (70m AGL) para superar edificios altos de CitySim. Estructura climb-first: WP_2 sube vertical puro antes de mover en horizontal.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">130.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">130.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-50.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_3&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_4&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="a66-protocolo-de-reproduccion-experimental-paso-a-paso">A6.6 Protocolo de reproducción experimental paso a paso<a class="headerlink" href="#a66-protocolo-de-reproduccion-experimental-paso-a-paso" title="Permanent link">&para;</a></h2>
+<p>Para replicar de forma independiente los experimentos documentados en el capítulo 10, siga la secuencia metodológica descrita a continuación:</p>
+<h3 id="paso-1-verificacion-de-software-y-dependencias">Paso 1: Verificación de software y dependencias<a class="headerlink" href="#paso-1-verificacion-de-software-y-dependencias" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Sistema operativo: Windows 10/11 (64-bit).</li>
+<li>Entorno virtual de Python 3.10+:
+   <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>airsim-loop
+python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+.venv<span class="se">\S</span>cripts<span class="se">\a</span>ctivate
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</code></pre></div></li>
+<li>Verificar la disponibilidad del plugin binario de Cosys-AirSim en el proyecto de Unreal Engine 5.5 correspondiente (MiniSim, TownSim o CitySim).</li>
+</ol>
+<h3 id="paso-2-instalacion-del-archivo-settingsjson">Paso 2: Instalación del archivo <code>settings.json</code><a class="headerlink" href="#paso-2-instalacion-del-archivo-settingsjson" title="Permanent link">&para;</a></h3>
+<p>Copiar el archivo de configuración del Anexo 6 (§A6.1) en el directorio de usuario:
+<div class="highlight"><pre><span></span><code><span class="nb">Copy-Item</span> <span class="s2">&quot;config/settings.json&quot;</span> <span class="s2">&quot;$HOME\Documents\AirSim\settings.json&quot;</span> <span class="n">-Force</span>
+</code></pre></div></p>
+<h3 id="paso-3-inicializacion-del-servidor-de-modelos-lm-studio">Paso 3: Inicialización del servidor de modelos (LM Studio)<a class="headerlink" href="#paso-3-inicializacion-del-servidor-de-modelos-lm-studio" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Abrir <strong>LM Studio</strong> (o instancia de <code>llama.cpp</code> / Ollama).</li>
+<li>Cargar el modelo multimodal <code>Qwen/Qwen2.5-VL-3B-Instruct</code> cuantizado en <code>Q4_K_M</code>.</li>
+<li>Iniciar el servidor local en el puerto <code>1234</code> con compatibilidad de API OpenAI (<code>http://127.0.0.1:1234/v1</code>).</li>
+<li>Verificar la respuesta del servidor mediante:
+   <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:1234/v1/models
+</code></pre></div></li>
+</ol>
+<h3 id="paso-4-lanzamiento-de-la-simulacion">Paso 4: Lanzamiento de la simulación<a class="headerlink" href="#paso-4-lanzamiento-de-la-simulacion" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Abrir el proyecto de Unreal Engine deseado (e.g., <code>TownSim</code>).</li>
+<li>Presionar <strong>Play</strong> (PIE) o ejecutar el binario <em>standalone</em>.</li>
+<li>Constatar que en la esquina superior aparezca la notificación de conexión de AirSim en el puerto 41451.</li>
+</ol>
+<h3 id="paso-5-ejecucion-del-lote-de-pruebas-runner">Paso 5: Ejecución del lote de pruebas (<em>Runner</em>)<a class="headerlink" href="#paso-5-ejecucion-del-lote-de-pruebas-runner" title="Permanent link">&para;</a></h3>
+<p>Para correr una comparación experimental balanceada entre los tres brazos de control sobre un escenario:
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--scenarios<span class="w"> </span>../airsim-plan/missions/flightplans/townsim_clear.json<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--arms<span class="w"> </span>slm<span class="w"> </span>fsm<span class="w"> </span>reactive<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--seeds<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out-dir<span class="w"> </span>airsim-runs/
+</code></pre></div></p>
+<h3 id="paso-6-procesamiento-de-datos-y-consolidacion-estadistica">Paso 6: Procesamiento de datos y consolidación estadística<a class="headerlink" href="#paso-6-procesamiento-de-datos-y-consolidacion-estadistica" title="Permanent link">&para;</a></h3>
+<p>Una vez finalizadas las corridas, compilar los resultados y generar las tablas estadísticas comparativas:
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>experiments/analyze.py<span class="w"> </span>--runs-dir<span class="w"> </span>airsim-runs/
+python<span class="w"> </span>experiments/analyze_tesis_results.py
+</code></pre></div>
+Los reportes estadísticos consolidados (tests de Mann-Whitney U, frecuencias de acción y tasas de éxito) se volcarán automáticamente en formato Markdown y CSV listos para su contrastación con las tablas de los capítulos 10 y 11.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+    
+  </body>
+</html>

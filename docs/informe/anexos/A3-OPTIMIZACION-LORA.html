@@ -1,0 +1,1669 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A3-OPTIMIZACION-LORA.html">
+      
+      
+        <link rel="prev" href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html">
+      
+      
+        <link rel="next" href="A4-DECODIFICACION-RESTRINGIDA.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A3. Optimización LoRA / QLoRA - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A3. Optimización LoRA / QLoRA
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a311-formulacion-matematica-de-lora" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.1 Formulación matemática de LoRA
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a312-seleccion-de-modulos-objetivo-en-arquitecturas-multimodales" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.2 Selección de módulos objetivo en arquitecturas multimodales
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a313-qlora-cuantizacion-en-4-bits-y-optimizadores-paginados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.3 QLoRA: cuantización en 4 bits y optimizadores paginados
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a314-dora-adaptacion-desacoplada-en-magnitud-y-direccion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.4 DoRA: adaptación desacoplada en magnitud y dirección
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a315-comparativa-de-paradigmas-de-ajuste-fino-para-svlms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.5 Comparativa de paradigmas de ajuste fino para sVLMs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.2.1 Reducción del presupuesto de tokens y compresión de latencia
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.2.2 Alineación causal directa: de la imagen a la maniobra
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3 Pipeline de ingeniería de datos para navegación aérea
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.3 Pipeline de ingeniería de datos para navegación aérea">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a331-estructura-del-dataset-multimodal-de-navegacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3.1 Estructura del dataset multimodal de navegación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a332-mitigacion-de-la-deriva-cinematica-mediante-dagger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3.2 Mitigación de la deriva cinemática mediante DAgger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3.3 Aumentación sintética y métricas objetivo de evaluación
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4 Fusión de pesos, despliegue y preservación de la seguridad híbrida
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.4 Fusión de pesos, despliegue y preservación de la seguridad híbrida">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4.1 Fusión algebraica de pesos (Weight Merging) y exportación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4.2 Sinergia entre LoRA y decodificación restringida (json_schema)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a311-formulacion-matematica-de-lora" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.1 Formulación matemática de LoRA
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a312-seleccion-de-modulos-objetivo-en-arquitecturas-multimodales" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.2 Selección de módulos objetivo en arquitecturas multimodales
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a313-qlora-cuantizacion-en-4-bits-y-optimizadores-paginados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.3 QLoRA: cuantización en 4 bits y optimizadores paginados
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a314-dora-adaptacion-desacoplada-en-magnitud-y-direccion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.4 DoRA: adaptación desacoplada en magnitud y dirección
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a315-comparativa-de-paradigmas-de-ajuste-fino-para-svlms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.1.5 Comparativa de paradigmas de ajuste fino para sVLMs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.2.1 Reducción del presupuesto de tokens y compresión de latencia
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.2.2 Alineación causal directa: de la imagen a la maniobra
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3 Pipeline de ingeniería de datos para navegación aérea
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.3 Pipeline de ingeniería de datos para navegación aérea">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a331-estructura-del-dataset-multimodal-de-navegacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3.1 Estructura del dataset multimodal de navegación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a332-mitigacion-de-la-deriva-cinematica-mediante-dagger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3.2 Mitigación de la deriva cinemática mediante DAgger
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.3.3 Aumentación sintética y métricas objetivo de evaluación
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4 Fusión de pesos, despliegue y preservación de la seguridad híbrida
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A3.4 Fusión de pesos, despliegue y preservación de la seguridad híbrida">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4.1 Fusión algebraica de pesos (Weight Merging) y exportación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4.2 Sinergia entre LoRA y decodificación restringida (json_schema)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<blockquote>
+<p><strong>Nota de ubicación:</strong> este documento constituye el estudio formal y la especificación metodológica de la especialización de Modelos de Visión y Lenguaje Pequeños (<em>Small Vision-Language Models</em>, sVLMs) mediante técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT / LoRA / QLoRA). Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.7), el capítulo 12 (<code>12-CONCLUSIONES.md</code>, §12.4) y los anexos A1, A2 y A4. Estructurado como la especificación de trabajo futuro y hoja de ruta de optimización del nodo deliberativo de DroneLM.</p>
+</blockquote>
+<hr />
+<h1 id="anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma">Anexo 3: Optimización y especialización de modelos de visión-lenguaje mediante LoRA/QLoRA para navegación aérea autónoma<a class="headerlink" href="#anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma" title="Permanent link">&para;</a></h1>
+<p>La arquitectura deliberativa desarrollada en esta tesis adopta un modelo multimodal de pesos abiertos de 3 mil millones de parámetros (<strong>Qwen2.5-VL-3B-Instruct</strong>; Qwen Team, 2025) ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (§8.1). En la versión evaluada en el lazo táctico de control, dicho modelo opera en régimen <em>zero-shot / in-context learning</em>, guiado por un prompt estructurado de cinco componentes (§8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (§8.2, Anexo 4; Willard &amp; Louf, 2023).</p>
+<p>Si bien esta configuración resuelve con éxito la extracción de semántica visual y el rescate ante fallas del estimador de flujo óptico (§6.12), introduce dos limitaciones operativas para el vuelo reactivo:
+1. <strong>Sobrecarga de latencia por longitud de contexto (<em>prompt overhead</em>):</strong> verbalizar la telemetría, el resumen del campo de obstáculos (<code>ObstacleField</code>), el historial de maniobras y las instrucciones sintácticas insume entre 400 y 600 tokens de entrada por ciclo. Esto eleva la fase de pre-llenado (<em>pre-fill</em>), empujando la latencia de inferencia hacia la frontera del perro guardián del sistema (<code>SLM_WATCHDOG_MS = 1500 ms</code>).
+2. <strong>Dependencia de restricciones externas de muestreo:</strong> el modelo preentrenado retiene sesgos conversacionales y un amplio espacio léxico generalista, lo que exige filtrar activamente sus <em>logits</em> en cada token mediante gramáticas para asegurar el cumplimiento de la lista blanca de macro-acciones (§8.3).</p>
+<p>Este anexo desarrolla los fundamentos matemáticos y metodológicos de <strong>Adaptación de Bajo Rango (LoRA; Hu et al., 2022)</strong> y sus extensiones contemporáneas (<strong>QLoRA; Dettmers et al., 2024</strong> y <strong>DoRA; Liu et al., 2024</strong>) como línea de trabajo futuro (§12.4): internalizar el dominio físico-espacial y el formato estricto directamente en los tensores de ponderación de la red, habilitando respuestas en tiempo real (&lt; 500 ms) sin alterar la arquitectura base ni requerir hardware de nivel servidor.</p>
+<hr />
+<h2 id="a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft">A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT<a class="headerlink" href="#a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" title="Permanent link">&para;</a></h2>
+<p>El ajuste fino completo (<em>Full Fine-Tuning</em>, FFT) de una red neuronal profunda requiere actualizar y almacenar en memoria los gradientes y momentos del optimizador (e.g., AdamW en precisión simple FP32) para la totalidad de los parámetros entrenables $\Phi_0$. Para un modelo de 3B parámetros, esto demanda más de 24 GB de VRAM únicamente para el estado del optimizador, tornando inviable el entrenamiento en GPUs de escritorio (tales como la NVIDIA RTX 5060 de 8 GB utilizada en este proyecto).</p>
+<p>Las técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT; Mangrulkar et al., 2022) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.</p>
+<div class="highlight"><pre><span></span><code>       Flujo de Inferencia Estándar                Adaptación de Bajo Rango (LoRA)
+
+              Entrada: x                                    Entrada: x
+                  │                                             ├─────────────────────┐
+                  ▼                                             ▼                     ▼
+         ┌─────────────────┐                           ┌─────────────────┐   ┌─────────────────┐
+         │  Matriz Base    │                           │  Matriz Base    │   │ Adaptador A     │
+         │  W₀ ∈ ℝ^(d×k)   │ (Congelada)               │  W₀ ∈ ℝ^(d×k)   │   │ A ∈ ℝ^(r×k)     │
+         └────────┬────────┘                           └────────┬────────┘   └────────┬────────┘
+                  │                                             │                     │
+                  ▼                                             │                     ▼
+              Salida: h                                         │            ┌─────────────────┐
+               h = W₀·x                                         │            │ Adaptador B     │
+                                                                │            │ B ∈ ℝ^(d×r)     │
+                                                                │            └────────┬────────┘
+                                                                │                     │ Escala: (α/r)
+                                                                ▼                     ▼
+                                                               ┌────────────────────────┐
+                                                               │  Suma: h = W₀·x + ΔW·x │
+                                                               └────────────────────────┘
+</code></pre></div>
+<h3 id="a311-formulacion-matematica-de-lora">A3.1.1 Formulación matemática de LoRA<a class="headerlink" href="#a311-formulacion-matematica-de-lora" title="Permanent link">&para;</a></h3>
+<p>La premisa matemática de LoRA (Hu et al., 2022) se basa en la hipótesis de que las actualizaciones de peso $\Delta W$ durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (<em>low intrinsic dimension</em>). Para una matriz lineal preentrenada $W_0 \in \mathbb{R}^{d \times k}$, la actualización se descompone como el producto de dos matrices de bajo rango:</p>
+<p>$$W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)$$</p>
+<p>donde:
+* $r \ll \min(d, k)$ es el hiperparámetro de <strong>rango intrínseco</strong> (típicamente $r \in [8, 32]$).
+* $B \in \mathbb{R}^{d \times r}$ se inicializa estrictamente en ceros ($B = 0$).
+* $A \in \mathbb{R}^{r \times k}$ se inicializa con una distribución normal gaussiana aleatoria $A \sim \mathcal{N}(0, \sigma^2)$, con $\sigma = \frac{1}{r}$.
+* $\alpha \in \mathbb{R}^+$ es una constante de escala que atenúa o amplifica el impacto de la adaptación sin requerir reajustar la tasa de aprendizaje (<em>learning rate</em>) al modificar $r$.</p>
+<p><strong>Propiedad de preservación funcional:</strong> gracias a la inicialización $B = 0$, en el paso inicial de entrenamiento se cumple que $\Delta W = 0 \cdot A = 0$. Por lo tanto, $W = W_0$ y el comportamiento inicial del modelo es matemáticamente idéntico al modelo preentrenado de fábrica, evitando saltos destructivos en los pesos durante las primeras iteraciones.</p>
+<h3 id="a312-seleccion-de-modulos-objetivo-en-arquitecturas-multimodales">A3.1.2 Selección de módulos objetivo en arquitecturas multimodales<a class="headerlink" href="#a312-seleccion-de-modulos-objetivo-en-arquitecturas-multimodales" title="Permanent link">&para;</a></h3>
+<p>En modelos basados en Transformer, las proyecciones lineales se dividen entre el bloque de autoatención (<em>Multi-Head Attention</em>) y el perceptrón multicapa (<em>Feed-Forward Network</em> / MLP):
+* <strong>Atención:</strong> matrices de consulta ($W_q$), clave ($W_k$), valor ($W_v$) y proyección de salida ($W_o$).
+* <strong>MLP:</strong> matrices de compuerta ($W_{\text{gate}}$), subida ($W_{\text{up}}$) y bajada ($W_{\text{down}}$).</p>
+<p>Para modelos multimodales (sVLMs como Qwen2.5-VL), existe una disyuntiva de diseño crítica:
+1. <strong>Codificador visual (<em>Vision Transformer</em>, ViT):</strong> procesa los parches de píxeles brutos de la cámara monocular. Adaptar el ViT con LoRA introduce el riesgo de destruir filtros de detección de bordes y texturas universales ante conjuntos de datos de vuelo acotados. Por ello, la práctica recomendada consiste en <strong>mantener el ViT congelado</strong>.
+2. <strong>Proyector multimodal y capas del LLM autorregresivo:</strong> adaptar $W_q, W_v$ y las capas lineales del MLP permite al modelo remapear las representaciones visuales hacia la lógica de control del dron. La literatura empírica demuestra que incorporar tanto los módulos de atención como los del bloque MLP ($W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}$) con rangos moderados ($r=16$) supera consistentemente a adaptar únicamente $W_q$ con rangos mayores ($r=64$).</p>
+<h3 id="a313-qlora-cuantizacion-en-4-bits-y-optimizadores-paginados">A3.1.3 QLoRA: cuantización en 4 bits y optimizadores paginados<a class="headerlink" href="#a313-qlora-cuantizacion-en-4-bits-y-optimizadores-paginados" title="Permanent link">&para;</a></h3>
+<p>Para posibilitar la sintonización en hardware de desarrollo restringido, Dettmers et al. (2024) introdujeron <strong>QLoRA</strong>, una extensión que combina tres innovaciones clave:
+* <strong>Formato NormalFloat4 (NF4):</strong> un tipo de datos no lineal de 4 bits con espaciado óptimo para representar tensores con distribución normal estándar centrada en cero, conservando un error de cuantización teóricamente menor que el formato entero uniforme INT4.
+* <strong>Doble Cuantización (<em>Double Quantization</em>):</strong> proceso que cuantiza las propias constantes de escala de cuantización del modelo (de FP32 a FP8 en bloques de 256 elementos), ahorrando un promedio de 0.37 bits por parámetro (~370 MB en un modelo de 3B).
+* <strong>Optimizadores Paginados (<em>Paged Optimizers</em>):</strong> integración con CUDA Memory Management para trasladar dinámicamente los estados de memoria de la GPU a la memoria RAM del sistema operativo durante picos transitorios de gradientes, previniendo fallos por memoria agotada (<em>Out-Of-Memory</em>, OOM).</p>
+<p>En este esquema, el modelo base $W_0$ reside en VRAM cuantizado en 4 bits NF4 ($~1.8\text{ GB}$ para 3B), mientras que los adaptadores $A$ y $B$ se mantienen y optimizan en precisión bfloat16 ($~25\text{ MB}$).</p>
+<h3 id="a314-dora-adaptacion-desacoplada-en-magnitud-y-direccion">A3.1.4 DoRA: adaptación desacoplada en magnitud y dirección<a class="headerlink" href="#a314-dora-adaptacion-desacoplada-en-magnitud-y-direccion" title="Permanent link">&para;</a></h3>
+<p>Liu et al. (2024) observaron una discrepancia estructural en la dinámica de gradientes: mientras que el ajuste completo (FFT) modifica tanto la magnitud como la dirección de los vectores de pesos de forma desbalanceada e independiente, LoRA exhibe un acoplamiento simétrico entre ambas dimensiones.</p>
+<p>Para solventar esta limitación, <strong>DoRA (<em>Weight-Decomposed Low-Rank Adaptation</em>)</strong> factoriza cada columna de la matriz de ponderación $W \in \mathbb{R}^{d \times k}$ en su vector de magnitud de norma euclidiana $m \in \mathbb{R}^{1 \times k}$ y su matriz direccional unitaria normalizada $V \in \mathbb{R}^{d \times k}$:</p>
+<p>$$W = m \odot \frac{V}{|V|_c} = m \odot \frac{W_0 + \Delta W}{|W_0 + \Delta W|_c}$$</p>
+<p>donde $| \cdot |_c$ denota la norma $L_2$ a lo largo de las columnas y $\Delta W = \frac{\alpha}{r} B A$. DoRA permite que el gradiente ajuste la escala global de activación ($m$) independientemente de las reorientaciones vectoriales ($\Delta W$), logrando una capacidad de modelado que equipara prácticamente a FFT en tareas espaciales y de razonamiento lógico, manteniendo la ventaja de poder fusionarse íntegramente en inferencia sin penalización de velocidad.</p>
+<h3 id="a315-comparativa-de-paradigmas-de-ajuste-fino-para-svlms">A3.1.5 Comparativa de paradigmas de ajuste fino para sVLMs<a class="headerlink" href="#a315-comparativa-de-paradigmas-de-ajuste-fino-para-svlms" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>Full Fine-Tuning (FFT)</th>
+<th>LoRA estándar</th>
+<th>QLoRA (NF4)</th>
+<th>DoRA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VRAM entrenamiento (3B)</strong></td>
+<td>&gt; 24 GB</td>
+<td>~12–14 GB</td>
+<td><strong>~5.5–7.0 GB</strong></td>
+<td>~6.5–8.0 GB</td>
+</tr>
+<tr>
+<td><strong>Parámetros entrenables</strong></td>
+<td>100% (~3.090 M)</td>
+<td>~0.15–0.30% (~5–10 M)</td>
+<td>~0.15–0.30% (~5–10 M)</td>
+<td>~0.20–0.35% (~6–11 M)</td>
+</tr>
+<tr>
+<td><strong>Precisión pesos base</strong></td>
+<td>FP16 / BF16</td>
+<td>FP16 / BF16</td>
+<td><strong>NF4 (4 bits)</strong></td>
+<td>NF4 / FP16</td>
+</tr>
+<tr>
+<td><strong>Sobrecarga en inferencia</strong></td>
+<td>Cero (pesos nativos)</td>
+<td>Cero (tras fusión)</td>
+<td>Cero (tras fusión + quant)</td>
+<td>Cero (tras fusión)</td>
+</tr>
+<tr>
+<td><strong>Fidelidad respecto a FFT</strong></td>
+<td>Referencia (100%)</td>
+<td>92–95%</td>
+<td>91–94%</td>
+<td><strong>97–99%</strong></td>
+</tr>
+<tr>
+<td><strong>Viabilidad en GPU 8 GB</strong></td>
+<td>No viable</td>
+<td>Crítico / Marginal</td>
+<td><strong>Plenamente viable</strong></td>
+<td><strong>Plenamente viable</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm">A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM<a class="headerlink" href="#a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" title="Permanent link">&para;</a></h2>
+<p>La integración de un adaptador LoRA en el nodo deliberativo transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
+<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        ARQUITECTURA DEL NODO DELIBERATIVO                              │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│   FASE ACTUAL (In-Context Zero-Shot + Gramáticas):                                     │
+│   [ Telemetría + Resumen ObstacleField + Historial + Instrucción Schema ] ~500 tokens  │
+│                                       │                                                │
+│                                       ▼                                                │
+│                 [ Qwen2.5-VL-3B Base (Pesos Genéricos Congelados) ]                    │
+│                                       │ (Logits dispersos)                             │
+│                                       ▼                                                │
+│                 [ Filtro de Gramática json_schema (Outlines/GBNF) ]                    │
+│                                       │ (Forzado externo)                              │
+│                                       ▼                                                │
+│                       { &quot;action&quot;: &quot;evasive&quot;, &quot;reason&quot;: &quot;...&quot; }                         │
+│                               Latencia: 850 - 1400 ms                                  │
+│                                                                                        │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│   FASE PROPUESTA OPTIMIZADA (Adaptador LoRA / QLoRA Fusionado):                        │
+│   [ Frames (t, t-1) + Tupla Compacta de Estado + TTC ]                    ~90 tokens   │
+│                                       │                                                │
+│                                       ▼                                                │
+│                 [ Qwen2.5-VL-3B + Adaptador LoRA Especializado ]                       │
+│                                       │ (Logits intrínsecamente alineados)             │
+│                                       ▼                                                │
+│                 [ Verificación Pasiva de Esquema (json_schema) ]                       │
+│                                       │                                                │
+│                                       ▼                                                │
+│                       { &quot;action&quot;: &quot;evasive&quot;, &quot;reason&quot;: &quot;...&quot; }                         │
+│                               Latencia: 300 - 550 ms                                   │
+│                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+<h3 id="a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia">A3.2.1 Reducción del presupuesto de tokens y compresión de latencia<a class="headerlink" href="#a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" title="Permanent link">&para;</a></h3>
+<p>En la implementación <em>zero-shot</em> de referencia (§8.5), el prompt de usuario debe reiterar en cada invocación:
+* Las definiciones semánticas de los sectores del sensor (<code>SECTOR_FRONTAL</code>, <code>SECTOR_LATERAL</code>).
+* La sintaxis exacta y el orden de los campos del esquema JSON.
+* La lista cerrada de macro-acciones admisibles (<code>keep_going</code>, <code>evasive</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>).</p>
+<p>Este contexto insume cientos de tokens de procesamiento previo (<em>prefill</em>). Al especializar el modelo con LoRA, <strong>la gramática de salida y las reglas de dominio quedan cristalizadas en los tensores de ponderación</strong>. El prompt de entrada puede simplificarse a una codificación tabular mínima:</p>
+<div class="highlight"><pre><span></span><code>[ESTADO: Vz=-0.1, Vh=3.2 | TTC: F=1.4s, L=inf, R=4.1s | HIST: keep_going(x3) | REASON: TTC_CRITICO]
+</code></pre></div>
+<p>Esta reducción comprime la ventana de entrada de ~500 a menos de 100 tokens, acelerando el tiempo de respuesta del modelo en un 60%, garantizando que la inferencia opere de forma consistente entre 300 ms y 550 ms, muy por debajo de los 1500 ms del perro guardián.</p>
+<h3 id="a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra">A3.2.2 Alineación causal directa: de la imagen a la maniobra<a class="headerlink" href="#a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra" title="Permanent link">&para;</a></h3>
+<p>Un modelo generalista tiende a verbalizar descripciones visuales pasivas (<em>«Veo un muro con sombras proyectadas»</em>). LoRA permite reentrenar la distribución de probabilidad condicional $P(y \mid X)$ para que el modelo efectúe una <strong>asociación sensoriomotora directa</strong>:
+* Reconocer cómo el patrón de divergencia óptica entre $I_t$ e $I_{t-1}$ anticipa colisiones inminentes.
+* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), suprimiendo alucinaciones visuales que el flujo monocular no logra desagregar (§6.1).</p>
+<hr />
+<h2 id="a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea">A3.3 Pipeline de ingeniería de datos para navegación aérea<a class="headerlink" href="#a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea" title="Permanent link">&para;</a></h2>
+<p>El factor determinante del éxito de la adaptación no radica en el volumen de parámetros, sino en la calidad informativa y la diversidad topológica del conjunto de datos de entrenamiento.</p>
+<h3 id="a331-estructura-del-dataset-multimodal-de-navegacion">A3.3.1 Estructura del dataset multimodal de navegación<a class="headerlink" href="#a331-estructura-del-dataset-multimodal-de-navegacion" title="Permanent link">&para;</a></h3>
+<p>Cada instancia de entrenamiento se define como un par supervisado $(X_t, Y_t)$ estructurado de la siguiente forma:</p>
+<p>$$X_t = \left{ I_t, I_{t-1}, \text{telemetry}_t, \text{obstacle_field}_t, \text{reason_note}_t \right}$$</p>
+<p>$$Y_t = \left{ \text{"action"}: a_t^<em>, \text{"reason"}: r_t^</em> \right}$$</p>
+<p>donde:
+* $I_t, I_{t-1}$ son los dos fotogramas RGB monoculares recientes capturados a 640×360 píxeles.
+* $\text{telemetry}_t$ incluye el vector de velocidad tridimensional, ángulo de cabeceo (<em>pitch</em>), alabeo (<em>roll</em>) y distancia al waypoint activo.
+* $\text{obstacle_field}_t$ codifica el TTC estimado y la tasa de ocupación por sector angular (cap. 6 y 7).
+* $a_t^<em> \in \mathcal{A}_{\text{whitelist}}$ es la macro-acción supervisada óptima.
+* $r_t^</em>$ es una cadena de justificación condensada (&lt; 120 caracteres) que verbaliza el razonamiento causal subyacente (e.g., <code>"TTC crítico de 1.2s en cuadrante frontal-izquierdo; espacio despejado a la derecha; iniciar maniobra evasiva"</code>).</p>
+<h3 id="a332-mitigacion-de-la-deriva-cinematica-mediante-dagger">A3.3.2 Mitigación de la deriva cinemática mediante DAgger<a class="headerlink" href="#a332-mitigacion-de-la-deriva-cinematica-mediante-dagger" title="Permanent link">&para;</a></h3>
+<p>El entrenamiento mediante simple Clonación de Comportamiento (<em>Behavioral Cloning</em>, BC) a partir de vuelos nominales perfectos sufre del problema de <strong>deriva covariada (<em>Covariate Shift</em>)</strong> (Codevilla et al., 2019): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.</p>
+<p>Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo <strong>DAgger (<em>Dataset Aggregation</em>; Ross et al., 2011)</strong> adaptado a simulación en AirSim / Unreal Engine 5:
+1. <strong>Vuelo con política actual</strong> $\pi_{\text{LoRA}}$ en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
+2. <strong>Consulta al oráculo experto</strong> (FSM determinista o supervisor experto) ante desvíos: determinación de la acción correctiva óptima $a^<em>$.
+3. </em><em>Agregación de tuplas críticas</em><em> $\mathcal{D}<em _text_previo="\text{previo">{\text{total}} = \mathcal{D}</em>, a^}} \cup {(X_{\text{perturbado}</em>_{\text{experto}})}$.
+4. <strong>Reentrenamiento iterativo</strong> de los adaptadores LoRA sobre el conjunto enriquecido.</p>
+<h3 id="a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion">A3.3.3 Aumentación sintética y métricas objetivo de evaluación<a class="headerlink" href="#a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion" title="Permanent link">&para;</a></h3>
+<p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; Marazzato &amp; Sparavigna, 2015) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
+<table>
+<thead>
+<tr>
+<th>Métrica de Validación</th>
+<th>Meta Operativa (Zero-Shot Actual)</th>
+<th>Meta Objetivo (LoRA / QLoRA)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cumplimiento de Esquema JSON</strong></td>
+<td>99.8% (gracias a gramática forzada)</td>
+<td><strong>100% nativo</strong> (verificación pasiva)</td>
+</tr>
+<tr>
+<td><strong>Latencia media de inferencia</strong></td>
+<td>~1100 ms (límite de watchdog)</td>
+<td><strong>&lt; 450 ms</strong> (margen amplio)</td>
+</tr>
+<tr>
+<td><strong>Tokens de entrada promedio</strong></td>
+<td>480–520 tokens</td>
+<td><strong>&lt; 100 tokens</strong></td>
+</tr>
+<tr>
+<td><strong>Tasa de resolución de atasco</strong></td>
+<td>60.0% (Tier 3, cap. 10)</td>
+<td><strong>&gt; 85.0%</strong></td>
+</tr>
+<tr>
+<td><strong>Tasa de colisiones evitables</strong></td>
+<td>20.0% en Tier 3</td>
+<td><strong>&lt; 5.0%</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida">A3.4 Fusión de pesos, despliegue y preservación de la seguridad híbrida<a class="headerlink" href="#a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida" title="Permanent link">&para;</a></h2>
+<h3 id="a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion">A3.4.1 Fusión algebraica de pesos (<em>Weight Merging</em>) y exportación<a class="headerlink" href="#a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion" title="Permanent link">&para;</a></h3>
+<p>Una de las ventajas arquitectónicas centrales de LoRA frente a otros esquemas modulares radica en la posibilidad de <strong>fusionar algebraicamente los adaptadores con los pesos base preentrenados</strong> antes del despliegue en el vehículo:</p>
+<p>$$W_{\text{despliegue}} = W_0 + \frac{\alpha}{r} (B \cdot A)$$</p>
+<p>Al realizar la fusión de tensores en punto flotante previo (FP16 o BF16), la matriz resultante $W_{\text{despliegue}}$ adquiere exactamente las mismas dimensiones y topología que la red preentrenada original. No existe ninguna bifurcación de memoria ni sobrecarga computacional adicional durante la inferencia. </p>
+<p>Posteriormente, el modelo fusionado se compila a formato <strong>GGUF</strong> cuantizado (<code>Q4_K_M</code>) mediante <code>llama.cpp</code> (Gerganov, 2023), produciendo un binario de ~2.0 GB listo para ejecución local embebida sin dependencias de librerías de entrenamiento.</p>
+<h3 id="a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema">A3.4.2 Sinergia entre LoRA y decodificación restringida (<code>json_schema</code>)<a class="headerlink" href="#a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema" title="Permanent link">&para;</a></h3>
+<p>El ajuste fino no reemplaza la decodificación restringida por gramáticas (§8.2, Anexo 4), sino que la complementa:
+* <strong>LoRA moldea la distribución interna de logits:</strong> el modelo aprende a concentrar prácticamente el 100% de su masa de probabilidad en las palabras clave del esquema JSON y la lista blanca de macro-acciones.
+* <strong><code>json_schema</code> opera como barrera determinista externa:</strong> enmascara el residuo infinitesimal de probabilidad en situaciones fuera de distribución, garantizando formalmente cero violaciones de formato.
+* <strong>Aceleración de generación:</strong> al fluir la decodificación sin colisionar con tokens suprimidos por la gramática, la tasa de muestreo alcanza el máximo rendimiento teórico del motor de inferencia.</p>
+<h3 id="a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia">A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia<a class="headerlink" href="#a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia" title="Permanent link">&para;</a></h3>
+<p>Un principio fundacional de DroneLM es que los modelos de lenguaje son aproximadores estocásticos y <strong>bajo ninguna circunstancia deben gobernar de forma directa los actuadores físicos sin arbitraje determinista</strong> (Gat, 1998; cap. 5 y 8). La incorporación de adaptadores LoRA preserva íntegramente las tres salvaguardas del sistema:
+1. <strong>Supervisión Jerárquica por FSM:</strong> la máquina de estados retiene la potestad para anular cualquier macro-acción deliberativa ante condiciones de riesgo inminente ($TTC &lt; 1.0\text{ s}$).
+2. <strong>Parser Tolerante de Tres Etapas:</strong> permanece activo en <code>_parse_decision()</code> como red de contención frente a anomalías de serialización.
+3. <strong>Perro Guardián Temporal (<code>SLM_WATCHDOG_MS = 1500 ms</code>):</strong> cualquier sobrepaso temporal fuerza el retorno inmediato al régimen conservador de sustentación.</p>
+<p>Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia del nodo deliberativo a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+    
+  </body>
+</html>

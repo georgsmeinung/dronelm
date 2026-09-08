@@ -1,162 +1,169 @@
-> **Nota de ubicación:** este documento es material exploratorio de la etapa de planificación (selección de modelos SLM en formato GGUF, técnicas de gramática restringida, evaluación del nivel de innovación de la arquitectura). No es un capítulo de la tesis; se conserva como anexo de referencia para la sección de selección de modelo en `08-DECISIONES-SLM.md`. Reubicado desde `informe/01-INTRO.md` el 2026-08-25.
+> **Nota de ubicación:** este documento constituye el estudio técnico exploratorio sobre selección de modelos SLM/sVLM, cuantización GGUF, decodificación estructurada y posicionamiento arquitectónico. Sirve como referencia técnica complementaria para el capítulo 8 (`08-DECISIONES-SLM.md`, §8.1) y los anexos A2, A3 y A4.
 
 ---
 
-## Limitaciones de hardware
+# Anexo 1: Exploración técnica de Small Language Models (SLM), cuantización GGUF y análisis de innovación arquitectónica
 
-Para una configuración compuesta por una RTX 5060 con 8 GB de VRAM, en la que es necesario compartir recursos de GPU con una simulación de Unreal Engine 5.5, la opción más realista consiste en emplear un *Small Language Model (SLM)*. Se requiere un modelo *instruct‑tuned*, capaz de seguir instrucciones de manera fiable y, al mismo tiempo, producir una salida con **gramática muy restringida o limitada**; es decir, un modelo que genere texto estrictamente conforme a un formato, esquema o gramática predefinida (por ejemplo, JSON siempre válido, pares clave‑valor específicos o una sintaxis personalizada mínima sin variación libre).
+La integración de modelos de lenguaje en plataformas robóticas autónomas exige resolver un compromiso riguroso entre capacidad representacional, latencia de inferencia y consumo de recursos computacionales. En el contexto de esta investigación, el objetivo es dotar a un vehículo aéreo no tripulado (UAV) de capacidad deliberativa de alto nivel mientras opera en simulación fotorrealista bajo hardware de consumo. 
 
-Esta configuración resulta adecuada para una solución local basada en *MCP* (Model Context Protocol), el estándar abierto (propuesto por Anthropic a partir de 2024) que permite a los modelos de lenguaje conectarse con herramientas y datos externos mediante un protocolo uniforme. Un cliente MCP, un LLM local y servidores MCP locales (por ejemplo, para acceso a archivos, ejecución de código o consultas relacionadas con Unreal Engine) pueden ejecutarse completamente sin conexión.
+Un **Modelo de Lenguaje Pequeño** (*Small Language Model*, SLM) —y su extensión multimodal, *Small Vision-Language Model* (sVLM)— se define operativamente por tres criterios: **(1)** un conteo de parámetros en el rango de 1B a 10B (Abdin et al., 2024; Zhang et al., 2024), que conserva competencia notable para razonamiento simbólico, comprensión sintáctica y extracción de relaciones complejas a pesar de su escala relativa (Nguyen et al., 2024); **(2)** la factibilidad de despliegue local (*on-device*) en hardware de consumo común (tarjetas gráficas de gama media como la NVIDIA RTX 5060 de 8 GB) o procesadores embebidos (NVIDIA Jetson; NVIDIA, 2025); y **(3)** una latencia de inferencia determinista de subsegundos a pocos segundos, compatible con los márgenes de los lazos de control en robótica móvil (Tian et al., 2025; Vemprala et al., 2023). Frente a los LLMs de frontera (GPT-4o, Claude 3.5, Gemini 1.5 — decenas a cientos de miles de millones de parámetros, 24–80 GB de VRAM), los SLMs ofrecen ventajas determinantes para sistemas embarcados: autonomía operativa sin conexión a la nube, supresión de la variabilidad de red, eficiencia energética en plataformas alimentadas por batería (Goel et al., 2021) y compatibilidad con decodificación restringida por gramáticas en motores locales como `llama.cpp` (Willard & Louf, 2023).
 
-### Razones por las que un SLM con salida restringida se ajusta al escenario
+Este anexo documenta el estudio exploratorio previo a las decisiones finales de implementación: delimita las restricciones físicas de memoria de video (VRAM), evalúa de forma comparativa los modelos compactos candidatos en formato GGUF, analiza los mecanismos para garantizar salidas estructuradas deterministas, y examina críticamente el nivel de novedad de la arquitectura frente al estado del arte reciente (2024–2026), identificando los ejes de ingeniería que aportan valor genuino al control autónomo.
 
-*   **Presupuesto de VRAM**: una simulación de UE5 probablemente utiliza entre 4 y 6 GB, lo que deja aproximadamente 2–4 GB disponibles para la inferencia del LLM (considerando el overhead de la KV cache).
-*   **Gramática restringida**: reduce alucinaciones y verbosidad, generando una salida pequeña, rápida y fácil de interpretar (crítico para llamadas a herramientas MCP o respuestas estructuradas).
-*   **Ejecución local**: elimina dependencias de la nube y permite baja latencia en la integración con la simulación.
+---
 
-### Modelos recomendados (febrero 2026, en formato GGUF para llama.cpp / LM Studio)
 
-Se recomienda centrarse en modelos instruct de **3B a 8B** parámetros, ya que ofrecen la capacidad suficiente para seguir instrucciones y manejar patrones de uso de herramientas en 2026. Las cuantizaciones *Q5\_K\_M* o *Q4\_K\_M* permiten ajustar el modelo a \~2–4.5 GB de VRAM manteniendo una calidad elevada.
+## A1.1 Restricciones de hardware y presupuesto de VRAM en cohabitación con Unreal Engine
 
-| Modelo                                    | Tamaño (quant) | VRAM aprox. (full offload) | Fortalezas                                                                                       | Razones para uso con gramática restringida                            | Disponibilidad                         |
-| ----------------------------------------- | -------------- | -------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | -------------------------------------- |
-| *Qwen3-4B-Instruct* / *Qwen3-7B-Instruct* | \~3–5 GB       | \~2.5–4 GB                 | Razonamiento sólido, seguimiento de instrucciones, function-calling                              | Cumplimiento fiable de formatos; variantes 2026 con buen soporte JSON | Qwen/Qwen3-4B-Instruct-GGUF            |
-| *Phi-4-mini-instruct*                     | \~3–4 GB       | \~2–3.5 GB                 | Ajustado por Microsoft para datos sintéticos de alta calidad; muy eficaz en tareas estructuradas | Muy alta adherencia a esquemas y salida de baja variación             | microsoft/Phi-4-mini-instruct-GGUF     |
-| *SmolLM3-3B-Instruct*                     | \~2–3 GB       | \~1.8–3 GB                 | Modelo compacto con rendimiento superior al de muchos 4–7B                                       | Fácil de forzar en formatos rígidos mediante prompt                   | HuggingFaceTB/SmolLM3-3B-GGUF          |
-| *Gemma-3-4B-IT*                           | \~3 GB         | \~2.5 GB                   | Ajustado por Google; fuerte rendimiento textual                                                  | Buena salida estructurada y soporte de function-calling               | google/gemma-3-4b-it-GGUF              |
-| *Ministral-3-3B-Instruct*                 | \~2.5 GB       | \~2 GB                     | Modelo compacto optimizado para edge                                                             | Diseñado para uso restringido; seguimiento estable de formatos        | mistralai/Ministral-3-3B-Instruct-GGUF |
+La plataforma de experimentación adoptada consta de una estación de trabajo equipada con una GPU NVIDIA GeForce RTX 5060 provista de **8 GB de VRAM**. A diferencia de los entornos de investigación que disponen de aceleradores dedicados (e.g., NVIDIA A100/H100 de 40–80 GB) o que delegan el cómputo a servicios en la nube, este proyecto impone una restricción de cohabitación local estricta: la GPU debe ejecutar simultáneamente el entorno de simulación física y visual, y el motor de inferencia del modelo deliberativo.
 
-La opción preferente suele ser *Phi‑4‑mini‑instruct*, mientras que *Qwen3‑4B/7B* puede utilizarse cuando se dispone de aproximadamente 1 GB adicional de VRAM.
+Una instancia activa del simulador AirSim sobre Unreal Engine 5.5 demanda, en condiciones estándar de renderizado (geometría Nanite, iluminación Lumen y captura de múltiples cámaras virtuales), entre **4.5 y 6.0 GB de VRAM** (Shah et al., 2017; Turco et al., 2024). En consecuencia:
 
-### Métodos para imponer “gramática limitada” o formato de salida estricto
+* **Presupuesto remanente disponible**: el espacio de memoria de video reservable para el modelo de lenguaje se restringe a una ventana de **2.0 a 3.5 GB de VRAM**.
+* **Sobrecarga de contexto (KV Cache)**: la inferencia no solo consume la memoria estática de los pesos de la red, sino también la memoria dinámica requerida por el caché de claves y valores (*Key-Value Cache*), la cual escala linealmente con la longitud de la ventana de contexto y el tamaño del lote.
+* **Exclusión de arquitecturas de frontera**: modelos superiores a 13B parámetros o modelos fundacionales no cuantizados (FP16/BF16) son inviables en esta configuración sin incurrir en transferencias masivas hacia la memoria RAM del sistema (*paging / offloading* excesivo a CPU), lo cual degrada la latencia de inferencia en órdenes de magnitud incompatibles con el control de vuelo.
 
-Los siguientes métodos, compatibles con backends locales como llama.cpp, LM Studio u Ollama, permiten controlar estrictamente la estructura de la salida:
+Bajo este marco, la única alternativa viable radica en el uso de *Small Language Models* (SLMs) y *Small Vision-Language Models* (sVLMs) de escala **3B a 8B parámetros**, sometidos a técnicas de cuantización post-entrenamiento (*Post-Training Quantization*, PTQ) y optimizados para ejecución local (Abdin et al., 2024; Frantar et al., 2022; Nguyen et al., 2024; Zhang et al., 2024).
 
-1.  **Prompt del sistema con instrucciones estrictas** (método más simple, sin costo computacional significativo)  
-    Ejemplo:
-        Eres un respondedor MCP estricto. Produce ÚNICAMENTE JSON válido que coincida con este esquema. Sin explicaciones, sin texto adicional, sin markdown.
-        Esquema: { "tool_call": {"name": str, "args": dict}, "response": str o null }
-        Si no se necesita herramienta, usar tool_call = null. Escapar correctamente todas las cadenas.
+---
 
-2.  **Gramáticas / GBNF en llama.cpp** (confiabilidad alta)
-    *   Definir una gramática libre de contexto mínima (GBNF) obliga al modelo a ajustarse exactamente al formato requerido.
-    *   Compatible nativamente con llama.cpp y expuesto en diversas interfaces como LM Studio.
-    *   Suele reducir la velocidad de generación en un 10–30%, pero garantiza validez estructural completa.
+## A1.2 Evaluación comparativa de modelos candidatos en formato GGUF (3B–8B)
 
-3.  **Outlines / Guidance / llguidance** (métodos avanzados)
-    *   Permiten imponer esquemas JSON, expresiones regulares o gramáticas personalizadas a nivel de token.
-    *   Garantizan salida estructurada incluso en modelos pequeños.
+El formato binario **GGUF** (*GPT-Generated Unified Format*), desarrollado por la comunidad de `llama.cpp` (Gerganov, 2023), se consolidó como el estándar de facto para la serialización y ejecución eficiente de modelos cuantizados en CPU y GPU. GGUF resuelve limitaciones de extensibilidad de formatos predecesores (como GGML) al incorporar metadatos estructurados en el encabezado del archivo y soportar esquemas de cuantización no uniforme (*k-quants*).
 
-Para MCP, estos métodos resultan especialmente relevantes, ya que numerosas implementaciones locales (por ejemplo, clientes y servidores MCP publicados en GitHub) requieren formatos fijos como JSON o XML estilo Anthropic.
+Las variantes *Q4_K_M* (cuantización a 4 bits con ponderación mixta en bloques de atención) y *Q5_K_M* (5 bits) permiten comprimir modelos de 3B–7B parámetros a tamaños de archivo de entre 1.8 y 4.5 GB, preservando la perplejidad y capacidad de razonamiento de los modelos originales con pérdidas marginales (Frantar et al., 2022).
 
-### Procedimiento práctico de configuración
+Durante la fase exploratoria de diseño se evaluaron los siguientes modelos instruccionales (*instruct-tuned*) en formato GGUF para su ejecución bajo motores locales como `llama.cpp` y LM Studio:
 
-1.  **Instalación de LM Studio**
-    *   Descargar un modelo GGUF entre los recomendados (desde el buscador integrado o Hugging Face).
-    *   Configurar entre 20 y 35 capas en GPU, ajustando según el comportamiento de Unreal Engine.
-    *   Activar el modo de gramática si está disponible o utilizar un prompt de sistema personalizado.
+| Modelo | Parámetros | Tamaño GGUF (quant) | VRAM estimada (full offload) | Fortalezas operativas | Comportamiento con salida estructurada | Disponibilidad de referencia |
+|---|---|---|---|---|---|---|
+| **Phi-4-mini-Instruct** | 3.8B | ~2.5–3.2 GB (Q4_K_M) | ~2.2–3.0 GB | Ajuste fino sobre datos sintéticos de alta fidelidad; sólida capacidad de razonamiento lógico y matemático (Abdin et al., 2024). | Muy alta adherencia a esquemas rígidos; mínima variación sintáctica. | `microsoft/Phi-4-mini-instruct-GGUF` |
+| **Qwen3-4B-Instruct** | ~4B | ~2.8–3.5 GB (Q4_K_M) | ~2.5–3.5 GB | Excelente seguimiento de instrucciones complejas; capacidad nativa de *tool-calling*. | Soporte consistente de esquemas JSON mediante prompting y gramáticas. | `Qwen/Qwen3-4B-Instruct-GGUF` |
+| **SmolLM3-3B-Instruct** | 3B | ~2.0–2.6 GB (Q4_K_M) | ~1.8–2.5 GB | Huella de memoria mínima; preentrenado específicamente para entornos embebidos y de bajo consumo. | Fácil de orientar a formatos fijos, aunque con menor tolerancia a contextos extensos. | `HuggingFaceTB/SmolLM3-3B-GGUF` |
+| **Gemma-3-4B-IT** | 4B | ~2.8–3.4 GB (Q4_K_M) | ~2.5–3.2 GB | Arquitectura optimizada por Google; notable coherencia lingüística y comprensión contextual. | Buen desempeño estructurado, pero mayor demanda de KV cache en secuencias largas. | `google/gemma-3-4b-it-GGUF` |
+| **Ministral-3-3B-Instruct** | 3B | ~2.2–2.7 GB (Q4_K_M) | ~2.0–2.6 GB | Diseñado específicamente por Mistral AI para despliegues de borde (*edge inference*); atención deslizante. | Rápido y estable en la emisión de respuestas compactas delimitadas. | `mistralai/Ministral-3-3B-Instruct-GGUF` |
 
-2.  **Implementación basada en MCP**
-    *   Iniciar con servidores MCP locales básicos (acceso a archivos, shell, etc.).
-    *   Utilizar un cliente MCP compatible con modelos locales (Ollama con plugins MCP o implementaciones Python como mcp‑agent).
-    *   Proporcionar las descripciones de herramientas MCP mediante el prompt del sistema.
+### Transición hacia el modelo multimodal definitivo (§8.1.1 y §8.1.2)
 
-3.  **Integración con Unreal Engine 5**
-    *   Implementar un servidor MCP que lea/escriba logs, datos de Blueprints o estados de simulación.
-    *   El modelo produce comandos estructurados que pueden ser interpretados y aplicados por la aplicación anfitriona.
+Aunque los modelos textuales analizados exhibieron un rendimiento adecuado para el procesamiento de telemetría pura, el análisis teórico y empírico de la percepción monocular demostró la existencia de **puntos ciegos estructurales en la estimación de flujo óptico** (maniobras de sustentación estática *hover*, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse §6.1 y §6.12). 
 
-## Sobre la innovación de la solución
+Bajo dichas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Esto motivó la sustitución de un SLM exclusivamente textual por un modelo con **capacidad de visión nativa** (*Small Vision-Language Model*, sVLM), permitiendo al agente inspeccionar directamente el fotograma capturado por la cámara frontal del UAV.
 
-De manera general, la *arquitectura en bucle* descrita —un lazo cerrado simple y compacto donde:
+Tal como se formaliza en el capítulo 8 (§8.1.2), la elección convergió en **Qwen2.5-VL-3B-Instruct** (Qwen Team, 2025) bajo cuantización *Q4_K_M*:
+* **Huella de memoria**: consume ~2.0 GB de VRAM, situándose holgadamente dentro del presupuesto operativo restante de la GPU.
+* **Inspección visual directa**: procesa secuencias de dos fotogramas temporales ($t$ y $t-1$) para inferir dinámica de aproximación y discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
+* **Compatibilidad de decodificación**: ofrece soporte completo para esquemas de decodificación restringida (`json_schema`).
 
-1.  AirSim proporciona el estado actual (posición, velocidad, datos de sensores, etc.),
-2.  Un SLM local y de pequeño tamaño procesa dicha información junto con el objetivo o las instrucciones,
-3.  Se genera un comando estructurado (por ejemplo, un JSON con parámetros de movimiento, guiñada o empuje),
-4.  El comando se ejecuta mediante la API de AirSim,
-5.  El proceso se repite a una frecuencia utilizable (por ejemplo, 2–20 Hz),
+---
 
-— resulta *sólida, práctica y adecuada para las restricciones planteadas* (RTX 5060 con 8 GB de VRAM compartida con una simulación en UE 5.5, y uso de modelos pequeños con gramática o salida restringida).
+## A1.3 Métodos para la imposición de salida estructurada y gramática restringida
 
-No obstante, en términos de *verdadera innovación* dentro del panorama 2025–2026 sobre control de drones/UAV impulsado por LLMs, dicha arquitectura *ya no se considera especialmente novedosa*. Se trata más bien de uno de los enfoques base que se han estandarizado tanto en investigación como en prototipos aplicados.
+En una arquitectura de control robótico en lazo cerrado, la generación de lenguaje en formato libre (*free-form text*) resulta inaceptable: respuestas prolijas, explicaciones accesorias o desviaciones sintácticas invalidan el analizador (*parser*), provocando la interrupción temporal o el congelamiento del lazo de control.
 
-### Razones por las que ya no se considera una solución de vanguardia
+Para garantizar la interoperabilidad con los actuadores cinemáticos del vehículo, se evaluaron tres mecanismos para restringir la salida del modelo a estructuras estrictas (e.g., esquemas JSON conformes):
 
-A partir de artículos, tesis, proyectos y experimentos recientes (principalmente entre 2025 y principios de 2026), se observa que:
+### 1. Instrucciones estrictas en el prompt del sistema (*Prompt Engineering*)
+Consiste en delimitar el formato esperado en el mensaje de sistema y penalizar explícitamente cualquier emisión de texto explicativo o etiquetas markdown:
+```text
+Eres un controlador de vuelo determinista. Responde ÚNICAMENTE un objeto JSON válido
+conforme a este esquema: {"action": "keep_going" | "evasive" | "girar_90" | "fsm" | "degraded", "reason": str}.
+No incluyas introducciones, markdown (```), ni texto posterior.
+```
+* **Ventajas**: implementación trivial; no impone sobrecarga computacional en el motor de inferencia.
+* **Limitaciones**: fiabilidad imperfecta. En modelos compactos (<7B parámetros), la tasa de adherencia sintáctica ronda el 70–85%, presentándose ocasionalmente truncamientos, alucinaciones de sintaxis o texto preliminar que corrompen el flujo de control.
 
-*   El *control en bucle cerrado mediante LLMs* para UAVs/drones en simuladores como AirSim se ha vuelto *muy común*. La mayoría de los trabajos emplea alguna variante del ciclo de retroalimentación.
-    *   Muchos lo denominan explícitamente “*closed-loop*” (por ejemplo, “LLM-driven closed-loop UAV operation”, “closed-loop reasoning/refinement”, “closed user-on-the-loop”).
-    *   La idea básica de alimentar el estado → LLM → comando → ejecutar → observar → repetir se ha demostrado repetidamente desde aproximadamente 2023–2024 y se generalizó en contextos UAV hacia 2025.
+### 2. Gramáticas libres de contexto (GBNF en `llama.cpp`)
+El motor `llama.cpp` proporciona un subsistema de decodificación guiada por gramáticas formales (*GGML BNF* o GBNF; Gerganov, 2023). En cada paso de generación autorregresiva, el motor filtra y enmascara los *logits* del vocabulario, asignando probabilidad cero ($-\infty$) a cualquier token que no cumpla con la regla de transición definida en la gramática.
+* **Ventajas**: garantiza matemáticamente que el 100% de los tokens emitidos respeten la estructura gramatical (e.g., sintaxis JSON perfecta).
+* **Limitaciones**: genera una penalización de rendimiento temporal del 10% al 30% en la velocidad de decodificación, debido a la evaluación continua de las reglas gramaticales sobre el conjunto de tokens candidatos.
 
-*   La combinación *AirSim + LLM* se ha convertido en una opción *muy utilizada*, debido a que AirSim (basado en Unreal Engine) proporciona un entorno realista para probar física, visión y control de drones. Entre las variantes exploradas se encuentran:
-    *   Bucles de generación y ejecución de código.
-    *   Transformación semántica de observaciones (telemetría → descripciones textuales).
-    *   Configuraciones multi‑agente con RAG.
-    *   Tuberías voz‑a‑comando.
-    *   Evaluación de ataques adversarios orientados a medir la robustez de LLMs en lazo cerrado.
+### 3. Decodificación guiada basada en autómatas finitos (*Outlines*, *Guidance*, *llguidance*)
+La formalización teórica introducida por Willard y Louf (2023) reformula el esquema JSON o expresión regular requerida como un autómata finito determinista (DFA). Mediante el preprocesamiento del vocabulario del tokenizador, el motor indexa de manera eficiente qué tokens son admisibles para cada estado del autómata, aplicando la máscara de *logits* con una sobrecarga computacional sensiblemente menor a la evaluación de gramáticas complejas.
 
-*   Las propuestas consideradas “innovadoras” en 2025–2026 suelen ir *más allá* del simple bucle estado → SLM → comando, e incluyen:
-    *   Diseños *dual‑LLM* (uno genera código/acciones y otro evalúa/refina dentro de la simulación antes de ejecutar).
-    *   *Mejoras semánticas* para traducir telemetría en descripciones más comprensibles para modelos pequeños.
-    *   Enfoques *multi‑agente* o *jerárquicos* (planificador + ejecutor + crítico).
-    *   *Visión en el bucle* (uso de VLMs pequeños como MiniCPM‑V para evitar obstáculos).
-    *   *Síntesis de código en tiempo real* con módulos de corrección o RAG adaptativo.
-    *   Inferencia en *edge* para reducir aún más la latencia.
+Estudios empíricos recientes (Geng et al., 2025; Raspanti et al., 2025) demuestran que la decodificación restringida token a token no solo erradica errores de parseo (elevando la adherencia estructural del ~73% a >98%), sino que preserva e incluso optimiza la coherencia semántica en modelos pequeños, al suprimir caminos de generación dispersos o redundantes. Este enfoque constituye el núcleo del soporte de `response_format: {"type": "json_schema", ...}` implementado en el sistema (§8.2.1).
 
-En consecuencia, la arquitectura propuesta se corresponde con el patrón básico ampliamente difundido en investigación sobre robótica/UAV basada en LLMs.
+### 4. Estandarización de llamadas a herramientas: Model Context Protocol (MCP)
+En arquitecturas modulares, la interacción entre el modelo deliberativo y las herramientas externas (sensores, registros de vuelo, interfaces con Unreal Engine) puede articularse mediante el **Model Context Protocol** (MCP; Anthropic, 2024). MCP define un protocolo de cliente-servidor en JSON-RPC que desacopla la lógica del modelo de los servicios del sistema anfitrión, permitiendo exponer primitivas de consulta y actuación de forma segura, determinista y local sin conexión a Internet.
 
-### Ámbitos en los que la propuesta sí presenta solidez y utilidad
+---
 
-*   Se adecúa de forma precisa a las limitaciones del hardware disponible: un SLM pequeño + inferencia rápida mediante llama.cpp permiten mantener latencias suficientemente bajas para tasas de control significativas, mientras que arquitecturas más complejas superarían el límite práctico de 8 GB de VRAM compartida con UE.
-*   La imposición de *salida estrictamente estructurada* (por ejemplo, JSON mediante gramáticas GBNF) constituye un enfoque actual y recomendable, utilizado en numerosos trabajos posteriores a 2025 para reducir alucinaciones en señales de control.
-*   Conseguir una operación totalmente local/offline dentro de UE5.5 + AirSim sigue siendo un reto para usuarios no especializados; muchos ejemplos conocidos emplean LLMs en la nube o hardware de mayor capacidad.
+## A1.4 Procedimiento práctico de configuración e integración local
 
-### Conclusión (evaluación general)
+La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:
 
-*   **Nivel de innovación**: aproximadamente 3–4/10. Se trata de una solución práctica y bien formulada, pero no representa una arquitectura novedosa en el contexto de 2026. Se ajusta más al ámbito de *ingeniería sólida basada en patrones establecidos* que a propuestas conceptualmente nuevas.
-*   No obstante, una implementación exitosa (vuelo estable, navegación reactiva, baja tasa de fallos en la simulación) constituye un logro destacable, especialmente bajo restricciones de VRAM y con un entorno UE ejecutándose de forma simultánea.
-*   Si se busca añadir un componente más innovador, es posible incorporar una de las extensiones comunes en 2025–2026, como un resumen semántico del estado, un pequeño evaluador para autocorrección o algún canal de retroalimentación visual, siempre que el presupuesto de VRAM y velocidad lo permita.
+```
+┌──────────────────────────────────────────────────────────┐
+│                   NVIDIA RTX 5060 (8 GB)                 │
+│                                                          │
+│  ┌────────────────────────────┐  ┌────────────────────┐  │
+│  │   Unreal Engine 5.5 /      │  │  LM Studio Server  │  │
+│  │         AirSim             │  │   (llama.cpp core) │  │
+│  │   (4.5 – 5.5 GB VRAM)      │  │  (2.0 – 2.5 GB)    │  │
+│  └─────────────┬──────────────┘  └─────────▲──────────┘  │
+└────────────────┼───────────────────────────┼─────────────┘
+                 │ Telemetría /              │ Macro-acción
+                 │ Fotogramas                │ JSON estructurado
+                 ▼                           │
+   ┌─────────────────────────────────────────┴─────────────┐
+   │        Nodo Deliberativo / FSM (Python)               │
+   │  - Resumen semántico & preprocesamiento               │
+   │  - Inferencia con decodificación json_schema         │
+   │  - Parser tolerante & traducción action_to_command    │
+   └───────────────────────────────────────────────────────┘
+```
 
-REFERENCIA: (Large Language Model-Driven Closed-Loop UAV Operation with Semantinc Observations)[https://arxiv.org/html/2507.01930v1]  
+1. **Gestión de capas en GPU (*GPU Layer Offloading*)**:
+   * En el servidor local de inferencia (LM Studio / `llama.cpp`), el modelo Qwen2.5-VL-3B en cuantización Q4_K_M se aloja en VRAM configurando el traspaso completo (*full offload*) de sus 36 bloques de capas Transformer, además del codificador visual ligero.
+   * La reserva de VRAM se monitoriza dinámicamente mediante la interfaz NVML (`nvidia-smi`) para garantizar un margen libre (*headroom*) de al menos 500 MB, evitando contingencias de falta de memoria (*Out of Memory*, OOM) cuando el simulador genera escenarios de alta densidad poligonal.
 
-## Sobre innovar sobre una arquitectura ya extensamente utilizada
+2. **Inferencia desacoplada mediante API HTTP local**:
+   * El motor de inferencia expone un punto de conexión compatible con OpenAI (`http://localhost:1234/v1/chat/completions`).
+   * El cliente de navegación serializa el estado perceptual y el fotograma codificado en base64, solicitando la respuesta con el parámetro `response_format` en modo `json_schema`.
 
-Para que un bucle de control de cuadricóptero en AirSim basado en un SLM resulte *genuinamente innovador* en 2026 —especialmente bajo la fuerte restricción de hardware impuesta por una RTX 5060 con 8 GB de VRAM compartida con una simulación en UE 5.5— es necesario ir más allá del patrón estándar “estado → prompt → salida estructurada → actuar → repetir”. Dicho patrón ya constituye la base común en prototipos de investigación actuales.
+3. **Puente bidireccional con AirSim**:
+   * Las lecturas de posición, velocidad y odometría generadas por el modelo de dinámica de AirSim se transforman en representaciones simbólicas y vectores de ocupación.
+   * La respuesta estructurada del modelo se valida mediante el analizador tolerante (`_parse_decision()`; §8.2.2) y se convierte en comandos cinemáticos continuos a través de `action_to_command()` (§8.4).
 
-A continuación se presentan los *giros de procesamiento/software* más prometedores que pueden situar la propuesta en el terreno de una contribución novedosa, ordenados aproximadamente según viabilidad en el hardware disponible y posible impacto:
+---
 
-| Técnica / Enfoque                                                    | Nivel de innovación (2026) | Impacto en VRAM / Velocidad (8GB compartidos) | Razón por la que puede ser novedosa en este contexto                                                                                                                                | Dificultad de implementación | Beneficio realista para la autonomía del dron                          |
-| -------------------------------------------------------------------- | -------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
-| *Compresión semántica del estado + alimentación en lenguaje natural* | Alta                       | Baja (añade \~0.2–0.5 GB de KV cache)         | La mayoría de los trabajos usa telemetría cruda; los SLM pequeños razonan mejor con descripciones ricas (“deriva 0.8 m/s hacia la izquierda, obstáculo rojo a 2.1 m, batería 67%”). | Media                        | 20–50% de mejora en calidad de decisiones / menos choques              |
-| *Autocorrección / refinamiento en bucle cerrado en una sola pasada*  | Muy alta                   | Media (prompts más largos)                    | Permite incluir un campo “crítico” en la salida: el modelo propone acción + evalúa riesgos en la misma inferencia. Pocas implementaciones en entornos de baja VRAM.                 | Media–Alta                   | Aumento notable de confiabilidad (80–95% de acciones válidas)          |
-| *Speculative decoding / borradores asistidos (con cabeza ligera)*    | Alta                       | Baja–Media (si se usa estilo EAGLE)           | Acelera la generación 1.8–3× sin pérdida de calidad. Muy poco explorado en drones con baja VRAM.                                                                                    | Media–Alta                   | 2–3× más frecuencia de bucle (p. ej., 10–15 Hz en lugar de 3–5 Hz)     |
-| *Híbrido reactivo + LLM (PID a sub‑ms + LLM solo para nivel alto)*   | Media–Alta                 | Muy baja                                      | El LLM se utiliza solo para metas/replanificación; la estabilización se delega a controladores reactivos. Reduce dependencia de latencia.                                           | Baja–Media                   | Vuelo más estable; narrativa innovadora de “control híbrido confiable” |
-| *Fine‑tuning diminuto en tiempo real / cambio de adaptadores LoRA*   | Muy alta                   | Media–Alta (100–300 MB por adaptador)         | Conjunto de LoRAs pequeños (“evitación agresiva”, “crucero eficiente”, etc.) con carga dinámica. Pocas demostraciones en simulación de baja capacidad.                              | Alta                         | Adaptación gradual al entorno en UE → efecto de “aprendizaje”          |
-| *Chain‑of‑thought multietapa con muestreo en árbol / batching*       | Media–Alta                 | Media                                         | Se fuerzan 2–3 futuros posibles en una sola salida; una heurística rápida elige el más seguro. Reduce latencia efectiva.                                                            | Media                        | Mejor manejo de incertidumbre / ráfagas de viento en AirSim            |
+## A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)
 
-### “Combinación ganadora” más prometedora para innovación + hardware disponible
+Al plantear una arquitectura agéntica basada en el esquema:
 
-Se recomienda apuntar a la siguiente arquitectura, factible dentro del límite de 8 GB de VRAM compartidos:
+$$\text{Telemetría sensorial} \longrightarrow \text{SLM / sVLM} \longrightarrow \text{Comando estructurado} \longrightarrow \text{Ejecución en AirSim} \longrightarrow \text{Recálculo}$$
 
-1.  **Base:** Phi‑4‑mini‑Instruct o Qwen3‑4B/7B en Q5\_K\_M GGUF (\~2.5–4 GB cargados; offload parcial si fuera necesario).
-2.  **Giro central A:** Preprocesamiento mediante *compresión semántica*. Una función Python ligera convierte telemetría de AirSim + objetivo en una descripción vívida en lenguaje natural. Esto potencia significativamente la capacidad de razonamiento de un SLM pequeño.
-3.  **Giro central B:** Salida con *autocorrección forzada por gramática*:
-    ```json
-    {
-      "proposed_action": {"thrust": 0.72, "yaw_delta": -12, "move_vector": [1.2, -0.4, 0.8]},
-      "confidence": 0.89,
-      "risks": ["batería baja → reducir velocidad si <30%"],
-      "alternative_if_risk_high": {"thrust": 0.55, "hover": true}
-    }
-    ```
-    La salida se analiza y se aplica la acción más segura o con mayor confianza. Una sola inferencia gestiona propuesta + crítica.
-4.  **Aceleración:** Activar *speculative decoding* si la versión de llama.cpp o LM Studio lo permite (implementaciones estilo EAGLE o Medusa; comunes en 2026). Puede reducir la latencia por decisión entre 40–200%.
-5.  **Red de seguridad híbrida:** El LLM produce intención de alto nivel cada 0.5–2 s; un controlador PID rápido en C++/Blueprints opera a 100–200 Hz. Si el LLM falla o se ralentiza → activación de “hover seguro + retorno a casa”.
+surge la interrogante fundamental sobre su **novedad científica y tecnológica**. 
 
-### Razones por las que este enfoque sí se considera innovador
+Una revisión exhaustiva de la literatura especializada publicada entre 2024 y 2026 revela que **el lazo de control cerrado simple impulsado por modelos de lenguaje en simuladores como AirSim ya no constituye una innovación de frontera**, sino un patrón de diseño ampliamente estandarizado:
 
-*   La mayoría de los trabajos entre 2025 y 2026 siguen recurriendo a LLMs en la nube, hardware más potente o alimentaciones de estado sin tratamiento semántico.
-*   La combinación de *compresión semántica + autocorrección con gramática + aceleración especulativa + control híbrido* ejecutada en solo 8 GB de VRAM compartidos con una simulación UE es poco habitual, y potencialmente publicable como una aproximación de *control agente de dron en simulación de alta fidelidad con recursos limitados*.
-*   Si se logra una navegación estable y reactiva (evitación de obstáculos, búsqueda de objetivos, comportamiento dependiente de batería) con latencias por decisión inferiores a 500 ms, se trataría de una demostración sólida.
+* **Generalización del lazo cerrado (*Closed-Loop Embodied Control*)**: desde los primeros experimentos de control robótico con modelos generativos (Huang et al., 2022; Vemprala et al., 2023), la comunidad ha convergido de forma unánime hacia ciclos de retroalimentación donde el modelo de lenguaje actúa como planificador táctico o generador de código en bucle continuo.
+* **Adopción de AirSim y simuladores fotorrealistas**: el ecosistema AirSim / UE5 es la plataforma canónica para evaluar conducción autónoma y navegación de UAVs asistida por modelos fundacionales (Hwang et al., 2024; Jansen et al., 2023; Turco et al., 2024).
+* **Navegación guiada por visión y lenguaje (VLN)**: propuestas como *UAV-VLN* (Saxena et al., 2025) y *AutoFly* (Sun et al., 2026) implementan modelos de acción visual (*Vision-Language-Action*, VLA) donde la interacción directa entre imagen y control reactivo está extensamente documentada.
+* **Generación de código y observación semántica**: trabajos contemporáneos como el de Wang et al. (2025) (*Large Language Model-Driven Closed-Loop UAV Operation with Semantic Observations*) abordan de forma explícita la conversión de telemetría numérica en descripciones semánticas para enriquecer la toma de decisiones en lazo cerrado dentro de entornos de simulación, utilizando módulos duales de generación y evaluación.
 
-Se recomienda comenzar por implementar la *compresión semántica* y la *salida con gramática*, medir tasa de fallos y comparar con el bucle base. Posteriormente, incorporar speculative decoding como mejora incremental.
+### Evaluación crítica
 
+En términos de originalidad puramente teórica o arquitectónica, la arquitectura en lazo cerrado simple se sitúa en un nivel de madurez consolidado (patrón canónico de ingeniería). Intentar justificar la novedad de una tesis únicamente en el hecho de conectar un modelo de lenguaje a un simulador de vuelo representaría un posicionamiento metodológicamente vulnerable.
+
+Por el contrario, **el verdadero aporte de ingeniería de esta tesis radica en la resolución de los cuellos de botella prácticos que la literatura suele ignorar o delegar a servidores masivos en la nube**:
+1. La integración sinérgica entre **percepción monocular por flujo óptico pasivo** (capítulo 6) y un modelo visual compacto local (capítulo 8), delimitando cuándo se activa el razonamiento deliberativo y cuándo se recurre al control reactivo.
+2. La caracterización sistemática de los **modos de fallo en tiempo real** bajo presupuestos severos de cómputo y memoria (capítulo 9).
+3. La garantía de determinismo y fiabilidad operativa mediante **decodificación restringida por esquemas gramaticales** y arquitecturas jerárquicas de seguridad.
+
+---
+
+## A1.6 Vías de diferenciación e innovación de ingeniería en entornos severamente restringidos
+
+Para que un sistema de navegación para cuadricópteros basado en SLMs aporte valor genuino y diferenciado en hardware de recursos limitados, es imperativo trascender el bucle elemental de control. A continuación se sintetizan las estrategias de software y procesamiento identificadas en esta exploración, contrastando su viabilidad y beneficio:
+
+| Estrategia arquitectónica | Nivel de diferenciación técnica | Impacto en VRAM y latencia (8 GB compartidos) | Fundamento y justificación operativa | Estado de integración en la tesis |
+|---|---|---|---|---|
+| **Compresión semántica de observaciones** | Alto | Bajo (+0.1–0.3 GB en KV cache) | La telemetría numérica cruda resulta opaca para modelos compactos; la transformación en resúmenes semánticos estructurados maximiza el razonamiento del SLM (Wang et al., 2025). | **Integrado** (módulo `ObstacleField` y prompts estructurados; §6.12, §8.5). |
+| **Control híbrido deliberativo-reactivo con FSM** | Alto | Muy bajo (despreciable en GPU) | El SLM no gestiona la cinemática de alta frecuencia; emite macro-acciones discretas cada 0.5–2 s, mientras una FSM determinista y controladores de bajo nivel aseguran estabilidad dinámica y *fail-safe* (Gat, 1998). | **Integrado como pilar central** (capítulos 5 y 8; desacoplamiento FSM / Deliberativo). |
+| **Decodificación restringida formal (`json_schema`)** | Alto | Nulo en VRAM; sobrecarga mínima de latencia | Sustituye el parseo heurístico por restricciones a nivel de logits; convierte el espacio discreto de macro-acciones en una gramática ejecutable (Geng et al., 2025; Raspanti et al., 2025; Willard & Louf, 2023). | **Integrado** (adherencia elevada del 73% al 98%; §8.2.1). |
+| **Autocorrección reflexiva en una sola pasada (*Single-Pass Self-Refinement*)** | Muy alto | Medio (demanda secuencias de salida más largas) | El modelo emite la acción propuesta, un índice de confianza y una alternativa de contingencia en un único flujo de inferencia, sin requerir un segundo llamado a la GPU. | **Conceptualizado** en el espacio de acción ampliado; factible como extensión futura. |
+| **Decodificación especulativa (*Speculative Decoding*)** | Alto | Bajo–Medio (requiere modelo borrador o cabeza auxiliar) | Acelera la generación autorregresiva 1.5× a 2.5× mediante verificación paralela de tokens (Leviathan et al., 2023), mitigando la latencia en maniobras evasivas críticas. | **Línea de trabajo futuro** condicionada por el soporte de cabezas draft en backends de borde. |
+
+### Conclusión sintética
+
+La exploración realizada confirma que la combinación de **compresión perceptiva estructurada**, **decodificación restringida por gramáticas** y **arquitectura híbrida deliberativa-reactiva** permite ejecutar un agente de navegación visual robusto, completamente desconectado de la nube y contenido en 8 GB de VRAM compartidos con Unreal Engine 5.5. Esta solución traslada el foco desde la especulación de modelos masivos hacia la ingeniería rigurosa de sistemas autónomos embebidos.

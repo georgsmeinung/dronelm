@@ -806,14 +806,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+      <a href="anexos/A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A2. SLM — Concepto y Ventajas
+    A2. Técnicas de Optimización en SLM
   
 
     
@@ -834,14 +834,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+      <a href="anexos/A3-OPTIMIZACION-LORA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A3. SLM — Optimización y Desafíos
+    A3. Optimización LoRA / QLoRA
   
 
     
@@ -862,14 +862,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+      <a href="anexos/A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A4. LoRA (Alternativa No Adoptada)
+    A4. Decodificación Restringida
   
 
     
@@ -890,14 +890,42 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+      <a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A5. Decodificación Restringida
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
   
 
     
@@ -1019,7 +1047,10 @@
 <h1 id="1-introduccion">1. Introducción<a class="headerlink" href="#1-introduccion" title="Permanent link">&para;</a></h1>
 <h2 id="11-motivacion-y-contexto">1.1 Motivación y contexto<a class="headerlink" href="#11-motivacion-y-contexto" title="Permanent link">&para;</a></h2>
 <p>Los drones autónomos han cruzado en los últimos años la frontera que separa la plataforma experimental de la infraestructura real. En el frente civil, el mercado global de UAVs comerciales alcanzó los USD 28,6 mil millones en 2025 con una proyección de superar los USD 52,1 mil millones en 2029, impulsado por entregas de última milla, movilidad aérea urbana, inspección de infraestructura crítica y agricultura de precisión (Dataintelo, 2025). En el frente militar, la guerra en Ucrania consolidó al dron autónomo como el activo táctico más transformador del conflicto moderno: en 2024, Ucrania fabricó cerca de dos millones de drones y reentrenó modelos de inteligencia artificial con datos de combate real, multiplicando por tres o cuatro la tasa de impacto de sus sistemas aéreos (Breaking Defense, 2025). En ambos escenarios, el denominador técnico común es la misma exigencia: un vehículo de bajo costo debe percibir su entorno, tomar decisiones en milisegundos y actuar sin intervención humana directa en el lazo, con hardware de borde limitado y a menudo en ausencia de conectividad.</p>
-<p>Argentina enfrenta esta convergencia tecnológica con cuatro urgencias concretas y simultáneas. La primera es la vigilancia del litoral marítimo: la Zona Económica Exclusiva comprende aproximadamente 1,6 millones de km² —incluyendo áreas críticas para la pesca comercial, la seguridad marítima y la soberanía territorial en el Atlántico Sur y Malvinas—, un espacio imposible de cubrir de forma continua con medios tripulados a costo razonable. En mayo de 2026, Argentina formalizó un acuerdo con los Estados Unidos para incorporar drones militares VTOL Shield AI V-Bat y aeronaves de patrulla bajo la <em>Maritime Domain Situational Awareness Initiative</em> (Infobae, 2026), y una propuesta legislativa de julio de 2026 impulsa la creación de un Sistema Nacional de Vigilancia Marítima con UAVs (El Estratégico, 2026). La segunda es la respuesta temprana a incendios forestales: los incendios en la Patagonia y el litoral fluvial son uno de los riesgos ambientales y económicos más severos del país; el Ministerio de Ambiente ya incorporó 17 UAVs autónomos en parques nacionales de Neuquén y Chubut, y la Provincia de Misiones avanza en despacho autónomo de drones inmediatamente tras la detección de una columna de humo. La tercera es la agricultura de precisión, el dominio de adopción más masiva y de crecimiento más acelerado del agro argentino: la superficie tratada con drones pasó de 50.000 hectáreas en 2024 a un millón de hectáreas en julio de 2025, con una proyección de superar los dos millones al cierre de la campaña gruesa 2026 (Dataportuaria, 2026), impulsada por una flota que creció de 90 equipos importados en 2023 a 600 en agosto de 2024 y una proyección de 2.000 unidades operativas para 2025 (Infocampo, 2025). El uso dominante es la pulverización dirigida de fitosanitarios y la fertilización —con rendimientos de hasta 35 ha/hora—, pero la Red de Drones del INTA, con más de 65 investigadores y 22 pilotos licenciados distribuidos en el país, ya despliega la tecnología en fenotipado de cultivos extensivos, detección temprana de enfermedades en frutales y vid, y monitoreo ganadero (INTA, 2025). Es, además, un dominio donde la autonomía de decisión ya se explora activamente: INTA y la Universidad Nacional de Catamarca ensayan drones con reconocimiento por IA para detectar y corregir en tiempo real fallas de plantación de caña de azúcar en el NOA (Agrolatam, 2025). El crecimiento no está acompañado por un marco regulatorio específico: el SENASA todavía no estableció un régimen propio para la aplicación de fitosanitarios con drones, pese a la actualización de las normas de aviación no tripulada (Infocampo, 2025) —el mismo tipo de vacío regulatorio que atraviesa los otros tres dominios de este trabajo—. La cuarta urgencia es la que articula directamente el entorno experimental de este trabajo: la seguridad y la logística aérea urbana en Buenos Aires. La Ciudad Autónoma de Buenos Aires abrió en 2025 el marco para la entrega comercial con drones (iProfesional, 2025), y la ANAC publicó la Resolución 319/2025 —que aprueba la Parte 100 del Reglamento Aeronáutico Civil Argentino— y la Resolución 550/2025, que desregulan y simplifican la operación de aeronaves no tripuladas en el espacio aéreo nacional. Pero la operación de UAVs en ese mismo tejido urbano ya no es una promesa regulatoria sino una práctica establecida: el Escuadrón de Drones de la Policía de la Ciudad —integrado a un sistema de videovigilancia con 850 puntos de captura, 3.400 cámaras y 82 % de cobertura territorial a julio de 2025, sostenido por una inversión cercana a los USD 48 millones (Perfil, 2026)— vuela unidades DJI Matrice 200 con seguimiento automático de personas y vehículos y sensores capaces de detectar cables de un milímetro de diámetro, en misiones de apoyo a persecuciones, localización de focos de incendio y búsqueda de personas extraviadas, incluso sobre la Reserva Ecológica y el Riachuelo (Buenos Aires Ciudad, 2023). Buenos Aires concentra en su tejido urbano los desafíos técnicos más exigentes del dominio: densidad edilicia extrema en el Microcentro y Palermo con cañones de 8–12 pisos, degradación severa del GPS dentro de esos cañones, cables de alta y baja tensión a baja altura, interferencia electromagnética y proximidad al espacio controlado de Aeroparque. En los cuatro dominios, el problema técnico de fondo es idéntico: decidir, en tiempo real y con percepción limitada, qué hacer a continuación.</p>
+<p>Argentina enfrenta esta convergencia tecnológica con cuatro urgencias concretas y simultáneas. La primera es la vigilancia del litoral marítimo: la Zona Económica Exclusiva comprende aproximadamente 1,6 millones de km² —incluyendo áreas críticas para la pesca comercial, la seguridad marítima y la soberanía territorial en el Atlántico Sur y Malvinas—, un espacio imposible de cubrir de forma continua con medios tripulados a costo razonable. En mayo de 2026, Argentina formalizó un acuerdo con los Estados Unidos para incorporar drones militares VTOL Shield AI V-Bat y aeronaves de patrulla bajo la <em>Maritime Domain Situational Awareness Initiative</em> (Infobae, 2026), y una propuesta legislativa de julio de 2026 impulsa la creación de un Sistema Nacional de Vigilancia Marítima con UAVs (El Estratégico, 2026). </p>
+<p>La segunda es la respuesta temprana a incendios forestales: los incendios en la Patagonia y el litoral fluvial son uno de los riesgos ambientales y económicos más severos del país; el Ministerio de Ambiente ya incorporó 17 UAVs autónomos en parques nacionales de Neuquén y Chubut, y la Provincia de Misiones avanza en despacho autónomo de drones inmediatamente tras la detección de una columna de humo. </p>
+<p>La tercera es la agricultura de precisión, el dominio de adopción más masiva y de crecimiento más acelerado del agro argentino: la superficie tratada con drones pasó de 50.000 hectáreas en 2024 a un millón de hectáreas en julio de 2025, con una proyección de superar los dos millones al cierre de la campaña gruesa 2026 (Dataportuaria, 2026), impulsada por una flota que creció de 90 equipos importados en 2023 a 600 en agosto de 2024 y una proyección de 2.000 unidades operativas para 2025 (Infocampo, 2025). El uso dominante es la pulverización dirigida de fitosanitarios y la fertilización —con rendimientos de hasta 35 ha/hora—, pero la Red de Drones del INTA, con más de 65 investigadores y 22 pilotos licenciados distribuidos en el país, ya despliega la tecnología en fenotipado de cultivos extensivos, detección temprana de enfermedades en frutales y vid, y monitoreo ganadero (INTA, 2025). Es, además, un dominio donde la autonomía de decisión ya se explora activamente: INTA y la Universidad Nacional de Catamarca ensayan drones con reconocimiento por IA para detectar y corregir en tiempo real fallas de plantación de caña de azúcar en el NOA (Agrolatam, 2025). El crecimiento no está acompañado por un marco regulatorio específico: el SENASA todavía no estableció un régimen propio para la aplicación de fitosanitarios con drones, pese a la actualización de las normas de aviación no tripulada (Infocampo, 2025) —el mismo tipo de vacío regulatorio que atraviesa los otros tres dominios de este trabajo—. </p>
+<p>La cuarta urgencia es la que articula directamente el entorno experimental de este trabajo: la seguridad y la logística aérea urbana en Buenos Aires. La Ciudad Autónoma de Buenos Aires abrió en 2025 el marco para la entrega comercial con drones (iProfesional, 2025), y la ANAC publicó la Resolución 319/2025 —que aprueba la Parte 100 del Reglamento Aeronáutico Civil Argentino— y la Resolución 550/2025, que desregulan y simplifican la operación de aeronaves no tripuladas en el espacio aéreo nacional. Pero la operación de UAVs en ese mismo tejido urbano ya no es una promesa regulatoria sino una práctica establecida: el Escuadrón de Drones de la Policía de la Ciudad —integrado a un sistema de videovigilancia con 850 puntos de captura, 3.400 cámaras y 82 % de cobertura territorial a julio de 2025, sostenido por una inversión cercana a los USD 48 millones (Perfil, 2026)— vuela unidades DJI Matrice 200 con seguimiento automático de personas y vehículos y sensores capaces de detectar cables de un milímetro de diámetro, en misiones de apoyo a persecuciones, localización de focos de incendio y búsqueda de personas extraviadas, incluso sobre la Reserva Ecológica y el Riachuelo (Buenos Aires Ciudad, 2023). Buenos Aires concentra en su tejido urbano los desafíos técnicos más exigentes del dominio: densidad edilicia extrema en el Microcentro y Palermo con cañones de 8–12 pisos, degradación severa del GPS dentro de esos cañones, cables de alta y baja tensión a baja altura, interferencia electromagnética y proximidad al espacio controlado de Aeroparque. En los cuatro dominios, el problema técnico de fondo es idéntico: decidir, en tiempo real y con percepción limitada, qué hacer a continuación.</p>
 <p>La navegación autónoma en entornos urbanos densos agrega capas de dificultad que no aparecen en espacios abiertos: alta densidad de obstáculos fijos y móviles, degradación de la señal GPS por la altura de los edificios (<em>urban canyon</em>), variaciones extremas de iluminación y, en el contexto latinoamericano en particular, restricciones de presupuesto que descartan sensores costosos como el LiDAR y la obligación de operar bajo marcos regulatorios específicos (Resolución ANAC 880/2019; Decreto 663/2024). Un dron sin percepción confiable y sin capacidad de decisión robusta representa un riesgo tangible: puede colisionar, invadir zonas sensibles o interferir con otras operaciones, con consecuencias humanas y económicas concretas (Samy et al., 2019; Aldao et al., 2022).</p>
 <p>Este trabajo se enmarca en esa tensión: cómo dotar a un cuadricóptero eVTOL de navegación autónoma reactiva usando exclusivamente visión monocular y hardware de bajo costo —sin redes neuronales de detección, sin LiDAR, sin GPU dedicada de alto costo—, manteniendo rigor metodológico y un diseño de seguridad explícito.</p>
 <h2 id="12-objetivos">1.2 Objetivos<a class="headerlink" href="#12-objetivos" title="Permanent link">&para;</a></h2>

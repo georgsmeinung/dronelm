@@ -1,0 +1,2006 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A4-DECODIFICACION-RESTRINGIDA.html">
+      
+      
+        <link rel="prev" href="A3-OPTIMIZACION-LORA.html">
+      
+      
+        <link rel="next" href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A4. Decodificación Restringida - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-4-decodificacion-restringida-gramaticas-formales-y-generacion-estructurada-para-el-control-tactico-del-slm" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A4. Decodificación Restringida
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a41-el-problema-de-la-salida-no-estructurada-en-sistemas-ciberfisicos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.1 El problema de la salida no estructurada en sistemas ciberfísicos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.1 El problema de la salida no estructurada en sistemas ciberfísicos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a411-modos-de-falla-de-la-decodificacion-libre-en-dronelm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.1.1 Modos de falla de la decodificación libre en DroneLM
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2 Fundamentos matemáticos y formales de la decodificación restringida
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.2 Fundamentos matemáticos y formales de la decodificación restringida">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a421-formulacion-del-enmascaramiento-de-logits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2.1 Formulación del enmascaramiento de logits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a422-modelado-mediante-automatas-finitos-dfa-y-automatas-de-pila-pda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2.2 Modelado mediante Autómatas Finitos (DFA) y Autómatas de Pila (PDA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a423-el-desafio-de-la-tokenizacion-sub-palabra-tokenization-boundary-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2.3 El desafío de la tokenización sub-palabra (Tokenization Boundary Problem)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a43-mecanismos-de-aceleracion-por-que-la-decodificacion-restringida-es-mas-rapida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3 Mecanismos de aceleración: ¿por qué la decodificación restringida es más rápida?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.3 Mecanismos de aceleración: ¿por qué la decodificación restringida es más rápida?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a431-poda-drastica-de-la-longitud-de-generacion-output-length-reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.1 Poda drástica de la longitud de generación (Output Length Reduction)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a432-avance-rapido-de-tokens-token-fast-forwarding-token-jumping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.2 Avance rápido de tokens (Token Fast-Forwarding / Token Jumping)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a433-particion-de-vocabulario-y-pre-calculo-de-mascaras-xgrammar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.3 Partición de vocabulario y pre-cálculo de máscaras (XGrammar)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a434-decodificacion-especulativa-basada-en-gramaticas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.4 Decodificación especulativa basada en gramáticas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.4 Optimización del Grafo de Control (StateGraph) mediante Decodificación Restringida
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.4 Optimización del Grafo de Control (StateGraph) mediante Decodificación Restringida">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.4.1 Invariantes del lazo táctico garantizados por la gramática
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a45-especificacion-tecnica-y-sintaxis-de-gramaticas-json-schema-vs-gbnf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.5 Especificación técnica y sintaxis de gramáticas: JSON Schema vs. GBNF
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.5 Especificación técnica y sintaxis de gramáticas: JSON Schema vs. GBNF">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a451-definicion-mediante-json-schema-estandar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.5.1 Definición mediante JSON Schema estándar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a452-definicion-mediante-gramatica-gbnf-gerganov-bnf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.5.2 Definición mediante gramática GBNF (Gerganov BNF)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a46-procedimiento-detallado-de-implementacion-paso-a-paso-en-dronelm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.6 Procedimiento detallado de implementación paso a paso en DroneLM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.6 Procedimiento detallado de implementación paso a paso en DroneLM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-1-modelado-estricto-con-pydantic-y-generacion-dinamica-de-esquemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 1: Modelado estricto con Pydantic y generación dinámica de esquemas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-2-configuracion-del-cliente-en-deliberationservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 2: Configuración del cliente en DeliberationService
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-3-analisis-tolerante-de-defensa-en-profundidad-_parse_decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 3: Análisis tolerante de defensa en profundidad (_parse_decision)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-4-sincronizacion-con-el-perro-guardian-y-velocidad-de-deslizamiento-creep-speed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 4: Sincronización con el perro guardián y velocidad de deslizamiento (Creep Speed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a47-comparativa-de-motores-y-ecosistemas-de-decodificacion-estructurada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.7 Comparativa de motores y ecosistemas de decodificación estructurada
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a48-conclusiones-del-anexo-y-balance-de-ingenieria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.8 Conclusiones del anexo y balance de ingeniería
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a41-el-problema-de-la-salida-no-estructurada-en-sistemas-ciberfisicos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.1 El problema de la salida no estructurada en sistemas ciberfísicos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.1 El problema de la salida no estructurada en sistemas ciberfísicos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a411-modos-de-falla-de-la-decodificacion-libre-en-dronelm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.1.1 Modos de falla de la decodificación libre en DroneLM
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2 Fundamentos matemáticos y formales de la decodificación restringida
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.2 Fundamentos matemáticos y formales de la decodificación restringida">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a421-formulacion-del-enmascaramiento-de-logits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2.1 Formulación del enmascaramiento de logits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a422-modelado-mediante-automatas-finitos-dfa-y-automatas-de-pila-pda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2.2 Modelado mediante Autómatas Finitos (DFA) y Autómatas de Pila (PDA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a423-el-desafio-de-la-tokenizacion-sub-palabra-tokenization-boundary-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.2.3 El desafío de la tokenización sub-palabra (Tokenization Boundary Problem)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a43-mecanismos-de-aceleracion-por-que-la-decodificacion-restringida-es-mas-rapida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3 Mecanismos de aceleración: ¿por qué la decodificación restringida es más rápida?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.3 Mecanismos de aceleración: ¿por qué la decodificación restringida es más rápida?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a431-poda-drastica-de-la-longitud-de-generacion-output-length-reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.1 Poda drástica de la longitud de generación (Output Length Reduction)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a432-avance-rapido-de-tokens-token-fast-forwarding-token-jumping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.2 Avance rápido de tokens (Token Fast-Forwarding / Token Jumping)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a433-particion-de-vocabulario-y-pre-calculo-de-mascaras-xgrammar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.3 Partición de vocabulario y pre-cálculo de máscaras (XGrammar)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a434-decodificacion-especulativa-basada-en-gramaticas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.3.4 Decodificación especulativa basada en gramáticas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.4 Optimización del Grafo de Control (StateGraph) mediante Decodificación Restringida
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.4 Optimización del Grafo de Control (StateGraph) mediante Decodificación Restringida">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.4.1 Invariantes del lazo táctico garantizados por la gramática
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a45-especificacion-tecnica-y-sintaxis-de-gramaticas-json-schema-vs-gbnf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.5 Especificación técnica y sintaxis de gramáticas: JSON Schema vs. GBNF
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.5 Especificación técnica y sintaxis de gramáticas: JSON Schema vs. GBNF">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a451-definicion-mediante-json-schema-estandar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.5.1 Definición mediante JSON Schema estándar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a452-definicion-mediante-gramatica-gbnf-gerganov-bnf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.5.2 Definición mediante gramática GBNF (Gerganov BNF)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a46-procedimiento-detallado-de-implementacion-paso-a-paso-en-dronelm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.6 Procedimiento detallado de implementación paso a paso en DroneLM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A4.6 Procedimiento detallado de implementación paso a paso en DroneLM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-1-modelado-estricto-con-pydantic-y-generacion-dinamica-de-esquemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 1: Modelado estricto con Pydantic y generación dinámica de esquemas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-2-configuracion-del-cliente-en-deliberationservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 2: Configuración del cliente en DeliberationService
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-3-analisis-tolerante-de-defensa-en-profundidad-_parse_decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 3: Análisis tolerante de defensa en profundidad (_parse_decision)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-4-sincronizacion-con-el-perro-guardian-y-velocidad-de-deslizamiento-creep-speed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paso 4: Sincronización con el perro guardián y velocidad de deslizamiento (Creep Speed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a47-comparativa-de-motores-y-ecosistemas-de-decodificacion-estructurada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.7 Comparativa de motores y ecosistemas de decodificación estructurada
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a48-conclusiones-del-anexo-y-balance-de-ingenieria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4.8 Conclusiones del anexo y balance de ingeniería
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<blockquote>
+<p><strong>Nota de ubicación:</strong> este documento constituye el estudio formal y la especificación técnica de los mecanismos de decodificación restringida (<em>constrained decoding</em>), gramáticas formales independientes del contexto (CFG / GBNF) y esquemas estructurados (<code>json_schema</code>). Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.2), el capítulo 5 (<code>05-ARQUITECTURA-LAZO-TACTICO.md</code>, §5.10), el capítulo 9 (<code>09-MODOS-DE-FALLA-LLM.md</code>) y los anexos A1, A2 y A3. Reubicado, reestructurado y ampliado como la guía integral de optimización del nodo deliberativo de DroneLM.</p>
+</blockquote>
+<hr />
+<h1 id="anexo-4-decodificacion-restringida-gramaticas-formales-y-generacion-estructurada-para-el-control-tactico-del-slm">Anexo 4: Decodificación restringida, gramáticas formales y generación estructurada para el control táctico del SLM<a class="headerlink" href="#anexo-4-decodificacion-restringida-gramaticas-formales-y-generacion-estructurada-para-el-control-tactico-del-slm" title="Permanent link">&para;</a></h1>
+<p>La incorporación de modelos de lenguaje pequeños (<em>Small Language Models</em>, SLMs) y modelos multimodales compactos (<em>Small Vision-Language Models</em>, sVLMs) en el lazo de control táctico de un vehículo aéreo no tripulado (UAV) introduce una paradoja arquitectónica fundamental: <strong>la naturaleza probabilística y estocástica de los modelos neuronales frente a los requerimientos deterministas, de baja latencia y tolerancia cero a fallas de sintaxis propios de la robótica aérea</strong>.</p>
+<p>En el diseño de DroneLM, el nodo deliberativo (<code>deliberative_node</code>, §5.10) está encargado de desempatar maniobras de evasión complejas, resolver atascos cinemáticos (<em>deadlocks</em>) e interpretar escenas visuales ambiguas cuando el estimador de flujo óptico colapsa (§6.12). Sin embargo, si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador sintáctico del lazo de control colapsa. En versiones tempranas del sistema, este modo de fallo provocaba la pérdida de 3 a 5 ciclos consecutivos de control mientras el dron avanzaba a ciegas o caía en modos de emergencia espurios (§8.2, §9.1).</p>
+<p>Este anexo desarrolla los fundamentos teóricos, los mecanismos algorítmicos y el procedimiento exhaustivo de ingeniería para implementar <strong>decodificación restringida (<em>constrained decoding</em>) basada en gramáticas formales y esquemas estrictos (<code>json_schema</code> / GBNF)</strong>. Se demuestra cómo esta técnica erradica las alucinaciones estructurales, comprime el tiempo de inferencia hasta en un 60–80% y optimiza el grafo de control (<code>StateGraph</code>) de DroneLM mediante gramáticas acotadas dinámicas adaptadas al contexto de vuelo.</p>
+<hr />
+<h2 id="a41-el-problema-de-la-salida-no-estructurada-en-sistemas-ciberfisicos">A4.1 El problema de la salida no estructurada en sistemas ciberfísicos<a class="headerlink" href="#a41-el-problema-de-la-salida-no-estructurada-en-sistemas-ciberfisicos" title="Permanent link">&para;</a></h2>
+<p>En la generación autorregresiva convencional, un modelo autoregresivo produce una secuencia de tokens muestreando de una distribución de probabilidad sobre la totalidad de su vocabulario $V$:</p>
+<p>$$y_t \sim P(y_t \mid y_{&lt;t}, x)$$</p>
+<p>donde $x$ representa la secuencia del prompt de entrada e $y_{&lt;t} = (y_1, \dots, y_{t-1})$ los tokens generados previamente. Para un modelo contemporáneo como <strong>Qwen2.5-VL-3B-Instruct</strong> (Qwen Team, 2025), el tamaño del vocabulario asciende a $|V| = 152\,064$ tokens.</p>
+<h3 id="a411-modos-de-falla-de-la-decodificacion-libre-en-dronelm">A4.1.1 Modos de falla de la decodificación libre en DroneLM<a class="headerlink" href="#a411-modos-de-falla-de-la-decodificacion-libre-en-dronelm" title="Permanent link">&para;</a></h3>
+<p>Cuando se solicita una salida JSON únicamente mediante instrucciones en el <em>system prompt</em> (<em>prompt engineering</em> puro), los modelos de 3B parámetros exhiben una tasa de incumplimiento sintáctico de entre el 20% y el 35% en condiciones de vuelo continuo (Geng et al., 2025; Raspanti et al., 2025). Los modos de falla documentados en DroneLM incluyen:
+1. <strong>Preámbulos y epílogos conversacionales:</strong> emisión de frases introductorias (<em>«Sure, here is the drone decision:»</em>) o explicaciones finales que rompen <code>json.loads()</code>.
+2. <strong>Encapsulamiento en Markdown irregular:</strong> uso intermitente de triples comillas invertidas (<code>```json ... ```</code>), a menudo con saltos de línea mal posicionados.
+3. <strong>Malformación sintáctica:</strong> comas terminales huérfanas (<em>trailing commas</em>), omisión de llaves de cierre <code>}</code> por corte de contexto o escape defectuoso de caracteres en cadenas.
+4. <strong>Alucinación de macro-acciones fuera de lista blanca:</strong> emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., <code>"girar_rapido"</code>, <code>"subir_diagonal"</code>, <code>"stop"</code> en lugar de <code>keep_going</code>, <code>evasive</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>).
+5. <strong>Latencia descontrolada por verbosidad:</strong> generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>) y forzando la degradación del lazo.</p>
+<div class="highlight"><pre><span></span><code>Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
+&quot;Based on the camera feed showing an obstacle ahead, the drone should initiate an evasive 
+ maneuver to the right corridor. Action: evasive_right, reason: obstacle in front.&quot;
+ ❌ Falla sintáctica: no es JSON parseable, rompe action_to_command(), timeout &gt; 1.5 s.
+
+Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
+{&quot;action&quot;:&quot;evasive&quot;,&quot;reason&quot;:&quot;bloqueo centro&quot;}
+ ✔ Estructura exacta, enum validado por gramática, latencia mínima, 100% parseable.
+</code></pre></div>
+<hr />
+<h2 id="a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida">A4.2 Fundamentos matemáticos y formales de la decodificación restringida<a class="headerlink" href="#a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida" title="Permanent link">&para;</a></h2>
+<p>La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (<em>logits</em>) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible (Willard &amp; Louf, 2023; Ugare et al., 2024; Dong et al., 2024).</p>
+<div class="highlight"><pre><span></span><code>                      ┌─────────────────────────────────┐
+                      │ Contexto / Prompt x + y_{&lt;t}    │
+                      └────────────────┬────────────────┘
+                                       │
+                                       ▼
+                      ┌─────────────────────────────────┐
+                      │   Paso Forward del Transformer  │
+                      └────────────────┬────────────────┘
+                                       │
+                                       ▼
+                       Logits crudos: z_t ∈ ℝ^|V|
+                                       │
+      ┌────────────────────────────────┼────────────────────────────────┐
+      │                                │                                │
+      │                                ▼                                │
+      │                     ┌────────────────────┐                      │
+      │                     │  Enmascaramiento   │                      │
+      │                     │  z&#39;_t = z_t + log M│                      │
+      │                     └─────────┬──────────┘                      │
+      │                               │                                 │
+      │                               ▼                                 │
+      │                     Logits filtrados z&#39;_t                       │
+      │                               │                                 │
+      │                               ▼                                 │
+      │                     Softmax / Argmax / Top-p                    │
+      │                               │                                 │
+      │                               ▼                                 │
+      │                     Token emitido: y_t ∈ V_válidos              │
+      │                               │                                 │
+      │                               ▼                                 │
+      │  ┌───────────────────────────────────────────────────────────┐  │
+      │  │      Motor de Gramática (Autómata Finito / Pushdown)      │  │
+      │  │  Actualiza estado s_{t+1} = δ(s_t, y_t)                   │  │
+      │  │  Calcula máscara booleana M(s_{t+1}) ∈ {0, 1}^|V|          │  │
+      │  └────────────────────────────┬──────────────────────────────┘  │
+      │                               │ Siguiente token                 │
+      └───────────────────────────────┴─────────────────────────────────┘
+</code></pre></div>
+<h3 id="a421-formulacion-del-enmascaramiento-de-logits">A4.2.1 Formulación del enmascaramiento de logits<a class="headerlink" href="#a421-formulacion-del-enmascaramiento-de-logits" title="Permanent link">&para;</a></h3>
+<p>Sea $z_t \in \mathbb{R}^{|V|}$ el vector de <em>logits</em> no normalizados producido por la última capa lineal del transformer en el paso $t$. Sea $s_t \in \mathcal{S}$ el estado actual del analizador sintáctico o autómata formal.</p>
+<p>La gramática define una función de transición de estados $\delta: \mathcal{S} \times V \to \mathcal{S} \cup {\text{error}}$ y una función de aceptación que determina qué tokens del vocabulario son continuaciones válidas:</p>
+<p>$$M_i(s_t) = \begin{cases} 1 &amp; \text{si } \delta(s_t, v_i) \neq \text{error} \ 0 &amp; \text{en caso contrario} \end{cases} \quad \forall v_i \in V$$</p>
+<p>El vector de logits filtrado $z'_t$ se computa mediante la adición de una máscara aditiva logarítmica:</p>
+<p>$$z'<em i="i" t_="t,">{t, i} = z</em>$$} + \log M_i(s_t) = \begin{cases} z_{t, i} &amp; \text{si } M_i(s_t) = 1 \ -\infty &amp; \text{si } M_i(s_t) = 0 \end{cases</p>
+<p>Al aplicar la función Softmax para obtener las probabilidades de muestreo normalizadas:</p>
+<p>$$P(y_t = v_i \mid y_{&lt;t}, x) = \frac{\exp(z'<em j="1">{t, i})}{\sum</em>$$}^{|V|} \exp(z'_{t, j})</p>
+<p>Cualquier token $v_j$ que conduzca a una violación de la gramática recibe un logit de $-\infty$, anulando su probabilidad ($\exp(-\infty) = 0$). Como resultado, <strong>es matemáticamente imposible que el modelo genere un token inválido según la gramática declarada</strong>.</p>
+<h3 id="a422-modelado-mediante-automatas-finitos-dfa-y-automatas-de-pila-pda">A4.2.2 Modelado mediante Autómatas Finitos (DFA) y Autómatas de Pila (PDA)<a class="headerlink" href="#a422-modelado-mediante-automatas-finitos-dfa-y-automatas-de-pila-pda" title="Permanent link">&para;</a></h3>
+<p>La complejidad del analizador depende de la expresividad de la restricción:
+1. <strong>Autómatas Finitos Deterministas (DFA):</strong> aplicables a expresiones regulares, listas cerradas de cadenas y enumeraciones fijas (<code>enum</code>). Willard y Louf (2023) demuestran que un esquema JSON con campos de profundidad fija puede compilarse directamente en un DFA. En este caso, la transición entre estados se resuelve en tiempo constante $\mathcal{O}(1)$.
+2. <strong>Autómatas de Pila (PDA):</strong> requeridos para gramáticas independientes del contexto (<em>Context-Free Grammars</em>, CFG) que admiten anidamientos arbitrarios de llaves, corchetes o estructuras recursivas (formato GBNF en <code>llama.cpp</code> y SynCode; Ugare et al., 2024). El PDA mantiene una pila de símbolos para validar el balanceo estricto de la sintaxis.</p>
+<h3 id="a423-el-desafio-de-la-tokenizacion-sub-palabra-tokenization-boundary-problem">A4.2.3 El desafío de la tokenización sub-palabra (<em>Tokenization Boundary Problem</em>)<a class="headerlink" href="#a423-el-desafio-de-la-tokenizacion-sub-palabra-tokenization-boundary-problem" title="Permanent link">&para;</a></h3>
+<p>Un obstáculo fundamental en la decodificación restringida radica en que los modelos de lenguaje no operan sobre caracteres individuales, sino sobre fragmentos de sub-palabras generados mediante algoritmos como <em>Byte-Pair Encoding</em> (BPE) o <em>SentencePiece</em>. </p>
+<p>Un token individual puede cruzar la frontera entre la sintaxis estática y el valor dinámico. Por ejemplo, el token <code>"action":</code> puede estar codificado como una única entrada léxica en el vocabulario, mientras que en otros tokenizadores se divide en <code>"</code> + <code>action</code> + <code>":</code>. </p>
+<p>Los motores modernos (Outlines, XGrammar, llama.cpp) resuelven esto construyendo un árbol de prefijos (<em>Trie</em>) sobre el vocabulario de sub-palabras indexado contra el autómata de la gramática. Durante la compilación previa, se identifican todos los tokens cuya secuencia de bytes constituye un prefijo válido para el estado actual del autómata, garantizando que el filtrado sea exacto a nivel de byte (Willard &amp; Louf, 2023; Dong et al., 2024).</p>
+<hr />
+<h2 id="a43-mecanismos-de-aceleracion-por-que-la-decodificacion-restringida-es-mas-rapida">A4.3 Mecanismos de aceleración: ¿por qué la decodificación restringida es más rápida?<a class="headerlink" href="#a43-mecanismos-de-aceleracion-por-que-la-decodificacion-restringida-es-mas-rapida" title="Permanent link">&para;</a></h2>
+<p>Existe una concepción errónea de que evaluar una gramática formal en cada paso de inferencia añade una sobrecarga computacional prohibitiva para sistemas en tiempo real. Si bien una implementación ingenua que verifique $150\,000$ tokens en CPU de forma secuencial introduciría una latencia sustancial, los motores optimizados de última generación <strong>pueden acelerar la generación global entre un 50% y un 80%</strong> en comparación con la inferencia en texto libre (Dong et al., 2024; Lundberg et al., 2023).</p>
+<p>Esta ganancia de eficiencia se sustenta en cuatro pilares de ingeniería:</p>
+<h3 id="a431-poda-drastica-de-la-longitud-de-generacion-output-length-reduction">A4.3.1 Poda drástica de la longitud de generación (<em>Output Length Reduction</em>)<a class="headerlink" href="#a431-poda-drastica-de-la-longitud-de-generacion-output-length-reduction" title="Permanent link">&para;</a></h3>
+<p>La complejidad temporal de la generación autorregresiva escala linealmente con el número de tokens producidos $K$:</p>
+<p>$$T_{\text{total}} = T_{\text{prefill}} + \sum_{k=1}^K T_{\text{decode}}(k)$$</p>
+<p>En una GPU de consumo cohabitada con simulación 3D (como la NVIDIA RTX 5060 de 8 GB utilizada en DroneLM), cada paso de decodificación autorregresiva de un modelo 3B insume entre <strong>18 ms y 25 ms</strong>. 
+* En texto libre, el modelo genera preámbulos, divagaciones o razonamientos extensos de 80 a 150 tokens ($T_{\text{decode}} \approx 1.5 - 3.2\text{ s}$), violando sistemáticamente el perro guardián del sistema.
+* Con decodificación restringida estricta, la salida se acota a exactamente la estructura mínima requerida (por ejemplo, 16 a 22 tokens en DroneLM). El tiempo de decodificación colapsa a <strong>$300 - 450\text{ ms}$</strong>, permitiendo al lazo deliberativo operar holgadamente dentro de su ventana temporal de seguridad.</p>
+<h3 id="a432-avance-rapido-de-tokens-token-fast-forwarding-token-jumping">A4.3.2 Avance rápido de tokens (<em>Token Fast-Forwarding / Token Jumping</em>)<a class="headerlink" href="#a432-avance-rapido-de-tokens-token-fast-forwarding-token-jumping" title="Permanent link">&para;</a></h3>
+<p>Marcos de trabajo como <strong>Guidance</strong> (Lundberg et al., 2023) y <strong>Outlines</strong> (Willard &amp; Louf, 2023) implementan una técnica crítica: <strong>el salto de tokens deterministas</strong>. </p>
+<p>Cuando el autómata de la gramática se encuentra en un estado donde la única continuación sintáctica posible es una secuencia fija de caracteres (por ejemplo, los caracteres sintácticos <code>{"action":"</code> o la clave <code>, "reason":"</code>), <strong>no existe incertidumbre probabilística</strong>. El motor de inferencia omite por completo el paso hacia adelante (<em>forward pass</em>) de la red neuronal para esos tokens. En su lugar:
+1. Concatena directamente los tokens estáticos en la secuencia generada.
+2. Inyecta sus representaciones en la memoria caché de claves y valores (<em>KV Cache</em>).
+3. Salta la ejecución del modelo en GPU hasta el punto exacto donde el modelo debe elegir un valor semántico libre (el valor de la macro-acción o el texto de la razón).</p>
+<p>Al saltarse entre 8 y 12 pasos de cómputo en la GPU por cada llamada deliberativa, la latencia neta cae drásticamente.</p>
+<h3 id="a433-particion-de-vocabulario-y-pre-calculo-de-mascaras-xgrammar">A4.3.3 Partición de vocabulario y pre-cálculo de máscaras (XGrammar)<a class="headerlink" href="#a433-particion-de-vocabulario-y-pre-calculo-de-mascaras-xgrammar" title="Permanent link">&para;</a></h3>
+<p>El motor <strong>XGrammar</strong> (Dong et al., 2024) optimiza la ejecución de gramáticas independientes del contexto dividiendo los tokens del vocabulario en dos categorías durante una fase de compilación inicial:
+* <strong>Tokens independientes del contexto:</strong> tokens cuyos patrones de aceptación dependen únicamente de reglas locales de caracteres y pueden precalcularse y almacenarse en mapas de bits compactos.
+* <strong>Tokens dependientes del contexto:</strong> aquellos que interactúan con la profundidad de la pila sintáctica (e.g., llaves y comillas anidadas).</p>
+<p>Durante la inferencia en tiempo real, XGrammar ejecuta el filtrado de máscaras en paralelo con el cómputo de la GPU o durante la fase de pre-llenado (<em>pre-fill</em>), reduciendo la sobrecarga de CPU a <strong>menos de 0.05 ms por token</strong> (prácticamente nula).</p>
+<h3 id="a434-decodificacion-especulativa-basada-en-gramaticas">A4.3.4 Decodificación especulativa basada en gramáticas<a class="headerlink" href="#a434-decodificacion-especulativa-basada-en-gramaticas" title="Permanent link">&para;</a></h3>
+<p>En sistemas avanzados, las restricciones gramaticales se combinan con <strong>decodificación especulativa</strong> (Leviathan et al., 2023; Dong et al., 2024). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo <code>action</code>, solo 5 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de $2\times$ a $3\times$.</p>
+<hr />
+<h2 id="a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida">A4.4 Optimización del Grafo de Control (<code>StateGraph</code>) mediante Decodificación Restringida<a class="headerlink" href="#a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida" title="Permanent link">&para;</a></h2>
+<p>La interacción entre el modelo de lenguaje y el grafo de control táctico (<code>src/agents/graph.py</code>) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una <strong>arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo</strong>.</p>
+<h3 id="a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica">A4.4.1 Invariantes del lazo táctico garantizados por la gramática<a class="headerlink" href="#a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica" title="Permanent link">&para;</a></h3>
+<p>En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los nodos de política (<code>reactive_node</code>, <code>evasive_node</code>, <code>deliberative_node</code>, <code>girar_90_node</code>) convergen en una interfaz estricta gobernada por <code>action_to_command()</code> (§8.4):</p>
+<div class="highlight"><pre><span></span><code>                                  ┌───────────────────────────┐
+                                  │      policy_router        │
+                                  └─────────────┬─────────────┘
+                                                │
+                 ┌──────────────────────────────┼──────────────────────────────┐
+                 ▼                              ▼                              ▼
+        ┌──────────────────┐           ┌──────────────────┐           ┌──────────────────┐
+        │  reactive_node   │           │   evasive_node   │           │ deliberative_node│
+        │  MANTENER_RUMBO  │           │ EVADIR_IZQ / DER │           │ (VLM + Gramática)│
+        └────────┬─────────┘           └────────┬─────────┘           └────────┬─────────┘
+                 │                              │                              │
+                 └──────────────────────────────┼──────────────────────────────┘
+                                                │
+                                                ▼
+                                 ┌─────────────────────────────┐
+                                 │      action_to_command      │
+                                 │   (Frontera Lenguaje-Física)│
+                                 └──────────────┬──────────────┘
+                                                │
+                                                ▼
+                                 ┌─────────────────────────────┐
+                                 │         motor_node          │
+                                 │  (vx, vy, vz, yaw_rate)     │
+                                 └─────────────────────────────┘
+</code></pre></div>
+<p>Al imponer decodificación restringida en <code>deliberative_node</code>, se garantizan tres invariantes operativas fundamentales:
+1. <strong>Ausencia total de fallas de parseo en el lazo:</strong> se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un <strong>98%–100%</strong>, como se verifica empíricamente en el informe (§8.2, §11).
+2. <strong>Determinismo en el espacio de acción:</strong> el campo <code>action</code> se constriñe a la enumeración canónica:
+   $$\text{action} \in {\text{"keep_going"}, \text{"evasive"}, \text{"girar_90"}, \text{"fsm"}, \text{"degraded"}}$$
+   Esto asegura que <code>action_to_command()</code> siempre recibe un identificador registrado, eliminando ramas de ejecución indefinidas en los actuadores del dron.
+3. <strong>Control estricto de la longitud del campo de justificación:</strong> al restringir la longitud máxima de la cadena <code>reason</code> mediante reglas gramaticales (e.g., <code>maxLength: 120</code> o regex <code>[a-zA-Z0-9 _-]{1,100}</code>), se impide que el modelo expanda su generación más allá de los tokens estrictamente necesarios para auditoría y telemetría.</p>
+<h3 id="a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo">A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo<a class="headerlink" href="#a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo" title="Permanent link">&para;</a></h3>
+<p>Una de las innovaciones de mayor impacto para optimizar el lazo deliberativo consiste en la <strong>parametrización dinámica de la gramática en función del estado de vuelo actual</strong>.</p>
+<p>En lugar de emplear un esquema JSON estático para todas las consultas, el nodo deliberativo selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (<code>reason_note</code>, §8.5):</p>
+<table>
+<thead>
+<tr>
+<th>Motivo de Consulta (<code>reason_note</code>)</th>
+<th>Condición de Activación en Grafo</th>
+<th>Gramática / Restricción Dinámica del Enum <code>action</code></th>
+<th>Racionalidad Operativa y Beneficio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"TTC_CRITICO"</code></td>
+<td>$\text{TTC} \le 3.2\text{ s}$ en sector central</td>
+<td><code>enum: ["evasive", "girar_90"]</code></td>
+<td><strong>Poda de acciones pasivas:</strong> se prohíbe sintácticamente que el SLM elija <code>keep_going</code> o <code>fsm</code> ante una colisión inminente. El espacio de búsqueda colapsa a solo 2 tokens de decisión.</td>
+</tr>
+<tr>
+<td><code>"DEADLOCK_ESCAPE"</code></td>
+<td><code>evasion_stuck_cycles &gt;= threshold</code> (atasco cinemático prolongado)</td>
+<td><code>enum: ["girar_90", "fsm", "degraded"]</code></td>
+<td><strong>Ruptura forzada de bucles:</strong> el dron lleva múltiples ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente (<code>evasive</code>) o insistir de frente (<code>keep_going</code>).</td>
+</tr>
+<tr>
+<td><code>"FALTA_EVIDENCIA"</code></td>
+<td>Pérdida de textura o colapso de flujo óptico en hover</td>
+<td><code>enum: ["keep_going", "girar_90"]</code></td>
+<td><strong>Preservación de movimiento:</strong> se impide al modelo frenar (<code>degraded</code>), forzándolo a generar traslación o rotación para reactivar el campo de divergencia visual.</td>
+</tr>
+<tr>
+<td><code>"STANDARD_DELIB"</code></td>
+<td>Desempate táctico en corredores urbanos</td>
+<td><code>enum: ["keep_going", "evasive", "girar_90", "fsm", "degraded"]</code></td>
+<td><strong>Espacio completo:</strong> evaluación deliberativa estándar con ponderación semántica.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Impacto en la eficiencia del grafo:</strong>
+* <strong>Poda semántica a priori:</strong> la gramática no solo previene errores de formato, sino que previene <strong>decisiones tácticas incompatibles con el estado físico del sistema</strong>.
+* <strong>Entropía mínima en el muestreo:</strong> al reducir las opciones admisibles a 2 alternativas críticas ante emergencias, la distribución de probabilidad se concentra masivamente, reduciendo la incertidumbre de inferencia y maximizando la reproducibilidad del control.</p>
+<hr />
+<h2 id="a45-especificacion-tecnica-y-sintaxis-de-gramaticas-json-schema-vs-gbnf">A4.5 Especificación técnica y sintaxis de gramáticas: JSON Schema vs. GBNF<a class="headerlink" href="#a45-especificacion-tecnica-y-sintaxis-de-gramaticas-json-schema-vs-gbnf" title="Permanent link">&para;</a></h2>
+<p>Para implementar la decodificación restringida en la infraestructura de DroneLM, se utilizan dos formalismos principales según el backend de inferencia subyacente.</p>
+<h3 id="a451-definicion-mediante-json-schema-estandar">A4.5.1 Definición mediante JSON Schema estándar<a class="headerlink" href="#a451-definicion-mediante-json-schema-estandar" title="Permanent link">&para;</a></h3>
+<p>Para servidores de inferencia que exponen APIs compatibles con OpenAI/vLLM/LM Studio con soporte nativo de <code>response_format</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;$schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DroneTacticalDecision&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;keep_going&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;evasive&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;girar_90&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;fsm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;degraded&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Macro-accion seleccionada para el ciclo actual de control.&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;maxLength&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;^[a-zA-Z0-9 _.,áéíóúÁÉÍÓÚñÑ-]*$&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Justificacion concisa de la decision para telemetria y auditoria.&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;reason&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;additionalProperties&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="a452-definicion-mediante-gramatica-gbnf-gerganov-bnf">A4.5.2 Definición mediante gramática GBNF (<em>Gerganov BNF</em>)<a class="headerlink" href="#a452-definicion-mediante-gramatica-gbnf-gerganov-bnf" title="Permanent link">&para;</a></h3>
+<p>En entornos basados directamente en <code>llama.cpp</code> (Gerganov, 2023) o en nodos de computación embebidos sin servidor REST intermedio, las gramáticas se definen en formato GBNF. GBNF es una extensión de la forma Backus-Naur que opera a nivel de caracteres y expresiones regulares:</p>
+<div class="highlight"><pre><span></span><code># Archivo: drone_decision.gbnf
+# Gramática formal para la macro-acción del lazo táctico de DroneLM
+
+root <span class="o">::=</span> &quot;{&quot; ws &quot;\&quot;action\&quot;:&quot; ws action-enum &quot;,&quot; ws &quot;\&quot;reason\&quot;:&quot; ws string-value &quot;}&quot;
+
+action-enum <span class="o">::=</span> &quot;\&quot;keep_going\&quot;&quot; | &quot;\&quot;evasive\&quot;&quot; | &quot;\&quot;girar_90\&quot;&quot; | &quot;\&quot;fsm\&quot;&quot; | &quot;\&quot;degraded\&quot;&quot;
+
+# Restricción estricta de la justificación: máximo 80 caracteres alfanuméricos seguros
+string-value <span class="o">::=</span> &quot;\&quot;&quot; [a-zA-Z0-9 _.,áéíóúÁÉÍÓÚñÑ-]{1,80} &quot;\&quot;&quot;
+
+ws <span class="o">::=</span> [ \t\n]*
+</code></pre></div>
+<p><strong>Ventajas operativas de GBNF:</strong>
+* <strong>Cero sobrecarga de esquemas:</strong> no requiere motores externos de validación JSON; el propio núcleo en C++ de <code>llama.cpp</code> filtra los logits directamente en memoria compartida.
+* <strong>Control microscópico de espacios en blanco:</strong> <code>ws</code> puede definirse como cadena vacía (<code>ws ::= ""</code> sin espacios), obligando al modelo a generar JSON minificado compacto (<code>{"action":"evasive","reason":"bloqueo_centro"}</code>), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.</p>
+<hr />
+<h2 id="a46-procedimiento-detallado-de-implementacion-paso-a-paso-en-dronelm">A4.6 Procedimiento detallado de implementación paso a paso en DroneLM<a class="headerlink" href="#a46-procedimiento-detallado-de-implementacion-paso-a-paso-en-dronelm" title="Permanent link">&para;</a></h2>
+<p>A continuación se detalla la metodología completa para integrar la decodificación restringida en la arquitectura de DroneLM, cubriendo desde la definición de tipos hasta el lazo de ejecución asincrónica.</p>
+<h3 id="paso-1-modelado-estricto-con-pydantic-y-generacion-dinamica-de-esquemas">Paso 1: Modelado estricto con Pydantic y generación dinámica de esquemas<a class="headerlink" href="#paso-1-modelado-estricto-con-pydantic-y-generacion-dinamica-de-esquemas" title="Permanent link">&para;</a></h3>
+<p>En <code>src/agents/schemas.py</code>, se declaran los modelos de datos que sirven como contrato único de verdad:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># src/agents/schemas.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Type</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BaseDroneDecision</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">action</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DroneEmergencyDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;evasive&quot;</span><span class="p">,</span> <span class="s2">&quot;girar_90&quot;</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DroneDeadlockDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;girar_90&quot;</span><span class="p">,</span> <span class="s2">&quot;fsm&quot;</span><span class="p">,</span> <span class="s2">&quot;degraded&quot;</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DroneStandardDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;keep_going&quot;</span><span class="p">,</span> <span class="s2">&quot;evasive&quot;</span><span class="p">,</span> <span class="s2">&quot;girar_90&quot;</span><span class="p">,</span> <span class="s2">&quot;fsm&quot;</span><span class="p">,</span> <span class="s2">&quot;degraded&quot;</span><span class="p">]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_decision_schema</span><span class="p">(</span><span class="n">reason_note</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retorna el esquema JSON óptimo condicionado por el estado del grafo.&quot;&quot;&quot;</span>
+    <span class="n">model_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseDroneDecision</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;TTC_CRITICO&quot;</span><span class="p">:</span> <span class="n">DroneEmergencyDecision</span><span class="p">,</span>
+        <span class="s2">&quot;DEADLOCK_ESCAPE&quot;</span><span class="p">:</span> <span class="n">DroneDeadlockDecision</span><span class="p">,</span>
+        <span class="s2">&quot;FALTA_EVIDENCIA&quot;</span><span class="p">:</span> <span class="n">DroneStandardDecision</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">target_cls</span> <span class="o">=</span> <span class="n">model_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reason_note</span><span class="p">,</span> <span class="n">DroneStandardDecision</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;json_schema&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;json_schema&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;DroneTacticalDecision&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;strict&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="n">target_cls</span><span class="o">.</span><span class="n">model_json_schema</span><span class="p">()</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+</code></pre></div>
+<h3 id="paso-2-configuracion-del-cliente-en-deliberationservice">Paso 2: Configuración del cliente en <code>DeliberationService</code><a class="headerlink" href="#paso-2-configuracion-del-cliente-en-deliberationservice" title="Permanent link">&para;</a></h3>
+<p>En <code>src/agents/deliberation_service.py</code>, el servicio asincrónico despacha la petición al backend local (LM Studio / vLLM / llama-server) inyectando el esquema restringido:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Fragmento en src/agents/deliberation_service.py</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_worker_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stop_event</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="c1"># Selección dinámica de la restricción según el trigger del ciclo</span>
+        <span class="n">response_format</span> <span class="o">=</span> <span class="n">get_decision_schema</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">reason_note</span><span class="p">)</span>
+
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
+            <span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">req</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">req</span><span class="o">.</span><span class="n">user_prompt_content</span><span class="p">}</span>
+            <span class="p">],</span>
+            <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+            <span class="s2">&quot;max_tokens&quot;</span><span class="p">:</span> <span class="mi">80</span><span class="p">,</span>  <span class="c1"># Bounding estricto de generación</span>
+            <span class="s2">&quot;response_format&quot;</span><span class="p">:</span> <span class="n">response_format</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Inferencia con decodificación restringida activa en el backend</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">payload</span><span class="p">)</span>
+        <span class="c1"># El contenido devuelto está matemáticamente garantizado de ser JSON válido</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_store_result</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="paso-3-analisis-tolerante-de-defensa-en-profundidad-_parse_decision">Paso 3: Análisis tolerante de defensa en profundidad (<code>_parse_decision</code>)<a class="headerlink" href="#paso-3-analisis-tolerante-de-defensa-en-profundidad-_parse_decision" title="Permanent link">&para;</a></h3>
+<p>A pesar de la garantía matemática de la decodificación restringida, las buenas prácticas de ingeniería en sistemas ciberfísicos exigen <strong>defensa en profundidad</strong> ante posibles migraciones de backend o errores de transporte HTTP (§8.2.2). En <code>src/agents/deliberative.py</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># src/agents/deliberative.py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span><span class="o">,</span><span class="w"> </span><span class="nn">re</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_decision</span><span class="p">(</span><span class="n">raw_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;keep_going&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Jerarquía de tres niveles para extracción segura de macro-acciones:</span>
+<span class="sd">    1. Parseo directo con json.loads() (camino nominal con decodificación restringida).</span>
+<span class="sd">    2. Extracción regex del bloque JSON delimitado por llaves.</span>
+<span class="sd">    3. Búsqueda directa del identificador de macro-acción mediante expresión regular.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 1. Intento nominal directo</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">raw_text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">if</span> <span class="s2">&quot;action&quot;</span> <span class="ow">in</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">VALID_MACRO_ACTIONS</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reason&quot;</span><span class="p">,</span> <span class="s2">&quot;ok&quot;</span><span class="p">),</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="c1"># 2. Extracción de bloque JSON más externo ante envolturas markdown no deseadas</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{.*?\}&quot;</span><span class="p">,</span> <span class="n">raw_text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="k">if</span> <span class="s2">&quot;action&quot;</span> <span class="ow">in</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">VALID_MACRO_ACTIONS</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reason&quot;</span><span class="p">,</span> <span class="s2">&quot;regex_block_ok&quot;</span><span class="p">),</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="c1"># 3. Escaneo léxico directo de macro-acción como último recurso</span>
+    <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">VALID_MACRO_ACTIONS</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">rf</span><span class="s1">&#39;\b</span><span class="si">{</span><span class="n">act</span><span class="si">}</span><span class="s1">\b&#39;</span><span class="p">,</span> <span class="n">raw_text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">act</span><span class="p">,</span> <span class="s2">&quot;fallback_regex_keyword&quot;</span><span class="p">,</span> <span class="kc">False</span>
+
+    <span class="c1"># 4. Fallback determinista seguro</span>
+    <span class="k">return</span> <span class="n">default_action</span><span class="p">,</span> <span class="s2">&quot;fallback_total_parse_error&quot;</span><span class="p">,</span> <span class="kc">False</span>
+</code></pre></div>
+<h3 id="paso-4-sincronizacion-con-el-perro-guardian-y-velocidad-de-deslizamiento-creep-speed">Paso 4: Sincronización con el perro guardián y velocidad de deslizamiento (<em>Creep Speed</em>)<a class="headerlink" href="#paso-4-sincronizacion-con-el-perro-guardian-y-velocidad-de-deslizamiento-creep-speed" title="Permanent link">&para;</a></h3>
+<p>En <code>deliberative_node</code>, la integración con la temporalidad del lazo de control se articula mediante el perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>) y el avance mínimo garantizado:
+* Mientras la inferencia está en vuelo (<code>slm_request_id is not None</code>), el dron ejecuta <code>DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s</code>. Esto evita el colapso del campo de flujo óptico por falta de movimiento traslacional (§8.6).
+* Gracias a la decodificación restringida, el 95% de las llamadas resuelven en <strong>$320 - 480\text{ ms}$</strong>, lo que significa que el dron solo pasa 2 o 3 ciclos en estado de espera antes de aplicar la macro-acción definitiva.</p>
+<hr />
+<h2 id="a47-comparativa-de-motores-y-ecosistemas-de-decodificacion-estructurada">A4.7 Comparativa de motores y ecosistemas de decodificación estructurada<a class="headerlink" href="#a47-comparativa-de-motores-y-ecosistemas-de-decodificacion-estructurada" title="Permanent link">&para;</a></h2>
+<p>Para seleccionar la infraestructura de inferencia más eficiente para DroneLM en función del hardware disponible, se evaluaron los cuatro marcos de trabajo líderes en el estado del arte (Willard &amp; Louf, 2023; Dong et al., 2024; Lundberg et al., 2023; Gerganov, 2023):</p>
+<table>
+<thead>
+<tr>
+<th>Dimensión de Análisis</th>
+<th><code>llama.cpp</code> (GBNF)</th>
+<th>Outlines</th>
+<th>XGrammar</th>
+<th>Guidance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Paradigma Formal</strong></td>
+<td>Gramática Context-Free (CFG) / GBNF</td>
+<td>Autómata Finito Determinista (DFA)</td>
+<td>CFG con partición de vocabulario</td>
+<td>Árboles sintácticos con <em>Token Jumping</em></td>
+</tr>
+<tr>
+<td><strong>Integración de Backend</strong></td>
+<td>Nativo C++ / GGUF (LM Studio, Ollama)</td>
+<td>PyTorch, vLLM, transformers</td>
+<td>vLLM, SGLang, TensorRT-LLM</td>
+<td>Interfaz unificada (Python, C++ bindings)</td>
+</tr>
+<tr>
+<td><strong>Sobrecarga de CPU por Token</strong></td>
+<td>Baja (~0.2 – 0.5 ms)</td>
+<td>Media (~1.0 – 3.0 ms en esquemas grandes)</td>
+<td><strong>Casi nula (&lt; 0.05 ms)</strong></td>
+<td>Variable (nula en saltos deterministas)</td>
+</tr>
+<tr>
+<td><strong>Soporte de Token Jumping</strong></td>
+<td>No (decodifica token a token)</td>
+<td>Parcial</td>
+<td>No</td>
+<td><strong>Excelente (omite forward passes completos)</strong></td>
+</tr>
+<tr>
+<td><strong>Compilación Previa de Gramática</strong></td>
+<td>Rápida (&lt; 10 ms)</td>
+<td>Variable (según tamaño del esquema)</td>
+<td>Muy rápida con soporte de caché</td>
+<td>Instantánea en tiempo de script</td>
+</tr>
+<tr>
+<td><strong>Idoneidad para DroneLM</strong></td>
+<td><strong>Óptima para entorno actual</strong> (cohabitación con UE5.5 vía GGUF/LM Studio)</td>
+<td>Alta para experimentación offline en Python puro</td>
+<td><strong>Ideal para migración a producción de alta concurrencia (vLLM)</strong></td>
+<td>Excelente para pipelines complejos con slots estáticos</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="a48-conclusiones-del-anexo-y-balance-de-ingenieria">A4.8 Conclusiones del anexo y balance de ingeniería<a class="headerlink" href="#a48-conclusiones-del-anexo-y-balance-de-ingenieria" title="Permanent link">&para;</a></h2>
+<p>La decodificación restringida no constituye un mero filtro estético de salida ni una conveniencia de formateo de datos: <strong>es el componente arquitectónico que hace viable el uso seguro de modelos de lenguaje pequeños en el lazo cerrado de control de un vehículo aéreo</strong>.</p>
+<p>Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se resumen en tres puntos esenciales:
+1. <strong>Fiabilidad operacional categórica:</strong> erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de atascos y degradaciones espurias del sistema.
+2. <strong>Eficiencia temporal crítica:</strong> al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, contrae la latencia de inferencia a un rango de 300 a 450 ms, asegurando que las decisiones deliberativas se entreguen con un margen de holgura superior al 60% respecto al perro guardián del sistema.
+3. <strong>Acoplamiento formal con el grafo de control:</strong> permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+    
+  </body>
+</html>

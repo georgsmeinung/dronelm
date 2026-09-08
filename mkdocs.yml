@@ -79,7 +79,8 @@ nav:
   - "13. Referencias": 13-REFERENCIAS.md
   - Anexos:
     - "A1. Exploración SLM / GGUF": anexos/A1-EXPLORACION-SLM-GGUF.md
-    - "A2. SLM — Concepto y Ventajas": anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md
-    - "A3. SLM — Optimización y Desafíos": anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md
-    - "A4. LoRA (Alternativa No Adoptada)": anexos/A4-OPTIMIZACION-LORA.md
-    - "A5. Decodificación Restringida": anexos/A5-DECODIFICACION-RESTRINGIDA.md
+    - "A2. Técnicas de Optimización en SLM": anexos/A2-SLM-OPTIMIZACION-Y-DESAFIOS.md
+    - "A3. Optimización LoRA / QLoRA": anexos/A3-OPTIMIZACION-LORA.md
+    - "A4. Decodificación Restringida": anexos/A4-DECODIFICACION-RESTRINGIDA.md
+    - "A5. Percepción Monocular y Flujo Óptico": anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md
+    - "A6. Entorno y Reproducibilidad": anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md

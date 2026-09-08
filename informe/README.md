@@ -23,11 +23,12 @@ reescribir la estructura cada vez.
 | 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Parcial — corridas piloto seed=1 completas (3 brazos × 3 Tiers). **Pendiente:** semillas 2–5 y escenarios con obstáculos (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`) | lote estadístico completo |
 | 12 | [`12-CONCLUSIONES.md`](12-CONCLUSIONES.md) | ⏳ Pendiente | capítulo 11 |
 | 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado — pendiente de depuración final (eliminar entradas no citadas en texto, resolver metadata incompleta §13.3) | — |
-| — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia — selección de modelos GGUF y evaluación de nivel de innovación | — |
-| — | [`anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md`](anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md) | Material de referencia (no es capítulo) | — |
-| — | [`anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md`](anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md) | Material de referencia (no es capítulo) | — |
-| — | [`anexos/A4-OPTIMIZACION-LORA.md`](anexos/A4-OPTIMIZACION-LORA.md) | Material de referencia — alternativa LoRA explorada y no adoptada | — |
-| — | [`anexos/A5-DECODIFICACION-RESTRINGIDA.md`](anexos/A5-DECODIFICACION-RESTRINGIDA.md) | Material de referencia — decodificación restringida, GBNF, `json_schema` | — |
+| — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia — selección de modelos GGUF, decodificación estructurada y análisis de innovación | — |
+| — | [`anexos/A2-SLM-OPTIMIZACION-Y-DESAFIOS.md`](anexos/A2-SLM-OPTIMIZACION-Y-DESAFIOS.md) | Material de referencia — técnicas de optimización, compresión y mitigación de desafíos en SLM | — |
+| — | [`anexos/A3-OPTIMIZACION-LORA.md`](anexos/A3-OPTIMIZACION-LORA.md) | Material de referencia — optimización y especialización con LoRA/QLoRA para navegación aérea | — |
+| — | [`anexos/A4-DECODIFICACION-RESTRINGIDA.md`](anexos/A4-DECODIFICACION-RESTRINGIDA.md) | Material de referencia — decodificación restringida, gramáticas formales, GBNF, `json_schema` y optimización del grafo de control | — |
+| — | [`anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md`](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md) | Material de referencia — fundamentos matemáticos de percepción monocular, flujo óptico y estimación de TTC | — |
+| — | [`anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md`](anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md) | Material de referencia — configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad | — |
 
 ## Convenciones
 

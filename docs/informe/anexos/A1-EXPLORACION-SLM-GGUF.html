@@ -18,7 +18,7 @@
         <link rel="prev" href="../13-REFERENCIAS.html">
       
       
-        <link rel="next" href="A2-SLM-CONCEPTO-Y-VENTAJAS.html">
+        <link rel="next" href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html">
       
       
         
@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#limitaciones-de-hardware" class="md-skip">
+        <a href="#anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica" class="md-skip">
           Saltar a contenido
         </a>
       
@@ -682,6 +682,8 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
@@ -724,6 +726,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -732,55 +736,33 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#limitaciones-de-hardware" class="md-nav__link">
+  <a href="#a11-restricciones-de-hardware-y-presupuesto-de-vram-en-cohabitacion-con-unreal-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limitaciones de hardware
+        A1.1 Restricciones de hardware y presupuesto de VRAM en cohabitación con Unreal Engine
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Limitaciones de hardware">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a12-evaluacion-comparativa-de-modelos-candidatos-en-formato-gguf-3b8b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A1.2 Evaluación comparativa de modelos candidatos en formato GGUF (3B–8B)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A1.2 Evaluación comparativa de modelos candidatos en formato GGUF (3B–8B)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario" class="md-nav__link">
+  <a href="#transicion-hacia-el-modelo-multimodal-definitivo-811-y-812" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Razones por las que un SLM con salida restringida se ajusta al escenario
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Modelos recomendados (febrero 2026, en formato GGUF para llama.cpp / LM Studio)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Métodos para imponer “gramática limitada” o formato de salida estricto
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#procedimiento-practico-de-configuracion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Procedimiento práctico de configuración
+        Transición hacia el modelo multimodal definitivo (§8.1.1 y §8.1.2)
       
     </span>
   </a>
@@ -793,22 +775,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sobre-la-innovacion-de-la-solucion" class="md-nav__link">
+  <a href="#a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sobre la innovación de la solución
+        A1.3 Métodos para la imposición de salida estructurada y gramática restringida
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Sobre la innovación de la solución">
+    <nav class="md-nav" aria-label="A1.3 Métodos para la imposición de salida estructurada y gramática restringida">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia" class="md-nav__link">
+  <a href="#1-instrucciones-estrictas-en-el-prompt-del-sistema-prompt-engineering" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Razones por las que ya no se considera una solución de vanguardia
+        1. Instrucciones estrictas en el prompt del sistema (Prompt Engineering)
       
     </span>
   </a>
@@ -816,10 +798,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad" class="md-nav__link">
+  <a href="#2-gramaticas-libres-de-contexto-gbnf-en-llamacpp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ámbitos en los que la propuesta sí presenta solidez y utilidad
+        2. Gramáticas libres de contexto (GBNF en llama.cpp)
       
     </span>
   </a>
@@ -827,10 +809,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#conclusion-evaluacion-general" class="md-nav__link">
+  <a href="#3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conclusión (evaluación general)
+        3. Decodificación guiada basada en autómatas finitos (Outlines, Guidance, llguidance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-estandarizacion-de-llamadas-a-herramientas-model-context-protocol-mcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Estandarización de llamadas a herramientas: Model Context Protocol (MCP)
       
     </span>
   </a>
@@ -843,33 +836,61 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada" class="md-nav__link">
+  <a href="#a14-procedimiento-practico-de-configuracion-e-integracion-local" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sobre innovar sobre una arquitectura ya extensamente utilizada
+        A1.4 Procedimiento práctico de configuración e integración local
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Sobre innovar sobre una arquitectura ya extensamente utilizada">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible" class="md-nav__link">
+  <a href="#evaluacion-critica" class="md-nav__link">
     <span class="md-ellipsis">
       
-        “Combinación ganadora” más prometedora para innovación + hardware disponible
+        Evaluación crítica
       
     </span>
   </a>
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#razones-por-las-que-este-enfoque-si-se-considera-innovador" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a16-vias-de-diferenciacion-e-innovacion-de-ingenieria-en-entornos-severamente-restringidos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Razones por las que este enfoque sí se considera innovador
+        A1.6 Vías de diferenciación e innovación de ingeniería en entornos severamente restringidos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A1.6 Vías de diferenciación e innovación de ingeniería en entornos severamente restringidos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conclusion-sintetica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusión sintética
       
     </span>
   </a>
@@ -897,14 +918,14 @@
   
   
     <li class="md-nav__item">
-      <a href="A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A2. SLM — Concepto y Ventajas
+    A2. Técnicas de Optimización en SLM
   
 
     
@@ -925,14 +946,14 @@
   
   
     <li class="md-nav__item">
-      <a href="A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A3. SLM — Optimización y Desafíos
+    A3. Optimización LoRA / QLoRA
   
 
     
@@ -953,14 +974,14 @@
   
   
     <li class="md-nav__item">
-      <a href="A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A4. LoRA (Alternativa No Adoptada)
+    A4. Decodificación Restringida
   
 
     
@@ -981,14 +1002,42 @@
   
   
     <li class="md-nav__item">
-      <a href="A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A5. Decodificación Restringida
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
   
 
     
@@ -1026,6 +1075,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1034,55 +1085,33 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#limitaciones-de-hardware" class="md-nav__link">
+  <a href="#a11-restricciones-de-hardware-y-presupuesto-de-vram-en-cohabitacion-con-unreal-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limitaciones de hardware
+        A1.1 Restricciones de hardware y presupuesto de VRAM en cohabitación con Unreal Engine
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Limitaciones de hardware">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a12-evaluacion-comparativa-de-modelos-candidatos-en-formato-gguf-3b8b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A1.2 Evaluación comparativa de modelos candidatos en formato GGUF (3B–8B)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A1.2 Evaluación comparativa de modelos candidatos en formato GGUF (3B–8B)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario" class="md-nav__link">
+  <a href="#transicion-hacia-el-modelo-multimodal-definitivo-811-y-812" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Razones por las que un SLM con salida restringida se ajusta al escenario
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Modelos recomendados (febrero 2026, en formato GGUF para llama.cpp / LM Studio)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Métodos para imponer “gramática limitada” o formato de salida estricto
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#procedimiento-practico-de-configuracion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Procedimiento práctico de configuración
+        Transición hacia el modelo multimodal definitivo (§8.1.1 y §8.1.2)
       
     </span>
   </a>
@@ -1095,22 +1124,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sobre-la-innovacion-de-la-solucion" class="md-nav__link">
+  <a href="#a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sobre la innovación de la solución
+        A1.3 Métodos para la imposición de salida estructurada y gramática restringida
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Sobre la innovación de la solución">
+    <nav class="md-nav" aria-label="A1.3 Métodos para la imposición de salida estructurada y gramática restringida">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia" class="md-nav__link">
+  <a href="#1-instrucciones-estrictas-en-el-prompt-del-sistema-prompt-engineering" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Razones por las que ya no se considera una solución de vanguardia
+        1. Instrucciones estrictas en el prompt del sistema (Prompt Engineering)
       
     </span>
   </a>
@@ -1118,10 +1147,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad" class="md-nav__link">
+  <a href="#2-gramaticas-libres-de-contexto-gbnf-en-llamacpp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ámbitos en los que la propuesta sí presenta solidez y utilidad
+        2. Gramáticas libres de contexto (GBNF en llama.cpp)
       
     </span>
   </a>
@@ -1129,10 +1158,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#conclusion-evaluacion-general" class="md-nav__link">
+  <a href="#3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conclusión (evaluación general)
+        3. Decodificación guiada basada en autómatas finitos (Outlines, Guidance, llguidance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-estandarizacion-de-llamadas-a-herramientas-model-context-protocol-mcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Estandarización de llamadas a herramientas: Model Context Protocol (MCP)
       
     </span>
   </a>
@@ -1145,33 +1185,61 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada" class="md-nav__link">
+  <a href="#a14-procedimiento-practico-de-configuracion-e-integracion-local" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sobre innovar sobre una arquitectura ya extensamente utilizada
+        A1.4 Procedimiento práctico de configuración e integración local
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Sobre innovar sobre una arquitectura ya extensamente utilizada">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible" class="md-nav__link">
+  <a href="#evaluacion-critica" class="md-nav__link">
     <span class="md-ellipsis">
       
-        “Combinación ganadora” más prometedora para innovación + hardware disponible
+        Evaluación crítica
       
     </span>
   </a>
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#razones-por-las-que-este-enfoque-si-se-considera-innovador" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a16-vias-de-diferenciacion-e-innovacion-de-ingenieria-en-entornos-severamente-restringidos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Razones por las que este enfoque sí se considera innovador
+        A1.6 Vías de diferenciación e innovación de ingeniería en entornos severamente restringidos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A1.6 Vías de diferenciación e innovación de ingeniería en entornos severamente restringidos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conclusion-sintetica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusión sintética
       
     </span>
   </a>
@@ -1200,277 +1268,229 @@
 
 
 
-  <h1>A1. Exploración SLM / GGUF</h1>
-
 <blockquote>
-<p><strong>Nota de ubicación:</strong> este documento es material exploratorio de la etapa de planificación (selección de modelos SLM en formato GGUF, técnicas de gramática restringida, evaluación del nivel de innovación de la arquitectura). No es un capítulo de la tesis; se conserva como anexo de referencia para la sección de selección de modelo en <code>08-DECISIONES-SLM.md</code>. Reubicado desde <code>informe/01-INTRO.md</code> el 2026-08-25.</p>
+<p><strong>Nota de ubicación:</strong> este documento constituye el estudio técnico exploratorio sobre selección de modelos SLM/sVLM, cuantización GGUF, decodificación estructurada y posicionamiento arquitectónico. Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.1) y los anexos A2, A3 y A4.</p>
 </blockquote>
 <hr />
-<h2 id="limitaciones-de-hardware">Limitaciones de hardware<a class="headerlink" href="#limitaciones-de-hardware" title="Permanent link">&para;</a></h2>
-<p>Para una configuración compuesta por una RTX 5060 con 8 GB de VRAM, en la que es necesario compartir recursos de GPU con una simulación de Unreal Engine 5.5, la opción más realista consiste en emplear un <em>Small Language Model (SLM)</em>. Se requiere un modelo <em>instruct‑tuned</em>, capaz de seguir instrucciones de manera fiable y, al mismo tiempo, producir una salida con <strong>gramática muy restringida o limitada</strong>; es decir, un modelo que genere texto estrictamente conforme a un formato, esquema o gramática predefinida (por ejemplo, JSON siempre válido, pares clave‑valor específicos o una sintaxis personalizada mínima sin variación libre).</p>
-<p>Esta configuración resulta adecuada para una solución local basada en <em>MCP</em> (Model Context Protocol), el estándar abierto (propuesto por Anthropic a partir de 2024) que permite a los modelos de lenguaje conectarse con herramientas y datos externos mediante un protocolo uniforme. Un cliente MCP, un LLM local y servidores MCP locales (por ejemplo, para acceso a archivos, ejecución de código o consultas relacionadas con Unreal Engine) pueden ejecutarse completamente sin conexión.</p>
-<h3 id="razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario">Razones por las que un SLM con salida restringida se ajusta al escenario<a class="headerlink" href="#razones-por-las-que-un-slm-con-salida-restringida-se-ajusta-al-escenario" title="Permanent link">&para;</a></h3>
+<h1 id="anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica">Anexo 1: Exploración técnica de Small Language Models (SLM), cuantización GGUF y análisis de innovación arquitectónica<a class="headerlink" href="#anexo-1-exploracion-tecnica-de-small-language-models-slm-cuantizacion-gguf-y-analisis-de-innovacion-arquitectonica" title="Permanent link">&para;</a></h1>
+<p>La integración de modelos de lenguaje en plataformas robóticas autónomas exige resolver un compromiso riguroso entre capacidad representacional, latencia de inferencia y consumo de recursos computacionales. En el contexto de esta investigación, el objetivo es dotar a un vehículo aéreo no tripulado (UAV) de capacidad deliberativa de alto nivel mientras opera en simulación fotorrealista bajo hardware de consumo. </p>
+<p>Un <strong>Modelo de Lenguaje Pequeño</strong> (<em>Small Language Model</em>, SLM) —y su extensión multimodal, <em>Small Vision-Language Model</em> (sVLM)— se define operativamente por tres criterios: <strong>(1)</strong> un conteo de parámetros en el rango de 1B a 10B (Abdin et al., 2024; Zhang et al., 2024), que conserva competencia notable para razonamiento simbólico, comprensión sintáctica y extracción de relaciones complejas a pesar de su escala relativa (Nguyen et al., 2024); <strong>(2)</strong> la factibilidad de despliegue local (<em>on-device</em>) en hardware de consumo común (tarjetas gráficas de gama media como la NVIDIA RTX 5060 de 8 GB) o procesadores embebidos (NVIDIA Jetson; NVIDIA, 2025); y <strong>(3)</strong> una latencia de inferencia determinista de subsegundos a pocos segundos, compatible con los márgenes de los lazos de control en robótica móvil (Tian et al., 2025; Vemprala et al., 2023). Frente a los LLMs de frontera (GPT-4o, Claude 3.5, Gemini 1.5 — decenas a cientos de miles de millones de parámetros, 24–80 GB de VRAM), los SLMs ofrecen ventajas determinantes para sistemas embarcados: autonomía operativa sin conexión a la nube, supresión de la variabilidad de red, eficiencia energética en plataformas alimentadas por batería (Goel et al., 2021) y compatibilidad con decodificación restringida por gramáticas en motores locales como <code>llama.cpp</code> (Willard &amp; Louf, 2023).</p>
+<p>Este anexo documenta el estudio exploratorio previo a las decisiones finales de implementación: delimita las restricciones físicas de memoria de video (VRAM), evalúa de forma comparativa los modelos compactos candidatos en formato GGUF, analiza los mecanismos para garantizar salidas estructuradas deterministas, y examina críticamente el nivel de novedad de la arquitectura frente al estado del arte reciente (2024–2026), identificando los ejes de ingeniería que aportan valor genuino al control autónomo.</p>
+<hr />
+<h2 id="a11-restricciones-de-hardware-y-presupuesto-de-vram-en-cohabitacion-con-unreal-engine">A1.1 Restricciones de hardware y presupuesto de VRAM en cohabitación con Unreal Engine<a class="headerlink" href="#a11-restricciones-de-hardware-y-presupuesto-de-vram-en-cohabitacion-con-unreal-engine" title="Permanent link">&para;</a></h2>
+<p>La plataforma de experimentación adoptada consta de una estación de trabajo equipada con una GPU NVIDIA GeForce RTX 5060 provista de <strong>8 GB de VRAM</strong>. A diferencia de los entornos de investigación que disponen de aceleradores dedicados (e.g., NVIDIA A100/H100 de 40–80 GB) o que delegan el cómputo a servicios en la nube, este proyecto impone una restricción de cohabitación local estricta: la GPU debe ejecutar simultáneamente el entorno de simulación física y visual, y el motor de inferencia del modelo deliberativo.</p>
+<p>Una instancia activa del simulador AirSim sobre Unreal Engine 5.5 demanda, en condiciones estándar de renderizado (geometría Nanite, iluminación Lumen y captura de múltiples cámaras virtuales), entre <strong>4.5 y 6.0 GB de VRAM</strong> (Shah et al., 2017; Turco et al., 2024). En consecuencia:</p>
 <ul>
-<li><strong>Presupuesto de VRAM</strong>: una simulación de UE5 probablemente utiliza entre 4 y 6 GB, lo que deja aproximadamente 2–4 GB disponibles para la inferencia del LLM (considerando el overhead de la KV cache).</li>
-<li><strong>Gramática restringida</strong>: reduce alucinaciones y verbosidad, generando una salida pequeña, rápida y fácil de interpretar (crítico para llamadas a herramientas MCP o respuestas estructuradas).</li>
-<li><strong>Ejecución local</strong>: elimina dependencias de la nube y permite baja latencia en la integración con la simulación.</li>
+<li><strong>Presupuesto remanente disponible</strong>: el espacio de memoria de video reservable para el modelo de lenguaje se restringe a una ventana de <strong>2.0 a 3.5 GB de VRAM</strong>.</li>
+<li><strong>Sobrecarga de contexto (KV Cache)</strong>: la inferencia no solo consume la memoria estática de los pesos de la red, sino también la memoria dinámica requerida por el caché de claves y valores (<em>Key-Value Cache</em>), la cual escala linealmente con la longitud de la ventana de contexto y el tamaño del lote.</li>
+<li><strong>Exclusión de arquitecturas de frontera</strong>: modelos superiores a 13B parámetros o modelos fundacionales no cuantizados (FP16/BF16) son inviables en esta configuración sin incurrir en transferencias masivas hacia la memoria RAM del sistema (<em>paging / offloading</em> excesivo a CPU), lo cual degrada la latencia de inferencia en órdenes de magnitud incompatibles con el control de vuelo.</li>
 </ul>
-<h3 id="modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio">Modelos recomendados (febrero 2026, en formato GGUF para llama.cpp / LM Studio)<a class="headerlink" href="#modelos-recomendados-febrero-2026-en-formato-gguf-para-llamacpp-lm-studio" title="Permanent link">&para;</a></h3>
-<p>Se recomienda centrarse en modelos instruct de <strong>3B a 8B</strong> parámetros, ya que ofrecen la capacidad suficiente para seguir instrucciones y manejar patrones de uso de herramientas en 2026. Las cuantizaciones <em>Q5_K_M</em> o <em>Q4_K_M</em> permiten ajustar el modelo a \~2–4.5 GB de VRAM manteniendo una calidad elevada.</p>
+<p>Bajo este marco, la única alternativa viable radica en el uso de <em>Small Language Models</em> (SLMs) y <em>Small Vision-Language Models</em> (sVLMs) de escala <strong>3B a 8B parámetros</strong>, sometidos a técnicas de cuantización post-entrenamiento (<em>Post-Training Quantization</em>, PTQ) y optimizados para ejecución local (Abdin et al., 2024; Frantar et al., 2022; Nguyen et al., 2024; Zhang et al., 2024).</p>
+<hr />
+<h2 id="a12-evaluacion-comparativa-de-modelos-candidatos-en-formato-gguf-3b8b">A1.2 Evaluación comparativa de modelos candidatos en formato GGUF (3B–8B)<a class="headerlink" href="#a12-evaluacion-comparativa-de-modelos-candidatos-en-formato-gguf-3b8b" title="Permanent link">&para;</a></h2>
+<p>El formato binario <strong>GGUF</strong> (<em>GPT-Generated Unified Format</em>), desarrollado por la comunidad de <code>llama.cpp</code> (Gerganov, 2023), se consolidó como el estándar de facto para la serialización y ejecución eficiente de modelos cuantizados en CPU y GPU. GGUF resuelve limitaciones de extensibilidad de formatos predecesores (como GGML) al incorporar metadatos estructurados en el encabezado del archivo y soportar esquemas de cuantización no uniforme (<em>k-quants</em>).</p>
+<p>Las variantes <em>Q4_K_M</em> (cuantización a 4 bits con ponderación mixta en bloques de atención) y <em>Q5_K_M</em> (5 bits) permiten comprimir modelos de 3B–7B parámetros a tamaños de archivo de entre 1.8 y 4.5 GB, preservando la perplejidad y capacidad de razonamiento de los modelos originales con pérdidas marginales (Frantar et al., 2022).</p>
+<p>Durante la fase exploratoria de diseño se evaluaron los siguientes modelos instruccionales (<em>instruct-tuned</em>) en formato GGUF para su ejecución bajo motores locales como <code>llama.cpp</code> y LM Studio:</p>
 <table>
 <thead>
 <tr>
 <th>Modelo</th>
-<th>Tamaño (quant)</th>
-<th>VRAM aprox. (full offload)</th>
-<th>Fortalezas</th>
-<th>Razones para uso con gramática restringida</th>
-<th>Disponibilidad</th>
+<th>Parámetros</th>
+<th>Tamaño GGUF (quant)</th>
+<th>VRAM estimada (full offload)</th>
+<th>Fortalezas operativas</th>
+<th>Comportamiento con salida estructurada</th>
+<th>Disponibilidad de referencia</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><em>Qwen3-4B-Instruct</em> / <em>Qwen3-7B-Instruct</em></td>
-<td>\~3–5 GB</td>
-<td>\~2.5–4 GB</td>
-<td>Razonamiento sólido, seguimiento de instrucciones, function-calling</td>
-<td>Cumplimiento fiable de formatos; variantes 2026 con buen soporte JSON</td>
-<td>Qwen/Qwen3-4B-Instruct-GGUF</td>
+<td><strong>Phi-4-mini-Instruct</strong></td>
+<td>3.8B</td>
+<td>~2.5–3.2 GB (Q4_K_M)</td>
+<td>~2.2–3.0 GB</td>
+<td>Ajuste fino sobre datos sintéticos de alta fidelidad; sólida capacidad de razonamiento lógico y matemático (Abdin et al., 2024).</td>
+<td>Muy alta adherencia a esquemas rígidos; mínima variación sintáctica.</td>
+<td><code>microsoft/Phi-4-mini-instruct-GGUF</code></td>
 </tr>
 <tr>
-<td><em>Phi-4-mini-instruct</em></td>
-<td>\~3–4 GB</td>
-<td>\~2–3.5 GB</td>
-<td>Ajustado por Microsoft para datos sintéticos de alta calidad; muy eficaz en tareas estructuradas</td>
-<td>Muy alta adherencia a esquemas y salida de baja variación</td>
-<td>microsoft/Phi-4-mini-instruct-GGUF</td>
+<td><strong>Qwen3-4B-Instruct</strong></td>
+<td>~4B</td>
+<td>~2.8–3.5 GB (Q4_K_M)</td>
+<td>~2.5–3.5 GB</td>
+<td>Excelente seguimiento de instrucciones complejas; capacidad nativa de <em>tool-calling</em>.</td>
+<td>Soporte consistente de esquemas JSON mediante prompting y gramáticas.</td>
+<td><code>Qwen/Qwen3-4B-Instruct-GGUF</code></td>
 </tr>
 <tr>
-<td><em>SmolLM3-3B-Instruct</em></td>
-<td>\~2–3 GB</td>
-<td>\~1.8–3 GB</td>
-<td>Modelo compacto con rendimiento superior al de muchos 4–7B</td>
-<td>Fácil de forzar en formatos rígidos mediante prompt</td>
-<td>HuggingFaceTB/SmolLM3-3B-GGUF</td>
+<td><strong>SmolLM3-3B-Instruct</strong></td>
+<td>3B</td>
+<td>~2.0–2.6 GB (Q4_K_M)</td>
+<td>~1.8–2.5 GB</td>
+<td>Huella de memoria mínima; preentrenado específicamente para entornos embebidos y de bajo consumo.</td>
+<td>Fácil de orientar a formatos fijos, aunque con menor tolerancia a contextos extensos.</td>
+<td><code>HuggingFaceTB/SmolLM3-3B-GGUF</code></td>
 </tr>
 <tr>
-<td><em>Gemma-3-4B-IT</em></td>
-<td>\~3 GB</td>
-<td>\~2.5 GB</td>
-<td>Ajustado por Google; fuerte rendimiento textual</td>
-<td>Buena salida estructurada y soporte de function-calling</td>
-<td>google/gemma-3-4b-it-GGUF</td>
+<td><strong>Gemma-3-4B-IT</strong></td>
+<td>4B</td>
+<td>~2.8–3.4 GB (Q4_K_M)</td>
+<td>~2.5–3.2 GB</td>
+<td>Arquitectura optimizada por Google; notable coherencia lingüística y comprensión contextual.</td>
+<td>Buen desempeño estructurado, pero mayor demanda de KV cache en secuencias largas.</td>
+<td><code>google/gemma-3-4b-it-GGUF</code></td>
 </tr>
 <tr>
-<td><em>Ministral-3-3B-Instruct</em></td>
-<td>\~2.5 GB</td>
-<td>\~2 GB</td>
-<td>Modelo compacto optimizado para edge</td>
-<td>Diseñado para uso restringido; seguimiento estable de formatos</td>
-<td>mistralai/Ministral-3-3B-Instruct-GGUF</td>
+<td><strong>Ministral-3-3B-Instruct</strong></td>
+<td>3B</td>
+<td>~2.2–2.7 GB (Q4_K_M)</td>
+<td>~2.0–2.6 GB</td>
+<td>Diseñado específicamente por Mistral AI para despliegues de borde (<em>edge inference</em>); atención deslizante.</td>
+<td>Rápido y estable en la emisión de respuestas compactas delimitadas.</td>
+<td><code>mistralai/Ministral-3-3B-Instruct-GGUF</code></td>
 </tr>
 </tbody>
 </table>
-<p>La opción preferente suele ser <em>Phi‑4‑mini‑instruct</em>, mientras que <em>Qwen3‑4B/7B</em> puede utilizarse cuando se dispone de aproximadamente 1 GB adicional de VRAM.</p>
-<h3 id="metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto">Métodos para imponer “gramática limitada” o formato de salida estricto<a class="headerlink" href="#metodos-para-imponer-gramatica-limitada-o-formato-de-salida-estricto" title="Permanent link">&para;</a></h3>
-<p>Los siguientes métodos, compatibles con backends locales como llama.cpp, LM Studio u Ollama, permiten controlar estrictamente la estructura de la salida:</p>
+<h3 id="transicion-hacia-el-modelo-multimodal-definitivo-811-y-812">Transición hacia el modelo multimodal definitivo (§8.1.1 y §8.1.2)<a class="headerlink" href="#transicion-hacia-el-modelo-multimodal-definitivo-811-y-812" title="Permanent link">&para;</a></h3>
+<p>Aunque los modelos textuales analizados exhibieron un rendimiento adecuado para el procesamiento de telemetría pura, el análisis teórico y empírico de la percepción monocular demostró la existencia de <strong>puntos ciegos estructurales en la estimación de flujo óptico</strong> (maniobras de sustentación estática <em>hover</em>, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse §6.1 y §6.12). </p>
+<p>Bajo dichas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Esto motivó la sustitución de un SLM exclusivamente textual por un modelo con <strong>capacidad de visión nativa</strong> (<em>Small Vision-Language Model</em>, sVLM), permitiendo al agente inspeccionar directamente el fotograma capturado por la cámara frontal del UAV.</p>
+<p>Tal como se formaliza en el capítulo 8 (§8.1.2), la elección convergió en <strong>Qwen2.5-VL-3B-Instruct</strong> (Qwen Team, 2025) bajo cuantización <em>Q4_K_M</em>:
+* <strong>Huella de memoria</strong>: consume ~2.0 GB de VRAM, situándose holgadamente dentro del presupuesto operativo restante de la GPU.
+* <strong>Inspección visual directa</strong>: procesa secuencias de dos fotogramas temporales ($t$ y $t-1$) para inferir dinámica de aproximación y discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
+* <strong>Compatibilidad de decodificación</strong>: ofrece soporte completo para esquemas de decodificación restringida (<code>json_schema</code>).</p>
+<hr />
+<h2 id="a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida">A1.3 Métodos para la imposición de salida estructurada y gramática restringida<a class="headerlink" href="#a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida" title="Permanent link">&para;</a></h2>
+<p>En una arquitectura de control robótico en lazo cerrado, la generación de lenguaje en formato libre (<em>free-form text</em>) resulta inaceptable: respuestas prolijas, explicaciones accesorias o desviaciones sintácticas invalidan el analizador (<em>parser</em>), provocando la interrupción temporal o el congelamiento del lazo de control.</p>
+<p>Para garantizar la interoperabilidad con los actuadores cinemáticos del vehículo, se evaluaron tres mecanismos para restringir la salida del modelo a estructuras estrictas (e.g., esquemas JSON conformes):</p>
+<h3 id="1-instrucciones-estrictas-en-el-prompt-del-sistema-prompt-engineering">1. Instrucciones estrictas en el prompt del sistema (<em>Prompt Engineering</em>)<a class="headerlink" href="#1-instrucciones-estrictas-en-el-prompt-del-sistema-prompt-engineering" title="Permanent link">&para;</a></h3>
+<p>Consiste en delimitar el formato esperado en el mensaje de sistema y penalizar explícitamente cualquier emisión de texto explicativo o etiquetas markdown:
+<div class="highlight"><pre><span></span><code>Eres un controlador de vuelo determinista. Responde ÚNICAMENTE un objeto JSON válido
+conforme a este esquema: {&quot;action&quot;: &quot;keep_going&quot; | &quot;evasive&quot; | &quot;girar_90&quot; | &quot;fsm&quot; | &quot;degraded&quot;, &quot;reason&quot;: str}.
+No incluyas introducciones, markdown (```), ni texto posterior.
+</code></pre></div>
+* <strong>Ventajas</strong>: implementación trivial; no impone sobrecarga computacional en el motor de inferencia.
+* <strong>Limitaciones</strong>: fiabilidad imperfecta. En modelos compactos (&lt;7B parámetros), la tasa de adherencia sintáctica ronda el 70–85%, presentándose ocasionalmente truncamientos, alucinaciones de sintaxis o texto preliminar que corrompen el flujo de control.</p>
+<h3 id="2-gramaticas-libres-de-contexto-gbnf-en-llamacpp">2. Gramáticas libres de contexto (GBNF en <code>llama.cpp</code>)<a class="headerlink" href="#2-gramaticas-libres-de-contexto-gbnf-en-llamacpp" title="Permanent link">&para;</a></h3>
+<p>El motor <code>llama.cpp</code> proporciona un subsistema de decodificación guiada por gramáticas formales (<em>GGML BNF</em> o GBNF; Gerganov, 2023). En cada paso de generación autorregresiva, el motor filtra y enmascara los <em>logits</em> del vocabulario, asignando probabilidad cero ($-\infty$) a cualquier token que no cumpla con la regla de transición definida en la gramática.
+* <strong>Ventajas</strong>: garantiza matemáticamente que el 100% de los tokens emitidos respeten la estructura gramatical (e.g., sintaxis JSON perfecta).
+* <strong>Limitaciones</strong>: genera una penalización de rendimiento temporal del 10% al 30% en la velocidad de decodificación, debido a la evaluación continua de las reglas gramaticales sobre el conjunto de tokens candidatos.</p>
+<h3 id="3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance">3. Decodificación guiada basada en autómatas finitos (<em>Outlines</em>, <em>Guidance</em>, <em>llguidance</em>)<a class="headerlink" href="#3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance" title="Permanent link">&para;</a></h3>
+<p>La formalización teórica introducida por Willard y Louf (2023) reformula el esquema JSON o expresión regular requerida como un autómata finito determinista (DFA). Mediante el preprocesamiento del vocabulario del tokenizador, el motor indexa de manera eficiente qué tokens son admisibles para cada estado del autómata, aplicando la máscara de <em>logits</em> con una sobrecarga computacional sensiblemente menor a la evaluación de gramáticas complejas.</p>
+<p>Estudios empíricos recientes (Geng et al., 2025; Raspanti et al., 2025) demuestran que la decodificación restringida token a token no solo erradica errores de parseo (elevando la adherencia estructural del ~73% a &gt;98%), sino que preserva e incluso optimiza la coherencia semántica en modelos pequeños, al suprimir caminos de generación dispersos o redundantes. Este enfoque constituye el núcleo del soporte de <code>response_format: {"type": "json_schema", ...}</code> implementado en el sistema (§8.2.1).</p>
+<h3 id="4-estandarizacion-de-llamadas-a-herramientas-model-context-protocol-mcp">4. Estandarización de llamadas a herramientas: Model Context Protocol (MCP)<a class="headerlink" href="#4-estandarizacion-de-llamadas-a-herramientas-model-context-protocol-mcp" title="Permanent link">&para;</a></h3>
+<p>En arquitecturas modulares, la interacción entre el modelo deliberativo y las herramientas externas (sensores, registros de vuelo, interfaces con Unreal Engine) puede articularse mediante el <strong>Model Context Protocol</strong> (MCP; Anthropic, 2024). MCP define un protocolo de cliente-servidor en JSON-RPC que desacopla la lógica del modelo de los servicios del sistema anfitrión, permitiendo exponer primitivas de consulta y actuación de forma segura, determinista y local sin conexión a Internet.</p>
+<hr />
+<h2 id="a14-procedimiento-practico-de-configuracion-e-integracion-local">A1.4 Procedimiento práctico de configuración e integración local<a class="headerlink" href="#a14-procedimiento-practico-de-configuracion-e-integracion-local" title="Permanent link">&para;</a></h2>
+<p>La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:</p>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
+│                   NVIDIA RTX 5060 (8 GB)                 │
+│                                                          │
+│  ┌────────────────────────────┐  ┌────────────────────┐  │
+│  │   Unreal Engine 5.5 /      │  │  LM Studio Server  │  │
+│  │         AirSim             │  │   (llama.cpp core) │  │
+│  │   (4.5 – 5.5 GB VRAM)      │  │  (2.0 – 2.5 GB)    │  │
+│  └─────────────┬──────────────┘  └─────────▲──────────┘  │
+└────────────────┼───────────────────────────┼─────────────┘
+                 │ Telemetría /              │ Macro-acción
+                 │ Fotogramas                │ JSON estructurado
+                 ▼                           │
+   ┌─────────────────────────────────────────┴─────────────┐
+   │        Nodo Deliberativo / FSM (Python)               │
+   │  - Resumen semántico &amp; preprocesamiento               │
+   │  - Inferencia con decodificación json_schema         │
+   │  - Parser tolerante &amp; traducción action_to_command    │
+   └───────────────────────────────────────────────────────┘
+</code></pre></div>
 <ol>
+<li><strong>Gestión de capas en GPU (<em>GPU Layer Offloading</em>)</strong>:</li>
+<li>En el servidor local de inferencia (LM Studio / <code>llama.cpp</code>), el modelo Qwen2.5-VL-3B en cuantización Q4_K_M se aloja en VRAM configurando el traspaso completo (<em>full offload</em>) de sus 36 bloques de capas Transformer, además del codificador visual ligero.</li>
 <li>
-<p><strong>Prompt del sistema con instrucciones estrictas</strong> (método más simple, sin costo computacional significativo)<br />
-    Ejemplo:
-        Eres un respondedor MCP estricto. Produce ÚNICAMENTE JSON válido que coincida con este esquema. Sin explicaciones, sin texto adicional, sin markdown.
-        Esquema: { "tool_call": {"name": str, "args": dict}, "response": str o null }
-        Si no se necesita herramienta, usar tool_call = null. Escapar correctamente todas las cadenas.</p>
+<p>La reserva de VRAM se monitoriza dinámicamente mediante la interfaz NVML (<code>nvidia-smi</code>) para garantizar un margen libre (<em>headroom</em>) de al menos 500 MB, evitando contingencias de falta de memoria (<em>Out of Memory</em>, OOM) cuando el simulador genera escenarios de alta densidad poligonal.</p>
 </li>
 <li>
-<p><strong>Gramáticas / GBNF en llama.cpp</strong> (confiabilidad alta)</p>
-<ul>
-<li>Definir una gramática libre de contexto mínima (GBNF) obliga al modelo a ajustarse exactamente al formato requerido.</li>
-<li>Compatible nativamente con llama.cpp y expuesto en diversas interfaces como LM Studio.</li>
-<li>Suele reducir la velocidad de generación en un 10–30%, pero garantiza validez estructural completa.</li>
-</ul>
+<p><strong>Inferencia desacoplada mediante API HTTP local</strong>:</p>
+</li>
+<li>El motor de inferencia expone un punto de conexión compatible con OpenAI (<code>http://localhost:1234/v1/chat/completions</code>).</li>
+<li>
+<p>El cliente de navegación serializa el estado perceptual y el fotograma codificado en base64, solicitando la respuesta con el parámetro <code>response_format</code> en modo <code>json_schema</code>.</p>
 </li>
 <li>
-<p><strong>Outlines / Guidance / llguidance</strong> (métodos avanzados)</p>
-<ul>
-<li>Permiten imponer esquemas JSON, expresiones regulares o gramáticas personalizadas a nivel de token.</li>
-<li>Garantizan salida estructurada incluso en modelos pequeños.</li>
-</ul>
+<p><strong>Puente bidireccional con AirSim</strong>:</p>
 </li>
+<li>Las lecturas de posición, velocidad y odometría generadas por el modelo de dinámica de AirSim se transforman en representaciones simbólicas y vectores de ocupación.</li>
+<li>La respuesta estructurada del modelo se valida mediante el analizador tolerante (<code>_parse_decision()</code>; §8.2.2) y se convierte en comandos cinemáticos continuos a través de <code>action_to_command()</code> (§8.4).</li>
 </ol>
-<p>Para MCP, estos métodos resultan especialmente relevantes, ya que numerosas implementaciones locales (por ejemplo, clientes y servidores MCP publicados en GitHub) requieren formatos fijos como JSON o XML estilo Anthropic.</p>
-<h3 id="procedimiento-practico-de-configuracion">Procedimiento práctico de configuración<a class="headerlink" href="#procedimiento-practico-de-configuracion" title="Permanent link">&para;</a></h3>
-<ol>
-<li>
-<p><strong>Instalación de LM Studio</strong></p>
+<hr />
+<h2 id="a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026">A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)<a class="headerlink" href="#a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026" title="Permanent link">&para;</a></h2>
+<p>Al plantear una arquitectura agéntica basada en el esquema:</p>
+<p>$$\text{Telemetría sensorial} \longrightarrow \text{SLM / sVLM} \longrightarrow \text{Comando estructurado} \longrightarrow \text{Ejecución en AirSim} \longrightarrow \text{Recálculo}$$</p>
+<p>surge la interrogante fundamental sobre su <strong>novedad científica y tecnológica</strong>. </p>
+<p>Una revisión exhaustiva de la literatura especializada publicada entre 2024 y 2026 revela que <strong>el lazo de control cerrado simple impulsado por modelos de lenguaje en simuladores como AirSim ya no constituye una innovación de frontera</strong>, sino un patrón de diseño ampliamente estandarizado:</p>
 <ul>
-<li>Descargar un modelo GGUF entre los recomendados (desde el buscador integrado o Hugging Face).</li>
-<li>Configurar entre 20 y 35 capas en GPU, ajustando según el comportamiento de Unreal Engine.</li>
-<li>Activar el modo de gramática si está disponible o utilizar un prompt de sistema personalizado.</li>
+<li><strong>Generalización del lazo cerrado (<em>Closed-Loop Embodied Control</em>)</strong>: desde los primeros experimentos de control robótico con modelos generativos (Huang et al., 2022; Vemprala et al., 2023), la comunidad ha convergido de forma unánime hacia ciclos de retroalimentación donde el modelo de lenguaje actúa como planificador táctico o generador de código en bucle continuo.</li>
+<li><strong>Adopción de AirSim y simuladores fotorrealistas</strong>: el ecosistema AirSim / UE5 es la plataforma canónica para evaluar conducción autónoma y navegación de UAVs asistida por modelos fundacionales (Hwang et al., 2024; Jansen et al., 2023; Turco et al., 2024).</li>
+<li><strong>Navegación guiada por visión y lenguaje (VLN)</strong>: propuestas como <em>UAV-VLN</em> (Saxena et al., 2025) y <em>AutoFly</em> (Sun et al., 2026) implementan modelos de acción visual (<em>Vision-Language-Action</em>, VLA) donde la interacción directa entre imagen y control reactivo está extensamente documentada.</li>
+<li><strong>Generación de código y observación semántica</strong>: trabajos contemporáneos como el de Wang et al. (2025) (<em>Large Language Model-Driven Closed-Loop UAV Operation with Semantic Observations</em>) abordan de forma explícita la conversión de telemetría numérica en descripciones semánticas para enriquecer la toma de decisiones en lazo cerrado dentro de entornos de simulación, utilizando módulos duales de generación y evaluación.</li>
 </ul>
-</li>
-<li>
-<p><strong>Implementación basada en MCP</strong></p>
-<ul>
-<li>Iniciar con servidores MCP locales básicos (acceso a archivos, shell, etc.).</li>
-<li>Utilizar un cliente MCP compatible con modelos locales (Ollama con plugins MCP o implementaciones Python como mcp‑agent).</li>
-<li>Proporcionar las descripciones de herramientas MCP mediante el prompt del sistema.</li>
-</ul>
-</li>
-<li>
-<p><strong>Integración con Unreal Engine 5</strong></p>
-<ul>
-<li>Implementar un servidor MCP que lea/escriba logs, datos de Blueprints o estados de simulación.</li>
-<li>El modelo produce comandos estructurados que pueden ser interpretados y aplicados por la aplicación anfitriona.</li>
-</ul>
-</li>
-</ol>
-<h2 id="sobre-la-innovacion-de-la-solucion">Sobre la innovación de la solución<a class="headerlink" href="#sobre-la-innovacion-de-la-solucion" title="Permanent link">&para;</a></h2>
-<p>De manera general, la <em>arquitectura en bucle</em> descrita —un lazo cerrado simple y compacto donde:</p>
-<ol>
-<li>AirSim proporciona el estado actual (posición, velocidad, datos de sensores, etc.),</li>
-<li>Un SLM local y de pequeño tamaño procesa dicha información junto con el objetivo o las instrucciones,</li>
-<li>Se genera un comando estructurado (por ejemplo, un JSON con parámetros de movimiento, guiñada o empuje),</li>
-<li>El comando se ejecuta mediante la API de AirSim,</li>
-<li>El proceso se repite a una frecuencia utilizable (por ejemplo, 2–20 Hz),</li>
-</ol>
-<p>— resulta <em>sólida, práctica y adecuada para las restricciones planteadas</em> (RTX 5060 con 8 GB de VRAM compartida con una simulación en UE 5.5, y uso de modelos pequeños con gramática o salida restringida).</p>
-<p>No obstante, en términos de <em>verdadera innovación</em> dentro del panorama 2025–2026 sobre control de drones/UAV impulsado por LLMs, dicha arquitectura <em>ya no se considera especialmente novedosa</em>. Se trata más bien de uno de los enfoques base que se han estandarizado tanto en investigación como en prototipos aplicados.</p>
-<h3 id="razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia">Razones por las que ya no se considera una solución de vanguardia<a class="headerlink" href="#razones-por-las-que-ya-no-se-considera-una-solucion-de-vanguardia" title="Permanent link">&para;</a></h3>
-<p>A partir de artículos, tesis, proyectos y experimentos recientes (principalmente entre 2025 y principios de 2026), se observa que:</p>
-<ul>
-<li>
-<p>El <em>control en bucle cerrado mediante LLMs</em> para UAVs/drones en simuladores como AirSim se ha vuelto <em>muy común</em>. La mayoría de los trabajos emplea alguna variante del ciclo de retroalimentación.</p>
-<ul>
-<li>Muchos lo denominan explícitamente “<em>closed-loop</em>” (por ejemplo, “LLM-driven closed-loop UAV operation”, “closed-loop reasoning/refinement”, “closed user-on-the-loop”).</li>
-<li>La idea básica de alimentar el estado → LLM → comando → ejecutar → observar → repetir se ha demostrado repetidamente desde aproximadamente 2023–2024 y se generalizó en contextos UAV hacia 2025.</li>
-</ul>
-</li>
-<li>
-<p>La combinación <em>AirSim + LLM</em> se ha convertido en una opción <em>muy utilizada</em>, debido a que AirSim (basado en Unreal Engine) proporciona un entorno realista para probar física, visión y control de drones. Entre las variantes exploradas se encuentran:</p>
-<ul>
-<li>Bucles de generación y ejecución de código.</li>
-<li>Transformación semántica de observaciones (telemetría → descripciones textuales).</li>
-<li>Configuraciones multi‑agente con RAG.</li>
-<li>Tuberías voz‑a‑comando.</li>
-<li>Evaluación de ataques adversarios orientados a medir la robustez de LLMs en lazo cerrado.</li>
-</ul>
-</li>
-<li>
-<p>Las propuestas consideradas “innovadoras” en 2025–2026 suelen ir <em>más allá</em> del simple bucle estado → SLM → comando, e incluyen:</p>
-<ul>
-<li>Diseños <em>dual‑LLM</em> (uno genera código/acciones y otro evalúa/refina dentro de la simulación antes de ejecutar).</li>
-<li><em>Mejoras semánticas</em> para traducir telemetría en descripciones más comprensibles para modelos pequeños.</li>
-<li>Enfoques <em>multi‑agente</em> o <em>jerárquicos</em> (planificador + ejecutor + crítico).</li>
-<li><em>Visión en el bucle</em> (uso de VLMs pequeños como MiniCPM‑V para evitar obstáculos).</li>
-<li><em>Síntesis de código en tiempo real</em> con módulos de corrección o RAG adaptativo.</li>
-<li>Inferencia en <em>edge</em> para reducir aún más la latencia.</li>
-</ul>
-</li>
-</ul>
-<p>En consecuencia, la arquitectura propuesta se corresponde con el patrón básico ampliamente difundido en investigación sobre robótica/UAV basada en LLMs.</p>
-<h3 id="ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad">Ámbitos en los que la propuesta sí presenta solidez y utilidad<a class="headerlink" href="#ambitos-en-los-que-la-propuesta-si-presenta-solidez-y-utilidad" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Se adecúa de forma precisa a las limitaciones del hardware disponible: un SLM pequeño + inferencia rápida mediante llama.cpp permiten mantener latencias suficientemente bajas para tasas de control significativas, mientras que arquitecturas más complejas superarían el límite práctico de 8 GB de VRAM compartida con UE.</li>
-<li>La imposición de <em>salida estrictamente estructurada</em> (por ejemplo, JSON mediante gramáticas GBNF) constituye un enfoque actual y recomendable, utilizado en numerosos trabajos posteriores a 2025 para reducir alucinaciones en señales de control.</li>
-<li>Conseguir una operación totalmente local/offline dentro de UE5.5 + AirSim sigue siendo un reto para usuarios no especializados; muchos ejemplos conocidos emplean LLMs en la nube o hardware de mayor capacidad.</li>
-</ul>
-<h3 id="conclusion-evaluacion-general">Conclusión (evaluación general)<a class="headerlink" href="#conclusion-evaluacion-general" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Nivel de innovación</strong>: aproximadamente 3–4/10. Se trata de una solución práctica y bien formulada, pero no representa una arquitectura novedosa en el contexto de 2026. Se ajusta más al ámbito de <em>ingeniería sólida basada en patrones establecidos</em> que a propuestas conceptualmente nuevas.</li>
-<li>No obstante, una implementación exitosa (vuelo estable, navegación reactiva, baja tasa de fallos en la simulación) constituye un logro destacable, especialmente bajo restricciones de VRAM y con un entorno UE ejecutándose de forma simultánea.</li>
-<li>Si se busca añadir un componente más innovador, es posible incorporar una de las extensiones comunes en 2025–2026, como un resumen semántico del estado, un pequeño evaluador para autocorrección o algún canal de retroalimentación visual, siempre que el presupuesto de VRAM y velocidad lo permita.</li>
-</ul>
-<p>REFERENCIA: (Large Language Model-Driven Closed-Loop UAV Operation with Semantinc Observations)[https://arxiv.org/html/2507.01930v1]  </p>
-<h2 id="sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada">Sobre innovar sobre una arquitectura ya extensamente utilizada<a class="headerlink" href="#sobre-innovar-sobre-una-arquitectura-ya-extensamente-utilizada" title="Permanent link">&para;</a></h2>
-<p>Para que un bucle de control de cuadricóptero en AirSim basado en un SLM resulte <em>genuinamente innovador</em> en 2026 —especialmente bajo la fuerte restricción de hardware impuesta por una RTX 5060 con 8 GB de VRAM compartida con una simulación en UE 5.5— es necesario ir más allá del patrón estándar “estado → prompt → salida estructurada → actuar → repetir”. Dicho patrón ya constituye la base común en prototipos de investigación actuales.</p>
-<p>A continuación se presentan los <em>giros de procesamiento/software</em> más prometedores que pueden situar la propuesta en el terreno de una contribución novedosa, ordenados aproximadamente según viabilidad en el hardware disponible y posible impacto:</p>
+<h3 id="evaluacion-critica">Evaluación crítica<a class="headerlink" href="#evaluacion-critica" title="Permanent link">&para;</a></h3>
+<p>En términos de originalidad puramente teórica o arquitectónica, la arquitectura en lazo cerrado simple se sitúa en un nivel de madurez consolidado (patrón canónico de ingeniería). Intentar justificar la novedad de una tesis únicamente en el hecho de conectar un modelo de lenguaje a un simulador de vuelo representaría un posicionamiento metodológicamente vulnerable.</p>
+<p>Por el contrario, <strong>el verdadero aporte de ingeniería de esta tesis radica en la resolución de los cuellos de botella prácticos que la literatura suele ignorar o delegar a servidores masivos en la nube</strong>:
+1. La integración sinérgica entre <strong>percepción monocular por flujo óptico pasivo</strong> (capítulo 6) y un modelo visual compacto local (capítulo 8), delimitando cuándo se activa el razonamiento deliberativo y cuándo se recurre al control reactivo.
+2. La caracterización sistemática de los <strong>modos de fallo en tiempo real</strong> bajo presupuestos severos de cómputo y memoria (capítulo 9).
+3. La garantía de determinismo y fiabilidad operativa mediante <strong>decodificación restringida por esquemas gramaticales</strong> y arquitecturas jerárquicas de seguridad.</p>
+<hr />
+<h2 id="a16-vias-de-diferenciacion-e-innovacion-de-ingenieria-en-entornos-severamente-restringidos">A1.6 Vías de diferenciación e innovación de ingeniería en entornos severamente restringidos<a class="headerlink" href="#a16-vias-de-diferenciacion-e-innovacion-de-ingenieria-en-entornos-severamente-restringidos" title="Permanent link">&para;</a></h2>
+<p>Para que un sistema de navegación para cuadricópteros basado en SLMs aporte valor genuino y diferenciado en hardware de recursos limitados, es imperativo trascender el bucle elemental de control. A continuación se sintetizan las estrategias de software y procesamiento identificadas en esta exploración, contrastando su viabilidad y beneficio:</p>
 <table>
 <thead>
 <tr>
-<th>Técnica / Enfoque</th>
-<th>Nivel de innovación (2026)</th>
-<th>Impacto en VRAM / Velocidad (8GB compartidos)</th>
-<th>Razón por la que puede ser novedosa en este contexto</th>
-<th>Dificultad de implementación</th>
-<th>Beneficio realista para la autonomía del dron</th>
+<th>Estrategia arquitectónica</th>
+<th>Nivel de diferenciación técnica</th>
+<th>Impacto en VRAM y latencia (8 GB compartidos)</th>
+<th>Fundamento y justificación operativa</th>
+<th>Estado de integración en la tesis</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><em>Compresión semántica del estado + alimentación en lenguaje natural</em></td>
-<td>Alta</td>
-<td>Baja (añade \~0.2–0.5 GB de KV cache)</td>
-<td>La mayoría de los trabajos usa telemetría cruda; los SLM pequeños razonan mejor con descripciones ricas (“deriva 0.8 m/s hacia la izquierda, obstáculo rojo a 2.1 m, batería 67%”).</td>
-<td>Media</td>
-<td>20–50% de mejora en calidad de decisiones / menos choques</td>
+<td><strong>Compresión semántica de observaciones</strong></td>
+<td>Alto</td>
+<td>Bajo (+0.1–0.3 GB en KV cache)</td>
+<td>La telemetría numérica cruda resulta opaca para modelos compactos; la transformación en resúmenes semánticos estructurados maximiza el razonamiento del SLM (Wang et al., 2025).</td>
+<td><strong>Integrado</strong> (módulo <code>ObstacleField</code> y prompts estructurados; §6.12, §8.5).</td>
 </tr>
 <tr>
-<td><em>Autocorrección / refinamiento en bucle cerrado en una sola pasada</em></td>
-<td>Muy alta</td>
-<td>Media (prompts más largos)</td>
-<td>Permite incluir un campo “crítico” en la salida: el modelo propone acción + evalúa riesgos en la misma inferencia. Pocas implementaciones en entornos de baja VRAM.</td>
-<td>Media–Alta</td>
-<td>Aumento notable de confiabilidad (80–95% de acciones válidas)</td>
+<td><strong>Control híbrido deliberativo-reactivo con FSM</strong></td>
+<td>Alto</td>
+<td>Muy bajo (despreciable en GPU)</td>
+<td>El SLM no gestiona la cinemática de alta frecuencia; emite macro-acciones discretas cada 0.5–2 s, mientras una FSM determinista y controladores de bajo nivel aseguran estabilidad dinámica y <em>fail-safe</em> (Gat, 1998).</td>
+<td><strong>Integrado como pilar central</strong> (capítulos 5 y 8; desacoplamiento FSM / Deliberativo).</td>
 </tr>
 <tr>
-<td><em>Speculative decoding / borradores asistidos (con cabeza ligera)</em></td>
-<td>Alta</td>
-<td>Baja–Media (si se usa estilo EAGLE)</td>
-<td>Acelera la generación 1.8–3× sin pérdida de calidad. Muy poco explorado en drones con baja VRAM.</td>
-<td>Media–Alta</td>
-<td>2–3× más frecuencia de bucle (p. ej., 10–15 Hz en lugar de 3–5 Hz)</td>
+<td><strong>Decodificación restringida formal (<code>json_schema</code>)</strong></td>
+<td>Alto</td>
+<td>Nulo en VRAM; sobrecarga mínima de latencia</td>
+<td>Sustituye el parseo heurístico por restricciones a nivel de logits; convierte el espacio discreto de macro-acciones en una gramática ejecutable (Geng et al., 2025; Raspanti et al., 2025; Willard &amp; Louf, 2023).</td>
+<td><strong>Integrado</strong> (adherencia elevada del 73% al 98%; §8.2.1).</td>
 </tr>
 <tr>
-<td><em>Híbrido reactivo + LLM (PID a sub‑ms + LLM solo para nivel alto)</em></td>
-<td>Media–Alta</td>
-<td>Muy baja</td>
-<td>El LLM se utiliza solo para metas/replanificación; la estabilización se delega a controladores reactivos. Reduce dependencia de latencia.</td>
-<td>Baja–Media</td>
-<td>Vuelo más estable; narrativa innovadora de “control híbrido confiable”</td>
+<td><strong>Autocorrección reflexiva en una sola pasada (<em>Single-Pass Self-Refinement</em>)</strong></td>
+<td>Muy alto</td>
+<td>Medio (demanda secuencias de salida más largas)</td>
+<td>El modelo emite la acción propuesta, un índice de confianza y una alternativa de contingencia en un único flujo de inferencia, sin requerir un segundo llamado a la GPU.</td>
+<td><strong>Conceptualizado</strong> en el espacio de acción ampliado; factible como extensión futura.</td>
 </tr>
 <tr>
-<td><em>Fine‑tuning diminuto en tiempo real / cambio de adaptadores LoRA</em></td>
-<td>Muy alta</td>
-<td>Media–Alta (100–300 MB por adaptador)</td>
-<td>Conjunto de LoRAs pequeños (“evitación agresiva”, “crucero eficiente”, etc.) con carga dinámica. Pocas demostraciones en simulación de baja capacidad.</td>
-<td>Alta</td>
-<td>Adaptación gradual al entorno en UE → efecto de “aprendizaje”</td>
-</tr>
-<tr>
-<td><em>Chain‑of‑thought multietapa con muestreo en árbol / batching</em></td>
-<td>Media–Alta</td>
-<td>Media</td>
-<td>Se fuerzan 2–3 futuros posibles en una sola salida; una heurística rápida elige el más seguro. Reduce latencia efectiva.</td>
-<td>Media</td>
-<td>Mejor manejo de incertidumbre / ráfagas de viento en AirSim</td>
+<td><strong>Decodificación especulativa (<em>Speculative Decoding</em>)</strong></td>
+<td>Alto</td>
+<td>Bajo–Medio (requiere modelo borrador o cabeza auxiliar)</td>
+<td>Acelera la generación autorregresiva 1.5× a 2.5× mediante verificación paralela de tokens (Leviathan et al., 2023), mitigando la latencia en maniobras evasivas críticas.</td>
+<td><strong>Línea de trabajo futuro</strong> condicionada por el soporte de cabezas draft en backends de borde.</td>
 </tr>
 </tbody>
 </table>
-<h3 id="combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible">“Combinación ganadora” más prometedora para innovación + hardware disponible<a class="headerlink" href="#combinacion-ganadora-mas-prometedora-para-innovacion-hardware-disponible" title="Permanent link">&para;</a></h3>
-<p>Se recomienda apuntar a la siguiente arquitectura, factible dentro del límite de 8 GB de VRAM compartidos:</p>
-<ol>
-<li><strong>Base:</strong> Phi‑4‑mini‑Instruct o Qwen3‑4B/7B en Q5_K_M GGUF (\~2.5–4 GB cargados; offload parcial si fuera necesario).</li>
-<li><strong>Giro central A:</strong> Preprocesamiento mediante <em>compresión semántica</em>. Una función Python ligera convierte telemetría de AirSim + objetivo en una descripción vívida en lenguaje natural. Esto potencia significativamente la capacidad de razonamiento de un SLM pequeño.</li>
-<li><strong>Giro central B:</strong> Salida con <em>autocorrección forzada por gramática</em>:
-    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;proposed_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;thrust&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.72</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;yaw_delta&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">-12</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;move_vector&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.2</span><span class="p">,</span><span class="w"> </span><span class="mf">-0.4</span><span class="p">,</span><span class="w"> </span><span class="mf">0.8</span><span class="p">]},</span>
-<span class="w">  </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.89</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;risks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;batería baja → reducir velocidad si &lt;30%&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;alternative_if_risk_high&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;thrust&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.55</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;hover&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-    La salida se analiza y se aplica la acción más segura o con mayor confianza. Una sola inferencia gestiona propuesta + crítica.</li>
-<li><strong>Aceleración:</strong> Activar <em>speculative decoding</em> si la versión de llama.cpp o LM Studio lo permite (implementaciones estilo EAGLE o Medusa; comunes en 2026). Puede reducir la latencia por decisión entre 40–200%.</li>
-<li><strong>Red de seguridad híbrida:</strong> El LLM produce intención de alto nivel cada 0.5–2 s; un controlador PID rápido en C++/Blueprints opera a 100–200 Hz. Si el LLM falla o se ralentiza → activación de “hover seguro + retorno a casa”.</li>
-</ol>
-<h3 id="razones-por-las-que-este-enfoque-si-se-considera-innovador">Razones por las que este enfoque sí se considera innovador<a class="headerlink" href="#razones-por-las-que-este-enfoque-si-se-considera-innovador" title="Permanent link">&para;</a></h3>
-<ul>
-<li>La mayoría de los trabajos entre 2025 y 2026 siguen recurriendo a LLMs en la nube, hardware más potente o alimentaciones de estado sin tratamiento semántico.</li>
-<li>La combinación de <em>compresión semántica + autocorrección con gramática + aceleración especulativa + control híbrido</em> ejecutada en solo 8 GB de VRAM compartidos con una simulación UE es poco habitual, y potencialmente publicable como una aproximación de <em>control agente de dron en simulación de alta fidelidad con recursos limitados</em>.</li>
-<li>Si se logra una navegación estable y reactiva (evitación de obstáculos, búsqueda de objetivos, comportamiento dependiente de batería) con latencias por decisión inferiores a 500 ms, se trataría de una demostración sólida.</li>
-</ul>
-<p>Se recomienda comenzar por implementar la <em>compresión semántica</em> y la <em>salida con gramática</em>, medir tasa de fallos y comparar con el bucle base. Posteriormente, incorporar speculative decoding como mejora incremental.</p>
+<h3 id="conclusion-sintetica">Conclusión sintética<a class="headerlink" href="#conclusion-sintetica" title="Permanent link">&para;</a></h3>
+<p>La exploración realizada confirma que la combinación de <strong>compresión perceptiva estructurada</strong>, <strong>decodificación restringida por gramáticas</strong> y <strong>arquitectura híbrida deliberativa-reactiva</strong> permite ejecutar un agente de navegación visual robusto, completamente desconectado de la nube y contenido en 8 GB de VRAM compartidos con Unreal Engine 5.5. Esta solución traslada el foco desde la especulación de modelos masivos hacia la ingeniería rigurosa de sistemas autónomos embebidos.</p>
 
 
 

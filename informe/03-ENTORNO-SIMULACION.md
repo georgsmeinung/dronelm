@@ -72,6 +72,8 @@ Con esta configuración Scalability de Unreal Engine se asegura a la hora de eje
 - Captura de video desde AirSim (con `Effects=Epic`)
 - Sombras en las texturas necesarias para capturar los gradientes usados para el cálculo del TTC con el flujo visual (con `Shadows=Epic`).
 
+*(Para la especificación completa del archivo `settings.json` anotado, el perfil de escalabilidad y el protocolo de reproducibilidad del entorno de simulación, véase el [Anexo 6](anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md)).*
+
 ### Higiene y consistencia de la captura monocular
 
 Durante la experimentación continua en simulación se identificaron y resolvieron dos anomalías instrumentales críticas en el canal visual:

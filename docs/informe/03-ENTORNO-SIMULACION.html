@@ -857,14 +857,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.html" class="md-nav__link">
+      <a href="anexos/A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A2. SLM — Concepto y Ventajas
+    A2. Técnicas de Optimización en SLM
   
 
     
@@ -885,14 +885,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+      <a href="anexos/A3-OPTIMIZACION-LORA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A3. SLM — Optimización y Desafíos
+    A3. Optimización LoRA / QLoRA
   
 
     
@@ -913,14 +913,14 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A4-OPTIMIZACION-LORA.html" class="md-nav__link">
+      <a href="anexos/A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A4. LoRA (Alternativa No Adoptada)
+    A4. Decodificación Restringida
   
 
     
@@ -941,14 +941,42 @@
   
   
     <li class="md-nav__item">
-      <a href="anexos/A5-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+      <a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    A5. Decodificación Restringida
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
   
 
     
@@ -1139,10 +1167,10 @@
 <p><strong>Tier 0 — Base / Control (<code>MiniSim</code>):</strong> Entorno abierto basado en el mapa <code>crater.png</code> (basado en el <strong>proyecto base de Unreal Engine</strong> <a href="https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-templates-reference?application_version=5.5">https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-templates-reference?application_version=5.5</a>). Diseñado para pruebas de calibración cinemática, sintonización de controladores de posición y determinación de la cota inferior de latencia del sistema sin interferencia de obstáculos.</p>
 </li>
 <li>
-<p><strong>Tier 1 — Intermedio / Morfología orgánica y vegetación (<code>TownSim</code>):</strong> Entorno semiurbano desarrollado sobre <code>townsim.png</code> y refinado en el mapa calibrado <code>townsim_calib.png</code>, basado en el entorno <strong>Downtown West Modular Pack</strong> <a href="https://www.fab.com/listings/0faf8b5d-7a5f-4fee-a297-7a8efaba8896">https://www.fab.com/listings/0faf8b5d-7a5f-4fee-a297-7a8efaba8896</a> de PurePolygons. Presenta calles de ancho variable, fachadas intermedias, mobiliario y arboledas densas. Constituye el banco de pruebas central para la batería de calibración <code>T-CALIB-0</code> a <code>T-CALIB-5</code> y la misión de recorrido perimetral <code>townsim_ini</code>, albergando el escenario de bloqueo frontal masivo genuino (<code>T-CALIB-2</code>).</p>
+<p><strong>Tier 1 — Intermedio / Morfología orgánica y vegetación (<code>TownSim</code>):</strong> Entorno semiurbano desarrollado sobre <code>townsim.png</code> y refinado en el mapa calibrado <code>townsim_calib.png</code>, basado en el entorno <strong>Downtown West Modular Pack</strong> <a href="https://www.fab.com/listings/0faf8b5d-7a5f-4fee-a297-7a8efaba8896">https://www.fab.com/listings/0faf8b5d-7a5f-4fee-a297-7a8efaba8896</a> de PurePolygons. Presenta calles de ancho variable, fachadas intermedias, mobiliario y arboledas densas. Constituye el banco de pruebas central para los escenarios de recorrido perimetral (<code>townsim_clear</code>, <code>townsim_ini</code>) y el escenario de bloqueo frontal masivo (<code>townsim_calib_cruce_frontal</code>).</p>
 </li>
 <li>
-<p><strong>Tier 2 — Complejo / Cañones urbanos de gran densidad (<code>CitySim</code>):</strong> Proyecto de Unreal Engine 5.5 con tejido edilicio masivo (<code>citysim_calib.png</code>), rascacielos, pasos restringidos y disposición en cuadrícula ortogonal, basado en el entorno <strong>Sample City</strong> <a href="https://www.fab.com/listings/4898e707-7855-404b-af0e-a505ee690e68">https://www.fab.com/listings/4898e707-7855-404b-af0e-a505ee690e68</a> de Epic Games. El escenario base validado para el batch G4 es <code>citysim_clear.json</code>: perímetro de manzana con patrón <em>climb-first</em>, ascenso vertical puro hasta −70 m AGL antes de moverse horizontalmente. La altitud de tránsito de −70 m es un dato de diseño del entorno: la primera corrida a −50 m falló porque la ruta de ascenso atravesaba edificios; a −70 m el dron vuela por encima de la línea de tejados. Los escenarios con corredores angostos (<code>citymap_pilot.json</code> y <code>citymap_a.json</code>) corresponden a la fase siguiente del batch.</p>
+<p><strong>Tier 2 — Complejo / Cañones urbanos de gran densidad (<code>CitySim</code>):</strong> Proyecto de Unreal Engine 5.5 con tejido edilicio masivo (<code>citysim_calib.png</code>), rascacielos, pasos restringidos y disposición en cuadrícula ortogonal, basado en el entorno <strong>Sample City</strong> <a href="https://www.fab.com/listings/4898e707-7855-404b-af0e-a505ee690e68">https://www.fab.com/listings/4898e707-7855-404b-af0e-a505ee690e68</a> de Epic Games. El escenario de control es <code>citysim_clear.json</code>: perímetro de manzana con patrón <em>climb-first</em>, ascenso vertical puro hasta −70 m AGL antes de moverse horizontalmente. La altitud de tránsito de −70 m es un dato de diseño del entorno: la primera corrida a −50 m falló porque la ruta de ascenso atravesaba edificios; a −70 m el dron vuela por encima de la línea de tejados. Los escenarios con corredores angostos (<code>citymap_pilot.json</code>) constituyen el escenario de dificultad máxima del tier.</p>
 </li>
 </ol>
 <h2 id="33-configuracion-de-rendimiento-escalabilidad-grafica-e-higiene-de-captura">3.3 Configuración de rendimiento, escalabilidad gráfica e higiene de captura<a class="headerlink" href="#33-configuracion-de-rendimiento-escalabilidad-grafica-e-higiene-de-captura" title="Permanent link">&para;</a></h2>
@@ -1172,6 +1200,7 @@ r.DetailMode=2
 <p>Con esta configuración Scalability de Unreal Engine se asegura a la hora de ejecutar la simulación:
 - Captura de video desde AirSim (con <code>Effects=Epic</code>)
 - Sombras en las texturas necesarias para capturar los gradientes usados para el cálculo del TTC con el flujo visual (con <code>Shadows=Epic</code>).</p>
+<p><em>(Para la especificación completa del archivo <code>settings.json</code> anotado, el perfil de escalabilidad y el protocolo de reproducibilidad del entorno de simulación, véase el <a href="anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html">Anexo 6</a>).</em></p>
 <h3 id="higiene-y-consistencia-de-la-captura-monocular">Higiene y consistencia de la captura monocular<a class="headerlink" href="#higiene-y-consistencia-de-la-captura-monocular" title="Permanent link">&para;</a></h3>
 <p>Durante la experimentación continua en simulación se identificaron y resolvieron dos anomalías instrumentales críticas en el canal visual:</p>
 <ol>

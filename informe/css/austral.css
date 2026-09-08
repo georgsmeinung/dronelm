@@ -247,6 +247,15 @@
     break-before: avoid;
   }
 
+  /* Salto de página explícito para separar secciones (e.g. carátula y resumen) */
+  .page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   /* Colores planos para impresión (ahorrar tinta, mantener legibilidad) */
   a {
     color: #0F29A2 !important;

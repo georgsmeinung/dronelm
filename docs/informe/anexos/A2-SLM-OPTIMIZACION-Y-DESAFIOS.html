@@ -1,0 +1,1446 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A2-SLM-OPTIMIZACION-Y-DESAFIOS.html">
+      
+      
+        <link rel="prev" href="A1-EXPLORACION-SLM-GGUF.html">
+      
+      
+        <link rel="next" href="A3-OPTIMIZACION-LORA.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A2. Técnicas de Optimización en SLM - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-2-tecnicas-de-optimizacion-compresion-y-mitigacion-de-desafios-en-small-language-models-slm" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A2. Técnicas de Optimización en SLM
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a21-paradigmas-fundamentales-de-compresion-de-modelos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1 Paradigmas fundamentales de compresión de modelos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.1 Paradigmas fundamentales de compresión de modelos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a211-destilacion-de-conocimiento-knowledge-distillation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1.1 Destilación de conocimiento (Knowledge Distillation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a212-poda-de-parametros-pruning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1.2 Poda de parámetros (Pruning)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a213-cuantizacion-quantization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1.3 Cuantización (Quantization)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a22-arquitecturas-compactas-y-optimizacion-para-inferencia-en-borde" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2 Arquitecturas compactas y optimización para inferencia en borde
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.2 Arquitecturas compactas y optimización para inferencia en borde">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a221-disenos-ligeros-y-optimizaciones-de-atencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2.1 Diseños ligeros y optimizaciones de atención
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a222-ajuste-fino-eficiente-en-parametros-peft-lora-y-qlora" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2.2 Ajuste fino eficiente en parámetros (PEFT, LoRA y QLoRA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a223-transferencia-y-destilacion-de-razonamiento" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2.3 Transferencia y destilación de razonamiento
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a23-el-desafio-de-las-alucinaciones-en-modelos-compactos-y-vision-lenguaje" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.3 El desafío de las alucinaciones en modelos compactos y visión-lenguaje
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.3 El desafío de las alucinaciones en modelos compactos y visión-lenguaje">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a231-correlacion-entre-escala-de-parametros-y-propension-alucinatoria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.3.1 Correlación entre escala de parámetros y propensión alucinatoria
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a232-riesgos-criticos-en-vehiculos-aereos-no-tripulados-uavs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.3.2 Riesgos críticos en vehículos aéreos no tripulados (UAVs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conclusion-sintetica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusión sintética
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a21-paradigmas-fundamentales-de-compresion-de-modelos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1 Paradigmas fundamentales de compresión de modelos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.1 Paradigmas fundamentales de compresión de modelos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a211-destilacion-de-conocimiento-knowledge-distillation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1.1 Destilación de conocimiento (Knowledge Distillation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a212-poda-de-parametros-pruning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1.2 Poda de parámetros (Pruning)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a213-cuantizacion-quantization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.1.3 Cuantización (Quantization)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a22-arquitecturas-compactas-y-optimizacion-para-inferencia-en-borde" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2 Arquitecturas compactas y optimización para inferencia en borde
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.2 Arquitecturas compactas y optimización para inferencia en borde">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a221-disenos-ligeros-y-optimizaciones-de-atencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2.1 Diseños ligeros y optimizaciones de atención
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a222-ajuste-fino-eficiente-en-parametros-peft-lora-y-qlora" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2.2 Ajuste fino eficiente en parámetros (PEFT, LoRA y QLoRA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a223-transferencia-y-destilacion-de-razonamiento" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.2.3 Transferencia y destilación de razonamiento
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a23-el-desafio-de-las-alucinaciones-en-modelos-compactos-y-vision-lenguaje" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.3 El desafío de las alucinaciones en modelos compactos y visión-lenguaje
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.3 El desafío de las alucinaciones en modelos compactos y visión-lenguaje">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a231-correlacion-entre-escala-de-parametros-y-propension-alucinatoria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.3.1 Correlación entre escala de parámetros y propensión alucinatoria
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a232-riesgos-criticos-en-vehiculos-aereos-no-tripulados-uavs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.3.2 Riesgos críticos en vehículos aéreos no tripulados (UAVs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conclusion-sintetica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusión sintética
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<blockquote>
+<p><strong>Nota de ubicación:</strong> este documento constituye material de investigación sobre técnicas de optimización, compresión y mitigación de desafíos operativos en Small Language Models (SLM). Sirve como referencia técnica complementaria para el capítulo 8 (<code>08-DECISIONES-SLM.md</code>, §8.1) y los anexos A1, A3 y A4. Reubicado desde <code>informe/SLM Optimización y Desafíos.md</code> el 2026-08-25.</p>
+</blockquote>
+<hr />
+<h1 id="anexo-2-tecnicas-de-optimizacion-compresion-y-mitigacion-de-desafios-en-small-language-models-slm">Anexo 2: Técnicas de optimización, compresión y mitigación de desafíos en Small Language Models (SLM)<a class="headerlink" href="#anexo-2-tecnicas-de-optimizacion-compresion-y-mitigacion-de-desafios-en-small-language-models-slm" title="Permanent link">&para;</a></h1>
+<p>La viabilidad de los modelos de lenguaje pequeños (<em>Small Language Models</em>, SLMs) y sus variantes multimodales de visión (<em>Small Vision-Language Models</em>, sVLMs) en plataformas robóticas autónomas reside en su capacidad para aproximar la competencia de razonamiento de los grandes modelos fundacionales bajo presupuestos severamente restringidos de cómputo, memoria y energía (Abdin et al., 2024; Nguyen et al., 2024).</p>
+<p>Este anexo sistematiza los principios teóricos y metodológicos de optimización que hacen posible este equilibrio: examina los tres pilares de compresión (destilación, poda y cuantización), revisa los avances arquitectónicos en eficiencia y adaptación en borde, analiza críticamente la propensión a alucinaciones en modelos compactos, y detalla los mecanismos de ingeniería adoptados en esta tesis para mitigar dichos riesgos en el lazo de navegación de un vehículo aéreo no tripulado (UAV).</p>
+<hr />
+<h2 id="a21-paradigmas-fundamentales-de-compresion-de-modelos">A2.1 Paradigmas fundamentales de compresión de modelos<a class="headerlink" href="#a21-paradigmas-fundamentales-de-compresion-de-modelos" title="Permanent link">&para;</a></h2>
+<p>La reducción del orden de magnitud en el conteo de parámetros sin degradar de manera catastrófica la precisión y capacidad de generalización se articula mediante tres técnicas complementarias:</p>
+<h3 id="a211-destilacion-de-conocimiento-knowledge-distillation">A2.1.1 Destilación de conocimiento (<em>Knowledge Distillation</em>)<a class="headerlink" href="#a211-destilacion-de-conocimiento-knowledge-distillation" title="Permanent link">&para;</a></h3>
+<p>La destilación de conocimiento consiste en transferir las distribuciones de probabilidad y las representaciones latentes aprendidas por un modelo «maestro» (<em>teacher</em>) de gran escala hacia una red «estudiante» (<em>student</em>) más compacta (Hinton et al., 2015). </p>
+<ul>
+<li><strong>Supervisión densa</strong>: a diferencia del entrenamiento supervisado tradicional basado únicamente en etiquetas duras (<em>one-hot</em>), el modelo estudiante aprende a replicar las probabilidades suaves (<em>soft targets</em>) del maestro, capturando correlaciones cruzadas implícitas y matices semánticos que no están presentes en los datos de entrada brutos.</li>
+<li><strong>Alineación de razonamiento</strong>: modificaciones en la función de pérdida de destilación permiten transferir cadenas de inferencia paso a paso (<em>Chain-of-Thought</em>, CoT), facultando a modelos sub-4B para resolver problemas de lógica simbólica, descomposición de metas y razonamiento espacial con fidelidad comparable a redes sustancialmente mayores.</li>
+<li><strong>Destilación multi-maestro</strong>: arquitecturas especializadas integran ensambles de múltiples modelos maestros (e.g., un maestro de visión y otro de razonamiento textual) para destilar un único modelo compacto unificado.</li>
+</ul>
+<h3 id="a212-poda-de-parametros-pruning">A2.1.2 Poda de parámetros (<em>Pruning</em>)<a class="headerlink" href="#a212-poda-de-parametros-pruning" title="Permanent link">&para;</a></h3>
+<p>La poda consiste en eliminar sistemáticamente ponderaciones redundantes o conexiones poco informativas dentro de las matrices de peso de la red, reduciendo el conteo de operaciones y la huella de memoria:</p>
+<ul>
+<li><strong>Poda no estructurada (<em>Unstructured Pruning</em>)</strong>: suprime ponderaciones individuales cuyos valores absolutos o gradientes caen por debajo de un umbral específico, generando matrices dispersas (<em>sparse</em>). Algoritmos de segunda derivada como SparseGPT (Frantar &amp; Alistarh, 2023) permiten podar modelos masivos en una sola pasada (<em>one-shot</em>) sin necesidad de reentrenamiento extensivo. No obstante, aprovechar la aceleración teórica de la poda no estructurada exige hardware especializado con soporte nativo de aceleración dispersa (e.g., patrones $2:4$ o $n:m$).</li>
+<li><strong>Poda estructurada (<em>Structured Pruning</em>)</strong>: retira bloques completos de la arquitectura, tales como neuronas completas, cabezas de atención (<em>attention heads</em>) o capas Transformer completas. Aunque puede inducir una degradación más abrupta si la tasa de remoción es excesiva, preserva matrices densas compatibles de forma nativa con cualquier biblioteca de álgebra lineal y GPU estándar.</li>
+</ul>
+<h3 id="a213-cuantizacion-quantization">A2.1.3 Cuantización (<em>Quantization</em>)<a class="headerlink" href="#a213-cuantizacion-quantization" title="Permanent link">&para;</a></h3>
+<p>La cuantización sustituye las representaciones numéricas de alta precisión (típicamente punto flotante de 16 o 32 bits, FP16/FP32) por representaciones discretas enteras de bajo número de bits (INT8 o INT4), reduciendo drásticamente la memoria requerida para almacenar los pesos y acelerando el rendimiento computacional de las unidades de cálculo matricial (Frantar et al., 2022):</p>
+<ul>
+<li><strong>Cuantización post-entrenamiento (<em>Post-Training Quantization</em>, PTQ)</strong>: metodologías como GPTQ (Frantar et al., 2022) y AWQ (<em>Activation-aware Weight Quantization</em>) formulan la compresión como un problema de optimización cuadrática por capas, cuantizando los pesos mientras compensan el error de reconstrucción basándose en la información de segundo orden de la matriz Hessiana.</li>
+<li><strong>Cuantización del caché de claves y valores (KV Cache Quantization)</strong>: en tareas de inferencia de secuencias continuas o históricas, la KV cache constituye la principal causa de crecimiento dinámico de VRAM. Reducir la precisión de estos tensores a INT8 o INT4 permite sostener ventanas de contexto prolongadas sin desbordar la memoria de video disponible.</li>
+<li><strong>Tratamiento de valores atípicos (<em>Outliers</em>)</strong>: esquemas como SmoothQuant mitigan la dificultad inherente a la cuantización de activaciones migrando la escala dinámica entre pesos y activaciones antes de la cuantización, asegurando estabilidad numérica en modelos autoregresivos.</li>
+</ul>
+<hr />
+<h2 id="a22-arquitecturas-compactas-y-optimizacion-para-inferencia-en-borde">A2.2 Arquitecturas compactas y optimización para inferencia en borde<a class="headerlink" href="#a22-arquitecturas-compactas-y-optimizacion-para-inferencia-en-borde" title="Permanent link">&para;</a></h2>
+<p>Más allá de la compresión directa de redes preexistentes, el diseño arquitectónico nativo de modelos compactos ha introducido mejoras estructurales orientadas a dispositivos con recursos limitados (<em>edge computing</em>):</p>
+<h3 id="a221-disenos-ligeros-y-optimizaciones-de-atencion">A2.2.1 Diseños ligeros y optimizaciones de atención<a class="headerlink" href="#a221-disenos-ligeros-y-optimizaciones-de-atencion" title="Permanent link">&para;</a></h3>
+<p>Modelos como MobileLLM (Liu et al., 2024), TinyLlama (Zhang et al., 2024) y la familia Phi (Abdin et al., 2024) demuestran que optimizar la profundidad frente al ancho de la red, compartir matrices de incrustación (<em>embedding sharing</em>) y adoptar mecanismos eficientes de atención permite que modelos de escala 1B a 4B alcancen competencias operativas antes restringidas a modelos de decenas de miles de millones de parámetros. </p>
+<p>Asimismo, la sustitución o combinación de la autoatención cuadrática convencional $\mathcal{O}(N^2)$ por mecanismos de atención lineal, ventanas deslizantes (<em>sliding window attention</em>) o formulaciones basadas en modelos de espacio de estados (SSM) alivia sustancialmente la carga computacional en inferencias continuas.</p>
+<h3 id="a222-ajuste-fino-eficiente-en-parametros-peft-lora-y-qlora">A2.2.2 Ajuste fino eficiente en parámetros (PEFT, LoRA y QLoRA)<a class="headerlink" href="#a222-ajuste-fino-eficiente-en-parametros-peft-lora-y-qlora" title="Permanent link">&para;</a></h3>
+<p>El reentrenamiento completo (<em>full fine-tuning</em>) de un modelo exige almacenar en memoria los estados del optimizador, activaciones intermedias y gradientes para la totalidad de los parámetros, lo cual supera con creces la memoria disponible en GPUs de consumo. </p>
+<p>Las técnicas de ajuste fino eficiente en parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT), y en particular la adaptación de bajo rango (<strong>LoRA</strong>; Hu et al., 2022), resuelven esta barrera:
+* Congelan las ponderaciones preentrenadas $W_0 \in \mathbb{R}^{d \times k}$ y modelan la actualización mediante la descomposición en dos matrices de bajo rango $B \times A$, donde $r \ll \min(d, k)$:
+  $$W = W_0 + \Delta W = W_0 + B \cdot A$$
+* Reducen el conteo de parámetros entrenables en más de un 99%, permitiendo especializar modelos en tareas de navegación o seguimiento de formatos en pocas horas de GPU.
+* Su variante cuantizada, <strong>QLoRA</strong> (Dettmers et al., 2024), mantiene el modelo base en precisión de 4 bits (NormalFloat4) e inserta adaptadores LoRA entrenables en precisión de 16 bits, posibilitando la especialización local sin incurrir en consumo masivo de VRAM.</p>
+<h3 id="a223-transferencia-y-destilacion-de-razonamiento">A2.2.3 Transferencia y destilación de razonamiento<a class="headerlink" href="#a223-transferencia-y-destilacion-de-razonamiento" title="Permanent link">&para;</a></h3>
+<p>Los modelos compactos entrenados sobre datos sintéticos curados de alta calidad pedagógica (como libros de texto sintéticos y trazas lógicas depuradas) exhiben una capacidad desproporcionada para el seguimiento de instrucciones y la descomposición algorítmica de problemas (Abdin et al., 2024). Esto valida que la capacidad de razonamiento operativo de un modelo en un lazo de control no está determinada exclusivamente por el volumen bruto de parámetros, sino por la densidad informativa y estructurada del corpus con el que fue optimizado.</p>
+<hr />
+<h2 id="a23-el-desafio-de-las-alucinaciones-en-modelos-compactos-y-vision-lenguaje">A2.3 El desafío de las alucinaciones en modelos compactos y visión-lenguaje<a class="headerlink" href="#a23-el-desafio-de-las-alucinaciones-en-modelos-compactos-y-vision-lenguaje" title="Permanent link">&para;</a></h2>
+<p>El fenómeno de la <strong>alucinación</strong> —definido como la generación de información fáctica o contextualmente incorrecta, no fundamentada en la entrada sensorial ni en la evidencia provista (Ji et al., 2023)— adquiere una gravedad particular en sistemas de robótica móvil e interacción física con el entorno.</p>
+<h3 id="a231-correlacion-entre-escala-de-parametros-y-propension-alucinatoria">A2.3.1 Correlación entre escala de parámetros y propensión alucinatoria<a class="headerlink" href="#a231-correlacion-entre-escala-de-parametros-y-propension-alucinatoria" title="Permanent link">&para;</a></h3>
+<p>La literatura experimental documenta que los modelos de menor tamaño presentan una propensión basal más alta a generar contenido alucinatorio en comparación con modelos de frontera:
+* Evaluaciones sistemáticas en modelos multimodales de visión-lenguaje mediante bancos de prueba especializados como <strong>HallusionBench</strong> (Guan et al., 2024) revelan que la reducción en la capacidad de la red acentúa las ilusiones visuales y los sesgos lingüísticos no fundamentados en la imagen (<em>language hallucination vs. visual illusion</em>).
+* Modelos pequeños sometidos a estímulos ambiguos o degradados tienden a completar secuencias basándose en prioris estadísticas del lenguaje más que en la evidencia visual real.</p>
+<h3 id="a232-riesgos-criticos-en-vehiculos-aereos-no-tripulados-uavs">A2.3.2 Riesgos críticos en vehículos aéreos no tripulados (UAVs)<a class="headerlink" href="#a232-riesgos-criticos-en-vehiculos-aereos-no-tripulados-uavs" title="Permanent link">&para;</a></h3>
+<p>En una misión de navegación aérea autónoma, los efectos de una alucinación trascienden la incorrección lingüística y se traducen en amenazas cinemáticas directas:
+1. <strong>Alucinación de espacio libre</strong>: el modelo reporta erróneamente que una trayectoria está despejada al confundir sombras, reflejos o texturas complejas con áreas transitables, suprimiendo maniobras de evasión esenciales.
+2. <strong>Alucinación de sintaxis o formato</strong>: la emisión de etiquetas no contempladas o la deformación del esquema JSON invalida el analizador sintáctico, interrumpiendo el flujo de control y dejando al vehículo sin acción defensiva durante múltiples ciclos de muestreo.
+3. <strong>Deriva temporal y desacoplamiento dinámico</strong>: el modelo puede basar su razonamiento en estados superados o inventar una persistencia de obstáculos inexistente, comprometiendo la coherencia de la misión.</p>
+<hr />
+<h2 id="a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis">A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis<a class="headerlink" href="#a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis" title="Permanent link">&para;</a></h2>
+<p>Para hacer viable el despliegue de un modelo compacto (Qwen2.5-VL-3B-Instruct; Qwen Team, 2025) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:</p>
+<div class="highlight"><pre><span></span><code>                  ┌─────────────────────────────────────────┐
+                  │      Cámara Monocular + Telemetría      │
+                  └────────────────────┬────────────────────┘
+                                       │
+                     ┌─────────────────┴─────────────────┐
+                     ▼                                   ▼
+        ┌─────────────────────────┐         ┌─────────────────────────┐
+        │  Percepción Monocular   │         │    Inspección Visual    │
+        │   - Flujo óptico DIS    │         │      Directa sVLM       │
+        │   - Derotación IMU      │         │   - Fotogramas t, t-1   │
+        │   - ObstacleField       │         │   - Semántica visual    │
+        └────────────┬────────────┘         └────────────┬────────────┘
+                     │                                   │
+                     │ Resumen sensorial                 │ Prompts contextuales
+                     ▼                                   ▼
+        ┌─────────────────────────────────────────────────────────────┐
+        │          Nodo Deliberativo / Decodificación json_schema     │
+        │   - Restricción formal de logits (Willard &amp; Louf, 2023)     │
+        │   - Espacio discreto cerrado (5 macro-acciones)             │
+        └──────────────────────────────┬──────────────────────────────┘
+                                       │ Macro-acción JSON
+                                       ▼
+        ┌─────────────────────────────────────────────────────────────┐
+        │     Red de Seguridad Híbrida / FSM Determinista (§5.2)      │
+        │   - Parser tolerante de 3 etapas                            │
+        │   - Validación de consistencia cinemática                   │
+        │   - Fallback conservador (hover seguro / bypass FSM)       │
+        └─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+<ol>
+<li>
+<p><strong>Decodificación restringida a nivel de logits (<code>json_schema</code>)</strong>:
+   En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON (Geng et al., 2025; Raspanti et al., 2025; Willard &amp; Louf, 2023). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (§8.2.1).</p>
+</li>
+<li>
+<p><strong>Espacio de acción discreto mediante lista blanca (§8.3)</strong>:
+   El modelo no genera vectores numéricos de velocidad o aceleración libres, sino que selecciona exclusivamente una etiqueta de una lista fija de cinco macro-acciones seguras (<code>keep_going</code>, <code>evasive</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>). Esta discretización suprime alucinaciones numéricas continuas y asegura que cada maniobra cuente con una función de traducción cinemática determinista y acotada.</p>
+</li>
+<li>
+<p><strong>Arquitectura híbrida y red de seguridad determinista con FSM (§5.2 y §8.2.2)</strong>:
+   El nodo deliberativo no ejerce control directo de baja latencia sobre los actuadores. Toda macro-acción es supervisada por una máquina de estados finitos (FSM) que opera como árbitro de seguridad. Ante cualquier discrepancia, latencia excesiva o fallo residual del analizador, la FSM ejecuta de inmediato una maniobra conservadora (<em>hover</em> de sustentación o maniobra reactiva guiada por el flujo óptico).</p>
+</li>
+<li>
+<p><strong>Inspección visual multimodal complementaria (§6.12 y §8.1.1)</strong>:
+   Para contrarrestar las alucinaciones inducidas por la pérdida de señal o los puntos ciegos del flujo óptico (como el vuelo estático o la rotación pura), el modelo recibe directamente el fotograma visual de la cámara junto con el resumen numérico. Esta redundancia perceptual asegura que el razonamiento simbólico esté anclado en evidencia física real y contemporánea.</p>
+</li>
+</ol>
+<h3 id="conclusion-sintetica">Conclusión sintética<a class="headerlink" href="#conclusion-sintetica" title="Permanent link">&para;</a></h3>
+<p>Los desafíos de capacidad limitada y susceptibilidad a alucinaciones propios de los SLMs no deben resolverse mediante el escalado indiscriminado de parámetros —inviable en hardware de borde—, sino a través de una <strong>estricta disciplina de ingeniería de sistemas</strong>: decodificación gramaticalmente guiada, discretización del espacio de decisión y acoplamiento jerárquico con supervisores deterministas en tiempo real.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+    
+  </body>
+</html>
