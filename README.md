@@ -21,8 +21,11 @@ Este repositorio contiene la implementación del Trabajo Final de Máster en Ing
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Activity](https://img.shields.io/badge/CHANGELOG-2026--0907-teal)](CHANGELOG.md) 
 [![Plan](https://img.shields.io/badge/Plan-Aprobado_2025--0829-drakgray)](./plan_tesis/plan-tesis.md)
-[![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)]([./plan_tesis/plan-tesis.md#objetivo-del-trabajo](https://jorgenicolau.ar/dronelm/informe/00-COVER.html))
-[![Infome](https://img.shields.io/badge/Informe-Tesis_MCD-172187)](./plan_tesis/plan-tesis.md#objetivo-del-trabajo)
+[![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)](./plan_tesis/plan-tesis.md#objetivo-del-trabajo)
+[![Infome](https://img.shields.io/badge/Informe-Tesis_MCD-172187)](https://jorgenicolau.ar/dronelm/informe/00-COVER.html)
+
+
+
 
 #### Plataforma:
 
