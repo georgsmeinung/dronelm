@@ -6,7 +6,7 @@
 
 <a id="ref-agrolatam-2025" class="ref-anchor"></a><a id="13-referencias-ref-agrolatam-2025"></a>Agrolatam. (2025, 31 de octubre). *Tecnología de precisión e inteligencia artificial: cómo el INTA usa drones para optimizar la siembra de caña de azúcar en Argentina*. <https://www.agrolatam.com/agricultura/drones-ia-inta-monitoreo-cana-de-azucar-argentina-2025/>
 
-<a id="ref-al-kaff-2017" class="ref-anchor"></a><a id="13-referencias-ref-al-kaff-2017"></a>Al-Kaff, A., García, F., Martín, D., De La Escalera, A., & Armingol, J. M. (2017). Obstacle Detection and Avoidance System Based on Monocular Camera and Size Expansion Algorithm for UAVs. *Sensors*, *17*(5), 1061.
+<a id="ref-al-kaff-2017" class="ref-anchor"></a><a id="13-referencias-ref-al-kaff-2017"></a>Al-Kaff, A., García, F., Martín, D., De La Escalera, A., & Armingol, J. M. (2017). Obstacle Detection and Avoidance System Based on Monocular Camera and Size Expansion Algorithm for UAVs. *Sensors*, *17*(5), 1061. <https://doi.org/10.3390/s17051061>
 
 <a id="ref-alarm-estate-agent-sf" class="ref-anchor"></a><a id="13-referencias-ref-alarm-estate-agent-sf"></a>_Alarm as estate agent's drone crashes into house - Property Industry Eye_. (s. f.). Recuperado 29 de junio de 2025, de <https://propertyindustryeye.com/alarm-as-estate-agents-drone-crashes-into-house/?utm_source=chatgpt.com>
 
@@ -14,7 +14,7 @@
 
 <a id="ref-aliane-2024" class="ref-anchor"></a><a id="13-referencias-ref-aliane-2024"></a>Aliane, N. (2024). A Survey of Open-Source UAV Autopilots. *Electronics*, *13*(23). <https://doi.org/10.3390/electronics13234785>
 
-<a id="ref-almahamid-2022" class="ref-anchor"></a><a id="13-referencias-ref-almahamid-2022"></a>AlMahamid, F., & Grolinger, K. (2022). Autonomous unmanned aerial vehicle navigation using reinforcement learning: A systematic review. *Engineering Applications of Artificial Intelligence*, *115*, 105321.
+<a id="ref-almahamid-2022" class="ref-anchor"></a><a id="13-referencias-ref-almahamid-2022"></a>AlMahamid, F., & Grolinger, K. (2022). Autonomous unmanned aerial vehicle navigation using reinforcement learning: A systematic review. *Engineering Applications of Artificial Intelligence*, *115*, 105321. <https://doi.org/10.1016/j.engappai.2022.105321>
 
 <a id="ref-altman-1995" class="ref-anchor"></a><a id="13-referencias-ref-altman-1995"></a>Altman, D. G., & Bland, J. M. (1995). Statistics notes: Absence of evidence is not evidence of absence. *BMJ*, *311*(7003), 485. <https://doi.org/10.1136/bmj.311.7003.485>
 
@@ -22,7 +22,7 @@
 
 <a id="ref-anac-2025a" class="ref-anchor"></a><a id="13-referencias-ref-anac-2025a"></a>ANAC. (2025a). *Resolución 319/2025 — Parte 100 del Reglamento Aeronáutico Civil Argentino (RAAC): aeronaves pilotadas a distancia*. Administración Nacional de Aviación Civil. <https://www.aviacionline.com/parte-100-anac-argentina-actualiza-su-normativa-para-drones>
 
-<a id="ref-anac-2025b" class="ref-anchor"></a><a id="13-referencias-ref-anac-2025b"></a>ANAC. (2025b). *Resolución 550/2025 — Desregulación de aeronaves no tripuladas de menos de 250 g y simplificación para categorías superiores*. Administración Nacional de Aviación Civil.
+<a id="ref-anac-2025b" class="ref-anchor"></a><a id="13-referencias-ref-anac-2025b"></a>ANAC. (2025b). *Resolución 550/2025 — Desregulación de aeronaves no tripuladas de menos de 250 g y simplificación para categorías superiores*. Administración Nacional de Aviación Civil. <https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-550-2025-416149>
 
 <a id="ref-anderson-2018" class="ref-anchor"></a><a id="13-referencias-ref-anderson-2018"></a>Anderson, P., Chang, A., Chaplot, D. S., Dosovitskiy, A., Gupta, S., Koltun, V., Kosecka, J., Malik, J., Mottaghi, R., Savva, M., & Zamir, A. R. (2018). *On Evaluation of Embodied Navigation Agents*. arXiv:1807.06757. <https://arxiv.org/abs/1807.06757>
 
@@ -34,7 +34,7 @@
 
 <a id="ref-uav-satellite-wildfire-2026" class="ref-anchor"></a><a id="13-referencias-ref-uav-satellite-wildfire-2026"></a>[Autores por confirmar]. (2026). A UAV–satellite hybrid pipeline for wildfire detection and dynamic perimeter prediction. *Drones*, *10*(4), 263. <https://doi.org/10.3390/drones10040263>
 
-<a id="ref-badrloo-2017" class="ref-anchor"></a><a id="13-referencias-ref-badrloo-2017"></a>Badrloo, S., & Varshosaz, M. (2017). Monocular vision based obstacle detection. *International Journal of Earth Observation and Geomatics Engineering*, *1*(2), 122-130.
+<a id="ref-badrloo-2017" class="ref-anchor"></a><a id="13-referencias-ref-badrloo-2017"></a>Badrloo, S., & Varshosaz, M. (2017). Monocular vision based obstacle detection. *Earth Observation and Geomatics Engineering*, *1*(2), 122-130. <https://doi.org/10.22059/eoge.2017.244709.1015>
 
 <a id="ref-baheri-2020" class="ref-anchor"></a><a id="13-referencias-ref-baheri-2020"></a>Baheri, A. (2020). *Safe Reinforcement Learning with Mixture Density Network: A Case Study in Autonomous Highway Driving*. <https://arxiv.org/abs/2007.01698>
 
@@ -44,7 +44,7 @@
 
 <a id="ref-breaking-defense-2025" class="ref-anchor"></a><a id="13-referencias-ref-breaking-defense-2025"></a>Breaking Defense. (2025, marzo). *Trained on classified battlefield data, AI multiplies effectiveness of Ukraine's drones: Report*. <https://breakingdefense.com/2025/03/trained-on-classified-battlefield-data-ai-multiplies-effectiveness-of-ukraines-drones-report/>
 
-<a id="ref-broggi-2000" class="ref-anchor"></a><a id="13-referencias-ref-broggi-2000"></a>Broggi, A., Bertozzi, M., Fascioli, A., Guarino, C., Guarino Lo Bianco, C., & Piazzi, A. (2000). The Argo Autonomous Vehicle's Vision And Control Systems. *Int. J. Intelligent. Control. Syst.*, *3*.
+<a id="ref-broggi-2000" class="ref-anchor"></a><a id="13-referencias-ref-broggi-2000"></a>Broggi, A., Bertozzi, M., Fascioli, A., Guarino, C., Guarino Lo Bianco, C., & Piazzi, A. (1999). The Argo Autonomous Vehicle's Vision And Control Systems. *International Journal of Intelligent Control and Systems*, *3*(4), 409-441. <https://www.ce.unipr.it/people/broggi/publications/ijics.pdf>
 
 <a id="ref-buenos-aires-ciudad-2023" class="ref-anchor"></a><a id="13-referencias-ref-buenos-aires-ciudad-2023"></a>Buenos Aires Ciudad. (2023, 30 de enero). *Así funciona el escuadrón de drones de la Ciudad que ayuda a apagar incendios, perseguir a ladrones y encontrar personas perdidas*. Gobierno de la Ciudad Autónoma de Buenos Aires. <https://buenosaires.gob.ar/noticias/asi-funciona-el-escuadron-de-drones-de-la-ciudad-que-ayuda-apagar-incendios-perseguir>
 
@@ -62,7 +62,7 @@
 
 <a id="ref-chen-w-2022" class="ref-anchor"></a><a id="13-referencias-ref-chen-w-2022"></a>Chen, W., Shang, G., Hu, K., Zhou, C., Wang, X., Fang, G., & Ji, A. (2022). A Monocular-Visual SLAM System with Semantic and Optical-Flow Fusion for Indoor Dynamic Environments. *Micromachines*, *13*(11). <https://doi.org/10.3390/mi13112006>
 
-<a id="ref-chen-x-2016" class="ref-anchor"></a><a id="13-referencias-ref-chen-x-2016"></a>Chen, X., Kundu, K., Zhang, Z., Ma, H., Fidler, S., & Urtasun, R. (2016). Monocular 3D Object Detection for Autonomous Driving. *2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)*.
+<a id="ref-chen-x-2016" class="ref-anchor"></a><a id="13-referencias-ref-chen-x-2016"></a>Chen, X., Kundu, K., Zhang, Z., Ma, H., Fidler, S., & Urtasun, R. (2016). Monocular 3D Object Detection for Autonomous Driving. *2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)*, 2147-2156. <https://openaccess.thecvf.com/content_cvpr_2016/html/Chen_Monocular_3D_Object_CVPR_2016_paper.html>
 
 <a id="ref-cliff-1993" class="ref-anchor"></a><a id="13-referencias-ref-cliff-1993"></a>Cliff, N. (1993). Dominance statistics: Ordinal analyses to answer ordinal questions. *Psychological Bulletin*, *114*(3), 494-509. <https://doi.org/10.1037/0033-2909.114.3.494>
 
@@ -72,7 +72,7 @@
 
 <a id="ref-collier-2012" class="ref-anchor"></a><a id="13-referencias-ref-collier-2012"></a>Collier, J., Trentini, M., Giesbrecht, J., Mcmanus, C., Furgale, P., Stenning, B., Barfoot, T., Se, S., Kotamraju, V., Jasiobedzki, P., Shang, L., Chan, B., Harmat, A., & Sharf, I. (2012, enero). Autonomous Navigation and Mapping in GPS-Denied Environments at Defence R&D Canada. *NATO Symposium SET 168: Navigation Sensor and Systems in GNSS Denied Environments*.
 
-<a id="ref-comas-sf" class="ref-anchor"></a><a id="13-referencias-ref-comas-sf"></a>Comas (s. f.). *Modelado e implementación de sistemas de navegación aérea autónoma*. [Autoría completa y venue pendientes de confirmar.]
+<a id="ref-comas-sf" class="ref-anchor"></a><a id="13-referencias-ref-comas-sf"></a>Comas, E. A. (2020). *Modelado e implementación de sistemas de navegación aérea autónoma basada en visión artificial* [Tesis doctoral]. Universidad Tecnológica Nacional, Facultad Regional Buenos Aires. <http://hdl.handle.net/20.500.12272/4557>
 
 <a id="ref-coptrz-2026" class="ref-anchor"></a><a id="13-referencias-ref-coptrz-2026"></a>Coptrz. (2026). *How will drones disrupt urban last-mile delivery in 2026?* <https://coptrz.com/blog/how-will-drones-disrupt-urban-last-mile-delivery-in-2026/>
 
@@ -86,7 +86,7 @@
 
 <a id="ref-dettmers-2024" class="ref-anchor"></a><a id="13-referencias-ref-dettmers-2024"></a>Dettmers, T., Pagnoni, A., Holtzman, A., & Zettlemoyer, L. (2024). QLoRA: Efficient Finetuning of Quantized LLMs. *Advances in Neural Information Processing Systems (NeurIPS)*, *36*. <https://arxiv.org/abs/2305.14314>
 
-<a id="ref-dickmanns-2024" class="ref-anchor"></a><a id="13-referencias-ref-dickmanns-2024"></a>Dickmanns, E. D. (2024). Evolution of the "4-D Approach" to Dynamic Vision for Vehicles. *Electronics*, *13*(20), 4133.
+<a id="ref-dickmanns-2024" class="ref-anchor"></a><a id="13-referencias-ref-dickmanns-2024"></a>Dickmanns, E. D. (2024). Evolution of the "4-D Approach" to Dynamic Vision for Vehicles. *Electronics*, *13*(20), 4133. <https://doi.org/10.3390/electronics13204133>
 
 <a id="ref-dong-2024" class="ref-anchor"></a><a id="13-referencias-ref-dong-2024"></a>Dong, Y., Ruan, C. F., Cai, Y., Lai, R., Xu, Z., Zhao, Y., & Chen, T. (2024). *XGrammar: Flexible and Efficient Structured Generation Engine for Large Language Models*. arXiv:2411.15100. <https://arxiv.org/abs/2411.15100>
 
@@ -156,7 +156,7 @@
 
 <a id="ref-jwo-2023" class="ref-anchor"></a><a id="13-referencias-ref-jwo-2023"></a>Jwo, D. J., Biswal, A., & Mir, I. A. (2023). Artificial Neural Networks for Navigation Systems: A Review of Recent Research. *Applied Sciences*, *13*(7), 4475. <https://doi.org/10.3390/app13074475>
 
-<a id="ref-kaneko-2017" class="ref-anchor"></a><a id="13-referencias-ref-kaneko-2017"></a>Kaneko, N., Yoshida, T., & Sumi, K. (2017). Fast Obstacle Detection for Monocular Autonomous Mobile Robots. *SICE Journal of Control, Measurement, and System Integration*, *10*(5), 370-377.
+<a id="ref-kaneko-2017" class="ref-anchor"></a><a id="13-referencias-ref-kaneko-2017"></a>Kaneko, N., Yoshida, T., & Sumi, K. (2017). Fast Obstacle Detection for Monocular Autonomous Mobile Robots. *SICE Journal of Control, Measurement, and System Integration*, *10*(5), 370-377. <https://doi.org/10.9746/jcmsi.10.370>
 
 <a id="ref-kemeny-2003" class="ref-anchor"></a><a id="13-referencias-ref-kemeny-2003"></a>Kemeny, A., & Panerai, F. (2003). Evaluating perception in driving simulation experiments. *Trends in Cognitive Sciences*, *7*(1), 31-37. <https://doi.org/10.1016/S1364-6613(02)00011-6>
 
@@ -210,7 +210,7 @@
 
 <a id="ref-marazzato-2015" class="ref-anchor"></a><a id="13-referencias-ref-marazzato-2015"></a>Marazzato, R., & Sparavigna, A. C. (2015). Retinex filtering of foggy images: generation of a bulk set with selection and ranking. *CoRR*, *abs/1509.08715*. <http://arxiv.org/abs/1509.08715>
 
-<a id="ref-martin-2017" class="ref-anchor"></a><a id="13-referencias-ref-martin-2017"></a>Martin, P. G., Scott, T. B., Payton, O. D., & Fardoulis, J. S. (2017). *High-Resolution Aerial Radiation Mapping for Nuclear Decontamination and Decommissioning-17371*.
+<a id="ref-martin-2017" class="ref-anchor"></a><a id="13-referencias-ref-martin-2017"></a>Martin, P. G., Scott, T. B., Payton, O. D., & Fardoulis, J. S. (2017). High-resolution aerial radiation mapping for nuclear decontamination and decommissioning (Paper 17371). *Proceedings of the 43rd Annual Waste Management Symposium (WM2017)*, Phoenix, AZ. <https://www.osti.gov/biblio/22802393>
 
 <a id="ref-matej-2016" class="ref-anchor"></a><a id="13-referencias-ref-matej-2016"></a>Matej, J. (2016). *Simulation of vehicle in Unreal Game Engine using equations of motion, Runge-Kutta and line tracing methods to solve motion and scan Unreal Engine terrain under wheel*. Publishing House at the Technical University in Zvolen. <https://doi.org/10.5281/zenodo.55806>
 
@@ -218,7 +218,7 @@
 
 <a id="ref-mwi-sf" class="ref-anchor"></a><a id="13-referencias-ref-mwi-sf"></a>Modern War Institute at West Point. (s. f.). *Battlefield drones and the accelerating autonomous arms race in Ukraine*. <https://mwi.westpoint.edu/battlefield-drones-and-the-accelerating-autonomous-arms-race-in-ukraine/>
 
-<a id="ref-molineros-2012" class="ref-anchor"></a><a id="13-referencias-ref-molineros-2012"></a>Molineros, J., Cheng, S. Y., Owechko, Y., Levi, D., & Zhang, W. (2012). Monocular Rear-View Obstacle Detection Using Residual Flow. *Computer Vision – ECCV 2012 Workshops and Demonstrations*, LNCS 7584. Springer.
+<a id="ref-molineros-2012" class="ref-anchor"></a><a id="13-referencias-ref-molineros-2012"></a>Molineros, J., Cheng, S. Y., Owechko, Y., Levi, D., & Zhang, W. (2012). Monocular Rear-View Obstacle Detection Using Residual Flow. *Computer Vision – ECCV 2012 Workshops and Demonstrations*, LNCS 7584. Springer. <https://doi.org/10.1007/978-3-642-33868-7_50>
 
 <a id="ref-mur-artal-2015" class="ref-anchor"></a><a id="13-referencias-ref-mur-artal-2015"></a>Mur-Artal, R., Montiel, J. M. M., & Tardós, J. D. (2015). ORB-SLAM: a Versatile and Accurate Monocular SLAM System. *CoRR*, *abs/1502.00956*. <http://arxiv.org/abs/1502.00956>
 
@@ -226,7 +226,7 @@
 
 <a id="ref-nguyen-2021" class="ref-anchor"></a><a id="13-referencias-ref-nguyen-2021"></a>Nguyen, D. D., Rohacs, J., & Rohacs, D. (2021). Autonomous Flight Trajectory Control System for Drones in Smart City Traffic Management. *ISPRS International Journal of Geo-Information*, *10*(5). <https://doi.org/10.3390/ijgi10050338>
 
-<a id="ref-nielsen-2022" class="ref-anchor"></a><a id="13-referencias-ref-nielsen-2022"></a>Nielsen, S. M. (2022). *A Visually Realistic Simulator for Autonomous eVTOL Aircraft*. [Venue de publicación pendiente de confirmar.]
+<a id="ref-nielsen-2022" class="ref-anchor"></a><a id="13-referencias-ref-nielsen-2022"></a>Nielsen, S. M. (2021). *A visually realistic simulator for autonomous eVTOL aircraft* [Tesis de maestría]. Brigham Young University. <https://scholarsarchive.byu.edu/etd/9340/>
 
 <a id="ref-norte-misionero-2026" class="ref-anchor"></a><a id="13-referencias-ref-norte-misionero-2026"></a>Norte Misionero. (2026). *Alerta temprana, drones y respuesta rápida: Misiones refuerza su esquema de prevención de incendios*. <https://nortemisionero.com.ar/provinciales/alerta-temprana-drones-y-respuesta-rapida-misiones-refuerza-su-esquema-de-prevencion-de-incendios-n516147/>
 
@@ -244,15 +244,15 @@
 
 <a id="ref-pomerleau-1988" class="ref-anchor"></a><a id="13-referencias-ref-pomerleau-1988"></a>Pomerleau, D. A. (1988). ALVINN: An Autonomous Land Vehicle in a Neural Network. En D. Touretzky (Ed.), *Advances in Neural Information Processing Systems* (Vol. 1). Morgan-Kaufmann. <https://proceedings.neurips.cc/paper_files/paper/1988/file/812b4ba287f5ee0bc9d43bbf5bbe87fb-Paper.pdf>
 
-<a id="ref-decreto-663-2024" class="ref-anchor"></a><a id="13-referencias-ref-decreto-663-2024"></a>Presidencia de la Nación Argentina. (2024). *Decreto 663/2024 — Aviación No Tripulada*.
+<a id="ref-decreto-663-2024" class="ref-anchor"></a><a id="13-referencias-ref-decreto-663-2024"></a>Presidencia de la Nación Argentina. (2024). *Decreto 663/2024 — Aviación No Tripulada*. <https://www.argentina.gob.ar/normativa/nacional/decreto-663-2024-401986>
 
 <a id="ref-qwen-team-2025" class="ref-anchor"></a><a id="13-referencias-ref-qwen-team-2025"></a>Qwen Team. (2025). *Qwen2.5-VL Technical Report*. arXiv:2502.13923. <https://arxiv.org/abs/2502.13923>
 
 <a id="ref-rafailov-2024" class="ref-anchor"></a><a id="13-referencias-ref-rafailov-2024"></a>Rafailov, R., Sharma, A., Mitchell, E., Ermon, S., Manning, C. D., & Finn, C. (2024). Direct Preference Optimization: Your Language Model is Secretly a Reward Model. *Advances in Neural Information Processing Systems (NeurIPS)*, *36*. <https://arxiv.org/abs/2305.18290>
 
-<a id="ref-ramezani-sf" class="ref-anchor"></a><a id="13-referencias-ref-ramezani-sf"></a>Ramezani, M. (s. f.). *UAV Path Planning Employing MPC Reinforcement*. [Venue pendiente de confirmar.]
+<a id="ref-ramezani-sf" class="ref-anchor"></a><a id="13-referencias-ref-ramezani-sf"></a>Ramezani, M., Voos, H., Habibi, H., & Sanchez-Lopez, J. L. (2023). UAV path planning employing MPC-reinforcement learning method considering collision avoidance. *2023 International Conference on Unmanned Aircraft Systems (ICUAS)*, 507-514. <https://arxiv.org/abs/2302.10669>
 
-<a id="ref-raspanti-2025" class="ref-anchor"></a><a id="13-referencias-ref-raspanti-2025"></a>Raspanti, F., Ozcelebi, T., & Holenderski, M. (2025). Grammar-Constrained Decoding Makes Large Language Models Better Logical Parsers. *ACL 2025 Industry Track*.
+<a id="ref-raspanti-2025" class="ref-anchor"></a><a id="13-referencias-ref-raspanti-2025"></a>Raspanti, F., Ozcelebi, T., & Holenderski, M. (2025). Grammar-Constrained Decoding Makes Large Language Models Better Logical Parsers. *ACL 2025 Industry Track*, 485-499. <https://doi.org/10.18653/v1/2025.acl-industry.34>
 
 <a id="ref-redmon-2015" class="ref-anchor"></a><a id="13-referencias-ref-redmon-2015"></a>Redmon, J., Divvala, S. K., Girshick, R. B., & Farhadi, A. (2015). You Only Look Once: Unified, Real-Time Object Detection. *CoRR*, *abs/1506.02640*. <http://arxiv.org/abs/1506.02640>
 
@@ -262,7 +262,7 @@
 
 <a id="ref-rill-2021" class="ref-anchor"></a><a id="13-referencias-ref-rill-2021"></a>Rill, R.-A., & Faragó, K. B. (2021). Collision Avoidance Using Deep Learning-Based Monocular Vision. *SN Computer Science*, *2*, 375. <https://doi.org/10.1007/s42979-021-00759-6>
 
-<a id="ref-romano-2006" class="ref-anchor"></a><a id="13-referencias-ref-romano-2006"></a>Romano, J., Kromrey, J. D., Coraggio, J., & Skowronek, J. (2006). Appropriate statistics for ordinal level data: Should we really be using t-test and Cohen's d for evaluating group differences on the NSSE and other surveys? *Annual Meeting of the Florida Association of Institutional Research*, 1-33.
+<a id="ref-romano-2006" class="ref-anchor"></a><a id="13-referencias-ref-romano-2006"></a>Romano, J., Kromrey, J. D., Coraggio, J., & Skowronek, J. (2006). Appropriate statistics for ordinal level data: Should we really be using t-test and Cohen's d for evaluating group differences on the NSSE and other surveys? *Annual Meeting of the Florida Association of Institutional Research*, 1-33. <https://www.researchgate.net/publication/237544991>
 
 <a id="ref-ross-2011" class="ref-anchor"></a><a id="13-referencias-ref-ross-2011"></a>Ross, S., Gordon, G., & Bagnell, D. (2011). A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning. *Proceedings of the Fourteenth International Conference on Artificial Intelligence and Statistics (AISTATS)*, PMLR 15, 627-635. <https://proceedings.mlr.press/v15/ross11a.html>
 
@@ -272,9 +272,7 @@
 
 <a id="ref-shah-2017" class="ref-anchor"></a><a id="13-referencias-ref-shah-2017"></a>Shah, S., Dey, D., Lovett, C., & Kapoor, A. (2017). *AirSim: High-Fidelity Visual and Physical Simulation for Autonomous Vehicles*. <http://arxiv.org/abs/1705.05065>
 
-<a id="ref-shi-s-2024" class="ref-anchor"></a><a id="13-referencias-ref-shi-s-2024"></a>Shi, S., Ni, J., Kong, X., Zhu, H., Zhan, J., Sun, Q., & Xu, Y. (2024). An Obstacle Detection Method Based on Longitudinal Active Vision. *Sensors*, *24*(14), 4407.
-
-<a id="ref-shi-y-2024" class="ref-anchor"></a><a id="13-referencias-ref-shi-y-2024"></a>Shi, Y., Li, X., & Zhang, J. (2024). Real-time obstacle avoidance for UAVs using lightweight deep learning. *IEEE Transactions on Industrial Electronics*, *71*(8), 9123-9132.
+<a id="ref-shi-s-2024" class="ref-anchor"></a><a id="13-referencias-ref-shi-s-2024"></a>Shi, S., Ni, J., Kong, X., Zhu, H., Zhan, J., Sun, Q., & Xu, Y. (2024). An Obstacle Detection Method Based on Longitudinal Active Vision. *Sensors*, *24*(13), 4407. <https://doi.org/10.3390/s24134407>
 
 <a id="ref-shin-2019" class="ref-anchor"></a><a id="13-referencias-ref-shin-2019"></a>Shin, Y.-S., & Kim, A. (2019). Sparse Depth Enhanced Direct Thermal-infrared SLAM Beyond the Visible Spectrum. *IEEE Robotics and Automation Letters*, *4*(3), 2918-2925. <https://arxiv.org/abs/1902.10892>
 
@@ -282,7 +280,7 @@
 
 <a id="ref-sun-2026" class="ref-anchor"></a><a id="13-referencias-ref-sun-2026"></a>Sun, X., Si, W., Ni, W., Li, Y., Wu, D., Xie, F., Guan, R., Xu, H.-Y., Ding, H., & Wu, Y. (2026). *AutoFly: Vision-Language-Action model for UAV autonomous navigation in the wild*. arXiv:2602.09657. <https://arxiv.org/abs/2602.09657>
 
-<a id="ref-sanchez-sf" class="ref-anchor"></a><a id="13-referencias-ref-sanchez-sf"></a>Sánchez Rodríguez (s. f.). *Navegación autónoma de un dron hexacóptero con visión estereoscópica*. [Autoría completa pendiente de confirmar.]
+<a id="ref-sanchez-sf" class="ref-anchor"></a><a id="13-referencias-ref-sanchez-sf"></a>Sánchez Rodríguez, J. P. (2018). *Navegación autónoma de un dron hexacóptero con visión estereoscópica para mapeo y evasión de obstáculos en tiempo real* [Tesis de maestría]. Instituto Tecnológico y de Estudios Superiores de Monterrey. <https://repositorio.tec.mx/items/5eec523b-b8ba-4baa-9a78-c9935486fb8b>
 
 <a id="ref-thorpe-1988" class="ref-anchor"></a><a id="13-referencias-ref-thorpe-1988"></a>Thorpe, C., Hebert, M. H., Kanade, T., & Shafer, S. A. (1988). Vision and navigation for the Carnegie-Mellon Navlab. *IEEE Transactions on Pattern Analysis and Machine Intelligence*, *10*(3), 362-373. <https://doi.org/10.1109/34.3900>
 
@@ -302,8 +300,6 @@
 
 <a id="ref-wahba-1965" class="ref-anchor"></a><a id="13-referencias-ref-wahba-1965"></a>Wahba, G. (1965). A Least Squares Estimate of Satellite Attitude. *SIAM Review*, *7*(3), 409. <https://doi.org/10.1137/1007077>
 
-<a id="ref-wang-2023" class="ref-anchor"></a><a id="13-referencias-ref-wang-2023"></a>Wang, H., Zhang, X., & Liu, C. (2023). Urban infrastructure inspection using autonomous UAVs: A review. *Automation in Construction*, *154*, 105020.
-
 <a id="ref-wang-2025" class="ref-anchor"></a><a id="13-referencias-ref-wang-2025"></a>Wang, W., Li, Y., Jiao, L., & Yuan, J. (2025). Large Language Model-Driven Closed-Loop UAV Operation with Semantic Observations. *IEEE Internet of Things Journal*. <https://doi.org/10.1109/JIOT.2025.3649376>
 
 <a id="ref-wei-2025" class="ref-anchor"></a><a id="13-referencias-ref-wei-2025"></a>Wei, P., Ragbir, P., Vougioukas, S. G., & Kong, Z. (2025). Vision-based Navigation of Unmanned Aerial Vehicles in Orchards: An Imitation Learning Approach. *Computers and Electronics in Agriculture*, Article 110802. arXiv:2508.02617. <https://doi.org/10.1016/j.compag.2025.110802>
@@ -314,22 +310,16 @@
 
 <a id="ref-xue-2021" class="ref-anchor"></a><a id="13-referencias-ref-xue-2021"></a>Xue, Z., & Gonsalves, T. (2021). Vision Based Drone Obstacle Avoidance by Deep Reinforcement Learning. *AI*, *2*(3), 366-380. <https://doi.org/10.3390/ai2030023>
 
-<a id="ref-yang-2024" class="ref-anchor"></a><a id="13-referencias-ref-yang-2024"></a>Yang, Y., & Wei, P. (2024). Autonomous eVTOL trajectory optimization for urban air mobility. *Transportation Research Part C: Emerging Technologies*, *158*, 104423.
-
 <a id="ref-youden-1950" class="ref-anchor"></a><a id="13-referencias-ref-youden-1950"></a>Youden, W. J. (1950). Index for rating diagnostic tests. *Cancer*, *3*(1), 32-35. <https://doi.org/10.1002/1097-0142(1950)3:1%3C32::AID-CNCR2820030106%3E3.0.CO;2-3>
 
 <a id="ref-zhang-g-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhang-g-2024"></a>Zhang, G., Liu, J., Luo, W., Zhao, Y., Tang, R., Mei, K., & Wang, P. (2024). A Shortest Distance Priority UAV Path Planning Algorithm for Precision Agriculture. *Sensors*, *24*(23), 7514. <https://doi.org/10.3390/s24237514>
 
 <a id="ref-zhang-tinyllama-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhang-tinyllama-2024"></a>Zhang, P., Zeng, G., Wang, T., & Lu, W. (2024). *TinyLlama: An Open-Source Small Language Model*. arXiv:2401.02385. <https://arxiv.org/abs/2401.02385>
 
-<a id="ref-zhang-t-2023" class="ref-anchor"></a><a id="13-referencias-ref-zhang-t-2023"></a>Zhang, T., & Wu, Q. (2023). Vision-based power line inspection with UAVs: Methods and challenges. *IEEE Geoscience and Remote Sensing Magazine*, *11*(2), 78-95.
-
-<a id="ref-zhao-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhao-2024"></a>Zhao, K., Liu, Z., & Chen, X. (2024). Deep reinforcement learning for UAV autonomous navigation in GPS-denied environments. *IEEE Transactions on Intelligent Transportation Systems*, *25*(3), 2890-2902.
-
 <a id="ref-zhen-sf" class="ref-anchor"></a><a id="13-referencias-ref-zhen-sf"></a>Zhen (s. f.). *Training-efficient deep reinforcement learning for autonomous driving*. [Autoría completa pendiente de confirmar.]
 
 <a id="ref-zhou-2025" class="ref-anchor"></a><a id="13-referencias-ref-zhou-2025"></a>Zhou, Y., Bautista, J., Yao, W., & de Marina, H. G. (2025). *Inverse Kinematics on Guiding Vector Fields for Robot Path Following*. <https://arxiv.org/abs/2502.17313>
 
-<a id="ref-zhou-2026" class="ref-anchor"></a><a id="13-referencias-ref-zhou-2026"></a>Zhou, Z., Liao, Y., Wang, B., Wang, M., Fu, M., & Hu, Z. (2026). Near obstacles detection by inverse perspective mapping of AVM for intelligent vehicles. *PLOS ONE*, *21*(1), e0336851.
+<a id="ref-zhou-2026" class="ref-anchor"></a><a id="13-referencias-ref-zhou-2026"></a>Zhou, Z., Liao, Y., Wang, B., Wang, M., Fu, M., & Hu, Z. (2026). Near obstacles detection by inverse perspective mapping of AVM for intelligent vehicles. *PLOS ONE*, *21*(1), e0336851. <https://doi.org/10.1371/journal.pone.0336851>
 
 <a id="ref-zhu-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhu-2024"></a>Zhu, Y., Moniz, J. R. A., Bhargava, S., Lu, J., Piraviperumal, D., Li, S., Zhang, Y., Yu, H., & Tseng, B.-H. (2024). *Can Large Language Models Understand Context?* <https://arxiv.org/abs/2402.00858>
