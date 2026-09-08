@@ -106,7 +106,8 @@ Wahba, G. (1965). A Least Squares Estimate of Satellite Attitude. *SIAM Review*,
 
 Shi, Y., Li, X., & Zhang, J. (2024). Real-time obstacle avoidance for UAVs using lightweight deep learning. *IEEE Transactions on Industrial Electronics*, *71*(8), 9123-9132.
 
-Vera-Yanez, R., Maza, I., & Ollero, A. (2024). Optical-Flow-Based Air-to-Air Detection of Airborne Obstacles for Autonomous Drones. *Drones*, *8*(12), 705. <https://doi.org/10.3390/drones8120705>
+Vera-Yanez, D., Pereira, A., Rodrigues, N., Molina, J. P., García, A. S., & Fernández-Caballero, A. (2024). Optical Flow-Based Obstacle Detection for Mid-Air Collision Avoidance. *Sensors*, *24*(10), 3016. <https://doi.org/10.3390/s24103016>
+[Corrección de cita, revisión de §13.4 (2026-09-08): la entrada previa de esta posición ("Vera-Yanez, R., Maza, I., & Ollero, A. (2024). Optical-Flow-Based Air-to-Air Detection... *Drones*, 8(12), 705") era una cita mal atribuida — no se encontró evidencia de tal artículo con esos autores, y el DOI que la acompañaba (10.3390/drones8120705) corresponde en realidad a un trabajo no relacionado (Sikora & Papić, "Survey of Path Planning for Aerial Drone Inspection of Multiple Moving Objects", *Drones*, 8(12), 705, 2024). Se reemplaza por la referencia correcta y verificada de Vera-Yanez et al. (2024), ya presente también en §13.4 (con un error tipográfico de número de fascículo, 24(9) en lugar de 24(10), corregido allí también) y citada en los capítulos 2, 6 y 7. Todas las citas de "Vera-Yanez et al. (2024)" en el texto principal —incluidas las que en una versión previa del capítulo 6 distinguían "(2024a)" y "(2024b)" como si fueran dos artículos distintos— refieren a este único artículo.]
 
 Wang, H., Zhang, X., & Liu, C. (2023). Urban infrastructure inspection using autonomous UAVs: A review. *Automation in Construction*, *154*, 105020.
 
@@ -164,6 +165,102 @@ Tian, Y., Lin, F., Li, Y., Zhang, T., Zhang, Q., Fu, X., Huang, J., Dai, X., Wan
 
 Vemprala, S., Bonatti, R., Bucker, A., & Kapoor, A. (2023). *ChatGPT for robotics: Design principles and model abilities*. arXiv:2306.17582. https://arxiv.org/abs/2306.17582
 
+## 13.1-ter Bibliografía metodológica incorporada en la revisión del capítulo 10
+
+Entradas añadidas durante la reescritura del capítulo 10 (metodología experimental). Cubren tres frentes: los protocolos de evaluación estratificada por dificultad que sirven de modelo al diseño de tiers, el tratamiento estadístico de experimentos con pocas réplicas por celda, y las pruebas no paramétricas y tamaños de efecto empleados en §10.7.
+
+**Protocolos de evaluación y benchmarks estratificados por dificultad**
+
+Anderson, P., Chang, A., Chaplot, D. S., Dosovitskiy, A., Gupta, S., Koltun, V., Kosecka, J., Malik, J., Mottaghi, R., Savva, M., & Zamir, A. R. (2018). *On Evaluation of Embodied Navigation Agents*. arXiv:1807.06757. <https://arxiv.org/abs/1807.06757>
+[Fuente de la definición de SPL usada en §10.6.1 y en `experiments/analyze.py`.]
+
+Codevilla, F., Santana, E., López, A. M., & Gaidon, A. (2019). Exploring the Limitations of Behavior Cloning for Autonomous Driving. *2019 IEEE/CVF International Conference on Computer Vision (ICCV)*, 9328-9337. arXiv:1904.08980. <https://arxiv.org/abs/1904.08980>
+[Benchmark *NoCrash*: tres niveles de dificultad por densidad de agentes dinámicos, 25 episodios por tarea y condición. Modelo directo de la estratificación en tiers de §10.1 y del reporte desagregado de §10.7.4.]
+
+Dosovitskiy, A., Ros, G., Codevilla, F., López, A., & Koltun, V. (2017). CARLA: An Open Urban Driving Simulator. *Proceedings of the 1st Annual Conference on Robot Learning (CoRL)*, PMLR 78, 1-16. <https://proceedings.mlr.press/v78/dosovitskiy17a.html>
+[Organización de tareas en cuatro niveles crecientes de dificultad sobre un mismo simulador.]
+
+Loquercio, A., Kaufmann, E., Ranftl, R., Müller, M., Koltun, V., & Scaramuzza, D. (2021). Learning high-speed flight in the wild. *Science Robotics*, *6*(59), eabg5810. <https://doi.org/10.1126/scirobotics.abg5810>
+[Reporte de desempeño de vuelo autónomo en función de la densidad de obstáculos en lugar de agregado; referencia del experimento extendido E2.1.]
+
+Machado, M. C., Bellemare, M. G., Talvitie, E., Veness, J., Hausknecht, M., & Bowling, M. (2018). Revisiting the Arcade Learning Environment: Evaluation Protocols and Open Problems for General Agents. *Journal of Artificial Intelligence Research*, *61*, 523-562. arXiv:1709.06009. <https://doi.org/10.1613/jair.5699>
+[Inyección de estocasticidad controlada (*sticky actions*) para evaluar robustez en lugar de memorización de trayectoria; análogo del modo `--seed-jitter` discutido en §10.4.3.]
+
+**Estadística de experimentos con pocas réplicas**
+
+Agarwal, R., Schwarzer, M., Castro, P. S., Courville, A., & Bellemare, M. G. (2021). Deep Reinforcement Learning at the Edge of the Statistical Precipice. *Advances in Neural Information Processing Systems (NeurIPS)*, *34*. arXiv:2108.13264. <https://arxiv.org/abs/2108.13264>
+[Reporte de intervalos de confianza y distribuciones completas en el régimen de pocas corridas por celda; base del criterio de §10.4.4 y §10.7.2.]
+
+Colas, C., Sigaud, O., & Oudeyer, P.-Y. (2018). *How Many Random Seeds? Statistical Power Analysis in Deep Reinforcement Learning Experiments*. arXiv:1806.08295. <https://arxiv.org/abs/1806.08295>
+[Análisis de potencia estadística en función del número de semillas.]
+
+Henderson, P., Islam, R., Bachman, P., Pineau, J., Precup, D., & Meger, D. (2018). Deep Reinforcement Learning That Matters. *Proceedings of the AAAI Conference on Artificial Intelligence*, *32*(1). arXiv:1709.06560. <https://arxiv.org/abs/1709.06560>
+[Documentación sistemática de conclusiones no reproducibles derivadas de un número insuficiente de corridas.]
+
+He, H., y colaboradores de Thinking Machines Lab. (2025, 10 de septiembre). *Defeating Nondeterminism in LLM Inference*. Thinking Machines Lab. <https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/>
+[Origen de la no-determinación en servidores de inferencia: composición de kernels no invariantes al tamaño de lote con lotes de tamaño variable según la carga. Fundamenta la cuarta fuente de estocasticidad de §10.4.2.]
+
+**Pruebas no paramétricas y tamaños de efecto**
+
+Cliff, N. (1993). Dominance statistics: Ordinal analyses to answer ordinal questions. *Psychological Bulletin*, *114*(3), 494-509. <https://doi.org/10.1037/0033-2909.114.3.494>
+
+Kruskal, W. H., & Wallis, W. A. (1952). Use of Ranks in One-Criterion Variance Analysis. *Journal of the American Statistical Association*, *47*(260), 583-621. <https://doi.org/10.1080/01621459.1952.10483441>
+
+Mann, H. B., & Whitney, D. R. (1947). On a Test of Whether one of Two Random Variables is Stochastically Larger than the Other. *The Annals of Mathematical Statistics*, *18*(1), 50-60. <https://doi.org/10.1214/aoms/1177730491>
+
+Romano, J., Kromrey, J. D., Coraggio, J., & Skowronek, J. (2006). Appropriate statistics for ordinal level data: Should we really be using t-test and Cohen's d for evaluating group differences on the NSSE and other surveys? *Annual Meeting of the Florida Association of Institutional Research*, 1-33.
+[Escala de interpretación de Cliff's Delta empleada en §10.7.2: |δ| < 0.147 despreciable, 0.147-0.330 pequeño, 0.330-0.474 mediano, ≥ 0.474 grande.]
+
+## 13.1-quater Bibliografía incorporada para el dominio de aplicación de agricultura de precisión (§1.1 y §2.4)
+
+Entradas añadidas al incorporar la agricultura de precisión como tercer dominio de aplicación de alta pertinencia local (junto a vigilancia marítima e incendios forestales). Incluye prensa especializada y estadísticas sectoriales sobre adopción de drones en el agro argentino, y literatura académica sobre navegación autónoma y evasión de obstáculos con UAVs en entornos agrícolas.
+
+**Prensa especializada y estadísticas del sector agro argentino**
+
+Agrolatam. (2025, 31 de octubre). *Tecnología de precisión e inteligencia artificial: cómo el INTA usa drones para optimizar la siembra de caña de azúcar en Argentina*. <https://www.agrolatam.com/agricultura/drones-ia-inta-monitoreo-cana-de-azucar-argentina-2025/>
+
+Dataportuaria. (2026, marzo). *Especialistas anticipan una rápida expansión del uso de drones en la agricultura argentina*. <https://dataportuaria.com/nota/25144/especialistas-anticipan-una-rapida-expansion-del-uso-de-drones-en-la-agricultura-argentina/>
+
+Infocampo. (2025, 8 de abril). *El uso de drones para pulverización agrícola: los pros, los contras y un gran pendiente*. <https://www.infocampo.com.ar/el-uso-de-drones-para-pulverizacion-agricola-los-pros-los-contras-y-un-gran-pendiente/>
+[Fuente de las cifras de flota citadas en los capítulos 1 y 2: 90 equipos importados en 2023, 600 en agosto de 2024, proyección de 2.000 unidades operativas en 2025; y del señalamiento del vacío regulatorio de SENASA para aplicación de fitosanitarios con drones.]
+
+INTA. (2025, diciembre). *Red de Drones del INTA: estrategia, datos y sinergias para el agro argentino*. Argentina.gob.ar. <https://www.argentina.gob.ar/noticias/red-de-drones-del-inta-estrategia-datos-y-sinergias-para-el-agro-argentino>
+
+LA NACION (Content Lab). (2026, 13 de marzo). *El campo del futuro: cómo son los drones agrícolas y por qué crece su uso*. <https://www.lanacion.com.ar/economia/campo/el-campo-del-futuro-como-son-los-drones-agricolas-y-por-que-crece-su-uso-nid13032026/>
+
+**Literatura académica: navegación autónoma y evasión de obstáculos con UAVs en agricultura**
+
+Castro, W., Marcato Junior, J., Polidoro, C., Osco, L. P., Gonçalves, W., Rodrigues, L., Santos, M., Jank, L., Barrios, S., Valle, C., Simeão, R., Carromeu, C., Silveira, E., Jorge, L. A. de C., & Matsubara, E. (2020). Deep Learning Applied to Phenotyping of Biomass in Forages with UAV-Based RGB Imagery. *Sensors*, *20*(17). <https://doi.org/10.3390/s20174802>
+[Ya listada en §13.1; se cita ahora en el texto del capítulo 2 como antecedente latinoamericano de percepción monocular de bajo costo aplicada al agro.]
+
+Li, J., Zhou, H., Mai, Y., Jia, Y., Zhou, Z., Wu, K., Chen, H., Lin, H., Luo, M., & Shi, L. (2025). An autonomous obstacle avoidance and path planning method for fruit-picking UAV in orchard environments. *Smart Agricultural Technology*, Article 100752. <https://doi.org/10.1016/j.atech.2024.100752>
+
+Wei, P., Ragbir, P., Vougioukas, S. G., & Kong, Z. (2025). Vision-based Navigation of Unmanned Aerial Vehicles in Orchards: An Imitation Learning Approach. *Computers and Electronics in Agriculture*, Article 110802. arXiv:2508.02617. <https://doi.org/10.1016/j.compag.2025.110802>
+
+Zhang, G., Liu, J., Luo, W., Zhao, Y., Tang, R., Mei, K., & Wang, P. (2024). A Shortest Distance Priority UAV Path Planning Algorithm for Precision Agriculture. *Sensors*, *24*(23), 7514. <https://doi.org/10.3390/s24237514>
+
+## 13.1-quinquies Bibliografía incorporada para el dominio de seguridad urbana y logística en Buenos Aires (§1.1 y §2.4)
+
+Entradas añadidas al incorporar la operación de drones de la Policía de la Ciudad de Buenos Aires como cuarto dominio de aplicación de alta pertinencia local: es el único de los cuatro dominios que ya opera UAVs dentro del mismo tejido urbano denso (cañón urbano, degradación de GPS, cableado de baja altura) que reproduce el entorno de evaluación Tier 1/Tier 2 de este trabajo.
+
+Buenos Aires Ciudad. (2023, 30 de enero). *Así funciona el escuadrón de drones de la Ciudad que ayuda a apagar incendios, perseguir a ladrones y encontrar personas perdidas*. Gobierno de la Ciudad Autónoma de Buenos Aires. <https://buenosaires.gob.ar/noticias/asi-funciona-el-escuadron-de-drones-de-la-ciudad-que-ayuda-apagar-incendios-perseguir>
+[Fuente de la descripción operativa del Escuadrón de Drones: modelos DJI Matrice 200/Mavic Air 2/Inspire 2, sensores de detección de obstáculos capaces de identificar cables de un milímetro de diámetro, y misiones de apoyo a persecuciones, localización de focos de incendio y búsqueda de personas extraviadas en la Reserva Ecológica y el Riachuelo.]
+
+Perfil. (2026, 8 de septiembre). *La vigilancia de Javier Milei y Jorge Macri: tecnología, millones y control del espacio público*. <https://www.perfil.com/noticias/politica/la-vigilancia-de-javier-milei-y-jorge-macri-tecnologia-millones-y-control-del-espacio-publico.phtml>
+[Fuente de las cifras de escala vigentes citadas en los capítulos 1 y 2: ~USD 48 millones invertidos en infraestructura de vigilancia, 850 puntos de captura con 3.400 cámaras nuevas, 82 % de cobertura territorial a julio de 2025, y seguimiento automático de vehículos/personas desde los drones de la Policía de la Ciudad.]
+
+## 13.1-sexies Bibliografía incorporada para casos de uso de AirSim y Cosys-AirSim (§3.1)
+
+Entradas añadidas al incorporar un apartado sobre las distintas formas en que AirSim y Cosys-AirSim se usan en la literatura —carreras de drones, aprendizaje por refuerzo para evasión de obstáculos, integración ROS, conducción autónoma, y la extensión de Cosys-AirSim a vehículos terrestres y de superficie—, en el capítulo 3 (entorno de simulación). Shah et al. (2017) y Jansen et al. (2023), fuentes primarias de AirSim y Cosys-AirSim respectivamente, ya estaban citadas en §13.1 y §13.4; Turco et al. (2024) ya estaba citada en §13.1 y se cita ahora también en el capítulo 3 como ejemplo adicional de uso de AirSim en simulación de sistemas de alto nivel.
+
+Lesy, B., Herremans, S., Kerstens, R., Steckel, J., Daems, W., Mercelis, S., & Anwar, A. (2026). ASVSim (AirSim for Surface Vehicles): A High-Fidelity Simulation Framework for Autonomous Surface Vehicle Research. *IEEE Access*, *14*, 63803-63820. arXiv:2506.22174. <https://arxiv.org/abs/2506.22174>
+
+Li, Y., Yuan, W., Zhang, S., Yan, W., Shen, Q., Wang, C., & Yang, M. (2023). Choose Your Simulator Wisely: A Review on Open-source Simulators for Autonomous Driving. *IEEE Transactions on Intelligent Vehicles*. arXiv:2311.11056. <https://doi.org/10.1109/TIV.2024.3374044>
+
+Madaan, R., Gyde, N., Vemprala, S., Brown, M., Nagami, K., Taubner, T., Cristofalo, E., Scaramuzza, D., Schwager, M., & Kapoor, A. (2020). AirSim Drone Racing Lab. *Proceedings of the NeurIPS 2019 Competition and Demonstration Track*, PMLR 123, 177-191. arXiv:2003.05654. <https://arxiv.org/abs/2003.05654>
+
+Xue, Z., & Gonsalves, T. (2021). Vision Based Drone Obstacle Avoidance by Deep Reinforcement Learning. *AI*, *2*(3), 366-380. <https://doi.org/10.3390/ai2030023>
+
 ## 13.2 Bibliografía adicional en `plan_tesis/bibliografia/` (con archivo BibTeX, no citada arriba)
 
 - AlMahamid, F., & Grolinger, K. (2022). Autonomous unmanned aerial vehicle navigation using reinforcement learning: A systematic review. *Engineering Applications of Artificial Intelligence*, *115*, 105321.
@@ -191,15 +288,35 @@ Sin archivo `.bib` asociado ni metadata completa embebida en el PDF; título tom
 
 ## 13.4 Bibliografía adicional en `informe/bibliografia/` (no incluida en el plan de trabajo aprobado)
 
+- Altman, D. G., & Bland, J. M. (1995). Statistics notes: Absence of evidence is not evidence of absence. *BMJ*, *311*(7003), 485. <https://doi.org/10.1136/bmj.311.7003.485>
+[Fuente correcta del principio epistémico citado en el capítulo 9 (§9.2.1) para el anti-patrón "cero como ausencia de evidencia": una revisión previa del capítulo atribuía este principio a Zhu et al. (2024) —artículo sobre comprensión de contexto en LLMs que no discute este concepto en absoluto—; se corrige la atribución a esta fuente, el origen efectivo y ampliamente citado de la formulación "la ausencia de evidencia no es evidencia de ausencia".]
+- Amershi, S., Begel, A., Bird, C., DeLine, R., Gall, H., Kamar, E., Nagappan, N., Nushi, B., & Zimmermann, T. (2019). Software Engineering for Machine Learning: A Case Study. *2019 IEEE/ACM 41st International Conference on Software Engineering: Software Engineering in Practice (ICSE-SEIP)*, 291-300. <https://doi.org/10.1109/ICSE-SEIP.2019.00042>
+[Evidencia de campo (equipos de Microsoft) de que los componentes de IA son estructuralmente más difíciles de aislar, probar y depurar como módulos independientes que el software determinista tradicional. Fundamenta en el capítulo 9 (§9.7) el argumento metodológico central del capítulo: que las técnicas de depuración convencionales son ciegas a fallas donde el componente de IA "decide mal" sin arrojar ninguna excepción.]
 - Badrloo, S., & Varshosaz, M. (2017). Monocular vision based obstacle detection. *International Journal of Earth Observation and Geomatics Engineering*, *1*(2), 122-130.
 - Chen, X., Kundu, K., Zhang, Z., Ma, H., Fidler, S., & Urtasun, R. (2016). Monocular 3D Object Detection for Autonomous Driving. *2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)*.
+- Fawcett, T. (2006). An introduction to ROC analysis. *Pattern Recognition Letters*, *27*(8), 861-874. <https://doi.org/10.1016/j.patrec.2005.10.010>
+[Fuente de la interpretación probabilística del AUC ROC como probabilidad de ordenamiento correcto entre un caso positivo y uno negativo, usada en el capítulo 7 (§7.3) para justificar por qué un AUC alto es compatible con una correlación puntual baja del estimador de TTC.]
+- Gat, E. (1998). On three-layer architectures. En D. Kortenkamp, R. P. Bonasso, & R. Murphy (Eds.), *Artificial Intelligence and Mobile Robots: Case Studies of Successful Robot Systems* (pp. 195-210). AAAI Press / MIT Press.
+[Referencia clásica de la arquitectura robótica de tres capas (reactiva / secuenciamiento / deliberativa), usada en el capítulo 8 (§8.6) para situar el mecanismo de watchdog + `DELIB_WAIT_CREEP_SPEED_MPS` —una capa reactiva que nunca deja de responder mientras una capa deliberativa lenta (el VLM) se consulta de forma asíncrona— como instancia concreta de un patrón arquitectónico general y no como una solución ad hoc de este sistema.]
 - Geng, S., Cooper, H., Moskal, M., Jenkins, S., Berman, J., Ranchin, N., West, R., Horvitz, E., & Nori, H. (2025). *Generating Structured Outputs from Language Models: Benchmark and Studies*. <https://arxiv.org/abs/2501.10868>
+- Huang, W., Xia, F., Xiao, T., Chan, H., Liang, J., Florence, P., Zeng, A., Tompson, J., Mordatch, I., Chebotar, Y., Sermanet, P., Brown, N., Jackson, T., Luu, L., Levine, S., Hausman, K., & Ichter, B. (2022). Inner Monologue: Embodied Reasoning through Planning with Language Models. *Proceedings of the 6th Conference on Robot Learning (CoRL)*, PMLR 205. <https://arxiv.org/abs/2207.05608>
+[Evidencia empírica de que verbalizar la retroalimentación de sensores y del entorno en lenguaje natural —en lugar de entregarla como estado estructurado— mejora la tasa de éxito de un LLM en tareas de planificación robótica de alto nivel. Fundamenta en el capítulo 8 (§8.5, Componente 1) la decisión de verbalizar la telemetría del dron antes de incluirla en el prompt del VLM, en lugar de serializarla como tupla numérica.]
+- Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., Ishii, E., Bang, Y. J., Madotto, A., & Fung, P. (2023). Survey of Hallucination in Natural Language Generation. *ACM Computing Surveys*, *55*(12), Article 248. <https://doi.org/10.1145/3571730>
+[Revisión sistemática del fenómeno de la alucinación (respuestas fluidas y plausibles pero no fundamentadas en la entrada real) en generación de lenguaje natural, usada en el capítulo 9 (§9.1) para situar el argumento central del capítulo —el modelo raciocina sobre lo que recibe, no sobre la realidad— como instancia de un fenómeno documentado en la literatura, no como una observación aislada de este proyecto.]
 - Jansen, W., Verreycken, E., Schenck, A., Blanquart, J.-E., Verhulst, C., Huebel, N., & Steckel, J. (2023). *Cosys-AirSim: A Real-Time Simulation Framework Expanded for Complex Industrial Applications*. <https://arxiv.org/abs/2303.13381>
 - Kaneko, N., Yoshida, T., & Sumi, K. (2017). Fast Obstacle Detection for Monocular Autonomous Mobile Robots. *SICE Journal of Control, Measurement, and System Integration*, *10*(5), 370-377.
+- Kroeger, T., Timofte, R., Dai, D., & Van Gool, L. (2016). Fast Optical Flow Using Dense Inverse Search. En B. Leibe, J. Matas, N. Sebe, & M. Welling (Eds.), *Computer Vision – ECCV 2016*, LNCS 9908 (pp. 471-488). Springer. <https://doi.org/10.1007/978-3-319-46493-0_29>
+[Fuente primaria del algoritmo DIS (*Dense Inverse Search*) usado como *backend* de flujo óptico en `FlowTTCEstimator` (cap. 6, §6.4). No estaba citada explícitamente en el texto anterior del capítulo, que solo remitía a "la implementación de OpenCV"; se agrega para fundamentar directamente la elección de diseño en la fuente original del algoritmo, no en su envoltorio de biblioteca.]
+- Lee, D. N. (1976). A theory of visual control of braking based on information about time-to-collision. *Perception*, *5*(4), 437-459. <https://doi.org/10.1068/p050437>
+[Trabajo fundacional de la teoría del *tau* (τ): primera derivación formal de que el tiempo-a-colisión puede estimarse directamente de la tasa de expansión óptica, sin recuperar distancia ni velocidad absolutas. Es la base psicofísica de la que derivan tanto la ecuación de TTC por divergencia del capítulo 6 (§6.1, punto 3, y §6.7) como los trabajos aplicados a UAVs (Al-Kaff et al., 2017; Vera-Yanez et al., 2024) que la instancian en visión artificial. No estaba citada en el capítulo 6 original, que fundamentaba la derivación solo en literatura de robótica aérea sin remitir al origen teórico del principio.]
 - Molineros, J., Cheng, S. Y., Owechko, Y., Levi, D., & Zhang, W. (2012). Monocular Rear-View Obstacle Detection Using Residual Flow. *Computer Vision – ECCV 2012 Workshops and Demonstrations*, LNCS 7584. Springer.
 - Al-Kaff, A., García, F., Martín, D., De La Escalera, A., & Armingol, J. M. (2017). Obstacle Detection and Avoidance System Based on Monocular Camera and Size Expansion Algorithm for UAVs. *Sensors*, *17*(5), 1061.
 - Raspanti, F., Ozcelebi, T., & Holenderski, M. (2025). Grammar-Constrained Decoding Makes Large Language Models Better Logical Parsers. *ACL 2025 Industry Track*.
 - Rill, R.-A., & Faragó, K. B. (2021). Collision Avoidance Using Deep Learning-Based Monocular Vision. *SN Computer Science*, *2*, 375. <https://doi.org/10.1007/s42979-021-00759-6>
 - Shi, S., Ni, J., Kong, X., Zhu, H., Zhan, J., Sun, Q., & Xu, Y. (2024). An Obstacle Detection Method Based on Longitudinal Active Vision. *Sensors*, *24*(14), 4407.
-- Vera-Yanez, D., Pereira, A., Rodrigues, N., Molina, J. P., García, A. S., & Fernández-Caballero, A. (2024). Optical Flow-Based Obstacle Detection for Mid-Air Collision Avoidance. *Sensors*, *24*(9), 3016.
+- Vera-Yanez, D., Pereira, A., Rodrigues, N., Molina, J. P., García, A. S., & Fernández-Caballero, A. (2024). Optical Flow-Based Obstacle Detection for Mid-Air Collision Avoidance. *Sensors*, *24*(10), 3016. <https://doi.org/10.3390/s24103016> [Entrada duplicada en §13.1 tras la corrección de 2026-09-08; se mantiene aquí por historial de organización del archivo.]
+- Willard, B. T., & Louf, R. (2023). *Efficient Guided Generation for Large Language Models*. arXiv:2307.09702. <https://arxiv.org/abs/2307.09702>
+[Fuente técnica original del mecanismo de decodificación restringida (reformulación de la gramática de un esquema como autómata de estados finitos para enmascarar logits durante la generación token a token), usado en el capítulo 8 (§8.2.1) para fundamentar el mecanismo interno de `response_format=json_schema`. El texto previo del capítulo citaba solo evaluaciones empíricas de la técnica (Raspanti et al., 2025; Geng et al., 2025) sin remitir a la fuente del mecanismo mismo.]
+- Youden, W. J. (1950). Index for rating diagnostic tests. *Cancer*, *3*(1), 32-35. <https://doi.org/10.1002/1097-0142(1950)3:1%3C32::AID-CNCR2820030106%3E3.0.CO;2-3>
+[Fuente original del índice de Youden ($J$ = sensibilidad + especificidad − 1), usado en el capítulo 7 (§7.4) como criterio de derivación de los umbrales operativos `TTC_EVASION_THRESHOLD` y `TTC_SAFE_THRESHOLD` a partir de la curva ROC.]
 - Zhou, Z., Liao, Y., Wang, B., Wang, M., Fu, M., & Hu, Z. (2026). Near obstacles detection by inverse perspective mapping of AVM for intelligent vehicles. *PLOS ONE*, *21*(1), e0336851.
