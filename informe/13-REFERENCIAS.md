@@ -122,6 +122,48 @@ Zhou, Y., Bautista, J., Yao, W., & de Marina, H. G. (2025). *Inverse Kinematics 
 
 Zhu, Y., Moniz, J. R. A., Bhargava, S., Lu, J., Piraviperumal, D., Li, S., Zhang, Y., Yu, H., & Tseng, B.-H. (2024). *Can Large Language Models Understand Context?*. <https://arxiv.org/abs/2402.00858>
 
+## 13.1-bis Bibliografía incorporada en la revisión de septiembre de 2026
+
+Las siguientes entradas fueron añadidas durante la revisión del capítulo 2 para actualizar el estado del arte al momento de la defensa. Se citan en el texto principal y se incluyen aquí con su referencia APA completa.
+
+ANAC. (2025). *Resolución 319/2025 — Parte 100 del Reglamento Aeronáutico Civil Argentino (RAAC): aeronaves pilotadas a distancia*. Administración Nacional de Aviación Civil. https://www.aviacionline.com/parte-100-anac-argentina-actualiza-su-normativa-para-drones
+
+ANAC. (2025). *Resolución 550/2025 — Desregulación de aeronaves no tripuladas de menos de 250 g y simplificación para categorías superiores*. Administración Nacional de Aviación Civil.
+
+Argentina.gob.ar. (s.f.). *Ambiente incorpora drones en parques nacionales para la detección temprana de incendios forestales*. Ministerio de Ambiente y Desarrollo Sostenible. https://www.argentina.gob.ar/noticias/ambiente-incorpora-drones-en-parques-nacionales-para-la-deteccion-temprana-de-incendios
+
+iProfesional. (2025). *La Ciudad abre la puerta al delivery con drones y crea un nuevo negocio para las empresas*. https://www.iprofesional.com/negocios/463009-la-ciudad-abre-la-puerta-al-delivery-con-drones-y-crea-un-nuevo-negocio-para-las-empresas
+
+Barišić Kulas, A., Petric, F., & Bogdan, S. (2025). *Aerial maritime vessel detection and identification*. ICUAS 2025. arXiv:2507.07153. https://arxiv.org/abs/2507.07153
+
+Breaking Defense. (2025, marzo). *Trained on classified battlefield data, AI multiplies effectiveness of Ukraine's drones: Report*. https://breakingdefense.com/2025/03/trained-on-classified-battlefield-data-ai-multiplies-effectiveness-of-ukraines-drones-report/
+
+Center for Strategic and International Studies (CSIS). (2024). *Ukraine's future vision and current capabilities for waging AI-enabled autonomous warfare*. https://www.csis.org/analysis/ukraines-future-vision-and-current-capabilities-waging-ai-enabled-autonomous-warfare
+
+Coptrz. (2026). *How will drones disrupt urban last-mile delivery in 2026?* https://coptrz.com/blog/how-will-drones-disrupt-urban-last-mile-delivery-in-2026/
+
+Danish, S., Piran, M. J., Khan, S. U., Khan, M. A., Dang, L. M., Zweiri, Y., Song, H.-K., & Moon, H. (2025). Vision-based fire management system using autonomous unmanned aerial vehicles: a comprehensive survey. *Artificial Intelligence Review*. https://doi.org/10.1007/s10462-025-11415-3
+
+Dataintelo. (2025). *Civil drone market research report 2034*. https://dataintelo.com/report/global-civil-drone-market
+
+El Estratégico. (2026, julio 22). *Proponen crear un sistema nacional de vigilancia marítima con drones*. https://www.elestrategico.com/2026/07/22/proponen-crear-un-sistema-nacional-de-vigilancia-maritima-con-drones
+
+Infobae. (2026, mayo 22). *Argentina acordó con Estados Unidos la incorporación de drones y tecnología militar para vigilar el Mar Argentino*. https://www.infobae.com/politica/2026/05/22/argentina-acordo-con-estados-unidos-la-incorporacion-de-drones-y-tecnologia-militar-para-vigilar-el-mar-argentino/
+
+Liu, C., & Sziranyi, T. (2023). *Active wildfires detection and dynamic escape routes planning for humans through information fusion between drones and satellites*. arXiv:2312.03519. https://arxiv.org/abs/2312.03519
+
+Modern War Institute at West Point. (s.f.). *Battlefield drones and the accelerating autonomous arms race in Ukraine*. https://mwi.westpoint.edu/battlefield-drones-and-the-accelerating-autonomous-arms-race-in-ukraine/
+
+Norte Misionero. (2026). *Alerta temprana, drones y respuesta rápida: Misiones refuerza su esquema de prevención de incendios*. https://nortemisionero.com.ar/provinciales/alerta-temprana-drones-y-respuesta-rapida-misiones-refuerza-su-esquema-de-prevencion-de-incendios-n516147/
+
+[Autores por confirmar]. (2026). A UAV–satellite hybrid pipeline for wildfire detection and dynamic perimeter prediction. *Drones*, *10*(4), 263. https://doi.org/10.3390/drones10040263
+
+Sun, X., Si, W., Ni, W., Li, Y., Wu, D., Xie, F., Guan, R., Xu, H.-Y., Ding, H., & Wu, Y. (2026). *AutoFly: Vision-Language-Action model for UAV autonomous navigation in the wild*. arXiv:2602.09657. https://arxiv.org/abs/2602.09657
+
+Tian, Y., Lin, F., Li, Y., Zhang, T., Zhang, Q., Fu, X., Huang, J., Dai, X., Wang, Y., Tian, C., Li, B., Lv, Y., Kovács, L., & Wang, F.-Y. (2025). UAVs meet LLMs: Overviews and perspectives toward agentic low-altitude mobility. *Information Fusion*. arXiv:2501.02341. https://arxiv.org/abs/2501.02341
+
+Vemprala, S., Bonatti, R., Bucker, A., & Kapoor, A. (2023). *ChatGPT for robotics: Design principles and model abilities*. arXiv:2306.17582. https://arxiv.org/abs/2306.17582
+
 ## 13.2 Bibliografía adicional en `plan_tesis/bibliografia/` (con archivo BibTeX, no citada arriba)
 
 - AlMahamid, F., & Grolinger, K. (2022). Autonomous unmanned aerial vehicle navigation using reinforcement learning: A systematic review. *Engineering Applications of Artificial Intelligence*, *115*, 105321.

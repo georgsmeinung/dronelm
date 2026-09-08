@@ -2,7 +2,7 @@
 
 ## 3.1 Arquitectura de simulación: Unreal Engine 5.5 y Cosys-AirSim
 
-El desarrollo y la validación de este trabajo se realizan, tal como preveía el plan de trabajo aprobado (`plan_tesis/plan-tesis.md`), sobre AirSim, un simulador basado en Unreal Engine que ofrece física y renderizado de alta fidelidad (Shah et al., 2017). La implementación efectiva, sin embargo, no usa la distribución original de AirSim de Microsoft: desde el inicio del proyecto se adoptó **Cosys-AirSim**, un fork mantenido por el Cosys-Lab (Laboratorio de Co-Diseño para Sistemas Ciber-Físicos de la Universidad de Amberes, Bélgica). Al inicio del desarrollo se adoptó la decisión de utilizar este fork: *"Abandonado el proyecto original AirSim por Microsoft, se utiliza la actual versión a partir de un fork mantenido por el Cosys-Lab"*, compilado e integrado sobre proyectos de Unreal Engine 5.5 que sirvieron como banco de pruebas y validación experimental.
+El desarrollo y la validación de este trabajo se realizan, tal como preveía el plan de trabajo aprobado (`plan_tesis/plan-tesis.md`), sobre **AirSim**, un simulador basado en Unreal Engine que ofrece física y renderizado de alta fidelidad (Shah et al., 2017). La implementación efectiva, sin embargo, no usa la distribución original de AirSim de Microsoft: desde el inicio del proyecto se adoptó **Cosys-AirSim** (específicamente el build para Windows de la versión [Cosys-AirSim v3.3 for Unreal v5.5](https://github.com/Cosys-Lab/Cosys-AirSim/releases/tag/5.5-v3.3), un fork mantenido por el Cosys-Lab (Laboratorio de Co-Diseño para Sistemas Ciber-Físicos de la Universidad de Amberes, Bélgica). Al inicio del desarrollo se adoptó la decisión de utilizar este fork: *"Abandonado el proyecto original AirSim por Microsoft, se utiliza la actual versión a partir de un fork mantenido por el Cosys-Lab"*, compilado e integrado sobre proyectos de Unreal Engine 5.5 (específicadmente la version [5.5.4-40574608+++UE5+Release-5.5](https://forums.unrealengine.com/t/5-5-4-hotfix-released/2385193))que sirvieron como banco de pruebas y validación experimental.
 
 Cosys-AirSim, a diferencia del AirSim clásico de Microsoft —enfocado principalmente en cámaras RGB y visión por computadora—, agrega sensores adicionales basados en GPU y CPU (LiDAR, sonar, radar), documentados en el paper oficial de la plataforma (Jansen et al., 2023). Este trabajo no usa esos sensores adicionales: la percepción descrita en el capítulo 6 depende exclusivamente de la cámara RGB monocular y de la telemetría de actitud, consistente con la restricción de hardware de bajo costo que motiva todo el proyecto (§1.2). La elección de Cosys-AirSim sobre el AirSim original responde, de todos modos, a la actividad de mantenimiento del fork más que a una necesidad de esos sensores adicionales: hacia 2025-2026 el proyecto de Microsoft dejó de recibir actualizaciones activas, y la documentación, configuración y versiones del fork de Cosys-Lab fueron revisadas exhaustivamente antes de adoptarlo.
 
@@ -18,20 +18,11 @@ La implementación efectivamente construida sustituyó ese pipeline de fotograme
 
 Para responder con rigor al protocolo experimental de la tesis (capítulo 10), los entornos de simulación se organizaron en una **jerarquía formal de tres niveles de complejidad (Tiers)**, superando los primeros borradores preliminares de misión (`manhattan_a` y `manhattan_b`, descartados y alineados a esta nueva nomenclatura):
 
-1. **Tier 0 — Base / Control (`MiniSim`):** Entorno abierto basado en el mapa `crater.png` (`Landscape Mountains`). Diseñado para pruebas de calibración cinemática, sintonización de controladores de posición y determinación de la cota inferior de latencia del sistema sin interferencia de obstáculos.
+1. **Tier 0 — Base / Control (`MiniSim`):** Entorno abierto basado en el mapa `crater.png` (basado en el **proyecto base de Unreal Engine** [https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-templates-reference?application_version=5.5](https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-templates-reference?application_version=5.5)). Diseñado para pruebas de calibración cinemática, sintonización de controladores de posición y determinación de la cota inferior de latencia del sistema sin interferencia de obstáculos.
 
-2. **Tier 1 — Intermedio / Morfología orgánica y vegetación (`TownSim`):** Entorno semiurbano desarrollado sobre `townsim.png` y refinado en el mapa calibrado `townsim_calib.png`. Presenta calles de ancho variable, fachadas intermedias, mobiliario y arboledas densas. Constituye el banco de pruebas central para la batería de calibración `T-CALIB-0` a `T-CALIB-5` y la misión de recorrido perimetral `townsim_ini`, albergando el escenario de bloqueo frontal masivo genuino (`T-CALIB-2`).
+2. **Tier 1 — Intermedio / Morfología orgánica y vegetación (`TownSim`):** Entorno semiurbano desarrollado sobre `townsim.png` y refinado en el mapa calibrado `townsim_calib.png`, basado en el entorno **Downtown West Modular Pack** [https://www.fab.com/listings/0faf8b5d-7a5f-4fee-a297-7a8efaba8896](https://www.fab.com/listings/0faf8b5d-7a5f-4fee-a297-7a8efaba8896) de PurePolygons. Presenta calles de ancho variable, fachadas intermedias, mobiliario y arboledas densas. Constituye el banco de pruebas central para la batería de calibración `T-CALIB-0` a `T-CALIB-5` y la misión de recorrido perimetral `townsim_ini`, albergando el escenario de bloqueo frontal masivo genuino (`T-CALIB-2`).
 
-3. **Tier 2 — Complejo / Cañones urbanos de gran densidad (`CitySim` / `CityParkSim`):** Proyecto de Unreal Engine 5.5 con tejido edilicio masivo (`citysim_calib.png`), rascacielos, pasos restringidos y disposición en cuadrícula ortogonal. El escenario base validado para el batch G4 es `citysim_clear.json`: perímetro de manzana con patrón *climb-first*, ascenso vertical puro hasta −70 m AGL antes de moverse horizontalmente. La altitud de tránsito de −70 m es un dato de diseño del entorno: la primera corrida a −50 m falló porque la ruta de ascenso atravesaba edificios; a −70 m el dron vuela por encima de la línea de tejados. Los escenarios con corredores angostos (`citymap_pilot.json` y `citymap_a.json`) corresponden a la fase siguiente del batch.
-
-### Entornos adicionales evaluados en fases exploratorias
-
-Junto a los tres Tiers principales, se evaluaron otras alternativas durante el desarrollo:
-- **"City Sample"** (Epic Games, vía Fab): entorno dedicadamente urbano denso, con peatones y tráfico gestionado por IA autónoma de Unreal Engine, confirmado funcionando con Cosys-AirSim el 2026-0522 y optimizado el 2026-0622 (escena `Small_City_LVL`) siguiendo las recomendaciones oficiales de Epic para sistemas de especificación más baja.
-- **"Downtown West Modular Pack"**: entorno semiurbano con mayor nivel de detalle arquitectónico, configurado el 2026-0521 como alternativa de mayor realismo visual al entorno base.
-- **"Dynamic City Creator"** (2026-0509): intento de generar un entorno urbano paramétricamente, **abandonado** debido a que Cosys-AirSim no detectaba adecuadamente la malla de colisión de las geometrías generadas proceduralmente, invalidando la detección física de obstáculos.
-
-El historial del proyecto no deja registrada una justificación explícita de por qué se sustituyó la fotogrametría de Buenos Aires por estos entornos; se documenta aquí como un desvío de hecho respecto del plan aprobado, en el mismo sentido en que el capítulo 1 (§1.3) documenta el desvío en percepción. Una lectura razonable es que los activos preexistentes resolvían de forma inmediata la necesidad de geometrías urbanas complejas con colisiones operativas, ahorrando el enorme costo técnico y temporal del pipeline de reconstrucción fotogramétrica.
+3. **Tier 2 — Complejo / Cañones urbanos de gran densidad (`CitySim`):** Proyecto de Unreal Engine 5.5 con tejido edilicio masivo (`citysim_calib.png`), rascacielos, pasos restringidos y disposición en cuadrícula ortogonal, basado en el entorno **Sample City** [https://www.fab.com/listings/4898e707-7855-404b-af0e-a505ee690e68](https://www.fab.com/listings/4898e707-7855-404b-af0e-a505ee690e68) de Epic Games. El escenario base validado para el batch G4 es `citysim_clear.json`: perímetro de manzana con patrón *climb-first*, ascenso vertical puro hasta −70 m AGL antes de moverse horizontalmente. La altitud de tránsito de −70 m es un dato de diseño del entorno: la primera corrida a −50 m falló porque la ruta de ascenso atravesaba edificios; a −70 m el dron vuela por encima de la línea de tejados. Los escenarios con corredores angostos (`citymap_pilot.json` y `citymap_a.json`) corresponden a la fase siguiente del batch.
 
 ## 3.3 Configuración de rendimiento, escalabilidad gráfica e higiene de captura
 
@@ -48,7 +39,7 @@ Para equilibrar la carga de GPU entre Unreal Engine y el servidor SLM/VLM local,
 
 Sin embargo, en Unreal Engine 5.5 la reducción automática de efectos suele degradar la resolución de los render targets de captura de escena. Para evitar que la cámara frontal pierda nitidez o altere el cálculo de flujo óptico, se forzó el nivel de detalle en el archivo `Config/DefaultScalability.ini` del proyecto Unreal:
 
-```ini
+``` 
 [EffectsQuality@0]
 r.DetailMode=2
 [EffectsQuality@1]
@@ -61,7 +52,13 @@ r.DetailMode=2
 r.DetailMode=2
 ```
 
-![Configuración mínima de escalabilidad en Unreal Engine](2026-0831%20Minimal%20Scalability%20Config%20for%20Airsim.png)
+También desde el editor de Unreal Engine se puede configurar la escalabilidad de la siguiente manera:
+
+![Configuración mínima de escalabilidad en Unreal Engine](2026-0907%20Scalability%20Config%20for%20Airsim%20and%20Shadows%20needed%20for%20TTC%20estimation.png)
+
+Con esta configuración Scalability de Unreal Engine se asegura a la hora de ejecutar la simulación:
+- Captura de video desde AirSim (con `Effects=Epic`)
+- Sombras en las texturas necesarias para capturar los gradientes usados para el cálculo del TTC con el flujo visual (con `Shadows=Epic`).
 
 ### Higiene y consistencia de la captura monocular
 

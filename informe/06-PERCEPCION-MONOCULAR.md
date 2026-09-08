@@ -1,42 +1,222 @@
-# 6. Percepción monocular sin redes neuronales
+# 6. Percepción monocular: flujo óptico, TTC y campo de obstáculos
 
-## 6.1 Fundamentos de diseño: percepción geométrica y física de aproximación
+## 6.1 Fundamentos de diseño: percepción geométrica sin redes neuronales
 
-La arquitectura de percepción a bordo implementada en este trabajo prescinde deliberadamente de redes neuronales profundas de detección (como detectores de cajas delimitadoras o segmentadores semánticos) y fundamenta la estimación de obstáculos en visión por computadora clásica: **flujo óptico denso derotado y divergencia del campo traslacional**. Esta decisión se sustenta en tres principios de ingeniería robótica:
+La arquitectura de percepción a bordo implementada en este trabajo prescinde deliberadamente de redes neuronales profundas de detección (detectores de cajas delimitadoras tipo YOLO — Redmon et al., 2015 — o segmentadores semánticos densos) y fundamenta la estimación de obstáculos en visión por computadora clásica: **flujo óptico denso derotado y divergencia del campo traslacional**. Esta decisión no es de conveniencia sino de principio, y se sustenta en tres argumentos de ingeniería robótica:
 
-1. **Determinismo y presupuesto de cómputo en tiempo real:** En una plataforma de navegación autónoma donde los recursos de cómputo (GPU/CPU) deben compartirse con la inferencia de un modelo de lenguaje local (SLM), los algoritmos de visión clásica optimizados (`cv2.DISOpticalFlow`) garantizan una latencia determinista y acotada por ciclo (5–10 Hz), eliminando los cuellos de botella de inferencia asociados a redes convolucionales o transformadores visuales densos.
-2. **Generalización universal y robustez fuera de distribución (OOD):** Los detectores de objetos supervisados están limitados a las clases semánticas presentes en sus conjuntos de entrenamiento (automóviles, personas, señales). En un entorno urbano tridimensional complejo, los obstáculos potenciales incluyen cables, salientes arquitectónicas, andamios o geometrías irregulares sin etiqueta previa. El flujo óptico modela directamente el fenómeno físico de aproximación espacial mediante la expansión de textura en el plano focal, reaccionando ante cualquier objeto que represente un riesgo de colisión sin importar su clase semántica ni su apariencia.
-3. **Modelado físico de Tiempo-a-Colisión (TTC):** Una caja delimitadora 2D no provee información cinemática de cierre ni distancia métrica directa. En contraste, la divergencia del campo de flujo traslacional permite derivar matemáticamente el Tiempo-a-Colisión ($TTC \approx Z / v_z$) de forma continua a lo largo del plano de la imagen, entregando una señal temporal interpretable y calibrable para las decisiones de maniobra reactiva.
+**1. Determinismo y presupuesto de cómputo compartido.** En una plataforma donde los recursos de CPU deben compartirse con la inferencia de un modelo de lenguaje local (SLM/VLM), un estimador de flujo clásico (DIS en OpenCV) garantiza una latencia determinista y acotada por ciclo (5–10 Hz), sin los picos de inferencia asociados a redes convolucionales o transformadores visuales densos. Shi et al. (2024) y Goel et al. (2021) documentan este problema de presupuesto en sistemas embebidos de visión con requisitos de tiempo real; en este sistema el presupuesto disponible para percepción es del orden de 20–50 ms por ciclo.
 
-## 6.2 Flujo óptico, derotación y divergencia como señal de ocupación
+**2. Generalización universal y robustez fuera de distribución.** Los detectores supervisados están limitados a las clases presentes en su conjunto de entrenamiento (automóviles, personas, señales). En un entorno urbano tridimensional, los obstáculos potenciales incluyen cables, salientes arquitectónicas, andamios o geometrías irregulares sin etiqueta semántica previa. El flujo óptico modela directamente el fenómeno **físico** de aproximación espacial mediante la expansión de textura en el plano focal: reacciona ante cualquier objeto que genere paralaje, sin importar su clase ni su apariencia (Badrloo & Varshosaz, 2017; Vera-Yanez et al., 2024a). Esta propiedad es especialmente valiosa en entornos de simulación que aún no reproducen fielmente la distribución fotométrica del mundo real (cap. 9).
 
-La percepción del sistema produce en cada ciclo un objeto de estado unificado denominado `ObstacleField` (`src/perception/obstacle_field.py`), generado por el estimador de flujo y TTC (`FlowTTCEstimator`, `src/perception/flow_ttc.py`). Los componentes del grafo de control consumen este estado exclusivamente a través de su API pública (`is_blocked`, `blocked_fraction`, `sector_ttc`, `summary_text`, `to_dict`), aislando la lógica de control de los cálculos numéricos de bajo nivel.
+**3. Modelado físico del Tiempo-a-Colisión (TTC).** Una caja delimitadora 2D no provee información cinemática de cierre ni distancia métrica directa. La divergencia del campo de flujo traslacional permite derivar matemáticamente el TTC ($TTC \approx d / v_{\text{cierre}}$) de forma continua a lo largo del plano de la imagen, entregando una señal temporal interpretable y calibrable para las decisiones de maniobra reactiva. Esta derivación es una consecuencia directa de la ecuación del flujo óptico bajo traslación pura (Al-Kaff et al., 2017; Vera-Yanez et al., 2024b).
 
-El campo espacial se organiza en una grilla de 3×3 celdas (tres sectores horizontales: *izquierda*, *centro*, *derecha*; por tres bandas verticales: *superior*, *medio*, *inferior*). Para cada celda se computan cuatro magnitudes principales:
-- **Ocupación (`occupancy` $\in [0, 1]$):** Nivel de actividad de divergencia positiva en la celda.
-- **Tiempo-a-Colisión (`ttc_s` en segundos):** Estimación de tiempo para el impacto ($+\infty$ si no hay aproximación).
-- **Divergencia traslacional (`divergence` en $1/s$):** Tasa de expansión del flujo traslacional.
-- **Confianza (`confidence` $\in [0, 1]$):** Proporción de píxeles válidos con gradiente suficiente en la celda.
+**Limitación estructural y rol del VLM.** La elección de percepción clásica tiene un costo explícito: el flujo óptico requiere **traslación entre frames** para generar evidencia válida. En hover puro, giro puro o crucero muy lento, la señal traslacional colapsa a cero y el campo de obstáculos pierde toda confianza. Este punto ciego estructural es exactamente el que el VLM deliberativo (cap. 5) está diseñado para cubrir: cuando el `ObstacleField` reporta "sin evidencia", el modelo de lenguaje toma decisiones con contexto visual e histórico que el estimador de flujo no puede proveer. La arquitectura de dos capas — percepción geométrica rápida + deliberación semántica lenta — es el mecanismo central con el que este trabajo aborda esa limitación.
 
-El procesamiento por ciclo ejecuta las siguientes etapas:
+## 6.2 Pipeline de percepción: cinco etapas
 
-1. **Flujo óptico denso:** Cálculo del vector de desplazamiento entre fotogramas consecutivos escalados a una resolución normalizada (`FLOW_DOWNSCALE_WIDTH`), empleando el algoritmo variacional DIS (*Dense Inverse Search*).
-2. **Derotación analítica por telemetría de actitud:** La rotación propia del vehículo (cambios de *roll*, *pitch* y *yaw* registrados por la IMU entre fotogramas) genera un flujo óptico angular parásito que enmascara la aproximación real. El estimador proyecta analíticamente la velocidad angular sobre el plano focal y resta este componente del flujo total medido:
-   $$\mathbf{v}_{\text{trans}} = \mathbf{v}_{\text{medido}} - \mathbf{v}_{\text{rot}}(\Delta\phi, \Delta\theta, \Delta\psi)$$
-   Esta corrección garantiza que giros puros de guiñada o cabeceos de estabilización no generen falsas alarmas de colisión frontal.
-3. **Estimación del Foco de Expansión (FOE):** Localización del punto de fuga del vector de traslación mediante mínimos cuadrados ponderados con eliminación recursiva de valores atípicos (*outliers*). Si el dron se encuentra en estacionario (*hover*) o movimiento lateral puro, el FOE se marca como indefinido y el TTC se asigna a $+\infty$.
-4. **Cálculo de TTC por celda:** Para cada píxel válido $p$, se calcula $TTC(p) = \frac{\|p - \mathbf{FOE}\| \cdot \Delta t}{\|\mathbf{v}_{\text{trans}}(p)\|}$. La agregación a nivel de celda toma el percentil 20 de la distribución interna, proporcionando una estimación conservadora y resistente al ruido espurio.
+`FlowTTCEstimator.estimate()` (`src/perception/flow_ttc.py`) ejecuta cada ciclo cinco etapas en secuencia, produciendo un `ObstacleField` (`src/perception/obstacle_field.py`) listo para el router de política:
 
-## 6.3 El canal de ocupación y calibración de escala
+```
+Frame(t-1) + Frame(t) + Telemetría(t-1, t)
+    ↓
+[1] Escala y conversión a escala de grises
+    ↓
+[2] Flujo óptico denso (DIS / Farneback)
+    ↓
+[3] Derotación por telemetría de actitud (IMU)
+    ↓
+[4] Estimación del FOE + RANSAC-lite de outliers
+    ↓
+[5] TTC por píxel + divergencia → agregación por celdas → ObstacleField
+```
 
-La divergencia del campo traslacional ($\nabla \cdot \mathbf{v}_{\text{trans}}$) se evalúa en `src/perception/flow_ttc.py` mediante operadores diferenciales sobre las componentes horizontal y vertical del flujo. En la implementación de referencia, la ocupación se deriva escalando la divergencia positiva (`occupancy = clip(divergencia × 0.5, 0, 1)`).
+Si en cualquier etapa no hay evidencia suficiente (primer ciclo, modo degradado, rotación grande entre frames, flujo bajo el piso de ruido), la función retorna un `empty_field()` con `source="degraded"` o `"flow"` y `foe_confidence=0.0`, marcando explícitamente la ausencia de evidencia sin ningún clamp cosmético que la enmascare.
 
-El predicado de bloqueo por celda `Cell.is_blocked()` integra de forma complementaria ambos canales de percepción mediante una compuerta lógica disyuntiva:
-$$\text{is\_blocked} = (\text{occupancy} \ge \tau_{\text{occ}}) \lor (\text{ttc\_s} \le \tau_{\text{ttc}})$$
-donde $\tau_{\text{ttc}} = 3.2\,\text{s}$ corresponde al umbral óptimo calibrado frente a profundidad de referencia (capítulo 7) y $\tau_{\text{occ}}$ es el umbral de ocupación (`OBSTACLE_OCCUPANCY_BLOCKED`). La calibración formal de este operador y su escala frente a datos de profundidad constituye un punto de análisis metodológico relevante (capítulo 7 y 9).
+## 6.3 Etapa 1: escala y parámetros intrínsecos
 
-## 6.4 Métrica de bloqueo global: `blocked_fraction()`
+Los fotogramas BGR de AirSim se convierten a escala de grises y se escalan a un ancho normalizado `FLOW_DOWNSCALE_WIDTH` (default 320 px). Esta reducción sirve dos propósitos: reducir el costo de cómputo del estimador de flujo y suavizar el ruido de alta frecuencia que genera falsos vectores de flujo. La distancia focal se escala proporcionalmente:
 
-Para la toma de decisiones a nivel macro en el grafo de navegación, `ObstacleField.blocked_fraction()` computa la proporción de celdas bloqueadas sobre el total de la grilla 3×3. 
+$$f_x' = f_x \cdot \frac{W'}{W}, \quad f_y' = f_y \cdot \frac{W'}{W}$$
 
-Cuando esta fracción supera el umbral crítico de bloqueo generalizado, el sistema determina que la trayectoria frontal se encuentra completamente comprometida en todos sus sectores, transfiriendo el control al nodo determinista `girar_90` para efectuar una maniobra de escape ortogonal inmediata sin incurrir en latencias de deliberación innecesarias.
+con `CAMERA_FX = CAMERA_FY = 554.0` px (cámara simétrica a la resolución de captura de AirSim) y el centro óptico $(c_x, c_y) = (W'/2, H'/2)$.
+
+**Guard de rotación.** Antes de computar el flujo, el estimador verifica que la rotación máxima entre frames (pitch, yaw, roll) no exceda `FLOW_MAX_ROTATION_DEG` (default 2°). Durante maniobras activas (GIRAR_90, EVADIR) el yaw cambia 4–9°/ciclo a `LOOP_HZ=5` Hz. En esas condiciones, el modelo de derotación lineal de primer orden que se describe en §6.4 introduce errores de linealización que el estimador no puede compensar, y regiones de baja textura (cielo, fachadas uniformes) generan flujo esencialmente aleatorio. El resultado documentado antes de implementar este guard fueron "nubes" de falsos obstáculos durante cada giro (CHANGELOG.md 2026-0826). La solución conservadora es descartar el ciclo y retornar `empty_field(source="degraded")`: es mejor declarar incertidumbre que producir un falso positivo que cancele una maniobra en ejecución.
+
+## 6.4 Etapa 2: flujo óptico denso (DIS)
+
+El backend de flujo óptico es **DIS** (*Dense Inverse Search*, `cv2.DISOpticalFlow_create(PRESET_MEDIUM)`), con fallback a Farneback si DIS no está disponible. DIS produce un campo vectorial $\mathbf{v}(x,y) = (u, v)$ de desplazamientos en píxeles para cada posición del frame actual respecto al anterior.
+
+**Por qué DIS y no Farneback.** DIS (Kroeger et al., 2016, referenciado en la implementación de OpenCV) ofrece una relación velocidad/calidad superior para flujo denso en imágenes de tamaño pequeño (≤ 320 px): su esquema de búsqueda inversa por parches es entre 5 y 10 veces más rápido que Farneback para resoluciones comparables, manteniendo la suavidad necesaria para la estimación del FOE. Vera-Yanez et al. (2024b) y Molineros et al. (2012) usan variantes de flujo óptico denso con esquemas de pirámide similares; la elección de DIS está motivada por el mismo compromiso latencia/densidad que documentan esos trabajos.
+
+El campo resultante $\mathbf{v}(x,y)$ mezcla el componente traslacional (paralaje de objetos en escena) con el componente rotacional inducido por los cambios de actitud del vehículo. Separar ambos componentes es el objetivo de la etapa siguiente.
+
+## 6.5 Etapa 3: derotación analítica por telemetría IMU
+
+La rotación propia del vehículo entre frames consecutivos genera un flujo óptico angular parásito $\mathbf{v}_{\text{rot}}$ que enmascara la expansión traslacional real. Para un modelo de cámara *pinhole* con rotación pequeña entre frames, la contribución rotacional al flujo óptico en el plano normalizado es:
+
+$$u_{\text{rot}}(x,y) = \frac{\theta_x \cdot x \cdot y}{f_x} - \theta_y \left(f_x + \frac{x^2}{f_x}\right) + \theta_z \cdot y$$
+
+$$v_{\text{rot}}(x,y) = \theta_x \left(f_y + \frac{y^2}{f_y}\right) - \frac{\theta_y \cdot x \cdot y}{f_y} - \theta_z \cdot x$$
+
+donde $(x, y)$ son coordenadas en el plano de la imagen centradas en $(c_x, c_y)$, y $(\theta_x, \theta_y, \theta_z)$ son los incrementos de actitud (pitch, yaw, roll) entre frames, extraídos de la telemetría del IMU del simulador. El mapeo cámara-cuerpo asume alineación frontal: $\theta_x \approx \Delta\text{pitch}$, $\theta_y \approx \Delta\text{yaw}$, $\theta_z \approx \Delta\text{roll}$.
+
+El campo traslacional derotado es:
+
+$$\mathbf{v}_{\text{trans}} = \mathbf{v}_{\text{medido}} - \mathbf{v}_{\text{rot}}$$
+
+La implementación (`_derotate()`) vectoriza esta operación sobre el array completo usando `np.mgrid` para construir los mapas de coordenadas $(x, y)$ en una sola operación, sin bucles por píxel. El salto de wrap-around del yaw ($\pm\pi$) se corrige con el módulo estándar antes de usar $\Delta\text{yaw}$ como $\theta_y$.
+
+Esta corrección es crítica para el sistema: sin ella, cada corrección de guiado (giro de unos pocos grados hacia el waypoint) genera un flujo rotacional en el sector central que se interpreta como un obstáculo frontal, disparando deliberaciones espurias en cada ciclo de crucero. El mismo principio de derotación por IMU se usa en sistemas de visión activa para vehículos terrestres (Dickmanns, 2024) y SLAM monocular (Chen et al., 2022).
+
+## 6.6 Etapa 4: estimación del Foco de Expansión (FOE) con RANSAC-lite
+
+Bajo traslación pura (sin rotación residual), todos los vectores del campo traslacional apuntan radialmente desde un único punto llamado **Foco de Expansión** (FOE, también llamado punto de fuga traslacional). La posición del FOE en el plano de la imagen codifica la dirección de traslación del vehículo, y la magnitud del flujo en cada píxel es inversamente proporcional a la distancia al obstáculo que generó ese paralaje.
+
+**Descarte de ruido de baja magnitud.** Los píxeles con $\|\mathbf{v}_{\text{trans}}\| \leq \text{FLOW\_NOISE\_FLOOR\_PX}$ (default 0.35 px) se descartan antes de cualquier ajuste. Por debajo de este umbral, los vectores de flujo son artefactos de cuantización del estimador, no señal real. Si la fracción de píxeles válidos resultante es menor que `MIN_VALID_FRACTION_FOR_FOE` (default 1%), el campo entero se declara sin evidencia.
+
+**Ajuste por mínimos cuadrados ponderados (primera pasada).** Para los píxeles válidos, la condición geométrica de consistencia con el FOE es que cada vector de flujo $\mathbf{v}(p)$ esté **alineado** con la línea que une $p$ al FOE. La componente normal al vector $\mathbf{v}$ debe ser cero en el FOE: para el píxel $(p_x, p_y)$ con vector $(v_x, v_y)$, la normal normalizada es $\mathbf{n} = (-v_y, v_x) / |\mathbf{v}|$, y la condición es $\mathbf{n}^T (\text{FOE} - p) = 0$. El sistema lineal resultante es:
+
+$$\left(\sum_i w_i \mathbf{n}_i \mathbf{n}_i^T\right) \text{FOE} = \sum_i w_i \mathbf{n}_i (\mathbf{n}_i^T p_i)$$
+
+donde $w_i = |\mathbf{v}_i|$ pondera cada ecuación por la magnitud del flujo (vectores más largos son más confiables). Este sistema $2 \times 2$ se resuelve con `np.linalg.solve()`.
+
+**Recorte de outliers tipo RANSAC-lite (segunda pasada).** El FOE de primera pasada puede estar contaminado por píxeles de fondo, regiones de baja textura, o residuos de la derotación. El refinamiento evalúa, para cada píxel, el ángulo entre su vector de flujo y la línea $p \to \text{FOE}$: si el ángulo supera `FOE_OUTLIER_ANGLE_RAD` (default 0.35 rad ≈ 20°), el píxel se descarta como outlier. Con los inliers restantes se repite el ajuste por mínimos cuadrados. Este esquema es una versión simplificada del RANSAC estocástico de Kaneko et al. (2017) y de la estimación robusta de FOE en flujo de egomotion documentada en la literatura de detección de obstáculos por flujo residual (Molineros et al., 2012).
+
+**Confianza del FOE.** Se distinguen dos casos:
+- Pocos inliers (< 30): FOE poco confiable; `foe_confidence` se clipea a 0.3 como señal de evidencia degradada.
+- Suficientes inliers (≥ 30): `foe_confidence = min(n_inliers / (H × W) × 3.0, 1.0)`. El factor 3.0 compensa que la fracción de inliers esperada en una escena real es aproximadamente 1/3 del total de píxeles válidos (fondo vs. objetos en aproximación); el boost normaliza la confianza a un rango comparable al de la fracción bruta.
+
+**Sanity check de límites.** Un FOE fuera del rectángulo de la imagen (`0 ≤ foe_x ≤ W`, `0 ≤ foe_y ≤ H`) no es un punto de fuga físicamente plausible para esa imagen; indica que el ajuste convergió a una solución artefactual (ruido dominante o residuo de derotación mal compensada). En ese caso, `foe_confidence` se fuerza a 0.0 y el campo se retorna sin celdas bloqueadas.
+
+## 6.7 Etapa 5: TTC por píxel y divergencia
+
+Con el FOE estimado y el intervalo temporal real $\Delta t$ (diferencia de timestamps del simulador entre frames consecutivos — nunca el período nominal del lazo), se calcula para cada píxel válido:
+
+$$TTC(x,y) = \frac{\|p - \text{FOE}\| \cdot \Delta t}{\|\mathbf{v}_{\text{trans}}(x,y)\|}$$
+
+Esta fórmula es la forma discreta de la ecuación continua $TTC = Z / v_{\text{cierre}}$, válida bajo la aproximación de cámara *pinhole* con traslación dominante. Para píxeles cerca del FOE o con flujo muy pequeño, el denominador puede producir TTC extremadamente alto (sin evidencia de aproximación), lo que se traduce en $TTC \to \infty$.
+
+**Canal de divergencia.** En paralelo al TTC, el estimador computa la divergencia del campo traslacional como verificación independiente:
+
+$$\text{div}(x,y) = \frac{\partial u}{\partial x} + \frac{\partial v}{\partial y}$$
+
+implementada con `np.gradient()` (diferencias de segundo orden centradas, normalizadas por el intervalo temporal $\Delta t$). La divergencia positiva indica expansión local del flujo — el objeto en ese punto del plano focal está acercándose al vehículo. Es un indicador complementario al TTC que no requiere estimar el FOE: incluso si el ajuste del FOE falla, una celda con divergencia positiva elevada sigue siendo evidencia de aproximación.
+
+## 6.8 Grilla de celdas 3×3 y agregación por sector
+
+El campo traslacional se divide en una grilla de 3 columnas (sectores: *izquierda*, *centro*, *derecha*) × 3 filas (bandas: *superior*, *medio*, *inferior*), totalizando 9 celdas. Las columnas dividen la imagen en tercios iguales de ancho; las filas, en tercios iguales de alto. Para cada celda se calcula:
+
+**Confianza** (`confidence`): fracción de píxeles válidos (magnitud > piso de ruido) sobre el total de la celda, multiplicada por `foe_confidence`. Esta confianza combinada refleja tanto la densidad local de flujo válido como la calidad global del FOE estimado.
+
+**TTC de celda** (`ttc_s`): percentil `TTC_AGGREGATION_PERCENTILE` (default 20) de la distribución de TTC finitos de la celda. El percentil 20 es conservador: estima el TTC del 20% más rápido de los objetos que se aproximan en la celda, resistente al ruido espurio que produce TTC extremadamente bajos en píxeles aislados. Celdas con menos de 5 píxeles válidos reciben `ttc_s = ∞` (sin evidencia).
+
+**Ocupación** (`occupancy`): media de la divergencia positiva en la celda, escalada por el factor de calibración:
+
+$$\text{occupancy} = \text{clip}\!\left(\bar{\text{div}}^+ \times \frac{0.450}{8.0},\ 0,\ 1\right)$$
+
+El factor $0.450 / 8.0$ fue determinado empíricamente comparando las salidas del estimador con profundidad de referencia del simulador; no es un valor físicamente derivado sino el mejor punto de operación encontrado en las condiciones de vuelo de los escenarios de esta tesis. El protocolo de validación completo —conjunto de datos, curva ROC y la interpretación correcta de las métricas resultantes— se describe en el capítulo 7.
+
+## 6.9 El predicado de bloqueo: fusión de dos canales
+
+La decisión de si una celda está **bloqueada** fusiona los dos canales (ocupación y TTC) con una compuerta disyuntiva, condicionada a la confianza:
+
+```python
+def is_blocked(self) -> bool:
+    if self.confidence < MIN_CONFIDENCE_FOR_BLOCKED:   # 0.15
+        return False
+    if self.occupancy >= OCCUPANCY_BLOCKED_THRESHOLD:  # 0.35
+        return True
+    return (
+        self.confidence >= MIN_CONFIDENCE_FOR_TTC_BLOCKED  # 0.35
+        and self.ttc_s <= TTC_BLOCKED_THRESHOLD_S          # 2.5 s
+    )
+```
+
+La lógica es: una celda está bloqueada si tiene evidencia mínima de percepción **y** (la ocupación es alta, **o** el TTC es bajo con suficiente confianza).
+
+**Umbrales diferenciados de confianza.** La confianza mínima para que la ocupación vote bloqueo es `MIN_CONFIDENCE_FOR_BLOCKED = 0.15`, pero para que el TTC vote bloqueo por sí solo (sin apoyo de ocupación) se requiere `MIN_CONFIDENCE_FOR_TTC_BLOCKED = 0.35`. La razón es que el camino de "pocos inliers" en la estimación del FOE (§6.6) produce `foe_confidence = 0.3` como señal de evidencia degradada. Sin el umbral diferenciado, ese 0.3 superaba el piso general (0.15) y el TTC degradado votaba bloqueo con la misma autoridad que un FOE robusto. La separación entre ambos umbrales fue el fix directo de una fuente documentada de falsos positivos (CHANGELOG.md 2026-0826).
+
+## 6.10 La API pública de `ObstacleField`
+
+Todos los consumidores del sistema de percepción — `policy_router`, `evasive_node`, `deliberative_node`, `fsm_node`, `FlightLogger` — acceden al campo de obstáculos **únicamente** a través de esta interfaz. Ningún módulo de control lee campos crudos de flujo ni coordenadas del FOE.
+
+| Método | Descripción |
+|---|---|
+| `is_blocked(sector)` | `True` si alguna celda del sector está bloqueada según §6.9 |
+| `sector_ttc(sector)` | Mínimo TTC del sector, sobre celdas con confianza ≥ 0.15 |
+| `sector_occupancy(sector)` | Máxima ocupación del sector, sobre celdas con confianza ≥ 0.15 |
+| `sector_confidence(sector)` | Máxima confianza del sector |
+| `blocked_fraction()` | Fracción de celdas bloqueadas sobre el total de la grilla 3×3 |
+| `min_ttc()` | TTC mínimo global, sobre todas las celdas con confianza suficiente |
+| `has_evidence()` | `True` si `source == "flow"` y `foe_confidence > 0.0` |
+| `summary_text()` | Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s)" |
+| `to_dict()` | Representación serializable para el JSONL de auditoría |
+
+El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. Esta propiedad simplifica el razonamiento sobre el ciclo de control, donde el mismo `ObstacleField` es leído por hasta tres consumidores (router, nodo de política, logger) en el mismo ciclo.
+
+## 6.11 Consultas de nivel superior: `has_open_corridor` y `sector_towards_waypoint`
+
+Dos funciones de módulo sirven como interfaz de alto nivel compartida entre el router de política, el nodo deliberativo y la FSM:
+
+**`sector_towards_waypoint(bearing_err_deg)`** mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
+- Si `bearing_err_deg < -BEARING_SECTOR_DEG` (default 15°) → `"izquierda"`
+- Si `bearing_err_deg > +15°` → `"derecha"`
+- Caso contrario → `"centro"`
+
+Esta función conecta el espacio de guiado de `WaypointTracker` con el espacio de percepción del `ObstacleField`, permitiendo que el escape de atasco priorice el sector hacia el waypoint.
+
+**`has_open_corridor(field, guidance)`** determina si la percepción tiene evidencia real de al menos un sector transitable, evaluado en el contexto del waypoint activo:
+
+```python
+if not field.has_evidence():
+    return False          # sin flujo ≠ "despejado"
+for sector in (target, otros_sectores):
+    if confidence(sector) >= MIN_CONFIDENCE y not is_blocked(sector):
+        return True
+return False
+```
+
+La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Esta función fue introducida después de documentar un vuelo donde el dron subió 12 m consecutivos mientras el `ObstacleField` reportaba `DERECHA: DESPEJADO` ciclo tras ciclo — el router cortocircuitaba hacia `GANAR_ALTURA` antes de leer el campo (CHANGELOG.md 2026-0824).
+
+## 6.12 Comportamiento bajo condiciones extremas
+
+**Hover / velocidad < 0.25 m/s.** Sin traslación entre frames, el flujo traslacional es indistinguible del ruido del estimador. La fracción de píxeles válidos cae por debajo de `MIN_VALID_FRACTION_FOR_FOE = 1%` y el campo retorna vacío (`foe_confidence = 0`). `has_evidence()` devuelve `False`, marcando la situación como "sin información" — no como "despejado". El nodo deliberativo lo detecta vía `_query_reason_note()` y comunica explícitamente al VLM que la consulta se debe a falta de evidencia, no a un bloqueo real (§4.3, §5.10).
+
+**Giro puro (yaw_rate alto).** La rotación excede `FLOW_MAX_ROTATION_DEG = 2°` y el ciclo retorna `empty_field(source="degraded")`. El lazo continúa con la maniobra comprometida (persistencia en `evasive_node`) sin recurrir a nueva evidencia perceptual.
+
+**Textura baja o uniformidad fotométrica.** En regiones sin gradiente (cielo, fachadas, superficies sin textura), `np.gradient` produce valores de flujo cercanos a cero que no contribuyen a la estimación del FOE ni al cómputo de TTC. La confianza de esas celdas es cercana a cero y el predicado `is_blocked()` las descarta.
+
+**Transiciones de iluminación brusca.** Cambios rápidos de exposición entre frames (que pueden ocurrir en el simulador al cruzar una sombra) producen flujo sistemático en toda la imagen que puede contaminar el FOE. El recorte de outliers (§6.6) mitiga esto parcialmente; la calibración de `FLOW_MAX_ROTATION_DEG` y el piso de ruido `FLOW_NOISE_FLOOR_PX` son los otros mecanismos de contención.
+
+## 6.13 Variables de entorno calibrables
+
+El estimador expone todos sus parámetros clave a través de variables de entorno (versionadas en `config/.env`):
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `FLOW_ALGORITHM` | `"dis"` | Backend de flujo: `"dis"` o `"farneback"` |
+| `FLOW_DOWNSCALE_WIDTH` | 320 | Ancho de trabajo para flujo óptico (px) |
+| `CAMERA_FX` / `CAMERA_FY` | 554.0 | Distancia focal a resolución de captura (px) |
+| `FLOW_NOISE_FLOOR_PX` | 0.35 | Piso de ruido: vectores más pequeños se descartan |
+| `MIN_VALID_FRACTION_FOR_FOE` | 0.01 | Fracción mínima de píxeles válidos para estimar FOE |
+| `FOE_OUTLIER_ANGLE_RAD` | 0.35 | Umbral de ángulo para RANSAC-lite (rad, ≈ 20°) |
+| `TTC_AGGREGATION_PERCENTILE` | 20 | Percentil de TTC usado como estimado por celda |
+| `FLOW_MAX_ROTATION_DEG` | 2.0 | Rotación máxima (°) para la que la derotación es confiable |
+| `OBSTACLE_OCCUPANCY_BLOCKED` | 0.35 | Umbral de ocupación para declarar celda bloqueada |
+| `OBSTACLE_TTC_BLOCKED_S` | 2.5 | Umbral de TTC para declarar celda bloqueada (s) |
+| `OBSTACLE_MIN_CONFIDENCE` | 0.15 | Confianza mínima para que ocupación vote bloqueo |
+| `OBSTACLE_MIN_CONFIDENCE_TTC` | 0.35 | Confianza mínima para que TTC vote bloqueo solo |
+
+## 6.14 Complementariedad entre percepción clásica y VLM
+
+El diseño del sistema asume explícitamente que ninguno de los dos componentes es completo por sí solo:
+
+**El estimador de flujo es fuerte cuando** el dron se traslada a velocidad moderada (> 0.5 m/s), la textura de la escena es suficiente, y la iluminación es razonablemente estable. En esas condiciones produce `ObstacleField` con `foe_confidence > 0.35` y bloqueos confiables que el router resuelve en < 5 ms sin consultar el VLM.
+
+**El VLM es fuerte cuando** la percepción clásica falla: hover, giro puro, atasco donde el dron está parado y el flujo colapsó, o cuando se necesita contexto semántico (distinguir una calle libre de una fachada con ventanas, o un árbol de un edificio). El VLM recibe el fotograma directamente y puede razonar sobre la escena a pesar de la falta de movimiento, aunque con latencia de 200 ms a varios segundos.
+
+**La interfaz entre ambas capas** es el campo `scene_summary` del `ObstacleField` y el motivo de consulta explícito del prompt (§4.3): cuando la percepción clásica tiene evidencia, el VLM la recibe como contexto cuantitativo ("CENTRO: BLOQUEADO, TTC=3.2s"); cuando no la tiene, el prompt lo dice explícitamente ("la percepción NO tiene evidencia suficiente en este ciclo, probablemente por falta de traslación"). Esta transparencia sobre la fuente y la calidad de la evidencia es el mecanismo que permite al modelo de lenguaje calibrar su propia respuesta según el nivel de confianza del canal perceptual.
+
+---
+
+*Las referencias bibliográficas citadas en este capítulo corresponden a las entradas del §13 del presente informe. La evaluación cuantitativa del estimador (curvas ROC, AUC, comparación con profundidad de referencia) se desarrolla en el capítulo 7. El análisis de los modos de falla de la percepción y su impacto en el comportamiento del lazo se presenta en el capítulo 9.*

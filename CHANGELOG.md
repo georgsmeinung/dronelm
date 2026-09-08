@@ -1,5 +1,110 @@
 # 2026-0907
 
+## Reescritura completa de capítulos 06–09 e índice del informe
+
+### `informe/06-PERCEPCION-MONOCULAR.md` — reescritura completa (14 secciones)
+
+Capítulo original de 4 secciones (~43 líneas) reemplazado por una descripción exhaustiva del pipeline de percepción monocular. Cobertura:
+
+- **§6.1** — Justificación de percepción clásica vs. redes neuronales: determinismo, generalización OOD, derivación física del TTC. Cita Badrloo & Varshosaz (2017), Al-Kaff et al. (2017), Vera-Yanez et al. (2024b), Shi et al. (2024), Goel et al. (2021).
+- **§6.2** — Vista del pipeline de 5 etapas (escala → DIS → derotación → FOE → agregación).
+- **§6.3** — Escala, parámetros intrínsecos y guard de rotación (`FLOW_MAX_ROTATION_DEG = 2°`), con la historia del bug de falsos positivos durante giros (CHANGELOG 2026-0826).
+- **§6.4** — DIS vs. Farneback: justificación de elección por latencia y densidad.
+- **§6.5** — Derotación analítica IMU: fórmulas completas de $u_{\text{rot}}$, $v_{\text{rot}}$ con parámetros de cámara escalados.
+- **§6.6** — FOE por mínimos cuadrados ponderados (sistema 2×2 derivado) + RANSAC-lite (umbral angular `FOE_OUTLIER_ANGLE_RAD = 0.35` rad); confianza diferenciada < 30 vs. ≥ 30 inliers; sanity check de FOE fuera de imagen.
+- **§6.7** — TTC por píxel y divergencia como canal independiente (`np.gradient()`, normalizado por $\Delta t$ real).
+- **§6.8** — Grilla 3×3, percentil 20 de TTC, factor de ocupación $0.450/8.0$. Remite al cap. 7 para el protocolo de validación (AUC, Youden).
+- **§6.9** — Predicado `is_blocked()` dual-canal con umbrales diferenciados (0.15 vs. 0.35) y la razón histórica del bug de falsos positivos con FOE degradado (CHANGELOG 2026-0826).
+- **§6.10** — API pública completa de `ObstacleField` (tabla de métodos).
+- **§6.11** — `has_open_corridor()` y `sector_towards_waypoint()` con la lógica del bug del ascenso de 12 m (CHANGELOG 2026-0824).
+- **§6.12** — Comportamientos bajo condiciones extremas (hover, giro puro, textura baja, iluminación brusca).
+- **§6.13** — Tabla de variables de entorno calibrables (12 parámetros).
+- **§6.14** — Complementariedad geométrica-VLM y la interfaz `scene_summary`/`reason_note`.
+
+### `informe/07-ESTIMACION-TTC.md` — reescritura completa (7 secciones)
+
+Capítulo previo de 4 secciones reemplazado por una descripción exhaustiva de la validación experimental. Cobertura:
+
+- **§7.1** — Ground truth de profundidad AirSim: ventaja metodológica, definición de $TTC_{\text{gt}}$ con percentil 20 de profundidad, limitación del plano focal (error < 8% para FoV 60° a distancias < 15 m).
+- **§7.2** — Diseño del dataset: 3735 registros, tabla de campos (11 variables por registro), 3 escenarios scripteados (aproximación frontal, cañón urbano, giros de guiñada), limitación documentada del rango de guiñada ensayado.
+- **§7.3** — Reconciliación entre correlación puntual baja ($r \approx -0.034$, error mediano 66%) y AUC ROC alta (0.96–0.97): el estimador es un *clasificador de riesgo monótono*, no un cronómetro. Cita Al-Kaff et al. (2017), Vera-Yanez et al. (2024).
+- **§7.4** — Derivación de umbrales por índice de Youden: tabla con τ ∈ {1, 2, 3} s; `TTC_EVASION_THRESHOLD = 3.2 s` (reemplaza provisorio 3.0 s), `TTC_SAFE_THRESHOLD = 4.6 s` (reemplaza 6.0 s); lógica de la banda de histéresis.
+- **§7.5** — Estado de la calibración del canal de ocupación: tabla comparativa TTC vs. ocupación (ROC completo vs. pendiente); el umbral `OBSTACLE_OCCUPANCY_BLOCKED = 0.35` es provisorio.
+- **§7.6** — Validación de derotación en giros agresivos: qué falta, qué indicaría un problema y cómo detectarlo.
+- **§7.7** — Implicaciones de los resultados de validación para el diseño: justificación del AUC para evasión reactiva, de la banda de histéresis y del rol del VLM; deuda técnica controlada del canal de ocupación.
+
+### `informe/08-DECISIONES-SLM.md` — reescritura completa (7 secciones)
+
+Capítulo previo de 5 secciones reemplazado. Cobertura:
+
+- **§8.1** — Selección del modelo: presupuesto de VRAM como parámetro de diseño duro (4.5–6 GB para UE5.5; 2–3.5 GB disponibles); justificación de VLM sobre modelo textual puro (puntos ciegos del flujo, semántica, historial temporal); tabla de candidatos evaluados (Phi-4-mini, Qwen3-4B, SmolLM3, Qwen2.5-VL-3B adoptado, Qwen2.5-VL-7B descartado por VRAM); posicionamiento respecto al arte (cita EMMA — Hwang et al. 2024, UAV-VLN — Saxena et al. 2025).
+- **§8.2** — Decodificación restringida (`json_schema`): mecanismo técnico de enmascarado de logits token a token (Raspanti et al. 2025, Geng et al. 2025); `adherence_rate` 73% → 98%; esquema JSON mínimo con `enum` de acciones. Parser tolerante: 3 estrategias de extracción (`json.loads`, regex, campo `action` solo); `_fallback_decision()` retorna `keep_going`.
+- **§8.3** — Espacio de acción discreto: tabla de macro-acciones; las 3 propiedades de diseño que se derivan mutuamente (compatibilidad con constrained decoding, comparación limpia entre brazos, auditabilidad).
+- **§8.4** — `action_to_command()`: tabla completa de traducción (vx, vy, vz, yaw_rate por macro-acción); bug histórico de asimetría FSM vs. deliberativo (CHANGELOG 2026-0824).
+- **§8.5** — 5 componentes del prompt: estado de vuelo verbalizado, resumen `ObstacleField`, historial de decisiones, motivo explícito de consulta (`reason_note`), instrucción de formato; `temperature = 0.2`, `max_tokens = 200`.
+- **§8.6** — Gestión de latencia: watchdog `SLM_WATCHDOG_MS = 1500`, `DELIB_WAIT_CREEP_SPEED_MPS = 0.5`; justificación de 3B sobre 7B por latencia.
+- **§8.7** — LoRA explorado y no adoptado: dos razones explícitas (cobertura de datos insuficiente, complejidad de mantenimiento).
+
+### `informe/09-MODOS-DE-FALLA-LLM.md` — reescritura completa (8 secciones)
+
+Capítulo previo de 7 secciones reemplazado con mayor detalle técnico. Adiciones principales:
+
+- **§9.1** — Tabla de taxonomía de las 5 fallas (categoría, capa, si genera excepción, consecuencia).
+- **§9.2** — Schema drift: descripción del anti-patrón "zero as absence of evidence" (cita Zhu et al. 2024); los 3 estados epistémicos de `ObstacleField` como solución.
+- **§9.3** — Desalineación temporal: dos escenarios concretos que producen frames duplicados; solución con `deque` + validación de timestamps + adaptación dinámica del prompt.
+- **§9.4** — Descalibración de divergencia: kernel de Sobel sin factor $1/8$ (fórmula); interacción con la lógica disyuntiva como problema de diseño; triple corrección (kernel, ROC, umbrales diferenciados).
+- **§9.5** — State clipping en LangGraph: descripción del mecanismo de descarte silencioso del runtime; 4 vulnerabilidades con pseudocódigo del ciclo límite (período 3); reconstrucción de la cadena causal del ascenso de ~356 m; diagnóstico con interceptor de estado entre nodos.
+- **§9.6** — Degradaciones sensoriales: fórmulas de conversión cuaternión→Euler (Wahba 1965); referencia CosysAirSim (Jansen et al. 2023); tests unitarios de verificación para cada corrección.
+- **§9.7** — Metodología de diagnóstico: 4 técnicas que sí funcionaron (auditoría de contratos, guardar datos crudos, tests de invariantes, inyección de valores límite); modo `LANGGRAPH_DEBUG_STATE_CLIPPING=1`.
+- **§9.8** — Riesgos residuales: 3 riesgos identificados con sus mitigaciones actuales.
+
+### `informe/README.md` — estado actualizado
+
+Tabla de capítulos actualizada con descripciones que reflejan el contenido real post-reescritura (caps. 5–9). Sección "Pendiente" reorganizada en tres bloques: datos experimentales faltantes (§7.5, §7.6), capítulos por redactar (11, 12) y revisión final de referencias.
+
+---
+
+## Revisión y actualización del Estado del Arte — capítulos 01, 02 y 13
+
+Revisión completa de `informe/02-ESTADO-DEL-ARTE.md` para actualizar el contenido al estado de la literatura al 7 de septiembre de 2026. Se incorporaron trabajos nuevos directamente pertinentes, se añadieron dos contextos de aplicación local, y se regeneró el capítulo de introducción para reflejar el estado actual del informe completo.
+
+### `informe/02-ESTADO-DEL-ARTE.md`
+
+**Párrafo de apertura nuevo (antes de §2.1):** contextualiza la relevancia civil y militar del problema.
+- Civil: mercado global de UAVs $28,6 B (2025) → $52,1 B (2029); expansión de aprobaciones BVLOS (FAA, EASA, CAAC).
+- Militar: guerra en Ucrania como primer conflicto con UAVs autónomos como factor táctico central — ~2 M drones fabricados en 2024, modelos de IA entrenados con datos de combate con tasa de impacto 3-4× mejor; creación de ramas de sistemas no tripulados en Ucrania (feb. 2024) y Rusia (dic. 2024).
+
+**§2.3 — Arquitecturas de control asistidas por modelos de lenguaje (ampliada):**
+- Incorporado **Vemprala et al. (2023)** — ChatGPT for Robotics (Microsoft Research) como trabajo fundacional; usó AirSim para validación.
+- Incorporado **Tian et al. (2025)** — "UAVs Meet LLMs", revisión sistemática P–C–A aceptada en *Information Fusion* (14 autores, incluye repositorio GitHub).
+- Incorporado **Sun et al. (2026)** — AutoFly, modelo VLA end-to-end para navegación de UAVs en exteriores (arxiv:2602.09657), +3,9 pp sobre el estado del arte anterior.
+- Explicitado el contraste entre la frontera 2026 (VLA de gran escala) y el aporte de este trabajo (SLM cuantizado de 1–4 B parámetros en CPU de borde).
+
+**§2.4 nueva — Dominios de aplicación de alta pertinencia local:**
+- *Vigilancia del litoral marítimo*: contexto del acuerdo Argentina-EEUU (may. 2026) con drones Shield AI V-Bat para la ZEE de 1,6 M km²; propuesta legislativa de Sistema Nacional (jul. 2026). Referencia académica: **Barišić Kulas, Petric & Bogdan (ICUAS 2025)** — detección autónoma de embarcaciones en entorno GNSS-denied con visión onboard.
+- *Incendios forestales*: Ministerio de Ambiente con 17 UAVs en parques nacionales de Neuquén y Chubut; Misiones con despacho autónomo post-detección. Referencias académicas: **Liu & Sziranyi (2023)** — fusión Sentinel-2 + dron para localización de foco y rutas de evacuación; **Danish et al. (2025)** — revisión sistemática en *Artificial Intelligence Review*; pipeline UAV–satélite en *Drones* 10(4), 263 (2026).
+
+**§2.4 anterior renombrada §2.5 (Posicionamiento).** Actualizada para explicitar que el trabajo apunta al extremo opuesto de la frontera 2026 y conectar los modos de falla documentados con los dominios de aplicación reales.
+
+### `informe/01-INTRODUCCION.md` — regenerado completo
+
+- **§1.1**: expandida de contexto técnico a motivación triple anclada en Argentina:
+  1. Litoral marítimo: ZEE de 1,6 M km², acuerdo con EEUU 2026, propuesta legislativa.
+  2. Incendios forestales: 17 UAVs en parques nacionales, Misiones con despacho autónomo.
+  3. Buenos Aires: CABA abre marco para delivery con drones (iProfesional, 2025); ANAC Resolución 319/2025 (Parte 100 RAAC) y Resolución 550/2025; descripción técnica del tejido urbano porteño (cañones de 8–12 pisos, degradación GPS, cables, proximidad a Aeroparque).
+- **§1.2**: añadido objetivo específico 4 que conecta los modos de falla documentados con los dominios de aplicación local.
+- **§1.3**: robustez OOD del flujo óptico extendida a entornos no estructurados (litoral, área de incendio).
+- **§1.4**: incorporada referencia a Zhu et al. (2024); enlace explícito entre integridad del contrato de datos y requisito operacional en los dominios de aplicación.
+- **§1.5**: descripción del capítulo 2 actualizada con los cinco subsections (§2.1–§2.5).
+- Corregida errata tipográfica: "Lamotivación" → "La motivación".
+
+### `informe/13-REFERENCIAS.md` — nuevas entradas (sección 13.1-bis)
+
+16 referencias nuevas en formato APA, organizadas en la sección 13.1-bis:
+Vemprala et al. (2023), Tian et al. (2025), Sun et al. (2026), Barišić Kulas et al. (2025), Danish et al. (2025), Liu & Sziranyi (2023), pipeline UAV-satélite Drones 10(4) 2026, CSIS (2024), Breaking Defense (2025), Modern War Institute (s.f.), Dataintelo (2025), Coptrz (2026), Infobae (2026), El Estratégico (2026), Norte Misionero (2026), Argentina.gob.ar (s.f.), iProfesional (2025), ANAC Res. 319/2025, ANAC Res. 550/2025.
+
+---
+
 ## Corridas de tesis I3 — Tier 2 base (`citysim_clear`, 3 brazos, seed=1)
 
 Primer escenario de Tier 2 (CitySim) validado con los tres brazos: `slm`, `fsm` y `reactive`.

@@ -446,10 +446,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#componentes-clave-del-contrato" class="md-nav__link">
+  <a href="#componentes-del-contrato" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Componentes clave del contrato:
+        Componentes del contrato:
       
     </span>
   </a>
@@ -481,6 +481,45 @@
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataset-de-corridas-estructura-de-airsim-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset de corridas: estructura de airsim-runs/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visor-de-auditoria-viewerhtml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visor de auditoría (.viewer.html)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visor de auditoría (.viewer.html)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anotaciones-del-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anotaciones del video
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1002,10 +1041,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#componentes-clave-del-contrato" class="md-nav__link">
+  <a href="#componentes-del-contrato" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Componentes clave del contrato:
+        Componentes del contrato:
       
     </span>
   </a>
@@ -1040,6 +1079,45 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#dataset-de-corridas-estructura-de-airsim-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset de corridas: estructura de airsim-runs/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visor-de-auditoria-viewerhtml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visor de auditoría (.viewer.html)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visor de auditoría (.viewer.html)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anotaciones-del-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anotaciones del video
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1069,7 +1147,7 @@
 <li><strong>El planificador de estación terrena (<code>airsim-plan</code> / WebDCS):</strong> opera de manera previa al despegue del vehículo. En esta etapa, el sistema puede tolerar presupuestos de tiempo del orden de 5 a 10 segundos para interpretar instrucciones en lenguaje natural, consultar información contextual del entorno, aplicar reglas de seguridad operacional y generar un plan de vuelo global validado.</li>
 <li><strong>El lazo táctico a bordo (<code>airsim-loop</code>):</strong> opera en tiempo real estricto una vez que el vehículo está en el aire (capítulo 5). Bajo una frecuencia objetivo de 5 a 10 Hz, su función no es diseñar la ruta global sino mantener la estabilidad cinemática, seguir los objetivos asignados y ejecutar maniobras reactivas inmediatas de evasión de obstáculos a partir de visión monocular ligera.</li>
 </ol>
-<p><img alt="Planificación de Misión UAV y Arquitectura de Control" src="2026-0625%20Planificacion%20de%20Mision%20UAV.png" /></p>
+<p><img alt="Planificación de Misión UAV y Arquitectura de Control" src="informe-03-planificacion-del-vuelo.jpg" /></p>
 <p>El desacoplamiento permite que la misión sea validada, persistida y versionada de forma determinista antes de iniciar los motores. Asimismo, garantiza que el lazo táctico a bordo no dependa de una conexión de red permanente con la estación terrena: una vez transmitido el manifiesto de vuelo, el dron opera de forma enteramente autónoma, protegiendo la seguridad del vuelo ante eventuales pérdidas de enlace de radio o telemetría.</p>
 <h2 id="42-compilacion-de-misiones-desde-lenguaje-natural">4.2 Compilación de misiones desde lenguaje natural<a class="headerlink" href="#42-compilacion-de-misiones-desde-lenguaje-natural" title="Permanent link">&para;</a></h2>
 <p>El módulo de planificación en tierra integra un modelo de lenguaje (LLM) que actúa como compilador semántico. Su objetivo es transformar directivas operativas de alto nivel expresadas en lenguaje natural por un operador humano (por ejemplo, <em>"recorrer el perímetro norte a 10 metros de altura evitando zonas de alta densidad vehicular"</em>) en un artefacto estructurado y ejecutable por el piloto automático.</p>
@@ -1081,56 +1159,143 @@
 </ul>
 <p>Cabe una aclaración sobre el alcance actual de la interfaz: si bien el compilador semántico descripto en esta sección está completamente implementado y expuesto como endpoint del backend, la interfaz de WebDCS en su estado presente no ofrece ningún control para invocarlo. La superficie de interacción del operador quedó acotada, por decisión de alcance del proyecto, a la edición manual de waypoints sobre la carta de navegación (§4.4.1) — priorizando el desarrollo del control de vuelo por sobre la interfaz de planificación asistida. La compilación desde lenguaje natural queda documentada aquí como una capacidad ya construida y validada, disponible para reincorporarse a la interfaz sin cambios en el backend.</p>
 <h2 id="43-el-contrato-del-manifiesto-de-mision-missionmanifest">4.3 El contrato del Manifiesto de Misión (<code>MissionManifest</code>)<a class="headerlink" href="#43-el-contrato-del-manifiesto-de-mision-missionmanifest" title="Permanent link">&para;</a></h2>
-<p>El producto final del planificador terrestre es un archivo JSON denominado <strong><code>MissionManifest</code></strong>. Este documento actúa como un contrato formal e inmutable entre la estación terrena y el lazo táctico de vuelo.</p>
+<p>El producto final del planificador terrestre es un archivo JSON denominado <strong><code>MissionManifest</code></strong>. Este documento actúa como un contrato formal e inmutable entre la estación terrena y el lazo táctico de vuelo. Su schema canónico está definido en Pydantic (<code>manifest.py</code>) y validado contra un JSON Schema (<code>manifest_schema.json</code>).</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MANHATTAN_URBAN_01&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Patrón de patrullaje urbano sobre cuadrícula con 7 waypoints y retorno seguro.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CITYSIM_CLEAR_01&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Patrón de patrullaje urbano sobre cuadrícula con 7 waypoints.&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">50.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wp_start&quot;</span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">60.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">50.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wp_turn_1&quot;</span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">60.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">120.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wp_turn_2&quot;</span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-40.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">120.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wp_target&quot;</span><span class="p">}</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">26.1</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.2</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">68.9</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.6</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">67.7</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-145.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_3&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">26.5</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-145.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_4&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-16.3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-145.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_5&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-17.9</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.6</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_6&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">12.5</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.6</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_7&quot;</span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;rules_of_engagement&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;ignore_objects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;person&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;car&quot;</span><span class="p">],</span>
-<span class="w">    </span><span class="nt">&quot;return_to_launch_battery_threshold&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">20.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;max_speed_mps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;safe_altitude_range_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="mf">30.0</span><span class="p">]</span>
-<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_calib.png&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
-<h3 id="componentes-clave-del-contrato">Componentes clave del contrato:<a class="headerlink" href="#componentes-clave-del-contrato" title="Permanent link">&para;</a></h3>
+<h3 id="componentes-del-contrato">Componentes del contrato:<a class="headerlink" href="#componentes-del-contrato" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>mission_id</code> y metadatos:</strong> identificador único y descripción textual de la intención operativa.</li>
-<li><strong><code>waypoints</code>:</strong> lista ordenada de puntos de paso tridimensionales expresados en el marco de coordenadas estándar aeronáutico <strong>NED</strong> (<em>North-East-Down</em>, donde $z &lt; 0$ representa altitud sobre el punto de despegue).</li>
-<li><strong><code>rules_of_engagement</code>:</strong> parámetros operacionales y límites cinemáticos globales, tales como velocidad máxima de crucero (<code>max_speed_mps</code>), rangos de altitud permitidos y umbrales de seguridad para retorno automático al punto de lanzamiento (<em>Return-to-Launch</em>).</li>
+<li><strong><code>mission_id</code>:</strong> identificador único en formato <code>^[A-Z0-9_]{3,32}$</code>, validado por el schema. Identifica el escenario experimental y aparece en los nombres de carpeta de telemetría.</li>
+<li><strong><code>summary</code>:</strong> descripción textual de la intención operativa (campo opcional, no consumido por el lazo táctico).</li>
+<li><strong><code>waypoints</code>:</strong> lista ordenada de puntos de paso tridimensionales en el marco <strong>NED</strong> (<em>North-East-Down</em>): $z &lt; 0$ representa altitud sobre el punto de despegue. Cada waypoint lleva una etiqueta opcional (<code>label</code>) para identificación en la traza.</li>
+<li><strong><code>map</code>:</strong> nombre del archivo de imagen de carta de territorio empleado por WebDCS para la visualización de la trayectoria (por defecto <code>map.png</code>).</li>
 </ul>
+<p><strong>Separación entre manifiesto y prompt táctico.</strong> El manifiesto entrega únicamente metas geométricas; el prompt del nodo deliberativo no forma parte de él porque no puede ser un texto estático: se construye dinámicamente en cada ciclo de vuelo a partir del estado percibido en ese instante. Su estructura es la siguiente:</p>
+<p><strong>System prompt (estático, fijo en <code>deliberative.py</code>):</strong> define el rol del modelo, las reglas de navegación urbana y el conjunto cerrado de macro-acciones posibles. Existen dos variantes — <code>SYSTEM_PROMPT_TEXT</code> (solo texto, para SLMs sin capacidad visual) y <code>SYSTEM_PROMPT_VISION</code> (texto + imágenes, para VLMs multimodales) — seleccionadas en tiempo de ejecución por la variable de entorno <code>VLM_VISION_ENABLED</code>.</p>
+<p><strong>User prompt (dinámico, construido por <code>_build_user_prompt()</code> en cada ciclo):</strong> combina cinco componentes:</p>
+<ol>
+<li><strong>Resumen del ObstacleField:</strong> estado de los tres sectores de percepción (centro, izquierda, derecha), con TTC estimado y nivel de ocupación por sector.</li>
+<li><strong>Objetivo y altitud:</strong> waypoint activo (etiqueta, distancia horizontal, error de rumbo en grados y dirección relativa), altitud actual y cota segura de operación.</li>
+<li><strong>Estado cinemático:</strong> velocidad horizontal y actitud (pitch, roll) en el ciclo actual. Si el dron está prácticamente detenido (<code>&lt; 0.3 m/s</code>), se indica explícitamente — porque un frame estático sin traslación no aporta evidencia de flujo óptico, y sin ese contexto el modelo tiende a sobre-interpretar la imagen.</li>
+<li><strong>Motivo de consulta:</strong> distingue si se consulta al VLM porque el sector central registra un obstáculo real (con TTC medido) o porque la percepción no tiene evidencia suficiente en este ciclo (confianza baja por falta de traslación o rotación reciente) — dos causas con implicaciones muy distintas para la decisión.</li>
+<li><strong>Historial reciente:</strong> las últimas tres deliberaciones con su macro-acción y sus resultados medidos (variación de distancia al waypoint, variación del TTC mínimo), para que el modelo pueda evaluar si una estrategia previa funcionó antes de repetirla.</li>
+</ol>
+<p>La respuesta del modelo se fuerza mediante decodificación restringida (<code>json_schema</code>, si el servidor lo soporta) al formato <code>{"macro_action": "&lt;ACCION&gt;", "rationale": "&lt;texto&gt;"}</code>, con temperatura 0.2 y límite de 200 tokens. Si el servidor no soporta <code>json_schema</code>, un parser tolerante (<code>_parse_decision()</code>) extrae la decisión del texto libre como red de seguridad. Ante timeout del watchdog o respuesta no parseable, se activa una heurística determinista sobre el ObstacleField (<code>_fallback_decision()</code>).</p>
+<p>Este nivel de dinamismo hace inviable delegar el prompt al manifiesto: el contenido útil depende de percepciones que solo existen en vuelo.</p>
 <p>En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la <strong>reproducibilidad experimental</strong>: los escenarios de benchmark por Tiers (<code>minisim_clear</code>, <code>townsim_ini</code>, <code>citysim_clear</code>) se definen a través de manifiestos fijos e inmutables, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.</p>
 <h2 id="44-estacion-terrena-webdcs-planificacion-y-auditoria-post-vuelo">4.4 Estación Terrena WebDCS: planificación y auditoría post-vuelo<a class="headerlink" href="#44-estacion-terrena-webdcs-planificacion-y-auditoria-post-vuelo" title="Permanent link">&para;</a></h2>
-<p>Para facilitar la interacción operativa y el análisis experimental posterior, se desarrolló <strong>WebDCS</strong> (<em>Web-based Drone Control Station</em>), una estación de control en tierra construida sobre <strong>FastAPI</strong> y tecnologías web estándar (HTML5, Vanilla CSS y JavaScript).</p>
+<p><strong>WebDCS</strong> (<em>Web-based Drone Control Station</em>) es la interfaz de control en tierra, construida sobre <strong>FastAPI</strong> con frontend en HTML5, CSS y JavaScript. Expone su API REST en <code>http://localhost:8000</code> y sirve el panel de operación como aplicación web estática.</p>
 <p><img alt="Interfaz de la Estación Terrena WebDCS" src="2026-0903%20Nueva%20UX%20WebDCS.png" /></p>
 <h3 id="funcionalidades-de-webdcs">Funcionalidades de WebDCS:<a class="headerlink" href="#funcionalidades-de-webdcs" title="Permanent link">&para;</a></h3>
 <ol>
 <li>
-<p><strong>Gestión interactiva de cartas de territorio y waypoints:</strong>
-   La interfaz incorpora un visor basado en Canvas 2D que mapea la geometría del entorno urbano (<code>CitySim</code>) a cartas de navegación satelital. Permite a los operadores cargar manifiestos existentes, visualizar las trayectorias proyectadas y editar waypoints interactivamente sobre la carta (agregar, reordenar, eliminar y ajustar la altitud de cada punto).</p>
+<p><strong>Gestión interactiva de cartas y waypoints:</strong>
+   El panel incorpora un visor Canvas 2D que superpone la trayectoria del manifiesto sobre la carta del entorno urbano (<code>CitySim</code>). El operador puede cargar manifiestos existentes desde <code>airsim-plan/missions/flightplans/</code>, visualizar la ruta proyectada y editar waypoints interactivamente sobre la carta — agregar, reordenar, eliminar y ajustar altitud — antes de guardar o lanzar.</p>
 </li>
 <li>
-<p><strong>Auditoría de vuelo post-misión, sincronizada por video:</strong>
-   Cada corrida del lazo táctico registra su propia carpeta autocontenida (identificador de misión y marca de tiempo ISO de inicio) con la traza completa en formato CSV/JSONL, los fotogramas enviados al modelo de lenguaje en cada consulta deliberativa y un video anotado del vuelo completo (un fotograma por ciclo, con overlay de la acción tomada, el nodo del grafo de decisión activo y el estado de los sectores de percepción). Un visor HTML autocontenido, generado automáticamente al cierre de cada corrida, sincroniza en ambos sentidos la reproducción del video con la fila correspondiente de la traza: reproducir el video mueve un cursor sobre la tabla de ciclos, y seleccionar una fila salta el video al instante correspondiente — permitiendo reconstruir exactamente qué fotograma vio el modelo y qué decisión tomó en cualquier punto del vuelo, sin depender de que el operador haya observado la sesión en vivo.</p>
+<p><strong>Lanzamiento y detención de misión:</strong>
+   El botón <em>Lanzar</em> invoca <code>POST /api/launch</code>, que persiste el manifiesto y arranca <code>airsim-loop</code> en un hilo de fondo sin bloquear la interfaz. <code>POST /api/stop</code> detiene todos los runners activos. <code>POST /api/reset</code> reinicia el simulador AirSim y libera el control de la API.</p>
 </li>
 </ol>
-<p>(Una etapa temprana del desarrollo exploró un mecanismo alternativo de transmisión en vivo de video y telemetría hacia la interfaz web, basado en WebSockets y <em>Server-Sent Events</em>. El canal quedó sin ningún consumidor tras un rediseño posterior del frontend y fue retirado por completo — tanto el backend como la interfaz — en favor del mecanismo de auditoría post-vuelo aquí descripto, que resultó suficiente para las necesidades de análisis experimental de este trabajo y más simple de mantener.)</p>
-<ol>
-<li>
-<p><strong>Registro íntegro de cada consulta al modelo de lenguaje:</strong>
-   Independientemente del mecanismo de auditoría visual del punto anterior, cada entrada de la traza CSV/JSONL conserva el prompt exacto enviado al modelo, la respuesta cruda emitida, el tiempo de inferencia en milisegundos, la macro-acción resultante y su justificación semántica, además de indicadores de activación de los mecanismos de respaldo deterministas (timeout del watchdog, salida no parseable). Esta traza es la fuente primaria de evidencia para el análisis de modos de falla del capítulo 9 y la metodología experimental del capítulo 10.</p>
-</li>
-<li>
-<p><strong>Secuencia de fin de misión y aterrizaje autónomo:</strong>
-   Al alcanzar el último waypoint del manifiesto o al solicitarse la detención de emergencia desde la interfaz web, el sistema coordina una secuencia controlada de finalización: ejecución de descenso autónomo (<code>landAsync</code>), corte de motores, liberación segura de los recursos de API del simulador y retorno ordenado a la pantalla de espera de la estación terrena.</p>
-</li>
-</ol>
+<h3 id="dataset-de-corridas-estructura-de-airsim-runs">Dataset de corridas: estructura de <code>airsim-runs/</code><a class="headerlink" href="#dataset-de-corridas-estructura-de-airsim-runs" title="Permanent link">&para;</a></h3>
+<p>Cada ejecución de una misión escribe una carpeta autocontenida en <code>airsim-runs/</code>. El nombre de la carpeta — y el prefijo común (<code>&lt;stem&gt;</code>) de todos los archivos dentro de ella — se construye concatenando el <code>mission_id</code> del manifiesto con la marca de tiempo de inicio de la ejecución en UTC, en formato ISO 8601 compacto sin separadores: <code>&lt;MISSION_ID&gt;-&lt;YYYYMMDDTHHMMSSZ&gt;</code>. Por ejemplo, lanzar la misión <code>CITYSIM_CLEAR</code> el 7 de septiembre de 2026 a las 19:12:26 UTC produce la carpeta y el stem <code>CITYSIM_CLEAR-20260907T191226Z</code>. Si la misma misión se lanza dos veces, cada ejecución queda en su propia carpeta gracias al timestamp — nunca se sobreescriben corridas anteriores. La tabla siguiente describe los archivos que produce cada ejecución:</p>
+<table>
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;stem&gt;.jsonl</code></td>
+<td>Traza completa: un objeto JSON por ciclo de control</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.csv</code></td>
+<td>Mismas columnas en formato plano, para inspección directa en Excel / pandas</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.summary.json</code></td>
+<td>Métricas agregadas de la corrida (éxito, colisiones, latencias, tasas del VLM)</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.summary_by_wp.csv</code></td>
+<td>Stats por waypoint: ciclos, deliberaciones y eventos de atasco por tramo</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.viewer.html</code></td>
+<td>Visor de auditoría HTML autocontenido, sincronizado con el video</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.webm</code></td>
+<td>Video anotado del vuelo (un fotograma por ciclo, con overlay de acción y estado)</td>
+</tr>
+<tr>
+<td><code>photo-&lt;ISO_UTC&gt;.png</code></td>
+<td>Fotogramas enviados al VLM, uno por deliberación, nombrados por timestamp UTC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Traza por ciclo (<code>.jsonl</code> / <code>.csv</code>):</strong> cada entrada registra el instante, el ciclo, el brazo de control (<code>arm</code>: slm/fsm/reactive), el escenario, la ruta, la macro-acción, el waypoint activo y la distancia al mismo, la posición y velocidad 3D, la actitud, el estado de colisión y la distancia mínima al obstáculo. En los ciclos deliberativos se agregan el prompt enviado (<code>slm_prompt</code>), la respuesta cruda del modelo (<code>slm_raw_response</code>), la latencia de inferencia, indicadores de fallback y timeout, y las rutas a los fotogramas enviados (<code>slm_frame_paths</code>). El estado del <code>ObstacleField</code> se registra por sector (ocupación, TTC, confianza, bloqueado).</p>
+<p><strong>Resumen de corrida (<code>.summary.json</code>):</strong> es el archivo que consume <code>analyze.py</code> para el análisis comparativo entre brazos. Incluye éxito de misión, colisiones, distancia mínima al obstáculo, longitud de trayectoria, tasa de deliberación, y tasas de fallback y timeout del VLM.</p>
+<p><strong>Resumen por waypoint (<code>.summary_by_wp.csv</code>):</strong> permite identificar en qué tramo de la misión se concentra la dificultad sin necesidad de analizar el CSV completo — muestra ciclos consumidos, proporción de ciclos deliberativos y eventos de escalación de atasco por waypoint.</p>
+<p><strong>Fotogramas del VLM (<code>photo-&lt;ISO&gt;.png</code>):</strong> cada imagen enviada al modelo se guarda con su timestamp real de captura en UTC (precisión de milisegundos), que sirve como clave para cruzar con la columna <code>slm_frame_paths</code> de la traza. La carpeta es autocontenida: toda la evidencia de una corrida reside en un único directorio.</p>
+<h3 id="visor-de-auditoria-viewerhtml">Visor de auditoría (<code>.viewer.html</code>)<a class="headerlink" href="#visor-de-auditoria-viewerhtml" title="Permanent link">&para;</a></h3>
+<p><img src="informe-03-auditoria-de-vuelo.png"/></p>
+<p>El archivo <code>&lt;stem&gt;.viewer.html</code> es un documento HTML autocontenido generado al cierre de cada corrida. Sincroniza en ambos sentidos la reproducción del video con la traza:</p>
+<ul>
+<li>Avanzar el video actualiza automáticamente el panel de detalle del ciclo correspondiente, mostrando el prompt enviado, la respuesta del modelo, la macro-acción resultante y el fotograma capturado en ese instante.</li>
+<li>Seleccionar una fila de la tabla salta el video al instante correspondiente.</li>
+</ul>
+<p>Para consultarlo: abrir el archivo directamente en Chrome desde <code>airsim-runs/&lt;carpeta&gt;/&lt;stem&gt;.viewer.html</code> — no requiere servidor.</p>
+<h4 id="anotaciones-del-video">Anotaciones del video<a class="headerlink" href="#anotaciones-del-video" title="Permanent link">&para;</a></h4>
+<p>El video (<code>.webm</code>) registra un fotograma por ciclo del lazo, a la misma cadencia de <code>LOOP_HZ</code>. Cada fotograma lleva un overlay de cuatro líneas superpuesto <strong>sobre una copia del fotograma</strong>; el original enviado al VLM y guardado como <code>.png</code> de auditoría queda sin modificar para no contaminar la evidencia perceptual.</p>
+<p><strong>Línea 1 — nodo activo y macro-acción</strong> (texto grande, color codificado):</p>
+<div class="highlight"><pre><span></span><code>[KEEP_GOING] ACT: MANTENER_RUMBO  WP 3/7 (42m)
+</code></pre></div>
+<ul>
+<li>El tag entre corchetes es el <strong>nodo del grafo de decisión</strong> que resolvió el ciclo (§5.1): <code>KEEP_GOING</code> (crucero sin novedad), <code>EVASIVE</code> (evasión reactiva), <code>GIRAR_90</code> (bypass de bloqueo severo), <code>FSM</code> (máquina de estados, brazo FSM), <code>DELIBERATIVE</code> (consulta al VLM, §5.2) o <code>DEGRADED_HOVER</code> (modo degradado, §5.4).</li>
+<li><code>ACT:</code> es la <strong>macro-acción</strong> traducida a comando cinemático por el nodo <code>motor</code>.</li>
+<li><code>WP X/N (Ym)</code> indica el waypoint activo y la distancia horizontal restante según <code>WaypointTracker</code> (§5.3).</li>
+<li><strong>Color:</strong> verde para <code>MANTENER_RUMBO</code> (avance sin novedad), naranja para maniobras de evasión o giro, rosa/magenta para decisiones del VLM, <code>PARADA</code> o <code>FRENAR</code>.</li>
+</ul>
+<p><strong>Línea 2 — TTC frontal y estado de vuelo</strong> (derecha del fotograma):</p>
+<div class="highlight"><pre><span></span><code>TTC: 3.2s | vuelo
+</code></pre></div>
+<ul>
+<li><code>TTC</code> es el tiempo estimado a colisión del sector frontal según el <code>ObstacleField</code> del ciclo (cap. 6); <code>inf</code> significa sector despejado.</li>
+<li>El campo de texto refleja el estado general de la misión (<code>vuelo</code>, <code>completada</code>, <code>colisión</code>).</li>
+</ul>
+<p><strong>Línea 3 — telemetría del ciclo:</strong></p>
+<div class="highlight"><pre><span></span><code>t= 18.4s cy=92 | pos=(+26.1,-78.2,-10.0) | v=2.31m/s pitch=-3.2deg roll=+0.8deg
+</code></pre></div>
+<ul>
+<li><code>t</code> y <code>cy</code> permiten cruzar el fotograma con la fila exacta del CSV por número de ciclo (la sincronización por tiempo es aproximada, la de ciclo es exacta; ver <code>flight_video.py</code>).</li>
+<li><code>pos</code> es la posición 3D en el marco NED del simulador.</li>
+<li><code>v</code>, <code>pitch</code>, <code>roll</code> son la velocidad horizontal y la actitud del vehículo en ese instante.</li>
+</ul>
+<p><strong>Línea 4 — estado del ObstacleField por sector</strong> (cap. 6):</p>
+<div class="highlight"><pre><span></span><code>C occ=0.62 ttc=3.2s! | I occ=0.11 ttc=inf | D occ=0.08 ttc=inf
+</code></pre></div>
+<ul>
+<li>Los tres sectores son <code>C</code> (centro / frente), <code>I</code> (izquierda) y <code>D</code> (derecha).</li>
+<li><code>occ</code> es la fracción de ocupación estimada por flujo óptico monocular; <code>ttc</code> es el tiempo a colisión estimado del sector; <code>!</code> marca el sector como bloqueado según el umbral de <code>is_blocked()</code>.</li>
+<li>Estos valores son los mismos que alimentan <code>_build_user_prompt()</code> (§4.3) y el enrutador de política (§5.1): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1.</li>
+</ul>
+<p>La combinación de estas cuatro líneas permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema, por qué derivó al nodo de grafo que aparece en el tag, y qué orden cinemática emitió — sin necesidad de cruzar a mano el video con el CSV.</p>
 
 
 

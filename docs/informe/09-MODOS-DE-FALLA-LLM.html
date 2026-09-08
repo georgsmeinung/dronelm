@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#9-modos-de-falla-de-lazos-de-control-hibridos-con-llm" class="md-skip">
+        <a href="#9-modos-de-falla-en-lazos-de-control-hibridos-con-llm" class="md-skip">
           Saltar a contenido
         </a>
       
@@ -547,10 +547,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#91-el-patron-comun-integridad-de-contratos-de-interfaz" class="md-nav__link">
+  <a href="#91-el-argumento-central-contratos-de-interfaz-como-vector-de-falla-primario" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9.1 El patrón común: integridad de contratos de interfaz
+        9.1 El argumento central: contratos de interfaz como vector de falla primario
       
     </span>
   </a>
@@ -558,10 +558,238 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift" class="md-nav__link">
+  <a href="#92-falla-1-schema-drift-el-campo-nulo-leido-como-ausencia-de-peligro" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9.2 Instancia 1 — Desincronización de esquemas y campos ciegos (Schema Drift)
+        9.2 Falla 1 — Schema drift: el campo nulo leído como ausencia de peligro
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.2 Falla 1 — Schema drift: el campo nulo leído como ausencia de peligro">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#921-descripcion-del-modo-de-falla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.1 Descripción del modo de falla
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#922-mecanismo-de-contencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.2 Mecanismo de contención
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#93-falla-2-desalineacion-temporal-del-historial-de-frames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 Falla 2 — Desalineación temporal del historial de frames
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.3 Falla 2 — Desalineación temporal del historial de frames">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#931-descripcion-del-modo-de-falla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.1 Descripción del modo de falla
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#932-mecanismo-de-contencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.2 Mecanismo de contención
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#94-falla-3-descalibracion-de-escala-en-el-canal-de-divergencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Falla 3 — Descalibración de escala en el canal de divergencia
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.4 Falla 3 — Descalibración de escala en el canal de divergencia">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#941-descripcion-del-modo-de-falla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4.1 Descripción del modo de falla
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#942-interaccion-con-la-logica-disyuntiva" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4.2 Interacción con la lógica disyuntiva
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#943-mecanismo-de-contencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4.3 Mecanismo de contención
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#95-falla-4-state-clipping-y-ciclos-limite-en-langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5 Falla 4 — State clipping y ciclos límite en LangGraph
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.5 Falla 4 — State clipping y ciclos límite en LangGraph">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#951-el-mecanismo-de-descarte-silencioso-de-langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.1 El mecanismo de descarte silencioso de LangGraph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#952-las-cuatro-vulnerabilidades-identificadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.2 Las cuatro vulnerabilidades identificadas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#953-el-ascenso-acumulado-como-sintoma-compuesto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.3 El ascenso acumulado como síntoma compuesto
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#96-falla-5-degradaciones-sensoriales-silenciosas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6 Falla 5 — Degradaciones sensoriales silenciosas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.6 Falla 5 — Degradaciones sensoriales silenciosas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#961-inversion-de-canales-de-color-rgbbgr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.1 Inversión de canales de color RGB/BGR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#962-contaminacion-por-primitivas-de-depuracion-persistentes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.2 Contaminación por primitivas de depuración persistentes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#963-supresion-de-angulos-de-actitud-en-la-telemetria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.3 Supresión de ángulos de actitud en la telemetría
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#97-por-que-el-sistema-seguia-funcionando-el-problema-de-la-observabilidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.7 Por qué el sistema seguía funcionando: el problema de la observabilidad
       
     </span>
   </a>
@@ -569,54 +797,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#93-instancia-2-desalineacion-temporal-en-secuencias-contextuales" class="md-nav__link">
+  <a href="#98-riesgos-residuales-y-trabajo-pendiente" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9.3 Instancia 2 — Desalineación temporal en secuencias contextuales
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.4 Instancia 3 — Descalibración de escala en operadores diferenciales y saturación disyuntiva
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.5 Instancia 4 — Fallas compuestas en orquestadores de grafos (State Clipping y Ciclos Límite)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.6 Instancia 5 — Degradaciones silenciosas en el canal de visión y telemetría de actitud
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.7 Por qué el sistema seguía volando y el modelo seguía respondiendo
+        9.8 Riesgos residuales y trabajo pendiente
       
     </span>
   </a>
@@ -967,10 +1151,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#91-el-patron-comun-integridad-de-contratos-de-interfaz" class="md-nav__link">
+  <a href="#91-el-argumento-central-contratos-de-interfaz-como-vector-de-falla-primario" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9.1 El patrón común: integridad de contratos de interfaz
+        9.1 El argumento central: contratos de interfaz como vector de falla primario
       
     </span>
   </a>
@@ -978,10 +1162,238 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift" class="md-nav__link">
+  <a href="#92-falla-1-schema-drift-el-campo-nulo-leido-como-ausencia-de-peligro" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9.2 Instancia 1 — Desincronización de esquemas y campos ciegos (Schema Drift)
+        9.2 Falla 1 — Schema drift: el campo nulo leído como ausencia de peligro
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.2 Falla 1 — Schema drift: el campo nulo leído como ausencia de peligro">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#921-descripcion-del-modo-de-falla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.1 Descripción del modo de falla
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#922-mecanismo-de-contencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.2 Mecanismo de contención
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#93-falla-2-desalineacion-temporal-del-historial-de-frames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 Falla 2 — Desalineación temporal del historial de frames
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.3 Falla 2 — Desalineación temporal del historial de frames">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#931-descripcion-del-modo-de-falla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.1 Descripción del modo de falla
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#932-mecanismo-de-contencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.2 Mecanismo de contención
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#94-falla-3-descalibracion-de-escala-en-el-canal-de-divergencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Falla 3 — Descalibración de escala en el canal de divergencia
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.4 Falla 3 — Descalibración de escala en el canal de divergencia">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#941-descripcion-del-modo-de-falla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4.1 Descripción del modo de falla
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#942-interaccion-con-la-logica-disyuntiva" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4.2 Interacción con la lógica disyuntiva
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#943-mecanismo-de-contencion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4.3 Mecanismo de contención
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#95-falla-4-state-clipping-y-ciclos-limite-en-langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5 Falla 4 — State clipping y ciclos límite en LangGraph
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.5 Falla 4 — State clipping y ciclos límite en LangGraph">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#951-el-mecanismo-de-descarte-silencioso-de-langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.1 El mecanismo de descarte silencioso de LangGraph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#952-las-cuatro-vulnerabilidades-identificadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.2 Las cuatro vulnerabilidades identificadas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#953-el-ascenso-acumulado-como-sintoma-compuesto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.3 El ascenso acumulado como síntoma compuesto
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#96-falla-5-degradaciones-sensoriales-silenciosas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6 Falla 5 — Degradaciones sensoriales silenciosas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.6 Falla 5 — Degradaciones sensoriales silenciosas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#961-inversion-de-canales-de-color-rgbbgr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.1 Inversión de canales de color RGB/BGR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#962-contaminacion-por-primitivas-de-depuracion-persistentes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.2 Contaminación por primitivas de depuración persistentes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#963-supresion-de-angulos-de-actitud-en-la-telemetria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.3 Supresión de ángulos de actitud en la telemetría
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#97-por-que-el-sistema-seguia-funcionando-el-problema-de-la-observabilidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.7 Por qué el sistema seguía funcionando: el problema de la observabilidad
       
     </span>
   </a>
@@ -989,54 +1401,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#93-instancia-2-desalineacion-temporal-en-secuencias-contextuales" class="md-nav__link">
+  <a href="#98-riesgos-residuales-y-trabajo-pendiente" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9.3 Instancia 2 — Desalineación temporal en secuencias contextuales
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.4 Instancia 3 — Descalibración de escala en operadores diferenciales y saturación disyuntiva
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.5 Instancia 4 — Fallas compuestas en orquestadores de grafos (State Clipping y Ciclos Límite)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.6 Instancia 5 — Degradaciones silenciosas en el canal de visión y telemetría de actitud
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9.7 Por qué el sistema seguía volando y el modelo seguía respondiendo
+        9.8 Riesgos residuales y trabajo pendiente
       
     </span>
   </a>
@@ -1060,48 +1428,203 @@
 
 
 
-<h1 id="9-modos-de-falla-de-lazos-de-control-hibridos-con-llm">9. Modos de falla de lazos de control híbridos con LLM<a class="headerlink" href="#9-modos-de-falla-de-lazos-de-control-hibridos-con-llm" title="Permanent link">&para;</a></h1>
-<h2 id="91-el-patron-comun-integridad-de-contratos-de-interfaz">9.1 El patrón común: integridad de contratos de interfaz<a class="headerlink" href="#91-el-patron-comun-integridad-de-contratos-de-interfaz" title="Permanent link">&para;</a></h2>
-<p>Este capítulo desarrolla el argumento central declarado en la introducción (§1.4): en un sistema robótico híbrido donde un modelo de lenguaje consume descripciones estructuradas del entorno para emitir decisiones de control, el modo de falla más crítico no radica en el razonamiento sintáctico del modelo, sino en la <strong>consistencia e integridad del contrato de datos</strong> que lo alimenta. </p>
-<p>Los modelos de lenguaje poseen una notable capacidad para racionalizar cualquier entrada estructurada y emitir respuestas plausibles, bien formadas y ejecutables, aun cuando las premisas subyacentes provengan de campos nulos, sensores degradados o datos descalibrados. Este capítulo documenta una taxonomía de cinco modos de falla estructurales identificados
-experimentalmente en la arquitectura híbrida, analizando su origen, su impacto en la toma de decisiones
-y los mecanismos de contención implementados.</p>
-<h2 id="92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift">9.2 Instancia 1 — Desincronización de esquemas y campos ciegos (Schema Drift)<a class="headerlink" href="#92-instancia-1-desincronizacion-de-esquemas-y-campos-ciegos-schema-drift" title="Permanent link">&para;</a></h2>
-<p>Una de las fallas más críticas en pipelines multimodales ocurre cuando existe una desincronización de contrato (<em>contract drift</em>) entre los productores de percepción y los módulos consumidores (enrutador de política, mecanismo de respaldo determinista y constructor del prompt del SLM).</p>
-<p>Cuando un campo de estado de obstáculos permanece en un valor nulo por defecto (por ejemplo, una lista vacía <code>detected_obstacles = []</code>), los módulos consumidores interpretan semánticamente ese valor como <em>"espacio aéreo totalmente despejado"</em> en lugar de <em>"sensor no disponible o no calibrado"</em>. En consecuencia:
-1. El generador de contexto construye un prompt que afirma al modelo de lenguaje que la trayectoria frontal carece de obstáculos.
-2. El SLM, actuando con perfecta coherencia lógica respecto de la información provista, comanda velocidad de crucero constante (<code>keep_going</code>).
-3. El sistema no genera excepciones de ejecución ni errores en los registros, pero el dron navega a ciegas hacia los obstáculos físicos de la escena.</p>
-<p><strong>Mecanismo de contención:</strong> La arquitectura resuelve este modo de falla unificando toda la percepción en el contrato tipado <code>ObstacleField</code> (capítulo 6). Si la estimación de flujo o telemetría no es confiable, el campo reporta explícitamente <code>confidence = 0</code> y <code>ttc_s = inf</code>, forzando al lazo de control a ingresar en modo de maniobra determinista segura o <code>degraded_hover</code> (capítulo 5), impidiendo que la ausencia de señal se disfrace de ausencia de peligro.</p>
-<h2 id="93-instancia-2-desalineacion-temporal-en-secuencias-contextuales">9.3 Instancia 2 — Desalineación temporal en secuencias contextuales<a class="headerlink" href="#93-instancia-2-desalineacion-temporal-en-secuencias-contextuales" title="Permanent link">&para;</a></h2>
-<p>El constructor de prompts para modelos de lenguaje multimodales o secuenciales frecuentemente incluye etiquetas temporales relativas (<code>[Fotograma t-2]</code>, <code>[Fotograma t-1]</code>, <code>[Fotograma t]</code>) para facilitar el análisis de velocidad de aproximación. Si el buffer histórico subyacente (<code>frame_history</code>) no se gestiona como una estructura de anillo sincrónica con marcas de tiempo verificadas, pueden inyectarse fotogramas estáticos duplicados o no sincronizados bajo rótulos de secuencia temporal activa.</p>
-<p>En este escenario, el modelo de lenguaje intenta inferir vectores de movimiento a partir de una secuencia temporal inexistente o artificialmente congelada.</p>
-<p><strong>Mecanismo de contención:</strong> Implementación de un <em>ring buffer</em> estricto con validación de estampas de tiempo ($\Delta t &gt; 0$) y adaptación dinámica del prompt: las etiquetas secuenciales solo se generan si el buffer cuenta con fotogramas temporales efectivamente diferenciados y verificados.</p>
-<h2 id="94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva">9.4 Instancia 3 — Descalibración de escala en operadores diferenciales y saturación disyuntiva<a class="headerlink" href="#94-instancia-3-descalibracion-de-escala-en-operadores-diferenciales-y-saturacion-disyuntiva" title="Permanent link">&para;</a></h2>
-<p>Como se documenta en el capítulo 6 (§6.3) y el capítulo 7 (§7.3), el cálculo de derivadas espaciales mediante operadores de gradiente discretos (como Sobel de 3×3 sin factor de normalización $1/8$) induce un factor de escala de amplificación sobre la divergencia estimada.</p>
-<p>Cuando la regla de decisión integra la ocupación y el Tiempo-a-Colisión mediante una compuerta lógica disyuntiva ($OR$):
-$$\text{is_blocked} = (\text{occupancy} \ge \tau_{\text{occ}}) \lor (\text{ttc_s} \le \tau_{\text{ttc}})$$
-la saturación artificial del canal de ocupación anula la influencia del canal de TTC calibrado, provocando declaraciones sistemáticas de bloqueo ante variaciones menores de textura visual.</p>
-<p><strong>Mecanismo de contención:</strong> Normalización analítica de los kernels diferenciales y calibración cruzada de los umbrales de activación mediante curvas ROC contra canales de profundidad de referencia (capítulo 7).</p>
-<h2 id="95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite">9.5 Instancia 4 — Fallas compuestas en orquestadores de grafos (State Clipping y Ciclos Límite)<a class="headerlink" href="#95-instancia-4-fallas-compuestas-en-orquestadores-de-grafos-state-clipping-y-ciclos-limite" title="Permanent link">&para;</a></h2>
-<p>El análisis de ejecución del grafo de control por ciclo identificó cuatro vulnerabilidades estructurales en la propagación de variables de estado entre nodos, ninguna de las cuales arrojaba excepciones en tiempo de ejecución:</p>
+<h1 id="9-modos-de-falla-en-lazos-de-control-hibridos-con-llm">9. Modos de falla en lazos de control híbridos con LLM<a class="headerlink" href="#9-modos-de-falla-en-lazos-de-control-hibridos-con-llm" title="Permanent link">&para;</a></h1>
+<h2 id="91-el-argumento-central-contratos-de-interfaz-como-vector-de-falla-primario">9.1 El argumento central: contratos de interfaz como vector de falla primario<a class="headerlink" href="#91-el-argumento-central-contratos-de-interfaz-como-vector-de-falla-primario" title="Permanent link">&para;</a></h2>
+<p>En sistemas robóticos que combinan percepción clásica, orquestación de grafo de control y un modelo de lenguaje, la intuición natural sobre modos de falla apunta al modelo: respuestas alucinadas, razonamiento incorrecto, formato inválido. La experiencia de desarrollo de este sistema señala en una dirección diferente: los fallos más costosos —en términos de horas de diagnóstico y de consecuencias en vuelo— ocurrieron en los <strong>contratos de interfaz entre componentes</strong>, no en el razonamiento del modelo.</p>
+<p>Un modelo de lenguaje tiene una propiedad que lo hace especialmente peligroso en este contexto: raciocina sobre lo que recibe, no sobre la realidad. Si recibe un resumen de percepción que dice "camino despejado", produce una respuesta consistente con esa premisa. No tiene acceso privilegiado a la verdad del mundo — solo al texto que se le entrega. El corolario es que cualquier corrupción, omisión o malinterpretación en los datos que llegan al modelo produce decisiones estructuralmente correctas pero factualmente equivocadas, sin que el modelo (ni el sistema) lo detecte como error. El sistema "funciona" — no arroja excepciones, no se cae, produce salida JSON válida — mientras toma decisiones sistemáticamente incorrectas.</p>
+<p>Este capítulo documenta cinco familias de fallas estructurales identificadas experimentalmente en la arquitectura, organizadas por la capa del sistema donde se originan. La tabla siguiente resume su taxonomía:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Categoría</th>
+<th>Capa de origen</th>
+<th>¿Genera excepción?</th>
+<th>Consecuencia en vuelo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Schema drift / campo ciego</td>
+<td>Contrato percepción→control</td>
+<td>No</td>
+<td>Navegación a ciegas hacia obstáculos</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Desalineación temporal de frames</td>
+<td>Buffer de historial visual</td>
+<td>No</td>
+<td>FOE/movimiento inferido incorrectamente</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Descalibración de escala en divergencia</td>
+<td>Operador diferencial en flujo</td>
+<td>No</td>
+<td>Saturación del canal de ocupación</td>
+</tr>
+<tr>
+<td>4</td>
+<td>State clipping + ciclos límite en LangGraph</td>
+<td>Orquestación de grafo</td>
+<td>No</td>
+<td>Ascenso acumulado de &gt;350 m</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Degradación sensorial silenciosa</td>
+<td>Captura de imagen y telemetría</td>
+<td>No</td>
+<td>Deliberación sobre datos corruptos</td>
+</tr>
+</tbody>
+</table>
+<p>El denominador común en los cinco casos es la ausencia de excepción en tiempo de ejecución. Este resultado metodológico se discute en §9.7.</p>
+<h2 id="92-falla-1-schema-drift-el-campo-nulo-leido-como-ausencia-de-peligro">9.2 Falla 1 — Schema drift: el campo nulo leído como ausencia de peligro<a class="headerlink" href="#92-falla-1-schema-drift-el-campo-nulo-leido-como-ausencia-de-peligro" title="Permanent link">&para;</a></h2>
+<h3 id="921-descripcion-del-modo-de-falla">9.2.1 Descripción del modo de falla<a class="headerlink" href="#921-descripcion-del-modo-de-falla" title="Permanent link">&para;</a></h3>
+<p>En una arquitectura temprana del sistema, el estado del campo de obstáculos se comunicaba como una lista de objetos detectados (<code>detected_obstacles: List[dict]</code>), con una lista vacía como valor por defecto. La decisión de qué hacer cuando la lista estaba vacía era ambigua: podía significar "la percepción corrió y no detectó nada" (espacio despejado) o "la percepción no corrió, no tiene confianza, o falló silenciosamente" (ausencia de información).</p>
+<p>Los módulos consumidores — el router de política, el constructor del prompt del VLM, el nodo FSM — resolvían esa ambigüedad en favor de la primera interpretación. El resultado en la práctica fue:</p>
 <ol>
-<li><strong>Claves de control descartadas silenciosamente por el esquema del grafo.</strong> LangGraph construye los canales de estado a partir de un <code>TypedDict</code> y descarta, sin aviso, cualquier clave que un nodo escriba pero que no esté declarada en ese esquema. Tres claves de control —una que debía reiniciar el contador de progreso estancado, una que acumulaba la memoria corta de resultados de decisiones previas, y una que inyectaba sub-waypoints de esquina— cruzaban la frontera entre nodo y lazo sin estar declaradas, y se perdían en cada invocación del grafo. La consecuencia más grave fue que el contador de ciclos sin progreso nunca se reiniciaba, y crecía de forma monótona.</li>
-<li><strong>Un ciclo límite de período 3 en la propia red de seguridad.</strong> El mecanismo pensado para limitar los reintentos de una maniobra de escape frenaba el vuelo pero, en la misma rama de código, también reseteaba a cero el contador de reintentos — es decir, la red de seguridad se reseteaba a sí misma, convirtiendo lo que debía ser un estado terminal en un ciclo que se repetía indefinidamente.</li>
-<li><strong>Una métrica de progreso auto-inconsistente por unidades mezcladas.</strong> El umbral de "ciclos sin progreso" se expresaba en ciclos, y el umbral de distancia mínima de progreso se expresaba en metros, definidos de forma independiente entre sí; combinados, exigían una velocidad de acercamiento sostenida mayor a la que el guiado en un giro cerrado podía físicamente entregar. El resultado era que el mecanismo de "atasco" se disparaba de forma prácticamente garantizada a los pocos ciclos de iniciar la misión, sin que hubiera ningún obstáculo real de por medio.</li>
-<li><strong>Un mecanismo de escape ciego a la percepción.</strong> El enrutador de decisiones activaba la rama de escape por atasco antes de consultar el campo de obstáculos, así que en varios ciclos consecutivos en los que la percepción reportaba con evidencia válida un sector lateral despejado, el dron siguió ascendiendo de todos modos: la evidencia de que existía una salida disponible no llegaba a considerarse antes de decidir.</li>
+<li>El generador de contexto construía un prompt que afirmaba al modelo "trayectoria frontal sin obstáculos detectados".</li>
+<li>El VLM, actuando con perfecta coherencia lógica respecto de la información provista, emitía <code>keep_going</code> con alta confianza.</li>
+<li>El lazo ejecutaba la maniobra de crucero normal.</li>
+<li>No se generaba ninguna excepción ni alerta de log, porque desde la perspectiva del código, la lista vacía es un valor válido.</li>
 </ol>
-<p>La combinación de estos cuatro problemas, más una macro-acción de ascenso con una deriva lateral no justificada en su definición cinemática (corregida junto con el resto de esta cadena; ver §8.4), produjo en una corrida de validación un ascenso acumulado del orden de 356 metros en una sola misión, sin que el sistema lo reportara como una falla — desde la perspectiva de las métricas agregadas de esa corrida, era simplemente una misión que no llegó a destino, no un ciclo de control atrapado en un estado absorbente. La corrección de estos cuatro problemas —declarar explícitamente las claves de estado, hacer que el reintento agotado enclave y cambie de estrategia en lugar de resetearse, medir el progreso por distancia horizontal en vez de tridimensional, y consultar la evidencia de percepción antes de decidir el escape— está incorporada en la arquitectura descrita en el capítulo 5.</p>
-<h2 id="96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud">9.6 Instancia 5 — Degradaciones silenciosas en el canal de visión y telemetría de actitud<a class="headerlink" href="#96-instancia-5-degradaciones-silenciosas-en-el-canal-de-vision-y-telemetria-de-actitud" title="Permanent link">&para;</a></h2>
-<p>La transición hacia una deliberación multimodal directa (VLM) expuso una quinta categoría de fallas de contrato, vinculadas a la fidelidad sensorial de los datos crudos presentados al modelo:</p>
+<p>Este patrón es una instancia del anti-patrón de diseño conocido como <em>"zero as absence of evidence"</em>: tratar el valor neutro de un tipo de dato como evidencia de ausencia de fenómeno (Zhu et al., 2024). En señales de seguridad, la convención correcta es la inversa: la ausencia de evidencia no es evidencia de ausencia de peligro.</p>
+<h3 id="922-mecanismo-de-contencion">9.2.2 Mecanismo de contención<a class="headerlink" href="#922-mecanismo-de-contencion" title="Permanent link">&para;</a></h3>
+<p>La solución adoptada fue rediseñar el contrato de percepción como el tipo <code>ObstacleField</code> (cap. 6): un objeto inmutable que distingue explícitamente tres estados epistémicos:</p>
+<ul>
+<li><code>source = "flow"</code>, <code>foe_confidence &gt; 0</code>: la percepción corrió con evidencia real. Los valores de TTC y ocupación son interpretables.</li>
+<li><code>source = "flow"</code>, <code>foe_confidence = 0</code>: la percepción corrió pero no produjo evidencia confiable (FOE fuera de imagen, menos de 30 inliers). Interpretable como "sin información".</li>
+<li><code>source = "degraded"</code>: la percepción fue inhibida activamente (guard de rotación, modo degradado, primer ciclo). El campo no contiene ninguna información sobre el mundo.</li>
+</ul>
+<p>La invariante que impone <code>ObstacleField</code> es que <strong>ningún consumidor puede confundir "sin obstáculos detectados" con "sin información"</strong> sin leer explícitamente <code>has_evidence()</code>. El prompt del VLM verbaliza esta distinción en el componente 2 (§8.5): "percepción SIN evidencia por baja velocidad traslacional" es un texto distinto de "todos los sectores despejados".</p>
+<p>En los nodos de control, <code>degraded_hover_node</code> es el destino de cualquier ciclo donde <code>has_evidence()</code> es <code>False</code> y el router no tiene una maniobra persistente activa — el sistema no puede decidir "avanzar" si no sabe nada del entorno.</p>
+<h2 id="93-falla-2-desalineacion-temporal-del-historial-de-frames">9.3 Falla 2 — Desalineación temporal del historial de frames<a class="headerlink" href="#93-falla-2-desalineacion-temporal-del-historial-de-frames" title="Permanent link">&para;</a></h2>
+<h3 id="931-descripcion-del-modo-de-falla">9.3.1 Descripción del modo de falla<a class="headerlink" href="#931-descripcion-del-modo-de-falla" title="Permanent link">&para;</a></h3>
+<p>El nodo deliberativo multimodal envía al VLM un historial de <code>VLM_FRAME_HISTORY_SIZE = 2</code> frames (frames $t$ y $t-1$) para que el modelo pueda estimar la dirección de movimiento comparando dos instantes temporales distintos. Esta funcionalidad depende de que los dos frames sean genuinamente distintos en el tiempo.</p>
+<p>En versiones tempranas, el buffer de historial era una lista Python simple que se actualizaba sin verificación de timestamps. Dos situaciones producían frames duplicados silenciosamente:</p>
 <ol>
-<li><strong>Inversión cromática persistente (RGB vs. BGR):</strong> Durante meses de experimentación, el cliente de captura de simulación entregó el buffer de imagen de Unreal Engine en formato RGB nativo a un pipeline que asumía la convención BGR de OpenCV. En consecuencia, el modelo de visión deliberó sistemáticamente sobre imágenes con canales rojo y azul invertidos (fachadas terracota observadas en tonos fríos azulados y cielos amarillentos). El VLM jamás emitió una queja sintáctica ni interrumpió su servicio: procesaba los fotogramas y emitía decisiones plausibles a partir de un espectro cromático falso.</li>
-<li><strong>Contaminación por primitivas de depuración en el espacio 3D:</strong> Trazas visuales dibujadas en el mundo virtual por scripts de inspección previa (<code>simPlotLineStrip</code> en Unreal Engine) no se limpiaban al iniciar el vuelo. La cámara a bordo las capturaba como franjas geométricas reales en la escena, induciendo al VLM a interpretar líneas de depuración como cables u obstáculos físicos delante del dron.</li>
-<li><strong>Supresión espuria de ángulos de actitud:</strong> Debido a que el binding <code>cosysairsim</code> no implementaba <code>to_eularian_angles</code>, los ángulos de <em>pitch</em> y <em>roll</em> permanecían fijados en $0.0^\circ$ en cada prompt, privando al modelo de conocer la inclinación física real del vehículo durante maniobras de aceleración.</li>
+<li>
+<p><strong>Reinicio del buffer sin vaciado:</strong> al saltar al siguiente waypoint, se vaciaba el historial pero el nodo de captura podía inyectar el último frame del waypoint anterior como "t-1" del nuevo waypoint. El VLM recibía el frame de un punto de la misión completamente distinto como contexto temporal inmediato.</p>
+</li>
+<li>
+<p><strong>Ciclos donde <code>capture_node</code> no producía un frame nuevo:</strong> si AirSim no respondía a tiempo (picos de carga de GPU), el buffer retenía el frame anterior. Bajo la etiqueta <code>[Fotograma t-1]</code> y <code>[Fotograma t]</code> aparecía la misma imagen.</p>
+</li>
 </ol>
-<p><strong>Mecanismos de contención:</strong> Corrección de la transposición de canales en memoria en el punto de captura (<code>AirSimClient.capture()</code>), llamada obligatoria de limpieza de primitivas (<code>simFlushPersistentMarkers()</code>) al inicializar la conexión, y cálculo matemático directo de ángulos de Euler a partir del cuaternión de orientación.</p>
-<h2 id="97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo">9.7 Por qué el sistema seguía volando y el modelo seguía respondiendo<a class="headerlink" href="#97-por-que-el-sistema-seguia-volando-y-el-modelo-seguia-respondiendo" title="Permanent link">&para;</a></h2>
-<p>Ninguno de los cinco modos de falla descritos en este capítulo se manifestó como un error visible en tiempo de ejecución: en las instancias multimodales y de prompt, el modelo de lenguaje seguía recibiendo entradas bien formadas y devolvía decisiones estructuradas y plausibles; en la orquestación del grafo, el lazo táctico seguía ejecutándose sin excepciones, ciclo tras ciclo. En todos los casos, el sistema "funcionaba" en el sentido más superficial de la palabra — no se caía, no arrojaba errores — mientras tomaba decisiones sistemáticamente equivocadas por razones que solo se hacían visibles leyendo el contrato entre quien produce un dato y quien lo consume, nunca observando el comportamiento agregado del vuelo. Es, en conjunto, un resultado metodológico sobre cómo depurar lazos de control híbridos con modelos de lenguaje, no una lista de anécdotas de desarrollo: la observación del comportamiento —la herramienta de depuración más natural para un sistema que "parece" razonar— es precisamente la que menos sirve para encontrar esta clase de error.</p>
+<p>El VLM, recibiendo dos frames idénticos, infería dos conclusiones posibles: el dron está estático (lo que puede ser correcto en hover pero es incorrecto durante crucero), o los objetos en escena están expandiéndose a velocidad cero (sin señal de aproximación). En ambos casos, la deliberación sobre movimiento y peligro era incorrecta de forma sistemática.</p>
+<h3 id="932-mecanismo-de-contencion">9.3.2 Mecanismo de contención<a class="headerlink" href="#932-mecanismo-de-contencion" title="Permanent link">&para;</a></h3>
+<p>El buffer de historial se reimplementó como un <code>deque</code> de capacidad fija con control estricto de timestamps. Antes de incluir un frame en el prompt, se verifica:</p>
+<ul>
+<li><code>timestamp_actual &gt; timestamp_anterior</code> (frames genuinamente distintos en el tiempo)</li>
+<li><code>delta_t &lt; FRAME_HISTORY_MAX_STALENESS_MS</code> (el frame anterior no es demasiado antiguo — un frame de hace 3 s no aporta contexto temporal útil a 5 Hz)</li>
+</ul>
+<p>Si la verificación falla, el prompt se adapta dinámicamente: en lugar de enviar dos frames etiquetados como <code>[t-1]</code> y <code>[t]</code>, envía un único frame etiquetado como <code>[ciclo actual]</code> con una nota explícita: "historial visual no disponible en este ciclo". Esto es más conservador pero menos peligroso que fabricar una secuencia temporal falsa.</p>
+<h2 id="94-falla-3-descalibracion-de-escala-en-el-canal-de-divergencia">9.4 Falla 3 — Descalibración de escala en el canal de divergencia<a class="headerlink" href="#94-falla-3-descalibracion-de-escala-en-el-canal-de-divergencia" title="Permanent link">&para;</a></h2>
+<h3 id="941-descripcion-del-modo-de-falla">9.4.1 Descripción del modo de falla<a class="headerlink" href="#941-descripcion-del-modo-de-falla" title="Permanent link">&para;</a></h3>
+<p>El canal de divergencia del <code>ObstacleField</code> (cap. 6, §6.7) estima $\partial u / \partial x + \partial v / \partial y$ usando <code>np.gradient()</code> sobre el campo de flujo. En versiones anteriores, el cálculo usaba gradientes de Sobel 3×3 sin el factor de normalización $1/8$ que el kernel estándar requiere para ser un estimador de derivada de primer orden en unidades de píxel-por-píxel:</p>
+<p>$$K_{\text{Sobel}} = \frac{1}{8}\begin{pmatrix} -1 &amp; 0 &amp; 1 \ -2 &amp; 0 &amp; 2 \ -1 &amp; 0 &amp; 1 \end{pmatrix}$$</p>
+<p>Sin la normalización, el estimador de divergencia producía valores aproximadamente 8 veces mayores que los correctos. Con el factor de ocupación original calibrado sobre esa escala inflada, el canal de ocupación saturaba a <code>1.0</code> en condiciones de textura moderada — es decir, prácticamente siempre que hubiera cualquier gradiente de flujo en la imagen, incluso en vuelo en espacio abierto sin obstáculos cercanos.</p>
+<p>La consecuencia operativa era que el predicado disyuntivo <code>is_blocked()</code> (§6.9) estaba dominado completamente por el canal de ocupación: aunque el TTC indicara una zona segura (&gt; 4 s), la ocupación saturada votaba bloqueo. El canal de TTC calibrado quedaba efectivamente anulado.</p>
+<h3 id="942-interaccion-con-la-logica-disyuntiva">9.4.2 Interacción con la lógica disyuntiva<a class="headerlink" href="#942-interaccion-con-la-logica-disyuntiva" title="Permanent link">&para;</a></h3>
+<p>Este modo de falla ilustra un problema de diseño de predicados disyuntivos en sistemas con múltiples canales de diferente confianza. La lógica $\text{is_blocked} = (\text{occ} \geq 0.35) \lor (\text{conf} \geq 0.35 \land \text{ttc} \leq 2.5)$ asume que ambos canales están calibrados en la misma escala de confianza. Si un canal está sistemáticamente sobre-estimado, la disyunción lo convierte en el canal dominante, anulando la información del otro. El TTC, que tiene validación empírica (cap. 7), perdía toda influencia frente a una ocupación descalibrada.</p>
+<h3 id="943-mecanismo-de-contencion">9.4.3 Mecanismo de contención<a class="headerlink" href="#943-mecanismo-de-contencion" title="Permanent link">&para;</a></h3>
+<p>La corrección fue triple:
+1. Migrar a <code>np.gradient()</code> (diferencias centradas de segundo orden, normalizadas intrínsecamente) para el cómputo de divergencia.
+2. Recalibrar el factor de ocupación contra datos de profundidad de referencia, con el proceso de curva ROC descrito en el cap. 7 (§7.5 — estado pendiente de completar para el canal de ocupación).
+3. Introducir los umbrales diferenciados de confianza para los dos canales (<code>MIN_CONFIDENCE_FOR_BLOCKED = 0.15</code> vs. <code>MIN_CONFIDENCE_FOR_TTC_BLOCKED = 0.35</code>), de modo que el canal de TTC requiera mayor confianza para votar solo que el canal de ocupación acompañado de confianza mínima.</p>
+<p>La tercera medida es especialmente importante: aunque la normalización del kernel corrige la escala, el sistema necesita ser robusto a futuras recalibraciones. Los umbrales diferenciados hacen que ningún canal pueda dominar completamente al otro sin confianza suficiente.</p>
+<h2 id="95-falla-4-state-clipping-y-ciclos-limite-en-langgraph">9.5 Falla 4 — State clipping y ciclos límite en LangGraph<a class="headerlink" href="#95-falla-4-state-clipping-y-ciclos-limite-en-langgraph" title="Permanent link">&para;</a></h2>
+<p>Esta instancia fue la más costosa en consecuencias observadas (un ascenso acumulado de ~356 m en una sola corrida de validación) y la más ilustrativa de los riesgos de orquestadores de grafos que descartan silenciosamente estado no declarado.</p>
+<h3 id="951-el-mecanismo-de-descarte-silencioso-de-langgraph">9.5.1 El mecanismo de descarte silencioso de LangGraph<a class="headerlink" href="#951-el-mecanismo-de-descarte-silencioso-de-langgraph" title="Permanent link">&para;</a></h3>
+<p>LangGraph construye los canales de estado de un <code>StateGraph</code> a partir de un <code>TypedDict</code> declarado en tiempo de compilación (<code>build_workflow()</code>). En cada invocación del grafo (<code>graph.invoke(state)</code>), el runtime serializa el estado de salida de cada nodo y lo fusiona con el estado entrante usando únicamente las claves presentes en el <code>TypedDict</code>. Cualquier clave que un nodo escriba en su diccionario de retorno pero que no esté declarada en el <code>TypedDict</code> es <strong>descartada silenciosamente</strong> — sin excepción, sin advertencia, sin registro en el log. El nodo siguiente recibe un estado donde esa clave simplemente no existe o tiene el valor por defecto del último ciclo donde sí estaba declarada.</p>
+<p>Esta propiedad del runtime es documentada en la implementación (§5.2 del cap. 5) como la causa de cuatro bugs históricos. Su mecanismo específico es importante: el <code>TypedDict</code> de Python es una anotación de tipos, no una estructura de datos con validación en tiempo de ejecución. <code>state["clave_nueva"] = valor</code> no falla aunque <code>clave_nueva</code> no esté en el <code>TypedDict</code>; simplemente el runtime de LangGraph no la persiste en el canal de estado entre nodos.</p>
+<h3 id="952-las-cuatro-vulnerabilidades-identificadas">9.5.2 Las cuatro vulnerabilidades identificadas<a class="headerlink" href="#952-las-cuatro-vulnerabilidades-identificadas" title="Permanent link">&para;</a></h3>
+<p><strong>Vulnerabilidad A — Claves de control no declaradas.</strong></p>
+<p>Tres claves de control cruzaban la frontera entre nodo y lazo sin estar declaradas en <code>DroneState</code>:</p>
+<ul>
+<li><code>_reset_stall_counter</code>: debía reiniciar el contador de progreso estancado al llegar a un waypoint. No declarada → el contador crecía monótonamente desde el inicio de la misión, independientemente del progreso real.</li>
+<li><code>_delib_memory</code>: debía acumular un historial corto de resultados del deliberativo para que el VLM pudiera referirse a decisiones previas. No declarada → el historial siempre estaba vacío; cada ciclo el VLM era consultado sin contexto de lo que había decidido un ciclo antes.</li>
+<li><code>_corner_wp</code>: debía inyectar un sub-waypoint de esquina intermedia para la maniobra <code>GIRAR_90</code>. No declarada → el nodo de girar_90 lo escribía en su retorno, el router lo leía en el ciclo siguiente... como el valor inicial (None), nunca como el punto calculado.</li>
+</ul>
+<p>El diagnóstico de estas tres claves requirió instrumentar el runtime con un interceptor de estado entre cada par de nodos — el equivalente de "printear el estado completo antes y después de cada nodo" — porque ningún log de nivel de aplicación mostraba el descarte.</p>
+<p><strong>Vulnerabilidad B — Ciclo límite de período 3 en la red de seguridad.</strong></p>
+<p>El mecanismo de reintento de maniobra de escape funcionaba así (versión con el bug):</p>
+<div class="highlight"><pre><span></span><code>si stall_count &gt; hard_threshold:
+    activar FRENAR (ciclo 1)
+    si stall_count &gt; hard_threshold + N:
+        resetear stall_count = 0  ← la red de seguridad se resetea a sí misma
+</code></pre></div>
+<p>El reseteo de <code>stall_count</code> en la propia rama de escape convertía el estado "atasco severo → acción de escape" en un estado transitorio: al ciclo siguiente, <code>stall_count = 0 &lt; hard_threshold</code> y el sistema volvía a modo crucero. Tres ciclos después, el atasco se re-detectaba y el ciclo se repetía. El período 3 (crucero → pre-stall → escape → reseteo → crucero) no era observable como un error — era un patrón de comportamiento que en el viewer se veía como "el dron frenaba ocasionalmente sin razón aparente".</p>
+<p>La corrección convierte el estado de escape en <strong>absorbente</strong>: una vez que <code>stall_count &gt; hard_threshold</code>, el sistema transiciona a <code>DEADLOCK_ESCAPE</code> y no retorna a crucero hasta completar la secuencia de escape (deep_scan o girar_90), independientemente de cómo evolucione el contador.</p>
+<p><strong>Vulnerabilidad C — Métrica de progreso auto-inconsistente.</strong></p>
+<p>El predicado de atasco evaluaba <code>ciclos_sin_progreso &gt; effective_stall_threshold</code> donde <code>effective_stall_threshold = max(10, eps_m / (min_speed / loop_hz))</code>. El problema era que <code>eps_m</code> (distancia mínima de avance por ciclo, en metros) y <code>min_speed</code> (velocidad mínima de crucero) estaban definidos en unidades y archivos distintos, y su combinación imponía una exigencia de velocidad de aproximación que el guiado en curva nunca podía satisfacer:</p>
+<ul>
+<li><code>eps_m = 0.5 m</code> (distancia mínima de avance por ciclo)</li>
+<li><code>min_speed = 2.0 m/s</code>, <code>loop_hz = 5 Hz</code> → velocidad de avance mínima implícita = <code>0.5 × 5 = 2.5 m/s</code></li>
+<li>En un giro de 90°, la velocidad de aproximación al waypoint oscila entre 0 y <code>vx · cos(θ)</code>, con media aproximadamente <code>vx/2 ≈ 1.25 m/s</code></li>
+</ul>
+<p>Resultado: <code>effective_stall_threshold ≈ max(10, 0.5/(2.0/5)) = max(10, 1.25) = 10</code> ciclos, pero el sistema detectaba atasco en ciclos 3–5 por el perfil de velocidad del giro. El mecanismo de atasco se disparaba prácticamente al inicio de cada waypoint que requiriera maniobra.</p>
+<p>La corrección fue medir el progreso solo en el plano horizontal XY (distancia 2D al waypoint), que es monotónicamente decreciente durante el giro aunque la componente frontal oscile, y ajustar <code>eps_m</code> al valor que es físicamente alcanzable en el peor caso del perfil de giro.</p>
+<p><strong>Vulnerabilidad D — Escape ciego a la percepción.</strong></p>
+<p>En la versión con el bug, el <code>policy_router</code> evaluaba las condiciones de escape de atasco <em>antes</em> de leer el <code>ObstacleField</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># versión con bug</span>
+<span class="k">if</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;stall_count&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">hard_threshold</span><span class="p">:</span>
+    <span class="k">return</span> <span class="s2">&quot;deadlock_escape&quot;</span>   <span class="c1"># ← sin verificar percepción</span>
+<span class="k">if</span> <span class="n">field</span><span class="o">.</span><span class="n">is_blocked</span><span class="p">(</span><span class="s2">&quot;centro&quot;</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;evasive&quot;</span>
+</code></pre></div>
+<p>La consecuencia era que en ciclos donde el estimador de flujo tenía evidencia válida de que un sector lateral estaba despejado (<code>has_open_corridor() = True</code>), el router seleccionaba igualmente la rama de escape de atasco. El dron ascendía aunque la percepción indicara una salida horizontal disponible. La corrección fue consultar <code>has_open_corridor()</code> como condición de guarda antes de activar el escape: si hay evidencia de corredor, la maniobra de escape no se activa aunque el contador de atasco haya excedido su umbral.</p>
+<h3 id="953-el-ascenso-acumulado-como-sintoma-compuesto">9.5.3 El ascenso acumulado como síntoma compuesto<a class="headerlink" href="#953-el-ascenso-acumulado-como-sintoma-compuesto" title="Permanent link">&para;</a></h3>
+<p>La combinación de las cuatro vulnerabilidades produjo en una corrida de validación un ascenso acumulado de ~356 m en una sola misión. La secuencia causal fue:</p>
+<ol>
+<li><code>_reset_stall_counter</code> no declarada → <code>stall_count</code> creció desde el ciclo 1 sin resetearse al llegar a cada waypoint.</li>
+<li>A los ~8 ciclos de misión, <code>stall_count &gt; hard_threshold</code> a pesar de que el dron avanzaba normalmente.</li>
+<li>El router activó <code>deadlock_escape</code> (ciego a percepción), que en esa versión ejecutaba <code>GANAR_ALTURA</code> con deriva lateral no justificada.</li>
+<li><code>stall_count</code> se reseteó (ciclo límite B) → el siguiente ciclo, el router volvió a crucero normal.</li>
+<li><code>stall_count</code> volvió a crecer rápidamente (umbral demasiado bajo por la métrica inconsistente C).</li>
+<li>El ciclo se repitió centenares de veces, produciendo un ascenso neto acumulado.</li>
+</ol>
+<p>Desde el exterior, la corrida registraba una misión "sin errores" (no hay excepciones en el log) que simplemente "no llegó a destino". Sin el análisis del viewer frame a frame y la lectura del JSONL de auditoría, el patrón era opaco.</p>
+<h2 id="96-falla-5-degradaciones-sensoriales-silenciosas">9.6 Falla 5 — Degradaciones sensoriales silenciosas<a class="headerlink" href="#96-falla-5-degradaciones-sensoriales-silenciosas" title="Permanent link">&para;</a></h2>
+<h3 id="961-inversion-de-canales-de-color-rgbbgr">9.6.1 Inversión de canales de color RGB/BGR<a class="headerlink" href="#961-inversion-de-canales-de-color-rgbbgr" title="Permanent link">&para;</a></h3>
+<p>Durante varios meses de experimentación, el cliente de captura de AirSim (<code>AirSimClient.capture()</code>) entregaba el buffer de imagen en el orden de canales RGB nativo del motor Unreal, mientras que el pipeline asumía la convención BGR de OpenCV — la convención estándar de OpenCV en la que el canal azul ocupa el índice 0.</p>
+<p>El efecto fotométrico es una inversión de los canales rojo y azul en cada píxel: fachadas de ladrillo rojo aparecen en tonos azulados, el cielo azul aparece amarillento, la vegetación adquiere colores no naturales. El VLM deliberativo — entrenado sobre datos fotométricamente correctos — deliberó durante esos meses sobre imágenes con espectro cromático sistemáticamente falso. En ningún momento emitió una queja sobre la calidad de las imágenes ni redujo su confianza en la decisión: el modelo de lenguaje no tiene acceso directo al historial de la distribución de datos sobre la que fue entrenado, y no puede detectar que la imagen recibida está fuera de distribución por inversión de canal.</p>
+<p>El diagnóstico requirió guardar físicamente las imágenes enviadas al VLM al disco y abrirlas en un visor externo — el análogo de "mirar los datos crudos" que es el primer paso de depuración en visión por computadora pero que en un sistema integrado es fácil de omitir cuando el modelo "parece razonar correctamente".</p>
+<p>La corrección fue añadir <code>cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)</code> en el punto de captura, con un test unitario que verifica el orden de canales comparando estadísticas de cada canal en una imagen de referencia conocida.</p>
+<h3 id="962-contaminacion-por-primitivas-de-depuracion-persistentes">9.6.2 Contaminación por primitivas de depuración persistentes<a class="headerlink" href="#962-contaminacion-por-primitivas-de-depuracion-persistentes" title="Permanent link">&para;</a></h3>
+<p>El simulador AirSim/cosysairsim permite dibujar primitivas geométricas en el mundo virtual (<code>simPlotLineStrip</code>, <code>simPlotPoints</code>, <code>simPlotArrows</code>) para visualización durante el desarrollo: trayectorias planificadas, sectores del <code>ObstacleField</code>, vectores de flujo. Estas primitivas son <em>persistentes</em> en la sesión del simulador: no se borran al reiniciar el script de control, solo al llamar explícitamente <code>simFlushPersistentMarkers()</code>.</p>
+<p>En varias sesiones de desarrollo, al relanzar el vuelo sin reiniciar AirSim, las primitivas de la sesión anterior permanecían en el mundo virtual. La cámara a bordo las capturaba como geometría física en la escena: franjas de colores brillantes cruzando el campo visual que el VLM interpretaba como cables, estructuras metálicas o señales de tráfico dependiendo del color y orientación.</p>
+<p>La consecuencia fue particularmente difícil de diagnosticar porque el comportamiento variaba según el historial de la sesión: un vuelo iniciado después de reiniciar AirSim se comportaba normalmente, mientras que el mismo vuelo iniciado sin reiniciar producía evasiones espurias repetidas. Jansen et al. (2023) documentan comportamientos similares de estado persistente en CosysAirSim como fuente de irreproducibilidad entre corridas.</p>
+<p>La corrección fue añadir <code>simFlushPersistentMarkers()</code> al inicio de cada sesión de vuelo, con un segundo vaciado de primitivas antes de iniciar la fase de captura de imágenes para el VLM.</p>
+<h3 id="963-supresion-de-angulos-de-actitud-en-la-telemetria">9.6.3 Supresión de ángulos de actitud en la telemetría<a class="headerlink" href="#963-supresion-de-angulos-de-actitud-en-la-telemetria" title="Permanent link">&para;</a></h3>
+<p>El binding <code>cosysairsim</code> usado en este proyecto (fork de AirSim con soporte UE5 — Jansen et al., 2023) no implementaba el método <code>to_eularian_angles()</code> del binding oficial de Microsoft AirSim. La llamada al método retornaba silenciosamente $(0, 0, 0)$ en lugar de lanzar <code>AttributeError</code>. El resultado era que los ángulos de pitch y roll reportados al VLM en cada prompt eran siempre <code>0.0°</code>, independientemente de la inclinación física real del vehículo.</p>
+<p>Durante maniobras de aceleración (pitch negativo ~ −8° a −12°), descenso agresivo (pitch positivo) o giros (roll lateral), el VLM recibía la información de que el dron estaba perfectamente nivelado. La estimación de la componente de velocidad de cierre perpendicular al plano focal — que depende del pitch — era incorrecta, y la interpretación de la escena visual (la posición aparente del horizonte en la imagen) estaba desalineada con la información verbal de actitud.</p>
+<p>La corrección fue implementar la conversión directa desde el cuaternión de orientación, disponible en la telemetría de CosysAirSim, a ángulos de Euler (roll, pitch, yaw) usando las fórmulas estándar de Wahba (1965), sin depender del método del binding:</p>
+<p>$$\phi = \arctan2(2(q_w q_x + q_y q_z),\ 1 - 2(q_x^2 + q_y^2))$$
+$$\theta = \arcsin(2(q_w q_y - q_z q_x))$$
+$$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))$$</p>
+<p>Un test unitario verifica, contra una tabla de cuaterniones conocidos (identidad, 90° en cada eje, 45° combinado), que la conversión produce los ángulos correctos con error &lt; 0.01°.</p>
+<h2 id="97-por-que-el-sistema-seguia-funcionando-el-problema-de-la-observabilidad">9.7 Por qué el sistema seguía funcionando: el problema de la observabilidad<a class="headerlink" href="#97-por-que-el-sistema-seguia-funcionando-el-problema-de-la-observabilidad" title="Permanent link">&para;</a></h2>
+<p>Ninguno de los cinco modos de falla descritos se manifestó como un error visible en tiempo de ejecución. En todos los casos:</p>
+<ul>
+<li>El modelo de lenguaje seguía produciendo respuestas JSON válidas y plausibles.</li>
+<li>El lazo de control ejecutaba el ciclo sin excepciones.</li>
+<li>Las métricas agregadas de la corrida (distancia recorrida, waypoints completados, velocidad media) no distinguían estas corridas de corridas fallidas por otras causas.</li>
+</ul>
+<p>Esta propiedad tiene una implicación metodológica directa: las técnicas de depuración habituales para sistemas de software — observar el output, monitorear las métricas, leer el log de errores — son ciegas a esta clase de error. La observación del comportamiento es precisamente la herramienta menos útil porque el sistema exhibe comportamiento <em>consistente con sus premisas internas</em>, aunque esas premisas estén corrompidas.</p>
+<p>Las técnicas de diagnóstico que sí funcionaron en este proyecto fueron:</p>
+<p><strong>1. Auditoría de contratos en la frontera de cada componente.</strong> Para cada par (productor, consumidor) de datos de estado, verificar explícitamente: ¿qué valor devuelve el productor cuando no tiene información? ¿Cómo interpreta el consumidor ese valor? La pregunta "¿qué pasa cuando este campo es None/vacío/cero?" tiene que tener una respuesta documentada y verificable.</p>
+<p><strong>2. Guardar los datos crudos enviados al modelo.</strong> El viewer (<code>airsim-runs/*.viewer.html</code>) guarda el fotograma anotado y el estado completo de cada ciclo precisamente para hacer auditable lo que el modelo recibía. Sin esa capacidad de inspección retroactiva, la falla de inversión RGB/BGR habría sido indetectable.</p>
+<p><strong>3. Tests de invariantes de contrato, no de comportamiento.</strong> Un test que verifique "el dron evadió el obstáculo" es frágil y dependiente de la escena. Un test que verifique "si <code>has_evidence()</code> es False, ningún consumidor reporta el campo como 'despejado'" es un test de contrato que captura la Falla 1 sin necesitar una corrida de vuelo.</p>
+<p><strong>4. Inyección de valores límite en el estado de LangGraph.</strong> Para detectar las claves no declaradas (Falla 4-A), la técnica fue instrumentar el lazo con un interceptor que comparaba <code>state</code> al entrar a cada nodo con <code>state</code> al salir, reportando cualquier clave presente en la salida que no estuviera en el <code>TypedDict</code>. Esta verificación se convirtió en un modo de debug permanente activable via variable de entorno (<code>LANGGRAPH_DEBUG_STATE_CLIPPING=1</code>).</p>
+<h2 id="98-riesgos-residuales-y-trabajo-pendiente">9.8 Riesgos residuales y trabajo pendiente<a class="headerlink" href="#98-riesgos-residuales-y-trabajo-pendiente" title="Permanent link">&para;</a></h2>
+<p>Los cinco modos de falla documentados están corregidos en la implementación actual. Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:</p>
+<p><strong>Riesgo A — Nuevas claves de DroneState.</strong> Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en <code>DroneState</code>. La mitigación es el modo <code>LANGGRAPH_DEBUG_STATE_CLIPPING=1</code> y el proceso de revisión de <code>DroneState</code> en el CHANGELOG antes de cada nueva feature.</p>
+<p><strong>Riesgo B — Cambios de API del binding de AirSim.</strong> El binding <code>cosysairsim</code> es un fork activamente mantenido (Jansen et al., 2023). Actualizaciones del binding pueden modificar el comportamiento de métodos (como ocurrió con la corrección del cuaternión). Los tests unitarios de conversión de telemetría son la mitigación; deben ejecutarse tras cada actualización del binding.</p>
+<p><strong>Riesgo C — Distribución de imágenes fuera del dominio de entrenamiento del VLM.</strong> La corrección de inversión RGB/BGR es una transformación fija. Pero la brecha de dominio entre imágenes de AirSim/UE5 y el dominio de entrenamiento del VLM (predominantemente imágenes reales del mundo) es una fuente estructural de error que no se elimina con ninguna corrección puntual. La calibración de la frecuencia de respuestas subóptimas del VLM en los escenarios de esta tesis (cap. 11) es el mecanismo de caracterización de ese riesgo residual.</p>
 
 
 

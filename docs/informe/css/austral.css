@@ -98,7 +98,7 @@
   /* Fuente base y párrafos para A4 */
   body,
   .md-typeset {
-    font-size: 14pt !important;
+    font-size: 15pt !important;
     line-height: 1.65 !important;
   }
 

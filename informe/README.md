@@ -13,21 +13,21 @@ reescribir la estructura cada vez.
 | 1 | [`01-INTRODUCCION.md`](01-INTRODUCCION.md) | Redactado — Introducción, motivación, objetivos y desvíos | — |
 | 2 | [`02-ESTADO-DEL-ARTE.md`](02-ESTADO-DEL-ARTE.md) | Redactado — Estado del arte y trabajos relacionados | — |
 | 3 | [`03-ENTORNO-SIMULACION.md`](03-ENTORNO-SIMULACION.md) | Redactado — Unreal Engine 5.5 + Cosys-AirSim, jerarquía de 3 Tiers (MiniSim, TownSim, CitySim) y telemetría Zenodo | — |
-| 4 | [`04-PLANIFICACION-MISION-GCS.md`](04-PLANIFICACION-MISION-GCS.md) | Redactado — Planificación en tierra antes del vuelo y GCS WebDCS | — |
-| 5 | [`05-ARQUITECTURA-LAZO-TACTICO.md`](05-ARQUITECTURA-LAZO-TACTICO.md) | Redactado — Grafo de decisión por tick (`airsim-loop`) | — |
-| 6 | [`06-PERCEPCION-MONOCULAR.md`](06-PERCEPCION-MONOCULAR.md) | Redactado — Percepción monocular sin redes neuronales (flujo óptico y TTC) | — |
-| 7 | [`07-ESTIMACION-TTC.md`](07-ESTIMACION-TTC.md) | Redactado (parcial: §7.3–7.4 pendientes de datos) | validación de calibración de ocupación, giros agresivos |
-| 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Ingeniería de decisiones del SLM/VLM, `json_schema` y macro-acciones | — |
-| 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — Modos de falla de lazos de control híbridos con LLM/VLM (5 instancias) | — |
+| 4 | [`04-PLANIFICACION-MISION-GCS.md`](04-PLANIFICACION-MISION-GCS.md) | Redactado — Planificación en tierra, GCS WebDCS, estructura de corridas `airsim-runs/` y viewer | — |
+| 5 | [`05-ARQUITECTURA-LAZO-TACTICO.md`](05-ARQUITECTURA-LAZO-TACTICO.md) | Redactado — Grafo LangGraph completo: todos los nodos, routers, DroneState, macro-acciones, WaypointTracker y DeiberationService | — |
+| 6 | [`06-PERCEPCION-MONOCULAR.md`](06-PERCEPCION-MONOCULAR.md) | Redactado — Pipeline completo DIS→derotación→FOE→TTC→ObstacleField; lógica `is_blocked()`; API pública; complementariedad VLM | — |
+| 7 | [`07-ESTIMACION-TTC.md`](07-ESTIMACION-TTC.md) | Redactado — Validación experimental: ground truth de profundidad, dataset 3735 registros, AUC ROC 0.96–0.97, derivación de umbrales por Youden. **Pendiente:** §7.5 calibración ROC del canal de ocupación; §7.6 validación derotación con giros agresivos | datos de giros agresivos y dataset ocupación |
+| 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Selección de modelo (Qwen2.5-VL-3B), decodificación restringida + parser tolerante, espacio de acción discreto, 5 componentes del prompt, gestión de latencia, LoRA no adoptado | — |
+| 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — 5 modos de falla documentados (schema drift, desalineación temporal, divergencia descalibrada, state clipping en LangGraph, degradaciones sensoriales); metodología de diagnóstico; riesgos residuales | — |
 | 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo en 3 Tiers) | — |
-| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Pendiente — corrida experimental final batch G4 (Brazo × Atasco × Tier × Semillas) | corrida batch G4 |
+| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Parcial — corridas piloto seed=1 completas (3 brazos × 3 Tiers). **Pendiente:** semillas 2–5, escenarios con obstáculos (`townsim_ini`, `citymap_a`), batch G4 completo | corrida batch G4 |
 | 12 | [`12-CONCLUSIONES.md`](12-CONCLUSIONES.md) | ⏳ Pendiente | capítulo 11 |
-| 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado — pendiente de depuración manual (duplicados, entradas no citadas en el texto final) | — |
-| — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia (no es capítulo) | — |
+| 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado — pendiente de depuración final (eliminar entradas no citadas en texto, resolver metadata incompleta §13.3) | — |
+| — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia — selección de modelos GGUF y evaluación de nivel de innovación | — |
 | — | [`anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md`](anexos/A2-SLM-CONCEPTO-Y-VENTAJAS.md) | Material de referencia (no es capítulo) | — |
 | — | [`anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md`](anexos/A3-SLM-OPTIMIZACION-Y-DESAFIOS.md) | Material de referencia (no es capítulo) | — |
-| — | [`anexos/A4-OPTIMIZACION-LORA.md`](anexos/A4-OPTIMIZACION-LORA.md) | Material de referencia — alternativa no adoptada | — |
-| — | [`anexos/A5-DECODIFICACION-RESTRINGIDA.md`](anexos/A5-DECODIFICACION-RESTRINGIDA.md) | Material de referencia (no es capítulo) | — |
+| — | [`anexos/A4-OPTIMIZACION-LORA.md`](anexos/A4-OPTIMIZACION-LORA.md) | Material de referencia — alternativa LoRA explorada y no adoptada | — |
+| — | [`anexos/A5-DECODIFICACION-RESTRINGIDA.md`](anexos/A5-DECODIFICACION-RESTRINGIDA.md) | Material de referencia — decodificación restringida, GBNF, `json_schema` | — |
 
 ## Convenciones
 
@@ -51,17 +51,27 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
 
 ## Pendiente
 
-- Completar §7.3 (calibración del canal de ocupación) y §7.4 (validación de derotación
-  con giros agresivos) una vez disponibles esos datos.
-- Completar los capítulos 11 (Resultados) y 12 (Conclusiones) con el batch G4 completo
-  (≥5 semillas por celda factorial). Corridas piloto con servidor LLM activo completas:
-  Tier 0 (`minisim_clear`), Tier 1 (`townsim_clear`), Tier 2 (`citysim_clear`), seed=1
-  para los tres brazos en cada escenario. Pendiente: semillas 2–5, escenarios con
-  obstáculos (`townsim_ini`, `citymap_a`).
-- Depurar `13-REFERENCIAS.md`: es una compilación exhaustiva de la bibliografía del plan
-  de tesis aprobado (`plan_tesis/plan-tesis.md` y `plan_tesis/bibliografia/`) más la
-  encontrada en `informe/bibliografia/`; falta eliminar lo no citado en el texto final y
-  resolver los pocos casos con metadata incompleta (marcados en la sección 13.3).
-- El capítulo 3 (§3.2) documenta como desvío de hecho la sustitución del pipeline de fotogrametría de Buenos Aires
-  (RealityCapture + OpenStreetMap + Blender) del plan aprobado por la jerarquía de tres Tiers en
-  Unreal Engine (`MiniSim`, `TownSim` y `CitySim`).
+### Datos experimentales faltantes
+- **§7.5** — Calibración ROC completa del canal de ocupación: ejecutar `experiments/analyze_occupancy.py`
+  sobre el dataset completo (3735 registros), construir curva ROC, derivar umbral por Youden.
+  El umbral actual `OBSTACLE_OCCUPANCY_BLOCKED = 0.35` es provisorio.
+- **§7.6** — Validación de la derotación con giros agresivos (±0.3–0.5 rad/s). El dataset
+  actual solo cubre `|yaw_rate| < 0.05` rad/s.
+
+### Capítulos pendientes de redactar
+- **Cap. 11 (Resultados)**: corridas piloto seed=1 completas para los tres brazos en 3 Tiers.
+  Falta: semillas 2–5 y escenarios con obstáculos (`townsim_ini`, `citymap_a`). El batch G4
+  completo (Brazo × Atasco × Tier × Semillas ≥ 5) es el prerequisito para las conclusiones.
+- **Cap. 12 (Conclusiones)**: bloquea en cap. 11.
+
+### Revisión final
+- Depurar `13-REFERENCIAS.md`: eliminar entradas no citadas en el texto final y resolver
+  los pocos casos con metadata incompleta (marcados en §13.3). Las referencias de los
+  capítulos 6–9 reescritos (Vera-Yanez 2024, Al-Kaff 2017, Badrloo 2017, Kaneko 2017,
+  Molineros 2012, Raspanti 2025, Geng 2025, Jansen 2023, Wahba 1965) ya están en §13.4
+  y deben verificarse como citadas en el texto.
+
+### Nota estructural
+- El capítulo 3 (§3.2) documenta como desvío de hecho la sustitución del pipeline de
+  fotogrametría de Buenos Aires (RealityCapture + OpenStreetMap + Blender) del plan
+  aprobado por la jerarquía de tres Tiers en Unreal Engine (`MiniSim`, `TownSim`, `CitySim`).
