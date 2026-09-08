@@ -1041,7 +1041,7 @@
 <ul>
 <li>
 <p><strong>Especialización y adaptación ligera del modelo deliberativo vía LoRA/QLoRA (Anexo 3):</strong>
-  En la implementación evaluada, el modelo multimodal (<strong>Qwen2.5-VL-3B-Instruct</strong>) opera en régimen <em>zero-shot / in-context learning</em>, lo cual exige verbalizar en cada ciclo la telemetría, el resumen del <code>ObstacleField</code>, el historial y las restricciones sintácticas (~500 tokens de prompt), empujando la latencia de inferencia (850–1400 ms) hacia el límite del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>). Como se fundamenta en el capítulo 8 (§8.7) y se desarrolla en detalle en el <a href="anexos/A3-OPTIMIZACION-LORA.html">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras inicial y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las matrices de atención ($W_q, W_v$) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT) utilizando la telemetría de vuelos exitosos. Esto permitirá internalizar el espacio cinemático y el formato estructurado en los pesos de la red, reduciendo el prompt a &lt;100 tokens y la latencia a &lt;500 ms sin incurrir en degradaciones por timeout.</p>
+  En la implementación evaluada, el modelo multimodal (<strong>Qwen2.5-VL-3B-Instruct</strong>) opera en régimen <em>zero-shot / in-context learning</em>, lo cual exige verbalizar en cada ciclo la telemetría, el resumen del <code>ObstacleField</code>, el historial y las restricciones sintácticas (~500 tokens de prompt), empujando la latencia de inferencia (850–1400 ms) hacia el límite del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>). Como se fundamenta en el capítulo 8 (§8.7) y se desarrolla en detalle en el <a href="anexos/A3-OPTIMIZACION-LORA.html">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras inicial y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las matrices de atención (<span class="arithmatex">\(W_q, W_v\)</span>) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT) utilizando la telemetría de vuelos exitosos. Esto permitirá internalizar el espacio cinemático y el formato estructurado en los pesos de la red, reduciendo el prompt a &lt;100 tokens y la latencia a &lt;500 ms sin incurrir en degradaciones por timeout.</p>
 </li>
 <li>
 <p><strong>Decodificación restringida con gramáticas reducidas y dinámicas condicionadas por el grafo (Anexo 4):</strong>
@@ -1128,6 +1128,10 @@
         <script src="js/print-site.js"></script>
       
         <script src="js/logo-link.js"></script>
+      
+        <script src="js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
     
   </body>

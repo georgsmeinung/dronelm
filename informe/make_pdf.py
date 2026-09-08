@@ -45,8 +45,20 @@ def make_pdf(url: str, output: Path) -> None:
         # Cargar con networkidle: espera a que no haya requests pendientes
         page.goto(url, wait_until="networkidle", timeout=60_000)
 
-        # Pequeña pausa extra para renderizado de fuentes (Google Fonts)
-        page.wait_for_timeout(2_000)
+        # Esperar a que MathJax 3 termine de tipar todas las fórmulas
+        page.wait_for_function(
+            """() => {
+                if (!window.MathJax || !window.MathJax.typesetPromise) return false;
+                return window.MathJax.startup && window.MathJax.startup.promise
+                    ? window.MathJax.startup.promise.then(() => true).catch(() => false)
+                    : true;
+            }""",
+            timeout=30_000,
+        )
+        # Forzar re-typeset por si algunas fórmulas llegaron tarde al DOM (print-site)
+        page.evaluate("() => window.MathJax && window.MathJax.typesetPromise && window.MathJax.typesetPromise()")
+        # Pausa extra para que el re-typeset y las fuentes terminen
+        page.wait_for_timeout(3_000)
 
         # --- Reordenar DOM: mover TOC a DESPUÉS del cover ---
         # Estructura de mkdocs-print-site:

@@ -1352,7 +1352,7 @@
 <p>Bajo dichas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Esto motivó la sustitución de un SLM exclusivamente textual por un modelo con <strong>capacidad de visión nativa</strong> (<em>Small Vision-Language Model</em>, sVLM), permitiendo al agente inspeccionar directamente el fotograma capturado por la cámara frontal del UAV.</p>
 <p>Tal como se formaliza en el capítulo 8 (§8.1.2), la elección convergió en <strong>Qwen2.5-VL-3B-Instruct</strong> (<a href="../13-REFERENCIAS.html#ref-qwen-team-2025">Qwen Team, 2025</a>) bajo cuantización <em>Q4_K_M</em>:
 * <strong>Huella de memoria</strong>: consume ~2.0 GB de VRAM, situándose holgadamente dentro del presupuesto operativo restante de la GPU.
-* <strong>Inspección visual directa</strong>: procesa secuencias de dos fotogramas temporales ($t$ y $t-1$) para inferir dinámica de aproximación y discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
+* <strong>Inspección visual directa</strong>: procesa secuencias de dos fotogramas temporales (<span class="arithmatex">\(t\)</span> y <span class="arithmatex">\(t-1\)</span>) para inferir dinámica de aproximación y discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
 * <strong>Compatibilidad de decodificación</strong>: ofrece soporte completo para esquemas de decodificación restringida (<code>json_schema</code>).</p>
 <hr />
 <h2 id="a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida">A1.3 Métodos para la imposición de salida estructurada y gramática restringida<a class="headerlink" href="#a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida" title="Permanent link">&para;</a></h2>
@@ -1367,7 +1367,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 * <strong>Ventajas</strong>: implementación trivial; no impone sobrecarga computacional en el motor de inferencia.
 * <strong>Limitaciones</strong>: fiabilidad imperfecta. En modelos compactos (&lt;7B parámetros), la tasa de adherencia sintáctica ronda el 70–85%, presentándose ocasionalmente truncamientos, alucinaciones de sintaxis o texto preliminar que corrompen el flujo de control.</p>
 <h3 id="2-gramaticas-libres-de-contexto-gbnf-en-llamacpp">2. Gramáticas libres de contexto (GBNF en <code>llama.cpp</code>)<a class="headerlink" href="#2-gramaticas-libres-de-contexto-gbnf-en-llamacpp" title="Permanent link">&para;</a></h3>
-<p>El motor <code>llama.cpp</code> proporciona un subsistema de decodificación guiada por gramáticas formales (<em>GGML BNF</em> o GBNF; Gerganov, 2023). En cada paso de generación autorregresiva, el motor filtra y enmascara los <em>logits</em> del vocabulario, asignando probabilidad cero ($-\infty$) a cualquier token que no cumpla con la regla de transición definida en la gramática.
+<p>El motor <code>llama.cpp</code> proporciona un subsistema de decodificación guiada por gramáticas formales (<em>GGML BNF</em> o GBNF; Gerganov, 2023). En cada paso de generación autorregresiva, el motor filtra y enmascara los <em>logits</em> del vocabulario, asignando probabilidad cero (<span class="arithmatex">\(-\infty\)</span>) a cualquier token que no cumpla con la regla de transición definida en la gramática.
 * <strong>Ventajas</strong>: garantiza matemáticamente que el 100% de los tokens emitidos respeten la estructura gramatical (e.g., sintaxis JSON perfecta).
 * <strong>Limitaciones</strong>: genera una penalización de rendimiento temporal del 10% al 30% en la velocidad de decodificación, debido a la evaluación continua de las reglas gramaticales sobre el conjunto de tokens candidatos.</p>
 <h3 id="3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance">3. Decodificación guiada basada en autómatas finitos (<em>Outlines</em>, <em>Guidance</em>, <em>llguidance</em>)<a class="headerlink" href="#3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance" title="Permanent link">&para;</a></h3>
@@ -1401,7 +1401,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <hr />
 <h2 id="a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026">A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)<a class="headerlink" href="#a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026" title="Permanent link">&para;</a></h2>
 <p>Al plantear una arquitectura agéntica basada en el esquema:</p>
-<p>$$\text{Telemetría sensorial} \longrightarrow \text{SLM / sVLM} \longrightarrow \text{Comando estructurado} \longrightarrow \text{Ejecución en AirSim} \longrightarrow \text{Recálculo}$$</p>
+<div class="arithmatex">\[\text{Telemetría sensorial} \longrightarrow \text{SLM / sVLM} \longrightarrow \text{Comando estructurado} \longrightarrow \text{Ejecución en AirSim} \longrightarrow \text{Recálculo}\]</div>
 <p>surge la interrogante fundamental sobre su <strong>novedad científica y tecnológica</strong>. </p>
 <p>Una revisión exhaustiva de la literatura especializada publicada entre 2024 y 2026 revela que <strong>el lazo de control cerrado simple impulsado por modelos de lenguaje en simuladores como AirSim ya no constituye una innovación de frontera</strong>, sino un patrón de diseño ampliamente estandarizado:</p>
 <ul>
@@ -1532,6 +1532,10 @@ No incluyas introducciones, markdown (```), ni texto posterior.
         <script src="../js/print-site.js"></script>
       
         <script src="../js/logo-link.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
     
   </body>

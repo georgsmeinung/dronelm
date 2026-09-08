@@ -442,6 +442,8 @@ async function loadMapConfig() {
     }
 }
 
+const DEFAULT_MAP_SCALE = 5.0;
+
 function applyMapConfig(mapFile) {
     currentMapFile = mapFile;
     const cfg = mapConfigs[mapFile];
@@ -449,7 +451,8 @@ function applyMapConfig(mapFile) {
         mapScale = cfg.scale;
         mapNedOffset = cfg.ned_offset ? { x: cfg.ned_offset.x, y: cfg.ned_offset.y } : { x: 0, y: 0 };
     } else {
-        // Sin config → mantener escala actual (no resetear a 2.5 por defecto)
+        mapScale = DEFAULT_MAP_SCALE;
+        mapNedOffset = { x: 0, y: 0 };
     }
     syncScaleInput();
     drawRoute();

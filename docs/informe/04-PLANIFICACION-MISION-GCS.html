@@ -1207,7 +1207,7 @@
 <ul>
 <li><strong><code>mission_id</code>:</strong> identificador único en formato <code>^[A-Z0-9_]{3,32}$</code>, validado por el schema. Identifica el escenario experimental y aparece en los nombres de carpeta de telemetría.</li>
 <li><strong><code>summary</code>:</strong> descripción textual de la intención operativa (campo opcional, no consumido por el lazo táctico).</li>
-<li><strong><code>waypoints</code>:</strong> lista ordenada de puntos de paso tridimensionales en el marco <strong>NED</strong> (<em>North-East-Down</em>): $z &lt; 0$ representa altitud sobre el punto de despegue. Cada waypoint lleva una etiqueta opcional (<code>label</code>) para identificación en la traza.</li>
+<li><strong><code>waypoints</code>:</strong> lista ordenada de puntos de paso tridimensionales en el marco <strong>NED</strong> (<em>North-East-Down</em>): <span class="arithmatex">\(z &lt; 0\)</span> representa altitud sobre el punto de despegue. Cada waypoint lleva una etiqueta opcional (<code>label</code>) para identificación en la traza.</li>
 <li><strong><code>map</code>:</strong> nombre del archivo de imagen de carta de territorio empleado por WebDCS para la visualización de la trayectoria (por defecto <code>map.png</code>).</li>
 </ul>
 <p><strong>Separación entre manifiesto y prompt táctico.</strong> El manifiesto entrega únicamente metas geométricas; el prompt del nodo deliberativo no forma parte de él porque no puede ser un texto estático: se construye dinámicamente en cada ciclo de vuelo a partir del estado percibido en ese instante. Su estructura es la siguiente:</p>
@@ -1387,6 +1387,10 @@
         <script src="js/print-site.js"></script>
       
         <script src="js/logo-link.js"></script>
+      
+        <script src="js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
     
   </body>

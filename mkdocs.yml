@@ -38,9 +38,6 @@ theme:
 extra_css:
   - css/austral.css
 
-extra_javascript:
-  - js/logo-link.js
-
 markdown_extensions:
   - toc:
       permalink: true
@@ -50,6 +47,13 @@ markdown_extensions:
   - pymdownx.superfences
   - attr_list
   - md_in_html
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - js/logo-link.js
+  - js/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 plugins:
   - search:

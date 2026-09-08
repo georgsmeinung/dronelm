@@ -1532,7 +1532,7 @@
 <p>En los nodos de control, <code>degraded_hover_node</code> es el destino de cualquier ciclo donde <code>has_evidence()</code> es <code>False</code> y el router no tiene una maniobra persistente activa — el sistema no puede decidir "avanzar" si no sabe nada del entorno.</p>
 <h2 id="93-falla-2-desalineacion-temporal-del-historial-de-frames">9.3 Falla 2 — Desalineación temporal del historial de frames<a class="headerlink" href="#93-falla-2-desalineacion-temporal-del-historial-de-frames" title="Permanent link">&para;</a></h2>
 <h3 id="931-descripcion-del-modo-de-falla">9.3.1 Descripción del modo de falla<a class="headerlink" href="#931-descripcion-del-modo-de-falla" title="Permanent link">&para;</a></h3>
-<p>El nodo deliberativo multimodal envía al VLM un historial de <code>VLM_FRAME_HISTORY_SIZE = 2</code> frames (frames $t$ y $t-1$) para que el modelo pueda estimar la dirección de movimiento comparando dos instantes temporales distintos. Esta funcionalidad depende de que los dos frames sean genuinamente distintos en el tiempo.</p>
+<p>El nodo deliberativo multimodal envía al VLM un historial de <code>VLM_FRAME_HISTORY_SIZE = 2</code> frames (frames <span class="arithmatex">\(t\)</span> y <span class="arithmatex">\(t-1\)</span>) para que el modelo pueda estimar la dirección de movimiento comparando dos instantes temporales distintos. Esta funcionalidad depende de que los dos frames sean genuinamente distintos en el tiempo.</p>
 <p>En versiones tempranas, el buffer de historial era una lista Python simple que se actualizaba sin verificación de timestamps. Dos situaciones producían frames duplicados silenciosamente:</p>
 <ol>
 <li>
@@ -1552,12 +1552,12 @@
 <p>Si la verificación falla, el prompt se adapta dinámicamente: en lugar de enviar dos frames etiquetados como <code>[t-1]</code> y <code>[t]</code>, envía un único frame etiquetado como <code>[ciclo actual]</code> con una nota explícita: "historial visual no disponible en este ciclo". Esto es más conservador pero menos peligroso que fabricar una secuencia temporal falsa.</p>
 <h2 id="94-falla-3-descalibracion-de-escala-en-el-canal-de-divergencia">9.4 Falla 3 — Descalibración de escala en el canal de divergencia<a class="headerlink" href="#94-falla-3-descalibracion-de-escala-en-el-canal-de-divergencia" title="Permanent link">&para;</a></h2>
 <h3 id="941-descripcion-del-modo-de-falla">9.4.1 Descripción del modo de falla<a class="headerlink" href="#941-descripcion-del-modo-de-falla" title="Permanent link">&para;</a></h3>
-<p>El canal de divergencia del <code>ObstacleField</code> (cap. 6, §6.7) estima $\partial u / \partial x + \partial v / \partial y$ usando <code>np.gradient()</code> sobre el campo de flujo. En versiones anteriores, el cálculo usaba gradientes de Sobel 3×3 sin el factor de normalización $1/8$ que el kernel estándar requiere para ser un estimador de derivada de primer orden en unidades de píxel-por-píxel:</p>
-<p>$$K_{\text{Sobel}} = \frac{1}{8}\begin{pmatrix} -1 &amp; 0 &amp; 1 \ -2 &amp; 0 &amp; 2 \ -1 &amp; 0 &amp; 1 \end{pmatrix}$$</p>
+<p>El canal de divergencia del <code>ObstacleField</code> (cap. 6, §6.7) estima <span class="arithmatex">\(\partial u / \partial x + \partial v / \partial y\)</span> usando <code>np.gradient()</code> sobre el campo de flujo. En versiones anteriores, el cálculo usaba gradientes de Sobel 3×3 sin el factor de normalización <span class="arithmatex">\(1/8\)</span> que el kernel estándar requiere para ser un estimador de derivada de primer orden en unidades de píxel-por-píxel:</p>
+<div class="arithmatex">\[K_{\text{Sobel}} = \frac{1}{8}\begin{pmatrix} -1 &amp; 0 &amp; 1 \\ -2 &amp; 0 &amp; 2 \\ -1 &amp; 0 &amp; 1 \end{pmatrix}\]</div>
 <p>Sin la normalización, el estimador de divergencia producía valores aproximadamente 8 veces mayores que los correctos. Con el factor de ocupación original calibrado sobre esa escala inflada, el canal de ocupación saturaba a <code>1.0</code> en condiciones de textura moderada — es decir, prácticamente siempre que hubiera cualquier gradiente de flujo en la imagen, incluso en vuelo en espacio abierto sin obstáculos cercanos.</p>
 <p>La consecuencia operativa era que el predicado disyuntivo <code>is_blocked()</code> (§6.9) estaba dominado completamente por el canal de ocupación: aunque el TTC indicara una zona segura (&gt; 4 s), la ocupación saturada votaba bloqueo. El canal de TTC calibrado quedaba efectivamente anulado.</p>
 <h3 id="942-interaccion-con-la-logica-disyuntiva">9.4.2 Interacción con la lógica disyuntiva<a class="headerlink" href="#942-interaccion-con-la-logica-disyuntiva" title="Permanent link">&para;</a></h3>
-<p>Este modo de falla ilustra un problema de diseño de predicados disyuntivos en sistemas con múltiples canales de diferente confianza. La lógica $\text{is_blocked} = (\text{occ} \geq 0.35) \lor (\text{conf} \geq 0.35 \land \text{ttc} \leq 2.5)$ asume que ambos canales están calibrados en la misma escala de confianza. Si un canal está sistemáticamente sobre-estimado, la disyunción lo convierte en el canal dominante, anulando la información del otro. El TTC, que tiene validación empírica (cap. 7), perdía toda influencia frente a una ocupación descalibrada.</p>
+<p>Este modo de falla ilustra un problema de diseño de predicados disyuntivos en sistemas con múltiples canales de diferente confianza. La lógica <span class="arithmatex">\(\text{is\_blocked} = (\text{occ} \geq 0.35) \lor (\text{conf} \geq 0.35 \land \text{ttc} \leq 2.5)\)</span> asume que ambos canales están calibrados en la misma escala de confianza. Si un canal está sistemáticamente sobre-estimado, la disyunción lo convierte en el canal dominante, anulando la información del otro. El TTC, que tiene validación empírica (cap. 7), perdía toda influencia frente a una ocupación descalibrada.</p>
 <h3 id="943-mecanismo-de-contencion">9.4.3 Mecanismo de contención<a class="headerlink" href="#943-mecanismo-de-contencion" title="Permanent link">&para;</a></h3>
 <p>La corrección fue triple:
 1. Migrar a <code>np.gradient()</code> (diferencias centradas de segundo orden, normalizadas intrínsecamente) para el cómputo de divergencia.
@@ -1628,12 +1628,12 @@
 <p>La consecuencia fue particularmente difícil de diagnosticar porque el comportamiento variaba según el historial de la sesión: un vuelo iniciado después de reiniciar AirSim se comportaba normalmente, mientras que el mismo vuelo iniciado sin reiniciar producía evasiones espurias repetidas. <a href="13-REFERENCIAS.html#ref-jansen-2023">Jansen et al. (2023)</a> documentan comportamientos similares de estado persistente en CosysAirSim como fuente de irreproducibilidad entre corridas.</p>
 <p>La corrección fue añadir <code>simFlushPersistentMarkers()</code> al inicio de cada sesión de vuelo, con un segundo vaciado de primitivas antes de iniciar la fase de captura de imágenes para el VLM.</p>
 <h3 id="963-supresion-de-angulos-de-actitud-en-la-telemetria">9.6.3 Supresión de ángulos de actitud en la telemetría<a class="headerlink" href="#963-supresion-de-angulos-de-actitud-en-la-telemetria" title="Permanent link">&para;</a></h3>
-<p>El binding <code>cosysairsim</code> usado en este proyecto (fork de AirSim con soporte UE5 — Jansen et al., 2023) no implementaba el método <code>to_eularian_angles()</code> del binding oficial de Microsoft AirSim. La llamada al método retornaba silenciosamente $(0, 0, 0)$ en lugar de lanzar <code>AttributeError</code>. El resultado era que los ángulos de pitch y roll reportados al VLM en cada prompt eran siempre <code>0.0°</code>, independientemente de la inclinación física real del vehículo.</p>
+<p>El binding <code>cosysairsim</code> usado en este proyecto (fork de AirSim con soporte UE5 — Jansen et al., 2023) no implementaba el método <code>to_eularian_angles()</code> del binding oficial de Microsoft AirSim. La llamada al método retornaba silenciosamente <span class="arithmatex">\((0, 0, 0)\)</span> en lugar de lanzar <code>AttributeError</code>. El resultado era que los ángulos de pitch y roll reportados al VLM en cada prompt eran siempre <code>0.0°</code>, independientemente de la inclinación física real del vehículo.</p>
 <p>Durante maniobras de aceleración (pitch negativo ~ −8° a −12°), descenso agresivo (pitch positivo) o giros (roll lateral), el VLM recibía la información de que el dron estaba perfectamente nivelado. La estimación de la componente de velocidad de cierre perpendicular al plano focal — que depende del pitch — era incorrecta, y la interpretación de la escena visual (la posición aparente del horizonte en la imagen) estaba desalineada con la información verbal de actitud.</p>
 <p>La corrección fue implementar la conversión directa desde el cuaternión de orientación, disponible en la telemetría de CosysAirSim, a ángulos de Euler (roll, pitch, yaw) usando las fórmulas estándar de <a href="13-REFERENCIAS.html#ref-wahba-1965">Wahba (1965)</a>, sin depender del método del binding:</p>
-<p>$$\phi = \arctan2(2(q_w q_x + q_y q_z),\ 1 - 2(q_x^2 + q_y^2))$$
+<div class="arithmatex">\[\phi = \arctan2(2(q_w q_x + q_y q_z),\ 1 - 2(q_x^2 + q_y^2))$$
 $$\theta = \arcsin(2(q_w q_y - q_z q_x))$$
-$$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))$$</p>
+$$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))\]</div>
 <p>Un test unitario verifica, contra una tabla de cuaterniones conocidos (identidad, 90° en cada eje, 45° combinado), que la conversión produce los ángulos correctos con error &lt; 0.01°.</p>
 <h2 id="97-por-que-el-sistema-seguia-funcionando-el-problema-de-la-observabilidad">9.7 Por qué el sistema seguía funcionando: el problema de la observabilidad<a class="headerlink" href="#97-por-que-el-sistema-seguia-funcionando-el-problema-de-la-observabilidad" title="Permanent link">&para;</a></h2>
 <p>Ninguno de los cinco modos de falla descritos se manifestó como un error visible en tiempo de ejecución. En todos los casos:</p>
@@ -1716,6 +1716,10 @@ $$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))$$</p>
         <script src="js/print-site.js"></script>
       
         <script src="js/logo-link.js"></script>
+      
+        <script src="js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
     
   </body>

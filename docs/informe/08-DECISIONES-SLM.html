@@ -1232,7 +1232,7 @@
 <ul>
 <li><strong>Puntos ciegos del flujo óptico</strong> (§6.1, §6.12): cuando el estimador de flujo carece de evidencia (hover, giro puro, baja textura), el <code>ObstacleField</code> entregado al modelo es esencialmente vacío. Un modelo textual no puede razonar sobre la escena sin ese resumen; un VLM puede observar directamente el fotograma y evaluar el contexto visual.</li>
 <li><strong>Semántica que el flujo no codifica</strong>: la distinción entre "árbol vs. edificio", "sombra vs. obstáculo sólido", o "calle con objetos vs. calle vacía" no está presente en el campo de divergencia. El VLM puede discriminar escenas semánticamente similares en percepción pero distintas en consecuencias de navegación.</li>
-<li><strong>Historial temporal mínimo</strong>: el campo <code>VLM_FRAME_HISTORY_SIZE = 2</code> envía los frames $t$ y $t-1$ juntos, permitiendo al modelo estimar la dirección de aproximación a partir de la diferencia visual entre frames, sin necesidad de que el flujo óptico sea confiable.</li>
+<li><strong>Historial temporal mínimo</strong>: el campo <code>VLM_FRAME_HISTORY_SIZE = 2</code> envía los frames <span class="arithmatex">\(t\)</span> y <span class="arithmatex">\(t-1\)</span> juntos, permitiendo al modelo estimar la dirección de aproximación a partir de la diferencia visual entre frames, sin necesidad de que el flujo óptico sea confiable.</li>
 </ul>
 <h3 id="812-modelo-adoptado-y-candidatos-evaluados">8.1.2 Modelo adoptado y candidatos evaluados<a class="headerlink" href="#812-modelo-adoptado-y-candidatos-evaluados" title="Permanent link">&para;</a></h3>
 <p>El modelo adoptado en la implementación definitiva es <strong>Qwen2.5-VL-3B-Instruct</strong> (cuantización Q4_K_M, ~2.0 GB de VRAM), ejecutado vía LM Studio. Combina capacidad de razonamiento simbólico, comprensión visual real de la cámara y seguimiento de instrucciones estructuradas. Los modelos candidatos evaluados durante el diseño (documentados en <code>informe/anexos/A1-EXPLORACION-SLM-GGUF.md</code>) son:</p>
@@ -1499,6 +1499,10 @@
         <script src="js/print-site.js"></script>
       
         <script src="js/logo-link.js"></script>
+      
+        <script src="js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
     
   </body>
