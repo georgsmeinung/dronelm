@@ -49,6 +49,9 @@ MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límit
 # numero de ciclo). Opt-in (default off): no todo el mundo quiere pagar el
 # costo de escritura en cada ciclo.
 FLIGHT_RECORD_VIDEO = os.getenv("FLIGHT_RECORD_VIDEO", "false").lower() == "true"
+# Opt-in: graba el viewport de UE lado a lado con la camara del drone.
+# Requiere mss + pywin32. El titulo de ventana se configura con VIEWPORT_WINDOW_TITLE.
+FLIGHT_RECORD_VIEWPORT = os.getenv("FLIGHT_RECORD_VIEWPORT", "false").lower() == "true"
 
 
 def _print_state(state: DroneState, cycle_num: int = 0) -> None:
@@ -253,16 +256,23 @@ def main() -> None:
               f"(y {flight_logger.csv_path} para inspeccion en planilla).")
 
     video_recorder = None
+    viewport_capture = None
     if FLIGHT_RECORD_VIDEO and flight_logger is not None:
-        from src.logging import FlightVideoRecorder
+        from src.logging import FlightVideoRecorder, ViewportCapture
 
         video_path = flight_logger.out_path.with_suffix(".webm")
+        with_vp = FLIGHT_RECORD_VIEWPORT
         video_recorder = FlightVideoRecorder(
             str(video_path),
             frame_size=(airsim_client.frame_width, airsim_client.frame_height),
             fps=DEFAULT_LOOP_HZ,
+            with_viewport=with_vp,
         )
-        print(f"[FlightVideoRecorder] Grabando video de esta corrida en {video_path}.")
+        if with_vp:
+            viewport_capture = ViewportCapture()
+            print(f"[FlightVideoRecorder] Grabando video split-screen (drone + viewport UE) en {video_path}.")
+        else:
+            print(f"[FlightVideoRecorder] Grabando video de esta corrida en {video_path}.")
 
     cycle_count = 0
     mission_start_time = time.time()
@@ -472,7 +482,8 @@ def main() -> None:
                     )
 
                 if video_recorder is not None:
-                    video_recorder.write_frame(annotated_frame)
+                    vp_frame = viewport_capture.capture() if viewport_capture is not None else None
+                    video_recorder.write_frame(annotated_frame, viewport_frame=vp_frame)
 
             if waypoint_tracker.is_completed and waypoints_list:
                 print("\n[Misión] ¡Misión completada exitosamente! Iniciando secuencia de aterrizaje autónomo...")
@@ -507,6 +518,8 @@ def main() -> None:
                 summary["termination_reason"] = mission_termination_reason
                 print(f"[Misión] Terminada: {mission_termination_reason}")
 
+        if viewport_capture is not None:
+            viewport_capture.close()
         if video_recorder is not None:
             n_frames = video_recorder.close()
             print(f"[FlightVideoRecorder] Video cerrado ({n_frames} frames a {DEFAULT_LOOP_HZ:.1f} fps).")

@@ -25,7 +25,7 @@ los notebooks deben aceptar `RUNS_DIR` como variable de entorno o parámetro de 
 
 ## NB1 — Pipeline de análisis estadístico (reproduce `§11`)
 
-**Archivo destino:** `airsim-loop/notebooks/nb1_analisis_estadistico.ipynb`
+**Archivo destino:** `airsim-loop/analisis_estadistico_resultados.ipynb`
 
 **Propósito:** notebook ejecutable que replique de forma transparente y reproducible todas las
 tablas y cifras de `informe/11-RESULTADOS.md`, mostrando cada cálculo con código visible.
@@ -126,7 +126,7 @@ pandas >= 2.0, numpy, scipy, matplotlib, seaborn, jupyter
 
 ## NB2 — Exploración interactiva de logs de auditoría
 
-**Archivo destino:** `airsim-loop/notebooks/nb2_auditoria.ipynb`
+**Archivo destino:** `airsim-loop/auditoria_interactiva_telemetria.ipynb`
 
 **Propósito:** notebook para cargar un run completo (un `.jsonl` o su `.csv` paralelo),
 visualizar la traza temporal de cada variable y reproducir lo que muestra `viewer.html`
@@ -211,7 +211,7 @@ pandas, numpy, matplotlib, json, pathlib, ipywidgets (opcional para slider)
 
 ## NB3 — Traza didáctica del grafo LangGraph (ciclo a ciclo)
 
-**Archivo destino:** `airsim-loop/notebooks/nb3_langgraph_traza.ipynb`
+**Archivo destino:** `airsim-loop/explicacion_nodos_langgraph.ipynb`
 
 **Propósito:** notebook pedagógico que toma una fila del CSV de auditoría y reproduce
 exactamente qué nodo del `StateGraph` se activaría en ese ciclo, con qué estado de entrada

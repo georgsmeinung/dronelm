@@ -52,12 +52,7 @@ def run_experiment(
     Returns:
         (success, summary_dict)
     """
-    import platform
-    project_root = Path(__file__).resolve().parent.parent
-    if platform.system() == "Windows":
-        python_exe = str(project_root / ".venv" / "Scripts" / "python.exe")
-    else:
-        python_exe = str(project_root / ".venv" / "bin" / "python")
+    python_exe = sys.executable  # usa el interprete activo (conda, venv, o sistema)
 
     runner_path = str(Path(__file__).resolve().parent / "runner.py")
     cmd = [

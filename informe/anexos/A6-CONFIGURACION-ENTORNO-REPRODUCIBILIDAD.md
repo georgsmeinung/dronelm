@@ -166,6 +166,14 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `OBSTACLE_MIN_CONFIDENCE` | `0.15` | Piso de píxeles válidos para que una celda participe en la votación. |
 | `OBSTACLE_MIN_CONFIDENCE_TTC`| `0.35` | Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación. |
 
+### 6. Grabación de Video y Viewport
+| Variable | Valor nominal | Default si ausente | Justificación y efecto |
+|---|---|---|---|
+| `FLIGHT_RECORD_VIDEO` | `true` | `false` | Habilita la grabación del video de auditoría `.webm` (VP8) por corrida. Desactivar en lotes *headless* elimina la escritura de un frame por ciclo a disco, reduciendo la carga de CPU en ≈ 30 %. |
+| `FLIGHT_RECORD_VIEWPORT` | `false` | `false` | Activa el modo *split-screen*: el video resultante tiene doble ancho horizontal, con la cámara del drone a la izquierda y el viewport de Unreal Engine Editor a la derecha. Requiere las dependencias adicionales `mss` y `pywin32`. Si alguna de las dos no está instalada, o la ventana de UE no es visible en pantalla, el panel derecho se rellena con negro y la grabación continúa sin interrupción (degradación silenciosa). Debe desactivarse en corridas *batch* o *headless* donde el editor no está en pantalla. |
+| `VIEWPORT_WINDOW_TITLE` | `"UnrealEditor"` | `"UnrealEditor"` | Subcadena del título de la ventana de Unreal Engine que utiliza `ViewportCapture` para localizar la ventana. La comparación ignora mayúsculas y minúsculas. Se selecciona la primera ventana visible que contenga la subcadena y tenga dimensiones superiores a $100 \times 100\text{ px}$. En UE5 el título suele seguir el patrón `"UnrealEditor – <NombreProyecto>"`. |
+| `VIEWPORT_REGION` | *(vacío)* | *(detección automática)* | Coordenadas absolutas de pantalla en píxeles para capturar una región fija, con formato `left,top,right,bottom`. Cuando se define, `ViewportCapture` omite la búsqueda por título y captura exactamente esa región, lo que permite recortar el *chrome* del editor y mostrar únicamente el panel de viewport interior. Ejemplo para un viewport que ocupa la mitad derecha de un monitor de $1920 \times 1080\text{ px}$: `VIEWPORT_REGION=960,0,1920,1080`. Si está vacío, la localización se delega a `VIEWPORT_WINDOW_TITLE`. |
+
 ---
 
 ## A6.4 Estructura del repositorio y artefactos de corrida (`airsim-runs/`)
