@@ -3522,30 +3522,30 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </ol>
 <p>Ninguna de estas limitaciones invalida el diseño para las preguntas que sí responde; todas acotan el alcance de lo que puede afirmarse a partir de él.</p></section><section class="print-page" id="11-resultados" heading-number="12"><h1 id="11-resultados-11-resultados-comparativos-slm-vs-fsm">11. Resultados comparativos SLM vs. FSM<a class="headerlink" href="#11-resultados-11-resultados-comparativos-slm-vs-fsm" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Estado (2026-09-07):</strong> corridas piloto de Tier 0, Tier 1 base y Tier 2 base completadas (1 semilla, ilustrativo).
-El lote estadístico completo (≥5 semillas, análisis Mann-Whitney) está pendiente.
-Las tablas de esta sección presentan datos reales de las corridas piloto en §11.1 y marcadores de
-posición para el lote completo en §11.2–11.4.</p>
-<p><strong>Corte de datos:</strong> todos los resultados de esta sección provienen de corridas con <code>code_version</code>
-posterior al 2026-09-03 — fecha de corrección de dos bugs que afectaban directamente la percepción
-del VLM (canales R/B invertidos y marcadores de debug en la captura). Las corridas anteriores a esa
-fecha no son comparables para el brazo <code>slm</code> y no se usan en el análisis.</p>
+<p><strong>Estado (2026-09-08):</strong> lote base completo — 45 corridas (5 semillas × 3 brazos × 3 tiers), todas con <code>success = True</code> y 0 colisiones.
+Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos.
+Las tablas de §11.1–11.3 presentan medias sobre las 5 semillas del lote estadístico.
+Las pruebas extendidas con obstrucción real (§5 del plan de pruebas) quedan pendientes.</p>
+<p><strong>Corte de datos:</strong> todos los resultados provienen de corridas con <code>code_version</code> en la familia
+de commits posterior al 2026-09-03. Las variaciones de <code>code_version</code> dentro del Lote B (Tier 1)
+reflejan commits de documentación realizados durante la ejecución del batch (~1.5 h); ninguno de
+esos commits tocó <code>airsim-loop/src/</code>. El flight loop es idéntico entre las 5 semillas de cada brazo.</p>
 </blockquote>
 <hr />
-<h2 id="11-resultados-111-resultados-piloto-1-semilla-ilustrativo">11.1 Resultados piloto (1 semilla, ilustrativo)<a class="headerlink" href="#11-resultados-111-resultados-piloto-1-semilla-ilustrativo" title="Permanent link">&para;</a></h2>
-<p>Estas corridas cumplen el criterio de arranque del diseño experimental (<code>success = True</code>, 0 colisiones)
-y sirven de referencia cualitativa antes del análisis estadístico completo.
-Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos (default de producción).</p>
+<h2 id="11-resultados-111-resultados-del-lote-base-5-semillas">11.1 Resultados del lote base (5 semillas)<a class="headerlink" href="#11-resultados-111-resultados-del-lote-base-5-semillas" title="Permanent link">&para;</a></h2>
+<p>Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos. Las celdas muestran media ± desviación
+estándar sobre las 5 semillas independientes. Tasa de éxito: 5/5 y 0 colisiones en los 45 runs.</p>
 <h3 id="11-resultados-tier-0-minisim_clear-minisim-craterpng">Tier 0 — <code>minisim_clear</code> · MiniSim (crater.png)<a class="headerlink" href="#11-resultados-tier-0-minisim_clear-minisim-craterpng" title="Permanent link">&para;</a></h3>
-<p>Escenario: 3 waypoints en L (~191m), altitud −10m, ambiente despejado. Fecha: 2026-09-07.</p>
+<p>Escenario: 3 waypoints en L (~180 m), altitud −10 m, ambiente despejado.</p>
 <table>
 <thead>
 <tr>
 <th>Brazo</th>
 <th>Éxito</th>
-<th>Ciclos</th>
-<th>Duración (s)</th>
-<th>Distancia (m)</th>
+<th>Duración media (s)</th>
+<th>σ (s)</th>
+<th>Dist. media (m)</th>
+<th>σ (m)</th>
 <th>Colisiones</th>
 <th>Invoc. SLM</th>
 <th>Deliberación</th>
@@ -3557,36 +3557,39 @@ Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos (default de p
 <tbody>
 <tr>
 <td><code>slm</code></td>
-<td>✅</td>
-<td>1151</td>
-<td>235</td>
-<td>191.7</td>
+<td>5/5 ✅</td>
+<td><strong>164.2</strong></td>
+<td>9.4</td>
+<td>185.6</td>
+<td>1.6</td>
 <td>0</td>
-<td>80</td>
-<td>6.95%</td>
-<td>1.25%</td>
-<td>1</td>
-<td>100%</td>
+<td>49.6</td>
+<td>6.5%</td>
+<td>3.2%</td>
+<td>0</td>
+<td>—</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
-<td>✅</td>
-<td>1031</td>
-<td>208</td>
-<td>224.4</td>
+<td>5/5 ✅</td>
+<td>174.2</td>
+<td>38.7</td>
+<td>218.9</td>
+<td>15.3</td>
 <td>0</td>
 <td>—</td>
 <td>—</td>
 <td>—</td>
-<td>2</td>
+<td>1.4</td>
 <td>100%</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
-<td>✅</td>
-<td>414</td>
-<td>84</td>
+<td>5/5 ✅</td>
+<td>74.7</td>
+<td>0.4</td>
 <td>183.6</td>
+<td>0.2</td>
 <td>0</td>
 <td>—</td>
 <td>—</td>
@@ -3596,22 +3599,25 @@ Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos (default de p
 </tr>
 </tbody>
 </table>
-<p><em>Dist. mín. al obstáculo:</em> <code>slm</code> 9.74m · <code>fsm</code> 6.38m · <code>reactive</code> 9.06m</p>
-<p><strong>Observación:</strong> En un ambiente despejado la diferencia entre brazos es de velocidad pura.
-<code>reactive</code> completa en 84s (sin deliberar); <code>slm</code> tarda 2.8× más debido a las 80 invocaciones
-al VLM, aunque el trayecto real es el más corto (191.7m vs 224.4m del <code>fsm</code>).</p>
+<p><em>Dist. mín. al obstáculo (media):</em> <code>slm</code> 6.5 m · <code>fsm</code> 8.0 m · <code>reactive</code> 7.9 m</p>
+<p><strong>Ratio <code>slm</code>/<code>reactive</code>:</strong> 2.20× · <strong>Ratio <code>fsm</code>/<code>reactive</code>:</strong> 2.33×</p>
+<p><strong>Observación:</strong> En ambiente despejado la diferencia entre brazos es de velocidad pura. <code>reactive</code>
+completa en 74.7 s (sin deliberar); <code>slm</code> tarda 2.20× más por sus 49.6 invocaciones promedio al
+VLM. La alta varianza del <code>fsm</code> (σ=38.7 s) refleja la variabilidad en el número de deadlocks por
+corrida (0–3, media 1.4), todos resueltos por <code>deep_vlm</code>. La varianza del <code>reactive</code> es
+prácticamente nula (σ=0.4 s), confirmando que sin deliberación el brazo es determinista.</p>
 <hr />
 <h3 id="11-resultados-tier-1-townsim_clear-townsim-townsim_calibpng">Tier 1 — <code>townsim_clear</code> · TownSim (townsim_calib.png)<a class="headerlink" href="#11-resultados-tier-1-townsim_clear-townsim-townsim_calibpng" title="Permanent link">&para;</a></h3>
-<p>Escenario: perímetro completo del complejo, 6 WPs, ~640m, altitud de tránsito −30m (sobre los
-edificios). Fecha: 2026-09-07.</p>
+<p>Escenario: perímetro completo del complejo, 6 WPs, ~626 m, altitud de tránsito −30 m.</p>
 <table>
 <thead>
 <tr>
 <th>Brazo</th>
 <th>Éxito</th>
-<th>Ciclos</th>
-<th>Duración (s)</th>
-<th>Distancia (m)</th>
+<th>Duración media (s)</th>
+<th>σ (s)</th>
+<th>Dist. media (m)</th>
+<th>σ (m)</th>
 <th>Colisiones</th>
 <th>Invoc. SLM</th>
 <th>Deliberación</th>
@@ -3623,36 +3629,39 @@ edificios). Fecha: 2026-09-07.</p>
 <tbody>
 <tr>
 <td><code>slm</code></td>
-<td>✅</td>
-<td>1337</td>
-<td>311</td>
-<td>632.3</td>
+<td>5/5 ✅</td>
+<td><strong>296.0</strong></td>
+<td>12.8</td>
+<td>624.4</td>
+<td>6.9</td>
 <td>0</td>
-<td>11</td>
-<td>0.82%</td>
-<td>0%</td>
-<td>3</td>
+<td>9.6</td>
+<td>0.8%</td>
+<td>2.2%</td>
+<td>2.6</td>
 <td>100%</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
-<td>✅</td>
-<td>1537</td>
-<td>347</td>
-<td>652.3</td>
+<td>5/5 ✅</td>
+<td>329.5</td>
+<td>46.0</td>
+<td>637.3</td>
+<td>15.8</td>
 <td>0</td>
 <td>—</td>
 <td>—</td>
 <td>—</td>
-<td>5</td>
+<td>3.8</td>
 <td>100%</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
-<td>✅</td>
-<td>1196</td>
-<td>266</td>
-<td>639.0</td>
+<td>5/5 ✅</td>
+<td>259.7</td>
+<td>3.1</td>
+<td>626.2</td>
+<td>2.2</td>
 <td>0</td>
 <td>—</td>
 <td>—</td>
@@ -3662,26 +3671,27 @@ edificios). Fecha: 2026-09-07.</p>
 </tr>
 </tbody>
 </table>
-<p><em>Dist. mín. al obstáculo:</em> <code>slm</code> 0.004m · <code>fsm</code> 7.89m · <code>reactive</code> 9.51m</p>
-<p><strong>Observación:</strong> La tasa de deliberación del <code>slm</code> bajó de 15.4% (corridas pre-fix de agosto) a
-0.82% — reducción de ×19, atribuible al avance cauteloso durante la espera del VLM (elimina el
-bucle mecánico de baja confianza) y al fix de colores R/B (reduce falsas alarmas de percepción).
-Con sólo 11 invocaciones sobre 1337 ciclos, el brazo <code>slm</code> es el más rápido de los tres en este
-escenario. El <code>fsm</code> acumula 5 deadlocks (todos resueltos por escaneo profundo); el <code>reactive</code>, 0.
-La distancia mínima al obstáculo del <code>slm</code> (0.004m) es un artefacto del spawn conocido (ciclo
-inicial, colisión estática con el suelo), no una aproximación peligrosa en vuelo.</p>
+<p><em>Dist. mín. al obstáculo (media):</em> <code>slm</code> 8.5 m · <code>fsm</code> 8.8 m · <code>reactive</code> 13.9 m</p>
+<p><strong>Ratio <code>slm</code>/<code>reactive</code>:</strong> 1.14× · <strong>Ratio <code>fsm</code>/<code>reactive</code>:</strong> 1.27×</p>
+<p><strong>Observación:</strong> La longitud de la ruta (~626 m vs. ~184 m en Tier 0) diluye el overhead por
+invocación: con solo 9.6 invocaciones promedio sobre ~4 500 ciclos, la tasa de deliberación cae a
+0.8%. El <code>slm</code> sigue siendo más lento que el <code>reactive</code> (1.14×), pero la diferencia se redujo a
+36 s de promedio. El <code>fsm</code> acumula más deadlocks (3.8 vs. 2.6 del <code>slm</code>) y presenta la mayor
+varianza (σ=46 s), incluyendo una corrida de 406 s por un bloqueo prolongado. El <code>reactive</code> no
+registra deadlocks y tiene σ=3.1 s, su varianza residual proviene del jitter de la física de AirSim.</p>
 <hr />
 <h3 id="11-resultados-tier-2-citysim_clear-citysim-citysim_calibpng">Tier 2 — <code>citysim_clear</code> · CitySim (citysim_calib.png)<a class="headerlink" href="#11-resultados-tier-2-citysim_clear-citysim-citysim_calibpng" title="Permanent link">&para;</a></h3>
-<p>Escenario: perímetro de una manzana del grid regular, 7 WPs, ~430m, altitud de tránsito −70m
-(climb-first: WP_1→WP_2 sube vertical puro antes de mover en horizontal). Fecha: 2026-09-07.</p>
+<p>Escenario: perímetro de una manzana del grid regular, 4 WPs, ~431 m, altitud de tránsito variable
+(climb desde −10 m hasta −50 m, patrón climb-first).</p>
 <table>
 <thead>
 <tr>
 <th>Brazo</th>
 <th>Éxito</th>
-<th>Ciclos</th>
-<th>Duración (s)</th>
-<th>Distancia (m)</th>
+<th>Duración media (s)</th>
+<th>σ (s)</th>
+<th>Dist. media (m)</th>
+<th>σ (m)</th>
 <th>Colisiones</th>
 <th>Invoc. SLM</th>
 <th>Deliberación</th>
@@ -3693,36 +3703,39 @@ inicial, colisión estática con el suelo), no una aproximación peligrosa en vu
 <tbody>
 <tr>
 <td><code>slm</code></td>
-<td>✅</td>
-<td>628</td>
-<td>174</td>
-<td>427.2</td>
+<td>5/5 ✅</td>
+<td><strong>175.5</strong></td>
+<td>3.2</td>
+<td>427.4</td>
+<td>1.0</td>
 <td>0</td>
-<td>5</td>
-<td>0.80%</td>
+<td>2.2</td>
+<td>0.3%</td>
 <td>0%</td>
 <td>0</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
-<td>✅</td>
-<td>641</td>
-<td>182</td>
-<td>447.2</td>
+<td>5/5 ✅</td>
+<td>187.7</td>
+<td>20.9</td>
+<td>434.9</td>
+<td>3.8</td>
 <td>0</td>
 <td>—</td>
 <td>—</td>
 <td>—</td>
-<td>0</td>
-<td>—</td>
+<td>0.8</td>
+<td>100%</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
-<td>✅</td>
-<td>541</td>
-<td>159</td>
-<td>431.2</td>
+<td>5/5 ✅</td>
+<td>165.2</td>
+<td>0.2</td>
+<td>431.0</td>
+<td>0.5</td>
 <td>0</td>
 <td>—</td>
 <td>—</td>
@@ -3732,67 +3745,68 @@ inicial, colisión estática con el suelo), no una aproximación peligrosa en vu
 </tr>
 </tbody>
 </table>
-<p><em>Dist. mín. al obstáculo:</em> <code>slm</code> 0.77m · <code>fsm</code> 11.0m · <code>reactive</code> 9.43m</p>
-<p><strong>Observación:</strong> Los tres brazos completan el perímetro sin colisiones ni deadlocks — el escenario
-base a −70m está por encima de la línea de tejados de CitySim. La arquitectura climb-first
-(near_vertical fix, 2026-09-07) evita el problema de la primera corrida (z=-50m, rampa diagonal
-que atravesaba edificios). Con 0 deadlocks en los tres brazos, <code>citysim_clear</code> confirma el mismo
-rol que <code>minisim_clear</code> y <code>townsim_clear</code>: escenario de control a altitud de tránsito libre,
-cota inferior para el análisis del brazo <code>slm</code> en Tier 2.
-La dist. mín. del <code>slm</code> (0.77m) es probable artefacto del segmento de climb cerca del spawn;
-no se registró ninguna evasión activa durante el vuelo horizontal.</p>
+<p><em>Dist. mín. al obstáculo (media):</em> <code>slm</code> 9.4 m · <code>fsm</code> 10.0 m · <code>reactive</code> 10.4 m</p>
+<p><strong>Ratio <code>slm</code>/<code>reactive</code>:</strong> 1.06× · <strong>Ratio <code>fsm</code>/<code>reactive</code>:</strong> 1.14×</p>
+<p><strong>Observación:</strong> Con solo 2.2 invocaciones promedio al VLM y tasa de deliberación de 0.3%, el
+overhead del <code>slm</code> es marginal (10.3 s sobre 165 s de base). El <code>fsm</code> presenta dos corridas con
+deadlock (seeds 4 y 5, 212 s y 208 s) que elevan la media y σ. El <code>reactive</code> es virtualmente
+determinista (σ=0.2 s). Los tres brazos completan sin colisiones, confirmando que la altitud de
+crucero está por encima de la línea de tejados en este escenario de control.</p>
 <hr />
 <h2 id="11-resultados-112-tabla-de-resultados-por-brazo-y-escenario">11.2 Tabla de resultados por brazo y escenario<a class="headerlink" href="#11-resultados-112-tabla-de-resultados-por-brazo-y-escenario" title="Permanent link">&para;</a></h2>
-<p>Datos de corridas piloto (seed=1). La columna "DistMin" es el valor observado en la corrida única;
-el percentil p5 se calculará sobre ≥5 semillas en el lote estadístico completo.
-Las filas marcadas <strong>[pendiente]</strong> corresponden a condiciones no corridas aún.</p>
+<p>Media sobre 5 semillas. Col./km = 0 en los tres tiers (0 colisiones en 45 corridas).
+DistMin = media de la distancia mínima al obstáculo por corrida.</p>
 <table>
 <thead>
 <tr>
 <th>Brazo</th>
 <th>Tier / Escenario</th>
-<th>Éxito (1 sem.)</th>
+<th>Éxito</th>
 <th>Col./km</th>
 <th>DistMin (m)</th>
 <th>Tiempo (s)</th>
 <th>Deliberación</th>
 <th>Fallback SLM</th>
 <th>Res. Atasco VLM</th>
+<th>Ratio vs <code>reactive</code></th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>slm</code></td>
 <td>Tier 0 (<code>minisim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>9.74</td>
-<td>235</td>
-<td>6.95%</td>
-<td>1.25%</td>
-<td>100% (1/1)</td>
+<td>6.5</td>
+<td>164.2 ± 9.4</td>
+<td>6.5%</td>
+<td>3.2%</td>
+<td>— (0 deadlocks)</td>
+<td><strong>2.20×</strong></td>
 </tr>
 <tr>
 <td><code>slm</code></td>
 <td>Tier 1 (<code>townsim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>0.004*</td>
-<td>311</td>
-<td>0.82%</td>
-<td>0%</td>
-<td>100% (3/3)</td>
+<td>8.5</td>
+<td>296.0 ± 12.8</td>
+<td>0.8%</td>
+<td>2.2%</td>
+<td>100% (2.6/corrida)</td>
+<td><strong>1.14×</strong></td>
 </tr>
 <tr>
 <td><code>slm</code></td>
 <td>Tier 1 (<code>townsim_ini</code>)</td>
-<td>[pendiente]</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0/5 ⛔ timeout</td>
+<td>0</td>
+<td>0.21</td>
+<td>900 (límite)</td>
+<td>1.4%</td>
+<td>0%</td>
+<td>100% (20.2/corrida)</td>
+<td>—</td>
 </tr>
 <tr>
 <td><code>slm</code></td>
@@ -3804,22 +3818,25 @@ Las filas marcadas <strong>[pendiente]</strong> corresponden a condiciones no co
 <td></td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
 <tr>
 <td><code>slm</code></td>
 <td>Tier 2 (<code>citysim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>0.77†</td>
-<td>174</td>
-<td>0.80%</td>
+<td>9.4</td>
+<td>175.5 ± 3.2</td>
+<td>0.3%</td>
 <td>0%</td>
 <td>— (0 deadlocks)</td>
+<td><strong>1.06×</strong></td>
 </tr>
 <tr>
 <td><code>slm</code></td>
 <td>Tier 2 (<code>citymap_pilot</code>)</td>
 <td>[pendiente]</td>
+<td></td>
 <td></td>
 <td></td>
 <td></td>
@@ -3830,35 +3847,38 @@ Las filas marcadas <strong>[pendiente]</strong> corresponden a condiciones no co
 <tr>
 <td><code>fsm</code></td>
 <td>Tier 0 (<code>minisim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>6.38</td>
-<td>208</td>
+<td>8.0</td>
+<td>174.2 ± 38.7</td>
 <td>—</td>
 <td>—</td>
-<td>100% (2/2)</td>
+<td>100% (1.4/corrida)</td>
+<td>2.33×</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
 <td>Tier 1 (<code>townsim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>7.89</td>
-<td>347</td>
+<td>8.8</td>
+<td>329.5 ± 46.0</td>
 <td>—</td>
 <td>—</td>
-<td>100% (5/5)</td>
+<td>100% (3.8/corrida)</td>
+<td>1.27×</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
 <td>Tier 1 (<code>townsim_ini</code>)</td>
-<td>[pendiente]</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0/5 ⛔ timeout</td>
+<td>0</td>
+<td>0.17</td>
+<td>900 (límite)</td>
+<td>—</td>
+<td>—</td>
+<td>100% (24.0/corrida)</td>
+<td>—</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
@@ -3870,22 +3890,25 @@ Las filas marcadas <strong>[pendiente]</strong> corresponden a condiciones no co
 <td></td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
 <td>Tier 2 (<code>citysim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>11.0</td>
-<td>182</td>
+<td>10.0</td>
+<td>187.7 ± 20.9</td>
 <td>—</td>
 <td>—</td>
-<td>— (0 deadlocks)</td>
+<td>100% (0.8/corrida)</td>
+<td>1.14×</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
 <td>Tier 2 (<code>citymap_pilot</code>)</td>
 <td>[pendiente]</td>
+<td></td>
 <td></td>
 <td></td>
 <td></td>
@@ -3896,35 +3919,38 @@ Las filas marcadas <strong>[pendiente]</strong> corresponden a condiciones no co
 <tr>
 <td><code>reactive</code></td>
 <td>Tier 0 (<code>minisim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>9.06</td>
-<td>84</td>
+<td>7.9</td>
+<td>74.7 ± 0.4</td>
 <td>—</td>
 <td>—</td>
 <td>—</td>
+<td>1.00×</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
 <td>Tier 1 (<code>townsim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>9.51</td>
-<td>266</td>
+<td>13.9</td>
+<td>259.7 ± 3.1</td>
 <td>—</td>
 <td>—</td>
 <td>—</td>
+<td>1.00×</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
 <td>Tier 1 (<code>townsim_ini</code>)</td>
-<td>[pendiente]</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0/5 ⛔ timeout</td>
+<td>0</td>
+<td>0.44</td>
+<td>900 (límite)</td>
+<td>—</td>
+<td>—</td>
+<td>— (0 deadlocks)</td>
+<td>—</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
@@ -3936,22 +3962,25 @@ Las filas marcadas <strong>[pendiente]</strong> corresponden a condiciones no co
 <td></td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
 <td>Tier 2 (<code>citysim_clear</code>)</td>
-<td>1/1 ✅</td>
+<td>5/5 ✅</td>
 <td>0</td>
-<td>9.43</td>
-<td>159</td>
+<td>10.4</td>
+<td>165.2 ± 0.2</td>
 <td>—</td>
 <td>—</td>
 <td>—</td>
+<td>1.00×</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
 <td>Tier 2 (<code>citymap_pilot</code>)</td>
 <td>[pendiente]</td>
+<td></td>
 <td></td>
 <td></td>
 <td></td>
@@ -3961,163 +3990,352 @@ Las filas marcadas <strong>[pendiente]</strong> corresponden a condiciones no co
 </tr>
 </tbody>
 </table>
-<p>* DistMin Tier 1 <code>slm</code> = 0.004m: artefacto del ciclo de spawn (contacto estático con suelo), no aproximación en vuelo.
-† DistMin Tier 2 <code>slm</code> = 0.77m: probable artefacto del segmento climb-first cerca del spawn; sin evasión activa registrada en vuelo horizontal.</p>
 <hr />
-<h2 id="11-resultados-113-observaciones-preliminares-y-marco-para-el-analisis-estadistico">11.3 Observaciones preliminares y marco para el análisis estadístico<a class="headerlink" href="#11-resultados-113-observaciones-preliminares-y-marco-para-el-analisis-estadistico" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>Nota:</strong> con 1 semilla por celda no es posible ejecutar pruebas de significancia estadística.
-Esta sección presenta las tendencias observadas en los datos piloto y el diseño del análisis
-que se realizará sobre el lote estadístico completo (≥5 semillas por celda).</p>
-</blockquote>
-<h3 id="11-resultados-1131-tendencias-en-los-datos-piloto">11.3.1 Tendencias en los datos piloto<a class="headerlink" href="#11-resultados-1131-tendencias-en-los-datos-piloto" title="Permanent link">&para;</a></h3>
-<p>Los tres escenarios ejecutados hasta la fecha son escenarios de <strong>control a altitud de tránsito
-libre</strong>: la ruta no cruza ningún obstáculo en la dirección de vuelo horizontal — los edificios
-quedan por debajo del plano de crucero (−30m en Tier 1, −70m en Tier 2). En esta configuración,
-los datos piloto muestran un patrón consistente en los tres tiers:</p>
+<h2 id="11-resultados-113-analisis-estadistico-del-lote-base">11.3 Análisis estadístico del lote base<a class="headerlink" href="#11-resultados-113-analisis-estadistico-del-lote-base" title="Permanent link">&para;</a></h2>
+<h3 id="11-resultados-1131-tabla-de-ratios-de-tiempo-de-mision-h2">11.3.1 Tabla de ratios de tiempo de misión (H2)<a class="headerlink" href="#11-resultados-1131-tabla-de-ratios-de-tiempo-de-mision-h2" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
 <th>Escenario</th>
-<th>Tiempo <code>reactive</code></th>
-<th>Tiempo <code>slm</code></th>
+<th>Tiempo <code>reactive</code> (s)</th>
+<th>Tiempo <code>slm</code> (s)</th>
 <th>Ratio <code>slm</code>/<code>reactive</code></th>
-<th>Tiempo <code>fsm</code></th>
+<th>Tiempo <code>fsm</code> (s)</th>
 <th>Ratio <code>fsm</code>/<code>reactive</code></th>
+<th>Invoc. VLM (<code>slm</code>)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Tier 0 <code>minisim_clear</code></td>
-<td>84s</td>
-<td>235s</td>
-<td><strong>2.8×</strong></td>
-<td>208s</td>
-<td>2.5×</td>
+<td>74.7 ± 0.4</td>
+<td>164.2 ± 9.4</td>
+<td><strong>2.20×</strong></td>
+<td>174.2 ± 38.7</td>
+<td>2.33×</td>
+<td>49.6</td>
 </tr>
 <tr>
 <td>Tier 1 <code>townsim_clear</code></td>
-<td>266s</td>
-<td>311s</td>
-<td><strong>1.17×</strong></td>
-<td>347s</td>
-<td>1.30×</td>
+<td>259.7 ± 3.1</td>
+<td>296.0 ± 12.8</td>
+<td><strong>1.14×</strong></td>
+<td>329.5 ± 46.0</td>
+<td>1.27×</td>
+<td>9.6</td>
 </tr>
 <tr>
 <td>Tier 2 <code>citysim_clear</code></td>
-<td>159s</td>
-<td>174s</td>
-<td><strong>1.09×</strong></td>
-<td>182s</td>
+<td>165.2 ± 0.2</td>
+<td>175.5 ± 3.2</td>
+<td><strong>1.06×</strong></td>
+<td>187.7 ± 20.9</td>
 <td>1.14×</td>
+<td>2.2</td>
 </tr>
 </tbody>
 </table>
-<p>El ratio <code>slm</code>/<code>reactive</code> decrece con la longitud de la ruta: en Tier 0 (~191m), la latencia fija
-del VLM (~2.9s por invocación × 80 invocaciones) domina el tiempo total; en Tier 2 (~430m), con
-solo 5 invocaciones y avance cauteloso durante la espera, el overhead es marginal. Esta relación
-es consistente con la hipótesis de que el costo del brazo <code>slm</code> no es lineal en la distancia,
-sino principalmente en la frecuencia de deliberación.</p>
-<p>Una segunda tendencia es la diferencia en distancia recorrida:</p>
+<p>El ratio <code>slm</code>/<code>reactive</code> decrece monotónicamente con la longitud de la ruta (y con la distancia
+por invocación VLM): 2.20× → 1.14× → 1.06×. Esto es consistente con H2: el costo temporal del
+brazo <code>slm</code> no es lineal en la distancia sino en la frecuencia de deliberación.</p>
+<h3 id="11-resultados-1132-prueba-u-de-mann-whitney-y-cliffs-delta">11.3.2 Prueba U de Mann-Whitney y Cliff's Delta<a class="headerlink" href="#11-resultados-1132-prueba-u-de-mann-whitney-y-cliffs-delta" title="Permanent link">&para;</a></h3>
+<p>Métrica: tiempo de misión (<code>duration_s</code>) en corridas con <code>success = True</code> (todas las corridas del
+lote base). Prueba bilateral. Corrección de Bonferroni: 18 comparaciones previstas
+(3 pares × 6 escenarios, incluyendo extendidos); umbral ajustado α = 0.05/18 ≈ 0.0028.</p>
 <table>
 <thead>
 <tr>
+<th>Comparación</th>
 <th>Escenario</th>
-<th>Distancia <code>slm</code></th>
-<th>Distancia <code>fsm</code></th>
-<th>Δ</th>
+<th>U</th>
+<th>z</th>
+<th>p</th>
+<th>p (Bonf.)</th>
+<th>Cliff's δ</th>
+<th>Significancia</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Tier 0</td>
-<td>191.7m</td>
-<td>224.4m</td>
-<td>−32.7m (−15%)</td>
+<td><code>slm</code> vs <code>reactive</code></td>
+<td>Tier 0 <code>minisim_clear</code></td>
+<td>25</td>
+<td>2.61</td>
+<td>0.009</td>
+<td>0.162</td>
+<td><strong>+1.00</strong></td>
+<td>* (no Bonf.)</td>
 </tr>
 <tr>
-<td>Tier 1</td>
-<td>632.3m</td>
-<td>652.3m</td>
-<td>−20.0m (−3%)</td>
+<td><code>slm</code> vs <code>reactive</code></td>
+<td>Tier 1 <code>townsim_clear</code></td>
+<td>25</td>
+<td>2.61</td>
+<td>0.009</td>
+<td>0.162</td>
+<td><strong>+1.00</strong></td>
+<td>* (no Bonf.)</td>
 </tr>
 <tr>
-<td>Tier 2</td>
-<td>427.2m</td>
-<td>447.2m</td>
-<td>−20.0m (−5%)</td>
+<td><code>slm</code> vs <code>reactive</code></td>
+<td>Tier 2 <code>citysim_clear</code></td>
+<td>25</td>
+<td>2.61</td>
+<td>0.009</td>
+<td>0.162</td>
+<td><strong>+1.00</strong></td>
+<td>* (no Bonf.)</td>
+</tr>
+<tr>
+<td><code>fsm</code> vs <code>reactive</code></td>
+<td>Tier 0 <code>minisim_clear</code></td>
+<td>25</td>
+<td>2.61</td>
+<td>0.009</td>
+<td>0.162</td>
+<td><strong>+1.00</strong></td>
+<td>* (no Bonf.)</td>
+</tr>
+<tr>
+<td><code>fsm</code> vs <code>reactive</code></td>
+<td>Tier 1 <code>townsim_clear</code></td>
+<td>25</td>
+<td>2.61</td>
+<td>0.009</td>
+<td>0.162</td>
+<td><strong>+1.00</strong></td>
+<td>* (no Bonf.)</td>
+</tr>
+<tr>
+<td><code>fsm</code> vs <code>reactive</code></td>
+<td>Tier 2 <code>citysim_clear</code></td>
+<td>25</td>
+<td>2.61</td>
+<td>0.009</td>
+<td>0.162</td>
+<td><strong>+1.00</strong></td>
+<td>* (no Bonf.)</td>
+</tr>
+<tr>
+<td><code>slm</code> vs <code>fsm</code></td>
+<td>Tier 0 <code>minisim_clear</code></td>
+<td>13</td>
+<td>0.10</td>
+<td>0.917</td>
+<td>1.000</td>
+<td>+0.04</td>
+<td>ns</td>
+</tr>
+<tr>
+<td><code>slm</code> vs <code>fsm</code></td>
+<td>Tier 1 <code>townsim_clear</code></td>
+<td>6</td>
+<td>−1.36</td>
+<td>0.175</td>
+<td>1.000</td>
+<td>−0.52</td>
+<td>ns</td>
+</tr>
+<tr>
+<td><code>slm</code> vs <code>fsm</code></td>
+<td>Tier 2 <code>citysim_clear</code></td>
+<td>13</td>
+<td>0.10</td>
+<td>0.917</td>
+<td>1.000</td>
+<td>+0.04</td>
+<td>ns</td>
 </tr>
 </tbody>
 </table>
-<p>En los tres tiers, el brazo <code>slm</code> recorre menos distancia que el <code>fsm</code>. Con 1 semilla, esto puede
-ser varianza del punto de spawn; con ≥5 semillas, si el patrón se sostiene, indicaría que las
-pocas invocaciones del VLM en escenarios de control producen correcciones de rumbo que evitan
-desviaciones que la FSM sí acumula.</p>
-<p>Los deadlocks observados son escasos (0–5 por corrida) y todos resueltos al 100% por <code>deep_vlm</code>
-en <code>slm</code> y <code>fsm</code>. El brazo <code>reactive</code> no registra deadlocks en ningún tier, lo cual es esperado:
-su control reactivo puro no tiene el concepto de "objetivo pendiente" que genera atascos en los
-brazos deliberativos cuando la ruta directa está bloqueada.</p>
-<h3 id="11-resultados-1132-marco-estadistico-para-el-lote-completo">11.3.2 Marco estadístico para el lote completo<a class="headerlink" href="#11-resultados-1132-marco-estadistico-para-el-lote-completo" title="Permanent link">&para;</a></h3>
-<p>Sobre ≥5 semillas independientes por celda se ejecutará:</p>
-<ol>
+<p><em>Referencia de δ: |δ| &lt; 0.147 negligible, 0.147–0.33 pequeño, 0.33–0.474 mediano, &gt; 0.474 grande
+(<a href="#13-referencias-ref-romano-2006">Romano et al., 2006</a>).</em></p>
+<p><strong>Interpretación:</strong></p>
+<ul>
 <li>
-<p><strong>Prueba U de Mann-Whitney</strong> (bilateral) comparando cada par de brazos en el mismo escenario.
-   Hipótesis nula: la distribución de la métrica principal no difiere entre brazos. Métrica
-   primaria: tiempo de misión en corridas con <code>success=True</code> para escenarios de control; SPL para
-   escenarios con bloqueo. Métrica secundaria: <code>dist_min_m</code> como indicador de seguridad.</p>
+<p><strong><code>slm</code> vs <code>reactive</code> y <code>fsm</code> vs <code>reactive</code>:</strong> δ = +1.00 en los tres tiers — separación perfecta,
+  ninguna corrida de <code>reactive</code> supera en tiempo a ninguna corrida de <code>slm</code> o <code>fsm</code>. El p-valor
+  unadjustado (0.009) indica significancia a α = 0.05, pero no supera el umbral de Bonferroni
+  (0.0028) con K = 5 semillas. El límite inferior del p alcanzable con K = 5 es 7.9 × 10⁻³ —
+  imposible superar Bonferroni con este tamaño muestral independientemente de cuán perfecta sea
+  la separación. El efecto es real (δ = 1.0) pero la potencia estadística es insuficiente para
+  la corrección multivariada. Ampliar a K = 10 (ver §5.3 del plan de pruebas) bajaría el p mínimo
+  alcanzable a 1.1 × 10⁻⁵, dentro del rango de Bonferroni.</p>
 </li>
 <li>
-<p><strong>Tamaño de efecto</strong>: Cliff's Delta (δ) sobre el mismo par. Umbral de referencia: δ &gt; 0.3
-   como efecto "mediano" (<a href="#13-referencias-ref-romano-2006">Romano et al., 2006</a>). Un p-valor significativo con δ pequeño (&lt; 0.1)
-   indicaría una diferencia real pero de magnitud práctica despreciable.</p>
+<p><strong><code>slm</code> vs <code>fsm</code>:</strong> no significativo en ningún tier (p &gt; 0.17). En Tier 1, δ = −0.52 (grande)
+  favorece al <code>slm</code>, impulsado por el outlier del <code>fsm</code> (406 s, seed 2, bloqueo prolongado). Con
+  K = 5 y alta varianza del <code>fsm</code>, este resultado no es concluyente — requiere los escenarios de
+  obstrucción real para separar los brazos deliberativos.</p>
 </li>
-<li>
-<p><strong>Corrección de Bonferroni</strong> sobre las comparaciones múltiples (3 pares de brazos × 6
-   escenarios = 18 pruebas); umbral ajustado α = 0.05/18 ≈ 0.0028.</p>
-</li>
-</ol>
-<p>Las comparaciones previstas son: <code>slm</code> vs. <code>fsm</code>, <code>slm</code> vs. <code>reactive</code>, y <code>fsm</code> vs. <code>reactive</code>
-en cada escenario.</p>
+</ul>
+<h3 id="11-resultados-1133-perfil-de-deliberacion-por-tier">11.3.3 Perfil de deliberación por tier<a class="headerlink" href="#11-resultados-1133-perfil-de-deliberacion-por-tier" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Invoc. VLM promedio</th>
+<th>Tasa deliberación</th>
+<th>Dist. / invocación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tier 0 <code>minisim_clear</code></td>
+<td>49.6</td>
+<td>6.5%</td>
+<td>~3.7 m/invoc.</td>
+</tr>
+<tr>
+<td>Tier 1 <code>townsim_clear</code></td>
+<td>9.6</td>
+<td>0.8%</td>
+<td>~65 m/invoc.</td>
+</tr>
+<tr>
+<td>Tier 2 <code>citysim_clear</code></td>
+<td>2.2</td>
+<td>0.3%</td>
+<td>~194 m/invoc.</td>
+</tr>
+</tbody>
+</table>
+<p>La distancia por invocación aumenta 52× entre Tier 0 y Tier 2. En Tier 0, el VLM es consultado
+cada ~3.7 m; en Tier 2, cada ~194 m. Esto confirma que el comportamiento cauteloso del <code>slm</code>
+durante la espera VLM (avance lento, sin giro) reduce la frecuencia de invocación a medida que la
+ruta tiene menos quiebres de rumbo y menos incertidumbre perceptual — incluso en ausencia de
+obstáculos reales.</p>
 <hr />
 <h2 id="11-resultados-114-analisis-por-tipo-de-escenario">11.4 Análisis por tipo de escenario<a class="headerlink" href="#11-resultados-114-analisis-por-tipo-de-escenario" title="Permanent link">&para;</a></h2>
-<p>La pregunta central de la tesis — ¿aporta la deliberación contextual del VLM sobre la heurística
-rígida de la FSM? — requiere desagregarla por tipo de escenario, porque la respuesta esperada
-es distinta según el nivel de dificultad.</p>
 <h3 id="11-resultados-1141-tier-0-control-sin-obstaculos-minisim_clear">11.4.1 Tier 0 — Control sin obstáculos (<code>minisim_clear</code>)<a class="headerlink" href="#11-resultados-1141-tier-0-control-sin-obstaculos-minisim_clear" title="Permanent link">&para;</a></h3>
-<p>El escenario de referencia más simple: 3 waypoints en L, ambiente despejado, sin ningún obstáculo
-en la trayectoria directa. El dato piloto muestra el costo puro del brazo <code>slm</code> sin ningún
-beneficio compensatorio: 80 invocaciones al VLM sobre 1151 ciclos (6.95%) generan 235s de tiempo
-de misión frente a los 84s del brazo <code>reactive</code> (ratio 2.8×). El <code>fsm</code> (208s) ocupa una posición
-intermedia: también sufre del overhead de su lazo deliberativo en atascos (2 deadlocks), pero sin
-la latencia VLM por invocación.</p>
-<p>La distancia mínima al obstáculo es comparable entre brazos (9.74m <code>slm</code>, 9.06m <code>reactive</code>,
-6.38m <code>fsm</code>), confirmando que en un entorno despejado ningún brazo es más seguro que otro — la
-ventaja del VLM no tiene dónde manifestarse. Este resultado es el esperado por diseño: <code>minisim_clear</code>
-existe para establecer la cota inferior de rendimiento del sistema y cuantificar el overhead puro
-del brazo <code>slm</code> en ausencia de beneficio.</p>
-<p><strong>Predicción:</strong> la diferencia de velocidad entre <code>reactive</code> y <code>slm</code> debería sostenerse con
-alta significancia estadística (Cliff's δ cercano a 1.0 en favor de <code>reactive</code>); la comparación
-<code>slm</code> vs. <code>fsm</code> puede ser más variable porque depende de cuántos deadlocks acumule la FSM por
-corrida.</p>
-<h3 id="11-resultados-1142-tier-1-perimetro-urbano-con-vegetacion-townsim_clear">11.4.2 Tier 1 — Perímetro urbano con vegetación (<code>townsim_clear</code>)<a class="headerlink" href="#11-resultados-1142-tier-1-perimetro-urbano-con-vegetacion-townsim_clear" title="Permanent link">&para;</a></h3>
-<p>El escenario <code>townsim_clear</code> para Tier 1: vuela el perímetro a −30m (sobre la línea de tejados), sin obstáculos en la trayectoria de crucero. A diferencia de Tier 0, la longitud de la ruta (~640m vs. ~191m) diluye el overhead por invocación, y el brazo <code>slm</code> resulta el más rápido de los tres en el piloto (311s vs. 347s <code>fsm</code> vs. 266s <code>reactive</code>). La tasa de deliberación de 0.82% (11 invocaciones / 1337 ciclos) representa una reducción de ×19 respecto a las corridas pre-fix de agosto (15.4%), directamente atribuible al avance cauteloso durante la espera del VLM y al fix de canales de color que reduce las falsas alarmas.</p>
-<p>El dato más significativo de Tier 1 piloto no es la velocidad sino los deadlocks: el <code>fsm</code> acumula 5 (todos resueltos por escaneo profundo <code>deep_vlm</code>); el <code>slm</code>, 3; el <code>reactive</code>, 0. Con 1 semilla, este patrón es indicativo pero no concluyente — puede reflejar diferencias en la gestión de atascos entre brazos, o simplemente la varianza de una única semilla.</p>
-<p>El escenario de interés real para Tier 1 es <code>townsim_ini</code>: un recorrido que cruza el interior del complejo, con corredores vegetados y fachadas que obstruyen la trayectoria directa. Es allí donde el escaneo deliberativo tiene un caso de uso genuino: la FSM y el <code>reactive</code> deben bordear obstáculos por heurística, mientras el <code>slm</code> puede consultar al VLM para elegir el corredor. Los datos de <code>townsim_clear</code> solo establecen la cota de partida.</p>
-<h3 id="11-resultados-1143-tier-2-entorno-urbano-denso-citysim_clear">11.4.3 Tier 2 — Entorno urbano denso (<code>citysim_clear</code>)<a class="headerlink" href="#11-resultados-1143-tier-2-entorno-urbano-denso-citysim_clear" title="Permanent link">&para;</a></h3>
-<p>El escenario base <code>citysim_clear</code> funciona como el tercer escenario de control: los tres brazos completan el perímetro en ~159–182s, sin colisiones ni deadlocks, con tiempos comparables entre sí (ratio <code>slm</code>/<code>reactive</code> = 1.09×). A −70m, el dron vuela por encima de la línea de tejados de CitySim; la deliberación del VLM no tiene obstáculo real que analizar.</p>
+<p>El escenario más simple (3 WPs en L, ambiente despejado) establece el costo puro del brazo <code>slm</code>
+sin ningún beneficio compensatorio. El lote estadístico (5 semillas) confirma la tendencia del
+piloto con mayor precisión:</p>
+<ul>
+<li><strong><code>reactive</code>:</strong> 74.7 ± 0.4 s — prácticamente determinista. Es la cota inferior de velocidad del
+  sistema: sin deliberación, sin overhead, trayectoria directa al siguiente waypoint.</li>
+<li><strong><code>slm</code>:</strong> 164.2 ± 9.4 s — 49.6 invocaciones promedio al VLM (6.5% de los ciclos). La varianza
+  (σ = 9.4 s) proviene de la variabilidad en la latencia de inferencia del VLM por corrida.
+  Ningún deadlock: el ambiente despejado no genera atascos en el <code>slm</code>.</li>
+<li><strong><code>fsm</code>:</strong> 174.2 ± 38.7 s — tiempo medio mayor al <code>slm</code>, con alta varianza (σ = 38.7 s) por la
+  variabilidad en deadlocks (0–3 por corrida). El overhead de la FSM en este escenario es
+  comparable al del VLM, pero más errático.</li>
+</ul>
+<p>La separación <code>slm</code>/<code>reactive</code> (Cliff's δ = +1.0) es perfecta: en las 25 comparaciones posibles
+(5 × 5 semillas), cada corrida de <code>reactive</code> fue más rápida que cualquier corrida de <code>slm</code>. El
+mismo patrón se observa para <code>fsm</code> vs <code>reactive</code>. En entorno despejado, ningún brazo deliberativo
+puede competir en velocidad con el <code>reactive</code> — la ventaja del VLM no tiene dónde manifestarse.</p>
+<p><strong>Predicción verificada:</strong> la diferencia <code>reactive</code> vs. <code>slm</code>/<code>fsm</code> tiene Cliff's δ = 1.0 en los
+tres tiers, confirmando el patrón esperado. La comparación <code>slm</code> vs. <code>fsm</code> es no significativa
+(δ = 0.04), como era esperado: en ausencia de obstáculos, ambos brazos deliberativos incurren en
+un overhead similar sin diferenciarse en calidad de decisión.</p>
+<h3 id="11-resultados-1142-tier-1-perimetro-urbano-de-crucero-townsim_clear">11.4.2 Tier 1 — Perímetro urbano de crucero (<code>townsim_clear</code>)<a class="headerlink" href="#11-resultados-1142-tier-1-perimetro-urbano-de-crucero-townsim_clear" title="Permanent link">&para;</a></h3>
+<p>La longitud de la ruta (~626 m, 3.4× Tier 0) diluye el overhead del VLM: de 49.6 invocaciones
+en Tier 0 a 9.6, y la tasa de deliberación baja de 6.5% a 0.8%. El ratio <code>slm</code>/<code>reactive</code>
+cae de 2.20× a 1.14×: el <code>slm</code> tarda 36 s más que el <code>reactive</code> en promedio, sobre una base de
+260 s.</p>
+<p>El dato más relevante de Tier 1 es la asimetría de deadlocks entre brazos:
+- <code>reactive</code>: 0 deadlocks en las 5 corridas (σ ≈ 0 en tiempo).
+- <code>slm</code>: 2.6 deadlocks promedio (todos resueltos al 100% por <code>deep_vlm</code>).
+- <code>fsm</code>: 3.8 deadlocks promedio, incluyendo un bloqueo de &gt;400 s en seed 2.</p>
+<p>Este patrón es consistente con la arquitectura: el <code>reactive</code> no tiene concepto de "objetivo
+pendiente" y no genera atascos; los brazos deliberativos sí. La diferencia entre <code>slm</code> (2.6) y
+<code>fsm</code> (3.8) sugiere que la consulta al VLM ayuda a evitar algunos deadlocks incluso en escenarios
+de control — aunque con K = 5 este resultado no es estadísticamente concluyente (δ = −0.52, ns).</p>
+<p>El escenario de interés real para Tier 1 es <code>townsim_ini</code> (corredores vegetados) y
+<code>townsim_calib_cruce_frontal</code> (bloqueo frontal masivo), donde el VLM tiene un caso de uso genuino
+y la diferencia <code>slm</code> vs <code>fsm</code> debería hacerse significativa. Los datos de <code>townsim_clear</code> solo
+establecen la cota de partida del lote base.</p>
+<h3 id="11-resultados-1142b-tier-1-corredor-arbolado-townsim_ini">11.4.2b Tier 1 — Corredor arbolado (<code>townsim_ini</code>)<a class="headerlink" href="#11-resultados-1142b-tier-1-corredor-arbolado-townsim_ini" title="Permanent link">&para;</a></h3>
+<p><code>townsim_ini</code> es el primer escenario de obstrucción real del lote: el corredor peatonal central
+de TownSim, volado a z=−10 m (bajo la copa de los árboles), de norte a sur entre los edificios.
+Los tres brazos fallan en las 15 corridas por timeout (900 s), sin una sola colisión registrada.</p>
+<table>
+<thead>
+<tr>
+<th>Brazo</th>
+<th>Éxito</th>
+<th>Dist. media recorrida</th>
+<th>Deadlocks (media)</th>
+<th>Res. VLM</th>
+<th>DistMin (m)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>slm</code></td>
+<td>0/5 ⛔</td>
+<td>134.7 ± 50.4 m</td>
+<td>20.2</td>
+<td>100%</td>
+<td>0.21</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>0/5 ⛔</td>
+<td>176.2 ± 84.2 m</td>
+<td>24.0</td>
+<td>100%</td>
+<td>0.17</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>0/5 ⛔</td>
+<td>158.5 ± 10.9 m</td>
+<td>0</td>
+<td>—</td>
+<td>0.44</td>
+</tr>
+</tbody>
+</table>
+<p>Ningún brazo superó el 60% de la ruta (~310 m total). El <code>reactive</code> es el más consistente en
+distancia recorrida (σ=10.9 m vs. 50–84 m del los brazos deliberativos), pero tampoco progresa:
+sin deadlock detection, oscila ante los obstáculos sin activar el mecanismo de escape, lo que
+resulta en movimiento local sin avance neto hacia el siguiente waypoint.</p>
+<p>Los brazos deliberativos acumulan entre 10 y 44 deadlocks por corrida (media: <code>slm</code> 20.2,
+<code>fsm</code> 24.0). El <code>deep_vlm</code> resuelve el 100% de ellos, pero cada resolución consume ciclos
+adicionales (escaneo + reposicionamiento), y la tasa de aparición de nuevos deadlocks supera
+la capacidad de avance efectivo: el sistema entra en un estado de "deadlock crónico" donde
+el <code>deep_vlm</code> nunca puede entregar progreso sostenido.</p>
+<p><strong>Interpretación para H1:</strong> el escenario <code>townsim_ini</code> coloca a los tres brazos más allá del
+umbral de capacidad de la arquitectura actual — el corredor a z=−10 m resulta demasiado
+obstruido para completarse en el presupuesto temporal. Esto no invalida H1, pero desplaza la
+comparación: con 0/5 éxitos en todos los brazos, la métrica discriminante no es la tasa de
+éxito sino la <strong>distancia recorrida antes del timeout</strong>. En esa métrica, el <code>fsm</code> aventaja
+ligeramente al <code>reactive</code> y al <code>slm</code> (176 m vs. 158 m vs. 135 m), contrariamente a la hipótesis
+de que el VLM debería guiar mejor en corredores obstruidos. La alta varianza del <code>slm</code> (σ=50 m)
+y del <code>fsm</code> (σ=84 m) impide conclusiones estadísticas con K=5.</p>
+<p><strong>Opciones para el análisis final:</strong> (a) aumentar <code>--max-seconds</code> a 1800 s y re-correr para dar
+tiempo a que algún brazo complete; (b) elevar la altitud del corredor a z=−20 m para reducir la
+densidad de obstrucción; (c) aceptar el resultado como hallazgo de límite operativo y reportar
+distancia recorrida en lugar de tasa de éxito. La opción (c) es la más honesta científicamente
+dado que los datos ya están colectados.</p>
+<h3 id="11-resultados-1143-tier-2-entorno-urbano-de-crucero-citysim_clear">11.4.3 Tier 2 — Entorno urbano de crucero (<code>citysim_clear</code>)<a class="headerlink" href="#11-resultados-1143-tier-2-entorno-urbano-de-crucero-citysim_clear" title="Permanent link">&para;</a></h3>
+<p>Con 2.2 invocaciones promedio al VLM y tasa de deliberación de 0.3%, el <code>slm</code> opera en modo casi
+puramente reactivo en este escenario: sólo 10 s de overhead sobre la base de 165 s del <code>reactive</code>.
+Los tres brazos completan sin colisiones y sin diferencias de seguridad (DistMin: 9.4–10.4 m).</p>
 <p>Tres observaciones son relevantes para el análisis posterior:</p>
 <ol>
 <li>
-<p><strong><code>fsm</code> conservador, <code>reactive</code> agresivo</strong>: el <code>fsm</code> registra la mayor distancia mínima al obstáculo (11.0m) y el mayor tiempo (182s); el <code>reactive</code> el menor (9.43m, 159s). El <code>slm</code> queda entre ambos (0.77m en climb inicial, 174s). En un entorno donde no hay obstáculos activos, la heurística conservadora de la FSM penaliza velocidad sin ganar seguridad.</p>
+<p><strong><code>reactive</code> determinista:</strong> σ = 0.2 s — la varianza más baja de los tres tiers. A −50 m de
+   altitud máxima, sin obstáculos activos, el <code>reactive</code> ejecuta la ruta con variación nula.</p>
 </li>
 <li>
-<p><strong>Altitud como variable crítica de diseño</strong>: la primera corrida a z=−50m falló (success=False, colisión) porque la altitud insuficiente hacía que la ruta de climb desde el spawn atravesara edificios. El fix de near_vertical (2026-09-07) permite el patrón climb-first, pero la variable determinante fue la elección de −70m &gt; altura de tejados.</p>
+<p><strong><code>fsm</code> variable:</strong> dos corridas con deadlock (seeds 4 y 5, 208 s y 212 s) vs. tres sin deadlock
+   (~170 s). La geometría del manifiesto (cambios de altitud en climb-first) genera ocasionalmente
+   atascos en la FSM que no se producen en el <code>reactive</code> ni en el <code>slm</code>. Con K = 5, δ = +0.04
+   (<code>slm</code> vs <code>fsm</code>), no significativo.</p>
 </li>
 <li>
-<p><strong>Cero deadlocks en los tres brazos</strong>: confirma que la ruta de crucero no presenta obstrucciones reales a −70m. Cualquier deadlock que aparezca en <code>citymap_clear</code> — donde la ruta sí cruza corredores entre edificios — será atribuible a la geometría del escenario, no a artefactos de la altitud.</p>
+<p><strong><code>slm</code> recorre menos distancia que <code>fsm</code>:</strong> 427.4 m vs. 434.9 m — el <code>slm</code> tiende a trayectorias
+   más cortas que la FSM, posiblemente porque las pocas invocaciones VLM producen correcciones de
+   rumbo que evitan desviaciones que la FSM acumula al gestionar sus deadlocks.</p>
 </li>
 </ol>
-<p>El escenario <code>citymap_clear</code> es el experimento inicial de Tier 2: un recorrido que atraviesa corredores angostos entre edificios altos, donde ni el <code>reactive</code> ni el <code>fsm</code> tienen información semántica para elegir entre dos calles de ancho similar. La hipótesis es que el brazo <code>slm</code>, al consultar al VLM con una imagen aérea del corredor, podrá elegir la ruta más despejada con mayor consistencia que una heurística basada en distancia pura o en flujo óptico. El resultado negativo también es válido: si el VLM no aporta información útil en un entorno de alta textura urbana uniforme, es un hallazgo de diseño relevante para el capítulo 09.</p></section><section class="print-page" id="12-conclusiones" heading-number="13"><h1 id="12-conclusiones-12-conclusiones">12. Conclusiones<a class="headerlink" href="#12-conclusiones-12-conclusiones" title="Permanent link">&para;</a></h1>
+<p>El escenario <code>citymap_pilot</code> (corredores angostos a −10 m, entre edificios de 50–100 m) es el
+experimento de Tier 2 donde el VLM tiene potencia discriminativa real. Los datos de <code>citysim_clear</code>
+establecen que, en condiciones de tránsito libre, ningún brazo discrimina en calidad de navegación —
+diferencia esperada por diseño experimental.</p></section><section class="print-page" id="12-conclusiones" heading-number="13"><h1 id="12-conclusiones-12-conclusiones">12. Conclusiones<a class="headerlink" href="#12-conclusiones-12-conclusiones" title="Permanent link">&para;</a></h1>
 <blockquote>
 <p><strong>Estado:</strong> pendiente del capítulo de resultados (cap. 11), que a su vez depende de la corrida experimental comparativa descrita en el capítulo 10.</p>
 </blockquote>
