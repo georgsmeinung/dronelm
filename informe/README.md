@@ -29,6 +29,7 @@ reescribir la estructura cada vez.
 | — | [`anexos/A4-DECODIFICACION-RESTRINGIDA.md`](anexos/A4-DECODIFICACION-RESTRINGIDA.md) | Material de referencia — decodificación restringida, gramáticas formales, GBNF, `json_schema` y optimización del grafo de control | — |
 | — | [`anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md`](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md) | Material de referencia — fundamentos matemáticos de percepción monocular, flujo óptico y estimación de TTC | — |
 | — | [`anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md`](anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md) | Material de referencia — configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad | — |
+| — | [`anexos/A7-MALDICION-MONOCULAR-ESTEREO.md`](anexos/A7-MALDICION-MONOCULAR-ESTEREO.md) | Material de referencia — formaliza la "maldición monocular" (ambigüedad de escala + flujo nulo cerca del FOE) como causa raíz del fracaso 0/5 en `townsim_ini` (§11.4.2b) y evalúa mitigación estéreo (dos cámaras / adaptador de un sensor) frente a LiDAR, con sus propias limitaciones en follaje denso | §11.4.2b, §12.4 |
 
 ## Convenciones
 
@@ -76,3 +77,14 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
 - El capítulo 3 (§3.2) documenta como desvío de hecho la sustitución del pipeline de
   fotogrametría de Buenos Aires (RealityCapture + OpenStreetMap + Blender) del plan
   aprobado por la jerarquía de tres Tiers en Unreal Engine (`MiniSim`, `TownSim`, `CitySim`).
+- El Anexo 7 se agregó tras el fracaso uniforme (0/5, sin colisiones) de los tres brazos en el
+  corredor arbolado `townsim_ini` (cap. 11, §11.4.2b): el hallazgo experimental exigía una
+  explicación física, no solo estadística, de por qué el sensor monocular colapsa justo en el
+  eje de avance (flujo nulo cerca del Foco de Expansión, Anexo 5 §A5.4.1) y textura auto-similar
+  del follaje. El anexo formaliza ese mecanismo como la "maldición monocular", evalúa la visión
+  estereoscópica (dos cámaras o un adaptador de un solo sensor, más barato) como mitigación de
+  menor costo que LiDAR, y aclara que ningún sensor de rango es inmune al follaje denso (§A7.5) —
+  para no presentar el estéreo como una "bala de plata". Referenciado desde §11.4.2b y desde el
+  trabajo futuro del cap. 12 (§12.4). El plan de implementación y protocolo experimental para
+  medir esta propuesta (si se decide ejecutar) queda fuera del informe, en
+  `plan-tesis/PLAN-BINOCULAR.md` y `plan-tesis/PLAN-STEREO-ADAPTER.md`.

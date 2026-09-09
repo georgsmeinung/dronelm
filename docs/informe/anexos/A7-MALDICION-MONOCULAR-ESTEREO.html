@@ -1,0 +1,1556 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A7-MALDICION-MONOCULAR-ESTEREO.html">
+      
+      
+        <link rel="prev" href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A7. Maldición Monocular y Mitigación Estéreo - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-7-la-maldicion-monocular-en-pasajes-densamente-obstruidos-y-mitigacion-con-vision-estereoscopica" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A7. Maldición Monocular y Mitigación Estéreo
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A7-MALDICION-MONOCULAR-ESTEREO.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a71-la-maldicion-monocular-dos-componentes-distintos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.1 La maldición monocular: dos componentes distintos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A7.1 La maldición monocular: dos componentes distintos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a711-ambiguedad-de-escala" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.1.1 Ambigüedad de escala
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a712-dependencia-estructural-del-movimiento-y-flujo-nulo-en-el-eje-de-avance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.1.2 Dependencia estructural del movimiento y flujo nulo en el eje de avance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a72-por-que-un-corredor-arbolado-es-el-caso-adversarial-por-diseno" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.2 Por qué un corredor arbolado es el caso adversarial por diseño
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A7.2 Por qué un corredor arbolado es el caso adversarial por diseño">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a721-ayudaria-slam-monocular-disperso-o-semi-denso" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.2.1 ¿Ayudaría SLAM monocular disperso o semi-denso?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a73-estereo-como-mitigacion-directa-de-ambos-componentes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.3 Estéreo como mitigación directa de ambos componentes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a74-costobeneficio-frente-a-lidar-emulado-planardepth-y-factibilidad-en-airsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.4 Costo/beneficio frente a LiDAR emulado (PlanarDepth) y factibilidad en AirSim
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a75-ningun-sensor-es-inmune-al-follaje-denso-limites-del-estereo-y-tambien-del-lidar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.5 Ningún sensor es inmune al follaje denso: límites del estéreo y también del LiDAR
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A7.5 Ningún sensor es inmune al follaje denso: límites del estéreo y también del LiDAR">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a751-por-que-el-estereo-tambien-puede-fallar-en-townsim_ini" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.5.1 Por qué el estéreo también puede fallar en townsim_ini
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a752-por-que-un-lidar-tampoco-resolveria-townsim_ini-sin-matices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.5.2 Por qué un LiDAR tampoco resolvería townsim_ini sin matices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a76-sintesis-y-ubicacion-en-el-trabajo-futuro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.6 Síntesis y ubicación en el trabajo futuro
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a71-la-maldicion-monocular-dos-componentes-distintos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.1 La maldición monocular: dos componentes distintos
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A7.1 La maldición monocular: dos componentes distintos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a711-ambiguedad-de-escala" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.1.1 Ambigüedad de escala
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a712-dependencia-estructural-del-movimiento-y-flujo-nulo-en-el-eje-de-avance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.1.2 Dependencia estructural del movimiento y flujo nulo en el eje de avance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a72-por-que-un-corredor-arbolado-es-el-caso-adversarial-por-diseno" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.2 Por qué un corredor arbolado es el caso adversarial por diseño
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A7.2 Por qué un corredor arbolado es el caso adversarial por diseño">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a721-ayudaria-slam-monocular-disperso-o-semi-denso" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.2.1 ¿Ayudaría SLAM monocular disperso o semi-denso?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a73-estereo-como-mitigacion-directa-de-ambos-componentes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.3 Estéreo como mitigación directa de ambos componentes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a74-costobeneficio-frente-a-lidar-emulado-planardepth-y-factibilidad-en-airsim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.4 Costo/beneficio frente a LiDAR emulado (PlanarDepth) y factibilidad en AirSim
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a75-ningun-sensor-es-inmune-al-follaje-denso-limites-del-estereo-y-tambien-del-lidar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.5 Ningún sensor es inmune al follaje denso: límites del estéreo y también del LiDAR
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A7.5 Ningún sensor es inmune al follaje denso: límites del estéreo y también del LiDAR">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a751-por-que-el-estereo-tambien-puede-fallar-en-townsim_ini" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.5.1 Por qué el estéreo también puede fallar en townsim_ini
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a752-por-que-un-lidar-tampoco-resolveria-townsim_ini-sin-matices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.5.2 Por qué un LiDAR tampoco resolvería townsim_ini sin matices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a76-sintesis-y-ubicacion-en-el-trabajo-futuro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7.6 Síntesis y ubicación en el trabajo futuro
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="anexo-7-la-maldicion-monocular-en-pasajes-densamente-obstruidos-y-mitigacion-con-vision-estereoscopica">Anexo 7: La "maldición monocular" en pasajes densamente obstruidos y mitigación con visión estereoscópica<a class="headerlink" href="#anexo-7-la-maldicion-monocular-en-pasajes-densamente-obstruidos-y-mitigacion-con-vision-estereoscopica" title="Permanent link">&para;</a></h1>
+<p>Este anexo desarrolla, con mayor rigor que el que admite el cuerpo del capítulo de resultados
+(§11.4.2b), el mecanismo físico por el cual la percepción monocular pura falla de forma
+estructural — no incidental — en corredores densamente arbolados como <code>townsim_ini</code>, y evalúa la
+visión estereoscópica como la mitigación de menor costo y mayor factibilidad de despliegue antes
+de recurrir a sensores activos más caros (LiDAR, radar).</p>
+<p>El razonamiento aquí presentado complementa, sin sustituir, los fundamentos matemáticos del
+Anexo 5 (flujo óptico, FOE, TTC): mientras el Anexo 5 formaliza <em>cómo</em> el sistema estima
+profundidad relativa a partir de una sola cámara, este anexo formaliza <em>por qué</em> esa estimación
+colapsa estructuralmente en ciertas geometrías de escena, y qué alternativa de bajo costo resuelve
+el colapso sin abandonar el principio de percepción pasiva declarado en §1.2.</p>
+<p><img src="a7-maldicion-monocular.jpg"/></p>
+<h2 id="a71-la-maldicion-monocular-dos-componentes-distintos">A7.1 La maldición monocular: dos componentes distintos<a class="headerlink" href="#a71-la-maldicion-monocular-dos-componentes-distintos" title="Permanent link">&para;</a></h2>
+<p>El término coloquial "maldición monocular" (<em>monocular curse</em>) agrupa dos limitaciones físicas
+independientes de la reconstrucción de profundidad a partir de una única cámara. Es importante
+separarlas porque tienen causas y mitigaciones distintas.</p>
+<h3 id="a711-ambiguedad-de-escala">A7.1.1 Ambigüedad de escala<a class="headerlink" href="#a711-ambiguedad-de-escala" title="Permanent link">&para;</a></h3>
+<p>Un sistema de estructura a partir del movimiento (<em>Structure from Motion</em>, SfM) o SLAM monocular
+reconstruye la geometría de la escena <strong>hasta un factor de escala desconocido</strong>: a partir de una
+secuencia de imágenes de una sola cámara no es posible distinguir, por ejemplo, un edificio grande
+visto de lejos de una maqueta pequeña vista de cerca — ambas producen exactamente la misma
+secuencia de proyecciones 2D salvo un factor de escala global. Para fijar esa escala se requiere
+información externa: una unidad de medición inercial (IMU) integrada, el tamaño conocido de un
+objeto en la escena, o un segundo punto de vista simultáneo.</p>
+<h3 id="a712-dependencia-estructural-del-movimiento-y-flujo-nulo-en-el-eje-de-avance">A7.1.2 Dependencia estructural del movimiento y flujo nulo en el eje de avance<a class="headerlink" href="#a712-dependencia-estructural-del-movimiento-y-flujo-nulo-en-el-eje-de-avance" title="Permanent link">&para;</a></h3>
+<p>El segundo componente es geométrico y no se resuelve con más cómputo ni mejor calibración: <strong>sin
+traslación no hay paralaje</strong>, y el paralaje es la única fuente de información de profundidad de
+una cámara monocular en movimiento (Anexo 5, §A5.2–§A5.4). Peor aún, el paralaje no es uniforme en
+el campo visual: según la relación deducida en el Anexo 5,</p>
+<div class="arithmatex">\[\|v_{\text{trans}}(x,y)\| = \frac{V_z}{Z_c}\,\|p - \text{FOE}\|\]</div>
+<p>la magnitud del flujo traslacional es <strong>proporcional a la distancia del píxel al Foco de
+Expansión (FOE)</strong>. Los puntos que están sobre o cerca del FOE —es decir, los que están
+<em>directamente adelante del vehículo, en la dirección exacta en que se necesita evidencia para
+evitar una colisión frontal</em>— son estructuralmente los que producen menos señal, sin importar cuán
+cerca estén. Esto no es un defecto del estimador de <code>flow_ttc.py</code>: es una propiedad de la
+proyección perspectiva, presente en cualquier algoritmo de flujo óptico o SfM monocular.</p>
+<blockquote>
+<p>[!IMPORTANTE]
+La maldición monocular no es "el sensor da poca información en general" sino, más precisamente,
+"el sensor da información nula justo donde más se la necesita". Un obstáculo lateral que el dron
+bordea genera flujo grande y confiable; el mismo obstáculo, si está centrado en la trayectoria de
+aproximación, tiende asintóticamente a flujo cero a medida que el dron se acerca en línea recta.</p>
+</blockquote>
+<hr />
+<h2 id="a72-por-que-un-corredor-arbolado-es-el-caso-adversarial-por-diseno">A7.2 Por qué un corredor arbolado es el caso adversarial por diseño<a class="headerlink" href="#a72-por-que-un-corredor-arbolado-es-el-caso-adversarial-por-diseno" title="Permanent link">&para;</a></h2>
+<p>El escenario <code>townsim_ini</code> (cap. 11, §11.4.2b) — corredor peatonal recto, volado a z=−10 m, bajo la
+copa de los árboles — combina ambos componentes de la maldición monocular con un tercer factor
+agravante propio de la vegetación:</p>
+<ol>
+<li><strong>Geometría del corredor → FOE sobre el obstáculo.</strong> Un corredor recto y angosto flanqueado y
+   techado por follaje fuerza a que el FOE nominal (centro de la imagen, para vuelo recto) caiga
+   exactamente sobre la masa de vegetación que bloquea el paso. No es un obstáculo lateral que
+   pueda esquivarse leyendo flujo periférico: es el obstáculo <em>en el eje de avance</em>, en la región de
+   mínima señal por construcción geométrica (§A7.1.2).</li>
+<li><strong>Textura auto-similar → problema de apertura agravado.</strong> Ramas y hojas son, para un estimador
+   de correspondencia por ventanas (Farnebäck o DIS; Anexo 5, §A5.7), prácticamente indistinguibles
+   de sus vecinos inmediatos. El <em>aperture problem</em> clásico de flujo óptico —la imposibilidad de
+   determinar la componente de movimiento paralela a un borde sin textura transversal— se agrava
+   severamente en follaje denso, generando vectores de flujo ruidosos o directamente espurios
+   incluso en regiones alejadas del FOE, degradando la confianza (<code>confidence</code>) de las celdas del
+   <code>ObstacleField</code> (Anexo 5, §A5.6.1) en todo el campo, no solo en el centro.</li>
+<li><strong>Follaje dinámico → violación de la hipótesis de escena estática.</strong> El viento mueve ramas y
+   hojas de forma incoherente con el movimiento propio del dron, introduciendo flujo espurio que
+   ninguna derotación por IMU (Anexo 5, §A5.3) puede compensar, porque esa derotación asume
+   explícitamente una escena rígida y estacionaria.</li>
+</ol>
+<p>El resultado observado en §11.4.2b —0/5 en los tres brazos, deadlock crónico (<code>slm</code>: 20.2/corrida,
+<code>fsm</code>: 24.0/corrida), sin una sola colisión— es consistente con este mecanismo: el sistema no
+avanza porque no puede confiar en su propia percepción frontal, y no colisiona precisamente porque
+esa falta de confianza lo mantiene en modo cauteloso. El <code>deep_vlm</code> resuelve el 100% de los
+deadlocks individuales (repone evidencia puntual vía descripción semántica de la escena), pero la
+tasa de generación de nuevos deadlocks excede la capacidad de avance neto — un régimen de
+"deadlock crónico" que ningún ajuste del nodo deliberativo (Anexos 3 y 4) puede resolver, porque el
+cuello de botella está en la capa de percepción, no en la de decisión.</p>
+<h3 id="a721-ayudaria-slam-monocular-disperso-o-semi-denso">A7.2.1 ¿Ayudaría SLAM monocular disperso o semi-denso?<a class="headerlink" href="#a721-ayudaria-slam-monocular-disperso-o-semi-denso" title="Permanent link">&para;</a></h3>
+<p>Es razonable preguntarse si integrar evidencia geométrica a lo largo de múltiples vistas —en vez de
+depender de un par de frames instantáneo, como hace el flujo óptico— mitigaría el problema. Un
+sistema de SLAM monocular disperso (<a href="../13-REFERENCIAS.html#ref-mur-artal-2015">ORB-SLAM, Mur-Artal et al., 2015</a>)
+construye una estructura 3D persistente mediante <em>bundle adjustment</em>, lo que en principio permite
+razonar sobre espacio libre acumulado en lugar de sobre la ambigüedad de un instante puntual, y
+habilitaría detección de brechas (<em>gap detection</em>) sobre un mapa en vez de evasión puramente
+reactiva.</p>
+<p>Sin embargo, esta mitigación no es gratuita en el caso específico de follaje denso, por tres
+razones que conviene declarar explícitamente para no sobrevender la propuesta como línea de trabajo
+futuro:</p>
+<ul>
+<li><strong>Escena no estática.</strong> El SLAM basado en <em>features</em> asume implícitamente un mundo rígido; ramas
+  moviéndose con el viento violan esa hipótesis e inducen asociaciones de datos erróneas (<em>false
+  loop closures</em>, matches entre ramas distintas con apariencia similar).</li>
+<li><strong>Geometría subpíxel.</strong> Las ramas finas están por debajo de la resolución efectiva de un mapa de
+  <em>landmarks</em> disperso: un SLAM disperso simplemente no las registra como <em>features</em> estables, y un
+  SLAM denso las "promedia" con el fondo, perdiendo precisión justo en el tipo de obstáculo donde
+  más importa (el caso típico, además, donde hasta un LiDAR de retorno único falla por escasez de
+  puntos de impacto).</li>
+<li><strong>Costo computacional.</strong> Un SLAM denso monocular con la robustez suficiente para compensar estos
+  dos problemas (p. ej., de la familia de DROID-SLAM) es sustancialmente más pesado en cómputo que
+  el flujo óptico clásico usado en este trabajo, lo cual entra en tensión directa con el objetivo
+  de mantener el presupuesto de CPU compartido con el SLM (cap. 6, §6.1, punto 1).</li>
+</ul>
+<p>La conclusión razonable no es descartar SLAM monocular como línea futura, sino ubicarlo como
+mitigación de la ambigüedad de correspondencia frame-a-frame, no como solución al problema de fondo
+del follaje dinámico y las estructuras subpíxel — que siguen siendo un caso límite conocido en la
+literatura de SLAM visual, y no un problema exclusivo del enfoque de flujo óptico adoptado en este
+trabajo.</p>
+<hr />
+<h2 id="a73-estereo-como-mitigacion-directa-de-ambos-componentes">A7.3 Estéreo como mitigación directa de ambos componentes<a class="headerlink" href="#a73-estereo-como-mitigacion-directa-de-ambos-componentes" title="Permanent link">&para;</a></h2>
+<p>Un par estéreo calibrado —dos cámaras RGB con <em>baseline</em> (separación) fija y conocida— resuelve los
+dos componentes de la maldición monocular (§A7.1) simultáneamente, y lo hace a partir de un <strong>único
+instante</strong>, sin depender de que el vehículo se mueva:</p>
+<div class="arithmatex">\[Z = \frac{f \cdot B}{d}\]</div>
+<p>donde <span class="arithmatex">\(f\)</span> es la distancia focal, <span class="arithmatex">\(B\)</span> la línea de base entre cámaras y <span class="arithmatex">\(d\)</span> la disparidad (el
+desplazamiento horizontal en píxeles del mismo punto físico entre ambas imágenes). Dado que <span class="arithmatex">\(B\)</span> es
+conocida por construcción (a diferencia de la traslación del vehículo entre dos frames, que hay que
+estimar o asumir), la profundidad <span class="arithmatex">\(Z\)</span> recuperada es <strong>métrica</strong>, sin el factor de escala
+indeterminado de SfM/SLAM monocular (§A7.1.1) — resolviendo el primer componente de la maldición.</p>
+<p>Sobre el segundo componente (§A7.1.2): la correspondencia estéreo es <strong>espacial y simultánea</strong>
+(misma toma, dos cámaras) en lugar de <strong>temporal</strong> (dos instantes de la misma cámara). Esto tiene
+una consecuencia directa y favorable para el caso de <code>townsim_ini</code>:</p>
+<ul>
+<li>La disparidad de un obstáculo centrado en la trayectoria de vuelo <strong>no depende de su posición
+  respecto de ningún FOE</strong> — la disparidad es función de la distancia <span class="arithmatex">\(Z\)</span> y la geometría fija del
+  par estéreo, no de hacia dónde se mueve el vehículo. El obstáculo <em>directamente adelante</em>, que es
+  el caso de flujo nulo en monocular (§A7.1.2), es exactamente igual de medible en estéreo que un
+  obstáculo lateral.</li>
+<li>Al no requerir correspondencia entre instantes distintos, el estéreo es menos frágil frente a
+  escena dinámica: ramas moviéndose con el viento entre el momento de captura de la cámara
+  izquierda y la derecha (disparo sincronizado) no introducen el mismo tipo de error que el
+  flujo óptico acumulado entre dos frames separados por <span class="arithmatex">\(\Delta t\)</span> (Anexo 5, §A5.3.3).</li>
+</ul>
+<p>La textura repetitiva del follaje (§A7.2, punto 2) <strong>no desaparece</strong> en estéreo —la ambigüedad de
+correspondencia lateral entre las dos vistas sigue siendo un desafío—, pero es en general un
+problema menos frágil que en flujo óptico, porque no depende de que exista movimiento suficiente
+del vehículo para generar paralaje utilizable: la línea de base está siempre presente, sea que el
+dron esté en hover, girando o avanzando lentamente. Esto es relevante porque el régimen de "cautela
+extrema → movimiento mínimo → menos evidencia" descrito en §11.4.2b (el ciclo de retroalimentación
+negativa que agrava el deadlock crónico) deja de aplicar: el par estéreo entrega profundidad
+métrica incluso cuando el vehículo está casi detenido.</p>
+<hr />
+<h2 id="a74-costobeneficio-frente-a-lidar-emulado-planardepth-y-factibilidad-en-airsim">A7.4 Costo/beneficio frente a LiDAR emulado (PlanarDepth) y factibilidad en AirSim<a class="headerlink" href="#a74-costobeneficio-frente-a-lidar-emulado-planardepth-y-factibilidad-en-airsim" title="Permanent link">&para;</a></h2>
+<p>La arquitectura de este trabajo excluye deliberadamente sensores activos pesados o costosos por
+principio de diseño (§1.2; Anexo 5, introducción). Frente a esa restricción, un LiDAR simulado
+(p. ej. el sensor <code>DepthPlanar</code> de Cosys-AirSim) sería el "sensor ideal" pero representa un salto
+de hardware que la mayoría de los UAVs urbanos pequeños de la clase objetivo de este trabajo no
+llevan, y cuyo costo, peso y consumo energético son órdenes de magnitud mayores que los de una
+segunda cámara RGB.</p>
+<p>Un par estéreo es la opción intermedia razonable: mucho más barato y liviano que un LiDAR real, y
+trivialmente emulable en AirSim agregando una segunda cámara RGB en <code>settings.json</code> con un offset
+fijo conocido en el eje <span class="arithmatex">\(X\)</span> o <span class="arithmatex">\(Y\)</span> del cuerpo del dron (baseline conocida por construcción, sin
+necesidad de calibración extrínseca adicional en simulación). El procesamiento estándar sería:</p>
+<ol>
+<li>Rectificación estéreo (alinear ambas imágenes a un plano epipolar común).</li>
+<li>Matching de disparidad — como línea de base clásica, <code>cv2.StereoSGBM</code> (OpenCV), con la opción de
+   escalar a un método basado en aprendizaje (p. ej. de la familia RAFT-Stereo) si se requiere mayor
+   precisión y el presupuesto de cómputo lo permite.</li>
+<li>Conversión de disparidad a profundidad métrica vía <span class="arithmatex">\(Z = f B / d\)</span>, alimentando el mismo contrato
+   <code>ObstacleField</code> (Anexo 5, §A5.6) ya consumido por el router de política (cap. 8) y el SLM, sin
+   necesidad de rediseñar la interfaz entre percepción y decisión.</li>
+</ol>
+<p><strong>Nota metodológica para una futura implementación:</strong> si se incorpora este canal, la profundidad
+debe derivarse del <em>matching</em> estéreo real (con su ruido de correspondencia y sus errores en zonas
+de textura ambigua) y no leerse directamente del <code>DepthPlanar</code> de ground truth que AirSim provee
+para otros propósitos de depuración. Usar el ground truth directamente compararía el sistema contra
+un LiDAR ideal en lugar de contra el estéreo real que se busca evaluar, invalidando la comparación
+de costo/beneficio que motiva la propuesta.</p>
+<hr />
+<h2 id="a75-ningun-sensor-es-inmune-al-follaje-denso-limites-del-estereo-y-tambien-del-lidar">A7.5 Ningún sensor es inmune al follaje denso: límites del estéreo y también del LiDAR<a class="headerlink" href="#a75-ningun-sensor-es-inmune-al-follaje-denso-limites-del-estereo-y-tambien-del-lidar" title="Permanent link">&para;</a></h2>
+<p>Es importante no presentar el estéreo como una "bala de plata" que resuelve el caso <code>townsim_ini</code>
+sin costo residual. El follaje denso es un escenario adversarial <em>per se</em>, no solo para la cámara
+monocular: degrada, por razones físicas distintas en cada caso, tanto al estéreo propuesto en este
+anexo como al LiDAR que la arquitectura de este trabajo excluye por principio de diseño (§1.2). Vale
+la pena declarar ambos límites explícitamente, porque cambian la expectativa razonable de lo que
+"agregar un sensor mejor" resolvería en un corredor arbolado.</p>
+<h3 id="a751-por-que-el-estereo-tambien-puede-fallar-en-townsim_ini">A7.5.1 Por qué el estéreo también puede fallar en <code>townsim_ini</code><a class="headerlink" href="#a751-por-que-el-estereo-tambien-puede-fallar-en-townsim_ini" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>El rango útil depende linealmente de la línea de base.</strong> En un UAV pequeño, la baseline física
+  disponible entre dos cámaras es corta (típicamente centímetros), y el error de profundidad
+  estimada <strong>crece con el cuadrado de la distancia</strong> (<span class="arithmatex">\(\sigma_Z \propto Z^2 / (f B)\)</span>, derivable por
+  propagación de error de la ecuación de disparidad de §A7.3). A las velocidades de crucero típicas
+  de este trabajo, el horizonte de detección confiable puede resultar corto en comparación con un
+  LiDAR de rango largo — precisamente en un corredor donde la evasión temprana importa.</li>
+<li><strong>Ambigüedad de correspondencia lateral persiste en follaje.</strong> El matching estéreo no depende del
+  FOE (§A7.3), pero sigue dependiendo de encontrar correspondencias únicas entre las dos vistas.
+  Sobre textura repetitiva y auto-similar como ramas y hojas, múltiples parches de la imagen
+  izquierda son plausiblemente compatibles con múltiples parches de la derecha: el problema de
+  apertura de flujo óptico (§A7.2, punto 2) reaparece en estéreo como ambigüedad de disparidad,
+  produciendo mapas de profundidad ruidosos o con "picos" espurios en zonas de vegetación densa,
+  incluso con un algoritmo de matching robusto.</li>
+<li><strong>Oclusiones diferenciales.</strong> Ramas muy finas pueden ser visibles desde una cámara del par y
+  quedar ocultas desde la otra (por paralaje entre los dos puntos de vista), generando huecos o
+  errores locales de matching en exactamente el tipo de obstáculo delgado que ya es difícil para
+  cualquier sensor de este trabajo (Anexo 5, §A5.6.2). Cuanto más denso el follaje, más frecuentes
+  estas oclusiones — el mismo factor que ayuda al estéreo (baseline fija, sin depender de FOE) es
+  el que introduce este modo de falla propio, ausente en monocular.</li>
+</ul>
+<h3 id="a752-por-que-un-lidar-tampoco-resolveria-townsim_ini-sin-matices">A7.5.2 Por qué un LiDAR tampoco resolvería <code>townsim_ini</code> sin matices<a class="headerlink" href="#a752-por-que-un-lidar-tampoco-resolveria-townsim_ini-sin-matices" title="Permanent link">&para;</a></h3>
+<p>Aunque fuera de alcance por diseño (§1.2), vale la pena precisar por qué un LiDAR real —el "sensor
+ideal" de referencia en §A7.4— no es una solución automática al mismo escenario, para no dejar la
+impresión de que cualquier sensor activo lo resolvería trivialmente:</p>
+<ul>
+<li><strong>Geometría subpíxel y retornos escasos.</strong> Las ramas finas tienen una sección transversal menor
+  que la divergencia del haz láser a distancias de varios metros; el pulso puede no intersectar
+  ninguna rama, o intersectar el borde de una, generando retornos débiles o ausentes. Este es el
+  mismo problema mencionado en §A7.2 para SLAM denso: la estructura fina de la vegetación está, en
+  buena medida, <em>por debajo de la resolución efectiva</em> de cualquier sensor de barrido disperso, no
+  solo del monocular.</li>
+<li><strong>Retornos múltiples y "mixed pixels".</strong> Un solo pulso de LiDAR puede atravesar parcialmente el
+  follaje y golpear más de una superficie (una hoja cercana y una rama más lejana en la misma
+  línea de vista), produciendo un retorno mezclado cuya distancia reportada no corresponde
+  limpiamente a ningún obstáculo real — un problema bien documentado en escaneo LiDAR forestal y
+  de vegetación urbana.</li>
+<li><strong>Reflectividad baja y variable.</strong> Las hojas tienen reflectividad óptica baja y anisótropa (varía
+  con el ángulo de incidencia y la humedad de la superficie), lo que reduce la relación
+  señal-ruido de los retornos y puede dejar zonas del follaje sin cobertura efectiva de puntos,
+  incluso dentro del rango nominal del sensor.</li>
+<li><strong>El costo real no es solo económico.</strong> Incluso si el LiDAR "viera" más geometría que el estéreo
+  en este escenario, la nube de puntos resultante en vegetación densa suele ser rala y ruidosa
+  precisamente donde más importa (el eje de avance), por lo que la mejora práctica sobre el modo
+  de falla de <code>townsim_ini</code> es menor de lo que su costo, peso y consumo energético (§A7.4)
+  sugerirían a priori.</li>
+</ul>
+<blockquote>
+<p>[!IMPORTANTE]
+La conclusión no es que ningún sensor ayude, sino que el follaje denso es un caso límite que
+degrada a <em>toda</em> la familia de sensores de rango (monocular, estéreo, LiDAR), cada uno por un
+mecanismo físico distinto. El estéreo sigue siendo la mejora de menor costo y mayor impacto
+marginal para el modo de falla específico identificado en §A7.2 (flujo nulo cerca del FOE), no
+porque sea inmune al follaje, sino porque elimina selectivamente la causa dominante del fracaso
+monocular sin heredar todas las limitaciones de un LiDAR en el mismo entorno.</p>
+</blockquote>
+<hr />
+<h2 id="a76-sintesis-y-ubicacion-en-el-trabajo-futuro">A7.6 Síntesis y ubicación en el trabajo futuro<a class="headerlink" href="#a76-sintesis-y-ubicacion-en-el-trabajo-futuro" title="Permanent link">&para;</a></h2>
+<p>La visión estereoscópica resuelve de forma directa y con bajo costo computacional los dos
+componentes formales de la maldición monocular (§A7.1): fija la escala métrica sin depender de IMU
+ni de referencias externas, y elimina la dependencia del flujo respecto de la posición del FOE, que
+es precisamente el mecanismo identificado en §A7.2 como causa estructural del fracaso en
+<code>townsim_ini</code> (cap. 11, §11.4.2b). Es, además, más fácil de justificar como próximo paso concreto
+que un LiDAR emulado, porque emula una limitación de hardware real y económicamente accesible (un
+segundo sensor RGB de bajo costo) en lugar de saltar directamente a una clase de sensor que la
+mayoría de los UAVs urbanos pequeños de este dominio de aplicación no incorpora.</p>
+<p>En la jerarquía de mejoras de percepción de este trabajo (cap. 12, §12.4), el estéreo se propone
+como el <strong>paso intermedio natural</strong>: menor costo de implementación y de hardware que un SLAM
+monocular semi-denso o un LiDAR real, y con un impacto directo sobre el modo de falla documentado
+en corredores arbolados. El SLAM monocular (§A7.2.1) queda como una línea posterior, complementaria
+y no sustitutiva, útil si además del canal de profundidad instantánea que aporta el estéreo se
+requiere robustez de localización y mapeo ante escena dinámica extendida en el tiempo.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

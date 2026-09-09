@@ -89,3 +89,4 @@ nav:
     - "A4. Decodificación Restringida": anexos/A4-DECODIFICACION-RESTRINGIDA.md
     - "A5. Percepción Monocular y Flujo Óptico": anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md
     - "A6. Entorno y Reproducibilidad": anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md
+    - "A7. Maldición Monocular y Mitigación Estéreo": anexos/A7-MALDICION-MONOCULAR-ESTEREO.md

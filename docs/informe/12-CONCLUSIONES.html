@@ -928,6 +928,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A7-MALDICION-MONOCULAR-ESTEREO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1058,6 +1086,10 @@
 <li>Calibración formal del canal de ocupación de <code>ObstacleField</code> contra el mapa de profundidad de ground truth (cap. 6, §6.3; <a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">Anexo 5</a>), completando el protocolo de curva ROC y derivación del umbral óptimo por índice de Youden de forma análoga a la validación del TTC (cap. 7, §7.5).</li>
 <li>
 <p>Validación y robustecimiento de la compensación de flujo óptico por derotación angular frente a maniobras de guiñada (<em>yaw</em>) agresivas (&gt; 0.3 rad/s), superando el rango acotado del dataset preliminar (cap. 7, §7.4, §7.6; <a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">Anexo 5</a>, §A5.3).</p>
+</li>
+<li>
+<p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong>
+  El fracaso uniforme de los tres brazos en el corredor arbolado <code>townsim_ini</code> (cap. 11, §11.4.2b) expuso un límite estructural del sensor monocular, no un defecto de ajuste: el flujo óptico traslacional se anula justo en los obstáculos centrados en la trayectoria de avance (cerca del Foco de Expansión), que son exactamente los de mayor riesgo de colisión frontal (<a href="anexos/A7-MALDICION-MONOCULAR-ESTEREO.html">Anexo 7</a>, §A7.1–§A7.2). Como línea de trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del flujo respecto del FOE al recuperar profundidad métrica a partir de un único instante, en vez de requerir movimiento del vehículo entre frames (<a href="anexos/A7-MALDICION-MONOCULAR-ESTEREO.html">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, útil para robustez de localización ante escena dinámica extendida, pero con limitaciones propias frente a follaje en movimiento y geometría subpíxel (Anexo 7, §A7.2.1) que no lo posicionan como sustituto directo del estéreo para este modo de falla específico.</p>
 </li>
 <li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>
