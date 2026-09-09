@@ -261,11 +261,50 @@ ligeramente al `reactive` y al `slm` (176 m vs. 158 m vs. 135 m), contrariamente
 de que el VLM debería guiar mejor en corredores obstruidos. La alta varianza del `slm` (σ=50 m)
 y del `fsm` (σ=84 m) impide conclusiones estadísticas con K=5.
 
+**Por qué falla específicamente el sensor monocular en este escenario.** El fracaso uniforme de
+los tres brazos en `townsim_ini` no es un artefacto de ajuste de parámetros ni una falla aislada
+de la política de decisión: `townsim_ini` fue diseñado deliberadamente como caso adversarial para
+la percepción monocular, y el resultado expone justamente el límite físico que ese diseño buscaba
+provocar. Vale la pena explicitar el mecanismo, desarrollado formalmente en el
+[Anexo 7](anexos/A7-MALDICION-MONOCULAR-ESTEREO.md):
+
+1. **Flujo traslacional nulo cerca del Foco de Expansión (FOE).** Por la relación deducida en el
+   Anexo 5 (§A5.4.1), $\|v_{\text{trans}}\| \propto \|p - \text{FOE}\|$: el flujo óptico de un
+   punto se anula a medida que su proyección se acerca al FOE, es decir, al centro geométrico de
+   la trayectoria de avance. En un corredor recto cubierto de follaje volado a z=−10 m (bajo la
+   copa de los árboles), las ramas que están *exactamente en la línea de vuelo* — las de mayor
+   riesgo de colisión — son las que producen la señal de flujo más débil, mientras que el follaje
+   periférico (que no bloquea el paso) genera el flujo más intenso. El `ObstacleField` tiende
+   entonces a reportar menor confianza justo donde la decisión es más urgente.
+2. **Textura repetitiva y auto-similar.** Ramas y hojas violan el supuesto de correspondencia
+   unívoca del que depende cualquier estimador de flujo: un parche de follaje es visualmente
+   indistinguible de sus vecinos, por lo que el problema de apertura (*aperture problem*) se
+   agrava y el vector estimado resulta frecuentemente espurio, incluso lejos del FOE.
+3. **Retroalimentación negativa entre cautela y evidencia.** Ante la ambigüedad de señal, los tres
+   brazos recurren a maniobras de bajo desplazamiento neto, lo que reduce aún más la línea de base
+   de paralaje disponible entre frames consecutivos — un ciclo de "menor confianza → mayor cautela
+   → menor movimiento → menor evidencia" que no se rompe por sí solo.
+
+Estos tres efectos son manifestaciones de la **maldición monocular** (ambigüedad de escala más
+dependencia estructural del movimiento; Anexo 7, §A7.1): no son errores de implementación del
+pipeline de `flow_ttc.py`, sino un límite físico del sensor elegido por diseño (§1.2). El deadlock
+crónico observado en `slm` (20.2/corrida) y `fsm` (24.0/corrida) es, en este sentido, la
+manifestación en la capa de control de una falla que se origina en la capa de percepción: el VLM y
+la FSM reciben evidencia degradada o nula del mismo pasaje que deben atravesar, y ningún
+razonamiento táctico adicional puede compensar la ausencia de señal geométrica confiable en la
+dirección de interés. Esto también explica por qué el `reactive` — que no delibera y por tanto no
+puede "esperar más evidencia" — tampoco progresa: sin flujo utilizable cerca del eje de avance, el
+campo de obstáculos frontal no genera un gradiente de evasión claro en ninguna capa de decisión.
+
 **Opciones para el análisis final:** (a) aumentar `--max-seconds` a 1800 s y re-correr para dar
 tiempo a que algún brazo complete; (b) elevar la altitud del corredor a z=−20 m para reducir la
 densidad de obstrucción; (c) aceptar el resultado como hallazgo de límite operativo y reportar
-distancia recorrida en lugar de tasa de éxito. La opción (c) es la más honesta científicamente
-dado que los datos ya están colectados.
+distancia recorrida en lugar de tasa de éxito; (d) como línea de trabajo futuro, evaluar una
+mitigación estructural del problema de percepción — no solo del ajuste de escenario — mediante un
+segundo canal de profundidad instantánea (visión estereoscópica) que no dependa del FOE ni del
+movimiento entre frames (Anexo 7, §A7.4–§A7.6). La opción (c) es la más honesta científicamente
+dado que los datos ya están colectados; la opción (d) es la que efectivamente atacaría la causa
+raíz identificada arriba, a diferencia de (a) y (b), que solo relajan el caso de prueba.
 
 ### 11.4.3 Tier 2 — Entorno urbano de crucero (`citysim_clear`)
 
