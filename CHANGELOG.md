@@ -1,3 +1,46 @@
+# 2026-09-08
+
+## Lote extendido E1 — `townsim_ini` y actualización de §11-RESULTADOS
+
+### Corridas experimentales — lote extendido E1
+
+- Lanzado lote extendido E1: `townsim_ini` (15 corridas, TownSim, tier1).
+
+### Rediseño de `townsim_ini`
+
+- Manifiesto `airsim-plan/missions/flightplans/townsim_ini.json` reescrito: la versión anterior era idéntica al perímetro de `townsim_clear` (mismo recorrido exterior a −30 m). La nueva versión atraviesa el corredor peatonal arbolado central de norte a sur a z=−10 m (bajo la copa de los árboles), con climb-first en spawn.
+- Coordenadas: x=−75 m (centro del complejo), y de +10 a −70 m; validación visual pendiente en viewport TownSim.
+
+### Resultado E1 — límite operativo confirmado
+
+- **0/5 éxitos** en los tres brazos (timeout en 900 s), 0 colisiones.
+- `slm`: 20.2 deadlocks/corrida, 100% resueltos por `deep_vlm`, ~135 m recorridos.
+- `fsm`: 24.0 deadlocks/corrida, 100% resueltos, ~176 m recorridos.
+- `reactive`: 0 deadlocks, ~158 m recorridos (oscilación sin progreso neto).
+- Hallazgo: tasa de deadlocks > capacidad de resolución → "deadlock crónico". Ninguna arquitectura completa el corredor a z=−10 m en el presupuesto temporal. Reportado como límite operativo en §11.4.2b.
+
+### `informe/11-RESULTADOS.md` — actualización
+
+- §11.1: reemplaza datos piloto (1 semilla) por medias reales sobre 5 semillas para los tres tiers base.
+- §11.2: tabla de resultados por brazo/escenario actualizada con datos del lote base y E1 (`townsim_ini`).
+- §11.3 (nueva): análisis estadístico completo — tabla de ratios H2, Mann-Whitney + Cliff's Delta para 9 comparaciones del lote base, perfil de deliberación por tier.
+- §11.4.2b (nueva): análisis de `townsim_ini` como escenario de límite operativo.
+- Filas `[pendiente]`: `townsim_calib_cruce_frontal`, `citymap_pilot`.
+
+### Decisión sobre `townsim_ini`
+
+- Escenario declarado **fallido por diseño** (corredor demasiado denso a z=−10 m). No se re-corre. Los datos de distancia recorrida y tasa de deadlocks se reportan como evidencia de límite operativo del sistema.
+
+## Corridas experimentales — Lotes Base A, B y C
+
+- **Lote A — Tier 0 `minisim_clear`** (15 corridas, MiniSim): 5/5 éxito en los 3 brazos, 0 colisiones. `slm` 164.2 s, `fsm` 174.2 s, `reactive` 74.7 s. Ratio slm/reactive = 2.20×.
+- **Lote B — Tier 1 `townsim_clear`** (15 corridas, TownSim): 5/5 éxito en los 3 brazos, 0 colisiones. `slm` 296.0 s, `fsm` 329.5 s, `reactive` 259.7 s. Ratio slm/reactive = 1.14×.
+- **Lote C — Tier 2 `citysim_clear`** (15 corridas, CitySim): 5/5 éxito en los 3 brazos, 0 colisiones. `slm` 175.5 s, `fsm` 187.7 s, `reactive` 165.2 s. Ratio slm/reactive = 1.06×.
+- Total lote base: 45 corridas, 45/45 éxitos, 0 colisiones. Resultados en `airsim-runs/produccion/tier0/`, `tier1/`, `tier2/`.
+- Hallazgo H2 confirmado: ratio slm/reactive decrece monotónicamente 2.20× → 1.14× → 1.06× con la longitud de ruta. Cliff's δ = 1.0 (separación perfecta) en las 6 comparaciones vs. `reactive`, p=0.009 sin corregir; no supera Bonferroni con K=5.
+
+---
+
 # 2026-0907
 
 ## Reescritura completa de capítulos 06–09 e índice del informe
