@@ -12,7 +12,7 @@ profundidad relativa a partir de una sola cámara, este anexo formaliza *por qu�
 colapsa estructuralmente en ciertas geometrías de escena, y qué alternativa de bajo costo resuelve
 el colapso sin abandonar el principio de percepción pasiva declarado en §1.2.
 
----
+<img src="a7-maldicion-monocular.jpg"/>
 
 ## A7.1 La maldición monocular: dos componentes distintos
 
