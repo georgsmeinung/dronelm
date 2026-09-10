@@ -42,6 +42,7 @@ falla, y debe quedar explícita en el informe (§12.3, nota metodológica).
 | **S2** Resumen textual para el VLM | Que el VLM reciba historia de intentos, no solo vista actual | `trajectory_context_text()` — qué direcciones se intentaron, cuáles produjeron progreso, cuáles stall |
 | **S2b** *(opcional)* Nube SfM por sectores | Añadir evidencia estructural 3D al bloque textual cuando el matching es confiable | Estadístico de puntos triangulados por sector (no render); se degrada silenciosamente si la confianza SfM < umbral |
 | **S3** Prompt de slam_assess | Consulta al VLM con contexto de trayectoria + frame actual | `SYSTEM_PROMPT_SLAM_ASSESS` — sin rotación panorámica, solo frame frontal + historia |
+| **S3b** *(sub-opción condicional de S3)* Anotación YOLO en stalls | Añadir clase semántica del obstáculo a eventos de stall pasados | `obstacle_class` en `TrajectoryEvent`; solo si `SLAM_YOLO_ENABLED=true` y `conf ≥ 0.45` |
 | **S4** Reemplazo de `deep_vlm` y `blind` | Que `DEADLOCK_STRATEGY` tenga un único valor útil | `deep_scan.py` con solo `slam_assess`; `blind` y `deep_vlm` quedan como legado no activo |
 | **S5** Validación offline | Saber si la historia hubiera sido útil antes de volar | Reconstrucción sobre logs de `townsim_ini` ya existentes |
 | **S6** Corrida experimental | El dato que va al cap. 11 | `townsim_ini` K=5 × 3 brazos con `slam_assess` vs. línea base (`deep_vlm`) del cap. 11 |
@@ -203,6 +204,62 @@ El prompt nuevo (`SYSTEM_PROMPT_SLAM_ASSESS`) reemplaza a `SYSTEM_PROMPT_DEEP_SC
    macro-acción. Prioriza direcciones no exploradas o la vuelta al origen si el frente está
    cronicamente bloqueado."
 5. Vocabulario y esquema JSON: idénticos a los del prompt actual — el parser de respuesta no cambia.
+
+### Fase S3b — Anotación semántica YOLO en eventos de stall *(sub-opción condicional de S3)*
+
+**Activación:** `SLAM_YOLO_ENABLED=true` (default `false`). Sub-opción de S3, no una fase
+independiente. Solo se evalúa si S3 ya funciona correctamente y el experimento de S6 muestra que
+el historial textual no alcanza para resolver `townsim_ini`.
+
+**Qué añade:** en lugar de correr YOLO en cada ciclo del lazo (innecesario: el VLM ya ve la
+imagen con mayor capacidad semántica que YOLO), se corre una única inferencia en el momento en
+que se registra un `stall=True` en el `FlightTrajectory`. El resultado anota el evento:
+
+```python
+@dataclass
+class TrajectoryEvent:
+    ...
+    stall: bool
+    obstacle_class: Optional[str] = None  # "tree" | "building" | "wall" | None
+    obstacle_conf: float = 0.0            # confianza de la detección; 0.0 si YOLO desactivado
+```
+
+Esto permite que `trajectory_context_text()` enriquezca el bloque con la clase del obstáculo:
+
+```
+- FRENTE: 12 stalls consecutivos. Obstáculo identificado: vegetación (árbol, conf=0.71).
+  → Considerar PERDER_ALTURA si hay espacio libre debajo.
+- IZQUIERDA: 3 stalls. Obstáculo: estructura rígida (edificio, conf=0.84).
+  → GANAR_ALTURA o cambio de ruta.
+```
+
+Sin S3b, el bloque solo dice "12 stalls, sin progreso" — la clase del obstáculo da al VLM
+contexto semántico para razonar sobre la dirección de escape (vertical vs. lateral).
+
+**Por qué no en cada ciclo:** el VLM ya recibe el frame frontal en S3 y puede inferir "árbol"
+o "edificio" directamente. Duplicar esa capacidad con YOLO en tiempo real es redundante y añade
+latencia al lazo de 5 Hz. La anotación en eventos de stall es el único uso donde YOLO añade
+información que el contexto textual no tiene: la clase del obstáculo *en el momento del stall
+pasado*, que el VLM del ciclo actual no puede recuperar desde el frame presente.
+
+**Limitación principal:** modelos YOLO con pesos COCO no tienen categorías específicas para
+obstáculos de dron en entornos arbóreos. "tree" es una clase COCO pero la confianza en vegetación
+densa (`townsim_ini`) puede ser baja o errática. Si `obstacle_conf < SLAM_YOLO_MIN_CONF`
+(default `0.45`), el campo `obstacle_class` queda en `None` y el texto del evento no incluye la
+anotación — igual que si YOLO estuviera desactivado. El umbral alto (0.45 en vez del típico 0.25)
+es deliberado: es mejor no anotar que anotar con clase incorrecta y sesgar al VLM.
+
+**YOLO fue retirado del lazo de vuelo principal** (`graph.py:13`, `detected_obstacles` quedaba
+siempre en `[]`). S3b no lo reintegra al lazo — solo lo usa fuera del camino crítico, en el
+momento puntual del registro de un stall.
+
+**Variables de entorno:**
+
+| Variable | Default | Rol |
+|---|---|---|
+| `SLAM_YOLO_ENABLED` | `false` | Activa la anotación semántica en eventos de stall |
+| `SLAM_YOLO_MODEL` | `yolov8n.pt` | Peso YOLO a usar (nano = mínimo overhead) |
+| `SLAM_YOLO_MIN_CONF` | `0.45` | Umbral de confianza; debajo de este, el campo queda en None |
 
 ---
 
