@@ -372,10 +372,11 @@ class FlightLogger:
             return "unknown"
 
     def close(self) -> Dict[str, Any]:
-        # H3.2/H3.3 (PLAN-MEJORAS-3): agregado del ablation blind vs. deep_vlm,
-        # desagregable despues por AGENT_ARM x DEADLOCK_STRATEGY (experiments/
-        # analyze.py agrupa por summary.json de multiples corridas).
-        deep_vlm_events = [e for e in self._deadlock_events if e.get("strategy") == "deep_vlm"]
+        # H3.2/H3.3/S4 (PLAN-SLAM): deep_scan_events cuenta todos los eventos
+        # con estrategia guiada por VLM (deep_vlm + slam_assess). Antes filtraba
+        # solo deep_vlm, lo que daba deep_scan_events=0 con slam_assess activo.
+        scan_strategies = {"deep_vlm", "slam_assess"}
+        deep_vlm_events = [e for e in self._deadlock_events if e.get("strategy") in scan_strategies]
         resolved_events = [e for e in deep_vlm_events if e.get("resolved_by_scan")]
         cycles_to_resolve = [
             e["cycles_to_resolve"] for e in resolved_events if e.get("cycles_to_resolve") is not None
@@ -400,7 +401,7 @@ class FlightLogger:
             # H3.1/H3.3: variable de diseno del factorial AGENT_ARM x
             # DEADLOCK_STRATEGY, leida al cierre (no al abrir el logger) para
             # que corridas largas reflejen el valor vigente durante el vuelo.
-            "deadlock_strategy": os.getenv("DEADLOCK_STRATEGY", "deep_vlm"),  # 2026-0903: mismo default que src/agents/deep_scan.py
+            "deadlock_strategy": os.getenv("DEADLOCK_STRATEGY", "slam_assess"),  # S4 (PLAN-SLAM): default slam_assess
             "deadlock_events": len(self._deadlock_events),
             "deep_scan_events": len(deep_vlm_events),
             "deep_scan_resolution_rate": (len(resolved_events) / len(deep_vlm_events)) if deep_vlm_events else None,

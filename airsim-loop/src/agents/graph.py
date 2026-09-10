@@ -195,7 +195,16 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             prev_dist = state.get("_prev_wp_distance")
             if prev_dist is not None:
                 delta_wp = curr_dist - prev_dist  # positivo = retroceso, negativo = avance
-                stall = delta_wp > SLAM_STALL_THRESHOLD_M
+                action_taken = state.get("next_action", "")
+                # Stall = retroceso significativo O acción de escape (escape
+                # implica que el camino estaba bloqueado ese ciclo, aunque la
+                # distancia al WP no haya aumentado: p.ej. PERDER_ALTURA cerca
+                # de un árbol no retrocede en distancia pero sí indica falla).
+                _ESCAPE_STALL = {
+                    "GANAR_ALTURA", "PERDER_ALTURA", "DESCENDER",
+                    "FRENAR", "EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GIRAR_90",
+                }
+                stall = delta_wp > SLAM_STALL_THRESHOLD_M or action_taken in _ESCAPE_STALL
                 pos = prev_telem.get("position") or {}
                 orient_d = prev_telem.get("orientation") or {}
                 had_evidence = (state.get("obstacle_field") or empty_field()).has_evidence()
@@ -207,7 +216,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
                         float(pos.get("z", 0.0)),
                     ),
                     heading_deg=math.degrees(float(orient_d.get("yaw", 0.0))),
-                    action_taken=state.get("next_action", ""),
+                    action_taken=action_taken,
                     delta_wp_m=delta_wp,
                     stall=stall,
                     flow_had_evidence=had_evidence,
