@@ -51,6 +51,15 @@ _CSV_FIELDNAMES = [
     # ya escapa comas/saltos de linea embebidos (quoting por default), asi
     # que un prompt multilinea no rompe el formato de fila.
     "slm_prompt", "slm_raw_response", "slm_delib_id", "slm_frame_paths",
+    # Estado de control interno (2026-0909): estas tres variables influyen en
+    # policy_router pero no se registraban, imposibilitando el replay exacto en
+    # NB3. evasion_stuck_cycles determina el escape de deadlock; active_maneuver
+    # + maneuver_cycles_left determinan si una maniobra comprometida continua;
+    # slm_request_id_logged indica si habia un pedido SLM en vuelo (fuerza rama
+    # deliberative). Con estas columnas el replay puede inicializar el estado
+    # exacto de cada ciclo desde el CSV.
+    "ctrl_stuck_cycles", "ctrl_active_maneuver", "ctrl_maneuver_cycles_left",
+    "ctrl_slm_pending",
 ] + [f"field_{s}_{k}" for s in _CSV_SECTORS for k in ("occ", "ttc_s", "conf", "blocked")]
 
 
@@ -340,6 +349,10 @@ class FlightLogger:
             csv_row[f"field_{s}_ttc_s"] = cell.get("ttc_s")
             csv_row[f"field_{s}_conf"] = cell.get("confidence")
             csv_row[f"field_{s}_blocked"] = cell.get("blocked")
+        csv_row["ctrl_stuck_cycles"]        = state.get("evasion_stuck_cycles", 0)
+        csv_row["ctrl_active_maneuver"]     = state.get("active_maneuver") or ""
+        csv_row["ctrl_maneuver_cycles_left"] = state.get("maneuver_cycles_left", 0)
+        csv_row["ctrl_slm_pending"]         = state.get("slm_request_id") is not None
         self._csv_writer.writerow(csv_row)
         self._csv_fh.flush()
 
