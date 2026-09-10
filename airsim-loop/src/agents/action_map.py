@@ -17,6 +17,7 @@ FLOW_MAX_YAW_DPS_NEAR_OBSTACLE = float(os.getenv("FLOW_MAX_YAW_DPS_NEAR_OBSTACLE
 EVASION_LATERAL_YAW_RATE = float(os.getenv("EVASION_LATERAL_YAW_RATE", "15.0"))
 EVASION_UP_SPEED = float(os.getenv("EVASION_UP_SPEED", "1.5"))
 EVASION_DOWN_SPEED = float(os.getenv("EVASION_DOWN_SPEED", "0.8"))
+EVASION_BACK_SPEED = float(os.getenv("EVASION_BACK_SPEED", "1.2"))
 # Distancia (metros) del waypoint de desvio temporal que se inyecta cuando el
 # escape sincronico se agota (ver compute_corner_waypoint mas abajo). Primera
 # aproximacion sin medir en vuelo real (2026-0827, ver CHANGELOG.md) -- punto
@@ -31,6 +32,7 @@ VALID_ACTIONS = {
     "PERDER_ALTURA",
     "FRENAR",
     "GIRAR_90",
+    "RETROCEDER",
 }
 
 
@@ -153,6 +155,16 @@ def action_to_command(
             "vz": 0.0,
             "yaw_rate": 20.0 * turn_sign,
             "target_yaw": target_yaw_deg,
+        }
+
+    if action == "RETROCEDER":
+        return {
+            "macro_action": action,
+            "vx": -EVASION_BACK_SPEED,
+            "vy": 0.0,
+            "vz": vz_guidance,
+            "yaw_rate": safe_yaw_rate(yaw_rate_guidance, near_obstacle),
+            "target_yaw": None,
         }
 
     # FRENAR y cualquier accion desconocida: parar en el lugar.

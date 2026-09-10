@@ -58,6 +58,7 @@ PROMPT_ACTIONS = {
     "GANAR_ALTURA",
     "PERDER_ALTURA",
     "FRENAR",
+    "RETROCEDER",
 }
 
 # S3 (PLAN-SLAM): prompt de slam_assess. Diferencia arquitectónica clave con
@@ -75,10 +76,13 @@ SYSTEM_PROMPT_SLAM_ASSESS = (
     "'No explorado', DEBES elegir EVADIR hacia la zona no explorada — incluso si la imagen "
     "muestra vegetación, las laterales podrían estar despejadas y no se han intentado.\n"
     "2. Los escapes verticales (GANAR/PERDER_ALTURA) solo aplican cuando las zonas laterales "
-    "también fueron intentadas y fallaron.\n\n"
+    "también fueron intentadas y fallaron.\n"
+    "3. RETROCEDER aplica cuando FRENTE y ambas laterales están bloqueadas — alejarse del "
+    "obstáculo crea margen para que el siguiente EVADIR tenga espacio de maniobra.\n\n"
     "Valores permitidos para macro_action:\n"
     "- MANTENER_RUMBO: el frente está despejado según lo que ves ahora (falso atasco).\n"
     "- EVADIR_IZQUIERDA / EVADIR_DERECHA: esa dirección no fue intentada o tuvo menor tasa de stall.\n"
+    "- RETROCEDER: el dron está pegado al obstáculo; retroceder 3-4m para ganar margen antes de evadir.\n"
     "- GANAR_ALTURA: el historial muestra bloqueo en todos los rumbos laterales; el obstáculo es sólido.\n"
     "- PERDER_ALTURA: el historial indica vegetación arriba y hay espacio libre abajo.\n"
     "- FRENAR: ninguna dirección del historial ni la vista actual ofrecen salida; esperar.\n\n"
@@ -219,7 +223,24 @@ def _lateral_first_override(
     elif der_att == 0:
         lateral = "EVADIR_DERECHA"
     else:
-        return decision  # ambas ya intentadas — el VLM tiene mejor criterio visual
+        # Ambas laterales intentadas. Si ambas tienen alta tasa de stall,
+        # el dron está pegado contra el obstáculo — retroceder primero.
+        izq_rate = stats["IZQUIERDA"]["stall_rate"]
+        der_rate = stats["DERECHA"]["stall_rate"]
+        if izq_rate >= 0.70 and der_rate >= 0.70:
+            print(
+                f"[slam_assess] retroceder-override: laterales bloqueadas "
+                f"(izq={izq_rate:.0%}, der={der_rate:.0%}) -> RETROCEDER"
+            )
+            return {
+                "macro_action": "RETROCEDER",
+                "rationale": (
+                    f"FRENTE bloqueado ({stats['FRENTE']['stall_rate']:.0%} stall), "
+                    f"laterales bloqueadas (izq={izq_rate:.0%}, der={der_rate:.0%}); "
+                    f"retroceder para ganar margen antes del siguiente EVADIR."
+                ),
+            }
+        return decision  # laterales intentadas con stall moderado — el VLM tiene mejor criterio visual
 
     print(
         f"[slam_assess] lateral-first override: {macro} -> {lateral} "
@@ -605,13 +626,11 @@ def _apply_scan_resolution(
     state["evasion_stuck_cycles"] = 0
     state["_deliberation_pending"] = False
 
+    loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
     if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA", "PERDER_ALTURA"):
-        loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
-        # Duración adaptativa: si el FRENTE tiene alta tasa de stall, la zona
-        # bloqueadora es densa — necesita más tiempo para sortearla.
-        # ≥70% stall → 3× duración base; ≥50% → 2×; <50% → 1× (base).
-        # Cuando la lateral elegida también tiene ≥50% stall (obstáculo ancho),
-        # se sube a 5× para ganar más desplazamiento lateral en el arco de evasión.
+        # Duración adaptativa: ≥70% stall FRENTE → 3× (aggressive); ≥50% → 2×; <50% → 1×.
+        # RETROCEDER maneja el caso extremo (ambas laterales bloqueadas), por lo que
+        # el tope aqui baja a 3× — suficiente con vx agresivo (1.2 m/s, radio 4.58m).
         duration_multiplier = 1.0
         aggressive_evasion = False
         if trajectory is not None:
@@ -620,10 +639,7 @@ def _apply_scan_resolution(
             stall_rate = trajectory.frente_stall_rate(current_hdg)
             if stall_rate >= 0.70:
                 aggressive_evasion = True
-                stats = trajectory.zone_stats(current_hdg)
-                lateral_zone = "DERECHA" if macro == "EVADIR_DERECHA" else "IZQUIERDA"
-                lateral_stall = stats.get(lateral_zone, {}).get("stall_rate", 0.0)
-                duration_multiplier = 5.0 if lateral_stall >= 0.50 else 3.0
+                duration_multiplier = 3.0
             elif stall_rate >= 0.50:
                 duration_multiplier = 2.0
         if aggressive_evasion and macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA"):
@@ -631,6 +647,13 @@ def _apply_scan_resolution(
             cmd["rationale"] = decision.get("rationale", "")
             state["velocity_command"] = cmd
         duration_s = DEEP_SCAN_MANEUVER_DURATION_S * duration_multiplier
+        state["active_maneuver"] = macro
+        state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
+        state["maneuver_command"] = cmd
+    elif macro == "RETROCEDER":
+        # Duración fija: crear distancia suficiente del obstáculo para que el
+        # siguiente EVADIR tenga margen de arco. No depende de la tasa de stall.
+        duration_s = DEEP_SCAN_MANEUVER_DURATION_S * 1.5  # 2.0 × 1.5 = 3s → ~3.6m a 1.2 m/s
         state["active_maneuver"] = macro
         state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
         state["maneuver_command"] = cmd
