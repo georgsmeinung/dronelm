@@ -258,7 +258,7 @@ def _slam_assess_cycle(
         if decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
             _apply_scan_resolution(
                 state, decision, result.raw_response, result.latency_ms,
-                guidance, telemetry, arm, deadlock_cycles,
+                guidance, telemetry, arm, deadlock_cycles, trajectory,
             )
             # Sobrescribir strategy en _deadlock_event para el log
             if state.get("_deadlock_event"):
@@ -501,6 +501,7 @@ def _apply_scan_resolution(
     telemetry: Dict[str, Any],
     arm: str,
     deadlock_cycles: int,
+    trajectory: "Any | None" = None,
 ) -> None:
     macro = decision["macro_action"]
     cmd = action_to_command(macro, guidance=guidance, telemetry=telemetry)
@@ -551,8 +552,21 @@ def _apply_scan_resolution(
 
     if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA", "PERDER_ALTURA"):
         loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
+        # Duración adaptativa: si el FRENTE tiene alta tasa de stall, la zona
+        # bloqueadora es densa — necesita más tiempo para sortearla.
+        # ≥70% stall → 3× duración base; ≥50% → 2×; <50% → 1× (base).
+        duration_multiplier = 1.0
+        if trajectory is not None:
+            orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+            current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
+            stall_rate = trajectory.frente_stall_rate(current_hdg)
+            if stall_rate >= 0.70:
+                duration_multiplier = 3.0
+            elif stall_rate >= 0.50:
+                duration_multiplier = 2.0
+        duration_s = DEEP_SCAN_MANEUVER_DURATION_S * duration_multiplier
         state["active_maneuver"] = macro
-        state["maneuver_cycles_left"] = max(1, round(DEEP_SCAN_MANEUVER_DURATION_S * loop_hz))
+        state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
         state["maneuver_command"] = cmd
     else:
         state["active_maneuver"] = None

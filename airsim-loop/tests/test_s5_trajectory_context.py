@@ -127,3 +127,20 @@ def test_unexplored_zone_marked_correctly():
     t = _fill_traj(events)
     text = t.trajectory_context_text(current_heading_deg=0.0)
     assert "No explorado" in text
+
+
+def test_frente_stall_rate_high():
+    """frente_stall_rate() devuelve la tasa correcta con mayoría de stalls."""
+    events = [_event(0.0, stall=True) for _ in range(7)]
+    events += [_event(0.0, stall=False) for _ in range(3)]
+    t = _fill_traj(events)
+    rate = t.frente_stall_rate(current_heading_deg=0.0)
+    assert abs(rate - 0.7) < 1e-9
+
+
+def test_frente_stall_rate_no_events():
+    """frente_stall_rate() devuelve 0.0 sin eventos en FRENTE."""
+    events = [_event(90.0, stall=True) for _ in range(5)]  # todos en DERECHA
+    t = _fill_traj(events)
+    rate = t.frente_stall_rate(current_heading_deg=0.0)
+    assert rate == 0.0

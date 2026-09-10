@@ -130,3 +130,25 @@ class FlightTrajectory:
             f"Progreso total al waypoint: {abs(total_delta):.1f}m ({direction} neto)."
         )
         return "\n".join(lines)
+
+    def frente_stall_rate(
+        self,
+        current_heading_deg: float = 0.0,
+        max_events: int = 0,
+    ) -> float:
+        """Tasa de stall de la zona FRENTE en los últimos max_events ciclos.
+
+        Devuelve 0.0 si no hay eventos en FRENTE. Misma zonificación que
+        trajectory_context_text(): ±30° del heading actual = FRENTE.
+        """
+        events = self._events
+        cap = max_events if max_events > 0 else SLAM_CONTEXT_MAX_EVENTS
+        events = events[-cap:] if len(events) > cap else events
+        attempts = stalls = 0
+        for ev in events:
+            rel = ((ev.heading_deg - current_heading_deg) + 180.0) % 360.0 - 180.0
+            if -30.0 <= rel <= 30.0:
+                attempts += 1
+                if ev.stall:
+                    stalls += 1
+        return stalls / attempts if attempts > 0 else 0.0
