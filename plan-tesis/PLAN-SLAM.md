@@ -40,6 +40,7 @@ falla, y debe quedar explícita en el informe (§12.3, nota metodológica).
 |---|---|---|
 | **S1** Buffer de trayectoria | Memoria de eventos de vuelo independiente del sensor óptico | `FlightTrajectory` en `spatial_history.py` — ring buffer de (posición, heading, acción, Δwp, stall) |
 | **S2** Resumen textual para el VLM | Que el VLM reciba historia de intentos, no solo vista actual | `trajectory_context_text()` — qué direcciones se intentaron, cuáles produjeron progreso, cuáles stall |
+| **S2b** *(opcional)* Nube SfM por sectores | Añadir evidencia estructural 3D al bloque textual cuando el matching es confiable | Estadístico de puntos triangulados por sector (no render); se degrada silenciosamente si la confianza SfM < umbral |
 | **S3** Prompt de slam_assess | Consulta al VLM con contexto de trayectoria + frame actual | `SYSTEM_PROMPT_SLAM_ASSESS` — sin rotación panorámica, solo frame frontal + historia |
 | **S4** Reemplazo de `deep_vlm` y `blind` | Que `DEADLOCK_STRATEGY` tenga un único valor útil | `deep_scan.py` con solo `slam_assess`; `blind` y `deep_vlm` quedan como legado no activo |
 | **S5** Validación offline | Saber si la historia hubiera sido útil antes de volar | Reconstrucción sobre logs de `townsim_ini` ya existentes |
