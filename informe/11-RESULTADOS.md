@@ -95,19 +95,19 @@ DistMin = media de la distancia mínima al obstáculo por corrida.
 | `slm` | Tier 0 (`minisim_clear`) | 5/5 ✅ | 0 | 6.5 | 164.2 ± 9.4 | 6.5% | 3.2% | — (0 deadlocks) | **2.20×** |
 | `slm` | Tier 1 (`townsim_clear`) | 5/5 ✅ | 0 | 8.5 | 296.0 ± 12.8 | 0.8% | 2.2% | 100% (2.6/corrida) | **1.14×** |
 | `slm` | Tier 1 (`townsim_ini`) | 0/5 ⛔ timeout | 0 | 0.21 | 900 (límite) | 1.4% | 0% | 100% (20.2/corrida) | — |
-| `slm` | Tier 1 (`townsim_calib_cruce_frontal`) | [pendiente] | | | | | | | |
+| `slm` | Tier 1 (`townsim_calib_cruce_frontal`) | 1/5 ⚠️ | 0 | 0.10 | 772.7 ± 285.1 | 1.9% | 0% | 95.3% (18.4/corrida) | — |
 | `slm` | Tier 2 (`citysim_clear`) | 5/5 ✅ | 0 | 9.4 | 175.5 ± 3.2 | 0.3% | 0% | — (0 deadlocks) | **1.06×** |
 | `slm` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | | |
 | `fsm` | Tier 0 (`minisim_clear`) | 5/5 ✅ | 0 | 8.0 | 174.2 ± 38.7 | — | — | 100% (1.4/corrida) | 2.33× |
 | `fsm` | Tier 1 (`townsim_clear`) | 5/5 ✅ | 0 | 8.8 | 329.5 ± 46.0 | — | — | 100% (3.8/corrida) | 1.27× |
 | `fsm` | Tier 1 (`townsim_ini`) | 0/5 ⛔ timeout | 0 | 0.17 | 900 (límite) | — | — | 100% (24.0/corrida) | — |
-| `fsm` | Tier 1 (`townsim_calib_cruce_frontal`) | [pendiente] | | | | | | | |
+| `fsm` | Tier 1 (`townsim_calib_cruce_frontal`) | 0/5 ⛔ timeout | 0 | 0.16 | 900 (límite) | — | — | 100% (6.2/corrida) | — |
 | `fsm` | Tier 2 (`citysim_clear`) | 5/5 ✅ | 0 | 10.0 | 187.7 ± 20.9 | — | — | 100% (0.8/corrida) | 1.14× |
 | `fsm` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | | |
 | `reactive` | Tier 0 (`minisim_clear`) | 5/5 ✅ | 0 | 7.9 | 74.7 ± 0.4 | — | — | — | 1.00× |
 | `reactive` | Tier 1 (`townsim_clear`) | 5/5 ✅ | 0 | 13.9 | 259.7 ± 3.1 | — | — | — | 1.00× |
 | `reactive` | Tier 1 (`townsim_ini`) | 0/5 ⛔ timeout | 0 | 0.44 | 900 (límite) | — | — | — (0 deadlocks) | — |
-| `reactive` | Tier 1 (`townsim_calib_cruce_frontal`) | [pendiente] | | | | | | | |
+| `reactive` | Tier 1 (`townsim_calib_cruce_frontal`) | 2/5 ⚠️ | 0 | 0.67 | 603.1 ± 406.8 | — | — | — (0 deadlocks) | — |
 | `reactive` | Tier 2 (`citysim_clear`) | 5/5 ✅ | 0 | 10.4 | 165.2 ± 0.2 | — | — | — | 1.00× |
 | `reactive` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | | |
 
@@ -305,6 +305,39 @@ segundo canal de profundidad instantánea (visión estereoscópica) que no depen
 movimiento entre frames (Anexo 7, §A7.4–§A7.6). La opción (c) es la más honesta científicamente
 dado que los datos ya están colectados; la opción (d) es la que efectivamente atacaría la causa
 raíz identificada arriba, a diferencia de (a) y (b), que solo relajan el caso de prueba.
+
+### 11.4.2c Tier 1 — Bloqueo frontal masivo (`townsim_calib_cruce_frontal`)
+
+El escenario cruza la fila de edificios oeste a nivel de calle (z=−10 m), regresando al spawn. Es
+el primer escenario con obstrucción frontal garantizada: el waypoint WP_3 está al otro lado de una
+fila de edificios y no hay ruta directa a nivel de calle.
+
+| Brazo | Éxito | Dist. media (m) | Deadlocks (media) | Res. VLM | Tiempo exitoso (s) | DistMin (m) |
+|---|---|---|---|---|---|---|
+| `slm` | 1/5 ⚠️ | 253.8 ± 51.4 | 18.4 | 95.3% | 262.7 (seed 4) | 0.10 |
+| `fsm` | 0/5 ⛔ | 274.1 ± 41.4 | 6.2 | 100% | — | 0.16 |
+| `reactive` | 2/5 ⚠️ | 286.6 ± 53.1 | 0 | — | 157.5 (seeds 3–4) | 0.67 |
+
+**Hallazgo principal:** el `reactive` supera a los brazos deliberativos en tasa de éxito (2/5 vs.
+1/5 vs. 0/5) y en velocidad cuando logra completar (~157 s vs. ~263 s del `slm`). El patrón de
+éxito del `reactive` es bimodal: en seeds 3 y 4 navega el bloqueo por evasión de flujo óptico puro
+en ~157 s; en seeds 1, 2 y 5 oscila ante los edificios y agota el presupuesto. El éxito depende
+del ángulo de aproximación inicial, no de deliberación.
+
+El `slm` logra 1 éxito (seed 4, 5 deadlocks, 262 s) con la tasa de resolución más baja observada
+(95.3% — 4.7% de deadlocks no resueltos por `deep_vlm`), lo que indica que la geometría del cruce
+genera situaciones que el escaneo profundo no puede resolver completamente. El `fsm` falla todas
+con solo 6.2 deadlocks promedio: no es que acumule más atascos que en `townsim_clear`, sino que
+los atascos en la zona de bloqueo frontal son cualitativamente diferentes — la FSM sin VLM no puede
+distinguir "avanzar por arriba" de "avanzar lateralmente" ante una fachada continua.
+
+**Interpretación para H1:** el VLM no aporta ventaja estadísticamente demostrable en este escenario
+con K=5 (1/5 slm vs. 2/5 reactive vs. 0/5 fsm). El resultado es contraintuitivo respecto a H1:
+el brazo sin deliberación (`reactive`) es el más exitoso. Una posible explicación es que el
+flujo óptico sí detecta el obstáculo frontal y lo evade por la ruta de menor resistencia (vertical
+o lateral), mientras que los brazos deliberativos generan deadlocks que paralizan la evasión. Con
+K=10 y análisis de SPL por waypoint, sería posible determinar si el VLM contribuye en el segmento
+específico de cruce o no.
 
 ### 11.4.3 Tier 2 — Entorno urbano de crucero (`citysim_clear`)
 

@@ -1009,6 +1009,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#6-grabacion-de-video-y-viewport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Grabación de Video y Viewport
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1384,6 +1395,17 @@
     <span class="md-ellipsis">
       
         5. Umbrales del ObstacleField
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-grabacion-de-video-y-viewport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Grabación de Video y Viewport
       
     </span>
   </a>
@@ -1889,6 +1911,43 @@
 <td><code>OBSTACLE_MIN_CONFIDENCE_TTC</code></td>
 <td><code>0.35</code></td>
 <td>Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="6-grabacion-de-video-y-viewport">6. Grabación de Video y Viewport<a class="headerlink" href="#6-grabacion-de-video-y-viewport" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valor nominal</th>
+<th>Default si ausente</th>
+<th>Justificación y efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FLIGHT_RECORD_VIDEO</code></td>
+<td><code>true</code></td>
+<td><code>false</code></td>
+<td>Habilita la grabación del video de auditoría <code>.webm</code> (VP8) por corrida. Desactivar en lotes <em>headless</em> elimina la escritura de un frame por ciclo a disco, reduciendo la carga de CPU en ≈ 30 %.</td>
+</tr>
+<tr>
+<td><code>FLIGHT_RECORD_VIEWPORT</code></td>
+<td><code>false</code></td>
+<td><code>false</code></td>
+<td>Activa el modo <em>split-screen</em>: el video resultante tiene doble ancho horizontal, con la cámara del drone a la izquierda y el viewport de Unreal Engine Editor a la derecha. Requiere las dependencias adicionales <code>mss</code> y <code>pywin32</code>. Si alguna de las dos no está instalada, o la ventana de UE no es visible en pantalla, el panel derecho se rellena con negro y la grabación continúa sin interrupción (degradación silenciosa). Debe desactivarse en corridas <em>batch</em> o <em>headless</em> donde el editor no está en pantalla.</td>
+</tr>
+<tr>
+<td><code>VIEWPORT_WINDOW_TITLE</code></td>
+<td><code>"UnrealEditor"</code></td>
+<td><code>"UnrealEditor"</code></td>
+<td>Subcadena del título de la ventana de Unreal Engine que utiliza <code>ViewportCapture</code> para localizar la ventana. La comparación ignora mayúsculas y minúsculas. Se selecciona la primera ventana visible que contenga la subcadena y tenga dimensiones superiores a <span class="arithmatex">\(100 \times 100\text{ px}\)</span>. En UE5 el título suele seguir el patrón <code>"UnrealEditor – &lt;NombreProyecto&gt;"</code>.</td>
+</tr>
+<tr>
+<td><code>VIEWPORT_REGION</code></td>
+<td><em>(vacío)</em></td>
+<td><em>(detección automática)</em></td>
+<td>Coordenadas absolutas de pantalla en píxeles para capturar una región fija, con formato <code>left,top,right,bottom</code>. Cuando se define, <code>ViewportCapture</code> omite la búsqueda por título y captura exactamente esa región, lo que permite recortar el <em>chrome</em> del editor y mostrar únicamente el panel de viewport interior. Ejemplo para un viewport que ocupa la mitad derecha de un monitor de <span class="arithmatex">\(1920 \times 1080\text{ px}\)</span>: <code>VIEWPORT_REGION=960,0,1920,1080</code>. Si está vacío, la localización se delega a <code>VIEWPORT_WINDOW_TITLE</code>.</td>
 </tr>
 </tbody>
 </table>
