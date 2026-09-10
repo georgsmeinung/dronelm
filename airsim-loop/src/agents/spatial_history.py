@@ -131,6 +131,45 @@ class FlightTrajectory:
         )
         return "\n".join(lines)
 
+    def zone_stats(
+        self,
+        current_heading_deg: float = 0.0,
+        max_events: int = 0,
+    ) -> dict:
+        """Devuelve {zona: {"attempts": int, "stall_rate": float}} para las 4 zonas.
+
+        Útil para decidir overrides de acción sin re-parsear el texto del prompt.
+        """
+        events = self._events
+        cap = max_events if max_events > 0 else SLAM_CONTEXT_MAX_EVENTS
+        events = events[-cap:] if len(events) > cap else events
+        raw: dict = {
+            "FRENTE":    {"attempts": 0, "stalls": 0},
+            "IZQUIERDA": {"attempts": 0, "stalls": 0},
+            "DERECHA":   {"attempts": 0, "stalls": 0},
+            "ATRÁS":     {"attempts": 0, "stalls": 0},
+        }
+        for ev in events:
+            rel = ((ev.heading_deg - current_heading_deg) + 180.0) % 360.0 - 180.0
+            if -30.0 <= rel <= 30.0:
+                zone = "FRENTE"
+            elif -150.0 <= rel < -30.0:
+                zone = "IZQUIERDA"
+            elif 30.0 < rel <= 150.0:
+                zone = "DERECHA"
+            else:
+                zone = "ATRÁS"
+            raw[zone]["attempts"] += 1
+            if ev.stall:
+                raw[zone]["stalls"] += 1
+        return {
+            z: {
+                "attempts": d["attempts"],
+                "stall_rate": d["stalls"] / d["attempts"] if d["attempts"] > 0 else 0.0,
+            }
+            for z, d in raw.items()
+        }
+
     def frente_stall_rate(
         self,
         current_heading_deg: float = 0.0,

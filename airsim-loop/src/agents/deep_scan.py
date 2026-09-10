@@ -70,6 +70,12 @@ SYSTEM_PROMPT_SLAM_ASSESS = (
     "produjeron avance y cuáles terminaron en stall) más el frame frontal del ciclo actual.\n"
     "Usá el historial para identificar qué direcciones están cronicamente bloqueadas y "
     "cuáles no se han explorado. Elegí UNA macro-acción que resuelva el atasco.\n\n"
+    "PRIORIDAD DE EXPLORACIÓN:\n"
+    "1. Si el historial marca FRENTE como 'Zona probable de bloqueo' y hay zonas con "
+    "'No explorado', DEBES elegir EVADIR hacia la zona no explorada — incluso si la imagen "
+    "muestra vegetación, las laterales podrían estar despejadas y no se han intentado.\n"
+    "2. Los escapes verticales (GANAR/PERDER_ALTURA) solo aplican cuando las zonas laterales "
+    "también fueron intentadas y fallaron.\n\n"
     "Valores permitidos para macro_action:\n"
     "- MANTENER_RUMBO: el frente está despejado según lo que ves ahora (falso atasco).\n"
     "- EVADIR_IZQUIERDA / EVADIR_DERECHA: esa dirección no fue intentada o tuvo menor tasa de stall.\n"
@@ -181,6 +187,54 @@ def _build_deep_scan_prompt(
     )
 
 
+def _lateral_first_override(
+    decision: dict,
+    trajectory: "Any | None",
+    telemetry: dict,
+) -> dict:
+    """Override: si el VLM recomendó escape vertical pero el FRENTE está confirmado
+    bloqueado (>=70% stall) y hay zonas laterales sin explorar, fuerza EVADIR.
+
+    El VLM tiende a recomendar PERDER/GANAR_ALTURA al ver vegetación en imagen,
+    ignorando que las laterales están sin intentar. Este override aplica el
+    principio 'lateral-first': explorar los costados antes de escalar verticalmente.
+    """
+    macro = decision.get("macro_action", "")
+    if macro not in ("PERDER_ALTURA", "GANAR_ALTURA") or trajectory is None:
+        return decision
+
+    orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+    current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
+    stats = trajectory.zone_stats(current_hdg)
+
+    if stats["FRENTE"]["stall_rate"] < 0.70:
+        return decision
+
+    izq_att = stats["IZQUIERDA"]["attempts"]
+    der_att = stats["DERECHA"]["attempts"]
+    if izq_att == 0 and der_att == 0:
+        lateral = "EVADIR_IZQUIERDA"  # convención: izquierda primero si ambas libres
+    elif izq_att == 0:
+        lateral = "EVADIR_IZQUIERDA"
+    elif der_att == 0:
+        lateral = "EVADIR_DERECHA"
+    else:
+        return decision  # ambas ya intentadas — el VLM tiene mejor criterio visual
+
+    print(
+        f"[slam_assess] lateral-first override: {macro} → {lateral} "
+        f"(FRENTE={stats['FRENTE']['stall_rate']:.0%} stall, "
+        f"izq={izq_att} intentos, der={der_att} intentos)"
+    )
+    return {
+        "macro_action": lateral,
+        "rationale": (
+            f"FRENTE bloqueado ({stats['FRENTE']['stall_rate']:.0%} stall); "
+            f"exploración lateral forzada hacia zona no intentada."
+        ),
+    }
+
+
 def _slam_assess_cycle(
     state: Dict[str, Any],
     service: DeliberationService,
@@ -256,6 +310,7 @@ def _slam_assess_cycle(
         decision = result.parsed_decision
         clear_scan_state(state)
         if decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
+            decision = _lateral_first_override(decision, trajectory, telemetry)
             _apply_scan_resolution(
                 state, decision, result.raw_response, result.latency_ms,
                 guidance, telemetry, arm, deadlock_cycles, trajectory,

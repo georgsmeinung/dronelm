@@ -138,6 +138,19 @@ def test_frente_stall_rate_high():
     assert abs(rate - 0.7) < 1e-9
 
 
+def test_zone_stats_returns_correct_attempts_and_rate():
+    """zone_stats() devuelve intentos y tasa correctos por zona."""
+    events = [_event(0.0, stall=True) for _ in range(7)]    # FRENTE, stall
+    events += [_event(0.0, stall=False) for _ in range(3)]  # FRENTE, ok
+    events += [_event(-90.0, stall=False) for _ in range(5)]  # IZQUIERDA
+    t = _fill_traj(events)
+    stats = t.zone_stats(current_heading_deg=0.0)
+    assert stats["FRENTE"]["attempts"] == 10
+    assert abs(stats["FRENTE"]["stall_rate"] - 0.7) < 1e-9
+    assert stats["IZQUIERDA"]["attempts"] == 5
+    assert stats["DERECHA"]["attempts"] == 0
+
+
 def test_frente_stall_rate_no_events():
     """frente_stall_rate() devuelve 0.0 sin eventos en FRENTE."""
     events = [_event(90.0, stall=True) for _ in range(5)]  # todos en DERECHA
