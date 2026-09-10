@@ -507,8 +507,12 @@ def _apply_maneuver_kinematics(decision: Dict[str, Any], guidance: Dict[str, Any
     return cmd
 
 
-def make_deliberative_node(service: DeliberationService):
-    """Construye el nodo deliberativo ligado a un DeliberationService concreto."""
+def make_deliberative_node(service: DeliberationService, trajectory: "Any | None" = None):
+    """Construye el nodo deliberativo ligado a un DeliberationService concreto.
+
+    trajectory: FlightTrajectory (S1/PLAN-SLAM), opcional — se pasa a
+    deep_scan_cycle() para el modo slam_assess.
+    """
 
     def deliberative_node(state: Dict[str, Any]) -> Dict[str, Any]:
         print("[Deliberativo] -> Iniciando nodo deliberativo...")
@@ -569,12 +573,13 @@ def make_deliberative_node(service: DeliberationService):
             # de seguridad final -- si el escaneo no resuelve (timeout,
             # formato invalido, sin accion viable), la ejecucion sigue hacia
             # abajo en el mismo ciclo, sin cambios en esa rama.
-            if deep_scan.DEADLOCK_STRATEGY == "deep_vlm":
+            if deep_scan.DEADLOCK_STRATEGY in ("deep_vlm", "slam_assess"):
                 handled = deep_scan.deep_scan_cycle(
                     state, service, field, telemetry, guidance,
                     arm="slm",
                     deadlock_cycles=state["_deadlock_cycles"],
                     consecutive_escapes=int(state.get("_consecutive_escapes", 0)),
+                    trajectory=trajectory,
                 )
                 if handled:
                     return state

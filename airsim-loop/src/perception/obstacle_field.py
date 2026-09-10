@@ -110,6 +110,21 @@ class ObstacleField:
     def has_evidence(self) -> bool:
         return self.source == "flow" and self.foe_confidence > 0.0
 
+    def decay_ttc(self, dt_s: float, source: str = "holdover") -> "ObstacleField":
+        """Devuelve copia con TTC decrementado en dt_s segundos (P2: holdover temporal)."""
+        new_cells: Dict[Tuple[str, str], Cell] = {}
+        for key, cell in self.cells.items():
+            new_ttc = max(0.0, cell.ttc_s - dt_s) if cell.ttc_s != float("inf") else float("inf")
+            new_cells[key] = Cell(
+                sector=cell.sector, band=cell.band,
+                occupancy=cell.occupancy, ttc_s=new_ttc,
+                divergence=cell.divergence, confidence=cell.confidence,
+            )
+        return ObstacleField(
+            cells=new_cells, dt_s=self.dt_s, timestamp=self.timestamp + dt_s,
+            source=source, foe=self.foe, foe_confidence=self.foe_confidence,
+        )
+
     def summary_text(self) -> str:
         """Unica fuente del resumen de sectores para el prompt del SLM."""
         lines = ["SECTORES VISUALES:"]

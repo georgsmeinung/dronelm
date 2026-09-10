@@ -27,6 +27,7 @@ FLIGHT_WHITELIST: List[str] = [
     "src/agents/fsm.py",
     "src/agents/graph.py",
     "src/agents/reactive.py",
+    "src/agents/spatial_history.py",
     "src/agents/spatial_scan.py",
     "src/perception/__init__.py",
     "src/perception/flow_ttc.py",

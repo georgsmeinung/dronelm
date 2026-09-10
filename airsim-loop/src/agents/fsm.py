@@ -126,7 +126,7 @@ def _decide_state(
     return STATE_CRUISE
 
 
-def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = None) -> Dict[str, Any]:
+def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = None, trajectory: "Any | None" = None) -> Dict[str, Any]:
     """Nodo del brazo FSM: decide la macro-accion por umbrales sobre ObstacleField."""
     field: ObstacleField = state.get("obstacle_field") or empty_field()
     telemetry = state.get("telemetry", {}) or {}
@@ -181,13 +181,14 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
 
     if deadlock:
         state["_deadlock_cycles"] = int(state.get("_deadlock_cycles", 0)) + 1
-        if deep_scan.DEADLOCK_STRATEGY == "deep_vlm":
+        if deep_scan.DEADLOCK_STRATEGY in ("deep_vlm", "slam_assess"):
             svc = service or _get_fallback_deep_scan_service()
             handled = deep_scan.deep_scan_cycle(
                 state, svc, field, telemetry, guidance,
                 arm="fsm",
                 deadlock_cycles=state["_deadlock_cycles"],
                 consecutive_escapes=consecutive_escapes,
+                trajectory=trajectory,
             )
             if handled:
                 return state

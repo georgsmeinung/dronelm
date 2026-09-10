@@ -340,6 +340,11 @@ class AirSimClient:
             state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
             t_after_state = time.time()
             telemetry = _state_to_telemetry(state, timestamp_s=image_timestamp_s)
+            # P1 (PLAN-SLAM): añadir velocidad angular IMU para pre-integración
+            # en flow_ttc.py. En AirSim la IMU es perfecta (sin ruido ni drift).
+            imu_av = self.get_imu_angular_velocity()
+            if imu_av is not None:
+                telemetry["imu_angular_velocity"] = imu_av
             
             t_total = time.time() - t_start
             dt_images = (t_after_images - t_before_images) * 1000.0
@@ -372,6 +377,25 @@ class AirSimClient:
         if return_depth:
             return self._simulated_frame(), self._simulated_depth(), self._simulated_telemetry()
         return self._simulated_frame(), self._simulated_telemetry()
+
+    def get_imu_angular_velocity(self) -> Optional[Dict[str, float]]:
+        """Devuelve velocidad angular cruda del giroscopio (rad/s) en ejes NED.
+
+        P1 (PLAN-SLAM): se usa en flow_ttc.py para pre-integración IMU.
+        wx=roll rate, wy=pitch rate, wz=yaw rate.
+        """
+        if not self._connected or self._client is None:
+            return None
+        try:
+            imu = self._client.getImuData(vehicle_name=self.vehicle_name)
+            av = imu.angular_velocity
+            return {
+                "wx": float(getattr(av, "x_val", 0.0)),
+                "wy": float(getattr(av, "y_val", 0.0)),
+                "wz": float(getattr(av, "z_val", 0.0)),
+            }
+        except Exception:
+            return None
 
     def get_telemetry(self) -> Dict[str, Any]:
         """Obtiene la telemetria de posicion, velocidad y orientacion actual del dron."""

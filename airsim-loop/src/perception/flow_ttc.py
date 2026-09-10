@@ -61,6 +61,11 @@ TTC_AGGREGATION_PERCENTILE = float(os.getenv("TTC_AGGREGATION_PERCENTILE", "20")
 # vacia en vez de arriesgar un falso positivo.
 FLOW_MAX_ROTATION_DEG = float(os.getenv("FLOW_MAX_ROTATION_DEG", "2.0"))
 
+# P2: número máximo de frames que un ObstacleField válido puede sostenerse
+# ("holdover") cuando el frame actual devuelve foe_confidence=0 (yaw activo,
+# textura baja, etc.). El TTC se decrementa en dt_s cada frame de holdover.
+FLOW_HOLDOVER_MAX_FRAMES = int(os.getenv("FLOW_HOLDOVER_MAX_FRAMES", "3"))
+
 
 def _create_flow_backend():
     if FLOW_ALGORITHM == "dis":
@@ -80,6 +85,9 @@ class FlowTTCEstimator:
 
     def __init__(self) -> None:
         self._backend = _create_flow_backend()
+        # P2: estado de holdover — último campo válido y contador de frames usados.
+        self._last_valid: Optional["ObstacleField"] = None  # type: ignore[name-defined]
+        self._holdover_count: int = 0
 
     # ------------------------------------------------------------------ #
     # Flujo optico crudo                                                  #
@@ -246,8 +254,24 @@ class FlowTTCEstimator:
         # Envolver saltos de +-pi en el yaw (cruce del limite -180/180).
         delta_yaw = (delta_yaw + np.pi) % (2 * np.pi) - np.pi
 
+        # P1 — Pre-integración IMU: si la captura incluyó velocidad angular del
+        # giroscopio, usar wz*dt en lugar de la diferencia de orientación puntual.
+        # En AirSim (IMU perfecta, sin ruido ni drift) wz*dt es idéntico a
+        # delta_yaw pero generaliza mejor a intervalos con tasa variable.
+        imu_av = telemetry_curr.get("imu_angular_velocity")
+        if imu_av is not None and dt > 0.0:
+            delta_pitch = float(imu_av.get("wy", delta_pitch / dt)) * dt
+            delta_yaw   = float(imu_av.get("wz", delta_yaw  / dt)) * dt
+            delta_roll  = float(imu_av.get("wx", delta_roll  / dt)) * dt
+            delta_yaw   = (delta_yaw + np.pi) % (2 * np.pi) - np.pi
+
         max_rotation_rad = np.deg2rad(FLOW_MAX_ROTATION_DEG)
         if max(abs(delta_pitch), abs(delta_yaw), abs(delta_roll)) > max_rotation_rad:
+            # P2 — Holdover: si el frame actual no es confiable por rotación,
+            # reutilizar el último campo válido con TTC decrementado.
+            if self._last_valid is not None and self._holdover_count < FLOW_HOLDOVER_MAX_FRAMES:
+                self._holdover_count += 1
+                return self._last_valid.decay_ttc(dt, source="holdover")
             return empty_field(source="degraded", timestamp=ts_curr)
 
         flow_trans = self._derotate(flow, delta_pitch, delta_yaw, delta_roll, fx, fy, cx, cy)
@@ -272,6 +296,10 @@ class FlowTTCEstimator:
             foe, foe_confidence = None, 0.0
 
         if foe is None or foe_confidence <= 0.0:
+            # P2 — Holdover: reutilizar último campo válido si no superó el máximo.
+            if self._last_valid is not None and self._holdover_count < FLOW_HOLDOVER_MAX_FRAMES:
+                self._holdover_count += 1
+                return self._last_valid.decay_ttc(dt, source="holdover")
             return ObstacleField(
                 cells={(s, b): Cell(sector=s, band=b) for s in SECTORS for b in BANDS},
                 dt_s=dt, timestamp=ts_curr, source="flow", foe=None, foe_confidence=0.0,
@@ -321,4 +349,8 @@ class FlowTTCEstimator:
                     divergence=cell_div, confidence=confidence * foe_confidence,
                 )
 
-        return ObstacleField(cells=cells, dt_s=dt, timestamp=ts_curr, source="flow", foe=foe, foe_confidence=foe_confidence)
+        result = ObstacleField(cells=cells, dt_s=dt, timestamp=ts_curr, source="flow", foe=foe, foe_confidence=foe_confidence)
+        # P2 — Actualizar estado de holdover con el campo recién calculado.
+        self._last_valid = result
+        self._holdover_count = 0
+        return result

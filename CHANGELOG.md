@@ -1,4 +1,52 @@
-# 2026-09-10 (sesión 2)
+# 2026-09-10
+
+## PLAN-SLAM — Implementación fases P1–P3 (percepción monocular) y S1–S4 (slam_assess)
+
+### P1 — Pre-integración IMU para derotación más precisa
+
+- `airsim_client.py`: nuevo método `get_imu_angular_velocity()` que llama a `getImuData()` y devuelve `{wx, wy, wz}` en rad/s.
+- `capture()` incluye `imu_angular_velocity` en el dict de telemetría.
+- `flow_ttc.py`: si `telem_curr["imu_angular_velocity"]` existe, se usa `wz*dt` para `delta_yaw` en lugar de la diferencia de ángulos de orientación. Cubre el caso de yaw variable dentro del intervalo entre frames. En AirSim (IMU perfecta) el resultado es numéricamente equivalente pero el diseño generaliza a hardware real.
+
+### P2 — Holdover temporal del TTC
+
+- `obstacle_field.py`: nuevo método `ObstacleField.decay_ttc(dt_s, source)` que devuelve una copia con TTC decrementado en `dt_s` segundos (inmutable, frozen dataclass). Marca `source="holdover"` para que los logs sean auditables.
+- `flow_ttc.py`: `FlowTTCEstimator` mantiene `_last_valid` y `_holdover_count`. Cuando el frame actual devuelve `foe_confidence=0` (yaw activo, textura baja, etc.), el estimador devuelve el último campo válido con TTC decrementado durante hasta `FLOW_HOLDOVER_MAX_FRAMES` frames (default=3, 0.6s a 5Hz). El holdover expira y el sistema vuelve a campo vacío. Variable de entorno: `FLOW_HOLDOVER_MAX_FRAMES`.
+
+### P3 — Supresión activa de yaw durante percepción
+
+- `action_map.py`: nueva función pública `safe_yaw_rate(yaw_rate_dps, near_obstacle)` que clampea el yaw a `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` (default=5°/s) cuando `near_obstacle=True`. Aplicada en `action_to_command("MANTENER_RUMBO")` vía nuevo parámetro `near_obstacle`.
+- `reactive.py`: importa `safe_yaw_rate` y calcula `near_obstacle = sector_ttc("centro") <= TTC_BLOCKED_THRESHOLD_S` desde el `ObstacleField` del estado. El yaw del guiado se clampea antes de enviarlo. No aplica a `GIRAR_90` ni a `EVADIR_*` (que tienen su propio yaw intencional de maniobra).
+- Variable de entorno nueva: `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` (default 5.0 °/s).
+
+### S1 — Buffer de trayectoria (`FlightTrajectory`)
+
+- Nuevo archivo `src/agents/spatial_history.py`. Define `TrajectoryEvent` (dataclass con timestamp, posición NED, heading, acción, delta_wp_m, stall, flow_had_evidence, obstacle_class) y `FlightTrajectory` (ring buffer de hasta `SLAM_HISTORY_SIZE` eventos, default=80).
+- `graph.py`: instancia `FlightTrajectory` en `_build_nodes()` como estado de proceso (no de grafo). Registra un `TrajectoryEvent` al inicio de cada `capture_node` usando la distancia al WP del ciclo anterior (`_prev_wp_distance`, nuevo campo en `DroneState`). Variables: `SLAM_HISTORY_SIZE`, `SLAM_STALL_THRESHOLD_M`.
+
+### S2 — Resumen textual de trayectoria (`trajectory_context_text`)
+
+- `FlightTrajectory.trajectory_context_text(current_heading_deg, max_events)` agrupa eventos por zona angular relativa (FRENTE ±30°, IZQUIERDA, DERECHA, ATRÁS) y produce un bloque de texto con intentos/stalls por zona. Incluye anotación semántica de obstáculo (S3b) cuando `obstacle_class` está disponible. Variable: `SLAM_CONTEXT_MAX_EVENTS` (default=30).
+
+### S3 — Prompt `slam_assess` y función `_slam_assess_cycle`
+
+- `deep_scan.py`: nuevo `SYSTEM_PROMPT_SLAM_ASSESS` orientado a razonamiento sobre historial de trayectoria + frame frontal (sin panorama de rotación). Nueva función `_slam_assess_cycle()` que, en el primer ciclo del deadlock, construye el contexto textual, codifica el frame frontal, envía el pedido al `DeliberationService` y espera el resultado. Sin fases de rotación ni asentamiento → latencia de activación mínima (mismo ciclo del deadlock). Variable: `SLAM_MIN_EVENTS_FOR_CONTEXT` (default=5).
+
+### S4 — `slam_assess` como estrategia por defecto
+
+- `deep_scan.py`: `DEADLOCK_STRATEGY` cambia default de `"deep_vlm"` a `"slam_assess"`. Las ramas `"deep_vlm"` y `"blind"` quedan como legado seleccionable vía env var (necesario para el factorial S6: comparar cap.11 `deep_vlm` vs `slam_assess`).
+- `config/.env`: `DEADLOCK_STRATEGY=slam_assess` explícito.
+- `deep_scan_cycle()` acepta nuevo parámetro `trajectory: FlightTrajectory | None`. Si `DEADLOCK_STRATEGY == "slam_assess"` delega a `_slam_assess_cycle()`.
+- `deliberative.py`: `make_deliberative_node()` acepta `trajectory` y lo pasa a `deep_scan_cycle()`. Condición actualizada: `in ("deep_vlm", "slam_assess")`.
+- `fsm.py`: `fsm_node()` acepta `trajectory`. Condición actualizada igual. `graph.py` pasa `flight_trajectory` a ambos.
+
+### Tests
+
+- 155 tests pasan (antes de esta sesión: 138 en I0.2 + los añadidos en D2/D3).
+- 1 fallo preexistente en `test_fsm.py::test_moderate_block_avoids_toward_less_occupied_side` — causado por el umbral `OBSTACLE_OCCUPANCY_BLOCKED=0.011` ya presente desde D2; no relacionado con esta sesión.
+- `test_no_depth_in_flight_path.py`: `spatial_history.py` añadido a `FLIGHT_WHITELIST`.
+
+---
 
 ## Deuda técnica D1–D3 + guard de altitud SLM + corrida de verificación `townsim_ini`
 

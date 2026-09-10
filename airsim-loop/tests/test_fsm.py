@@ -31,7 +31,10 @@ def test_critical_ttc_boxed_in_climbs():
 
 
 def test_moderate_block_avoids_toward_less_occupied_side():
-    field = _field(center_ttc=3.0, center_occ=0.5, left_occ=0.1, right_occ=0.8)
+    # Con el umbral calibrado D2 (OCCUPANCY_BLOCKED_THRESHOLD=0.011),
+    # left_occ=0.005 es despejado y right_occ=0.1 es bloqueado:
+    # la FSM debe evitar hacia la izquierda (lado libre).
+    field = _field(center_ttc=3.0, center_occ=0.5, left_occ=0.005, right_occ=0.1)
     assert _decide_state(field, 0, 10) == STATE_AVOID_LEFT
 
 

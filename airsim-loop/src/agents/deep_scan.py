@@ -30,12 +30,10 @@ from typing import Any, Dict, List, Optional
 from .action_map import action_to_command
 from .deliberation_service import DeliberationService
 
-# Default deep_vlm (2026-0903, pedido explicito): coherente con el resto de
-# H2/H3 -- el escape ciego sigue existiendo como red de seguridad final (ver
-# deep_scan_cycle) para cuando el escaneo profundo expira o no resuelve, asi
-# que subir el default no reduce la robustez, solo la usa como primera
-# opcion en vez de la ultima.
-DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "deep_vlm")  # "blind" | "deep_vlm"
+# S4 (PLAN-SLAM): slam_assess es ahora el modo por defecto y único activo.
+# deep_vlm y blind quedan como legado seleccionable vía variable de entorno
+# (para el factorial de S6: comparar cap.11 deep_vlm vs slam_assess).
+DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "slam_assess")  # "slam_assess" | "deep_vlm" | "blind" (legado)
 SCAN_HEADING_COUNT_DEEP = int(os.getenv("SCAN_HEADING_COUNT_DEEP", "4"))
 SCAN_SETTLE_CYCLES_DEEP = int(os.getenv("SCAN_SETTLE_CYCLES_DEEP", "2"))
 SCAN_YAW_TOLERANCE_DEG = float(os.getenv("SCAN_YAW_TOLERANCE_DEG", "5.0"))
@@ -61,6 +59,26 @@ PROMPT_ACTIONS = {
     "PERDER_ALTURA",
     "FRENAR",
 }
+
+# S3 (PLAN-SLAM): prompt de slam_assess. Diferencia arquitectónica clave con
+# deep_vlm: no hay rotación panorámica — se envía solo el frame frontal del
+# ciclo actual MÁS el historial de trayectoria acumulado (texto de S2).
+# El VLM razona sobre historia de intentos + vista actual, sin maniobra extra.
+SYSTEM_PROMPT_SLAM_ASSESS = (
+    "Sos el cerebro deliberativo de un dron autónomo en un atasco genuino.\n"
+    "Se te provee el HISTORIAL DE TRAYECTORIA (qué acciones se intentaron, cuáles "
+    "produjeron avance y cuáles terminaron en stall) más el frame frontal del ciclo actual.\n"
+    "Usá el historial para identificar qué direcciones están cronicamente bloqueadas y "
+    "cuáles no se han explorado. Elegí UNA macro-acción que resuelva el atasco.\n\n"
+    "Valores permitidos para macro_action:\n"
+    "- MANTENER_RUMBO: el frente está despejado según lo que ves ahora (falso atasco).\n"
+    "- EVADIR_IZQUIERDA / EVADIR_DERECHA: esa dirección no fue intentada o tuvo menor tasa de stall.\n"
+    "- GANAR_ALTURA: el historial muestra bloqueo en todos los rumbos laterales; el obstáculo es sólido.\n"
+    "- PERDER_ALTURA: el historial indica vegetación arriba y hay espacio libre abajo.\n"
+    "- FRENAR: ninguna dirección del historial ni la vista actual ofrecen salida; esperar.\n\n"
+    "Responde ÚNICAMENTE con un objeto JSON válido:\n"
+    '{"macro_action": "<ACCION>", "rationale": "<explicación breve citando el historial>"}'
+)
 
 SYSTEM_PROMPT_DEEP_SCAN = (
     "Sos el cerebro deliberativo de un dron autonomo en un atasco genuino: los intentos previos de "
@@ -163,6 +181,115 @@ def _build_deep_scan_prompt(
     )
 
 
+def _slam_assess_cycle(
+    state: Dict[str, Any],
+    service: DeliberationService,
+    field: Any,
+    telemetry: Dict[str, Any],
+    guidance: Dict[str, Any],
+    arm: str,
+    deadlock_cycles: int,
+    consecutive_escapes: int,
+    trajectory: "Any | None",
+) -> bool:
+    """Escape de deadlock basado en historial de trayectoria (S3 PLAN-SLAM).
+
+    Sin rotación panorámica: solo el frame frontal del ciclo actual más el
+    contexto textual de FlightTrajectory. Se activa en el mismo ciclo en que
+    se detecta el deadlock — latencia de activación mínima.
+
+    Devuelve True si este ciclo queda resuelto por slam_assess.
+    Devuelve False si el VLM no responde o la respuesta no es válida.
+    """
+    state["_deliberation_pending"] = True
+
+    def _hover_cmd(rationale: str) -> Dict[str, Any]:
+        cmd = action_to_command("FRENAR", guidance=guidance, telemetry=telemetry)
+        cmd["rationale"] = rationale
+        return cmd
+
+    pending_id = state.get("_deep_scan_request_id")
+
+    if pending_id is None:
+        # Construir contexto de trayectoria
+        orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+        current_yaw_deg = math.degrees(float(orient.get("yaw", 0.0)))
+
+        from .spatial_history import SLAM_CONTEXT_MAX_EVENTS
+        min_events = int(os.getenv("SLAM_MIN_EVENTS_FOR_CONTEXT", "5"))
+
+        if trajectory is not None and len(trajectory) >= min_events:
+            traj_text = trajectory.trajectory_context_text(
+                current_heading_deg=current_yaw_deg,
+                max_events=SLAM_CONTEXT_MAX_EVENTS,
+            )
+        else:
+            traj_text = "HISTORIAL DE TRAYECTORIA: sin datos suficientes aún (primeros ciclos de vuelo)."
+
+        prompt = _build_deep_scan_prompt(field, telemetry, guidance, deadlock_cycles, consecutive_escapes)
+        full_prompt = f"{traj_text}\n\n{prompt}"
+
+        frame = state.get("rgb_image")
+        encoded = _encode_frame_base64(frame)
+        capture_ts = float(telemetry.get("timestamp") or time.time())
+
+        request_id = service.request(
+            {
+                "mode": "slam_assess",
+                "prompt": full_prompt,
+                "images_b64": [encoded] if encoded else None,
+                "image_labels": ["[Rumbo actual (frame frontal)]"] if encoded else None,
+            }
+        )
+        state["_deep_scan_request_id"] = request_id
+        state["_pending_delib_prompt"] = full_prompt
+        state["_pending_delib_frames"] = [(frame, capture_ts)] if frame is not None else []
+        state["next_action"] = "ESCANEO"
+        state["velocity_command"] = _hover_cmd(
+            f"slam_assess ({arm}): deadlock {deadlock_cycles} ciclos, consultando VLM con historial."
+        )
+        state["flight_status"] = "escaneo_profundo_vlm"
+        return True
+
+    result, age_ms, _has_pending = service.poll()
+    if result is not None and result.request_id == pending_id:
+        decision = result.parsed_decision
+        clear_scan_state(state)
+        if decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
+            _apply_scan_resolution(
+                state, decision, result.raw_response, result.latency_ms,
+                guidance, telemetry, arm, deadlock_cycles,
+            )
+            # Sobrescribir strategy en _deadlock_event para el log
+            if state.get("_deadlock_event"):
+                state["_deadlock_event"]["strategy"] = "slam_assess"
+            return True
+        print(f"[slam_assess] ({arm}) respuesta sin acción viable. Cae al escape sincrónico.")
+        state["_deadlock_event"] = {
+            "strategy": "slam_assess", "arm": arm,
+            "resolved_by_scan": False, "cycles_to_resolve": None,
+            "fell_back_to_blind": True,
+        }
+        return False
+
+    if age_ms > SLM_DEEP_WATCHDOG_MS:
+        print(f"[slam_assess] WATCHDOG ({arm}): sin respuesta en {age_ms:.0f}ms. Cae al escape sincrónico.")
+        clear_scan_state(state)
+        state["_deadlock_event"] = {
+            "strategy": "slam_assess", "arm": arm,
+            "resolved_by_scan": False, "cycles_to_resolve": None,
+            "fell_back_to_blind": True,
+        }
+        return False
+
+    state["next_action"] = "ESCANEO"
+    state["velocity_command"] = _hover_cmd(
+        f"slam_assess ({arm}): esperando respuesta del VLM ({age_ms:.0f}ms)."
+    )
+    state["flight_status"] = "escaneo_profundo_vlm"
+    return True
+
+
 def deep_scan_cycle(
     state: Dict[str, Any],
     service: DeliberationService,
@@ -172,6 +299,7 @@ def deep_scan_cycle(
     arm: str,
     deadlock_cycles: int,
     consecutive_escapes: int,
+    trajectory: "Any | None" = None,
 ) -> bool:
     """Ejecuta un paso del escaneo profundo (H2.2).
 
@@ -185,6 +313,14 @@ def deep_scan_cycle(
     cambios en esa rama (H2.2).
     """
     state["route"] = "deliberative" if arm == "slm" else "fsm"
+
+    # S3/S4 (PLAN-SLAM): modo slam_assess — sin rotación panorámica, frame
+    # frontal + historial de trayectoria. Delega en _slam_assess_cycle().
+    if DEADLOCK_STRATEGY == "slam_assess":
+        return _slam_assess_cycle(
+            state, service, field, telemetry, guidance, arm,
+            deadlock_cycles, consecutive_escapes, trajectory,
+        )
 
     orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
     current_yaw_deg = math.degrees(float(orient.get("yaw", 0.0)))

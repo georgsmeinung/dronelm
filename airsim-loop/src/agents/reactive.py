@@ -7,6 +7,9 @@ from __future__ import annotations
 import os
 from typing import Any, Dict
 
+from .action_map import safe_yaw_rate
+from src.perception import ObstacleField, empty_field
+
 try:
     from pathlib import Path
     from dotenv import load_dotenv
@@ -27,6 +30,12 @@ def reactive_node(state: Dict[str, Any]) -> Dict[str, Any]:
     guidance = state.get("waypoint_guidance") or {}
     is_completed = state.get("mission_completed", False) or guidance.get("is_completed", False)
 
+    # P3 (PLAN-SLAM): suprimir yaw durante percepción cuando hay obstáculo cercano.
+    # Aplica solo a MANTENER_RUMBO (guiado continuo) — no a giro de 90° ni evasión.
+    from src.perception.obstacle_field import TTC_BLOCKED_THRESHOLD_S
+    field: ObstacleField = state.get("obstacle_field") or empty_field()
+    near_obstacle = field.sector_ttc("centro") <= TTC_BLOCKED_THRESHOLD_S
+
     if is_completed:
         command = {
             "macro_action": "FRENAR",
@@ -43,14 +52,15 @@ def reactive_node(state: Dict[str, Any]) -> Dict[str, Any]:
         label = wp.get("label", "WP")
         dist = guidance.get("distance", 0.0)
         err = guidance.get("bearing_err_deg", 0.0)
+        yaw_rate_cmd = safe_yaw_rate(float(guidance.get("yaw_rate", 0.0)), near_obstacle)
         command = {
             "macro_action": "MANTENER_RUMBO",
             "vx": guidance.get("vx", DEFAULT_FORWARD_SPEED),
             "vy": guidance.get("vy", 0.0),
             "vz": guidance.get("vz", 0.0),
-            "yaw_rate": float(guidance.get("yaw_rate", 0.0)),
+            "yaw_rate": yaw_rate_cmd,
             "target_yaw": None,
-            "rationale": f"Navegando hacia {label} a dist={dist:.1f}m (desvío={err:+.0f}°, giro={guidance.get('yaw_rate', 0.0):+.1f}°/s).",
+            "rationale": f"Navegando hacia {label} a dist={dist:.1f}m (desvío={err:+.0f}°, giro={yaw_rate_cmd:+.1f}°/s).",
         }
         state["next_action"] = "MANTENER_RUMBO"
         state["flight_status"] = "vuelo_waypoint"

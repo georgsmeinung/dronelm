@@ -10,6 +10,10 @@ import os
 from typing import Any, Dict, Optional
 
 DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
+# P3 (PLAN-SLAM): límite de yaw (°/s) cuando el dron está cerca de un obstáculo
+# (TTC_centro < TTC_SAFE_THRESHOLD o en modo evasivo). Mantiene la derotación
+# de flow_ttc dentro del límite operativo (~0.175 rad/s ≈ 10°/s a 5 Hz).
+FLOW_MAX_YAW_DPS_NEAR_OBSTACLE = float(os.getenv("FLOW_MAX_YAW_DPS_NEAR_OBSTACLE", "5.0"))
 EVASION_LATERAL_YAW_RATE = float(os.getenv("EVASION_LATERAL_YAW_RATE", "15.0"))
 EVASION_UP_SPEED = float(os.getenv("EVASION_UP_SPEED", "1.5"))
 EVASION_DOWN_SPEED = float(os.getenv("EVASION_DOWN_SPEED", "0.8"))
@@ -37,12 +41,21 @@ def _manhattan_snap_yaw(current_yaw_deg: float, delta_deg: float) -> float:
     return (snapped + 180.0) % 360.0 - 180.0
 
 
+def safe_yaw_rate(yaw_rate_dps: float, near_obstacle: bool) -> float:
+    """P3 (PLAN-SLAM): clampea yaw_rate cuando el sensor puede degradarse por rotación."""
+    if near_obstacle:
+        return max(-FLOW_MAX_YAW_DPS_NEAR_OBSTACLE,
+                   min(FLOW_MAX_YAW_DPS_NEAR_OBSTACLE, yaw_rate_dps))
+    return yaw_rate_dps
+
+
 def action_to_command(
     action: str,
     guidance: Optional[Dict[str, Any]] = None,
     telemetry: Optional[Dict[str, Any]] = None,
     close_structural: bool = False,
     aggressive: bool = False,
+    near_obstacle: bool = False,
 ) -> Dict[str, Any]:
     """Traduce una macro-accion discreta a un comando de velocidad Body Frame.
 
@@ -67,7 +80,7 @@ def action_to_command(
             "vx": float(guidance.get("vx", DEFAULT_FORWARD_SPEED)),
             "vy": 0.0,
             "vz": vz_guidance,
-            "yaw_rate": yaw_rate_guidance,
+            "yaw_rate": safe_yaw_rate(yaw_rate_guidance, near_obstacle),
             "target_yaw": None,
         }
 

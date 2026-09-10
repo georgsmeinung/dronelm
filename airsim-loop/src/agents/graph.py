@@ -149,6 +149,10 @@ class DroneState(TypedDict, total=False):
     _pending_delib_prompt: Optional[str]
     _pending_delib_frames: Optional[List[Any]]
     _last_delib_frames: Optional[List[Any]]
+    # S1 (PLAN-SLAM): distancia al waypoint del ciclo anterior, para calcular
+    # delta_wp_m en FlightTrajectory.record() al inicio del siguiente ciclo.
+    # Estado del grafo (no del proceso): sobrevive entre graph.invoke() calls.
+    _prev_wp_distance: Optional[float]
     # NUNCA agregar aca una clave de profundidad (depth/depth_image/
     # min_obstacle_dist_m o similar, ver PLAN-MEJORAS-3.md §0.2): mientras
     # ningun nodo pueda escribir una y que sobreviva a graph.invoke(), el
@@ -169,17 +173,48 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     from .evasive import evasive_node
     from .fsm import fsm_node as _fsm_node_fn
     from .action_map import action_to_command
+    from .spatial_history import FlightTrajectory, TrajectoryEvent, SLAM_STALL_THRESHOLD_M
     from src.perception import FlowTTCEstimator
 
     flow_ttc_estimator = FlowTTCEstimator()
+    flight_trajectory = FlightTrajectory()  # S1: buffer de trayectoria (estado de proceso)
     deliberation_service = make_deliberation_service()
-    deliberative_node = make_deliberative_node(deliberation_service)
+    deliberative_node = make_deliberative_node(deliberation_service, flight_trajectory)
 
     frame_history_size = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "2"))  # 2026-0903: t y t-1, no solo t (pedido explicito)
     girar90_duration_s = float(os.getenv("GIRAR90_DURATION_S", "1.0"))
 
     # 1. Captura sensorial
     def capture_node(state: DroneState) -> DroneState:
+        # S1 (PLAN-SLAM): registrar evento del ciclo ANTERIOR antes de sobreescribir
+        # el estado. Usa la distancia al WP guardada del ciclo anterior (_prev_wp_distance)
+        # vs la actual (waypoint_guidance.distance del ciclo que acaba de terminar).
+        prev_telem = state.get("telemetry") or {}
+        if prev_telem.get("source") == "airsim":
+            curr_dist = float((state.get("waypoint_guidance") or {}).get("distance", 0.0))
+            prev_dist = state.get("_prev_wp_distance")
+            if prev_dist is not None:
+                delta_wp = curr_dist - prev_dist  # positivo = retroceso, negativo = avance
+                stall = delta_wp > SLAM_STALL_THRESHOLD_M
+                pos = prev_telem.get("position") or {}
+                orient_d = prev_telem.get("orientation") or {}
+                had_evidence = (state.get("obstacle_field") or empty_field()).has_evidence()
+                event = TrajectoryEvent(
+                    timestamp=float(prev_telem.get("timestamp", 0.0)),
+                    position=(
+                        float(pos.get("x", 0.0)),
+                        float(pos.get("y", 0.0)),
+                        float(pos.get("z", 0.0)),
+                    ),
+                    heading_deg=math.degrees(float(orient_d.get("yaw", 0.0))),
+                    action_taken=state.get("next_action", ""),
+                    delta_wp_m=delta_wp,
+                    stall=stall,
+                    flow_had_evidence=had_evidence,
+                )
+                flight_trajectory.record(event)
+            state["_prev_wp_distance"] = curr_dist
+
         state["prev_image"] = state.get("rgb_image")
         state["prev_telemetry"] = state.get("telemetry", {}) or {}
         image, telemetry = airsim_client.capture()
@@ -279,10 +314,9 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         "evasive": evasive_node,
         "deliberative": deliberative_node,
         "girar_90": girar_90_node,
-        # H3.1 (PLAN-MEJORAS-3): el escaneo profundo (DEADLOCK_STRATEGY=deep_vlm)
-        # es una capacidad compartida entre los brazos slm y fsm; ambos usan el
-        # mismo DeliberationService (un solo hilo worker, nunca dos pools).
-        "fsm": lambda state: _fsm_node_fn(state, service=deliberation_service),
+        # H3.1 (PLAN-MEJORAS-3): el escaneo profundo es una capacidad compartida
+        # entre slm y fsm; usan el mismo DeliberationService y FlightTrajectory.
+        "fsm": lambda state: _fsm_node_fn(state, service=deliberation_service, trajectory=flight_trajectory),
         "motor": motor_node,
         "_airsim_client": airsim_client,
         "_deliberation_service": deliberation_service,
