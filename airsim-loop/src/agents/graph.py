@@ -204,7 +204,14 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
                     "GANAR_ALTURA", "PERDER_ALTURA", "DESCENDER",
                     "FRENAR", "EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GIRAR_90",
                 }
-                stall = delta_wp > SLAM_STALL_THRESHOLD_M or action_taken in _ESCAPE_STALL
+                # ESCANEO = VLM procesando deadlock: dron quieto contra el obstáculo.
+                # Si no avanzó más de 3 cm en ese ciclo, es improductivo → stall.
+                _SCAN_NO_PROGRESS = 0.03
+                stall = (
+                    delta_wp > SLAM_STALL_THRESHOLD_M
+                    or action_taken in _ESCAPE_STALL
+                    or (action_taken == "ESCANEO" and delta_wp > -_SCAN_NO_PROGRESS)
+                )
                 pos = prev_telem.get("position") or {}
                 orient_d = prev_telem.get("orientation") or {}
                 had_evidence = (state.get("obstacle_field") or empty_field()).has_evidence()
