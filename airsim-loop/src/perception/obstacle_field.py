@@ -11,9 +11,10 @@ from typing import Dict, Optional, Tuple
 SECTORS: Tuple[str, ...] = ("izquierda", "centro", "derecha")
 BANDS: Tuple[str, ...] = ("superior", "medio", "inferior")
 
-# Umbrales por defecto. Quedan marcados como PROVISORIOS hasta que F1.3
-# (validacion contra depth, curva ROC) los reemplace por valores calibrados.
-OCCUPANCY_BLOCKED_THRESHOLD = float(os.getenv("OBSTACLE_OCCUPANCY_BLOCKED", "0.35"))
+# OCCUPANCY_BLOCKED_THRESHOLD calibrado D2 (2026-0910, TownSim, 196 frames,
+# 4 velocidades). AUC=0.87; threshold Youden t=0.011 → TPR=0.931, FPR=0.222.
+# Valor seteado en config/.env; el default 0.011 refleja la calibración.
+OCCUPANCY_BLOCKED_THRESHOLD = float(os.getenv("OBSTACLE_OCCUPANCY_BLOCKED", "0.011"))
 TTC_BLOCKED_THRESHOLD_S = float(os.getenv("OBSTACLE_TTC_BLOCKED_S", "2.5"))
 MIN_CONFIDENCE_FOR_BLOCKED = float(os.getenv("OBSTACLE_MIN_CONFIDENCE", "0.15"))
 # Piso de confianza mas exigente para que el TTC por si solo (sin apoyo de
@@ -147,6 +148,71 @@ class ObstacleField:
                 for sector in SECTORS
             },
         }
+
+
+class OccupancyCalibrator:
+    """Auto-calibra OCCUPANCY_BLOCKED_THRESHOLD midiendo el ruido de hover inicial.
+
+    Durante los primeros `n_samples` ciclos (dron quieto en zona despejada),
+    recoge el máximo de occ por sector y estima el piso de ruido de la escena.
+    Aplica threshold = mean + k_sigma * std, con un piso mínimo de `min_threshold`.
+
+    Uso en main.py::
+
+        calibrator = OccupancyCalibrator()
+        # dentro del loop, tras graph.invoke():
+        if not calibrator.is_calibrated:
+            calibrator.feed(final_state.get("obstacle_field"))
+    """
+
+    def __init__(
+        self,
+        n_samples: int = 25,
+        k_sigma: float = 3.0,
+        min_threshold: float = 0.005,
+        max_threshold: float = 0.05,
+    ):
+        self._n = n_samples
+        self._k = k_sigma
+        self._min = min_threshold
+        self._max = max_threshold
+        self._samples: list = []
+        self._calibrated = False
+
+    @property
+    def is_calibrated(self) -> bool:
+        return self._calibrated
+
+    def feed(self, field: "ObstacleField | None") -> bool:
+        """Agrega una muestra. Retorna True cuando la calibración se completa."""
+        if self._calibrated or field is None or field.source == "none":
+            return self._calibrated
+
+        occ_max = max(
+            field.sector_occupancy("izquierda"),
+            field.sector_occupancy("centro"),
+            field.sector_occupancy("derecha"),
+        )
+        self._samples.append(occ_max)
+
+        if len(self._samples) >= self._n:
+            self._apply()
+        return self._calibrated
+
+    def _apply(self) -> None:
+        global OCCUPANCY_BLOCKED_THRESHOLD
+        n = len(self._samples)
+        mean = sum(self._samples) / n
+        variance = sum((x - mean) ** 2 for x in self._samples) / max(n - 1, 1)
+        std = variance ** 0.5
+        threshold = mean + self._k * std
+        threshold = max(self._min, min(self._max, threshold))
+        OCCUPANCY_BLOCKED_THRESHOLD = threshold
+        self._calibrated = True
+        print(
+            f"[OccupancyCalibrator] Threshold adaptativo: {threshold:.4f} "
+            f"(mean={mean:.4f}, std={std:.4f}, n={n})"
+        )
 
 
 def empty_field(source: str = "none", timestamp: float = 0.0) -> ObstacleField:

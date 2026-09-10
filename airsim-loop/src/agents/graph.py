@@ -298,6 +298,12 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
 TTC_EVASION_THRESHOLD = float(os.getenv("TTC_EVASION_THRESHOLD", "3.2"))
 TTC_SAFE_THRESHOLD = float(os.getenv("TTC_SAFE_THRESHOLD", "4.6"))
 FOV_BLOCKED_THRESHOLD = float(os.getenv("FOV_BLOCKED_THRESHOLD", "0.6"))
+# Altitud mínima (m) por debajo de la cual los disparadores TTC/occupancy NO
+# invocan el SLM — se desvían a "evasive" en su lugar.  Durante el ascenso
+# inicial (WP_0 climb-first) el dron percibe suelo y ramas bajas como
+# obstáculos y agotaba los timeouts del SLM antes de salir de los primeros 10m.
+# El deep_scan de deadlock sigue activo a cualquier altitud.
+SLM_MIN_ALT_M = float(os.getenv("SLM_MIN_ALT_M", "8.0"))
 
 
 def degraded_router(state: DroneState) -> str:
@@ -335,6 +341,11 @@ def policy_router(state: DroneState) -> str:
     if state.get("slm_request_id") is not None:
         return "deliberative"
 
+    telem = state.get("telemetry") or {}
+    pos = telem.get("position") or {}
+    alt_m = abs(float(pos.get("z", 0.0)))
+    below_slm_floor = alt_m < SLM_MIN_ALT_M
+
     field: ObstacleField = state.get("obstacle_field") or empty_field()
     guidance = state.get("waypoint_guidance") or {}
     ttc = field.min_ttc()
@@ -368,8 +379,8 @@ def policy_router(state: DroneState) -> str:
     center_imminent = center_ttc <= TTC_EVASION_THRESHOLD
     if center_imminent or (center_blocked and center_ttc <= TTC_SAFE_THRESHOLD):
         if field.blocked_fraction() > FOV_BLOCKED_THRESHOLD:
-            return "girar_90"
-        return "deliberative"
+            return "evasive" if below_slm_floor else "girar_90"
+        return "evasive" if below_slm_floor else "deliberative"
 
     if center_blocked or ttc <= TTC_SAFE_THRESHOLD:
         return "evasive"

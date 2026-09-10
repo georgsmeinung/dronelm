@@ -1,7 +1,8 @@
-# Plan slam_assess — reemplazo del modo de escape por deadlock
+# Plan slam_assess — memoria de trayectoria + mitigaciones de percepción
 
-**Fecha:** 2026-09-10
-**Estado:** exploratorio, no comprometido.
+**Fecha:** 2026-09-10  
+**Actualizado:** 2026-09-10 (sesión 2) — incorporadas mitigaciones P1–P3 de percepción monocular.  
+**Estado:** comprometido para re-test de `townsim_ini`.  
 **Pregunta experimental:** ¿Un VLM con memoria de trayectoria acumulada supera al VLM con
 panorama instantáneo (`deep_vlm`) en los escenarios bloqueantes (`townsim_ini`)?
 
@@ -36,8 +37,13 @@ falla, y debe quedar explícita en el informe (§12.3, nota metodológica).
 
 ## 0. Tabla de fases
 
+Las fases P1–P3 son mitigaciones de percepción monocular independientes del SLAM; se implementan primero porque son pre-requisito para que el sensor óptico sea más confiable durante las corridas de validación SLAM. Las fases S1–S6 son el plan SLAM original. S2b, S3b y MDE son opcionales.
+
 | Fase | Qué desbloquea | Entregable |
 |---|---|---|
+| **P1** Pre-integración IMU | Derotación más precisa → extiende límite de yaw operativo | `flow_ttc.py`: integración del giroscopio entre frames en lugar de tasa instantánea |
+| **P2** Holdover temporal TTC | TTC válido durante giros cortos sin corromper el canal | `flow_ttc.py` / `obstacle_field.py`: último TTC válido con decaimiento temporal, máx. N frames |
+| **P3** Supresión de yaw durante percepción | Elimina la degradación de derotación en aproximación a obstáculos | `graph.py` / `action_map.py`: inhibir yaw_rate > umbral cuando TTC < TTC_SAFE_THRESHOLD |
 | **S1** Buffer de trayectoria | Memoria de eventos de vuelo independiente del sensor óptico | `FlightTrajectory` en `spatial_history.py` — ring buffer de (posición, heading, acción, Δwp, stall) |
 | **S2** Resumen textual para el VLM | Que el VLM reciba historia de intentos, no solo vista actual | `trajectory_context_text()` — qué direcciones se intentaron, cuáles produjeron progreso, cuáles stall |
 | **S2b** *(opcional)* Nube SfM por sectores | Añadir evidencia estructural 3D al bloque textual cuando el matching es confiable | Estadístico de puntos triangulados por sector (no render); se degrada silenciosamente si la confianza SfM < umbral |
@@ -46,6 +52,108 @@ falla, y debe quedar explícita en el informe (§12.3, nota metodológica).
 | **S4** Reemplazo de `deep_vlm` y `blind` | Que `DEADLOCK_STRATEGY` tenga un único valor útil | `deep_scan.py` con solo `slam_assess`; `blind` y `deep_vlm` quedan como legado no activo |
 | **S5** Validación offline | Saber si la historia hubiera sido útil antes de volar | Reconstrucción sobre logs de `townsim_ini` ya existentes |
 | **S6** Corrida experimental | El dato que va al cap. 11 | `townsim_ini` K=5 × 3 brazos con `slam_assess` vs. línea base (`deep_vlm`) del cap. 11 |
+| **MDE** *(opcional / trabajo futuro)* Depth Anything v2 Small | Reemplazo del canal TTC por profundidad monocular sin dependencia de movimiento ni yaw | Si P1–P3 no alcanzan y el VRAM lo permite; no bloquea S6 |
+
+---
+
+## Mitigaciones de percepción monocular (P1–P3)
+
+**Contexto.** El análisis de D3 (2026-09-10) confirmó que la derotación analítica falla a partir de 0.3 rad/s de yaw — la primera tasa ensayada por encima del límite teórico de `FLOW_MAX_ROTATION_DEG = 2°/frame` a 5 Hz. Cuando falla, `foe_confidence` cae a cero y el canal de TTC se silencia. Esto ocurre durante maniobras de guiado con yaw, durante `girar_90`, y potencialmente en cualquier ciclo donde el dron corrija su rumbo. Las mitigaciones P1–P3 atacan el problema en tres capas: mejorar la derotación, preservar la información cuando falla, e inhibir el yaw cuando más importa.
+
+Estas tres mitigaciones son independientes entre sí y del SLAM; se implementan antes que S1–S6 porque mejoran la calidad del sensor óptico que el buffer de trayectoria usa para decidir si un ciclo tuvo `flow_had_evidence=True`.
+
+---
+
+### Fase P1 — Pre-integración de IMU para derotación más precisa
+
+**Problema actual.** `FlowTTCEstimator.estimate()` usa `telemetry_curr["orientation"]["yaw_rate"]` (un único valor escalar tomado en el instante del frame actual) para estimar el flujo rotacional acumulado entre `prev_frame` y `curr_frame`. Si la tasa de yaw varió durante el intervalo entre frames (p. ej. el guiado empezó a girar a mitad del intervalo), la estimación es incorrecta.
+
+**Solución.** AirSim expone `client.getImuData()` con velocidad angular cruda del giroscopio a alta frecuencia. En lugar de tomar el valor instantáneo, integrar las muestras de giroscopio acumuladas entre los dos timestamps de captura:
+
+```python
+# En AirSimClient, nuevo método:
+def get_imu_angular_velocity(self) -> dict:
+    imu = self.client.getImuData()
+    return {"wx": imu.angular_velocity.x_val,
+            "wy": imu.angular_velocity.y_val,
+            "wz": imu.angular_velocity.z_val}
+```
+
+La integración se hace acumulando `wz × Δt` entre cada par de lecturas de IMU dentro del intervalo de un ciclo. En AirSim la IMU no tiene ruido real (simulación perfecta), por lo que no hay drift de integración — el beneficio es máximo y el riesgo es mínimo. En hardware real habría que modelar el drift, lo que se documenta como limitación de generalización en §12.4.
+
+**Impacto esperado.** Extiende el límite operativo de ~0.175 rad/s (teórico) a un valor determinado por la varianza de la tasa de yaw durante el intervalo, no por la tasa puntual. En guiado normal (≤15°/s = 0.26 rad/s, cerca del límite actual), pequeñas ráfagas de yaw que hoy corrompen la derotación quedarían compensadas.
+
+**Alcance.** Cambios en `src/hardware/airsim_client.py` (método `get_imu_angular_velocity`) y en `src/perception/flow_ttc.py` (pasar velocidad angular integrada en lugar de tomar de `telemetry_curr`). No cambia la firma pública de `FlowTTCEstimator.estimate()` — la integración queda encapsulada en el cliente o se pasa como parámetro adicional opcional.
+
+**Variables de entorno nuevas:** ninguna. El comportamiento es siempre activo si se llama al método IMU.
+
+---
+
+### Fase P2 — Holdover temporal del TTC
+
+**Problema actual.** Cuando `foe_confidence = 0` (yaw activo, textura baja, etc.), `ObstacleField` devuelve `ttc_s = inf` para todos los sectores y el canal de TTC queda mudo. Si el dron está en un giro de 2–3 frames y la última estimación válida era `ttc_centro = 3.5 s`, esa información sigue siendo relevante — el obstáculo no desapareció por el hecho de que el sensor giró.
+
+**Solución.** Mantener en `FlowTTCEstimator` (estado del estimador, no del grafo) el último `ObstacleField` con `foe_confidence > 0`. Cuando el frame actual devuelve `foe_confidence = 0`, devolver ese campo "congelado" con el TTC decrementado por el tiempo transcurrido (`ttc_s -= dt`) hasta un mínimo de 0, y con un flag `source = "holdover"`. El holdover expira después de `FLOW_HOLDOVER_MAX_FRAMES` frames (default 3, = 0.6 s a 5 Hz).
+
+```python
+# En FlowTTCEstimator:
+FLOW_HOLDOVER_MAX_FRAMES = int(os.getenv("FLOW_HOLDOVER_MAX_FRAMES", "3"))
+
+def estimate(self, curr_frame, prev_frame, telem_curr, telem_prev):
+    field = self._compute(curr_frame, prev_frame, telem_curr, telem_prev)
+    if field.foe_confidence > 0:
+        self._last_valid = field
+        self._holdover_count = 0
+        return field
+    if self._last_valid is not None and self._holdover_count < FLOW_HOLDOVER_MAX_FRAMES:
+        self._holdover_count += 1
+        dt = (telem_curr["timestamp"] - telem_prev["timestamp"])
+        return self._last_valid.decay_ttc(dt, source="holdover")
+    return field  # foe_confidence=0, sin holdover disponible
+```
+
+`ObstacleField.decay_ttc(dt)` reduce `ttc_s` de cada celda en `dt` segundos, clampea a 0, cambia `source` a `"holdover"`. El `policy_router` y los logs ya leen `field.source`, por lo que la distinción es auditable sin cambios adicionales.
+
+**Condición de seguridad.** Si el holdover expira (`_holdover_count >= FLOW_HOLDOVER_MAX_FRAMES`), se devuelve el campo con `foe_confidence = 0` original — el sistema vuelve al comportamiento actual. El holdover no puede mantenerse indefinidamente porque el entorno puede haber cambiado.
+
+**Variables de entorno nuevas:** `FLOW_HOLDOVER_MAX_FRAMES` (int, default 3).
+
+---
+
+### Fase P3 — Supresión activa de yaw durante percepción
+
+**Problema actual.** Cuando el dron se acerca a un obstáculo (TTC < `TTC_SAFE_THRESHOLD`), el guiado puede estar aplicando yaw para realinearse con el waypoint mientras simultáneamente intenta estimar si hay obstáculo. Si ese yaw supera el límite de derotación, el sensor queda ciego justo cuando más necesita ver.
+
+**Solución.** En `action_map.py` (donde se convierte la macro-acción en comandos de velocidad), limitar el `yaw_rate` a `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` (default 5°/s = 0.087 rad/s, bien por debajo del límite de 0.175 rad/s) cuando el `policy_router` devuelve `"evasive"` o cuando el TTC del centro es menor que `TTC_SAFE_THRESHOLD`. Fuera de esas condiciones, el yaw del guiado opera con su límite normal (`GUIDANCE_YAW_RATE_MAX_DPS = 15°/s`).
+
+La supresión NO aplica a `girar_90`: ese modo ya sabe que la percepción es inválida durante el giro (la lógica de `policy_router` no toma decisiones de TTC durante `girar_90`) y necesita yaw agresivo para completar la maniobra. Solo afecta al guiado continuo (keep_going + evasive).
+
+```python
+# En action_map.py, en la función que arma el comando de velocidad:
+FLOW_MAX_YAW_DPS_NEAR_OBSTACLE = float(os.getenv("FLOW_MAX_YAW_DPS_NEAR_OBSTACLE", "5.0"))
+
+def _safe_yaw_rate(yaw_rate_dps, near_obstacle: bool) -> float:
+    if near_obstacle:
+        return max(-FLOW_MAX_YAW_DPS_NEAR_OBSTACLE,
+                   min(FLOW_MAX_YAW_DPS_NEAR_OBSTACLE, yaw_rate_dps))
+    return yaw_rate_dps
+```
+
+**Trade-off.** El dron realinea su rumbo más lento cuando está cerca de un obstáculo. Para el guiado esto es aceptable: el waypoint no se mueve, y un yaw más lento pero con percepción válida es mejor que un yaw rápido con sensor ciego. El tiempo extra de alineación es del orden de 1–2 ciclos adicionales.
+
+**Variables de entorno nuevas:** `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` (float, default 5.0).
+
+---
+
+## Opcional / trabajo futuro: MDE (Depth Anything v2 Small)
+
+Si P1–P3 implementadas y validadas no reducen suficientemente la degradación del sensor óptico (medida como fracción de ciclos con `foe_confidence = 0` en el dataset D3 re-corrido), la siguiente opción es reemplazar o complementar el canal de TTC con un estimador de profundidad monocular basado en red neuronal.
+
+**Modelo candidato:** Depth Anything v2 Small (~25 MB, ~50 ms por frame en GPU moderna). Estimación de profundidad densa por frame sin dependencia de movimiento entre frames → sin sensibilidad al yaw.
+
+**Condición de activación:** solo si el VRAM disponible (2–3 GB libres con UE5.5 corriendo) permite cargar VLM + MDE simultáneamente sin thrashing. Medir con `nvidia-smi` en condición de vuelo antes de comprometer implementación.
+
+**Por qué se deja para después:** P1–P3 son cambios algorítmicos puros (sin modelos nuevos, sin VRAM adicional, sin nuevas dependencias). Si resuelven el problema de degradación en el rango operativo de guiado (≤15°/s), MDE no agrega valor para la tesis. Si no alcanzan y el VRAM lo permite, MDE entra como mejora documentada en §12.4.
 
 ---
 

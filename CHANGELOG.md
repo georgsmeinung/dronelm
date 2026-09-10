@@ -1,3 +1,67 @@
+# 2026-09-10 (sesión 2)
+
+## Deuda técnica D1–D3 + guard de altitud SLM + corrida de verificación `townsim_ini`
+
+### D1 — Poda dinámica del esquema JSON por `reason_note` (`deliberative.py`)
+
+- Completado en sesión anterior. Esquema JSON del VLM se poda en función del valor de `reason_note` para evitar acciones semánticamente imposibles (p. ej. girar cuando el obstáculo es frontal). Documentado en `PLAN-DEUDA-TECNICA.md`.
+
+### D2 — Calibración ROC del canal de ocupación (`OCCUPANCY_BLOCKED_THRESHOLD`)
+
+**Por qué era necesario.** `ObstacleField` tiene dos canales independientes para detectar obstáculos: TTC y ocupancia. El canal de ocupancia toma el porcentaje de vectores de flujo con divergencia alta en cada sector y lo compara con `OCCUPANCY_BLOCKED_THRESHOLD`. El valor 0.35 era provisional: se fijó a ojo durante el desarrollo sin ningún dataset de respaldo, bajo la suposición de que los valores de ocupancia serían similares a los del canal TTC. Esa suposición era falsa. Los valores reales de ocupancia en TownSim rara vez superan 0.082 (máximo observado en el dataset), lo que hacía que el umbral 0.35 nunca se disparara. En la práctica el canal de ocupancia estaba desactivado: TPR=0.034 con el umbral original significa que el sistema detectaba como bloqueado solo el 3.4% de los frames en que el obstáculo estaba a menos de 5 m. El canal TTC cargaba solo con toda la responsabilidad de detección.
+
+**Para qué sirve calibrarlo.** El canal de ocupancia es el que activa el brazo deliberativo cuando el TTC todavía no es crítico pero el sector ya está visualmente saturado de obstáculos (árboles densos, fachadas). Sin ese canal, el sistema solo reacciona cuando el obstáculo ya está muy cerca (TTC bajo), reduciendo el margen de maniobra para el SLM. Un umbral calibrado convierte el canal de ocupancia en un detector temprano independiente del TTC.
+
+**Cómo se calibró.**
+- *Dataset*: script `callibration-flight/d2_occupancy_capture.py`. 196 frames, 4 velocidades (0.5–3 m/s), pared sólida en TownSim (x=61, y=−42). Ground truth binario: `gt_depth_centro < 5.0 m`. Archivo: `d2_dataset/d2_dataset_20260910_130726.npz`.
+- *ROC*: script `callibration-flight/d2_roc_analysis.py`. Barrido de 500 umbrales sobre `occ_centro`. Resultado: AUC=0.87, umbral Youden óptimo **t=0.011** (TPR=0.931, FPR=0.222).
+- *Actualización*: `obstacle_field.py` → `OCCUPANCY_BLOCKED_THRESHOLD` cambiado 0.35 → 0.011. `config/.env` → `OBSTACLE_OCCUPANCY_BLOCKED=0.011`.
+
+**Por qué el umbral fijo de 0.011 no alcanza: `OccupancyCalibrator`.** Los valores de ocupancia dependen de la textura de la escena y la calidad del flujo óptico, que varían entre escenarios. Un umbral calibrado en TownSim puede ser demasiado bajo en CityParkSim (más textura, más ruido de flujo en zona despejada → falsos positivos) o demasiado alto en un mapa con paredes lisas (menos ruido → el umbral fijo no dispara a tiempo). La solución es medir el nivel de ruido de ocupancia *en el escenario actual* durante los primeros segundos de vuelo en hover, antes de que haya obstáculos cercanos, y fijar el umbral como `mean + 3σ` de esa línea base. Clase `OccupancyCalibrator` añadida en `obstacle_field.py`: recolecta 25 frames de hover en zona despejada, aplica `mean + 3σ`, clamp a [0.005, 0.05], actualiza el global. Integrado en `main.py`. 8 tests en `tests/test_occupancy_calibrator.py`, todos pasan.
+
+### D3 — Validación de la derotación bajo yaw agresivo
+
+**Por qué era necesario.** El estimador de TTC (`FlowTTCEstimator`) aplica una derotación analítica para eliminar la componente rotacional del flujo óptico antes de calcular la divergencia. Si el dron gira (yaw) mientras vuela, el flujo de cada píxel mezcla la componente translacional (la que indica proximidad de obstáculos) con la rotacional (artefacto del movimiento de cámara). Sin derotación, un giro puro sin obstáculos produciría divergencias altas → falsos positivos. La derotación analítica usa los datos de IMU para estimar y restar el flujo rotacional esperado, pero tiene un límite: si la rotación es tan rápida que desplaza los píxeles más de `FLOW_MAX_ROTATION_DEG = 2°/frame` entre fotogramas consecutivos, la correspondencia de flujo óptico ya no es confiable y la derotación introduce más error del que corrige. El experimento D3 existía para confirmar empíricamente a qué tasa de yaw ocurre esa degradación y verificar que el sistema lo detecta por sí mismo.
+
+**Para qué sirve saberlo.** Hay dos preguntas distintas: (1) ¿a qué tasa de yaw falla la derotación? y (2) ¿el sistema sabe que está fallando? Si la respuesta a (2) fuera "no", el estimador entregaría TTC corrompido con confianza alta → el policy_router tomaría decisiones de evasión basadas en información falsa. Lo que se quería validar es que `foe_confidence` cae a cero cuando la derotación no puede operar, silenciando el canal de TTC en lugar de contaminarlo. Ese comportamiento es la red de seguridad del sistema ante giros agresivos.
+
+**Cómo se validó.**
+- *Dataset*: script `callibration-flight/d3_derotation_capture.py`. 250 frames, 5 tasas de yaw (0.0, 0.3, 0.5, 0.8, 1.0 rad/s), pared sólida a 5 m de distancia constante. 5 frames de estabilización descartados por tasa; 50 frames capturados por tasa. Archivo: `d3_dataset/d3_dataset_20260910_142048.npz`.
+- *Resultado*: `foe_confidence = 0` a partir de **0.3 rad/s** (≈17.2°/s). Consistente con el límite teórico: `FLOW_MAX_ROTATION_DEG = 2°/frame` a 5 Hz → umbral ≈ 10°/s = 0.175 rad/s; la primera tasa ensayada por encima de ese umbral (0.3 rad/s) ya produce confianza cero.
+- *Conclusión*: la derotación falla por diseño ante yaw agresivo, **y el sistema lo detecta correctamente** (`foe_confidence → 0`). El canal de TTC se silencia en lugar de generar señal corrupta. El guiado normal opera a ≤15°/s (dentro del límite), y los giros de escape (`girar_90`) sí superan el umbral, pero durante esos giros el sistema ya sabe que la percepción no es fiable y no toma decisiones de TTC. Resultado universal: no depende de TownSim ni del entorno visual.
+
+### Guard de altitud SLM (`SLM_MIN_ALT_M`)
+
+- **Diagnóstico previo**: corrida `townsim_ini` seed 1 (sesión anterior): 42 invocaciones SLM, 1 timeout (cold-start), 939/1290 ciclos en `deliberative`. El SLM se invocaba durante el ascenso inicial (z≈−6 m) donde el suelo y ramas llenan todos los sectores → timeouts y 57 ciclos de fallback.
+- **Implementación** (`src/agents/graph.py`): variable `SLM_MIN_ALT_M = float(os.getenv("SLM_MIN_ALT_M", "8.0"))`. En `policy_router`, rutas TTC/occupancy → `deliberative` o `girar_90` se redirigen a `evasive` cuando `alt_m < SLM_MIN_ALT_M`. El escape `deep_scan` (deadlock duro) permanece activo a cualquier altitud.
+- **Config**: `config/.env` → `SLM_MIN_ALT_M=8.0` documentado.
+- **Tests**: 3 tests existentes en `tests/test_policy_router.py` fallaban porque el estado de prueba no incluía telemetría/posición → `alt_m=0 < 8 → below_slm_floor=True`. Corregidos añadiendo `"telemetry": {"position": {"z": -15.0}}` a los estados de prueba que esperan routing `deliberative`/`girar_90`. Suite completa: 155 pasan, 1 falla preexistente en `test_fsm.py` (no relacionada).
+
+### Corrida de verificación `townsim_ini` seed 1 con guard activo
+
+| Métrica | Sin guard | Con guard | Δ |
+|---|---|---|---|
+| `slm_invocations` | 42 | 11 | −74% |
+| `slm_timeout_rate` | 2.4% | 0% | — |
+| `deadlock_events` | 15 | 9 | −40% |
+| `evasive` cycles | 97 | 65 | −33% |
+| `deliberative` cycles | 939 | 1029 | +9.6% |
+| `path_length_m` | 93.2 | 79.2 | −15% |
+
+- **Guard funcionando**: el ascenso ya no dispara el SLM. Cero timeouts. Menos deadlocks.
+- **Paradoja deliberative**: menos invocaciones SLM pero más ciclos en `deliberative`. Causa: los 11 invocaciones remanentes ocurren en situaciones genuinas de obstáculo (por encima de 8 m) donde el drone se queda más tiempo esperando respuesta o acumulando ciclos `evasion_stuck`. El `min_obstacle_dist_m=0.39 m` confirma encuentros reales con obstáculos en vuelo de crucero.
+- **Conclusión**: el fix era correcto y el efecto esperado se observa. El cuello de botella restante no es el ascenso sino la dinámica de deliberación/atasco en el segmento arbolado a altitud de crucero. Misión incompleta en ambas corridas (`success=false`). Se requiere batch multi-semilla para conclusiones estadísticas.
+
+### `experiments/runner.py` — timestamp ISO local en todos los mensajes
+
+- Añadida función `_ts() -> str` basada en `datetime.now().astimezone().isoformat(timespec="seconds")`. Todos los `print` del runner muestran ahora el timestamp en formato ISO con offset de zona horaria local.
+
+### Mitigación operacional del cold-start SLM
+
+- Warm-up manual previo a cada corrida: `curl http://192.168.110.101:1234/v1/chat/completions` con prompt trivial para precargar el modelo en VRAM (~8–10 s). Evita el único timeout por cold-start sin modificar código ni watchdog.
+
+---
+
 # 2026-09-10
 
 ## Lotes extendidos E2 y E3 — `townsim_calib_cruce_frontal` y `citymap_pilot`; §11-RESULTADOS completo

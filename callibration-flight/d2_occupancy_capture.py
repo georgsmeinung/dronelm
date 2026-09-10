@@ -7,15 +7,14 @@ El dron realiza aproximaciones controladas a una pared en TownSim,
 capturando pares (RGB + DepthPlanar) + ObstacleField en cada ciclo.
 El dataset se guarda como .npz para análisis offline (notebook ROC).
 
-Defecto para TownSim: el dron arranca en x=-120, y=0.4, z=-10 (15 m al
-este de la fila de edificios oeste del mapa townsim_calib) y aproxima a
-lo largo del eje -x hasta x=-148 (≈2 m de la pared).
+IMPORTANTE — coordenadas: los defectos son un punto de partida, no garantizan
+zona libre de árboles. Verificar en AirSim que el tramo start→wall esté
+despejado antes de lanzar. Usar --start-x/y/z y --wall-x/y para ajustar.
 
 Uso:
     cd callibration-flight
-    python d2_occupancy_capture.py
+    python d2_occupancy_capture.py --start-x X --start-y Y --wall-x WX --wall-y WY
     python d2_occupancy_capture.py --speeds 0.5 1.0 --output-dir d2_dataset
-    python d2_occupancy_capture.py --start-x -100 --wall-x -150 --speeds 1.0 2.0 3.0
 """
 from __future__ import annotations
 
@@ -55,15 +54,21 @@ AIRSIM_PORT = int(os.getenv("AIRSIM_PORT", "41451"))
 # de cada aproximación (15 m / 0.5 m/s = 30 s) con margen amplio.
 CMD_DURATION_S = 120.0
 
-# Defectos para TownSim (basados en townsim_calib_cruce_frontal.json):
-# el edificio oeste está aproximadamente en x=-150. Empezamos 15 m al este.
-DEFAULT_START_X = -120.0
-DEFAULT_START_Y =    0.4
+# Timeout máximo por pase: si en este tiempo no se alcanza min_dist
+# (p.ej. el dron chocó con un árbol y quedó atascado), se aborta y
+# se pasa a la siguiente velocidad sin perder los frames ya capturados.
+MAX_PASS_TIME_S = 60.0
+
+# Defectos — AJUSTAR según el tramo despejado que verifiques en AirSim.
+# Los defectos anteriores (x=-120) caían en la zona arbolada de TownSim.
+# Dejar en None para que el script pida las coordenadas si no se pasan por CLI.
+DEFAULT_START_X = None
+DEFAULT_START_Y = None
 DEFAULT_START_Z =  -10.0
-DEFAULT_WALL_X  = -148.0   # ≈2 m extra de margen respecto al edificio
-DEFAULT_WALL_Y  =    0.4
+DEFAULT_WALL_X  = None
+DEFAULT_WALL_Y  = None
 DEFAULT_SPEEDS  = [0.5, 1.0, 2.0, 3.0]
-DEFAULT_MIN_DIST = 2.0      # m — distancia a la pared para abortar el pase
+DEFAULT_MIN_DIST = 2.0      # m — distancia a la pared para terminar el pase
 
 
 # ── Argumentos ────────────────────────────────────────────────────────────────
@@ -72,16 +77,16 @@ def _parse_args() -> argparse.Namespace:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--start-x", type=float, default=DEFAULT_START_X,
-                   help=f"Coordenada X de inicio (NED, m). Defecto: {DEFAULT_START_X}")
-    p.add_argument("--start-y", type=float, default=DEFAULT_START_Y,
-                   help=f"Coordenada Y de inicio (NED, m). Defecto: {DEFAULT_START_Y}")
+    p.add_argument("--start-x", type=float, default=DEFAULT_START_X, required=DEFAULT_START_X is None,
+                   help="Coordenada X de inicio (NED, m). REQUERIDO si no hay defecto.")
+    p.add_argument("--start-y", type=float, default=DEFAULT_START_Y, required=DEFAULT_START_Y is None,
+                   help="Coordenada Y de inicio (NED, m). REQUERIDO si no hay defecto.")
     p.add_argument("--start-z", type=float, default=DEFAULT_START_Z,
                    help=f"Coordenada Z de inicio (NED, m). Defecto: {DEFAULT_START_Z}")
-    p.add_argument("--wall-x",  type=float, default=DEFAULT_WALL_X,
-                   help=f"Coordenada X de la pared (NED, m). Defecto: {DEFAULT_WALL_X}")
-    p.add_argument("--wall-y",  type=float, default=DEFAULT_WALL_Y,
-                   help=f"Coordenada Y de la pared (NED, m). Defecto: {DEFAULT_WALL_Y}")
+    p.add_argument("--wall-x",  type=float, default=DEFAULT_WALL_X, required=DEFAULT_WALL_X is None,
+                   help="Coordenada X de la pared (NED, m). REQUERIDO si no hay defecto.")
+    p.add_argument("--wall-y",  type=float, default=DEFAULT_WALL_Y, required=DEFAULT_WALL_Y is None,
+                   help="Coordenada Y de la pared (NED, m). REQUERIDO si no hay defecto.")
     p.add_argument("--speeds", type=float, nargs="+", default=DEFAULT_SPEEDS, metavar="V",
                    help="Velocidades de aproximación en m/s.")
     p.add_argument("--min-dist", type=float, default=DEFAULT_MIN_DIST,
@@ -190,13 +195,20 @@ def run_approach(
     prev_rgb:   Optional[np.ndarray] = None
     prev_telem: Optional[Dict]       = None
     depth_img_type = _depth_type()
+    t_pass_start = time.time()
 
     print(f"  V={speed} m/s | yaw={math.degrees(yaw):.1f}° | "
-          f"inicio=({start_x},{start_y},{start_z}) → pared=({wall_x},{wall_y})")
+          f"inicio=({start_x},{start_y},{start_z}) → pared=({wall_x},{wall_y})"
+          f" | timeout={MAX_PASS_TIME_S}s")
 
     try:
         while True:
             t0 = time.time()
+
+            # ── Timeout por pase ─────────────────────────────────────────────
+            if t0 - t_pass_start > MAX_PASS_TIME_S:
+                print(f"  TIMEOUT ({MAX_PASS_TIME_S}s). Abortando pase.")
+                break
 
             # ── Captura ──────────────────────────────────────────────────────
             responses = client.simGetImages(
@@ -210,6 +222,13 @@ def run_approach(
             state = client.getMultirotorState(vehicle_name=VEHICLE)
             pos   = state.kinematics_estimated.position
             dist  = math.sqrt((pos.x_val - wall_x) ** 2 + (pos.y_val - wall_y) ** 2)
+
+            # ── Detección de colisión ────────────────────────────────────────
+            collision = getattr(state, "collision", None)
+            if collision is not None and getattr(collision, "has_collided", False):
+                obj = getattr(collision, "object_name", "?")
+                print(f"  COLISIÓN con '{obj}'. Abortando pase ({len(records)} frames guardados).")
+                break
 
             rgb    = _decode_rgb(responses[0] if responses else None)
             depth  = _decode_depth(responses[1] if len(responses) > 1 else None, FRAME_H, FRAME_W)

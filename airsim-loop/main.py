@@ -20,6 +20,7 @@ except Exception:  # pragma: no cover
 from src.agents.graph import DroneState, compile_workflow
 from src.hardware import AirSimClient
 from src.navigation import WaypointTracker
+from src.perception.obstacle_field import OccupancyCalibrator
 
 DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "5.0"))
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")
@@ -229,6 +230,7 @@ def main() -> None:
 
     graph, deliberation_service = compile_workflow(airsim_client)
     sleep_s = 1.0 / max(DEFAULT_LOOP_HZ, 0.01)
+    occupancy_calibrator = OccupancyCalibrator()
 
     flight_logger = None
     if not FLIGHT_LOG_DISABLED:
@@ -365,6 +367,9 @@ def main() -> None:
                 time.sleep(sleep_s)
                 continue
             latency_graph_ms = (time.time() - t_graph) * 1000.0
+
+            if not occupancy_calibrator.is_calibrated:
+                occupancy_calibrator.feed(final_state.get("obstacle_field"))
 
             if drone_state.pop("_escape_reset", False):
                 # Escape de deadlock forzado: el progreso medido (xy) puede no

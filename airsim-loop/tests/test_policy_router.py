@@ -51,14 +51,22 @@ def test_center_blocked_with_moderate_ttc_triggers_deliberative(monkeypatch):
     # todavia no sea critico, un bloqueo estructural franco escala a
     # deliberacion en lugar de una correccion lateral rapida.
     field = _field_with(center_ttc=4.0, center_occ=0.5)
-    state = {"obstacle_field": field, "evasion_stuck_cycles": 0}
+    state = {
+        "obstacle_field": field,
+        "evasion_stuck_cycles": 0,
+        "telemetry": {"position": {"z": -15.0}},  # 15m sobre el suelo, sobre SLM_MIN_ALT_M
+    }
     assert graph_mod.policy_router(state) == "deliberative"
 
 
 def test_imminent_center_ttc_triggers_deliberative(monkeypatch):
     monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
     field = _field_with(center_ttc=1.0, center_occ=0.8)
-    state = {"obstacle_field": field, "evasion_stuck_cycles": 0}
+    state = {
+        "obstacle_field": field,
+        "evasion_stuck_cycles": 0,
+        "telemetry": {"position": {"z": -15.0}},
+    }
     assert graph_mod.policy_router(state) == "deliberative"
 
 
@@ -69,7 +77,11 @@ def test_imminent_with_high_blocked_fraction_triggers_girar_90(monkeypatch):
         for s in SECTORS for b in BANDS
     }
     field = ObstacleField(cells=cells, source="flow", foe=(0.0, 0.0), foe_confidence=1.0)
-    state = {"obstacle_field": field, "evasion_stuck_cycles": 0}
+    state = {
+        "obstacle_field": field,
+        "evasion_stuck_cycles": 0,
+        "telemetry": {"position": {"z": -15.0}},
+    }
     assert graph_mod.policy_router(state) == "girar_90"
 
 

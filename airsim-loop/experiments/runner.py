@@ -20,6 +20,7 @@ import os
 import random
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 # Jitter reproducible del start_pose por semilla (2026-0824): AIRSIM_SEED no
@@ -29,6 +30,10 @@ from pathlib import Path
 # identicas, y Mann-Whitney U no tenia con que comparar entre semillas.
 SEED_JITTER_XY_M = 1.5
 SEED_JITTER_YAW_DEG = 10.0
+
+
+def _ts() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -287,7 +292,7 @@ def main():
         for arm in args.arms:
             for deadlock_strategy in args.deadlock_strategies:
                 for seed in args.seeds:
-                    print(f"[runner] scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}")
+                    print(f"[{_ts()}][runner] scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}")
                     cmd = [
                         sys.executable, __file__, "--_single",
                         "--scenario", scenario, "--arm", arm, "--seed", str(seed),
@@ -299,15 +304,16 @@ def main():
                         cmd.append("--seed-jitter")
                     proc = subprocess.run(cmd, capture_output=True, text=True)
                     if proc.returncode != 0:
-                        print(f"[runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
+                        print(f"[{_ts()}][runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
                     else:
-                        print(proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[runner] ok")
+                        last = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[runner] ok"
+                        print(f"[{_ts()}] {last}")
                     results.append({
                         "scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
                         "seed": seed, "returncode": proc.returncode,
                     })
 
-    print(f"\n[runner] {len(results)} corridas completadas. Ver {args.out_dir}/ para los JSONL y usar experiments/analyze.py.")
+    print(f"\n[{_ts()}][runner] {len(results)} corridas completadas. Ver {args.out_dir}/ para los JSONL y usar experiments/analyze.py.")
 
 
 def _single_main():
@@ -326,7 +332,7 @@ def _single_main():
         args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,
         seed_jitter=args.seed_jitter, deadlock_strategy=args.deadlock_strategy,
     )
-    print(f"[runner] summary: {json.dumps(summary)}")
+    print(f"[{_ts()}][runner] summary: {json.dumps(summary)}")
 
 
 if __name__ == "__main__":
