@@ -196,61 +196,77 @@ def _lateral_first_override(
     trajectory: "Any | None",
     telemetry: dict,
 ) -> dict:
-    """Override: si el VLM recomendó escape vertical pero el FRENTE está confirmado
-    bloqueado (>=70% stall) y hay zonas laterales sin explorar, fuerza EVADIR.
+    """Override determinístico sobre la recomendación del VLM.
 
-    El VLM tiende a recomendar PERDER/GANAR_ALTURA al ver vegetación en imagen,
-    ignorando que las laterales están sin intentar. Este override aplica el
-    principio 'lateral-first': explorar los costados antes de escalar verticalmente.
+    Override 1 — RETROCEDER (independiente de la acción VLM):
+      Si FRENTE + ambas laterales tienen >=70% stall con >=3 intentos cada una,
+      el dron está rodeado: retroceder sin importar lo que diga el VLM.
+      (El VLM puede ver algo que parece libre pero ya fue confirmado bloqueado.)
+
+    Override 2 — lateral-first (solo cuando VLM sugiere escape vertical):
+      Si el VLM recomendó GANAR/PERDER_ALTURA pero hay laterales sin explorar,
+      forzar EVADIR antes de escalar verticalmente.
     """
-    macro = decision.get("macro_action", "")
-    if macro not in ("PERDER_ALTURA", "GANAR_ALTURA") or trajectory is None:
+    if trajectory is None:
         return decision
 
     orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
     current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
     stats = trajectory.zone_stats(current_hdg)
 
-    if stats["FRENTE"]["stall_rate"] < 0.70:
+    frente_rate = stats["FRENTE"]["stall_rate"]
+    izq = stats["IZQUIERDA"]
+    der = stats["DERECHA"]
+
+    # Override 1: todas las direcciones delanteras bloqueadas -> RETROCEDER.
+    # Umbral de intentos (>=3) para no disparar antes de explorar los costados.
+    if (frente_rate >= 0.70
+            and izq["attempts"] >= 3 and izq["stall_rate"] >= 0.70
+            and der["attempts"] >= 3 and der["stall_rate"] >= 0.70):
+        print(
+            f"[slam_assess] retroceder-override: 3 zonas bloqueadas "
+            f"(frente={frente_rate:.0%}, izq={izq['stall_rate']:.0%} "
+            f"[{izq['attempts']}int], der={der['stall_rate']:.0%} "
+            f"[{der['attempts']}int]) -> RETROCEDER"
+        )
+        return {
+            "macro_action": "RETROCEDER",
+            "rationale": (
+                f"FRENTE {frente_rate:.0%}, "
+                f"IZQUIERDA {izq['stall_rate']:.0%} ({izq['attempts']} int), "
+                f"DERECHA {der['stall_rate']:.0%} ({der['attempts']} int); "
+                f"todas las direcciones bloqueadas — retroceder para ganar margen."
+            ),
+        }
+
+    # Override 2: VLM sugiere escape vertical pero hay laterales sin explorar.
+    macro = decision.get("macro_action", "")
+    if macro not in ("PERDER_ALTURA", "GANAR_ALTURA"):
         return decision
 
-    izq_att = stats["IZQUIERDA"]["attempts"]
-    der_att = stats["DERECHA"]["attempts"]
+    if frente_rate < 0.70:
+        return decision
+
+    izq_att = izq["attempts"]
+    der_att = der["attempts"]
     if izq_att == 0 and der_att == 0:
-        lateral = "EVADIR_IZQUIERDA"  # convención: izquierda primero si ambas libres
+        lateral = "EVADIR_IZQUIERDA"
     elif izq_att == 0:
         lateral = "EVADIR_IZQUIERDA"
     elif der_att == 0:
         lateral = "EVADIR_DERECHA"
     else:
-        # Ambas laterales intentadas. Si ambas tienen alta tasa de stall,
-        # el dron está pegado contra el obstáculo — retroceder primero.
-        izq_rate = stats["IZQUIERDA"]["stall_rate"]
-        der_rate = stats["DERECHA"]["stall_rate"]
-        if izq_rate >= 0.70 and der_rate >= 0.70:
-            print(
-                f"[slam_assess] retroceder-override: laterales bloqueadas "
-                f"(izq={izq_rate:.0%}, der={der_rate:.0%}) -> RETROCEDER"
-            )
-            return {
-                "macro_action": "RETROCEDER",
-                "rationale": (
-                    f"FRENTE bloqueado ({stats['FRENTE']['stall_rate']:.0%} stall), "
-                    f"laterales bloqueadas (izq={izq_rate:.0%}, der={der_rate:.0%}); "
-                    f"retroceder para ganar margen antes del siguiente EVADIR."
-                ),
-            }
-        return decision  # laterales intentadas con stall moderado — el VLM tiene mejor criterio visual
+        return decision  # ambas intentadas con stall moderado — el VLM tiene mejor criterio visual
 
     print(
         f"[slam_assess] lateral-first override: {macro} -> {lateral} "
-        f"(FRENTE={stats['FRENTE']['stall_rate']:.0%} stall, "
+        f"(FRENTE={frente_rate:.0%} stall, "
         f"izq={izq_att} intentos, der={der_att} intentos)"
     )
     return {
         "macro_action": lateral,
         "rationale": (
-            f"FRENTE bloqueado ({stats['FRENTE']['stall_rate']:.0%} stall); "
+            f"FRENTE bloqueado ({frente_rate:.0%} stall); "
             f"exploración lateral forzada hacia zona no intentada."
         ),
     }
