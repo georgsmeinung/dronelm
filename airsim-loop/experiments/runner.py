@@ -54,14 +54,13 @@ def run_one(
     max_cycles: int,
     max_seconds: float,
     seed_jitter: bool = False,
-    deadlock_strategy: str = "deep_vlm",  # 2026-0903: mismo default que src/agents/deep_scan.py
+    deadlock_strategy: str = "slam_assess",  # S4 (PLAN-SLAM): slam_assess es el default desde 2026-0910
 ) -> dict:
     os.environ["AGENT_ARM"] = arm
     os.environ["AIRSIM_SEED"] = str(seed)
-    # H3.1 (PLAN-MEJORAS-3): segunda variable del factorial (blind vs.
-    # deep_vlm), leida a nivel de modulo por src/agents/deep_scan.py -- mismo
-    # motivo que AGENT_ARM arriba: cada combinacion corre en su propio
-    # subproceso (ver main() mas abajo).
+    # H3.1/S6 (PLAN-SLAM): segunda variable del factorial (slam_assess /
+    # deep_vlm / blind), leida a nivel de modulo por src/agents/deep_scan.py.
+    # Cada combinacion corre en su propio subproceso (ver main() mas abajo).
     os.environ["DEADLOCK_STRATEGY"] = deadlock_strategy
 
     # Import diferido: AGENT_ARM se lee a nivel de modulo en graph.py, asi que
@@ -266,9 +265,10 @@ def main():
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
     parser.add_argument(
-        "--deadlock-strategies", nargs="+", default=["deep_vlm"], choices=["blind", "deep_vlm"],
-        help="H3.1: factorial AGENT_ARM x DEADLOCK_STRATEGY. 'deep_vlm' no tiene efecto sobre el "
-             "brazo reactive (nunca declara atasco/escape).",
+        "--deadlock-strategies", nargs="+", default=["slam_assess"],
+        choices=["blind", "deep_vlm", "slam_assess"],
+        help="H3.1/S6 (PLAN-SLAM): factorial AGENT_ARM x DEADLOCK_STRATEGY. "
+             "'slam_assess' es el default (S4). 'deep_vlm' se usa como baseline para S6.",
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-runs"))
@@ -326,7 +326,7 @@ def _single_main():
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--seed-jitter", action="store_true")
-    parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])
+    parser.add_argument("--deadlock-strategy", default="slam_assess", choices=["blind", "deep_vlm", "slam_assess"])
     args = parser.parse_args()
     summary = run_one(
         args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,
