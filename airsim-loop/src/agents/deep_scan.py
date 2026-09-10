@@ -222,7 +222,7 @@ def _lateral_first_override(
         return decision  # ambas ya intentadas — el VLM tiene mejor criterio visual
 
     print(
-        f"[slam_assess] lateral-first override: {macro} → {lateral} "
+        f"[slam_assess] lateral-first override: {macro} -> {lateral} "
         f"(FRENTE={stats['FRENTE']['stall_rate']:.0%} stall, "
         f"izq={izq_att} intentos, der={der_att} intentos)"
     )
