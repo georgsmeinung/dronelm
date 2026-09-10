@@ -610,15 +610,26 @@ def _apply_scan_resolution(
         # Duración adaptativa: si el FRENTE tiene alta tasa de stall, la zona
         # bloqueadora es densa — necesita más tiempo para sortearla.
         # ≥70% stall → 3× duración base; ≥50% → 2×; <50% → 1× (base).
+        # Cuando la lateral elegida también tiene ≥50% stall (obstáculo ancho),
+        # se sube a 5× para ganar más desplazamiento lateral en el arco de evasión.
         duration_multiplier = 1.0
+        aggressive_evasion = False
         if trajectory is not None:
             orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
             current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
             stall_rate = trajectory.frente_stall_rate(current_hdg)
             if stall_rate >= 0.70:
-                duration_multiplier = 3.0
+                aggressive_evasion = True
+                stats = trajectory.zone_stats(current_hdg)
+                lateral_zone = "DERECHA" if macro == "EVADIR_DERECHA" else "IZQUIERDA"
+                lateral_stall = stats.get(lateral_zone, {}).get("stall_rate", 0.0)
+                duration_multiplier = 5.0 if lateral_stall >= 0.50 else 3.0
             elif stall_rate >= 0.50:
                 duration_multiplier = 2.0
+        if aggressive_evasion and macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA"):
+            cmd = action_to_command(macro, guidance=guidance, telemetry=telemetry, aggressive=True)
+            cmd["rationale"] = decision.get("rationale", "")
+            state["velocity_command"] = cmd
         duration_s = DEEP_SCAN_MANEUVER_DURATION_S * duration_multiplier
         state["active_maneuver"] = macro
         state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
