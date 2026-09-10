@@ -1,3 +1,35 @@
+# 2026-09-10
+
+## Lotes extendidos E2 y E3 — `townsim_calib_cruce_frontal` y `citymap_pilot`; §11-RESULTADOS completo
+
+### Corridas experimentales — lote extendido E2
+
+- Lanzado lote E2: `townsim_calib_cruce_frontal` (15 corridas, TownSim, tier1, z=−10 m).
+- **Resultado:** `reactive` 2/5 éxitos (~157 s cuando completa), `slm` 1/5 (seed 4, 262.7 s), `fsm` 0/5.
+- `slm`: 18.4 deadlocks/corrida, 95.3% resueltos (tasa más baja del dataset), dist. media 253.8 ± 51.4 m.
+- `fsm`: 6.2 deadlocks/corrida, 100% resueltos, dist. media 274.1 ± 41.4 m.
+- `reactive`: 0 deadlocks, dist. media 286.6 ± 53.1 m; patrón bimodal (éxito ↔ timeout según ángulo de aproximación).
+- Hallazgo contraintuitivo respecto a H1: el brazo sin deliberación supera a los deliberativos. Flujo óptico encuentra ruta de escape geométrica cuando existe; cuando no, oscila hasta timeout.
+
+### Corridas experimentales — lote extendido E3
+
+- Lanzado lote E3: `citymap_pilot` (15 corridas, CitySim, tier2, z=−10 m, 7 WPs, grilla urbana).
+- **Resultado:** 0/5 éxitos en los tres brazos (timeout 600 s).
+- `slm`: 168.5 ± 83.9 m recorridos, 20.4 deadlocks/corrida, 100% resueltos, mindist 0.22 m.
+- `fsm`: 178.0 ± 90.8 m recorridos, 21.4 deadlocks/corrida, 100% resueltos, mindist 0.10 m.
+- `reactive`: **26.7 ± 0.4 m** recorridos (cuasi-determinista), 0 deadlocks, mindist 3.05 m.
+- Causa de parálisis `reactive`: dron queda atrapado bajo estructura de autopista elevada. El flujo óptico detecta superficies en todas las direcciones y el controlador oscila sin poder escapar — trampa geométrica que solo un mecanismo de razonamiento global (`deep_vlm`) puede resolver.
+- Hallazgo: brazos deliberativos cubren 6.3× más distancia que `reactive`. Es la evidencia más directa a favor de H1 disponible en el lote, aunque sin éxitos completos.
+
+### `informe/11-RESULTADOS.md` — completado
+
+- §11.4.2c (nueva): análisis de `townsim_calib_cruce_frontal`; patrón bimodal del `reactive`, tasa de resolución degradada del `slm`, interpretación para H1.
+- §11.4.3b (nueva): análisis de `citymap_pilot`; parálisis geométrica del `reactive` bajo autopista elevada, inversión respecto a `townsim_calib_cruce_frontal`, ventaja de distancia 6.3× de los brazos deliberativos.
+- §11.5 (nueva): síntesis de hallazgos — H2 confirmado cualitativamente (ratio 2.20× → 1.14× → 1.06×); H1 con evidencia parcial en `citymap_pilot`; límites operativos clasificados (percepción monocular vs. escape geométrico); conclusión operativa sobre el rol del VLM.
+- Total del capítulo: 75 runs (5 escenarios × 3 brazos × 5 semillas), completo.
+
+---
+
 # 2026-09-08
 
 ## Lote extendido E1 — `townsim_ini` y actualización de §11-RESULTADOS

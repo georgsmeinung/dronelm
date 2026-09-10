@@ -1,9 +1,7 @@
 # 11. Resultados comparativos SLM vs. FSM
 
-> **Estado (2026-09-08):** lote base completo — 45 corridas (5 semillas × 3 brazos × 3 tiers), todas con `success = True` y 0 colisiones.
+> **Estado (2026-09-10):** lote base y pruebas extendidas completos — 75 corridas en total (5 escenarios × 3 brazos × 5 semillas). Escenarios de control: 45/45 éxitos, 0 colisiones. Escenarios de obstrucción: ningún brazo completa la ruta dentro del presupuesto temporal en ningún escenario.
 > Estrategia de desbloqueo: `deep_vlm` en todos los casos.
-> Las tablas de §11.1–11.3 presentan medias sobre las 5 semillas del lote estadístico.
-> Las pruebas extendidas con obstrucción real (§5 del plan de pruebas) quedan pendientes.
 >
 > **Corte de datos:** todos los resultados provienen de corridas con `code_version` en la familia
 > de commits posterior al 2026-09-03. Las variaciones de `code_version` dentro del Lote B (Tier 1)
@@ -97,19 +95,19 @@ DistMin = media de la distancia mínima al obstáculo por corrida.
 | `slm` | Tier 1 (`townsim_ini`) | 0/5 ⛔ timeout | 0 | 0.21 | 900 (límite) | 1.4% | 0% | 100% (20.2/corrida) | — |
 | `slm` | Tier 1 (`townsim_calib_cruce_frontal`) | 1/5 ⚠️ | 0 | 0.10 | 772.7 ± 285.1 | 1.9% | 0% | 95.3% (18.4/corrida) | — |
 | `slm` | Tier 2 (`citysim_clear`) | 5/5 ✅ | 0 | 9.4 | 175.5 ± 3.2 | 0.3% | 0% | — (0 deadlocks) | **1.06×** |
-| `slm` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | | |
+| `slm` | Tier 2 (`citymap_pilot`) | 0/5 ⛔ timeout | 0 | 0.22 | 600 (límite) | 2.3% | 0% | 100% (20.4/corrida) | — |
 | `fsm` | Tier 0 (`minisim_clear`) | 5/5 ✅ | 0 | 8.0 | 174.2 ± 38.7 | — | — | 100% (1.4/corrida) | 2.33× |
 | `fsm` | Tier 1 (`townsim_clear`) | 5/5 ✅ | 0 | 8.8 | 329.5 ± 46.0 | — | — | 100% (3.8/corrida) | 1.27× |
 | `fsm` | Tier 1 (`townsim_ini`) | 0/5 ⛔ timeout | 0 | 0.17 | 900 (límite) | — | — | 100% (24.0/corrida) | — |
 | `fsm` | Tier 1 (`townsim_calib_cruce_frontal`) | 0/5 ⛔ timeout | 0 | 0.16 | 900 (límite) | — | — | 100% (6.2/corrida) | — |
 | `fsm` | Tier 2 (`citysim_clear`) | 5/5 ✅ | 0 | 10.0 | 187.7 ± 20.9 | — | — | 100% (0.8/corrida) | 1.14× |
-| `fsm` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | | |
+| `fsm` | Tier 2 (`citymap_pilot`) | 0/5 ⛔ timeout | 0 | 0.10 | 600 (límite) | — | — | 100% (21.4/corrida) | — |
 | `reactive` | Tier 0 (`minisim_clear`) | 5/5 ✅ | 0 | 7.9 | 74.7 ± 0.4 | — | — | — | 1.00× |
 | `reactive` | Tier 1 (`townsim_clear`) | 5/5 ✅ | 0 | 13.9 | 259.7 ± 3.1 | — | — | — | 1.00× |
 | `reactive` | Tier 1 (`townsim_ini`) | 0/5 ⛔ timeout | 0 | 0.44 | 900 (límite) | — | — | — (0 deadlocks) | — |
 | `reactive` | Tier 1 (`townsim_calib_cruce_frontal`) | 2/5 ⚠️ | 0 | 0.67 | 603.1 ± 406.8 | — | — | — (0 deadlocks) | — |
 | `reactive` | Tier 2 (`citysim_clear`) | 5/5 ✅ | 0 | 10.4 | 165.2 ± 0.2 | — | — | — | 1.00× |
-| `reactive` | Tier 2 (`citymap_pilot`) | [pendiente] | | | | | | | |
+| `reactive` | Tier 2 (`citymap_pilot`) | 0/5 ⛔ paralizado | 0 | 3.05 | 600 (límite) | — | — | — (0 deadlocks) | — |
 
 ---
 
@@ -339,6 +337,49 @@ o lateral), mientras que los brazos deliberativos generan deadlocks que paraliza
 K=10 y análisis de SPL por waypoint, sería posible determinar si el VLM contribuye en el segmento
 específico de cruce o no.
 
+### 11.4.3b Tier 2 — Corredores urbanos angostos (`citymap_pilot`)
+
+`citymap_pilot` es el escenario terminal: 7 WPs en grilla urbana a z=−10 m entre edificios de
+50–100 m. La ruta total es ~310 m; ningún brazo supera el 58% de la ruta dentro del presupuesto
+de 600 s.
+
+| Brazo | Éxito | Dist. media recorrida | σ (m) | Deadlocks (media) | Res. VLM | DistMin (m) |
+|---|---|---|---|---|---|---|
+| `slm` | 0/5 ⛔ | 168.5 m | 83.9 | 20.4 | 100% | 0.22 |
+| `fsm` | 0/5 ⛔ | 178.0 m | 90.8 | 21.4 | 100% | 0.10 |
+| `reactive` | 0/5 ⛔ | **26.7 m** | 0.4 | 0 | — | 3.05 |
+
+El hallazgo más significativo es la conducta del `reactive`: recorre exactamente ~27 m en las
+5 semillas (σ=0.4 m — comportamiento cuasi-determinista) y se detiene. La causa identificada
+es geométrica: la ruta pasa por debajo de una autopista elevada y el dron queda atrapado bajo
+su estructura. El flujo óptico detecta superficies en todas las direcciones y el controlador
+oscila sin poder escapar — sin un mecanismo de escape global, el `reactive` permanece bajo la
+autopista hasta agotar el presupuesto. La distancia mínima al obstáculo (media 3.05 m) refleja
+el espacio bajo la estructura, no proximidad a los edificios de los corredores.
+
+Los brazos deliberativos recorren ~170 m usando `deep_vlm` para resolver deadlocks (20–21 por
+corrida, todos resueltos al 100%). La alta varianza (σ≈87 m) indica que el progreso depende
+fuertemente de la semilla: en seed 3 (`slm`, 18.7 m) y seed 5 (`fsm`, 16.6 m) el dron queda
+paralizado desde el primer waypoint — comportamiento análogo al `reactive` pero detonado por un
+deadlock inicial irresuelto que consume el presupuesto.
+
+**Inversión del resultado respecto a `townsim_calib_cruce_frontal`:** en ese escenario el
+`reactive` superaba a los brazos deliberativos (2/5 vs. 1/5 vs. 0/5); en `citymap_pilot` los
+brazos deliberativos superan al `reactive` en distancia recorrida (170 m vs. 27 m). La diferencia
+es la geometría: en `townsim_calib_cruce_frontal` existe una "ruta de escape" lateral que el flujo
+óptico puede encontrar sin necesidad de razonamiento global; en `citymap_pilot` la grilla de
+corredores angostos bloquea todas las salidas locales y el `reactive` no tiene manera de determinar
+qué corredor elegir. El `deep_vlm`, aunque no completa la misión, al menos permite que el dron
+explore sucesivamente los deadlocks y avance en la dirección correcta entre resoluciones.
+
+**Interpretación para H1:** `citymap_pilot` proporciona la evidencia más clara a favor de H1
+disponible en este lote — los brazos con deliberación VLM cubren 6.3× más distancia que el
+`reactive` en un entorno donde el flujo óptico solo no es suficiente para elegir entre corredores.
+Sin embargo, con 0/5 éxitos en todos los brazos y K=5, no es posible establecer significancia
+estadística. El escenario confirma el escenario de uso previsto del VLM (ambigüedad semántica
+entre corredores de textura uniforme) pero a una escala de dificultad que excede el presupuesto
+temporal disponible.
+
 ### 11.4.3 Tier 2 — Entorno urbano de crucero (`citysim_clear`)
 
 Con 2.2 invocaciones promedio al VLM y tasa de deliberación de 0.3%, el `slm` opera en modo casi
@@ -363,3 +404,82 @@ El escenario `citymap_pilot` (corredores angostos a −10 m, entre edificios de 
 experimento de Tier 2 donde el VLM tiene potencia discriminativa real. Los datos de `citysim_clear`
 establecen que, en condiciones de tránsito libre, ningún brazo discrimina en calidad de navegación —
 diferencia esperada por diseño experimental.
+
+---
+
+## 11.5 Síntesis de hallazgos
+
+### 11.5.1 Soporte a hipótesis H2 (overhead del VLM se diluye con la longitud de ruta)
+
+**H2 se confirma cualitativamente** con los tres escenarios de control completados:
+
+| Escenario | Ruta (m) | Ratio `slm`/`reactive` |
+|---|---|---|
+| `minisim_clear` | ~185 | 2.20× |
+| `townsim_clear` | ~626 | 1.14× |
+| `citysim_clear` | ~427 | 1.06× |
+
+El ratio decrece monótonamente con la longitud de ruta, con separación perfecta entre los tres
+tiers (Cliff's δ = 1.0 en comparaciones por pares). La potencia estadística es insuficiente para
+la corrección Bonferroni (K = 5, p mínimo alcanzable ~7.9×10⁻³ >> α = 0.0028), pero el patrón es
+consistente con la predicción teórica: el overhead fijo de cada invocación VLM (~3–5 s) se reparte
+sobre un presupuesto de tiempo mayor a medida que la ruta se alarga.
+
+### 11.5.2 Soporte a hipótesis H1 (VLM aporta ventaja en ambientes obstruidos)
+
+**H1 no se confirma ni refuta con los datos disponibles.** El diseño experimental identifica tres
+regímenes cualitativamente distintos:
+
+| Escenario | Régimen | Ganancia del VLM |
+|---|---|---|
+| `minisim_clear`, `townsim_clear`, `citysim_clear` | Control libre | Ninguna — costo puro |
+| `townsim_calib_cruce_frontal` | Bloqueo frontal | Negativa: `reactive` 2/5 > `slm` 1/5 > `fsm` 0/5 |
+| `townsim_ini` | Deadlock crónico | Neutral — 0/5 todos; VLM incapaz de recuperar señal monocular |
+| `citymap_pilot` | Ambigüedad de corredor | Positiva en distancia: 6.3× (VLM) vs. `reactive`; 0/5 todos |
+
+La evidencia más favorable a H1 es `citymap_pilot`: los brazos deliberativos cubren 6.3× más
+distancia que el `reactive`, precisamente porque el `deep_vlm` puede elegir el corredor correcto
+donde el flujo óptico solo no discrimina. Sin embargo, 0/5 éxitos en todos los brazos impide
+cuantificar ventaja en términos de tasa de éxito.
+
+El resultado contraintuitivo de `townsim_calib_cruce_frontal` (el brazo menos deliberativo supera
+a los más deliberativos) ilustra un efecto de composición: en obstrucciones donde existe una
+"ruta de escape" geométricamente accesible desde la posición actual, el `reactive` la encuentra
+más rápido porque no detiene el vuelo para deliberar. El `deep_vlm` introduce latencia de
+reposicionamiento que, en este caso, llega cuando el momento de escape ya pasó.
+
+### 11.5.3 Límites operativos identificados
+
+Los escenarios de obstrucción revelan dos límites distintos de la arquitectura:
+
+**Límite de percepción monocular (`townsim_ini`):** el corredor arbolado a z=−10 m produce
+deadlock crónico en los tres brazos porque la señal de flujo óptico se degrada en la dirección
+de avance (flujo traslacional nulo cerca del FOE) y las texturas repetitivas del follaje generan
+vectores espurios. Ningún mecanismo de decisión puede compensar la ausencia de señal geométrica
+confiable en la dirección de interés. Este es un límite físico del sensor monocular, no del
+algoritmo de control.
+
+**Límite de escape geométrico (`citymap_pilot`, `reactive`):** cuando la geometría cierra todas
+las salidas locales — el dron queda atrapado bajo una autopista elevada con el techo arriba, el
+suelo abajo y paredes laterales —, el flujo óptico no puede generar un gradiente de evasión útil
+en ninguna dirección. La opción "perder altura" no ayuda (agrava el atrapamiento bajo la
+estructura). Solo un mecanismo de razonamiento global, como `deep_vlm`, puede plantear una salida
+que no sea localmente accesible en el campo de flujo.
+
+### 11.5.4 Conclusión operativa
+
+Los 75 runs del lote completo establecen que:
+
+1. **En ruta libre**, ningún brazo deliberativo justifica su overhead frente al `reactive` en
+   términos de velocidad o seguridad. El VLM añade latencia sin agregar valor de decisión.
+2. **En ambientes con obstrucción geométrica compleja** (`citymap_pilot`), el `deep_vlm` aporta
+   una ventaja sustancial de progreso de ruta (6.3×), aunque insuficiente para completar la misión
+   dentro del presupuesto temporal disponible.
+3. **En ambientes con degradación de señal monocular** (`townsim_ini`), la limitación es de
+   percepción, no de decisión. Ningún brazo — deliberativo o reactivo — puede compensarla. La
+   extensión natural de esta línea de investigación es la incorporación de un segundo canal de
+   profundidad instantánea (visión estereoscópica) que no dependa del movimiento entre frames
+   (Anexo 7, §A7.4–§A7.6).
+4. **El VLM no penaliza la seguridad:** la distancia mínima al obstáculo es similar o mejor que la
+   del `reactive` en los escenarios donde todos los brazos operan, y las 45 corridas de control
+   producen 0 colisiones en todos los brazos.

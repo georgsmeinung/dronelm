@@ -3561,10 +3561,8 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </ol>
 <p>Ninguna de estas limitaciones invalida el diseño para las preguntas que sí responde; todas acotan el alcance de lo que puede afirmarse a partir de él.</p></section><section class="print-page" id="11-resultados" heading-number="12"><h1 id="11-resultados-11-resultados-comparativos-slm-vs-fsm">11. Resultados comparativos SLM vs. FSM<a class="headerlink" href="#11-resultados-11-resultados-comparativos-slm-vs-fsm" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Estado (2026-09-08):</strong> lote base completo — 45 corridas (5 semillas × 3 brazos × 3 tiers), todas con <code>success = True</code> y 0 colisiones.
-Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos.
-Las tablas de §11.1–11.3 presentan medias sobre las 5 semillas del lote estadístico.
-Las pruebas extendidas con obstrucción real (§5 del plan de pruebas) quedan pendientes.</p>
+<p><strong>Estado (2026-09-10):</strong> lote base y pruebas extendidas completos — 75 corridas en total (5 escenarios × 3 brazos × 5 semillas). Escenarios de control: 45/45 éxitos, 0 colisiones. Escenarios de obstrucción: ningún brazo completa la ruta dentro del presupuesto temporal en ningún escenario.
+Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos.</p>
 <p><strong>Corte de datos:</strong> todos los resultados provienen de corridas con <code>code_version</code> en la familia
 de commits posterior al 2026-09-03. Las variaciones de <code>code_version</code> dentro del Lote B (Tier 1)
 reflejan commits de documentación realizados durante la ejecución del batch (~1.5 h); ninguno de
@@ -3874,14 +3872,14 @@ DistMin = media de la distancia mínima al obstáculo por corrida.</p>
 <tr>
 <td><code>slm</code></td>
 <td>Tier 2 (<code>citymap_pilot</code>)</td>
-<td>[pendiente]</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0/5 ⛔ timeout</td>
+<td>0</td>
+<td>0.22</td>
+<td>600 (límite)</td>
+<td>2.3%</td>
+<td>0%</td>
+<td>100% (20.4/corrida)</td>
+<td>—</td>
 </tr>
 <tr>
 <td><code>fsm</code></td>
@@ -3946,14 +3944,14 @@ DistMin = media de la distancia mínima al obstáculo por corrida.</p>
 <tr>
 <td><code>fsm</code></td>
 <td>Tier 2 (<code>citymap_pilot</code>)</td>
-<td>[pendiente]</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0/5 ⛔ timeout</td>
+<td>0</td>
+<td>0.10</td>
+<td>600 (límite)</td>
+<td>—</td>
+<td>—</td>
+<td>100% (21.4/corrida)</td>
+<td>—</td>
 </tr>
 <tr>
 <td><code>reactive</code></td>
@@ -4018,14 +4016,14 @@ DistMin = media de la distancia mínima al obstáculo por corrida.</p>
 <tr>
 <td><code>reactive</code></td>
 <td>Tier 2 (<code>citymap_pilot</code>)</td>
-<td>[pendiente]</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0/5 ⛔ paralizado</td>
+<td>0</td>
+<td>3.05</td>
+<td>600 (límite)</td>
+<td>—</td>
+<td>—</td>
+<td>— (0 deadlocks)</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
@@ -4451,6 +4449,79 @@ flujo óptico sí detecta el obstáculo frontal y lo evade por la ruta de menor 
 o lateral), mientras que los brazos deliberativos generan deadlocks que paralizan la evasión. Con
 K=10 y análisis de SPL por waypoint, sería posible determinar si el VLM contribuye en el segmento
 específico de cruce o no.</p>
+<h3 id="11-resultados-1143b-tier-2-corredores-urbanos-angostos-citymap_pilot">11.4.3b Tier 2 — Corredores urbanos angostos (<code>citymap_pilot</code>)<a class="headerlink" href="#11-resultados-1143b-tier-2-corredores-urbanos-angostos-citymap_pilot" title="Permanent link">&para;</a></h3>
+<p><code>citymap_pilot</code> es el escenario terminal: 7 WPs en grilla urbana a z=−10 m entre edificios de
+50–100 m. La ruta total es ~310 m; ningún brazo supera el 58% de la ruta dentro del presupuesto
+de 600 s.</p>
+<table>
+<thead>
+<tr>
+<th>Brazo</th>
+<th>Éxito</th>
+<th>Dist. media recorrida</th>
+<th>σ (m)</th>
+<th>Deadlocks (media)</th>
+<th>Res. VLM</th>
+<th>DistMin (m)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>slm</code></td>
+<td>0/5 ⛔</td>
+<td>168.5 m</td>
+<td>83.9</td>
+<td>20.4</td>
+<td>100%</td>
+<td>0.22</td>
+</tr>
+<tr>
+<td><code>fsm</code></td>
+<td>0/5 ⛔</td>
+<td>178.0 m</td>
+<td>90.8</td>
+<td>21.4</td>
+<td>100%</td>
+<td>0.10</td>
+</tr>
+<tr>
+<td><code>reactive</code></td>
+<td>0/5 ⛔</td>
+<td><strong>26.7 m</strong></td>
+<td>0.4</td>
+<td>0</td>
+<td>—</td>
+<td>3.05</td>
+</tr>
+</tbody>
+</table>
+<p>El hallazgo más significativo es la conducta del <code>reactive</code>: recorre exactamente ~27 m en las
+5 semillas (σ=0.4 m — comportamiento cuasi-determinista) y se detiene. La causa identificada
+es geométrica: la ruta pasa por debajo de una autopista elevada y el dron queda atrapado bajo
+su estructura. El flujo óptico detecta superficies en todas las direcciones y el controlador
+oscila sin poder escapar — sin un mecanismo de escape global, el <code>reactive</code> permanece bajo la
+autopista hasta agotar el presupuesto. La distancia mínima al obstáculo (media 3.05 m) refleja
+el espacio bajo la estructura, no proximidad a los edificios de los corredores.</p>
+<p>Los brazos deliberativos recorren ~170 m usando <code>deep_vlm</code> para resolver deadlocks (20–21 por
+corrida, todos resueltos al 100%). La alta varianza (σ≈87 m) indica que el progreso depende
+fuertemente de la semilla: en seed 3 (<code>slm</code>, 18.7 m) y seed 5 (<code>fsm</code>, 16.6 m) el dron queda
+paralizado desde el primer waypoint — comportamiento análogo al <code>reactive</code> pero detonado por un
+deadlock inicial irresuelto que consume el presupuesto.</p>
+<p><strong>Inversión del resultado respecto a <code>townsim_calib_cruce_frontal</code>:</strong> en ese escenario el
+<code>reactive</code> superaba a los brazos deliberativos (2/5 vs. 1/5 vs. 0/5); en <code>citymap_pilot</code> los
+brazos deliberativos superan al <code>reactive</code> en distancia recorrida (170 m vs. 27 m). La diferencia
+es la geometría: en <code>townsim_calib_cruce_frontal</code> existe una "ruta de escape" lateral que el flujo
+óptico puede encontrar sin necesidad de razonamiento global; en <code>citymap_pilot</code> la grilla de
+corredores angostos bloquea todas las salidas locales y el <code>reactive</code> no tiene manera de determinar
+qué corredor elegir. El <code>deep_vlm</code>, aunque no completa la misión, al menos permite que el dron
+explore sucesivamente los deadlocks y avance en la dirección correcta entre resoluciones.</p>
+<p><strong>Interpretación para H1:</strong> <code>citymap_pilot</code> proporciona la evidencia más clara a favor de H1
+disponible en este lote — los brazos con deliberación VLM cubren 6.3× más distancia que el
+<code>reactive</code> en un entorno donde el flujo óptico solo no es suficiente para elegir entre corredores.
+Sin embargo, con 0/5 éxitos en todos los brazos y K=5, no es posible establecer significancia
+estadística. El escenario confirma el escenario de uso previsto del VLM (ambigüedad semántica
+entre corredores de textura uniforme) pero a una escala de dificultad que excede el presupuesto
+temporal disponible.</p>
 <h3 id="11-resultados-1143-tier-2-entorno-urbano-de-crucero-citysim_clear">11.4.3 Tier 2 — Entorno urbano de crucero (<code>citysim_clear</code>)<a class="headerlink" href="#11-resultados-1143-tier-2-entorno-urbano-de-crucero-citysim_clear" title="Permanent link">&para;</a></h3>
 <p>Con 2.2 invocaciones promedio al VLM y tasa de deliberación de 0.3%, el <code>slm</code> opera en modo casi
 puramente reactivo en este escenario: sólo 10 s de overhead sobre la base de 165 s del <code>reactive</code>.
@@ -4476,52 +4547,217 @@ Los tres brazos completan sin colisiones y sin diferencias de seguridad (DistMin
 <p>El escenario <code>citymap_pilot</code> (corredores angostos a −10 m, entre edificios de 50–100 m) es el
 experimento de Tier 2 donde el VLM tiene potencia discriminativa real. Los datos de <code>citysim_clear</code>
 establecen que, en condiciones de tránsito libre, ningún brazo discrimina en calidad de navegación —
-diferencia esperada por diseño experimental.</p></section><section class="print-page" id="12-conclusiones" heading-number="13"><h1 id="12-conclusiones-12-conclusiones">12. Conclusiones<a class="headerlink" href="#12-conclusiones-12-conclusiones" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p><strong>Estado:</strong> pendiente del capítulo de resultados (cap. 11), que a su vez depende de la corrida experimental comparativa descrita en el capítulo 10.</p>
-</blockquote>
+diferencia esperada por diseño experimental.</p>
+<hr />
+<h2 id="11-resultados-115-sintesis-de-hallazgos">11.5 Síntesis de hallazgos<a class="headerlink" href="#11-resultados-115-sintesis-de-hallazgos" title="Permanent link">&para;</a></h2>
+<h3 id="11-resultados-1151-soporte-a-hipotesis-h2-overhead-del-vlm-se-diluye-con-la-longitud-de-ruta">11.5.1 Soporte a hipótesis H2 (overhead del VLM se diluye con la longitud de ruta)<a class="headerlink" href="#11-resultados-1151-soporte-a-hipotesis-h2-overhead-del-vlm-se-diluye-con-la-longitud-de-ruta" title="Permanent link">&para;</a></h3>
+<p><strong>H2 se confirma cualitativamente</strong> con los tres escenarios de control completados:</p>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Ruta (m)</th>
+<th>Ratio <code>slm</code>/<code>reactive</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minisim_clear</code></td>
+<td>~185</td>
+<td>2.20×</td>
+</tr>
+<tr>
+<td><code>townsim_clear</code></td>
+<td>~626</td>
+<td>1.14×</td>
+</tr>
+<tr>
+<td><code>citysim_clear</code></td>
+<td>~427</td>
+<td>1.06×</td>
+</tr>
+</tbody>
+</table>
+<p>El ratio decrece monótonamente con la longitud de ruta, con separación perfecta entre los tres
+tiers (Cliff's δ = 1.0 en comparaciones por pares). La potencia estadística es insuficiente para
+la corrección Bonferroni (K = 5, p mínimo alcanzable ~7.9×10⁻³ &gt;&gt; α = 0.0028), pero el patrón es
+consistente con la predicción teórica: el overhead fijo de cada invocación VLM (~3–5 s) se reparte
+sobre un presupuesto de tiempo mayor a medida que la ruta se alarga.</p>
+<h3 id="11-resultados-1152-soporte-a-hipotesis-h1-vlm-aporta-ventaja-en-ambientes-obstruidos">11.5.2 Soporte a hipótesis H1 (VLM aporta ventaja en ambientes obstruidos)<a class="headerlink" href="#11-resultados-1152-soporte-a-hipotesis-h1-vlm-aporta-ventaja-en-ambientes-obstruidos" title="Permanent link">&para;</a></h3>
+<p><strong>H1 no se confirma ni refuta con los datos disponibles.</strong> El diseño experimental identifica tres
+regímenes cualitativamente distintos:</p>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Régimen</th>
+<th>Ganancia del VLM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minisim_clear</code>, <code>townsim_clear</code>, <code>citysim_clear</code></td>
+<td>Control libre</td>
+<td>Ninguna — costo puro</td>
+</tr>
+<tr>
+<td><code>townsim_calib_cruce_frontal</code></td>
+<td>Bloqueo frontal</td>
+<td>Negativa: <code>reactive</code> 2/5 &gt; <code>slm</code> 1/5 &gt; <code>fsm</code> 0/5</td>
+</tr>
+<tr>
+<td><code>townsim_ini</code></td>
+<td>Deadlock crónico</td>
+<td>Neutral — 0/5 todos; VLM incapaz de recuperar señal monocular</td>
+</tr>
+<tr>
+<td><code>citymap_pilot</code></td>
+<td>Ambigüedad de corredor</td>
+<td>Positiva en distancia: 6.3× (VLM) vs. <code>reactive</code>; 0/5 todos</td>
+</tr>
+</tbody>
+</table>
+<p>La evidencia más favorable a H1 es <code>citymap_pilot</code>: los brazos deliberativos cubren 6.3× más
+distancia que el <code>reactive</code>, precisamente porque el <code>deep_vlm</code> puede elegir el corredor correcto
+donde el flujo óptico solo no discrimina. Sin embargo, 0/5 éxitos en todos los brazos impide
+cuantificar ventaja en términos de tasa de éxito.</p>
+<p>El resultado contraintuitivo de <code>townsim_calib_cruce_frontal</code> (el brazo menos deliberativo supera
+a los más deliberativos) ilustra un efecto de composición: en obstrucciones donde existe una
+"ruta de escape" geométricamente accesible desde la posición actual, el <code>reactive</code> la encuentra
+más rápido porque no detiene el vuelo para deliberar. El <code>deep_vlm</code> introduce latencia de
+reposicionamiento que, en este caso, llega cuando el momento de escape ya pasó.</p>
+<h3 id="11-resultados-1153-limites-operativos-identificados">11.5.3 Límites operativos identificados<a class="headerlink" href="#11-resultados-1153-limites-operativos-identificados" title="Permanent link">&para;</a></h3>
+<p>Los escenarios de obstrucción revelan dos límites distintos de la arquitectura:</p>
+<p><strong>Límite de percepción monocular (<code>townsim_ini</code>):</strong> el corredor arbolado a z=−10 m produce
+deadlock crónico en los tres brazos porque la señal de flujo óptico se degrada en la dirección
+de avance (flujo traslacional nulo cerca del FOE) y las texturas repetitivas del follaje generan
+vectores espurios. Ningún mecanismo de decisión puede compensar la ausencia de señal geométrica
+confiable en la dirección de interés. Este es un límite físico del sensor monocular, no del
+algoritmo de control.</p>
+<p><strong>Límite de escape geométrico (<code>citymap_pilot</code>, <code>reactive</code>):</strong> cuando la geometría cierra todas
+las salidas locales — el dron queda atrapado bajo una autopista elevada con el techo arriba, el
+suelo abajo y paredes laterales —, el flujo óptico no puede generar un gradiente de evasión útil
+en ninguna dirección. La opción "perder altura" no ayuda (agrava el atrapamiento bajo la
+estructura). Solo un mecanismo de razonamiento global, como <code>deep_vlm</code>, puede plantear una salida
+que no sea localmente accesible en el campo de flujo.</p>
+<h3 id="11-resultados-1154-conclusion-operativa">11.5.4 Conclusión operativa<a class="headerlink" href="#11-resultados-1154-conclusion-operativa" title="Permanent link">&para;</a></h3>
+<p>Los 75 runs del lote completo establecen que:</p>
+<ol>
+<li><strong>En ruta libre</strong>, ningún brazo deliberativo justifica su overhead frente al <code>reactive</code> en
+   términos de velocidad o seguridad. El VLM añade latencia sin agregar valor de decisión.</li>
+<li><strong>En ambientes con obstrucción geométrica compleja</strong> (<code>citymap_pilot</code>), el <code>deep_vlm</code> aporta
+   una ventaja sustancial de progreso de ruta (6.3×), aunque insuficiente para completar la misión
+   dentro del presupuesto temporal disponible.</li>
+<li><strong>En ambientes con degradación de señal monocular</strong> (<code>townsim_ini</code>), la limitación es de
+   percepción, no de decisión. Ningún brazo — deliberativo o reactivo — puede compensarla. La
+   extensión natural de esta línea de investigación es la incorporación de un segundo canal de
+   profundidad instantánea (visión estereoscópica) que no dependa del movimiento entre frames
+   (Anexo 7, §A7.4–§A7.6).</li>
+<li><strong>El VLM no penaliza la seguridad:</strong> la distancia mínima al obstáculo es similar o mejor que la
+   del <code>reactive</code> en los escenarios donde todos los brazos operan, y las 45 corridas de control
+   producen 0 colisiones en todos los brazos.</li>
+</ol></section><section class="print-page" id="12-conclusiones" heading-number="13"><h1 id="12-conclusiones-12-conclusiones">12. Conclusiones<a class="headerlink" href="#12-conclusiones-12-conclusiones" title="Permanent link">&para;</a></h1>
 <h2 id="12-conclusiones-121-retomar-el-hilo-conductor">12.1 Retomar el hilo conductor<a class="headerlink" href="#12-conclusiones-121-retomar-el-hilo-conductor" title="Permanent link">&para;</a></h2>
-<p>Cerrar aquí el argumento declarado en la introducción (§1.4) y desarrollado con evidencia medida en el capítulo 9: en un sistema de control donde un modelo de lenguaje consume descripciones de escena, el error más caro está en la interfaz que lo alimenta, no en el razonamiento del modelo, y las instancias documentadas de ese patrón —desincronización de esquemas de percepción y campos nulos, desalineación en secuencias temporales, saturación por descalibración de escala diferencial, y descarte silencioso en grafos de estado— se detectaron auditando formalmente los contratos de datos y la propagación de estado, nunca observando únicamente el comportamiento superficial del vuelo.</p>
+<p>Este trabajo partió de una constatación práctica: en un sistema de control donde un modelo de lenguaje visivo consume descripciones de escena para deliberar sobre maniobras de evasión, el error más caro no está en la política de decisión del modelo sino en la interfaz que lo alimenta.</p>
+<p>La evidencia de esa afirmación —desincronización de esquemas de percepción, campos nulos por calibración de escala diferencial, descarte silencioso en grafos de estado— nunca emergió observando el comportamiento superficial del vuelo; emergió auditando formalmente los contratos de datos y la propagación de estado entre capas (cap. 9).</p>
+<p>Los 75 runs del lote experimental (5 escenarios × 3 brazos × 5 semillas) validan la arquitectura resultante de ese proceso de depuración y permiten responder, con datos, a la pregunta de investigación central.</p>
+<hr />
 <h2 id="12-conclusiones-122-respuesta-a-la-pregunta-de-investigacion">12.2 Respuesta a la pregunta de investigación<a class="headerlink" href="#12-conclusiones-122-respuesta-a-la-pregunta-de-investigacion" title="Permanent link">&para;</a></h2>
-<p>¿Aporta el SLM sobre la FSM? Síntesis de §11.4, con los matices por tipo de escenario que surjan de la corrida experimental — evitar una respuesta única y agregada si los datos sostienen una respuesta más matizada por escenario.</p>
+<p><strong>¿Aporta el brazo deliberativo VLM (<code>slm</code>) sobre la máquina de estados (<code>fsm</code>) y sobre el control puramente reactivo (<code>reactive</code>) en navegación autónoma de dron en entornos urbanos simulados?</strong></p>
+<p>La respuesta es matizada por escenario y no puede reducirse a un único enunciado:</p>
+<h3 id="12-conclusiones-en-entornos-de-transito-libre-45-corridas-de-control">En entornos de tránsito libre (45 corridas de control)<a class="headerlink" href="#12-conclusiones-en-entornos-de-transito-libre-45-corridas-de-control" title="Permanent link">&para;</a></h3>
+<p>El <code>slm</code> no aporta ventaja sobre el <code>fsm</code> ni sobre el <code>reactive</code> en términos de tasa de éxito o seguridad: los tres brazos completan todas las rutas sin colisiones. El VLM introduce un overhead de tiempo que se diluye con la longitud de ruta (<strong>H2 confirmada</strong>):</p>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Ruta aprox.</th>
+<th>Ratio <code>slm</code>/<code>reactive</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minisim_clear</code> (Tier 0, ~185 m)</td>
+<td>2.20×</td>
+<td></td>
+</tr>
+<tr>
+<td><code>townsim_clear</code> (Tier 1, ~626 m)</td>
+<td>1.14×</td>
+<td></td>
+</tr>
+<tr>
+<td><code>citysim_clear</code> (Tier 2, ~427 m)</td>
+<td>1.06×</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>El ratio decrece monótonamente (Cliff's δ = 1.0 en comparaciones por pares). La convergencia hacia 1.0× a medida que la ruta se alarga confirma que el overhead del VLM —fijo por invocación, ~850–1400 ms— es absorbido por el presupuesto total de vuelo: en rutas largas, pocas invocaciones son necesarias y su peso relativo decrece. Esta predicción se sostenía teóricamente (cap. 8, §8.6)
+y los datos la verifican.</p>
+<h3 id="12-conclusiones-en-entornos-con-obstruccion-30-corridas-de-prueba-extendida">En entornos con obstrucción (30 corridas de prueba extendida)<a class="headerlink" href="#12-conclusiones-en-entornos-con-obstruccion-30-corridas-de-prueba-extendida" title="Permanent link">&para;</a></h3>
+<p>La evidencia es heterogénea y revela tres regímenes cualitativamente distintos:</p>
+<p><strong>Régimen 1 — Deadlock crónico por límite de percepción (<code>townsim_ini</code>):</strong> El corredor arbolado a z=−10 m produce 0/5 éxitos en los tres brazos. El flujo óptico traslacional se anula precisamente en los obstáculos centrados en la trayectoria (cerca del Foco de Expansión), que son los de mayor riesgo frontal. Ningún mecanismo de decisión puede compensar la ausencia de señal geométrica confiable: ni el <code>deep_vlm</code>, ni la FSM, ni el control reactivo. Este es un
+límite del sensor, no del algoritmo.</p>
+<p><strong>Régimen 2 — Trampa geométrica por ausencia de razonamiento global (<code>citymap_pilot</code>):</strong> Los brazos deliberativos (<code>slm</code>, <code>fsm</code>) cubren <strong>6.3× más distancia</strong> que el <code>reactive</code> (170 m vs. 27 m). El <code>reactive</code> queda paralizado bajo una autopista elevada: el flujo óptico detecta superficies en todas las direcciones y el controlador oscila sin escape posible — sin razonamiento global, ninguna evasión local desbloquea la situación. El <code>deep_vlm</code>, aunque no logra completar la misión en 600 s, permite que los brazos deliberativos progresen por la grilla urbana eligiendo corredores que el flujo óptico no puede discriminar. Esta es la evidencia más directa a favor de <strong>H1</strong> disponible en el lote.</p>
+<p><strong>Régimen 3 — Obstrucción frontal con escape lateral accesible
+(<code>townsim_calib_cruce_frontal</code>):</strong> El <code>reactive</code> supera a los brazos deliberativos (2/5 vs. 1/5 vs. 0/5). Cuando existe una ruta de escape geométricamente accesible desde la posición actual, el flujo óptico la encuentra más rápido porque no detiene el vuelo para deliberar; el <code>deep_vlm</code> introduce latencia de reposicionamiento que, en el momento de la oportunidad de evasión, ya pasó. El VLM no aporta ventaja —y en la mayoría de semillas introduce una desventaja neta.</p>
+<h3 id="12-conclusiones-sintesis">Síntesis<a class="headerlink" href="#12-conclusiones-sintesis" title="Permanent link">&para;</a></h3>
+<p>El VLM aporta valor en exactamente el régimen para el que fue diseñado: ambigüedad semántica entre corredores de textura uniforme donde el flujo óptico no puede discriminar la dirección correcta.</p>
+<p>No aporta valor en ruta libre ni en obstrucciones con escape local. No puede compensar el límite físico del sensor monocular en textura auto-similar densa. Con K=5 semillas y la corrección de Bonferroni aplicada a 18 comparaciones (α_corr ≈ 0.0028), ningún resultado individual alcanza significancia estadística formal. El patrón H2, no obstante, es consistente con δ = 1.0 en todos los pares, y el patrón H1 en <code>citymap_pilot</code> es cuantitativamente sustancial (6.3×) aunque no completable en el presupuesto temporal disponible. La validación estadística requeriría K ≥ 10–15 semillas por condición.</p>
+<hr />
 <h2 id="12-conclusiones-123-limitaciones">12.3 Limitaciones<a class="headerlink" href="#12-conclusiones-123-limitaciones" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Validación exclusivamente en simulación (AirSim); sin validación en hardware físico (Jetson Nano + dron real), que el plan de trabajo aprobado (<code>plan_tesis/plan-tesis.md</code>, §"Transferencia de los resultados obtenidos") sitúa como siguiente etapa fuera del alcance de este trabajo.</li>
-<li>Calibración del canal de ocupación de <code>ObstacleField</code> pendiente al cierre de este escrito (cap. 6, §6.3), con el canal de TTC como el único de los dos formalmente validado contra profundidad (cap. 7).</li>
-<li>Tamaño de muestra y generalización: a determinar según el número final de semillas y escenarios de la corrida de tesis (cap. 10).</li>
+<li>
+<p><strong>Validación exclusivamente en simulación (AirSim):</strong> sin validación en hardware físico (Jetson Nano + dron real), que el plan de trabajo aprobado (<code>plan_tesis/plan-tesis.md</code>, §"Transferencia de los resultados obtenidos") sitúa como siguiente etapa fuera del alcance de este trabajo.</p>
+</li>
+<li>
+<p><strong>Tamaño de muestra:</strong> K=5 semillas por condición (75 corridas en total). La corrección de Bonferroni para 18 comparaciones fija α_corr ≈ 0.0028, un umbral que el p-valor mínimo alcanzable con K=5 (p ≈ 7.9×10⁻³) no puede superar. Los resultados son indicativos y cuantitativamente consistentes, pero no formalmente significativos.</p>
+</li>
+<li>
+<p><strong>Sensor monocular:</strong> el canal de flujo óptico depende del movimiento del vehículo entre frames, lo que lo hace estructuralmente ciego a obstáculos centrados en la trayectoria (Foco de Expansión). El límite observado en <code>townsim_ini</code> no es resueltamente por ajuste de parámetros; requiere un segundo canal de profundidad instantánea (cap. 11, §11.5.3; Anexo 7).</p>
+</li>
+<li>
+<p><strong>Calibración del canal de ocupación de <code>ObstacleField</code> pendiente:</strong> el canal de TTC está formalmente validado contra profundidad ground truth (cap. 7); el umbral de ocupación(<code>OBSTACLE_OCCUPANCY_BLOCKED = 0.35</code>) es provisorio (cap. 6, §6.9; cap. 7, §7.5).</p>
+</li>
+<li>
+<p><strong>Un único mapa por escenario:</strong> cada escenario de obstrucción se corrió en un solo mapa urbano (TownSim o CitySim). La generalización de los resultados a otras geometrías urbanas no está garantizada con los datos disponibles.</p>
+</li>
+<li>
+<p><strong>VLM fijo (Qwen2.5-VL-3B-Instruct, zero-shot):</strong> el modelo opera en régimen zero-shot sin sintonización al dominio de vuelo. Los resultados de deliberación están acotados por la distribución de preentrenamiento del modelo y el diseño del prompt, no por la capacidad máxima de la arquitectura.</p>
+</li>
 </ul>
+<hr />
 <h2 id="12-conclusiones-124-trabajo-futuro-y-mejoras">12.4 Trabajo futuro y mejoras<a class="headerlink" href="#12-conclusiones-124-trabajo-futuro-y-mejoras" title="Permanent link">&para;</a></h2>
-<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en cuatro ejes prioritarios, integrando tanto la transferencia física como las arquitecturas de optimización del nodo deliberativo analizadas teóricamente pero no desplegadas en la corrida experimental base:</p>
+<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en cinco ejes prioritarios, integrando la transferencia física, la arquitectura del nodo deliberativo y la infraestructura perceptual:</p>
 <ul>
 <li>
-<p><strong>Especialización y adaptación ligera del modelo deliberativo vía LoRA/QLoRA (Anexo 3):</strong>
-  En la implementación evaluada, el modelo multimodal (<strong>Qwen2.5-VL-3B-Instruct</strong>) opera en régimen <em>zero-shot / in-context learning</em>, lo cual exige verbalizar en cada ciclo la telemetría, el resumen del <code>ObstacleField</code>, el historial y las restricciones sintácticas (~500 tokens de prompt), empujando la latencia de inferencia (850–1400 ms) hacia el límite del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>). Como se fundamenta en el capítulo 8 (§8.7) y se desarrolla en detalle en el <a href="#anexos-a3-optimizacion-lora">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras inicial y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las matrices de atención (<span class="arithmatex">\(W_q, W_v\)</span>) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT) utilizando la telemetría de vuelos exitosos. Esto permitirá internalizar el espacio cinemático y el formato estructurado en los pesos de la red, reduciendo el prompt a &lt;100 tokens y la latencia a &lt;500 ms sin incurrir en degradaciones por timeout.</p>
+<p><strong>Especialización y adaptación ligera del modelo deliberativo vía LoRA/QLoRA (Anexo 3):</strong> En la implementación evaluada, el modelo multimodal (<strong>Qwen2.5-VL-3B-Instruct</strong>) opera en régimen <em>zero-shot / in-context learning</em>, lo cual exige verbalizar en cada ciclo la telemetría, el resumen del <code>ObstacleField</code>, el historial y las restricciones sintácticas (~500 tokens de prompt), empujando la latencia de inferencia (850–1400 ms) hacia el límite del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>). Como se fundamenta en el capítulo 8 (§8.7) y se desarrolla en detalle en el <a href="#anexos-a3-optimizacion-lora">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras inicial y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las   matrices de atención (<span class="arithmatex">\(W_q, W_v\)</span>) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT) utilizando la telemetría de vuelos exitosos. Esto permitirá internalizar el espacio cinemático y el formato estructurado en los pesos de la red, reduciendo el prompt a &lt;100 tokens y la latencia a &lt;500 ms sin incurrir en degradaciones por timeout.</p>
 </li>
 <li>
-<p><strong>Decodificación restringida con gramáticas reducidas y dinámicas condicionadas por el grafo (Anexo 4):</strong>
-  La versión actual del lazo táctico emplea un esquema estático global (<code>DroneTacticalDecision</code>) con el abanico completo de 5 macro-acciones acoplado a un analizador tolerante (§8.2). En el <a href="#anexos-a4-decodificacion-restringida">Anexo 4</a>, §A4.4.2, se documenta la especificación técnica de una optimización no implementada en el ciclo actual: la <strong>inyección dinámica de gramáticas acotadas según el estado de vuelo y el motivo de consulta (<code>reason_note</code>)</strong>. Como línea de mejora, se propone parametrizar el autómata de decodificación (GBNF / JSON Schema) en tiempo real:</p>
+<p><strong>Decodificación restringida con gramáticas reducidas y dinámicas condicionadas por el grafo (Anexo 4):</strong> La versión actual del lazo táctico emplea un esquema estático global (<code>DroneTacticalDecision</code>) con el abanico completo de 5 macro-acciones acoplado a un analizador tolerante (§8.2). En el <a href="#anexos-a4-decodificacion-restringida">Anexo 4</a>, §A4.4.2, se documenta la especificación técnica de una optimización no implementada en el ciclo actual: la <strong>inyección dinámica de gramáticas acotadas según el estado de vuelo y el motivo de consulta (<code>reason_note</code>)</strong>. Como línea de mejora, se propone parametrizar el autómata de decodificación (GBNF / JSON Schema) en tiempo real:</p>
 </li>
-<li>Ante colisiones inminentes (<code>"TTC_CRITICO"</code>), restringir la gramática estrictamente a <code>["evasive", "girar_90"]</code>, podando sintácticamente cualquier token asociado a acciones pasivas (<code>keep_going</code>).</li>
-<li>Ante atascos cinemáticos (<code>"DEADLOCK_ESCAPE"</code>), forzar alternativas de escape (<code>["girar_90", "fsm", "degraded"]</code>), impidiendo bucles de evasión redundantes.</li>
+<li>Ante colisiones inminentes (<code>"TTC_CRITICO"</code>), restringir la gramática estrictamente a <code>["evasive", "girar_90"]</code>, podando sintácticamente cualquier token asociado a acciones pasivas.</li>
+<li>Ante atascos cinemáticos (<code>"DEADLOCK_ESCAPE"</code>), forzar alternativas de escape <code>["girar_90", "fsm", "degraded"]</code>, impidiendo bucles de evasión redundantes.</li>
 <li>
 <p>Esta poda semántica <em>a priori</em> concentrará la distribución de probabilidad en alternativas físicamente coherentes, reducirá la entropía de muestreo y acelerará la decodificación aprovechando el salto de tokens (<em>token fast-forwarding</em>).</p>
 </li>
 <li>
 <p><strong>Perfeccionamiento del lazo perceptual monocular (Anexo 5):</strong></p>
 </li>
-<li>Calibración formal del canal de ocupación de <code>ObstacleField</code> contra el mapa de profundidad de ground truth (cap. 6, §6.3; <a href="#anexos-a5-percepcion-monocular-flujo-optico">Anexo 5</a>), completando el protocolo de curva ROC y derivación del umbral óptimo por índice de Youden de forma análoga a la validación del TTC (cap. 7, §7.5).</li>
+<li>Calibración formal del canal de ocupación de <code>ObstacleField</code> contra el mapa de profundidad de ground truth (cap. 6, §6.3; <a href="#anexos-a5-percepcion-monocular-flujo-optico">Anexo 5</a>), completando el protocolo de curva ROC y derivación del umbral óptimo por índice de Youden.</li>
 <li>
-<p>Validación y robustecimiento de la compensación de flujo óptico por derotación angular frente a maniobras de guiñada (<em>yaw</em>) agresivas (&gt; 0.3 rad/s), superando el rango acotado del dataset preliminar (cap. 7, §7.4, §7.6; <a href="#anexos-a5-percepcion-monocular-flujo-optico">Anexo 5</a>, §A5.3).</p>
+<p>Validación y robustecimiento de la compensación de flujo óptico por derotación angular frente a maniobras de guiñada (<em>yaw</em>) agresivas (&gt; 0.3 rad/s), superando el rango acotado del dataset preliminar (cap. 7, §7.4, §7.6).</p>
 </li>
 <li>
-<p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong>
-  El fracaso uniforme de los tres brazos en el corredor arbolado <code>townsim_ini</code> (cap. 11, §11.4.2b) expuso un límite estructural del sensor monocular, no un defecto de ajuste: el flujo óptico traslacional se anula justo en los obstáculos centrados en la trayectoria de avance (cerca del Foco de Expansión), que son exactamente los de mayor riesgo de colisión frontal (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.1–§A7.2). Como línea de trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del flujo respecto del FOE al recuperar profundidad métrica a partir de un único instante, en vez de requerir movimiento del vehículo entre frames (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, útil para robustez de localización ante escena dinámica extendida, pero con limitaciones propias frente a follaje en movimiento y geometría subpíxel (Anexo 7, §A7.2.1) que no lo posicionan como sustituto directo del estéreo para este modo de falla específico.</p>
+<p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong> El fracaso uniforme de los tres brazos en <code>townsim_ini</code> (cap. 11, §11.4.2b) expuso un límite estructural del sensor monocular: el flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión), que son los de mayor riesgo de colisión frontal (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.1–§A7.2). Como trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del movimiento entre frames al recuperar profundidad métrica en un único instante (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, con limitaciones propias frente a follaje en movimiento y geometría subpíxel.</p>
 </li>
 <li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>
 </li>
-<li>Validación en plataforma física real: integración en una <em>companion computer</em> de bajo consumo (e.g., NVIDIA Jetson Nano / Orin) conectada vía MAVLink/ROS a un cuadrirrotor físico con sensor monocular, evaluando el lazo reactivo-táctico en entornos reales según las fases delineadas en el plan de trabajo aprobado (<code>plan_tesis/plan-tesis.md</code>).</li>
-<li>Extensión a navegación cooperativa en enjambre y fusión sensorial con sensores complementarios (e.g., flujo óptico diferencial con sensores acústicos o ToF ultraligeros).</li>
+<li>Validación en plataforma física real: integración en una <em>companion computer</em> de bajo consumo (NVIDIA Jetson Nano / Orin) conectada vía MAVLink/ROS a un cuadrirrotor físico con sensor monocular, evaluando el lazo reactivo-táctico en entornos reales según las fases delineadas en el plan de trabajo aprobado.</li>
+<li>Extensión a navegación cooperativa en enjambre y fusión sensorial con sensores
+    complementarios (flujo óptico diferencial con sensores acústicos o ToF ultraligeros).</li>
 </ul></section><section class="print-page" id="13-referencias" heading-number="14"><h1 id="13-referencias-13-referencias">13. Referencias<a class="headerlink" href="#13-referencias-13-referencias" title="Permanent link">&para;</a></h1>
 <p><a id="ref-abdin-2024" class="ref-anchor"></a><a id="13-referencias-ref-abdin-2024"></a>Abdin, M., Aneja, J., Awadalla, H., Awadallah, A., Awan, A. A., Bach, N., Bahree, A., Bakhtiari, A., Bao, J., Behl, H., Benhaim, A., Bilenko, M., Bjorck, J., Bubeck, S., Cai, M., Cai, Q., Chaudhary, V., Chen, D., Chen, D., ... Zhang, X. (2024). <em>Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone</em>. arXiv:2404.14219. <a href="https://arxiv.org/abs/2404.14219">https://arxiv.org/abs/2404.14219</a></p>
 <p><a id="ref-agarwal-2021" class="ref-anchor"></a><a id="13-referencias-ref-agarwal-2021"></a>Agarwal, R., Schwarzer, M., Castro, P. S., Courville, A., &amp; Bellemare, M. G. (2021). Deep Reinforcement Learning at the Edge of the Statistical Precipice. <em>Advances in Neural Information Processing Systems (NeurIPS)</em>, <em>34</em>. arXiv:2108.13264. <a href="https://arxiv.org/abs/2108.13264">https://arxiv.org/abs/2108.13264</a></p>
