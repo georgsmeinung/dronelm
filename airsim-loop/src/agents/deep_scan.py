@@ -218,13 +218,15 @@ def _lateral_first_override(
     izq = stats["IZQUIERDA"]
     der = stats["DERECHA"]
 
-    # Override 1: todas las direcciones delanteras bloqueadas -> RETROCEDER.
-    # Umbral de intentos (>=3) para no disparar antes de explorar los costados.
+    frente_att = stats["FRENTE"]["attempts"]
+
+    # Override 1a: FRENTE + ambas laterales confirmadas bloqueadas -> RETROCEDER.
+    # Requiere >=3 intentos en cada lateral para no disparar antes de explorarlas.
     if (frente_rate >= 0.70
             and izq["attempts"] >= 3 and izq["stall_rate"] >= 0.70
             and der["attempts"] >= 3 and der["stall_rate"] >= 0.70):
         print(
-            f"[slam_assess] retroceder-override: 3 zonas bloqueadas "
+            f"[slam_assess] retroceder-override-1a: 3 zonas bloqueadas "
             f"(frente={frente_rate:.0%}, izq={izq['stall_rate']:.0%} "
             f"[{izq['attempts']}int], der={der['stall_rate']:.0%} "
             f"[{der['attempts']}int]) -> RETROCEDER"
@@ -236,6 +238,28 @@ def _lateral_first_override(
                 f"IZQUIERDA {izq['stall_rate']:.0%} ({izq['attempts']} int), "
                 f"DERECHA {der['stall_rate']:.0%} ({der['attempts']} int); "
                 f"todas las direcciones bloqueadas — retroceder para ganar margen."
+            ),
+        }
+
+    # Override 1b: drone físicamente inmovilizado dentro del obstáculo.
+    # Señal: buffer saturado de stalls FRENTE (>=90%, >=20 eventos) y ningún
+    # intento lateral. EVADIR se ejecutó pero el drone no pudo rotar (colisión
+    # física), así que los eventos siguen en zona FRENTE y las laterales nunca
+    # acumulan intentos. Datos de prueba visual (code_version=35367d3b):
+    # c433–c463: FRENTE=30/30 stalls, IZQUIERDA=0, DERECHA=0, yaw Δ<4°.
+    if (frente_rate >= 0.90 and frente_att >= 20
+            and izq["attempts"] == 0 and der["attempts"] == 0):
+        print(
+            f"[slam_assess] retroceder-override-1b: drone inmovilizado "
+            f"(frente={frente_rate:.0%} [{frente_att}int], "
+            f"izq=0, der=0) -> RETROCEDER"
+        )
+        return {
+            "macro_action": "RETROCEDER",
+            "rationale": (
+                f"FRENTE {frente_rate:.0%} stall ({frente_att} intentos), "
+                f"sin intentos laterales — drone inmovilizado en el obstáculo; "
+                f"retroceder para crear margen antes de evadir."
             ),
         }
 
@@ -673,6 +697,58 @@ def _apply_scan_resolution(
         state["active_maneuver"] = macro
         state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
         state["maneuver_command"] = cmd
+
+        # Inyectar corner waypoint lateral para que al terminar RETROCEDER el
+        # guiado no apunte de vuelta al árbol bloqueado (mismo mecanismo que
+        # GIRAR_90 en deliberative.py y fsm.py).
+        #
+        # Jerarquía de señales para elegir la dirección lateral:
+        #   1. Trayectoria: lateral con stall_rate menor (si alguna tiene intentos).
+        #   2. Campo óptico: lateral con TTC mayor (más despejada según flow).
+        #   3. Fallback: lateral que acorta el error de rumbo al WP.
+        # El corner sigue sujeto al reactive/evasive normal mientras el drone
+        # navega hacia él, así que no se requiere que el punto esté 100% libre.
+        orient_r = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+        current_hdg_r = math.degrees(float(orient_r.get("yaw", 0.0)))
+
+        turn_sign: float
+        if trajectory is not None:
+            stats_r = trajectory.zone_stats(current_hdg_r)
+            izq_r = stats_r["IZQUIERDA"]
+            der_r = stats_r["DERECHA"]
+            if izq_r["attempts"] > 0 or der_r["attempts"] > 0:
+                # Señal 1: trayectoria — lateral con menor stall rate
+                if izq_r["stall_rate"] <= der_r["stall_rate"]:
+                    turn_sign = -1.0  # IZQUIERDA menos bloqueada
+                else:
+                    turn_sign = 1.0   # DERECHA menos bloqueada
+            else:
+                # Señal 2: campo óptico — lateral con mayor TTC
+                _field = state.get("obstacle_field")
+                ttc_izq = (_field.sector_ttc("izquierda") or 0.0) if _field is not None else 0.0
+                ttc_der = (_field.sector_ttc("derecha") or 0.0) if _field is not None else 0.0
+                if ttc_izq != ttc_der:
+                    turn_sign = -1.0 if ttc_izq >= ttc_der else 1.0
+                else:
+                    # Señal 3: acortar error de rumbo al WP
+                    turn_sign = -1.0 if float(guidance.get("bearing_err_deg", 0.0)) < 0.0 else 1.0
+        else:
+            _field = state.get("obstacle_field")
+            ttc_izq = (_field.sector_ttc("izquierda") or 0.0) if _field is not None else 0.0
+            ttc_der = (_field.sector_ttc("derecha") or 0.0) if _field is not None else 0.0
+            if ttc_izq != ttc_der:
+                turn_sign = -1.0 if ttc_izq >= ttc_der else 1.0
+            else:
+                turn_sign = -1.0 if float(guidance.get("bearing_err_deg", 0.0)) < 0.0 else 1.0
+
+        from .action_map import compute_corner_waypoint, _manhattan_snap_yaw
+        lateral_yaw = _manhattan_snap_yaw(current_hdg_r, 90.0 * turn_sign)
+        side_name = "IZQUIERDA" if turn_sign < 0 else "DERECHA"
+        print(f"[slam_assess] retroceder-corner: rumbo lateral {lateral_yaw:.0f}° ({side_name}) inyectado como corner.")
+        state["inject_corner"] = compute_corner_waypoint(
+            telemetry, lateral_yaw, guidance=guidance,
+            offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
+        )
     else:
         state["active_maneuver"] = None
         state["maneuver_cycles_left"] = 0

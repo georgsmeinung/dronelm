@@ -1,5 +1,95 @@
 # 2026-09-10
 
+## PLAN-SLAM — Mejoras de desatasco post-S4: RETROCEDER, Override 1b, trigger de trayectoria, corner injection
+
+Diagnóstico a partir de los datos de `seed_1.jsonl` (código `35367d3b`): 36 deadlocks con
+`IZQUIERDA=0(0) DERECHA=0(0)` en todos ellos; 254 ciclos entre el primer deadlock (c433) y el
+primer `RETROCEDER` (c714). Causa raíz: el optical flow reportaba `blocked_fraction=0.0` mientras
+el drone estaba embebido en la malla de colisión de la palmera → `corridor_open=True` →
+`deep_scan_cycle` no activaba. Cuando lo hacía (hard_stall a los 30 ciclos), el drone ya no
+podía moverse físicamente. Tras RETROCEDER, el guiado volvía a apuntar al mismo árbol y el
+ciclo se repetía.
+
+### Fix 1 — Acción RETROCEDER (`action_map.py`, `deep_scan.py`)
+
+- `action_map.py`: nueva macro-acción `"RETROCEDER"` añadida a `VALID_ACTIONS`. Handler que emite
+  `vx = -EVASION_BACK_SPEED` (1.2 m/s) manteniendo yaw via guiado. Variable de entorno nueva:
+  `EVASION_BACK_SPEED` (default 1.2 m/s).
+- `deep_scan.py`: `RETROCEDER` añadido a `PROMPT_ACTIONS` y a `SYSTEM_PROMPT_SLAM_ASSESS`
+  (prioridad 3, descripción semántica). `_apply_scan_resolution`: manejo de `RETROCEDER` con
+  duración fija 1.5× `MANEUVER_DURATION_S` (2.0×1.5=3 s → ~3.6 m a 1.2 m/s).
+
+### Fix 2 — Override 1a y Override 1b en `_lateral_first_override` (`deep_scan.py`)
+
+**Override 1a**: si `FRENTE ≥70% stall` y ambas laterales con `≥3 intentos` y `≥70% stall` →
+RETROCEDER (todas las direcciones confirmadas bloqueadas).
+
+**Override 1b** (nuevo — diagnosticado con datos de `seed_1.jsonl`): si `FRENTE ≥90% stall` con
+`≥20 eventos` y `IZQUIERDA=0 intentos` y `DERECHA=0 intentos` → RETROCEDER. Señal diagnóstica
+exacta de drone inmovilizado: el buffer está saturado de stalls FRENTE sin ningún intento lateral
+porque el drone no puede rotar físicamente (colisión con malla del árbol). Ciclos c433–c463 del
+log muestran exactamente este patrón (FRENTE=30/30 stalls, yaw Δ<4° en 30 ciclos).
+
+**Override 2** (sin cambios): VLM sugiere escape vertical pero laterales no exploradas → EVADIR.
+
+- Nuevo archivo `tests/test_retroceder_override.py`: 7 tests que cubren Override 1a, 1b, 2 y
+  el caso sin trayectoria. Suite completa: 177 tests pasan.
+
+### Fix 3 — `STUCK_HARD_FACTOR` reducido 3.0 → 1.5 (`config/.env`)
+
+Hard-stall threshold pasa de 30 a 15 ciclos (6 s → 3 s a 5 Hz). Datos del log: con 3.0 el drone
+tardaba 254 ciclos en llegar a RETROCEDER, ya embebido en la malla. Con 1.5, `deep_scan_cycle`
+se activa antes de la embebida física.
+
+### Fix 4 — Trigger de slam_assess por trayectoria (`graph.py`)
+
+`capture_node` publica `_traj_frente_stall_rate` y `_traj_frente_attempts` en el estado tras
+cada evento de trayectoria registrado. `policy_router` añade un nuevo gate independiente del
+contador de ciclos atascados: si `_traj_frente_stall_rate ≥ TRAJ_STALL_TRIGGER_RATE` (default
+0.70) con `_traj_frente_attempts ≥ TRAJ_STALL_TRIGGER_MIN_ATT` (default 10) → enruta a
+`deliberative` aunque el campo óptico reporte corredor libre. Corrige el loop de feedback: optical
+flow débil (drone embebido) → `foe_confidence` baja → `blocked=False` espurio → `corridor_open=True`
+→ slam_assess nunca activaba.
+
+Variables nuevas: `TRAJ_STALL_TRIGGER_RATE=0.70`, `TRAJ_STALL_TRIGGER_MIN_ATT=10` en `config/.env`.
+
+### Fix 5 — Corner waypoint lateral tras RETROCEDER (`deep_scan.py`, `config/.env`)
+
+Al resolver un deadlock con RETROCEDER, `_apply_scan_resolution` inyecta simultáneamente un
+corner waypoint lateral (`state["inject_corner"]`) para que cuando la maniobra termine el guiado
+apunte a un punto lateral —no de vuelta al árbol bloqueado. Mismo mecanismo que GIRAR_90 en
+`deliberative.py`/`fsm.py`.
+
+**Jerarquía de señales para elegir la dirección lateral** (en orden de prioridad):
+1. Trayectoria: lateral con `stall_rate` menor (si alguna tiene intentos previos).
+2. Campo óptico: lateral con TTC mayor según `state["obstacle_field"].sector_ttc()`.
+3. Fallback: lateral que reduce el error de rumbo al WP real.
+
+El corner sigue sujeto a reactive/evasive mientras el drone navega hacia él; no requiere que el
+punto esté 100% despejado.
+
+**Encadenamiento automático**: después de alcanzar el corner, `waypoint_tracker.current_waypoint`
+avanza al WP real. Si ese camino también está bloqueado, un nuevo ciclo de deadlock → RETROCEDER
+→ nuevo corner se inyecta antes del WP real (guard de 10 m solo bloquea si el WP actual ya es
+un CORNER muy cercano al nuevo). Cada corner deflecta el drone ~15 m en la dirección más libre.
+
+Variable nueva: `CORNER_OFFSET_M=15.0` en `config/.env` (default en `action_map.py` era 12 m;
+15 m para clusters de palmeras de ~8–10 m de ancho).
+
+### Config / entorno
+
+| Variable | Valor anterior | Valor nuevo | Motivo |
+|---|---|---|---|
+| `BEARING_UNSTABLE_DIST_XY_M` | 1.0 | 4.0 | Fix WP_0: drone a 3.18 m en XY → giro 149° espurio |
+| `MANEUVER_DURATION_S` | 1.0 | 2.0 | Fix WP_1: 6 s a 1.2 m/s → 4.6 m de arco lateral |
+| `STUCK_HARD_FACTOR` | 3.0 | 1.5 | slam_assess antes de embebida física |
+| `CORNER_OFFSET_M` | 12.0 (default) | 15.0 | Corner fuera del cluster de palmeras |
+| `EVASION_BACK_SPEED` | — | 1.2 | Nuevo: velocidad de RETROCEDER |
+| `TRAJ_STALL_TRIGGER_RATE` | — | 0.70 | Nuevo: umbral de stall para trigger por traj. |
+| `TRAJ_STALL_TRIGGER_MIN_ATT` | — | 10 | Nuevo: intentos mínimos FRENTE para trigger |
+
+---
+
 ## PLAN-SLAM — Implementación fases P1–P3 (percepción monocular) y S1–S4 (slam_assess)
 
 ### P1 — Pre-integración IMU para derotación más precisa

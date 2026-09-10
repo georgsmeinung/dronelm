@@ -229,6 +229,13 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
                     flow_had_evidence=had_evidence,
                 )
                 flight_trajectory.record(event)
+                # Publicar frente_stall_rate en el estado para que policy_router
+                # pueda activar slam_assess antes de llegar a hard_stall_threshold
+                # cuando el campo óptico reporta corredor espurio (2026-0910).
+                orient_now = prev_telem.get("orientation") or {}
+                hdg_now = math.degrees(float(orient_now.get("yaw", 0.0)))
+                state["_traj_frente_stall_rate"] = flight_trajectory.frente_stall_rate(hdg_now)
+                state["_traj_frente_attempts"] = flight_trajectory.zone_stats(hdg_now)["FRENTE"]["attempts"]
             state["_prev_wp_distance"] = curr_dist
 
         state["prev_image"] = state.get("rgb_image")
@@ -425,6 +432,18 @@ def policy_router(state: DroneState) -> str:
     if stuck >= effective_stall_threshold():
         if stuck >= hard_stall_threshold() or not has_open_corridor(field, guidance):
             return "deliberative"
+
+    # Trigger por trayectoria (2026-0910): si el historial acumulado confirma
+    # bloqueo frontal persistente, escalar a deliberative aunque el campo
+    # óptico reportara corredor libre (optical flow no fiable cuando el drone
+    # está embebido en la malla del árbol → foe_confidence baja → blocked=False
+    # espurio). Umbral: >=70% stall FRENTE con >=10 eventos (2s a 5Hz).
+    traj_stall = float(state.get("_traj_frente_stall_rate", 0.0))
+    traj_att = int(state.get("_traj_frente_attempts", 0))
+    _TRAJ_STALL_TRIGGER = float(os.getenv("TRAJ_STALL_TRIGGER_RATE", "0.70"))
+    _TRAJ_ATT_TRIGGER = int(os.getenv("TRAJ_STALL_TRIGGER_MIN_ATT", "10"))
+    if traj_stall >= _TRAJ_STALL_TRIGGER and traj_att >= _TRAJ_ATT_TRIGGER:
+        return "deliberative"
 
     center_imminent = center_ttc <= TTC_EVASION_THRESHOLD
     if center_imminent or (center_blocked and center_ttc <= TTC_SAFE_THRESHOLD):
