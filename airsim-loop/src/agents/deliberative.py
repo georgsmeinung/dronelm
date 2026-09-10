@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import math
 import os
 import re
@@ -81,6 +82,37 @@ RESPONSE_JSON_SCHEMA = {
         },
     },
 }
+
+# Poda sintáctica del enum por motivo de consulta (D1, PLAN-DEUDA-TECNICA.md):
+# concentra la distribución de sampling en acciones físicamente coherentes con
+# la causa de la consulta. El fallback es el enum completo (clave no listada).
+_ACTIONS_BY_REASON: Dict[str, set] = {
+    "TTC_CRITICO": {
+        "EVADIR_IZQUIERDA", "EVADIR_DERECHA",
+        "GANAR_ALTURA", "PERDER_ALTURA", "FRENAR",
+        # MANTENER_RUMBO excluido: hay colisión inminente confirmada
+    },
+    "DEADLOCK_ESCAPE": {
+        "EVADIR_IZQUIERDA", "EVADIR_DERECHA",
+        "GANAR_ALTURA", "PERDER_ALTURA",
+        # MANTENER_RUMBO excluido: ya falló. FRENAR excluido: no avanza.
+    },
+}
+
+
+def _schema_for_reason(reason_key: str) -> dict:
+    """Schema JSON con enum podado según el motivo de consulta al VLM."""
+    allowed = _ACTIONS_BY_REASON.get(reason_key, PROMPT_ACTIONS)
+    schema = copy.deepcopy(RESPONSE_JSON_SCHEMA)
+    schema["json_schema"]["schema"]["properties"]["macro_action"]["enum"] = sorted(allowed)
+    return schema
+
+
+def _get_reason_key(field: ObstacleField) -> str:
+    """Clave corta para `_schema_for_reason`; vacía = enum completo."""
+    if field.is_blocked("centro"):
+        return "TTC_CRITICO"
+    return ""
 
 # --------------------------------------------------------------------------- #
 # System Prompts: Texto Puro (SLM) y Vision Directa (VLM)                    #
@@ -414,7 +446,9 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
         used_schema = False
         if VLM_USE_JSON_SCHEMA:
             try:
-                completion = client.chat.completions.create(response_format=RESPONSE_JSON_SCHEMA, **kwargs)
+                reason_key = payload.get("reason_note", "")
+                schema = _schema_for_reason(reason_key)
+                completion = client.chat.completions.create(response_format=schema, **kwargs)
                 raw = completion.choices[0].message.content or ""
                 used_schema = True
             except Exception:
@@ -753,7 +787,8 @@ def make_deliberative_node(service: DeliberationService):
 
         recent_history = state.get("_delib_outcomes") or []
         prompt = _build_user_prompt(field, telemetry, guidance, stuck_cycles=stuck_cycles, recent_history=recent_history)
-        request_id = service.request({"prompt": prompt, "images_b64": images_b64})
+        reason_key = _get_reason_key(field)
+        request_id = service.request({"prompt": prompt, "images_b64": images_b64, "reason_note": reason_key})
         state["slm_request_id"] = request_id
         # Instrumentacion de auditoria (2026-0901): recordar que se mando
         # (texto + frames RAW, cada uno con su timestamp REAL de captura,
