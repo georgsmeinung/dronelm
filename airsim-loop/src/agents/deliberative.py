@@ -838,6 +838,19 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
 
         def _finalize(decision: Dict[str, Any], raw_response: str, latency_ms: float, is_fallback: bool, err: Optional[str], timed_out: bool) -> Dict[str, Any]:
             macro = decision.get("macro_action", "FRENAR")
+            # Override de trayectoria: aplica los mismos overrides que slam_assess (Override 1-3)
+            # tambien en el path regular para cubrir _escape_locked=True, donde slam_assess
+            # deja de ejecutarse y el SLM regular retorna MANTENER_RUMBO sin restriction.
+            if trajectory is not None and not is_fallback:
+                overridden = deep_scan._apply_trajectory_overrides(decision, trajectory, telemetry)
+                if overridden.get("macro_action") != macro:
+                    print(
+                        f"[Deliberativo] _finalize traj-override: "
+                        f"{macro} -> {overridden.get('macro_action')} "
+                        f"(rationale: {overridden.get('rationale', '')[:80]})"
+                    )
+                    decision = overridden
+                    macro = decision.get("macro_action", macro)
             # Override de seguridad: nunca MANTENER_RUMBO con estructura bloqueada a corto TTC.
             if macro == "MANTENER_RUMBO" and close_structural:
                 print("[Deliberativo] -> OVERRIDE DE SEGURIDAD: centro bloqueado con TTC bajo. Forzando evasión.")
@@ -900,7 +913,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             state["slm_request_id"] = None
             state["_deliberation_pending"] = False
 
-            if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA"):
+            if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA", "PERDER_ALTURA"):
                 loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
                 state["active_maneuver"] = macro
                 state["maneuver_cycles_left"] = max(1, round(MANEUVER_DURATION_S * loop_hz))

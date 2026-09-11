@@ -21,26 +21,7 @@ mismo nivel de abstracción que ocupa actualmente `evasive_node` + `reactive_nod
 El sistema implementado en esta tesis opera en tres capas de abstracción temporal
 diferenciada:
 
-```
-[Lenguaje / Misión]  ─ planeación de misión (GCS, cap. 4)
-        │
-        ▼
-┌───────────────────────────────────────────┐
-│ Capa deliberativa — VLM  (0.5–2 Hz)       │  brazo "slm": Qwen2.5-VL-3B
-│  razonamiento semántico → macro-acción     │  (implementado, cap. 5, §5.10)
-└──────────────────┬────────────────────────┘
-                   │ macro-acción
-                   ▼
-┌───────────────────────────────────────────┐
-│ Capa táctica — control reactivo (5 Hz)    │  brazos "fsm", "reactive" (implementados)
-│  ObstacleField → velocidad                 │  brazo "rl": política neuronal (propuesto)
-└──────────────────┬────────────────────────┘
-                   │ velocity setpoints
-                   ▼
-┌───────────────────────────────────────────┐
-│ Capa motora — PX4 / PID (400 Hz)          │  controlador de actitud; intocado
-└───────────────────────────────────────────┘
-```
+<img src="a8-tres-capas-control.jpg">
 
 El brazo `rl` ocupa la **capa táctica**: recibe el frame RGB actual, el `ObstacleField`
 producido por `FlowTTCEstimator` y la telemetría de guiado (`waypoint_guidance`), y
@@ -212,30 +193,11 @@ una de las incógnitas clave del protocolo de evaluación de §A8.6.
 
 ### Arquitectura de la política
 
-Para la observación mixta `{rgb, ttc_field, nav}` se propone una política de dos cabezales
-paralelos:
+Para la observación mixta `{rgb, ttc_field, nav}` se propone una política de dos cabezales paralelos:
 
-```
-rgb (84×84×3)           ttc_field + nav (27+6)
-      │                         │
-Conv(32,8,4)            Linear(64) → ReLU
-Conv(64,4,2)
-Conv(64,3,1)
-Flatten(3136)
-      │                         │
-      └──── Concat(3136+70) ────┘
-                    │
-             Linear(512) → ReLU
-             Linear(256) → ReLU
-            ┌────────────────┐
-       Actor(6)          Critic(1)
-```
+<img src="a8-arquitectura-dos-cabezales.jpg">
 
-La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de
-obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella
-fuerza la política a integrar información visual y geométrica antes de tomar la decisión.
-Esta arquitectura es directamente compatible con `CnnPolicy` de Stable-Baselines3 cuando
-se define el espacio de observación como `gym.spaces.Dict`.
+La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella fuerza la política a integrar información visual y geométrica antes de tomar la decisión. Esta arquitectura es directamente compatible con `CnnPolicy` de Stable-Baselines3 cuando se define el espacio de observación como `gym.spaces.Dict`.
 
 ---
 

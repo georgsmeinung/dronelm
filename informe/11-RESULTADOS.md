@@ -1,15 +1,5 @@
 # 11. Resultados comparativos SLM vs. FSM
 
-> **Estado (2026-09-10):** lote base y pruebas extendidas completos — 75 corridas en total (5 escenarios × 3 brazos × 5 semillas). Escenarios de control: 45/45 éxitos, 0 colisiones. Escenarios de obstrucción: ningún brazo completa la ruta dentro del presupuesto temporal en ningún escenario.
-> Estrategia de desbloqueo: `deep_vlm` en todos los casos.
->
-> **Corte de datos:** todos los resultados provienen de corridas con `code_version` en la familia
-> de commits posterior al 2026-09-03. Las variaciones de `code_version` dentro del Lote B (Tier 1)
-> reflejan commits de documentación realizados durante la ejecución del batch (~1.5 h); ninguno de
-> esos commits tocó `airsim-loop/src/`. El flight loop es idéntico entre las 5 semillas de cada brazo.
-
----
-
 ## 11.1 Resultados del lote base (5 semillas)
 
 Estrategia de desbloqueo: `deep_vlm` en todos los casos. Las celdas muestran media ± desviación

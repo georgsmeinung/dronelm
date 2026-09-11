@@ -18,7 +18,7 @@ El grafo se compila **una sola vez** al inicio de la misión y el bucle externo 
 
 La estructura actual del grafo (cada ciclo recorre los nodos en este orden), es la siguiente:
 
-<img src="./2026-0904_grafo_control_dronelm_horizontal.png"/>
+<img src="2026-0904_grafo_control_dronelm_horizontal.png"/>
 
 ## 5.2 El estado compartido: `DroneState`
 
