@@ -78,7 +78,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Versión: 2026-09-07</span>
+          <span class="badge-pill badge-teal">Versión: 2026-09-11</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -89,31 +89,31 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-09-07)</h2>
+        <h2>Actualizaciones Recientes (2026-09-11)</h2>
         <div class="card-grid">
           <div class="card">
-            <h4>Tier 2 / CitySim Validado — Corridas Piloto I3</h4>
-            <p>Primer escenario de Tier 2 (<code>citysim_clear</code>) validado con los tres brazos: patrón <em>climb-first</em> a −70 m AGL (por encima de la línea de tejados). 3/3 <code>success=True</code>, 0 colisiones, 0 deadlocks en seed=1.</p>
+            <h4>Bug-1 Fix — Descarte Silencioso de <code>DroneState</code> (TRAJ_STALL)</h4>
+            <p>El disparador <code>TRAJ_STALL</code> en <code>policy_router</code> estaba roto por 584 ciclos porque <code>_traj_frente_stall_rate</code> y <code>_traj_frente_attempts</code> no estaban declarados en el TypedDict <code>DroneState</code>. LangGraph descarta silenciosamente los campos no declarados al cruzar <code>graph.invoke()</code>. Corregido: campos agregados a <code>DroneState</code>; ahora TRAJ_STALL escala a deliberativo ante stall frontal ≥ 70% con ≥ 10 intentos.</p>
           </div>
           <div class="card">
-            <h4>Configuración Unificada: <code>config/.env</code> como Fuente Única</h4>
-            <p>Todos los subproyectos leen de <code>config/.env</code> en la raíz del repo. Antes cada subproyecto tenía su propio <code>.env</code> con valores distintos para las mismas variables (p. ej. el umbral de atasco difería entre el VLM y el planificador de misión).</p>
+            <h4><code>slam_assess</code> como Nuevo Modo de Desatasco por Defecto</h4>
+            <p>El modo <code>DEADLOCK_STRATEGY</code> cambió de <code>"deep_vlm"</code> (escaneo panorámico de 4 rumbos) a <code>"slam_assess"</code>: usa el contexto textual de <code>FlightTrajectory</code> (historial de zonas FRENTE/IZQUIERDA/DERECHA/ATRÁS con stall_rate) + frame actual, sin rotaciones. Latencia ~4× menor; se activa desde 2026-09-07.</p>
           </div>
           <div class="card">
-            <h4>Escaneo Espacial Pre-vuelo (<code>spatial_scan</code>)</h4>
-            <p>Barrido de yaw antes de iniciar el lazo táctico: captura fotogramas en N rumbos y los envía en una única consulta al VLM para obtener un contexto cualitativo del entorno de despegue. Advisory — no safety-critical; un VLM caído nunca impide el despegue.</p>
+            <h4>Señales de Detección de Atasco: V3 / V3b / V3c + <code>stuck_invisible</code></h4>
+            <p>Tres señales ortogonales en <code>perception_node</code>: V3 (<code>imu_contact_event</code> — jitter acústico), V3b (<code>blind_wall_event</code> — deceleración sin TTC), V3c (<code>_stopped_cycles ≥ 15</code> — inmovilidad). Su OR unificado es <code>stuck_invisible</code>, prioridad 4 en <code>policy_router</code>, diseñado para detectar obstáculos invisibles al flujo óptico (malla de árboles, paredes paralelas).</p>
           </div>
           <div class="card">
-            <h4>Trazabilidad de Corridas: <code>code_version</code> en <code>summary.json</code></h4>
-            <p><code>FlightLogger.close()</code> ahora escribe el hash de commit Git en el resumen de cada corrida. La política de cuarentena establece que solo corridas con <code>code_version</code> posterior al 2026-09-03 (fix de canales de color R/B) son válidas para el análisis estadístico.</p>
+            <h4>V4 — Depth Anything V2 Metric (Profundidad Monocular Complementaria)</h4>
+            <p>Hilo background que infiere profundidad métrica absoluta a partir del frame RGB y la inyecta en <code>ObstacleField</code> vía <code>merge_depth_estimate()</code> (arquitectura A1). Complementa el flujo óptico en la zona ciega del FOE. Guarda V4b evita falsos positivos en renders sintéticos. Clasificación E2 (<code>"follaje"</code> vs. <code>"superficie plana"</code>) por textura del mapa de profundidad.</p>
           </div>
           <div class="card">
-            <h4>Movimiento Vertical Puro (<code>near_vertical</code>) en WaypointTracker</h4>
-            <p>Cuando el siguiente waypoint está directamente arriba o abajo (<code>dist_xy &lt; 1 m</code>, <code>|dz| &gt; 0.3 m</code>), se fuerza <code>vx = 0</code> para ascenso o descenso estrictamente vertical. Necesario para el patrón <em>climb-first</em> de Tier 2.</p>
+            <h4>C1 / D1 — Selección Lateral y Giro con Memoria de Stalls</h4>
+            <p>C1 en <code>evasive_node</code>: ocupación efectiva <code>eff_occ = occ + stall_rate × 0.5</code> penaliza la zona con historial de stalls. D1 en <code>girar_90_node</code>: la dirección del giro evita la zona de mayor stall histórico (no repite el giro hacia la trampa). Ambas mejoras usan <code>zone_stats()</code> de <code>FlightTrajectory</code>.</p>
           </div>
           <div class="card">
-            <h4>Limpieza de Código Legacy y Formato Preloop</h4>
-            <p>Eliminados <code>debug_tracker.py</code>, <code>airsim-poc/.env.copy</code> y el formato <code>.preloop.json</code>; <code>loop_runner.py</code> ahora apunta directamente al manifiesto canónico en <code>missions/flightplans/</code>.</p>
+            <h4>Nuevos Anexos: A8 (Propuesta RL) y A9 (Uso de IA en la Tesis)</h4>
+            <p>Anexo 8: diseño técnico del cuarto brazo experimental <code>rl</code> (PPO visual, jerarquía VLM → RL → PX4, advertencia sobre generalización basada en el caso Swift/ETH). Anexo 9: documento metodológico sobre el uso de Claude Code en el desarrollo de la tesis — modalidades, casos de alto impacto, mejores prácticas y recomendaciones para investigadores.</p>
           </div>
         </div>
       </section>
@@ -329,6 +329,10 @@
             <p>Variables de control no tipadas en el esquema del orquestador son descartadas silenciosamente, originando
               ciclos límite y bucles absorbentes de ascenso indefinido.</p>
           </div>
+          <div class="card">
+            <h4>5. Punto Ciego Estructural del Sensor Monocular (FOE)</h4>
+            <p>El flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión). En pasillos arbolados densos, ninguno de los tres brazos de control puede detectar el obstáculo frontal crítico. Mitigación parcial: V4 (profundidad monocular) + señales V3/V3b/V3c. Solución estructural: cámara estéreo (Anexo 7).</p>
+          </div>
         </div>
       </section>
 
@@ -412,7 +416,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-09-07):</strong> Sistema operacional en simulación. Los tres Tiers validados en corridas piloto (seed=1): Tier 0 MiniSim, Tier 1 TownSim, Tier 2 CitySim (<code>citysim_clear</code>, patrón <em>climb-first</em> −70 m AGL). 138 pruebas unitarias. Configuración unificada en <code>config/.env</code>. Trazabilidad de corridas con <code>code_version</code> (hash Git). Pendiente: batch G4 completo (≥5 semillas por celda factorial).</p>
+          <p><strong>Estado actual (2026-09-11):</strong> Sistema operacional en simulación. Los tres Tiers validados en corridas piloto (seed=1): Tier 0 MiniSim, Tier 1 TownSim, Tier 2 CitySim (<code>citysim_clear</code>). 181 pruebas unitarias. Bug-1 corregido (TRAJ_STALL operativo). <code>DEADLOCK_STRATEGY=slam_assess</code> como nuevo default. Señales V3/V3b/V3c + <code>stuck_invisible</code> activas. V4 (Depth Anything V2) integrado en <code>ObstacleField</code>. Informe actualizado (caps. 05, 06, 08, 12) y nueve anexos (A1–A9). Pendiente: batch G4 completo (≥5 semillas × 5 escenarios × 3 brazos).</p>
         </div>
       </section>
 
@@ -597,7 +601,7 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
         <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
           <div class="card" style="text-align:center;">
             <h4>Informe HTML</h4>
-            <p>Navegación lateral completa, búsqueda integrada y modo oscuro/claro. Incluye todos los capítulos (00–13) y cinco anexos.</p>
+            <p>Navegación lateral completa, búsqueda integrada y modo oscuro/claro. Incluye todos los capítulos (00–13) y nueve anexos (A1–A9).</p>
             <a href="informe/00-COVER.html" class="badge-pill badge-teal" style="display:inline-block;margin-top:8px;">Abrir Informe (HTML)</a>
           </div>
           <div class="card" style="text-align:center;">
@@ -612,7 +616,7 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>Repositorio: georgsmeinung/dronelm</p>
-        <p>Fecha de actualización: 2026-09-07</p>
+        <p>Fecha de actualización: 2026-09-11</p>
       </footer>
     </main>
   </div>

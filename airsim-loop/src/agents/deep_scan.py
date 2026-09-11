@@ -328,27 +328,27 @@ def _apply_trajectory_overrides(
             ),
         }
 
-    # Override 3: VLM sugiere MANTENER_RUMBO con progreso frontal marginal.
-    # Avance promedio < MARGINAL_PROGRESS_M con >=3 intentos = firma de
-    # obstaculo invisible que el flujo optico no ve.
-    # MANTENER_RUMBO en este estado refuerza el bloqueo fisico.
+    # Override 3: progreso frontal marginal con >=3 intentos.
+    # Aplica cuando el VLM recomienda MANTENER_RUMBO, EVADIR_IZQUIERDA o
+    # EVADIR_DERECHA sin rotacion real (izq_att==0, der_att==0).
+    # El caso EVADIR_* sin rotacion es tan inutil como MANTENER_RUMBO: el
+    # drone estrafa lateralmente pero no gira, sus eventos permanecen en
+    # zona FRENTE, izq_att/der_att quedan en 0 y el bloqueo no se resuelve.
     #
     # Sub-rama 3a — firma de TECHO (autopista elevada, estructura horizontal):
-    #   Altitud <= CEILING_ALT_MAX_M (5.0m) + laterales sin explorar.
-    #   Se usa altitud en vez de stall_rate porque EVADIR_IZQUIERDA estrafa
-    #   sin cambiar heading — sus eventos quedan en zona FRENTE, inflando
-    #   frente_stall_rate a 0.33-1.00 aunque no haya colision frontal real.
-    #   La altitud baja es discriminador fiable: bajo autopista elevada
-    #   el drone vuela a <5m; contra un muro alto o arbol grande la altitud
-    #   es mayor. PERDER_ALTURA libera la estructura sin requerir rotacion.
+    #   Altitud <= CEILING_ALT_MAX_M (default 7.5m) + laterales sin explorar.
+    #   Umbral 7.5m cubre el crucero tipico de 6m bajo autopista elevada.
+    #   Se usa altitud en vez de stall_rate porque EVADIR estrafa sin rotar,
+    #   inflando frente_stall_rate a 0.40-1.00 incluso bajo un techo.
+    #   PERDER_ALTURA libera la estructura sin requerir rotacion.
     #
-    # Sub-rama 3b — firma de MURO/ARBOL (obstaculo frontal, stall alto):
-    #   Explorar laterales primero; si ambas probadas -> GIRAR_90.
+    # Sub-rama 3b — firma de MURO/ARBOL (obstáculo frontal, altitud alta):
+    #   Explorar laterales por rotacion; si ambas fallidas -> GIRAR_90.
     pos_tel = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
     current_alt_m = abs(float(pos_tel.get("z", 0.0))) if isinstance(pos_tel, dict) else 0.0
 
     macro = decision.get("macro_action", "")
-    if macro == "MANTENER_RUMBO":
+    if macro in ("MANTENER_RUMBO", "EVADIR_IZQUIERDA", "EVADIR_DERECHA"):
         frente_stats = stats["FRENTE"]
         frente_att3 = frente_stats["attempts"]
         _MARGINAL3 = float(os.getenv("SLAM_MARGINAL_PROGRESS_M", "0.28"))
@@ -356,10 +356,10 @@ def _apply_trajectory_overrides(
             izq_att3 = izq["attempts"]
             der_att3 = der["attempts"]
             frente_stall3 = frente_stats.get("stall_rate", 0.0)
-            _CEILING_ALT_MAX = float(os.getenv("SLAM_CEILING_ALT_MAX_M", "5.0"))
+            _CEILING_ALT_MAX = float(os.getenv("SLAM_CEILING_ALT_MAX_M", "7.5"))
             avg_p3 = frente_stats.get("avg_prog", 0.0)
 
-            # 3a: techo — altitud baja + laterales inexploradas -> bajar
+            # 3a: techo — altitud dentro del rango + laterales sin rotar -> bajar
             if current_alt_m <= _CEILING_ALT_MAX and izq_att3 == 0 and der_att3 == 0:
                 override3 = "PERDER_ALTURA"
                 reason3 = (
@@ -367,7 +367,7 @@ def _apply_trajectory_overrides(
                     f"con avance {avg_p3:.2f}m/ciclo (stall={frente_stall3:.0%}) "
                     f"— firma de techo; bajar para liberar."
                 )
-            # 3b: muro/arbol — explorar laterales
+            # 3b: muro/arbol — explorar laterales por rotacion
             elif izq_att3 == 0:
                 override3 = "EVADIR_IZQUIERDA"
                 reason3 = f"avance {avg_p3:.2f}m/ciclo < {_MARGINAL3:.2f}m — lateral izq sin explorar."
@@ -379,14 +379,14 @@ def _apply_trajectory_overrides(
                 reason3 = f"avance {avg_p3:.2f}m/ciclo < {_MARGINAL3:.2f}m — laterales agotadas; girar."
 
             print(
-                f"[slam_assess] mantener-override-3({'techo' if override3 == 'PERDER_ALTURA' else 'muro'}): "
-                f"VLM recomendo MANTENER_RUMBO pero FRENTE avg_prog={avg_p3:.2f}m/ciclo "
+                f"[slam_assess] override-3({'techo' if override3 == 'PERDER_ALTURA' else 'muro'}): "
+                f"VLM recomendo {macro} pero FRENTE avg_prog={avg_p3:.2f}m/ciclo "
                 f"(stall={frente_stall3:.0%}, alt={current_alt_m:.1f}m, izq={izq_att3}, der={der_att3}) -> {override3}"
             )
             return {
                 "macro_action": override3,
                 "rationale": (
-                    f"MANTENER_RUMBO rechazado: FRENTE {frente_att3} intentos, {reason3}"
+                    f"{macro} rechazado: FRENTE {frente_att3} intentos, {reason3}"
                 ),
             }
 
