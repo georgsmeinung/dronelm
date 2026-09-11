@@ -11,6 +11,9 @@ from .action_map import action_to_command
 from src.perception import ObstacleField, empty_field
 
 FSM_MANEUVER_DURATION_S = float(os.getenv("EVASIVE_MANEUVER_DURATION_S", "1.0"))
+# V3b/V3c: ciclos de RETROCEDER cuando la causa es colisión invisible.
+# 5 ciclos = 1 s a 5 Hz: suficiente para salir del convex hull sin alejarse demasiado.
+_RETROCEDER_CYCLES = int(os.getenv("RETROCEDER_ESCAPE_CYCLES", "5"))
 
 
 def evasive_node(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -55,6 +58,36 @@ def evasive_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     field: ObstacleField = state.get("obstacle_field") or empty_field()
     guidance = state.get("waypoint_guidance") or {}
+
+    # V3b/V3c-VLM-REFINEMENT: colisión invisible → RETROCEDER es el único vector
+    # garantizado de escape. EVADIR_IZQ/DER falla dentro de un convex hull porque
+    # la malla bloquea todos los laterales desde adentro.
+    # Condiciones de activación (OR):
+    #   • blind_wall_event: cmd_vx > 0 pero el drone no se mueve + bf≈0 (2 ciclos).
+    #     Fase de aproximación: el drone aún comanda velocidad frontal.
+    #   • _stopped_cycles >= 10: el drone lleva ≥ 2 s parado sin moverse.
+    #     Fase freeze: ESCANEO (cmd_vx=0) o MANTENER_RUMBO con malla que absorbe empuje.
+    is_blind_collision = (
+        state.get("blind_wall_event")
+        or int(state.get("_stopped_cycles", 0)) >= 10
+    )
+    if is_blind_collision:
+        action = "RETROCEDER"
+        rationale = (
+            f"Escape colision invisible: blind_wall={state.get('blind_wall_event')}, "
+            f"parado_ciclos={state.get('_stopped_cycles', 0)}. "
+            "Retroceso al vector de entrada para salir del convex hull."
+        )
+        command = action_to_command(action, guidance=guidance, telemetry=telemetry)
+        command["rationale"] = rationale
+        state["next_action"] = action
+        state["velocity_command"] = command
+        state["route"] = "evasive"
+        state["flight_status"] = "escape_retroceso"
+        state["active_maneuver"] = action
+        state["maneuver_cycles_left"] = _RETROCEDER_CYCLES
+        state["maneuver_command"] = command
+        return state
 
     left_occ = field.sector_occupancy("izquierda")
     right_occ = field.sector_occupancy("derecha")

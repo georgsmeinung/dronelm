@@ -37,6 +37,28 @@ from src.perception.obstacle_field import ObstacleField, empty_field, has_open_c
 
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")  # "slm" | "fsm" | "reactive"
 
+# V3-VLM-REFINEMENT: umbrales IMU para detección de contacto/jitter.
+_IMU_JITTER_ELEVATED_MPS2 = float(os.getenv("IMU_JITTER_ELEVATED_MPS2", "3.0"))
+_IMU_JITTER_CRITICAL_MPS2 = float(os.getenv("IMU_JITTER_CRITICAL_MPS2", "8.0"))
+_IMU_CONTACT_THRESHOLD_MPS2 = float(os.getenv("IMU_CONTACT_THRESHOLD_MPS2", "5.0"))
+# V2-VLM-REFINEMENT: parámetros del trigger proactivo (también en deliberative.py).
+_VLM_PROACTIVE_INTERVAL_S = float(os.getenv("VLM_PROACTIVE_INTERVAL_S", "1.5"))
+_VLM_PROACTIVE_WATCHDOG_MS = float(os.getenv("VLM_PROACTIVE_WATCHDOG_MS", "3000.0"))
+_VLM_GOAL_MIN_CONFIDENCE = float(os.getenv("VLM_GOAL_MIN_CONFIDENCE", "0.7"))
+# V3b-VLM-REFINEMENT: detección de "pared invisible" por divergencia cmd/real.
+_CMD_BLIND_FWD_MIN_MPS = float(os.getenv("CMD_BLIND_FWD_MIN_MPS", "0.45"))
+_CMD_BLIND_ACT_MAX_MPS = float(os.getenv("CMD_BLIND_ACT_MAX_MPS", "0.30"))
+# BF_MAX subido a 0.25: follaje UE5 dentro del convex hull produce bf=0-0.222;
+# con 0.15 esos ciclos rompían la cuenta consecutiva. 0.25 deja pasar el rango
+# real del árbol sin confundirse con obstáculos legítimos (bf > 0.5 en pasillo).
+_CMD_BLIND_BF_MAX      = float(os.getenv("CMD_BLIND_BF_MAX",       "0.25"))
+# 2 ciclos consecutivos (0.4s a 5Hz): reduce la ventana donde bf puede fluctuar.
+_CMD_BLIND_CYCLES      = int(os.getenv("CMD_BLIND_CYCLES",          "2"))
+# V3c-VLM-REFINEMENT: drone parado sin razón (obstáculo no visto por flujo óptico).
+# 15 ciclos = 3 s: por encima del watchdog normal de VLM (1.5 s), por debajo del
+# freeze observado (130 s). Independiente de cmd_vx → captura el caso ESCANEO.
+_STOPPED_CYCLES_THRESHOLD = int(os.getenv("STOPPED_CYCLES_THRESHOLD", "15"))
+
 # Correccion activa de altitud durante FRENAR prolongado (2026-0824, opcion 3
 # de CHANGELOG.md): moveByVelocityBodyFrameAsync(vz=0,...) reemitido cada
 # ciclo no sostiene la altitud perfectamente durante ventanas largas (~9m de
@@ -153,6 +175,36 @@ class DroneState(TypedDict, total=False):
     # delta_wp_m en FlightTrajectory.record() al inicio del siguiente ciclo.
     # Estado del grafo (no del proceso): sobrevive entre graph.invoke() calls.
     _prev_wp_distance: Optional[float]
+    # V1-VLM-REFINEMENT: sub-meta semántica proactiva/reactiva del VLM.
+    # vlm_goal: VlmGoal actual (confianza >= VLM_GOAL_MIN_CONFIDENCE).
+    # _vlm_goal_history: últimas 3 metas + trigger_type, para contexto del prompt.
+    # _vlm_last_proactive_ts: timestamp de la última consulta proactiva disparada.
+    # _vlm_proactive_request_id: ID de la consulta proactiva en vuelo (None si libre).
+    vlm_goal: Optional[Dict[str, Any]]
+    _vlm_goal_history: List[Dict[str, Any]]
+    _vlm_last_proactive_ts: float
+    _vlm_proactive_request_id: Optional[int]
+    # V3-VLM-REFINEMENT: señales IMU (linear acceleration) para detección de contacto.
+    # imu_jitter_level: "normal" | "elevado" | "crítico" (RMS aceleración transversal).
+    # imu_contact_event: True si jitter alto por 2+ ciclos consecutivos con cmd > 0.3 m/s.
+    # _imu_contact_cycles: contador interno de ciclos consecutivos de contacto.
+    imu_jitter_level: str
+    imu_contact_event: bool
+    _imu_contact_cycles: int
+    # V3b-VLM-REFINEMENT: "pared invisible" — velocidad comandada vs. real.
+    # Señal pura cinemática: el drone manda velocidad frontal pero la física lo
+    # detiene mientras el flujo óptico reporta corredor libre. Captura colisiones
+    # con convex hulls opacos (árboles UE5, muros sin textura) sin requerir sensor
+    # de profundidad. Equivalente real: comando motor vs. velocidad medida por IMU.
+    # _blind_wall_cycles: ciclos consecutivos de condición activa.
+    # blind_wall_event: True cuando _blind_wall_cycles >= CMD_BLIND_CYCLES (default 3).
+    blind_wall_event: bool
+    _blind_wall_cycles: int
+    # V3c-VLM-REFINEMENT: ciclos consecutivos con velocidad real ≈ 0, sin importar
+    # la acción comandada. Detecta el freeze del árbol (cmd_vx=0 en ESCANEO, donde
+    # blind_wall_event nunca dispara). Se resetea sólo cuando el drone se mueve
+    # (act_spd > 0.1 m/s); un RETROCEDER fallido mantiene la cuenta activa.
+    _stopped_cycles: int
     # NUNCA agregar aca una clave de profundidad (depth/depth_image/
     # min_obstacle_dist_m o similar, ver PLAN-MEJORAS-3.md §0.2): mientras
     # ningun nodo pueda escribir una y que sobreviva a graph.invoke(), el
@@ -169,7 +221,11 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     conectado (F0.3: inyeccion de dependencia, un solo cliente por proceso).
     """
     from .reactive import reactive_node
-    from .deliberative import make_deliberation_service, make_deliberative_node
+    from .deliberative import (
+        make_deliberation_service, make_deliberative_node,
+        build_proactive_payload, parse_vlm_goal, vlm_goal_to_inject_corner,
+        VLM_PROACTIVE_ENABLED,
+    )
     from .evasive import evasive_node
     from .fsm import fsm_node as _fsm_node_fn
     from .action_map import action_to_command
@@ -252,6 +308,82 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             history_ts.append(float(telemetry.get("timestamp") or time.time()))
             state["frame_history"] = history[-frame_history_size:]
             state["frame_history_ts"] = history_ts[-frame_history_size:]
+
+        # V3-VLM-REFINEMENT: jitter IMU desde aceleración lineal transversal.
+        imu_la = (telemetry.get("imu_linear_acceleration") or {}) if isinstance(telemetry, dict) else {}
+        ax = float(imu_la.get("ax", 0.0))
+        ay = float(imu_la.get("ay", 0.0))
+        jitter_rms = math.sqrt(ax * ax + ay * ay)
+        if jitter_rms >= _IMU_JITTER_CRITICAL_MPS2:
+            jitter_level = "crítico"
+        elif jitter_rms >= _IMU_JITTER_ELEVATED_MPS2:
+            jitter_level = "elevado"
+        else:
+            jitter_level = "normal"
+        state["imu_jitter_level"] = jitter_level
+
+        cmd_vel = state.get("velocity_command") or {}
+        cmd_speed = math.hypot(float(cmd_vel.get("vx", 0.0)), float(cmd_vel.get("vy", 0.0)))
+        contact_cycles = int(state.get("_imu_contact_cycles") or 0)
+        if jitter_rms >= _IMU_CONTACT_THRESHOLD_MPS2 and cmd_speed > 0.3:
+            contact_cycles += 1
+        else:
+            contact_cycles = 0
+        state["_imu_contact_cycles"] = contact_cycles
+        state["imu_contact_event"] = contact_cycles >= 2
+
+        # V2-VLM-REFINEMENT: trigger proactivo del VLM en background.
+        # Corre solo en brazo slm, sin degradación, y sin consulta reactiva activa.
+        # CRÍTICO: también ceder la cola cuando slam_assess/deep_scan tiene un
+        # pedido activo (_deep_scan_request_id). El DeliberationService tiene
+        # cola maxsize=1 y un request() nuevo reemplaza _pending_request,
+        # reseteando age_ms a 0 en poll() y rompiendo el watchdog del slam_assess.
+        if AGENT_ARM == "slm" and VLM_PROACTIVE_ENABLED and not degraded:
+            # Si una consulta reactiva o de deadlock tomó la cola, ceder.
+            any_priority = (
+                state.get("slm_request_id") is not None
+                or state.get("_deep_scan_request_id") is not None
+            )
+            if any_priority:
+                state["_vlm_proactive_request_id"] = None
+
+            proactive_id = state.get("_vlm_proactive_request_id")
+
+            # Polear resultado proactivo.
+            if proactive_id is not None:
+                result, age_ms, _ = deliberation_service.poll()
+                if result is not None and result.request_id == proactive_id:
+                    goal = parse_vlm_goal(result.parsed_decision)
+                    if goal and float(goal.get("confidence", 0.0)) >= _VLM_GOAL_MIN_CONFIDENCE:
+                        state["vlm_goal"] = goal
+                        if not state.get("inject_corner"):
+                            state["inject_corner"] = vlm_goal_to_inject_corner(
+                                goal, telemetry, state.get("waypoint_guidance")
+                            )
+                        history = list(state.get("_vlm_goal_history") or [])
+                        history.append({
+                            "timestamp": time.time(),
+                            "trigger_type": "proactive",
+                            "vlm_goal": goal,
+                        })
+                        state["_vlm_goal_history"] = history[-3:]
+                    state["_vlm_proactive_request_id"] = None
+                elif age_ms > _VLM_PROACTIVE_WATCHDOG_MS:
+                    state["_vlm_proactive_request_id"] = None
+
+            # Disparar nueva consulta proactiva solo si no hay nada prioritario activo.
+            if (state.get("_vlm_proactive_request_id") is None
+                    and state.get("slm_request_id") is None
+                    and state.get("_deep_scan_request_id") is None):
+                now = time.time()
+                last_ts = float(state.get("_vlm_last_proactive_ts") or 0.0)
+                if now - last_ts >= _VLM_PROACTIVE_INTERVAL_S:
+                    payload = build_proactive_payload(state)
+                    if payload:
+                        req_id = deliberation_service.request(payload)
+                        state["_vlm_proactive_request_id"] = req_id
+                        state["_vlm_last_proactive_ts"] = now
+
         return state
 
     def degraded_hover_node(state: DroneState) -> DroneState:
@@ -274,6 +406,39 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         state["obstacle_field"] = field
         state["estimated_ttc"] = field.min_ttc()
         state["scene_summary"] = field.summary_text()
+
+        # V3b-VLM-REFINEMENT: detección de "pared invisible" por divergencia cmd/real.
+        # El drone comanda velocidad frontal (vx > umbral) pero la física lo detiene
+        # (velocidad real < umbral) mientras el flujo óptico reporta corredor libre.
+        # Captura colisiones con convex hulls opacos (árboles, muros) sin sensor depth.
+        # Equivalente real: comando motor vs. velocidad medida por IMU/barómetro/VIO.
+        vel_cmd = state.get("velocity_command") or {}
+        cmd_vx  = float(vel_cmd.get("vx", 0.0))
+        vel_now = (state.get("telemetry") or {}).get("velocity") or {}
+        act_spd = math.sqrt(
+            float(vel_now.get("vx", 0.0)) ** 2 + float(vel_now.get("vy", 0.0)) ** 2
+        )
+        blind_wall_cond = (
+            cmd_vx >= _CMD_BLIND_FWD_MIN_MPS               # comandando hacia adelante
+            and act_spd < _CMD_BLIND_ACT_MAX_MPS            # pero no se mueve
+            and field.blocked_fraction() < _CMD_BLIND_BF_MAX  # flujo óptico: corredor libre
+        )
+        prev_bw = int(state.get("_blind_wall_cycles") or 0)
+        bw_cycles = (prev_bw + 1) if blind_wall_cond else 0
+        state["_blind_wall_cycles"] = bw_cycles
+        state["blind_wall_event"] = bw_cycles >= _CMD_BLIND_CYCLES
+
+        # V3c-VLM-REFINEMENT: contador de "parado sin razón" en ruta deliberativa.
+        # Solo acumula cuando el ciclo ANTERIOR fue "deliberative" (ESCANEO o
+        # MANTENER_RUMBO de slam_assess). En ruta reactive/keep_going, el atasco
+        # lo maneja evasion_stuck_cycles para no interferir con ese mecanismo.
+        prev_stopped = int(state.get("_stopped_cycles") or 0)
+        prev_route = state.get("route", "")
+        if act_spd > 0.10 or prev_route not in ("deliberative",):
+            state["_stopped_cycles"] = 0
+        else:
+            # Techo de 200 para evitar overflow en corridas muy largas.
+            state["_stopped_cycles"] = min(prev_stopped + 1, 200)
         return state
 
     def girar_90_node(state: DroneState) -> DroneState:
@@ -381,6 +546,23 @@ def policy_router(state: DroneState) -> str:
         return "keep_going"
     if AGENT_ARM == "fsm":
         return "fsm"
+
+    # V3/V3b/V3c-VLM-REFINEMENT: señales físicas de obstáculo no visible al flujo óptico.
+    # Todas tienen prioridad sobre slm_request_id: si el drone está impactando
+    # algo o lleva demasiado tiempo parado, hay que escapar primero.
+    #
+    # V3  — imu_contact_event: spike de aceleración transversal (2+ ciclos),
+    #         captura impactos abruptos donde el drone golpea y rebota.
+    # V3b — blind_wall_event: cmd_vx > umbral pero act_speed ≈ 0 con
+    #         blocked_fraction ≈ 0 (2 ciclos). Captura la fase de aproximación
+    #         al árbol cuando aún se comanda velocidad frontal.
+    # V3c — _stopped_cycles: drone parado (act_spd < 0.1) durante 15+ ciclos
+    #         consecutivos sin importar cmd_vx. Captura el freeze en ESCANEO
+    #         donde blind_wall nunca dispara porque cmd_vx=0.
+    if state.get("imu_contact_event") or state.get("blind_wall_event"):
+        return "evasive"
+    if int(state.get("_stopped_cycles", 0)) >= _STOPPED_CYCLES_THRESHOLD:
+        return "evasive"
 
     # No abandonar una deliberacion ya encolada (2026-0828, ver CHANGELOG.md):
     # si hay un pedido al LLM en vuelo (slm_request_id != None), seguir
