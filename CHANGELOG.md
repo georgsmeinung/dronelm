@@ -1,5 +1,92 @@
 # 2026-09-11
 
+## PLAN-SLAM — Buffer de trayectoria ampliado a 5000 eventos (`spatial_history.py`)
+
+**Motivación**: con 80 eventos (16s a 5 Hz) el ring buffer rotaba varias veces durante una
+misión de 4-5 minutos. `zone_stats()` trabajaba sobre historia reciente y perdía los stalls
+anteriores en la misma zona. Con 5000 eventos (1000s ≈ 16 min) el buffer nunca rota en una
+misión típica de townsim_ini — toda la trayectoria desde el despegue queda disponible.
+
+**Cambios**:
+- `SLAM_HISTORY_SIZE`: default `80` → `5000` (configurable vía env var).
+- Estructura interna: `list` → `collections.deque(maxlen=5000)`. El `pop(0)` anterior era
+  O(n) — con 5000 elementos serían 25,000 desplazamientos/s a 5 Hz. La deque hace eviction
+  en O(1). Los tres métodos que hacen slicing convierten a `list()` localmente (solo ocurre
+  durante deadlock, no en el hot path de cada ciclo).
+- Memoria estimada: 5000 × ~200 bytes (Python object overhead) ≈ **1 MB**.
+
+## PLAN-SLAM — Fix 16: Corner post-RETROCEDER con ángulo fijo (reemplaza Fix 11/13/15) (`deep_scan.py`)
+
+**Diagnóstico** (seed_1 run 3): Fix 11/13/15 usaban lógica adaptativa — el corner se calculaba
+basándose en el bearing_err_deg al WP o la dirección VLM — cuya dirección variaba con cada
+rotación del heading y con el estado del VLM. Resultado: el drone rebotaba entre zonas distintas
+en vez de resolver sistemáticamente el mismo obstáculo:
+- c527 RETROCEDER → scan (PERDER_ALTURA, bearing→sur) → corner sur → drone cae en (-44,3.6)
+- c681, c810: mismo patrón, dirección inconsistente
+- c1051-c1224: drone atrapado en (-45,4) sin movimiento en RETROCEDER (burbuja trasera + frontal)
+
+**Fix**: `RETROCEDER_CORNER_ANGLE_DEG` (default 45°) — ángulo fijo, sin Manhattan snap, siempre
+en la misma dirección relativa al heading actual. EVADIR_IZQUIERDA → hdg-45°; todo lo demás
+(EVADIR_DERECHA, MANTENER_RUMBO, GANAR/PERDER_ALTURA) → hdg+45°. El ángulo diagonal crea
+desplazamiento lateral progresivo en una dirección consistente. Configurable via env var.
+Elimina Fix 13 (off-axis 30°) y Fix 15 (90° bearing-based) — ambos absorbidos por este enfoque.
+
+## PLAN-SLAM — Fix 15: Corner lateral para GANAR/PERDER_ALTURA post-RETROCEDER (`deep_scan.py`)
+
+**Diagnóstico** (seed_1 WP=1, c316–c1244): 22 deadlocks en la misma posición (-43, 5).
+9 de 22 resueltos con PERDER_ALTURA; en todos los casos el drone descendió y volvió al
+mismo árbol (la collision mesh es esférica, bloquea a todas las alturas). El fix 11 ya inyectaba
+corner para EVADIR_X y MANTENER_RUMBO post-RETROCEDER, pero `GANAR/PERDER_ALTURA` no tenía corner
+(`corner_yaw = None`). Sin desplazamiento lateral, el drone hace el descenso en el lugar y
+retoma el heading original hacia el WP — pasando por el mismo obstáculo.
+
+**Fix**: cuando `_post_retroceder_corner_pending` está activo y el VLM post-RETROCEDER dice
+GANAR_ALTURA o PERDER_ALTURA, inyectar un corner a 90° en la dirección que reduce el
+`bearing_err_deg` al WP. El drone se desplaza lateralmente (12m, configurable con
+`CORNER_OFFSET_M`) antes de retomar el acercamiento al WP, creando una línea de aproximación
+distinta que no pasa por el mismo punto de impacto.
+
+## PLAN-SLAM — Fix 14: RETROCEDER adaptativo — factor reducido si hay árbol detrás (`deep_scan.py`)
+
+**Diagnóstico**: Fix 12 aumentó el retroceso a ~6m (factor 2.5) para salir de la burbuja de
+collision mesh frontal. Pero 6m de retroceso ciego puede colisionar con un árbol detrás del
+drone. La `FlightTrajectory` registra eventos en la zona `ATRÁS` (≥150° del heading actual);
+si hay stalls allí, el drone ya chocó en esa dirección en algún momento del vuelo.
+
+**Fix**: en `_apply_scan_resolution` al despachar RETROCEDER, verificar `zone_stats(hdg)["ATRÁS"]`.
+Si `attempts ≥ 2` y `stall_rate ≥ 70%` → árbol confirmado detrás → reducir el factor al mínimo
+(min(factor, 1.5) = 1.5×, ~3m). Si ATRÁS está libre → usar el factor completo (2.5×, ~6m).
+El mensaje `[slam_assess] retroceder-fix14` indica cuándo se activa la reducción.
+
+**Tests**: 2 nuevos tests en `test_retroceder_override.py` (11/11 pasan):
+- `test_atras_zone_detects_rear_stalls`: `zone_stats` reporta ATRÁS con stall_rate=100% correctamente.
+- `test_atras_zone_clear_when_no_rear_stalls`: ATRÁS=0 intentos cuando solo hay movimiento FRENTE.
+
+## PLAN-SLAM — Fix 13: Corner off-axis para VLM=MANTENER_RUMBO post-RETROCEDER (`deep_scan.py`)
+
+**Diagnóstico** (seed_1 WP=1, c640, c877, c1103): después de RETROCEDER + scan VLM, el VLM
+recomendaba MANTENER_RUMBO (frente visualmente despejado). Sin corner, el drone apuntaba directo
+al WP original — mismo rumbo, mismo árbol. La collision mesh de los árboles en AirSim puede
+extenderse más allá de la renderización visual de las hojas (efecto "burbuja"), por lo que el
+VLM ve espacio libre que físicamente está bloqueado.
+
+**Fix**: cuando `_post_retroceder_corner_pending` está activo y el VLM post-RETROCEDER dice
+MANTENER_RUMBO, inyectar un corner off-axis: ±30° del heading actual (hacia el lado que acorta
+el bearing_err_deg al WP). Esto hace que el drone se acerque al área desde un ángulo levemente
+distinto en vez de volver al mismo punto de impacto.
+
+## PLAN-SLAM — Fix 12: Aumentar distancia de RETROCEDER (`deep_scan.py`)
+
+**Diagnóstico** (seed_1 c529-c1186): 7 RETROCEDER en WP=1, retroceso promedio **3.0m**
+(rango 2.6-3.2m). El drone retrocedía y volvía al mismo árbol en todos los casos, con la
+excepción de c876 (0.02m de movimiento — drone físicamente atrapado en el mesh). La collision
+mesh de los árboles de AirSim actúa como "burbuja" de ~4-5m de radio; con 3m de retroceso el
+drone salía apenas o no salía de la mesh.
+
+**Fix**: factor de duración aumentado de 1.5× a 2.5× `MANEUVER_DURATION_S`:
+`2.0 × 2.5 = 5s = ~6m a 1.2 m/s`. Configurable con env `RETROCEDER_DURATION_FACTOR` (default 2.5).
+Resultado esperado: el drone sale completamente de la burbuja antes de intentar el siguiente EVADIR.
+
 ## PLAN-SLAM — Fix 11: Corner post-scan — inyectar el corner DESPUÉS del scan post-RETROCEDER (`deep_scan.py`)
 
 **Diagnóstico** (seed_1, c929→c1067): el corner inyectado al despachar RETROCEDER usaba la

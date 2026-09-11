@@ -141,3 +141,33 @@ def test_no_override_when_trajectory_is_none():
     decision = {"macro_action": "GANAR_ALTURA", "rationale": "VLM"}
     result = _lateral_first_override(decision, None, _telemetry(0.0))
     assert result["macro_action"] == "GANAR_ALTURA"
+
+
+# ── Fix 14: zona ATRÁS en zone_stats ─────────────────────────────────────────
+
+def test_atras_zone_detects_rear_stalls():
+    """zone_stats registra stalls ATRÁS cuando el drone se mueve 180° del heading.
+    Fix 14 usa esta zona para reducir el factor RETROCEDER y evitar colisión trasera."""
+    traj = FlightTrajectory(max_size=100)
+    heading = 0.0  # drone apunta al norte
+    # Movimientos hacia ATRÁS (≥150° del heading=0): heading ≈ 180°
+    for _ in range(3):
+        traj.record(TrajectoryEvent(
+            timestamp=0.0, position=(0.0, 0.0, 0.0),
+            heading_deg=180.0, action_taken="RETROCEDER",
+            delta_wp_m=0.1, stall=True, flow_had_evidence=True,
+        ))
+    stats = traj.zone_stats(heading)
+    atras = stats["ATRÁS"]
+    assert atras["attempts"] == 3
+    assert atras["stall_rate"] == pytest.approx(1.0)
+
+
+def test_atras_zone_clear_when_no_rear_stalls():
+    """zone_stats ATRÁS muestra 0 intentos si nunca hubo movimiento hacia atrás.
+    Fix 14 NO reduce el factor RETROCEDER en este caso."""
+    traj = FlightTrajectory(max_size=100)
+    for _ in range(5):
+        traj.record(_event(0.0, stall=True))  # solo FRENTE
+    stats = traj.zone_stats(0.0)
+    assert stats["ATRÁS"]["attempts"] == 0

@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import math
 import os
+from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-SLAM_HISTORY_SIZE = int(os.getenv("SLAM_HISTORY_SIZE", "80"))
+SLAM_HISTORY_SIZE = int(os.getenv("SLAM_HISTORY_SIZE", "5000"))
 SLAM_STALL_THRESHOLD_M = float(os.getenv("SLAM_STALL_THRESHOLD_M", "0.3"))
 SLAM_CONTEXT_MAX_EVENTS = int(os.getenv("SLAM_CONTEXT_MAX_EVENTS", "30"))
 
@@ -45,12 +46,10 @@ class FlightTrajectory:
 
     def __init__(self, max_size: int = SLAM_HISTORY_SIZE) -> None:
         self._max_size = max_size
-        self._events: List[TrajectoryEvent] = []
+        self._events: deque[TrajectoryEvent] = deque(maxlen=max_size)
 
     def record(self, event: TrajectoryEvent) -> None:
-        self._events.append(event)
-        if len(self._events) > self._max_size:
-            self._events.pop(0)
+        self._events.append(event)  # deque(maxlen) descarta el más antiguo en O(1)
 
     def __len__(self) -> int:
         return len(self._events)
@@ -66,7 +65,7 @@ class FlightTrajectory:
         intentos y stalls por zona. El vocabulario está alineado con las
         macro-acciones disponibles (MANTENER_RUMBO, EVADIR_IZQUIERDA, etc.).
         """
-        events = self._events
+        events = list(self._events)
         cap = max_events if max_events > 0 else SLAM_CONTEXT_MAX_EVENTS
         events = events[-cap:] if len(events) > cap else events
 
@@ -140,7 +139,7 @@ class FlightTrajectory:
 
         Útil para decidir overrides de acción sin re-parsear el texto del prompt.
         """
-        events = self._events
+        events = list(self._events)
         cap = max_events if max_events > 0 else SLAM_CONTEXT_MAX_EVENTS
         events = events[-cap:] if len(events) > cap else events
         raw: dict = {
@@ -180,7 +179,7 @@ class FlightTrajectory:
         Devuelve 0.0 si no hay eventos en FRENTE. Misma zonificación que
         trajectory_context_text(): ±30° del heading actual = FRENTE.
         """
-        events = self._events
+        events = list(self._events)
         cap = max_events if max_events > 0 else SLAM_CONTEXT_MAX_EVENTS
         events = events[-cap:] if len(events) > cap else events
         attempts = stalls = 0

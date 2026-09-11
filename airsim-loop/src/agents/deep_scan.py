@@ -425,29 +425,33 @@ def _slam_assess_cycle(
             if state.get("_deadlock_event"):
                 state["_deadlock_event"]["strategy"] = "slam_assess"
 
-            # Fix 11: inyectar corner post-RETROCEDER usando el resultado del scan.
-            # El scan ve la vista despejada después del retroceso y elige una dirección
-            # limpia. Si el VLM dice EVADIR_X, el corner apunta hacia ese lado.
-            # MANTENER_RUMBO y escapes verticales no necesitan corner (WP accesible).
+            # Fix 16: corner post-RETROCEDER con ángulo fijo pequeño, siempre en la
+            # misma dirección relativa al heading actual.
+            # Fix 11-15 usaban lógica adaptativa (bearing_err, VLM direction) que resultó
+            # en corners inconsistentes: la dirección variaba con cada rotación del heading
+            # haciendo que el drone rebotara entre zonas bloqueadas distintas en lugar de
+            # resolver sistemáticamente el mismo obstáculo (diagnosticado seed_1 run 3:
+            # c527→(-36,7)→vuelve a (-43,7), c681→mismo, c810→EVADIR_DER→cae en (-44,3)).
+            # Solución: ángulo fijo RETROCEDER_CORNER_ANGLE_DEG (default 45°) en la dirección
+            # que indica el VLM (IZQ → negativo, DER o cualquier otro → positivo).
+            # Sin Manhattan snap: el ángulo diagonal crea desplazamiento lateral progresivo.
             macro_post = decision.get("macro_action", "")
             if state.pop("_post_retroceder_corner_pending", False) and macro_post != "RETROCEDER":
-                from .action_map import compute_corner_waypoint, _manhattan_snap_yaw
+                from .action_map import compute_corner_waypoint
+                _corner_angle = float(os.getenv("RETROCEDER_CORNER_ANGLE_DEG", "45.0"))
                 orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
                 hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
-                if macro_post == "EVADIR_IZQUIERDA":
-                    corner_yaw = _manhattan_snap_yaw(hdg_pc, -90.0)
-                elif macro_post == "EVADIR_DERECHA":
-                    corner_yaw = _manhattan_snap_yaw(hdg_pc, 90.0)
-                else:
-                    corner_yaw = None  # MANTENER_RUMBO / GANAR / PERDER: sin corner
-                if corner_yaw is not None:
-                    state["inject_corner"] = compute_corner_waypoint(
-                        telemetry, corner_yaw, guidance=guidance,
-                        offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
-                    )
-                    side = "IZQUIERDA" if macro_post == "EVADIR_IZQUIERDA" else "DERECHA"
-                    print(f"[slam_assess] retroceder-corner post-scan: {corner_yaw:.0f}° ({side}) "
-                          f"basado en VLM={macro_post}.")
+                # EVADIR_IZQUIERDA → ángulo negativo (giro a la izquierda del heading).
+                # Todo lo demás (EVADIR_DERECHA, MANTENER_RUMBO, vertical) → positivo.
+                _sign = -1.0 if macro_post == "EVADIR_IZQUIERDA" else 1.0
+                corner_yaw = hdg_pc + _sign * _corner_angle
+                state["inject_corner"] = compute_corner_waypoint(
+                    telemetry, corner_yaw, guidance=guidance,
+                    offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
+                )
+                side = "IZQUIERDA" if _sign < 0 else "DERECHA"
+                print(f"[slam_assess] retroceder-corner fix16: hdg={hdg_pc:.0f}°{_sign:+.0f}×{_corner_angle:.0f}°"
+                      f"={corner_yaw:.0f}° ({side}) VLM={macro_post}.")
 
             return True
         print(f"[slam_assess] ({arm}) respuesta sin acción viable. Cae al escape sincrónico.")
@@ -761,9 +765,27 @@ def _apply_scan_resolution(
         state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
         state["maneuver_command"] = cmd
     elif macro == "RETROCEDER":
-        # Duración fija: crear distancia suficiente del obstáculo para que el
-        # siguiente EVADIR tenga margen de arco. No depende de la tasa de stall.
-        duration_s = DEEP_SCAN_MANEUVER_DURATION_S * 1.5  # 2.0 × 1.5 = 3s → ~3.6m a 1.2 m/s
+        # Fix 12: duración aumentada para salir de la collision mesh "burbuja".
+        # Con factor 1.5: 2.0×1.5=3s → ~3m a 1.2m/s — insuficiente para meshes
+        # de 4-5m de radio (diagnosticado seed_1: c529-c1186, retroceso promedio 3m,
+        # drone volvía al mismo árbol en todos los casos). Factor 2.5: 5s → ~6m.
+        _retro_factor = float(os.getenv("RETROCEDER_DURATION_FACTOR", "2.5"))
+        # Fix 14: RETROCEDER adaptativo — si la trayectoria registra stalls en la
+        # zona ATRÁS (≥2 intentos, ≥70% stall), hay un árbol detrás confirmado por
+        # el buffer de vuelo. En ese caso reducir el factor para no colisionar por
+        # retroceso ciego (collision mesh "burbuja" puede existir en ambas dirs).
+        if trajectory is not None:
+            orient_r = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+            hdg_r = math.degrees(float(orient_r.get("yaw", 0.0)))
+            atras = trajectory.zone_stats(hdg_r).get("ATRÁS", {"attempts": 0, "stall_rate": 0.0})
+            if atras["attempts"] >= 2 and atras["stall_rate"] >= 0.70:
+                _retro_factor = min(_retro_factor, 1.5)
+                print(
+                    f"[slam_assess] retroceder-fix14: ATRÁS bloqueado "
+                    f"({atras['stall_rate']:.0%} stall, {atras['attempts']} int) "
+                    f"→ factor reducido a {_retro_factor} para evitar colisión trasera."
+                )
+        duration_s = DEEP_SCAN_MANEUVER_DURATION_S * _retro_factor  # nominal 2.0×2.5=5s → ~6m
         state["active_maneuver"] = macro
         state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
         state["maneuver_command"] = cmd
