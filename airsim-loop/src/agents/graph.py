@@ -418,10 +418,21 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         act_spd = math.sqrt(
             float(vel_now.get("vx", 0.0)) ** 2 + float(vel_now.get("vy", 0.0)) ** 2
         )
+        # prev_act_spd: velocidad del ciclo anterior — distingue "frenado por obstáculo"
+        # (prev_spd > 0.20, luego act_spd cae) de "aceleración desde reposo"
+        # (prev_spd ≈ 0, act_spd aún no subió). Sin esto, los primeros 2-3 ciclos
+        # de cualquier despegue disparan blind_wall_event con CYCLES=2.
+        prev_vel = (state.get("prev_telemetry") or {}).get("velocity") or {}
+        prev_act_spd = math.sqrt(
+            float(prev_vel.get("vx", 0.0)) ** 2 + float(prev_vel.get("vy", 0.0)) ** 2
+        )
         blind_wall_cond = (
             cmd_vx >= _CMD_BLIND_FWD_MIN_MPS               # comandando hacia adelante
-            and act_spd < _CMD_BLIND_ACT_MAX_MPS            # pero no se mueve
+            and act_spd < _CMD_BLIND_ACT_MAX_MPS            # pero no se mueve ahora
             and field.blocked_fraction() < _CMD_BLIND_BF_MAX  # flujo óptico: corredor libre
+            and (prev_act_spd >= 0.20 or int(state.get("_blind_wall_cycles") or 0) > 0)
+            # ^^^: el drone YA estaba en movimiento antes de detenerse, O el contador
+            # ya empezó (persistencia: un ciclo con bf ligeramente alta no rompe la cuenta).
         )
         prev_bw = int(state.get("_blind_wall_cycles") or 0)
         bw_cycles = (prev_bw + 1) if blind_wall_cond else 0
