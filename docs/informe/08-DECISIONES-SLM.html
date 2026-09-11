@@ -1056,6 +1056,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A9-USO-IA-GENERATIVA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Uso de IA Generativa en esta Tesis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1339,7 +1395,7 @@
 <p>Si las tres estrategias fallan, <code>_fallback_decision()</code> entra en vigor: devuelve <code>keep_going</code> con una nota de error, lo que es conservador (continuar la maniobra actual) y auditable (la nota aparece en el log).</p>
 <p>La métrica <code>adherence_rate</code> es una fila explícita de la tabla de resultados (cap. 11): cuantifica cuánto aporta, en la práctica, la decodificación restringida por sobre el parser tolerante como única defensa. Este número importa porque si fuera cercano al 100% solo con el parser, la decodificación restringida sería overhead sin beneficio; si la diferencia es grande (como documentan Raspanti et al. [2025] y Geng et al. [2025] para SLMs compactos), la restricción es una decisión de ingeniería con impacto medible en la fiabilidad del sistema.</p>
 <h2 id="83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones">8.3 Espacio de acción discreto: lista blanca de macro-acciones<a class="headerlink" href="#83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones" title="Permanent link">&para;</a></h2>
-<p>El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones:</p>
+<p>El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones definido en <code>PROMPT_ACTIONS</code> (<code>deliberative.py</code>):</p>
 <table>
 <thead>
 <tr>
@@ -1349,27 +1405,57 @@
 </thead>
 <tbody>
 <tr>
-<td><code>keep_going</code></td>
+<td><code>MANTENER_RUMBO</code></td>
 <td>Continuar hacia el waypoint activo sin alterar la velocidad ni el rumbo</td>
 </tr>
 <tr>
-<td><code>evasive</code></td>
-<td>Iniciar evasión lateral (dirección decidida por <code>evasive_node</code> según ocupación L/R)</td>
+<td><code>EVADIR_IZQUIERDA</code></td>
+<td>Iniciar evasión lateral hacia la izquierda (yaw −15°/s, vx = 0.3–1.2 m/s)</td>
 </tr>
 <tr>
-<td><code>girar_90</code></td>
-<td>Ejecutar un giro de 90° en la dirección menos bloqueada para desatasco</td>
+<td><code>EVADIR_DERECHA</code></td>
+<td>Iniciar evasión lateral hacia la derecha (yaw +15°/s, vx = 0.3–1.2 m/s)</td>
 </tr>
 <tr>
-<td><code>fsm</code></td>
-<td>Delegar la decisión a la máquina de estados FSM (brazo alternativo)</td>
+<td><code>GANAR_ALTURA</code></td>
+<td>Ascender en el lugar (vz = −1.5 m/s, vx = 0) para sobrevolar el obstáculo</td>
 </tr>
 <tr>
-<td><code>degraded</code></td>
-<td>Declarar modo degradado; pasar a <code>degraded_hover_node</code></td>
+<td><code>PERDER_ALTURA</code></td>
+<td>Descender con avance lento (vz = +0.8 m/s, vx = 1.0 m/s)</td>
+</tr>
+<tr>
+<td><code>FRENAR</code></td>
+<td>Detener el drone en el lugar (hover) con corrección de altitud por controlador P</td>
 </tr>
 </tbody>
 </table>
+<p><code>GIRAR_90</code> <strong>no está en <code>PROMPT_ACTIONS</code></strong>: es un bypass determinista que el <code>policy_router</code> activa directamente cuando <code>blocked_fraction &gt; 0.6</code>, sin consultar al VLM. El modelo nunca necesita elegirlo; si lo intentara, el parser lo descartaría.</p>
+<p>El schema JSON declarado para la decodificación restringida tiene la forma:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;json_schema&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;json_schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;macro_decision&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;macro_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span>
+<span class="w">                   </span><span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">]</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;rationale&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">}</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;macro_action&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rationale&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;additionalProperties&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Poda del enum por motivo de consulta.</strong> En lugar de enviar siempre el enum completo, <code>_schema_for_reason(reason_key)</code> genera un schema podado según el contexto:
+- <code>"TTC_CRITICO"</code>: excluye <code>MANTENER_RUMBO</code> (hay colisión inminente confirmada).
+- <code>"DEADLOCK_ESCAPE"</code>: excluye <code>MANTENER_RUMBO</code> y <code>FRENAR</code> (el drone ya está atascado; detenerse o insistir al frente es contraproducente).</p>
+<p>Esta poda semántica concentra la distribución de muestreo del modelo en las acciones físicamente coherentes con la causa de la consulta, reduciendo la tasa de respuestas subóptimas en los escenarios de mayor riesgo sin requerir fine-tuning.</p>
 <p>Esta arquitectura de lista blanca tiene tres propiedades de diseño que se derivan mutuamente:</p>
 <p><strong>1. Compatibilidad directa con la decodificación restringida.</strong> Un espacio de acción finito y conocido a priori puede representarse como una enumeración JSON (<code>enum</code>), lo que hace posible convertir la restricción de salida en una gramática aplicable en tiempo de inferencia. Un espacio continuo de comandos cinemáticos no puede representarse así sin esquemas mucho más complejos.</p>
 <p><strong>2. Comparación limpia entre brazos.</strong> El nodo deliberativo (VLM), el nodo FSM y el nodo reactivo comparten el mismo espacio de macro-acciones y el mismo traductor a comandos <code>action_to_command()</code>. La única variable que difiere entre ellos es <em>quién elige la etiqueta</em>, no <em>qué puede elegir ni cómo se ejecuta</em>. Esto hace posible la comparación experimental de los tres brazos (cap. 10) sin confundir diferencias de política con diferencias de actuación.</p>
@@ -1444,7 +1530,11 @@
 <h2 id="85-ingenieria-del-prompt-cinco-componentes">8.5 Ingeniería del prompt: cinco componentes<a class="headerlink" href="#85-ingenieria-del-prompt-cinco-componentes" title="Permanent link">&para;</a></h2>
 <p>El prompt de usuario construido por <code>_build_user_prompt()</code> tiene cinco componentes estructurados, cada uno respondiendo a una pregunta específica que el VLM necesita para decidir:</p>
 <p><strong>Componente 1 — Estado de vuelo y telemetría.</strong> Velocidad horizontal, velocidad vertical, altitud, actitud (pitch, roll), estado de misión, waypoint activo y distancia restante. Este componente traduce telemetría numérica cruda a descripciones en lenguaje natural ("el dron vuela a 4.2 m/s, con 23 m al próximo waypoint, pitch -3.1°"). La verbalización explícita se prefiere a la telemetría cruda por dos razones convergentes: los SLMs de 3B parámetros razonan más confiablemente sobre descripciones en lenguaje natural que sobre tuplas de números (<a href="13-REFERENCIAS.html#ref-zhu-2024">Zhu et al., 2024</a>), y la práctica de convertir retroalimentación de sensores y de entorno a lenguaje natural antes de dársela a un modelo de lenguaje para planificación robótica está empíricamente validada en el patrón de "monólogo interno": <a href="13-REFERENCIAS.html#ref-huang-2022">Huang et al. (2022)</a> muestran que un LLM que recibe la retroalimentación del entorno verbalizada explícitamente —en lugar de como estado estructurado— mejora significativamente la tasa de éxito en la ejecución de instrucciones de alto nivel en múltiples dominios robóticos.</p>
-<p><strong>Componente 2 — Resumen del <code>ObstacleField</code>.</strong> El resultado de <code>ObstacleField.summary_text()</code> para cada sector activo: TTC, ocupación, confianza, estado de bloqueo. Cuando el campo tiene evidencia, este componente provee información cuantitativa sobre la geometría del obstáculo. Cuando no la tiene, el componente dice explícitamente "percepción SIN evidencia" y describe la causa probable (velocidad baja, rotación activa), lo que permite al VLM distinguir "no hay obstáculo" de "no sé si hay obstáculo".</p>
+<p><strong>Componente 2 — Resumen del <code>ObstacleField</code> enriquecido.</strong> El resultado de <code>ObstacleField.summary_text()</code> para cada sector activo: TTC, ocupación, confianza, estado de bloqueo y <strong>fuente</strong> del campo (<code>"flujo óptico"</code>, <code>"flujo óptico + profundidad monocular (Depth Anything V2)"</code>, etc.). Cuando el campo tiene evidencia, este componente provee información cuantitativa sobre la geometría del obstáculo. Cuando no la tiene, el componente dice explícitamente "percepción SIN evidencia".</p>
+<p><code>scene_summary</code> puede además incluir avisos adicionales generados por <code>perception_node</code>:
+- <strong>E2</strong>: <code>"Obstáculo frontal (profundidad monocular): follaje. Posibles huecos entre ramas — evasión diagonal o +1 m de altura puede ser viable."</code> (cuando Depth Anything V2 clasifica el obstáculo como vegetación).
+- <strong>G1</strong>: <code>"AVISO [G1]: stall frontal 33% (30 intentos) con campo óptico despejado — posible obstáculo invisible (muro liso, baja textura). MANTENER_RUMBO agravará el bloqueo. Priorizar GIRAR_90 o evasión lateral amplia."</code> (cuando el historial acumulado contradice la ausencia de bloqueo óptico).</p>
+<p>Estos avisos llegan al VLM en todos los paths deliberativos (regular, <code>slam_assess</code>, <code>deep_vlm</code>), permitiéndole ajustar la decisión a la naturaleza específica del obstáculo invisible.</p>
 <p><strong>Componente 3 — Historial de decisiones recientes.</strong> Las últimas <code>N</code> acciones tomadas (con sus razones, si el deliberativo las reportó), incluyendo cuántos ciclos lleva activa la maniobra actual y si hay señales de atasco (progreso hacia el waypoint &lt; umbral durante varios ciclos). Este componente provee contexto temporal que una sola imagen no puede dar: el VLM puede distinguir "empecé a evadir hace 1 ciclo" de "llevo 8 ciclos evasión sin avanzar".</p>
 <p><strong>Componente 4 — Motivo explícito de consulta.</strong> El campo <code>reason_note</code> codifica <em>por qué</em> el nodo deliberativo fue activado en este ciclo: <code>"TTC_CRITICO"</code> (TTC &lt; umbral de evasión), <code>"TTC_ADVERTENCIA"</code> (zona de histéresis), <code>"FALTA_EVIDENCIA"</code> (flujo colapsado), <code>"DEADLOCK_ESCAPE"</code> (atasco detectado), <code>"DEEP_SCAN_RESULT"</code> (resultado de exploración rotacional). Este campo es crítico para calibrar la respuesta: ante <code>"FALTA_EVIDENCIA"</code>, el VLM no debe reportar obstáculos que no ve; ante <code>"TTC_CRITICO"</code>, debe priorizar evasión inmediata.</p>
 <p><strong>Componente 5 — Instrucción de formato de salida.</strong> Reiteración explícita del esquema JSON esperado y de los valores posibles del campo <code>action</code>, coherente con el <code>json_schema</code> declarado en el parámetro de formato. Esta redundancia entre prompt y schema es intencional: para modelos pequeños, la instrucción textual explícita mejora el <code>adherence_rate</code> incluso cuando la decodificación restringida está activa, especialmente en la elección del campo <code>action</code> dentro del dominio de la enumeración (<a href="13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>).</p>

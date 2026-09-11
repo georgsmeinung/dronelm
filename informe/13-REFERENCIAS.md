@@ -160,6 +160,8 @@
 
 <a id="ref-kemeny-2003" class="ref-anchor"></a><a id="13-referencias-ref-kemeny-2003"></a>Kemeny, A., & Panerai, F. (2003). Evaluating perception in driving simulation experiments. *Trends in Cognitive Sciences*, *7*(1), 31-37. <https://doi.org/10.1016/S1364-6613(02)00011-6>
 
+<a id="ref-kaufmann-2023" class="ref-anchor"></a><a id="13-referencias-ref-kaufmann-2023"></a>Kaufmann, E., Bauersfeld, L., Loquercio, A., Müller, M., Koltun, V., & Scaramuzza, D. (2023). Champion-level drone racing using deep reinforcement learning. *Nature*, *620*(7976), 982–987. <https://doi.org/10.1038/s41586-023-06419-4>
+
 <a id="ref-koubaa-2019" class="ref-anchor"></a><a id="13-referencias-ref-koubaa-2019"></a>Koubaa, A., Allouch, A., Alajlan, M., Javed, Y., Belghith, A., & Khalgui, M. (2019). Micro Air Vehicle Link (MAVLink) in a Nutshell: A Survey. *CoRR*, *abs/1906.10641*. <http://arxiv.org/abs/1906.10641>
 
 <a id="ref-kroeger-2016" class="ref-anchor"></a><a id="13-referencias-ref-kroeger-2016"></a>Kroeger, T., Timofte, R., Dai, D., & Van Gool, L. (2016). Fast Optical Flow Using Dense Inverse Search. En B. Leibe, J. Matas, N. Sebe, & M. Welling (Eds.), *Computer Vision – ECCV 2016*, LNCS 9908 (pp. 471-488). Springer. <https://doi.org/10.1007/978-3-319-46493-0_29>

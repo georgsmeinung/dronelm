@@ -1,0 +1,1700 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A8-NAVEGACION-RL.html">
+      
+      
+        <link rel="prev" href="A7-MALDICION-MONOCULAR-ESTEREO.html">
+      
+      
+        <link rel="next" href="A9-USO-IA-GENERATIVA.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A8. Navegación por Aprendizaje por Refuerzo (Propuesta) - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-8-politica-de-navegacion-visual-por-aprendizaje-por-refuerzo-diseno-propuesto-como-cuarto-brazo" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A7-MALDICION-MONOCULAR-ESTEREO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A8-NAVEGACION-RL.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a81-posicion-en-la-arquitectura-jerarquica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.1 Posición en la arquitectura jerárquica
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a82-espacio-de-observaciones" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.2 Espacio de observaciones
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a83-espacio-de-acciones" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.3 Espacio de acciones
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a84-funcion-de-recompensa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.4 Función de recompensa
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a85-algoritmo-de-entrenamiento" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.5 Algoritmo de entrenamiento
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A8.5 Algoritmo de entrenamiento">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#justificacion-de-la-eleccion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Justificación de la elección
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arquitectura-de-la-politica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arquitectura de la política
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a86-protocolo-de-evaluacion-comparativa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.6 Protocolo de evaluación comparativa
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a87-dependencias-y-prerrequisitos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.7 Dependencias y prerrequisitos
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A9-USO-IA-GENERATIVA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Uso de IA Generativa en esta Tesis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a81-posicion-en-la-arquitectura-jerarquica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.1 Posición en la arquitectura jerárquica
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a82-espacio-de-observaciones" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.2 Espacio de observaciones
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a83-espacio-de-acciones" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.3 Espacio de acciones
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a84-funcion-de-recompensa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.4 Función de recompensa
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a85-algoritmo-de-entrenamiento" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.5 Algoritmo de entrenamiento
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A8.5 Algoritmo de entrenamiento">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#justificacion-de-la-eleccion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Justificación de la elección
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arquitectura-de-la-politica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arquitectura de la política
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a86-protocolo-de-evaluacion-comparativa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.6 Protocolo de evaluación comparativa
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a87-dependencias-y-prerrequisitos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A8.7 Dependencias y prerrequisitos
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="anexo-8-politica-de-navegacion-visual-por-aprendizaje-por-refuerzo-diseno-propuesto-como-cuarto-brazo">Anexo 8: Política de Navegación Visual por Aprendizaje por Refuerzo — Diseño Propuesto como Cuarto Brazo<a class="headerlink" href="#anexo-8-politica-de-navegacion-visual-por-aprendizaje-por-refuerzo-diseno-propuesto-como-cuarto-brazo" title="Permanent link">&para;</a></h1>
+<p>Este anexo desarrolla el diseño técnico de un cuarto brazo de comparación experimental
+(<code>rl</code>) basado en <strong>aprendizaje por refuerzo visual (<em>Reinforcement Learning</em>, RL)</strong>,
+propuesto como trabajo futuro en §12.4. El brazo <code>rl</code> no está implementado en el sistema
+evaluado en el capítulo 11; este anexo especifica su arquitectura, espacio de
+observaciones y acciones, función de recompensa, protocolo de entrenamiento y posición en
+el conjunto de hipótesis experimentales de la tesis, de forma que sirva como base técnica
+para la etapa de implementación.</p>
+<p>El planteamiento es complementario — no alternativo — a los avances del Anexo 3 (LoRA) y
+del Anexo 4 (gramáticas restringidas): mientras esos dos anexos proponen especializar la
+capa deliberativa existente (VLM), el brazo <code>rl</code> propone reemplazar la capa táctica
+completa por una política neuronal entrenada por interacción directa con el entorno, en el
+mismo nivel de abstracción que ocupa actualmente <code>evasive_node</code> + <code>reactive_node</code>.</p>
+<hr />
+<h2 id="a81-posicion-en-la-arquitectura-jerarquica">A8.1 Posición en la arquitectura jerárquica<a class="headerlink" href="#a81-posicion-en-la-arquitectura-jerarquica" title="Permanent link">&para;</a></h2>
+<p>El sistema implementado en esta tesis opera en tres capas de abstracción temporal
+diferenciada:</p>
+<div class="highlight"><pre><span></span><code>[Lenguaje / Misión]  ─ planeación de misión (GCS, cap. 4)
+        │
+        ▼
+┌───────────────────────────────────────────┐
+│ Capa deliberativa — VLM  (0.5–2 Hz)       │  brazo &quot;slm&quot;: Qwen2.5-VL-3B
+│  razonamiento semántico → macro-acción     │  (implementado, cap. 5, §5.10)
+└──────────────────┬────────────────────────┘
+                   │ macro-acción
+                   ▼
+┌───────────────────────────────────────────┐
+│ Capa táctica — control reactivo (5 Hz)    │  brazos &quot;fsm&quot;, &quot;reactive&quot; (implementados)
+│  ObstacleField → velocidad                 │  brazo &quot;rl&quot;: política neuronal (propuesto)
+└──────────────────┬────────────────────────┘
+                   │ velocity setpoints
+                   ▼
+┌───────────────────────────────────────────┐
+│ Capa motora — PX4 / PID (400 Hz)          │  controlador de actitud; intocado
+└───────────────────────────────────────────┘
+</code></pre></div>
+<p>El brazo <code>rl</code> ocupa la <strong>capa táctica</strong>: recibe el frame RGB actual, el <code>ObstacleField</code>
+producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>waypoint_guidance</code>), y
+produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
+<code>evasive_node</code>. La capa deliberativa (VLM) sigue activa en modo jerárquico: puede inyectar
+waypoints de desvío (<code>inject_corner</code>) o llamar a <code>slam_assess</code> ante atascos duros, igual
+que con los brazos existentes.</p>
+<p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
+<code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
+seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
+<ul>
+<li>El mismo <code>ObstacleField</code> como entrada perceptual.</li>
+<li>El mismo <code>action_to_command()</code> como traductor a cinemática.</li>
+<li>Las mismas salvaguardas de <code>motor_node</code> (corrección de altitud, target_yaw).</li>
+<li>El mismo <code>WaypointTracker</code> para el guiado a waypoints.</li>
+</ul>
+<hr />
+<h2 id="a82-espacio-de-observaciones">A8.2 Espacio de observaciones<a class="headerlink" href="#a82-espacio-de-observaciones" title="Permanent link">&para;</a></h2>
+<p>Se propone un espacio de observación de tres componentes, idénticos a los que ya produce el
+lazo en cada ciclo (sin nuevos sensores):</p>
+<div class="highlight"><pre><span></span><code><span class="n">obs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;rgb&quot;</span><span class="p">:</span>      <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>   <span class="c1"># shape (H, W, 3) — frame RGB del ciclo actual</span>
+    <span class="s2">&quot;ttc_field&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>  <span class="c1"># shape (3, 3, 3) — ObstacleField: [ttc, occ, conf] × 9 celdas</span>
+    <span class="s2">&quot;nav&quot;</span><span class="p">:</span>      <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>   <span class="c1"># shape (6,) — [dist_wp, bearing_err, vx, vy, vz, alt]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong><code>rgb</code> (entrada visual).</strong> El mismo frame que <code>capture_node</code> ya produce. Para el
+entrenamiento se escala a 84 × 84 px, suficiente para que una CNN pequeña extraiga
+patrones de textura y borde sin el costo de resolución completa. Se puede extender a
+<code>frame_history</code> (dos frames consecutivos, igual que el VLM) para que la política infiera
+dirección de movimiento.</p>
+<p><strong><code>ttc_field</code> (campo de obstáculos serializado).</strong> El <code>ObstacleField</code> se serializa como un
+tensor 3×3×3: para cada celda de la grilla, los tres valores son TTC, ocupación y
+confianza. Esta representación preserva la estructura espacial del campo sin exponer al
+modelo los internos del estimador de flujo óptico. La política aprende implícitamente el
+significado de cada componente durante el entrenamiento, igual que el VLM lo aprende del
+texto de <code>summary_text()</code>.</p>
+<p><strong><code>nav</code> (estado de guiado).</strong> Distancia al waypoint activo, error de rumbo (<code>bearing_err_deg</code>),
+velocidades actuales y altitud. Estos seis escalares proporcionan el contexto cinemático
+necesario para que la política distinga "atascado contra obstáculo frontal" de "girando
+hacia el waypoint".</p>
+<p><strong>Opción B — end-to-end puro.</strong> Una alternativa más ajustada al objetivo de bajo costo de
+sensor es usar solo <code>rgb</code> como observación. Es más difícil de entrenar (la política debe
+aprender implícitamente el TTC y la geometría de obstáculos), pero produce un sistema sin
+dependencia del estimador de flujo óptico — relevante si se quiere transferir a un drone
+real donde la calibración del flujo es incierta.</p>
+<hr />
+<h2 id="a83-espacio-de-acciones">A8.3 Espacio de acciones<a class="headerlink" href="#a83-espacio-de-acciones" title="Permanent link">&para;</a></h2>
+<p>Se propone un espacio discreto de seis acciones, alineado con <code>PROMPT_ACTIONS</code> del nodo
+deliberativo (§8.3, §5.14):</p>
+<table>
+<thead>
+<tr>
+<th>Índice</th>
+<th>Macro-acción</th>
+<th>Semántica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>MANTENER_RUMBO</code></td>
+<td>Avanzar hacia el waypoint activo</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>EVADIR_IZQUIERDA</code></td>
+<td>Evasión lateral izquierda</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>EVADIR_DERECHA</code></td>
+<td>Evasión lateral derecha</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>GANAR_ALTURA</code></td>
+<td>Ascender para sobrevolar obstáculo</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>PERDER_ALTURA</code></td>
+<td>Descender con avance lento</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>FRENAR</code></td>
+<td>Detener el drone (hover)</td>
+</tr>
+</tbody>
+</table>
+<p>La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
+(<code>action_to_command()</code>, §5.14): la política neuronal nunca genera velocidades directamente,
+lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
+saturaciones y convenciones de Body Frame que los brazos <code>fsm</code> y <code>slm</code>.</p>
+<p><strong>Espacio continuo (extensión futura).</strong> Una vez que el brazo discreto haya convergido, se
+puede reemplazar el cabezal de política por un <code>Box(low=-1, high=1, shape=(4,))</code>
+correspondiente a <span class="arithmatex">\([v_x, v_y, v_z, \dot\psi]\)</span> normalizados. El espacio continuo permite
+maniobras más suaves y eficientes, pero requiere guardar los límites cinemáticos como
+restricciones en la función de recompensa o como proyección post-acción.</p>
+<hr />
+<h2 id="a84-funcion-de-recompensa">A8.4 Función de recompensa<a class="headerlink" href="#a84-funcion-de-recompensa" title="Permanent link">&para;</a></h2>
+<p>La función de recompensa combina cuatro términos con signos y pesos diferenciados:</p>
+<div class="arithmatex">\[r_t = w_{\text{prog}} \cdot \Delta d_t + w_{\text{col}} \cdot c_t + w_{\text{near}} \cdot n_t + w_{\text{arr}} \cdot a_t - w_{\text{time}} \cdot \Delta t\]</div>
+<p>donde:</p>
+<ul>
+<li>
+<p><span class="arithmatex">\(\Delta d_t = d_{t-1} - d_t\)</span> es la reducción de distancia al waypoint activo en el ciclo
+  <span class="arithmatex">\(t\)</span> (positivo = progreso, negativo = retroceso).</p>
+</li>
+<li>
+<p><span class="arithmatex">\(c_t \in \{0, -1\}\)</span>: penalidad dura de colisión. Se activa cuando <code>telemetry["collision"]
+  = True</code> (flag de AirSim). Domina sobre todos los demás términos para que la primera
+  prioridad aprendida sea la evitación de obstáculos.</p>
+</li>
+<li>
+<p><span class="arithmatex">\(n_t = -\text{clip}(1/\text{TTC}_{\min} - 1/T_{\text{safe}},\, 0,\, 1)\)</span>: penalidad suave
+  de proximidad, proporcional al exceso de peligro por encima del umbral <code>TTC_SAFE_THRESHOLD
+  = 4.6 s</code>. Permite al agente aprender gradaciones de riesgo sin esperar la colisión.</p>
+</li>
+<li>
+<p><span class="arithmatex">\(a_t \in \{0, +1\}\)</span>: bonificación esparsa de llegada al waypoint activo
+  (<code>waypoint_guidance["is_completed"] = True</code>).</p>
+</li>
+<li>
+<p><span class="arithmatex">\(\Delta t\)</span>: penalidad de tiempo (eficiencia). Evita que el agente aprenda a hovear
+  indefinidamente cerca de los waypoints para acumular señal de proximidad sin avanzar.</p>
+</li>
+</ul>
+<p><strong>Currículo de entrenamiento.</strong> Se recomienda iniciar con <span class="arithmatex">\(w_{\text{col}} \gg w_{\text{prog}}
+\gg w_{\text{near}}\)</span> para que la política aprenda primero a no colisionar (comportamiento
+de seguridad mínimo); una vez que la tasa de colisión caiga por debajo del 20 % en el
+escenario de entrenamiento, se aumenta gradualmente <span class="arithmatex">\(w_{\text{prog}}\)</span> para impulsar el
+comportamiento de avance. La secuencia de escenarios sigue el orden de dificultad de la
+tesis: Tier 0 → Tier 1 → Tier 2.</p>
+<hr />
+<h2 id="a85-algoritmo-de-entrenamiento">A8.5 Algoritmo de entrenamiento<a class="headerlink" href="#a85-algoritmo-de-entrenamiento" title="Permanent link">&para;</a></h2>
+<p>Se propone <strong>PPO</strong> (<em>Proximal Policy Optimization</em>, [Schulman et al., 2017]) como algoritmo
+primario, implementado vía <strong>Stable-Baselines3</strong> ([Raffin et al., 2021]).</p>
+<h3 id="justificacion-de-la-eleccion">Justificación de la elección<a class="headerlink" href="#justificacion-de-la-eleccion" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Algoritmo</th>
+<th>Tipo</th>
+<th>Ventaja</th>
+<th>Limitación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PPO</strong> (recomendado)</td>
+<td>On-policy</td>
+<td>Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift (<a href="#ref-kaufmann-2023">Kaufmann et al., 2023</a>)</td>
+<td>Mayor costo de muestras que off-policy</td>
+</tr>
+<tr>
+<td>SAC</td>
+<td>Off-policy</td>
+<td>Mayor eficiencia de muestras; apropiado para espacio continuo</td>
+<td>Requiere ajuste fino de temperatura de entropía</td>
+</tr>
+<tr>
+<td>DQN</td>
+<td>Off-policy (discreto)</td>
+<td>Línea base rápida; bajo costo de implementación</td>
+<td>Sin soporte nativo para observaciones imagen + vector</td>
+</tr>
+</tbody>
+</table>
+<p>PPO es el algoritmo que usa el sistema <strong>Swift</strong> de la Universidad de Zúrich
+(<a href="#ref-kaufmann-2023">Kaufmann et al., 2023</a>) para control de drones de carreras; en ese
+trabajo, una política PPO entrenada en AirSim superó en tiempo de vuelta a pilotos humanos
+campeones del mundo. Es el antecedente más directo en nivel de maniobra y en uso del mismo
+simulador. La convergencia on-policy es más predecible, lo que simplifica la interpretación
+de los resultados en un contexto de tesis.</p>
+<p><strong>Advertencia sobre generalización.</strong> El resultado de Swift ilustra tanto el potencial como
+el límite central del enfoque RL en robótica aérea: la política fue entrenada y evaluada en
+el circuito de carreras de Zúrich —geometría fija, velocidades máximas constantes, ausencia
+de obstáculos imprevistos— y no puede transferirse directamente a un entorno diferente sin
+reentrenamiento completo. Cambiar el trazado del circuito o la dinámica del dron degrada la
+tasa de éxito hasta el nivel de aleatoriedad. Este fenómeno de <em>overfitting</em> a la
+distribución de entrenamiento es estructural en RL, no un artefacto del método.</p>
+<p>Para el brazo <code>rl</code> de esta tesis, el riesgo de especialización excesiva se mitiga
+parcialmente por tres decisiones de diseño:</p>
+<ol>
+<li>
+<p><strong>Espacio de acciones discretas sobre macro-acciones</strong>: en lugar de generar velocidades
+   directamente (como hace Swift), la política elige entre las seis macro-acciones ya
+   validadas en los brazos <code>fsm</code> y <code>reactive</code>. Esto reduce el espacio de comportamientos
+   "incorrectos" aprendibles a aquellos que el sistema ya sabe ejecutar con seguridad.</p>
+</li>
+<li>
+<p><strong>Currículo de escenarios por Tier</strong>: el agente se expone a tres niveles de dificultad
+   (Tier 0 → 1 → 2) y cinco mapas diferentes durante el entrenamiento, forzando
+   generalización a geometrías urbanas variadas en lugar de memorizar un circuito.</p>
+</li>
+<li>
+<p><strong>Capa deliberativa activa</strong>: cuando la política RL entra en un estado no representado
+   en el entrenamiento (alta entropía de acción, múltiples ciclos de <code>FRENAR</code>), el nodo
+   deliberativo puede invocar <code>slam_assess</code> para recuperar el control, igual que con los
+   brazos <code>fsm</code> y <code>reactive</code>. Esto limita la región de fallo catastrófico de la política
+   neuronal.</p>
+</li>
+</ol>
+<p>La validación en escenarios no vistos durante el entrenamiento —especialmente
+<code>citymap_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
+una de las incógnitas clave del protocolo de evaluación de §A8.6.</p>
+<h3 id="arquitectura-de-la-politica">Arquitectura de la política<a class="headerlink" href="#arquitectura-de-la-politica" title="Permanent link">&para;</a></h3>
+<p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales
+paralelos:</p>
+<div class="highlight"><pre><span></span><code>rgb (84×84×3)           ttc_field + nav (27+6)
+      │                         │
+Conv(32,8,4)            Linear(64) → ReLU
+Conv(64,4,2)
+Conv(64,3,1)
+Flatten(3136)
+      │                         │
+      └──── Concat(3136+70) ────┘
+                    │
+             Linear(512) → ReLU
+             Linear(256) → ReLU
+            ┌────────────────┐
+       Actor(6)          Critic(1)
+</code></pre></div>
+<p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de
+obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella
+fuerza la política a integrar información visual y geométrica antes de tomar la decisión.
+Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando
+se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
+<hr />
+<h2 id="a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
+<p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
+los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, §10.2), para que la comparación sea válida:</p>
+<div class="highlight"><pre><span></span><code>K=5 semillas × 3 escenarios × 4 brazos = 60 corridas
+</code></pre></div>
+<p>Los escenarios propuestos para la evaluación del brazo <code>rl</code> son los mismos cinco de la
+tesis (§10.1):</p>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Tier</th>
+<th>Tipo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minisim_clear</code></td>
+<td>0</td>
+<td>Tránsito libre</td>
+</tr>
+<tr>
+<td><code>townsim_clear</code></td>
+<td>1</td>
+<td>Tránsito libre</td>
+</tr>
+<tr>
+<td><code>citysim_clear</code></td>
+<td>2</td>
+<td>Tránsito libre</td>
+</tr>
+<tr>
+<td><code>townsim_ini</code></td>
+<td>1</td>
+<td>Obstrucción densa (corredor arbolado)</td>
+</tr>
+<tr>
+<td><code>citymap_pilot</code></td>
+<td>2</td>
+<td>Obstrucción estructural (autopista elevada)</td>
+</tr>
+</tbody>
+</table>
+<p>Las métricas son las mismas que §10.3 (<code>success_rate</code>, <code>mission_time_s</code>, <code>collision_rate</code>,
+<code>waypoints_reached</code>, <code>deliberative_rate</code>) más dos métricas específicas del brazo <code>rl</code>:</p>
+<ul>
+<li><code>policy_latency_ms</code>: tiempo de inferencia de la política neuronal (objetivo &lt; 5 ms en
+  CPU, &lt; 1 ms en GPU dedicada).</li>
+<li><code>training_steps_to_convergence</code>: número de pasos PPO hasta superar el criterio de éxito
+  mínimo de R1 (tasa de llegada &gt; 50 % en <code>minisim_clear</code>).</li>
+</ul>
+<p>La tabla de comparación propuesta para el capítulo 11 sería:</p>
+<table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th><code>reactive</code></th>
+<th><code>fsm</code></th>
+<th><code>slm</code></th>
+<th><code>rl</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tasa de éxito — tránsito libre</td>
+<td>ref</td>
+<td>ref</td>
+<td>ref</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Tasa de éxito — obstrucción densa</td>
+<td>ref</td>
+<td>ref</td>
+<td>ref</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Ratio tiempo vs. <code>reactive</code></td>
+<td>1.0×</td>
+<td>?</td>
+<td>1.06–2.20×</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Latencia de decisión</td>
+<td>~0.1 ms</td>
+<td>~0.2 ms</td>
+<td>850–1400 ms</td>
+<td>&lt; 5 ms (estimado)</td>
+</tr>
+<tr>
+<td>Consumo adicional de VRAM</td>
+<td>—</td>
+<td>—</td>
+<td>~2 GB</td>
+<td>&lt; 50 MB (CNN pequeña)</td>
+</tr>
+</tbody>
+</table>
+<p>La hipótesis de trabajo es que el brazo <code>rl</code> superará al brazo <code>reactive</code> en escenarios de
+obstrucción densa (<code>townsim_ini</code>) donde el flujo óptico colapsa — porque la política
+neuronal puede aprender a actuar con observación visual directa, sin depender de la
+divergencia del flujo — y competirá con <code>fsm</code> en tránsito libre, donde la política debería
+aprender a elegir <code>MANTENER_RUMBO</code> de forma casi perfecta. Su comparación más relevante
+para la tesis es contra el brazo <code>slm</code>: ambos usan visión directa, pero <code>slm</code> es una
+inferencia de VLM pre-entrenado de propósito general mientras que <code>rl</code> es una política
+especializada en el espacio de maniobras de este sistema.</p>
+<hr />
+<h2 id="a87-dependencias-y-prerrequisitos">A8.7 Dependencias y prerrequisitos<a class="headerlink" href="#a87-dependencias-y-prerrequisitos" title="Permanent link">&para;</a></h2>
+<p>La implementación del brazo <code>rl</code> tiene las siguientes dependencias sobre el trabajo ya
+realizado:</p>
+<ul>
+<li><strong>S6 completado</strong> (PLAN-SLAM): la corrida comparativa <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
+  debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
+  tenga una línea base válida.</li>
+<li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=slam_assess</code>: la política RL se entrenará
+  en el mismo entorno de simulación en el que se midió el <code>slm</code>; si ese entorno cambia
+  durante el entrenamiento, los resultados no son comparables.</li>
+</ul>
+<p>Las dependencias de software son mínimas (sobre el entorno conda <code>airsimenv</code> existente):</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>stable-baselines3<span class="o">[</span>extra<span class="o">]</span><span class="w">   </span><span class="c1"># PPO, SAC, DQN + tensorboard</span>
+pip<span class="w"> </span>install<span class="w"> </span>gymnasium<span class="w">                  </span><span class="c1"># gym API moderna (reemplaza gym)</span>
+pip<span class="w"> </span>install<span class="w"> </span>sb3-contrib<span class="w">                </span><span class="c1"># TQC, RecurrentPPO si se necesitan</span>
+</code></pre></div>
+<p>El entrenamiento puede ejecutarse en la misma máquina de desarrollo (RTX 5060, 8 GB VRAM),
+ya que el brazo <code>rl</code> no requiere inferencia de VLM durante el entrenamiento. El presupuesto
+estimado de VRAM para PPO con la arquitectura CNN propuesta (§A8.5) es &lt; 2 GB, compatible
+con AirSim corriendo en paralelo.</p>
+<hr />
+<p><em>Las referencias citadas en este anexo corresponden a las entradas del §13 del presente
+informe. La evaluación cuantitativa del brazo <code>rl</code> y su comparación con los tres brazos
+implementados forma parte del trabajo futuro descrito en §12.4.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

@@ -576,6 +576,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#610b-segundo-canal-perceptual-depth-anything-v2-metric-v4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.10b Segundo canal perceptual: Depth Anything V2 Metric (V4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#611-consultas-de-nivel-superior-has_open_corridor-y-sector_towards_waypoint" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -609,10 +620,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#614-complementariedad-entre-percepcion-clasica-y-vlm" class="md-nav__link">
+  <a href="#614-complementariedad-entre-los-tres-canales-de-percepcion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6.14 Complementariedad entre percepción clásica y VLM
+        6.14 Complementariedad entre los tres canales de percepción
       
     </span>
   </a>
@@ -1066,6 +1077,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A9-USO-IA-GENERATIVA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Uso de IA Generativa en esta Tesis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1210,6 +1277,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#610b-segundo-canal-perceptual-depth-anything-v2-metric-v4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.10b Segundo canal perceptual: Depth Anything V2 Metric (V4)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#611-consultas-de-nivel-superior-has_open_corridor-y-sector_towards_waypoint" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1243,10 +1321,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#614-complementariedad-entre-percepcion-clasica-y-vlm" class="md-nav__link">
+  <a href="#614-complementariedad-entre-los-tres-canales-de-percepcion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6.14 Complementariedad entre percepción clásica y VLM
+        6.14 Complementariedad entre los tres canales de percepción
       
     </span>
   </a>
@@ -1390,7 +1468,11 @@
 </tr>
 <tr>
 <td><code>summary_text()</code></td>
-<td>Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s)"</td>
+<td>Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s, fuente: flujo óptico + profundidad monocular)"</td>
+</tr>
+<tr>
+<td><code>merge_depth_estimate(depth_m, cmd_vx)</code></td>
+<td>Inyecta una estimación de profundidad monocular en el sector centro: las tres celdas quedan con <code>occupancy</code> sobre el umbral de bloqueo, <code>ttc_s = depth_m / cmd_vx</code> y <code>source = "flow+depth"</code> (V4/A1)</td>
 </tr>
 <tr>
 <td><code>to_dict()</code></td>
@@ -1398,7 +1480,19 @@
 </tr>
 </tbody>
 </table>
-<p>El diseño como objeto inmutable (<code>@dataclass(frozen=True)</code>) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. Esta propiedad simplifica el razonamiento sobre el ciclo de control, donde el mismo <code>ObstacleField</code> es leído por hasta tres consumidores (router, nodo de política, logger) en el mismo ciclo.</p>
+<p>El campo <code>source</code> del <code>ObstacleField</code> indica el origen de la evidencia: <code>"flow"</code> (solo flujo óptico), <code>"flow+depth"</code> (flujo + Depth Anything V2 Metric), <code>"degraded"</code> (ciclo con rotación alta o sin flujo), <code>"holdover"</code> (campo del ciclo anterior por degradación temporal), <code>"none"</code> (sin datos). Este campo es visible en <code>summary_text()</code> y llega al SLM en el prompt, permitiéndole calibrar su confianza según las fuentes que confirmaron el obstáculo (B1).</p>
+<p>El diseño como objeto inmutable (<code>@dataclass(frozen=True)</code>) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. La excepción es <code>merge_depth_estimate()</code>, que retorna un <strong>nuevo</strong> <code>ObstacleField</code> con el sector centro modificado — el campo original no se altera.</p>
+<h2 id="610b-segundo-canal-perceptual-depth-anything-v2-metric-v4">6.10b Segundo canal perceptual: Depth Anything V2 Metric (V4)<a class="headerlink" href="#610b-segundo-canal-perceptual-depth-anything-v2-metric-v4" title="Permanent link">&para;</a></h2>
+<p>El estimador de flujo óptico tiene un punto ciego estructural ante obstáculos centrados en la trayectoria (cerca del FOE): la divergencia traslacional de esos píxeles es mínima precisamente porque están en el eje de aproximación. Para cubrir ese punto ciego, el sistema incorpora un segundo canal de profundidad <strong>completamente independiente del sensor de profundidad del simulador</strong>: un estimador de profundidad monocular basado en el modelo <strong>Depth Anything V2 Metric</strong> (<code>src/perception/depth_estimator.py</code>).</p>
+<p><strong>Principio.</strong> La entrada es únicamente el frame RGB del ciclo actual — el mismo frame que ya captura <code>capture_node</code>, sin ninguna llamada adicional a AirSim. El modelo de red neuronal infiere un mapa de profundidad métrico (en metros) del frame. Esta distinción arquitectural es crucial: no es el canal <code>DepthPlanar</code> de AirSim (ground truth del simulador, disponible solo en simulación), sino un estimado inferido de una imagen monocular, idéntico a lo que haría un sistema real con un drone sin LiDAR.</p>
+<p><strong>Hilo background.</strong> <code>DepthEstimator</code> corre en un hilo daemon independiente para no bloquear el lazo de control a 5 Hz. <code>perception_node</code> llama a <code>depth_estimator.request(frame)</code> (no bloqueante) y <code>depth_estimator.poll()</code> para obtener el resultado más reciente y su edad en ms. Si el resultado tiene más de <code>DEPTH_MAX_AGE_MS = 3000 ms</code>, se descarta.</p>
+<p><strong>Trigger condicional.</strong> La inferencia solo se solicita cuando: (a) el drone avanza (<code>cmd_vx &gt;= 0.30 m/s</code>), (b) el flujo óptico reporta corredor libre (<code>blocked_fraction &lt; 0.25</code>), y (c) la ruta del ciclo anterior no es <code>"evasive"</code> (no relanzar inferencia durante maniobras activas). La condición (b) es la más importante: cuando el flujo óptico ve obstáculos (<code>blocked_fraction &gt; 0.25</code>), ya tiene control; Depth Anything V2 solo se activa en el caso específico donde el flujo dice "libre" pero el drone no avanza.</p>
+<p><strong>Guarda V4b — anti-falso-positivo.</strong> El mapa de profundidad de Depth Anything V2 sobre renders sintéticos de Unreal Engine puede generar falsos positivos aislados (el modelo fue entrenado sobre imágenes del mundo real y el dominio simulado introduce artefactos). Para filtrarlos, la señal solo se inyecta en el <code>ObstacleField</code> cuando <code>depth_m &lt; DEPTH_BRAKE_M = 5.0 m</code> durante ≥ <code>DEPTH_BELOW_THRESHOLD = 2</code> ciclos consecutivos (<code>_depth_below_cycles</code>). Un solo frame con profundidad baja no activa la señal.</p>
+<p><strong>Clasificación por textura (E2).</strong> <code>DepthEstimator.poll()</code> retorna también un tipo de obstáculo estimado por análisis del mapa de profundidad del sector frontal:
+- <code>"follaje"</code>: CV (std/mean) &gt; 0.55 <strong>o</strong> fracción de píxeles con profundidad &gt; 3× el percentil-5 &gt; 0.30. El follaje tiene huecos que ven objetos lejanos; el CV es alto.
+- <code>"superficie plana"</code>: CV &lt; 0.55 y low far_fraction. La pared produce un mapa de profundidad uniforme.</p>
+<p>Esta clasificación se añade al <code>scene_summary</code> como pista táctica para el SLM (<code>"follaje: evasión diagonal o +1 m"</code> vs. <code>"superficie plana: evasión lateral amplia"</code>), mejorando la especificidad de la decisión sin modificar el routing.</p>
+<p><strong>Integración con el <code>ObstacleField</code> (A1).</strong> Cuando la señal V4 está activa, la profundidad no crea un path de routing separado: se inyecta vía <code>merge_depth_estimate()</code> en el campo existente. El resultado es que el router, el SLM y todos los consumidores downstream ven un único <code>ObstacleField</code> coherente con <code>source = "flow+depth"</code>. No hay condiciones <code>if depth_available</code> dispersas en el código de navegación.</p>
 <h2 id="611-consultas-de-nivel-superior-has_open_corridor-y-sector_towards_waypoint">6.11 Consultas de nivel superior: <code>has_open_corridor</code> y <code>sector_towards_waypoint</code><a class="headerlink" href="#611-consultas-de-nivel-superior-has_open_corridor-y-sector_towards_waypoint" title="Permanent link">&para;</a></h2>
 <p>Dos funciones de módulo sirven como interfaz de alto nivel compartida entre el router de política, el nodo deliberativo y la FSM:</p>
 <p><strong><code>sector_towards_waypoint(bearing_err_deg)</code></strong> mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
@@ -1493,11 +1587,12 @@
 </tr>
 </tbody>
 </table>
-<h2 id="614-complementariedad-entre-percepcion-clasica-y-vlm">6.14 Complementariedad entre percepción clásica y VLM<a class="headerlink" href="#614-complementariedad-entre-percepcion-clasica-y-vlm" title="Permanent link">&para;</a></h2>
-<p>El diseño del sistema asume explícitamente que ninguno de los dos componentes es completo por sí solo:</p>
-<p><strong>El estimador de flujo es fuerte cuando</strong> el dron se traslada a velocidad moderada (&gt; 0.5 m/s), la textura de la escena es suficiente, y la iluminación es razonablemente estable. En esas condiciones produce <code>ObstacleField</code> con <code>foe_confidence &gt; 0.35</code> y bloqueos confiables que el router resuelve en &lt; 5 ms sin consultar el VLM.</p>
-<p><strong>El VLM es fuerte cuando</strong> la percepción clásica falla: hover, giro puro, atasco donde el dron está parado y el flujo colapsó, o cuando se necesita contexto semántico (distinguir una calle libre de una fachada con ventanas, o un árbol de un edificio). El VLM recibe el fotograma directamente y puede razonar sobre la escena a pesar de la falta de movimiento, aunque con latencia de 200 ms a varios segundos.</p>
-<p><strong>La interfaz entre ambas capas</strong> es el campo <code>scene_summary</code> del <code>ObstacleField</code> y el motivo de consulta explícito del prompt (§4.3): cuando la percepción clásica tiene evidencia, el VLM la recibe como contexto cuantitativo ("CENTRO: BLOQUEADO, TTC=3.2s"); cuando no la tiene, el prompt lo dice explícitamente ("la percepción NO tiene evidencia suficiente en este ciclo, probablemente por falta de traslación"). Esta transparencia sobre la fuente y la calidad de la evidencia es el mecanismo que permite al modelo de lenguaje calibrar su propia respuesta según el nivel de confianza del canal perceptual.</p>
+<h2 id="614-complementariedad-entre-los-tres-canales-de-percepcion">6.14 Complementariedad entre los tres canales de percepción<a class="headerlink" href="#614-complementariedad-entre-los-tres-canales-de-percepcion" title="Permanent link">&para;</a></h2>
+<p>El diseño del sistema asume explícitamente que ningún canal de percepción es completo por sí solo. La arquitectura emplea tres capas con dominios de confiabilidad complementarios:</p>
+<p><strong>Flujo óptico (canal primario)</strong> es fuerte cuando el dron se traslada a velocidad moderada (&gt; 0.5 m/s), la textura es suficiente y la iluminación es estable. Produce <code>ObstacleField</code> con <code>foe_confidence &gt; 0.35</code> y bloqueos confiables en &lt; 5 ms sin consultar el VLM ni el estimador de profundidad.</p>
+<p><strong>Depth Anything V2 Metric (canal secundario, V4)</strong> actúa en el punto ciego estructural del flujo óptico: obstáculos centrados en la trayectoria (cerca del FOE) que generan divergencia nula o muy baja. Solo se activa cuando el flujo dice "libre" pero el drone no avanza — exactamente el escenario donde el flujo óptico más falla. Agrega información de profundidad sin costo de sensor adicional (entrada solo RGB). Sus limitaciones: latencia de inferencia (↑ algunas decenas de ms, cubierta por el hilo background), posibles falsos positivos en renders sintéticos (mitigados por la guarda V4b de N ciclos consecutivos), y dependencia de la distribución del modelo preentrenado.</p>
+<p><strong>VLM (capa deliberativa)</strong> cubre los casos donde ambos canales geométricos fallan: hover puro, giro puro, atasco crónico donde el flujo y la profundidad han colapsado, o cuando se necesita razonamiento semántico global (distinguir una calle libre de una fachada con ventanas, elegir el corredor en una intersección). Recibe el fotograma directamente junto con el resumen del <code>ObstacleField</code> (que puede llevar <code>source = "flow+depth"</code> si el canal V4 aportó evidencia) y la historia de trayectoria acumulada.</p>
+<p><strong>La interfaz entre capas</strong> es el <code>scene_summary</code> del <code>ObstacleField</code> y el motivo de consulta del prompt: cuando hay evidencia geométrica, el VLM la recibe como contexto cuantitativo con su fuente indicada (<code>"CENTRO: BLOQUEADO, TTC=3.2s, fuente: flujo óptico + profundidad monocular"</code>); cuando no la hay, el prompt lo dice explícitamente. Esta transparencia sobre fuente y calidad de la evidencia es el mecanismo que permite al modelo calibrar su respuesta según el nivel de confianza del canal perceptual.</p>
 <hr />
 <p><em>Las referencias bibliográficas citadas en este capítulo corresponden a las entradas del §13 del presente informe. La evaluación cuantitativa del estimador (curvas ROC, AUC, comparación con profundidad de referencia) se desarrolla en el capítulo 7. El análisis de los modos de falla de la percepción y su impacto en el comportamiento del lazo se presenta en el capítulo 9.</em></p>
 

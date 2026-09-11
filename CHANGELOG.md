@@ -1,3 +1,190 @@
+# 2026-09-11 (sesión 6) — Override 3: MANTENER_RUMBO rechazado por progreso frontal marginal
+
+## Contexto
+
+Análisis de la corrida `prueba_reingenieria / citysim_pilot / slm / slam_assess / seed_1`
+(82 s, 308 ciclos). El drone quedó atrapado bajo una autopista elevada a ~6.27 m de altitud
+sin intentar ninguna acción lateral ni vertical. Causa raíz: el SLM recibía el aviso de
+progreso marginal de `spatial_history` pero lo ignoraba, respondiendo MANTENER_RUMBO repetidamente.
+
+**Datos clave del run**:
+- 0 acciones GANAR_ALTURA / PERDER_ALTURA en 308 ciclos
+- IZQUIERDA y DERECHA: 0 intentos (laterales nunca exploradas)
+- FRENTE: avg_prog = 0.056 m/ciclo (< MARGINAL_PROGRESS_M = 0.28 m)
+- SLM prompt incluía aviso spatial_history pero respondía MANTENER_RUMBO (prompt info insuficiente)
+
+---
+
+## Override 3 — MANTENER_RUMBO rechazado con progreso frontal marginal (`deep_scan.py`)
+
+**Síntoma**: `_apply_trajectory_overrides()` solo cubría casos de stall_rate alto (≥ 70 %,
+Overrides 1a/1b/1c → RETROCEDER) y escape vertical prematuro (Override 2 → lateral-first).
+Cuando stall_rate era bajo pero avg_prog < MARGINAL_PROGRESS_M, el VLM podía responder
+MANTENER_RUMBO sin override, reforzando el bloqueo físico ciclo a ciclo.
+
+**Causa raíz**: `zone_stats()` en `spatial_history.py` no devolvía `delta_sum` / `avg_prog`,
+por lo que `_apply_trajectory_overrides` no tenía acceso al progreso neto por zona.
+
+**Fix**:
+
+1. **`spatial_history.py` — `zone_stats()`**: añadidos `delta_sum` y `avg_prog` al dict de
+   cada zona (`avg_prog = -delta_sum / attempts`, mismo criterio que `trajectory_context_text`).
+
+2. **`deep_scan.py` — `_apply_trajectory_overrides()`**: nuevo Override 3 (antes de Override 2)
+   con dos sub-ramas según la _firma_ del obstáculo invisible:
+
+   **Sub-rama 3a — techo** (`stall_rate < SLAM_CEILING_STALL_MAX=0.10` + laterales sin explorar):
+   - El drone roza/se arrastra por la estructura horizontal sin choques frontales (stall bajo).
+   - Acción: `PERDER_ALTURA` — bajar libera el contacto con el techo sin requerir rotación.
+   - Ejemplos: autopista elevada citysim (stall=0.0%, alt≈6.04m), estructura townsim (stall=0.067%, alt≈9.76m).
+
+   **Sub-rama 3b — muro/árbol** (`stall_rate >= 0.10` o laterales ya intentadas):
+   - Choque frontal real (stall > 10%) o laterales disponibles a explorar primero.
+   - Acción: EVADIR_IZQUIERDA → EVADIR_DERECHA → GIRAR_90 (progresivo).
+   - Ejemplo: edificio townsim (stall=40% en run sesión 3).
+
+**Umbral discriminador validado**:
+| Escenario | frente_stall_rate | Override 3 |
+|---|---|---|
+| citysim autopista (c449) | 0.000 | 3a → PERDER_ALTURA ✓ |
+| townsim estructura final (c1121) | 0.067 | 3a → PERDER_ALTURA ✓ |
+| townsim edificio (sesión 3, 2000c) | 0.40 | 3b → EVADIR lateral ✓ |
+
+Las 181 pruebas unitarias siguen pasando.
+
+---
+
+# 2026-09-11 (sesión 6) — Nuevo Anexo 9 + referencia Kaufmann 2023
+
+- **Nuevo `informe/anexos/A9-USO-IA-GENERATIVA.md`**: Anexo metodológico que documenta el uso de IA generativa (Claude Code) en el desarrollo de la tesis. Cubre: posición reflexiva sobre la simetría IA-objeto-de-estudio / IA-herramienta (A9.1), descripción de modalidades de uso y contribución cuantitativa estimada (A9.2), casos concretos de alto impacto (Bug-1, corrección policy_router, actualización masiva del informe), mejores prácticas observadas (A9.3), limitaciones y riesgos (A9.4), y recomendaciones para investigadores en situación análoga (A9.5–A9.6).
+- **`informe/13-REFERENCIAS.md`**: Nueva entrada `ref-kaufmann-2023` — Kaufmann et al. (2023), *Champion-level drone racing using deep reinforcement learning*, Nature 620.
+- **`informe/anexos/A8-NAVEGACION-RL.md` §A8.5**: Expandida la justificación de PPO con el párrafo "Advertencia sobre generalización" (Swift/ETH optimizado para circuito fijo, overfitting estructural al entrenamiento) y tres mitigaciones de diseño del brazo `rl`. Referencias Kaufmann actualizadas al anchor `#ref-kaufmann-2023`.
+
+---
+
+# 2026-09-11 (sesión 5) — Nuevo Anexo 8 + referencia en §12.4
+
+- **Nuevo `informe/anexos/A8-NAVEGACION-RL.md`**: Anexo de trabajo futuro que documenta el diseño del cuarto brazo experimental `rl` basado en aprendizaje por refuerzo visual. Cubre: posición en la jerarquía VLM → RL → PX4, espacio de observación mixto `{rgb, ttc_field, nav}`, espacio de acciones discretas (6 macro-acciones), función de recompensa con currículo, justificación de PPO sobre SAC/DQN, arquitectura CNN+FC, protocolo de evaluación comparativa 4 brazos, y prerrequisitos.
+- **`informe/12-CONCLUSIONES.md` §12.4**: Nuevo bullet "Política de navegación por RL" con referencia a [Anexo 8](anexos/A8-NAVEGACION-RL.md), hipótesis central (superar `reactive` en obstrucción densa, latencia < 5 ms vs. 850–1400 ms del `slm`), y prerequisito (S6 del PLAN-SLAM).
+
+---
+
+# 2026-09-11 (sesión 4) — Actualización del informe (caps. 05, 06, 08, 12)
+
+Todos los cambios de sesiones 2 y 3 reflejados en el informe:
+
+- **Cap 05 §5.3** `policy_router`: prioridades reescritas (11 pasos en vez de 7); agregados imu_contact/blind_wall (prioridad 2), stuck_invisible (prioridad 4), V4c suelo óptico (prioridad 5), reubicada persistencia de maniobra (prioridad 6), agregado TRAJ_STALL Bug-1 (prioridad 8).
+- **Cap 05 §5.2** DroneState: tablas de señales V3/V3b/V3c + stuck_invisible, estadísticas de trayectoria (`_traj_frente_*`), campos V4.
+- **Cap 05 §5.6** perception_node: documentadas las 5 señales adicionales (V3 jitter, V3b blind_wall, V3c stopped_cycles, stuck_invisible, V4 depth, G1 stall/optical).
+- **Cap 05 §5.8** evasive_node: C1 — selección lateral con memoria de stalls.
+- **Cap 05 §5.9** girar_90_node: D1 — dirección de giro con historia de zonas.
+- **Cap 05 §5.10** deliberative: guarda de exclusividad mutua slam_assess/regular; V2 proactivo eliminado.
+- **Cap 05 §5.12** deep_scan: slam_assess como modo por defecto; nueva §5.12.1 FlightTrajectory/trajectory_context_text.
+- **Cap 06 §6.10b** nueva sección: Depth Anything V2 Metric (V4) — principio, hilo background, trigger, guarda V4b, E2 clasificación, integración A1.
+- **Cap 06 §6.10** ObstacleField API: merge_depth_estimate, campo source (B1).
+- **Cap 06 §6.14** renombrado "tres canales": flujo óptico + V4 depth + VLM.
+- **Cap 08 §8.3**: corregidas macro-acciones (MANTENER_RUMBO/EVADIR_*/etc.); schema JSON corregido; añadida poda del enum por motivo de consulta.
+- **Cap 08 §8.5**: Componente 2 actualizado con avisos E2 y G1 en scene_summary.
+- **Cap 12 §12.3**: limitación sensor monocular actualizada (V4 parcialmente mitiga, límite estructural persiste).
+
+---
+
+# 2026-09-11 (sesión 3) — Diagnóstico de vuelo + correcciones post-corrida
+
+## Contexto
+
+Análisis de la corrida `prueba_reingenieria / townsim_ini / slm / slam_assess / seed_1`
+(180 s → 551 s). Se identificaron tres bugs y un gap de comunicación SLM que impedían al
+drone superar obstáculos invisibles al flujo óptico (muro de edificio, "pata" de malla
+convexa de estructura). Resumen de métricas antes/después de los fixes:
+
+| Métrica | Corrida 1 (180 s) | Corrida 2 (551 s, con Bug-1 fix) |
+|---|---|---|
+| Ciclos | 584 | 2000 |
+| WP alcanzado | 1 | 2 |
+| Ruta deliberativa | 28 % | 58 % |
+| frente_stall_rate activo | 0 ciclos | 671 ciclos (Bug-1 operativo) |
+
+---
+
+## Bug-1 — `_traj_frente_stall_rate` no declarado en `DroneState` (`graph.py`)
+
+**Síntoma**: `policy_router` usa `state.get("_traj_frente_stall_rate", 0.0)` para decidir
+si escalar a `slam_assess` via TRAJ_STALL. En los 584 ciclos de la corrida 1, el campo
+era `None` en cada registro JSONL — el router veía siempre 0.0 y el path TRAJ_STALL
+nunca se activó.
+
+**Causa raíz**: LangGraph construye los canales del grafo a partir del esquema `DroneState`
+y descarta en silencio cualquier clave no declarada. En la sesión 2 se añadieron
+`_traj_izq/der_stall_rate` y `_traj_izq/der_attempts` para C1, pero se omitieron los
+equivalentes de FRENTE aunque `capture_node` los escribe y `policy_router` los lee.
+
+**Fix**: añadidos `_traj_frente_stall_rate: float` y `_traj_frente_attempts: int` al
+TypedDict `DroneState` con comentario explicativo del motivo (mismo bloque C1 ya existente).
+
+**Impacto observado**: corrida 2 muestra `frente_stall ≥ 60%` en 671 ciclos; ruta
+deliberativa sube de 28 % a 58 %; drone avanza de WP 1 a WP 2 en 551 s.
+
+---
+
+## G1 — Detección de muro invisible por contraste campo/stall (`graph.py`, `perception_node`)
+
+**Motivación**: en el episodio final de la corrida 2 el drone quedó atascado contra la
+"pata" de una estructura (malla convexa). La superficie lisa no genera flujo óptico
+(`occ = 0.0`, `foe_confidence ≈ 0.08`) pero la tasa de stall frontal era 33–40 %
+(`traj_frente_stall_rate = 0.33–0.40`). Las señales V3/V3b/V3c no dispararon:
+
+- `imu_contact_event`: 0 activaciones — AirSim no genera jitter IMU al contacto con
+  collision mesh estática.
+- `blind_wall_event`: activa en episodios tempranos (c239–c1366, 56 veces) pero NO en
+  el episodio final porque los ciclos de ESCANEO (`cmd_vx = 0`) reseteaban el contador
+  antes de acumular los 2 ciclos requeridos.
+- `stopped_cycles`: llega a 10–11 pero se resetea porque `slm_active = True` en modo
+  deliberativo frecuente (umbral: 15).
+
+**Fix**: al final de `perception_node`, cuando `frente_stall_rate ≥ 20 %` Y
+`frente_attempts ≥ 3` Y `blocked_fraction < 15 %`, se añade a `scene_summary`:
+```
+AVISO [G1]: stall frontal 33% (30 intentos) con campo optico despejado
+— posible obstaculo invisible (muro liso, baja textura).
+MANTENER_RUMBO agravara el bloqueo. Priorizar GIRAR_90 o evasion lateral amplia.
+```
+Configurable: `G1_STALL_MIN=0.20`, `G1_ATT_MIN=3`, `G1_OCC_MAX=0.15`.
+
+El `scene_summary` llega al SLM via todos los paths deliberativos (regular y slam_assess).
+
+---
+
+## spatial_history — Warning de progreso neto nulo (`spatial_history.py`, `trajectory_context_text`)
+
+**Motivación**: el prompt SLM del ciclo de bloqueo mostraba:
+```
+FRENTE (30 intentos / 10 stalls, 20 con progreso). Avance promedio -0.00m/ciclo.
+```
+El SLM interpretaba "20 con progreso" como 66 % de ciclos con avance y respondía
+`MANTENER_RUMBO: "Frente libre y rumbo al waypoint despejados."` El avance promedio
+`-0.00m/ciclo` (floating-point) podía leerse como movimiento neto negativo en vez de cero.
+
+**Causa raíz**: la condición para el warning de obstáculo invisible tenía `stalls == 0`
+como requisito. El escenario de "muro liso" genera algunos stalls (retrocesos físicos)
+además de ciclos con Δ ≈ 0, por lo que la condición nunca disparaba.
+
+**Fix** (dos cambios en `trajectory_context_text`):
+1. Condición `stalls == 0 AND avg_prog < MARGINAL` → `avg_prog < MARGINAL` (aplica con
+   o sin stalls). Cuando hay stalls, el warning dice explícitamente "progreso neto nulo
+   pese a intentos — probable obstáculo invisible (muro liso, malla convexa)".
+2. `avg_prog_display = max(0.0, avg_prog)` para evitar el artefacto `-0.00` en el texto.
+
+Con ambos fixes, el prompt del SLM en el mismo ciclo diría:
+```
+FRENTE (30 intentos / 10 stalls, 20 con progreso). ADVERTENCIA: avance promedio
+0.00m/ciclo < 0.28m con 10 stalls — progreso neto nulo pese a intentos. Probable
+obstaculo invisible (muro liso, malla convexa). MANTENER_RUMBO agrava el bloqueo.
+Priorizar GIRAR_90 o evasion lateral.
+```
+
+---
+
 # 2026-09-11 (sesión 2) — Zona 1: simplificación del grafo + Zona 2: sub-ingeniería
 
 ## Zona 1 — Simplificaciones del grafo de control

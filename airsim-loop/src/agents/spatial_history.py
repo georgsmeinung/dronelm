@@ -118,20 +118,34 @@ class FlightTrajectory:
             avg_prog = -data["delta_sum"] / attempts  # negativo delta = avance → positivo aquí
 
             note = ""
+            avg_prog_display = max(0.0, avg_prog)  # evitar -0.00 por floating point
             if stalls >= attempts * 0.7:
                 note = " Zona probable de bloqueo."
-            elif stalls == 0 and attempts >= 3 and avg_prog < _MARGINAL_PROGRESS_M:
-                # Sin retroceso pero con avance marginal: firma típica de árbol/malla invisible.
-                note = (
-                    f" ADVERTENCIA: sin stalls registrados pero avance promedio"
-                    f" {avg_prog:.2f}m/ciclo < {_MARGINAL_PROGRESS_M:.2f}m"
-                    f" — posible colisión con obstáculo invisible al flujo óptico."
-                    " MANTENER_RUMBO en FRENTE refuerza este bloqueo."
-                )
+            elif attempts >= 3 and avg_prog < _MARGINAL_PROGRESS_M:
+                # Avance marginal con o sin stalls: firma de obstaculo invisible o
+                # malla convexa (arbol, pata de edificio, muro de baja textura).
+                # Antes: solo se activaba con stalls==0. Ahora cubre el caso mixto
+                # (algunos stalls + avance neto cero) que engana al SLM con
+                # "N ciclos con progreso" pero sin desplazamiento real.
+                if stalls == 0:
+                    note = (
+                        f" ADVERTENCIA: sin stalls pero avance promedio"
+                        f" {avg_prog_display:.2f}m/ciclo < {_MARGINAL_PROGRESS_M:.2f}m"
+                        f" — posible obstaculo invisible al flujo optico."
+                        " MANTENER_RUMBO refuerza el bloqueo. Priorizar GIRAR_90 o evasion."
+                    )
+                else:
+                    note = (
+                        f" ADVERTENCIA: avance promedio {avg_prog_display:.2f}m/ciclo"
+                        f" < {_MARGINAL_PROGRESS_M:.2f}m con {stalls} stalls"
+                        f" — progreso neto nulo pese a intentos."
+                        f" Probable obstaculo invisible (muro liso, malla convexa)."
+                        " MANTENER_RUMBO agrava el bloqueo. Priorizar GIRAR_90 o evasion lateral."
+                    )
             elif stalls == 0:
-                note = f" Sin stalls registrados (avance promedio {avg_prog:.2f}m/ciclo)."
+                note = f" Sin stalls registrados (avance promedio {avg_prog_display:.2f}m/ciclo)."
             else:
-                note = f" Avance promedio {avg_prog:.2f}m/ciclo."
+                note = f" Avance promedio {avg_prog_display:.2f}m/ciclo."
 
             # S3b: incluir clase de obstáculo si hay anotaciones
             obs_notes = ""
@@ -139,7 +153,7 @@ class FlightTrajectory:
                 top = max(data["classes"], key=lambda x: x[1])
                 obs_notes = f" Obstáculo identificado: {top[0]} (conf={top[1]:.2f})."
             lines.append(
-                f"- {zone} ({attempts} intentos → {stalls} stalls, {progress} con progreso).{note}{obs_notes}"
+                f"- {zone} ({attempts} intentos / {stalls} stalls, {progress} con progreso).{note}{obs_notes}"
             )
 
         direction = "retroceso" if total_delta > 0 else "avance"
@@ -162,10 +176,10 @@ class FlightTrajectory:
         cap = max_events if max_events > 0 else SLAM_CONTEXT_MAX_EVENTS
         events = events[-cap:] if len(events) > cap else events
         raw: dict = {
-            "FRENTE":    {"attempts": 0, "stalls": 0},
-            "IZQUIERDA": {"attempts": 0, "stalls": 0},
-            "DERECHA":   {"attempts": 0, "stalls": 0},
-            "ATRÁS":     {"attempts": 0, "stalls": 0},
+            "FRENTE":    {"attempts": 0, "stalls": 0, "delta_sum": 0.0},
+            "IZQUIERDA": {"attempts": 0, "stalls": 0, "delta_sum": 0.0},
+            "DERECHA":   {"attempts": 0, "stalls": 0, "delta_sum": 0.0},
+            "ATRÁS":     {"attempts": 0, "stalls": 0, "delta_sum": 0.0},
         }
         for ev in events:
             rel = ((ev.heading_deg - current_heading_deg) + 180.0) % 360.0 - 180.0
@@ -178,15 +192,21 @@ class FlightTrajectory:
             else:
                 zone = "ATRÁS"
             raw[zone]["attempts"] += 1
+            raw[zone]["delta_sum"] += ev.delta_wp_m
             if ev.stall:
                 raw[zone]["stalls"] += 1
-        return {
-            z: {
-                "attempts": d["attempts"],
-                "stall_rate": d["stalls"] / d["attempts"] if d["attempts"] > 0 else 0.0,
+        result = {}
+        for z, d in raw.items():
+            att = d["attempts"]
+            # avg_prog: positivo = avance hacia waypoint (mismo criterio que trajectory_context_text)
+            avg_prog = -d["delta_sum"] / att if att > 0 else 0.0
+            result[z] = {
+                "attempts": att,
+                "stall_rate": d["stalls"] / att if att > 0 else 0.0,
+                "delta_sum": d["delta_sum"],
+                "avg_prog": avg_prog,
             }
-            for z, d in raw.items()
-        }
+        return result
 
     def frente_stall_rate(
         self,

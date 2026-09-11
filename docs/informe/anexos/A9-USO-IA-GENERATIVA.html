@@ -1,0 +1,1646 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A9-USO-IA-GENERATIVA.html">
+      
+      
+        <link rel="prev" href="A8-NAVEGACION-RL.html">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A9. Uso de IA Generativa en esta Tesis - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-9-uso-de-inteligencia-artificial-generativa-en-el-desarrollo-de-esta-tesis" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A9. Uso de IA Generativa en esta Tesis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A7-MALDICION-MONOCULAR-ESTEREO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Uso de IA Generativa en esta Tesis
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A9-USO-IA-GENERATIVA.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Uso de IA Generativa en esta Tesis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a91-contexto-una-tesis-cuya-materia-prima-es-la-ia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.1 Contexto: una tesis cuya materia prima es la IA
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a92-descripcion-del-uso" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2 Descripción del uso
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.2 Descripción del uso">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a921-asistente-y-modalidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2.1 Asistente y modalidad
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a922-contribucion-cuantitativa-aproximada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2.2 Contribución cuantitativa aproximada
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a923-casos-concretos-de-alto-impacto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2.3 Casos concretos de alto impacto
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a93-mejores-practicas-observadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3 Mejores prácticas observadas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.3 Mejores prácticas observadas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a931-el-investigador-como-verificador-final-siempre" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.1 El investigador como verificador final, siempre
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a932-especificidad-del-contexto-como-palanca-principal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.2 Especificidad del contexto como palanca principal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a933-separar-las-fases-de-diseno-y-de-implementacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.3 Separar las fases de diseño y de implementación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a934-ciclos-cortos-de-verificacion-empirica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.4 Ciclos cortos de verificación empírica
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a935-gestion-del-contexto-de-conversacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.5 Gestión del contexto de conversación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a936-transparencia-sobre-la-contribucion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.6 Transparencia sobre la contribución
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a94-limitaciones-y-riesgos-observados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4 Limitaciones y riesgos observados
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.4 Limitaciones y riesgos observados">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a941-alucinacion-en-contexto-tecnico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4.1 Alucinación en contexto técnico
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a942-dependencia-que-reduce-la-comprension-profunda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4.2 Dependencia que reduce la comprensión profunda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a943-sesgo-hacia-soluciones-conocidas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4.3 Sesgo hacia soluciones conocidas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a95-recomendaciones-para-investigadores-en-situacion-analoga" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5 Recomendaciones para investigadores en situación análoga
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.6 Reflexión final: la IA agéntica como condición de posibilidad
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a91-contexto-una-tesis-cuya-materia-prima-es-la-ia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.1 Contexto: una tesis cuya materia prima es la IA
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a92-descripcion-del-uso" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2 Descripción del uso
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.2 Descripción del uso">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a921-asistente-y-modalidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2.1 Asistente y modalidad
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a922-contribucion-cuantitativa-aproximada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2.2 Contribución cuantitativa aproximada
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a923-casos-concretos-de-alto-impacto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2.3 Casos concretos de alto impacto
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a93-mejores-practicas-observadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3 Mejores prácticas observadas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.3 Mejores prácticas observadas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a931-el-investigador-como-verificador-final-siempre" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.1 El investigador como verificador final, siempre
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a932-especificidad-del-contexto-como-palanca-principal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.2 Especificidad del contexto como palanca principal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a933-separar-las-fases-de-diseno-y-de-implementacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.3 Separar las fases de diseño y de implementación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a934-ciclos-cortos-de-verificacion-empirica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.4 Ciclos cortos de verificación empírica
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a935-gestion-del-contexto-de-conversacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.5 Gestión del contexto de conversación
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a936-transparencia-sobre-la-contribucion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3.6 Transparencia sobre la contribución
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a94-limitaciones-y-riesgos-observados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4 Limitaciones y riesgos observados
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.4 Limitaciones y riesgos observados">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a941-alucinacion-en-contexto-tecnico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4.1 Alucinación en contexto técnico
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a942-dependencia-que-reduce-la-comprension-profunda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4.2 Dependencia que reduce la comprensión profunda
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a943-sesgo-hacia-soluciones-conocidas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4.3 Sesgo hacia soluciones conocidas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a95-recomendaciones-para-investigadores-en-situacion-analoga" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5 Recomendaciones para investigadores en situación análoga
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.6 Reflexión final: la IA agéntica como condición de posibilidad
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="anexo-9-uso-de-inteligencia-artificial-generativa-en-el-desarrollo-de-esta-tesis">Anexo 9: Uso de Inteligencia Artificial Generativa en el Desarrollo de esta Tesis<a class="headerlink" href="#anexo-9-uso-de-inteligencia-artificial-generativa-en-el-desarrollo-de-esta-tesis" title="Permanent link">&para;</a></h1>
+<p>Este anexo documenta el rol que la inteligencia artificial generativa —en particular los asistentes de código agénticos— desempeñó en el desarrollo de este trabajo, tanto en la prueba del sistema técnico como en la redacción del informe. Su propósito es triple: cumplir con el deber de transparencia académica sobre las herramientas utilizadas; registrar las prácticas que resultaron efectivas en este contexto específico; y ofrecer recomendaciones concretas para investigadores que enfrenten proyectos de complejidad similar en los que la IA agéntica ya no es un lujo opcional sino, como se argumenta aquí, una condición necesaria para que el trabajo sea realizable dentro del horizonte temporal de una tesis de maestría.</p>
+<p>La reflexión que sigue no es una apología tecnológica. El uso de IA en investigación académica introduce riesgos reales —de atribución intelectual, de verificación, de dependencia— que se discuten sin eufemismos. El objetivo es describir honestamente qué funcionó, qué no, y por qué.</p>
+<hr />
+<h2 id="a91-contexto-una-tesis-cuya-materia-prima-es-la-ia">A9.1 Contexto: una tesis cuya materia prima es la IA<a class="headerlink" href="#a91-contexto-una-tesis-cuya-materia-prima-es-la-ia" title="Permanent link">&para;</a></h2>
+<p>Existe una particularidad metodológica en este trabajo que vale la pena enunciar explícitamente: la tesis <em>estudia</em> sistemas basados en modelos de lenguaje de visión (VLM), y fue <em>desarrollada con</em> un asistente basado en modelos de lenguaje. Esto no es una contradicción; es una confluencia que ilumina ambos lados de la práctica.</p>
+<p>El sistema implementado (cap. 5) usa un VLM de 3B parámetros para razonar sobre escenas de vuelo y elegir maniobras. El asistente utilizado en su desarrollo (Claude Code / Claude Opus 4.5, Anthropic, 2024–2026) es una IA agéntica con acceso al sistema de archivos, al historial de git y a las herramientas del entorno de desarrollo. La semejanza no es superficial: en ambos casos un modelo de lenguaje recibe contexto, razona sobre él y propone una acción; en ambos casos la validez de la acción propuesta debe ser verificada por un agente externo (el drone con el resultado físico del vuelo; el investigador con el
+resultado técnico del código o del texto).</p>
+<p>Esta simetría genera una forma inusual de reflexividad metodológica: el investigador que desarrolla este sistema entiende, desde adentro, qué significa confiar en la salida de un LLM y qué significa verificarla.</p>
+<hr />
+<h2 id="a92-descripcion-del-uso">A9.2 Descripción del uso<a class="headerlink" href="#a92-descripcion-del-uso" title="Permanent link">&para;</a></h2>
+<h3 id="a921-asistente-y-modalidad">A9.2.1 Asistente y modalidad<a class="headerlink" href="#a921-asistente-y-modalidad" title="Permanent link">&para;</a></h3>
+<p>Se utilizó <strong>Claude Code</strong> (Anthropic, 2024–2026) en modalidad agéntica con acceso al repositorio local. A lo largo del proyecto, la interacción adoptó tres modalidades diferenciadas:</p>
+<p><strong>Modo exploración:</strong> el investigador plantea una pregunta abierta sobre el código o el diseño del sistema ("¿por qué el TRAJ_STALL nunca se dispara?") y el asistente lee los archivos relevantes, propone hipótesis y verifica cada una contra el código real. Esta modalidad fue la más valiosa para el diagnóstico de errores sutiles.</p>
+<p><strong>Modo implementación guiada:</strong> el investigador especifica qué se quiere hacer y revisa cada cambio propuesto antes de aplicarlo. El asistente explica el razonamiento, y el investigador aprueba o rechaza cada decisión de diseño.</p>
+<p><strong>Modo redacción técnica:</strong> el investigador describe en lenguaje coloquial lo que hace una sección del sistema (por ejemplo, "el nodo de percepción ahora calcula tres señales nuevas para detectar cuando el drone está atascado contra una pared invisible") y el asistente transforma esa descripción en prosa académica con terminología precisa, ecuaciones y referencias al código fuente.</p>
+<p>También se utilizó <strong>Gemini 3 Pro</strong> (Google, 2026) para generar figuras e ilustraciones del informe, incluyendo los diagramas de arquitectura y los esquemas conceptuales. La interacción siguió un patrón similar al modo redacción técnica: el investigador describe la imagen que necesita y revisa cada propuesta del asistente antes de aplicarla.</p>
+<h3 id="a922-contribucion-cuantitativa-aproximada">A9.2.2 Contribución cuantitativa aproximada<a class="headerlink" href="#a922-contribucion-cuantitativa-aproximada" title="Permanent link">&para;</a></h3>
+<p>Cuantificar con precisión la contribución del asistente es difícil porque la frontera entre "código generado por IA" y "código validado/modificado por el investigador" es siempre borrosa. Una estimación honesta:</p>
+<table>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Proporción estimada de asistencia IA</th>
+<th>Nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Código de infraestructura (<code>batch_runner</code>, loggers, tests)</td>
+<td>Alta (~70%)</td>
+<td>Patrones repetitivos con especificación precisa</td>
+</tr>
+<tr>
+<td>Código de lógica de control (<code>graph.py</code>, <code>spatial_history.py</code>)</td>
+<td>Media (~40%)</td>
+<td>Diseño del investigador, implementación parcialmente asistida con una buena cantidad de vueltas de reingeniería posibles gracias a la iteración rápida con Claude Code</td>
+</tr>
+<tr>
+<td>Diagnóstico de bugs</td>
+<td>Alta (~60%)</td>
+<td>Especialmente bugs de contrato de datos (DroneState, LangGraph)</td>
+</tr>
+<tr>
+<td>Redacción del informe (estructura, prosa técnica, referencias cruzadas)</td>
+<td>Alta (~75%)</td>
+<td>A partir de descripciones del investigador + lectura del código</td>
+</tr>
+<tr>
+<td>Decisiones arquitectónicas (qué construir, cómo comparar)</td>
+<td>Baja (~5%)</td>
+<td>Siempre del investigador; el asistente señala implicaciones</td>
+</tr>
+</tbody>
+</table>
+<p>La columna "proporción estimada" mide cuánto del trabajo <em>de ejecución</em> fue asistido, no cuánto del trabajo <em>intelectual</em>. Las decisiones de qué hipótesis plantear, qué comparar, qué considerar un resultado relevante y qué descartar como artefacto de simulación fueron siempre del investigador.</p>
+<h3 id="a923-casos-concretos-de-alto-impacto">A9.2.3 Casos concretos de alto impacto<a class="headerlink" href="#a923-casos-concretos-de-alto-impacto" title="Permanent link">&para;</a></h3>
+<p><strong>Bug-1: descarte silencioso en DroneState (2026-09-11).</strong>
+El disparador <code>TRAJ_STALL</code> en <code>policy_router</code> estaba roto por 584 ciclos de vuelo —dos meses de desarrollo— sin que ningún test lo detectara. La causa: <code>_traj_frente_stall_rate</code> y <code>_traj_frente_attempts</code> no estaban declarados en el TypedDict <code>DroneState</code>, y LangGraph descarta silenciosamente los campos no declarados al cruzar <code>graph.invoke()</code>. El asistente identificó la causa raíz en menos de un turno de conversación, tras leer <code>graph.py</code> y <code>spatial_history.py</code> en paralelo y notar la discrepancia entre los campos que <code>capture_node</code> publicaba y los que <code>DroneState</code> declaraba. El investigador no había vinculado el síntoma (TRAJ_STALL nunca activo) con ese mecanismo de LangGraph porque el comportamiento silencioso nunca produce un error visible.</p>
+<p>Este caso ilustra una ventaja específica de la IA agéntica frente a un peer humano: el asistente no tiene "coste cognitivo" de leer 500 líneas de código en paralelo y no "asume" que un campo debe estar declarado porque el código lo usa. Lee lo que está escrito, no lo que debería estar escrito.</p>
+<p><strong>Corrección del orden de prioridades de <code>policy_router</code>.</strong>
+El informe documentaba un orden erróneo de las 11 prioridades del router principal (active_maneuver antes del guard de continuidad de VLM, sin la prioridad imu_contact/blind_wall, sin stuck_invisible). El asistente corrigió la sección completa del informe leyendo el código real de <code>policy_router</code> y comparándolo línea a línea con la documentación anterior. El proceso tomó un turno de conversación; hacerlo manualmente habría requerido leer el código, transcribir el orden correcto, reescribir la tabla y verificar cada nombre de condición.</p>
+<p><strong>Actualización masiva del informe.</strong>
+Después de tres meses de desarrollo, el informe había quedado desactualizado en cinco capítulos. El investigador describió cada cambio relevante y el asistente leyó el código actual, confrontó con el texto existente e identificó las discrepancias capítulo por capítulo, redactando las secciones nuevas (§5.3, §5.6, §6.10b, §8.3, etc.) a partir de la lectura directa del código. El trabajo de actualización que habría llevado varios días se completó en una sesión.</p>
+<hr />
+<h2 id="a93-mejores-practicas-observadas">A9.3 Mejores prácticas observadas<a class="headerlink" href="#a93-mejores-practicas-observadas" title="Permanent link">&para;</a></h2>
+<p>Las siguientes prácticas emergieron de la experiencia acumulada en este proyecto, no de una evaluación sistemática. Se presentan como observaciones de campo, no como prescripciones universales.</p>
+<h3 id="a931-el-investigador-como-verificador-final-siempre">A9.3.1 El investigador como verificador final, siempre<a class="headerlink" href="#a931-el-investigador-como-verificador-final-siempre" title="Permanent link">&para;</a></h3>
+<p>La regla más importante y más frecuentemente violada en el uso productivo de IA agéntica es: <strong>nunca aceptar una edición de código o de texto sin leerla</strong>. El asistente puede generar código correcto que resuelve el problema planteado pero que introduce una suposición implícita que viola una invariante del sistema que el investigador conoce pero no expresó. En este proyecto, la práctica fue revisar cada <code>diff</code> antes de aprobarlo, con especial atención a:</p>
+<ul>
+<li>Cambios en firmas de funciones o en TypedDicts (contrato de datos).</li>
+<li>Nuevas importaciones (dependencias que quizás no están en el entorno).</li>
+<li>Cambios en constantes globales con nombres similares (e.g., <code>SLAM_HISTORY_SIZE</code> aparece en dos archivos con semánticas distintas).</li>
+</ul>
+<p>Esta vigilancia no reduce el valor del asistente; lo maximiza. Un revisor que entiende lo que lee puede aprobar en segundos lo que tardaría minutos en escribir.</p>
+<h3 id="a932-especificidad-del-contexto-como-palanca-principal">A9.3.2 Especificidad del contexto como palanca principal<a class="headerlink" href="#a932-especificidad-del-contexto-como-palanca-principal" title="Permanent link">&para;</a></h3>
+<p>La calidad de la asistencia escala directamente con la especificidad del contexto proporcionado. Una pregunta como "¿por qué no funciona la evasión?" produce una exploración costosa. Una pregunta como "el trigger TRAJ_STALL en <code>policy_router.py:83</code> nunca se activa según los logs <code>_traj_frente_stall_rate=0.0</code> en cada ciclo; la función <code>zone_stats()</code> en <code>spatial_history.py</code> sí devuelve valores no nulos" localiza el problema de inmediato.</p>
+<p>El investigador que sabe leer logs y conoce la arquitectura del sistema puede formular preguntas altamente contextualizadas. La inversión en entender el propio código —en lugar de delegarlo completamente al asistente— multiplica exponencialmente el retorno de la asistencia.</p>
+<h3 id="a933-separar-las-fases-de-diseno-y-de-implementacion">A9.3.3 Separar las fases de diseño y de implementación<a class="headerlink" href="#a933-separar-las-fases-de-diseno-y-de-implementacion" title="Permanent link">&para;</a></h3>
+<p>El asistente es más valioso en la fase de implementación que en la de diseño arquitectónico. Las decisiones sobre <em>qué construir</em> (¿cuatro brazos o tres? ¿flujo óptico + VLM o solo VLM? ¿<code>slam_assess</code> o <code>deep_vlm</code> como default?) requieren juicio sobre las restricciones del proyecto, el horizonte temporal, y los objetivos académicos que el investigador posee y el asistente no puede inferir completamente de los archivos.</p>
+<p>La práctica recomendada es: <em>decidir primero, implementar con asistencia después</em>. Intentar que el asistente decida la arquitectura produce propuestas genéricas que no tienen en cuenta las restricciones reales del proyecto (presupuesto temporal, hardware disponible, qué comparaciones son académicamente interesantes).</p>
+<h3 id="a934-ciclos-cortos-de-verificacion-empirica">A9.3.4 Ciclos cortos de verificación empírica<a class="headerlink" href="#a934-ciclos-cortos-de-verificacion-empirica" title="Permanent link">&para;</a></h3>
+<p>La IA agéntica acelera el ciclo de código → informe → validación, pero no lo elimina. En este proyecto, el ciclo productivo fue:</p>
+<p><img src="a9-ciclo-verificacion-empirica.jpg"/></p>
+<p>El paso que permanece completamente fuera del alcance del asistente —la validación empírica en simulación— sigue siendo el cuello de botella del ciclo. La IA comprime los demás pasos, lo que libera tiempo para más iteraciones experimentales.</p>
+<h3 id="a935-gestion-del-contexto-de-conversacion">A9.3.5 Gestión del contexto de conversación<a class="headerlink" href="#a935-gestion-del-contexto-de-conversacion" title="Permanent link">&para;</a></h3>
+<p>Los asistentes agénticos tienen una ventana de contexto finita. En proyectos de varias semanas, el contexto acumulado supera esa ventana y el asistente pierde memoria de decisiones previas. La práctica que resultó más efectiva fue mantener un archivo <code>CHANGELOG.md</code> actualizado después de cada sesión significativa: el asistente puede releer ese archivo al inicio de cada sesión y recuperar el estado del proyecto en minutos, en lugar de reexplorar el código completo.</p>
+<h3 id="a936-transparencia-sobre-la-contribucion">A9.3.6 Transparencia sobre la contribución<a class="headerlink" href="#a936-transparencia-sobre-la-contribucion" title="Permanent link">&para;</a></h3>
+<p>El uso de IA en la redacción de tesis no es equivalente al plagio, pero sí requiere un nivel análogo de declaración. El estándar propuesto, y adoptado en este trabajo, es:</p>
+<ul>
+<li><strong>El investigador es responsable</strong> de toda afirmación técnica, toda interpretación de resultados y toda decisión arquitectónica. Si una sección fue redactada con asistencia pero contiene una afirmación incorrecta, la responsabilidad es del investigador.</li>
+<li><strong>La IA es una herramienta de producción</strong>, no un coautor. Así como un estadístico que usa R para calcular p-valores no cita a R como coautor, el uso de IA para transformar notas técnicas en prosa académica no convierte al asistente en autor.</li>
+<li><strong>Declarar el uso es parte de la metodología</strong>, no una confesión. Este anexo es esa declaración.</li>
+</ul>
+<hr />
+<h2 id="a94-limitaciones-y-riesgos-observados">A9.4 Limitaciones y riesgos observados<a class="headerlink" href="#a94-limitaciones-y-riesgos-observados" title="Permanent link">&para;</a></h2>
+<h3 id="a941-alucinacion-en-contexto-tecnico">A9.4.1 Alucinación en contexto técnico<a class="headerlink" href="#a941-alucinacion-en-contexto-tecnico" title="Permanent link">&para;</a></h3>
+<p>El riesgo más relevante en el uso de IA para redacción técnica no es la alucinación flagrante (nombres de paper inventados, APIs inexistentes) sino la <strong>alucinación de coherencia</strong>: el texto suena técnicamente preciso pero afirma algo sutilmente erróneo que solo el experto en el dominio puede detectar.</p>
+<p>En este proyecto se identificaron varios casos de este tipo durante la revisión: secciones del informe que describían un comportamiento del sistema que había sido verdadero en una versión anterior pero que ya había cambiado, o que usaban terminología ligeramente incorrecta para un mecanismo específico. La mitigación fue sistemática: nunca aceptar una descripción del sistema sin verificarla contra el código real. El asistente que <em>lee elcódigo</em> y describe lo que ve es más confiable que el que <em>recuerda</em> descripciones previas.</p>
+<h3 id="a942-dependencia-que-reduce-la-comprension-profunda">A9.4.2 Dependencia que reduce la comprensión profunda<a class="headerlink" href="#a942-dependencia-que-reduce-la-comprension-profunda" title="Permanent link">&para;</a></h3>
+<p>Existe un riesgo real de que la fluidez con la que el asistente genera código reduzca el tiempo que el investigador dedica a entender ese código en profundidad. Para un proyecto de tesis, donde la comprensión del sistema es un objetivo académico en sí mismo, esto es un riesgo serio.</p>
+<p>La práctica adoptada fue usar el asistente para generar la primera versión de un módulo y luego leerla completa antes de seguir —tratando la lectura del código generado como cualquier otra lectura de código ajeno. En módulos críticos (<code>graph.py</code>,<code>deliberative.py</code>), el investigador reescribió partes del código generado no porque estuviera incorrecto sino para forzarse a entender cada decisión de implementación.</p>
+<h3 id="a943-sesgo-hacia-soluciones-conocidas">A9.4.3 Sesgo hacia soluciones conocidas<a class="headerlink" href="#a943-sesgo-hacia-soluciones-conocidas" title="Permanent link">&para;</a></h3>
+<p>Los modelos de lenguaje tienden a proponer soluciones que aparecen frecuentemente en sus datos de entrenamiento. En este proyecto, esto produjo ocasionalmente propuestas de infraestructura sobredimensionada (abstracciones innecesarias, patrones de diseño para sistemas más grandes) o soluciones estándar que no se ajustaban bien a las restricciones específicas del entorno AirSim/Windows/PowerShell.</p>
+<p>La mitigación fue mantener instrucciones explícitas de estilo en el contexto del asistente ("no agregar abstracciones más allá de lo que el task requiere", "preferir editar archivos existentes a crear nuevos"), que el asistente respetó consistentemente una vez establecidas.</p>
+<hr />
+<h2 id="a95-recomendaciones-para-investigadores-en-situacion-analoga">A9.5 Recomendaciones para investigadores en situación análoga<a class="headerlink" href="#a95-recomendaciones-para-investigadores-en-situacion-analoga" title="Permanent link">&para;</a></h2>
+<p>Las siguientes recomendaciones están dirigidas a investigadores de maestría o doctorado que trabajan solos o en grupos pequeños en proyectos de ingeniería de sistemas con componentes de IA, y que consideran usar asistentes agénticos como herramienta de desarrollo.</p>
+<p><strong>1. Defina primero la arquitectura sin el asistente.</strong> Use la IA para implementar una arquitectura que usted ya entiende, no para que la IA diseñe una que usted luego intenta entender. El tiempo invertido en diseño propio se recupera multiplicado en la fase de verificación.</p>
+<p><strong>2. Mantenga un CHANGELOG sesión a sesión.</strong> Un registro de qué se cambió y por qué, actualizado al final de cada sesión de trabajo, es la forma más eficiente de inicializar el contexto del asistente en sesiones posteriores. Es también la bitácora metodológica que permitirá escribir la sección de métodos del informe con precisión.</p>
+<p><strong>3. Trate los tests como contrato, no como cobertura.</strong> El asistente puede generar tests para verificar comportamientos. El investigador debe asegurarse de que esos tests verifican el comportamiento correcto, no simplemente que el código no lanza excepciones. En este proyecto, la Suite de 181 tests no detectó el Bug-1 porque ningún test verificaba que <code>_traj_frente_stall_rate</code> cruzara la llamada <code>graph.invoke()</code> — nadie (humano ni IA) había pensado en ese vector de fallo.</p>
+<p><strong>4. Use la IA para comprimir los ciclos, no para saltarlos.</strong> El valor del asistente es reducir el tiempo entre hipótesis y evidencia empírica: implementación más rápida, diagnóstico más rápido, documentación más rápida. El paso de validación empírica —correr el sistema, observar el comportamiento, interpretar los resultados— no se comprime y no debe saltarse.</p>
+<p><strong>5. Verifique las referencias citadas por el asistente.</strong> En redacción técnica, el asistente puede citar papers que existen y son relevantes, papers que existen pero dicen algo diferente de lo que se afirma, o papers que no existen en absoluto. La práctica segura es tratar toda referencia generada por IA como una hipótesis a verificar antes de incluirla en el informe.</p>
+<p><strong>6. Declare el uso con precisión.</strong> La pregunta relevante para la integridad académica no es "¿usé IA?" sino "¿puedo defender intelectualmente cada afirmación de este trabajo?" Si la respuesta es sí —porque verificó el código, interpretó los resultados y tomó las decisiones arquitectónicas— el uso de IA como herramienta de producción es metodológica y éticamente análogo al uso de cualquier otro entorno de desarrollo.</p>
+<hr />
+<h2 id="a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad">A9.6 Reflexión final: la IA agéntica como condición de posibilidad<a class="headerlink" href="#a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad" title="Permanent link">&para;</a></h2>
+<p>Este proyecto involucra un sistema de control distribuido en múltiples módulos Python (~4 000 líneas de código activo), una suite de pruebas de 181 tests, cinco capítulos técnicos del informe con referencias cruzadas precisas al código, y ocho anexos que documentan desde fundamentos matemáticos hasta propuestas de trabajo futuro.</p>
+<p>Completar todo esto en el horizonte temporal de una tesis de maestría, como investigador individual, sin el asistente agéntico, habría requerido o bien un recorte sustancial del alcance técnico o bien un tiempo de desarrollo que excedería el plazo académico disponible.</p>
+<p>Esto no significa que cualquier investigador con acceso a Claude pueda producir este sistema. Significa que el asistente multiplicó la capacidad de ejecución del investigador, que aportó la comprensión del dominio, las decisiones arquitectónicas, la interpretación de los resultados y la responsabilidad intelectual sobre el trabajo. La analogía más precisa no es la del ghostwriter sino la del taller bien equipado: las herramientas no construyen el objeto, pero sin ellas el artesano no puede construirlo en el tiempo disponible.</p>
+<p>La incorporación de herramientas de IA agéntica en el flujo de trabajo de investigación científica y de ingeniería no es una tendencia futura: es una práctica presente que la comunidad académica está comenzando a normalizar. La transparencia sobre cómo se usan estas herramientas —sus contribuciones, sus límites y sus riesgos— es el primer paso hacia estándares metodológicos que permitan evaluarlas con rigor.</p>
+<hr />
+<p><em>Este anexo fue redactado en colaboración con Claude Code (Anthropic, 2024–2026),
+usando como fuente primaria la bitácora de desarrollo (<code>CHANGELOG.md</code>), los registros
+de sesión del proyecto y la reflexión del investigador sobre el proceso. Las afirmaciones
+sobre comportamiento del sistema están verificadas contra el código fuente del repositorio.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

@@ -190,8 +190,12 @@ class DroneState(TypedDict, total=False):
     _pending_delib_prompt: Optional[str]
     _pending_delib_frames: Optional[List[Any]]
     _last_delib_frames: Optional[List[Any]]
-    # C1 (Zona 2): stall rates laterales publicados por capture_node para que
-    # evasive_node los use como señal de desempate cuando el campo óptico es ambiguo.
+    # C1 (Zona 2): stall rates publicados por capture_node para policy_router y
+    # evasive_node. _traj_frente_* se leen en policy_router (TRAJ_STALL path);
+    # _traj_izq/_der_* en evasive_node para desempate de direccion.
+    # IMPORTANTE: si no estan declarados aqui LangGraph los descarta en silencio.
+    _traj_frente_stall_rate: float
+    _traj_frente_attempts: int
     _traj_izq_stall_rate: float
     _traj_izq_attempts: int
     _traj_der_stall_rate: float
@@ -515,6 +519,28 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         else:
             state["_depth_proximity_m"] = None
             state["_depth_obstacle_type"] = None
+
+        # G1: Muro invisible por baja textura — contradiccion campo optico vs stall historico.
+        # Cuando la tasa de stall frontal es significativa pero el campo optico reporta
+        # corredor libre, es probable que haya un muro liso (edificio, pared de hormigon)
+        # invisible al flujo optico. Inyectar aviso en scene_summary para que el SLM
+        # no recomiende MANTENER_RUMBO y priorice un giro o evasion lateral.
+        _g1_frente_stall = float(state.get("_traj_frente_stall_rate") or 0.0)
+        _g1_frente_att   = int(state.get("_traj_frente_attempts") or 0)
+        _G1_STALL_MIN = float(os.getenv("G1_STALL_MIN", "0.20"))
+        _G1_ATT_MIN   = int(os.getenv("G1_ATT_MIN",    "3"))
+        _G1_OCC_MAX   = float(os.getenv("G1_OCC_MAX",  "0.15"))
+        if (_g1_frente_stall >= _G1_STALL_MIN
+                and _g1_frente_att >= _G1_ATT_MIN
+                and field.blocked_fraction() < _G1_OCC_MAX):
+            state["scene_summary"] = (
+                state.get("scene_summary", "")
+                + f"\nAVISO [G1]: stall frontal {_g1_frente_stall:.0%}"
+                  f" ({_g1_frente_att} intentos) con campo optico despejado"
+                  f" — posible obstaculo invisible (muro liso, baja textura)."
+                  f" MANTENER_RUMBO agravara el bloqueo."
+                  f" Priorizar GIRAR_90 o evasion lateral amplia."
+            )
         return state
 
     def girar_90_node(state: DroneState) -> DroneState:
@@ -543,7 +569,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             effective_guidance = {**guidance, "bearing_err_deg": flipped}
             flip_note = (
                 f" [D1: lado {'izq' if pref_key=='izq' else 'der'} "
-                f"{pref_stall:.0%}/{pref_att}int → giro al lado contrario]"
+                f"{pref_stall:.0%}/{pref_att}int -> giro al lado contrario]"
             )
         else:
             effective_guidance = guidance

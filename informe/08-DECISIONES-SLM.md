@@ -77,15 +77,48 @@ La métrica `adherence_rate` es una fila explícita de la tabla de resultados (c
 
 ## 8.3 Espacio de acción discreto: lista blanca de macro-acciones
 
-El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones:
+El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones definido en `PROMPT_ACTIONS` (`deliberative.py`):
 
 | Macro-acción | Significado navegacional |
 |---|---|
-| `keep_going` | Continuar hacia el waypoint activo sin alterar la velocidad ni el rumbo |
-| `evasive` | Iniciar evasión lateral (dirección decidida por `evasive_node` según ocupación L/R) |
-| `girar_90` | Ejecutar un giro de 90° en la dirección menos bloqueada para desatasco |
-| `fsm` | Delegar la decisión a la máquina de estados FSM (brazo alternativo) |
-| `degraded` | Declarar modo degradado; pasar a `degraded_hover_node` |
+| `MANTENER_RUMBO` | Continuar hacia el waypoint activo sin alterar la velocidad ni el rumbo |
+| `EVADIR_IZQUIERDA` | Iniciar evasión lateral hacia la izquierda (yaw −15°/s, vx = 0.3–1.2 m/s) |
+| `EVADIR_DERECHA` | Iniciar evasión lateral hacia la derecha (yaw +15°/s, vx = 0.3–1.2 m/s) |
+| `GANAR_ALTURA` | Ascender en el lugar (vz = −1.5 m/s, vx = 0) para sobrevolar el obstáculo |
+| `PERDER_ALTURA` | Descender con avance lento (vz = +0.8 m/s, vx = 1.0 m/s) |
+| `FRENAR` | Detener el drone en el lugar (hover) con corrección de altitud por controlador P |
+
+`GIRAR_90` **no está en `PROMPT_ACTIONS`**: es un bypass determinista que el `policy_router` activa directamente cuando `blocked_fraction > 0.6`, sin consultar al VLM. El modelo nunca necesita elegirlo; si lo intentara, el parser lo descartaría.
+
+El schema JSON declarado para la decodificación restringida tiene la forma:
+
+```json
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "macro_decision",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "macro_action": {
+          "type": "string",
+          "enum": ["EVADIR_DERECHA", "EVADIR_IZQUIERDA", "FRENAR",
+                   "GANAR_ALTURA", "MANTENER_RUMBO", "PERDER_ALTURA"]
+        },
+        "rationale": {"type": "string"}
+      },
+      "required": ["macro_action", "rationale"],
+      "additionalProperties": false
+    }
+  }
+}
+```
+
+**Poda del enum por motivo de consulta.** En lugar de enviar siempre el enum completo, `_schema_for_reason(reason_key)` genera un schema podado según el contexto:
+- `"TTC_CRITICO"`: excluye `MANTENER_RUMBO` (hay colisión inminente confirmada).
+- `"DEADLOCK_ESCAPE"`: excluye `MANTENER_RUMBO` y `FRENAR` (el drone ya está atascado; detenerse o insistir al frente es contraproducente).
+
+Esta poda semántica concentra la distribución de muestreo del modelo en las acciones físicamente coherentes con la causa de la consulta, reduciendo la tasa de respuestas subóptimas en los escenarios de mayor riesgo sin requerir fine-tuning.
 
 Esta arquitectura de lista blanca tiene tres propiedades de diseño que se derivan mutuamente:
 
@@ -121,7 +154,13 @@ El prompt de usuario construido por `_build_user_prompt()` tiene cinco component
 
 **Componente 1 — Estado de vuelo y telemetría.** Velocidad horizontal, velocidad vertical, altitud, actitud (pitch, roll), estado de misión, waypoint activo y distancia restante. Este componente traduce telemetría numérica cruda a descripciones en lenguaje natural ("el dron vuela a 4.2 m/s, con 23 m al próximo waypoint, pitch -3.1°"). La verbalización explícita se prefiere a la telemetría cruda por dos razones convergentes: los SLMs de 3B parámetros razonan más confiablemente sobre descripciones en lenguaje natural que sobre tuplas de números ([Zhu et al., 2024](13-REFERENCIAS.md#ref-zhu-2024)), y la práctica de convertir retroalimentación de sensores y de entorno a lenguaje natural antes de dársela a un modelo de lenguaje para planificación robótica está empíricamente validada en el patrón de "monólogo interno": [Huang et al. (2022)](13-REFERENCIAS.md#ref-huang-2022) muestran que un LLM que recibe la retroalimentación del entorno verbalizada explícitamente —en lugar de como estado estructurado— mejora significativamente la tasa de éxito en la ejecución de instrucciones de alto nivel en múltiples dominios robóticos.
 
-**Componente 2 — Resumen del `ObstacleField`.** El resultado de `ObstacleField.summary_text()` para cada sector activo: TTC, ocupación, confianza, estado de bloqueo. Cuando el campo tiene evidencia, este componente provee información cuantitativa sobre la geometría del obstáculo. Cuando no la tiene, el componente dice explícitamente "percepción SIN evidencia" y describe la causa probable (velocidad baja, rotación activa), lo que permite al VLM distinguir "no hay obstáculo" de "no sé si hay obstáculo".
+**Componente 2 — Resumen del `ObstacleField` enriquecido.** El resultado de `ObstacleField.summary_text()` para cada sector activo: TTC, ocupación, confianza, estado de bloqueo y **fuente** del campo (`"flujo óptico"`, `"flujo óptico + profundidad monocular (Depth Anything V2)"`, etc.). Cuando el campo tiene evidencia, este componente provee información cuantitativa sobre la geometría del obstáculo. Cuando no la tiene, el componente dice explícitamente "percepción SIN evidencia".
+
+`scene_summary` puede además incluir avisos adicionales generados por `perception_node`:
+- **E2**: `"Obstáculo frontal (profundidad monocular): follaje. Posibles huecos entre ramas — evasión diagonal o +1 m de altura puede ser viable."` (cuando Depth Anything V2 clasifica el obstáculo como vegetación).
+- **G1**: `"AVISO [G1]: stall frontal 33% (30 intentos) con campo óptico despejado — posible obstáculo invisible (muro liso, baja textura). MANTENER_RUMBO agravará el bloqueo. Priorizar GIRAR_90 o evasión lateral amplia."` (cuando el historial acumulado contradice la ausencia de bloqueo óptico).
+
+Estos avisos llegan al VLM en todos los paths deliberativos (regular, `slam_assess`, `deep_vlm`), permitiéndole ajustar la decisión a la naturaleza específica del obstáculo invisible.
 
 **Componente 3 — Historial de decisiones recientes.** Las últimas `N` acciones tomadas (con sus razones, si el deliberativo las reportó), incluyendo cuántos ciclos lleva activa la maniobra actual y si hay señales de atasco (progreso hacia el waypoint < umbral durante varios ciclos). Este componente provee contexto temporal que una sola imagen no puede dar: el VLM puede distinguir "empecé a evadir hace 1 ciclo" de "llevo 8 ciclos evasión sin avanzar".
 

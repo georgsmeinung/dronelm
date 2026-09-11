@@ -867,6 +867,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A9-USO-IA-GENERATIVA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Uso de IA Generativa en esta Tesis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1135,6 +1191,28 @@
     <span class="md-ellipsis">
       
         15.7 A7. Maldición Monocular y Mitigación Estéreo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anexos-a8-navegacion-rl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.8 A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anexos-a9-uso-ia-generativa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.9 A9. Uso de IA Generativa en esta Tesis
       
     </span>
   </a>
@@ -1797,6 +1875,122 @@ r.DetailMode=2
 </tr>
 </tbody>
 </table>
+<p><strong>Señales de obstáculo invisible (V3 / V3b / V3c):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>imu_jitter_level</code></td>
+<td><code>str</code></td>
+<td><code>"normal"</code> | <code>"elevado"</code> | <code>"crítico"</code> según RMS de aceleración lateral</td>
+</tr>
+<tr>
+<td><code>imu_contact_event</code></td>
+<td><code>bool</code></td>
+<td><code>True</code> cuando jitter ≥ <code>IMU_CONTACT_THRESHOLD_MPS2</code> por ≥ 2 ciclos con cmd_speed &gt; 0.3 m/s</td>
+</tr>
+<tr>
+<td><code>_imu_contact_cycles</code></td>
+<td><code>int</code></td>
+<td>Contador interno de ciclos consecutivos de jitter alto</td>
+</tr>
+<tr>
+<td><code>blind_wall_event</code></td>
+<td><code>bool</code></td>
+<td><code>True</code> cuando <code>_blind_wall_cycles &gt;= CMD_BLIND_CYCLES</code></td>
+</tr>
+<tr>
+<td><code>_blind_wall_cycles</code></td>
+<td><code>int</code></td>
+<td>Ciclos consecutivos de condición activa (cmd frontal sin velocidad real, flujo libre)</td>
+</tr>
+<tr>
+<td><code>_stopped_cycles</code></td>
+<td><code>int</code></td>
+<td>Ciclos con <code>act_spd &lt; 0.10 m/s</code> en ruta deliberativa sin VLM pendiente</td>
+</tr>
+<tr>
+<td><code>stuck_invisible</code></td>
+<td><code>bool</code></td>
+<td>OR unificado de las tres señales anteriores; consumido por <code>policy_router</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Estadísticas de trayectoria para routing:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_traj_frente_stall_rate</code></td>
+<td><code>float</code></td>
+<td>Tasa de stall de la zona FRENTE (últimos 30 eventos), publicado por <code>capture_node</code></td>
+</tr>
+<tr>
+<td><code>_traj_frente_attempts</code></td>
+<td><code>int</code></td>
+<td>Intentos en la zona FRENTE</td>
+</tr>
+<tr>
+<td><code>_traj_izq_stall_rate</code></td>
+<td><code>float</code></td>
+<td>Tasa de stall IZQUIERDA, para C1 en <code>evasive_node</code></td>
+</tr>
+<tr>
+<td><code>_traj_izq_attempts</code></td>
+<td><code>int</code></td>
+<td>Intentos IZQUIERDA</td>
+</tr>
+<tr>
+<td><code>_traj_der_stall_rate</code></td>
+<td><code>float</code></td>
+<td>Tasa de stall DERECHA, para C1 y D1</td>
+</tr>
+<tr>
+<td><code>_traj_der_attempts</code></td>
+<td><code>int</code></td>
+<td>Intentos DERECHA</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Profundidad monocular (V4):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_depth_proximity_m</code></td>
+<td><code>float\|None</code></td>
+<td>Distancia estimada por Depth Anything V2 Metric al obstáculo frontal; <code>None</code> si el estimador no tiene resultado reciente o la señal no está activa</td>
+</tr>
+<tr>
+<td><code>_depth_below_cycles</code></td>
+<td><code>int</code></td>
+<td>Ciclos consecutivos con <code>depth_m &lt; DEPTH_BRAKE_M</code> (guarda V4b anti-falso-positivo)</td>
+</tr>
+<tr>
+<td><code>_depth_obstacle_type</code></td>
+<td><code>str\|None</code></td>
+<td><code>"follaje"</code> | <code>"superficie plana"</code> | <code>"desconocido"</code> | <code>None</code> — clasificación por textura del mapa de profundidad (E2)</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Corrección de altitud en hover:</strong></p>
 <table>
 <thead>
@@ -1823,18 +2017,21 @@ r.DetailMode=2
 <li>En caso contrario → ruta <code>"perception"</code></li>
 </ul>
 <h3 id="05-arquitectura-lazo-tactico-policy_router"><code>policy_router</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-policy_router" title="Permanent link">&para;</a></h3>
-<p>Es el corazón de la arquitectura. Ejecuta la decisión táctica completa en un único paso condicional, reemplazando la cadena de tres routers que existía antes (que producía la invocación doble al VLM por ciclo). La lógica es la siguiente, en orden de prioridad:</p>
+<p>Es el corazón de la arquitectura. Ejecuta la decisión táctica completa en un único paso condicional, reemplazando la cadena de tres routers que existía antes (que producía la invocación doble al VLM por ciclo). La lógica es la siguiente, en orden estricto de prioridad:</p>
 <p><strong>1. Selección de brazo (<code>AGENT_ARM</code>).</strong> Si el brazo configurado es <code>"reactive"</code>, el router va directo a <code>keep_going</code> sin evaluar percepción. Si es <code>"fsm"</code>, va directo a <code>fsm</code>. Esto permite comparaciones factoriales limpias entre los tres brazos (§5.11).</p>
-<p><strong>2. Continuidad de deliberación en vuelo.</strong> Si <code>slm_request_id is not None</code> (hay un pedido al VLM en vuelo), el router <strong>siempre</strong> va a <code>"deliberative"</code>, independientemente del TTC actual. Sin esta regla, el pedido queda huérfano: ningún nodo vuelve a entrar a <code>deliberative_node</code> para resolverlo, <code>_deliberation_pending</code> nunca vuelve a <code>False</code>, y el detector de atasco queda desactivado para el resto de la misión.</p>
-<p><strong>3. Persistencia de maniobra.</strong> Si <code>active_maneuver</code> está activo, <code>maneuver_cycles_left &gt; 0</code> <strong>y</strong> <code>min_ttc &gt; TTC_EVASION_THRESHOLD</code>, el router va a <code>"evasive"</code> para continuar la maniobra comprometida. La condición de TTC garantiza que una emergencia real sí la interrumpa.</p>
-<p><strong>4. Escape de atasco.</strong> Si <code>evasion_stuck_cycles &gt;= effective_stall_threshold()</code>:
-   - Si además <code>evasion_stuck_cycles &gt;= hard_stall_threshold()</code> (factor 3×, atasco duro) o <code>has_open_corridor(field, guidance)</code> es <code>False</code> → <code>"deliberative"</code> (activa el mecanismo de escape, §5.10).</p>
-<p><strong>5. Peligro crítico inminente.</strong> Si <code>center_ttc &lt;= TTC_EVASION_THRESHOLD</code> (3.2 s) o el centro está bloqueado con <code>center_ttc &lt;= TTC_SAFE_THRESHOLD</code> (4.6 s):
-   - Si <code>blocked_fraction() &gt; FOV_BLOCKED_THRESHOLD</code> (0.6) → <code>"girar_90"</code> (bypass determinista de bloqueo total de FOV).
-   - En caso contrario → <code>"deliberative"</code> (consulta al VLM para decisión con contexto).</p>
-<p><strong>6. Advertencia de proximidad.</strong> Si el centro está bloqueado o <code>min_ttc &lt;= TTC_SAFE_THRESHOLD</code> → <code>"evasive"</code> (corrección lateral rápida sin consultar el VLM).</p>
-<p><strong>7. Camino despejado.</strong> Default → <code>"keep_going"</code>.</p>
-<p>Los tres umbrales de TTC son variables de entorno (<code>TTC_EVASION_THRESHOLD=3.2</code>, <code>TTC_SAFE_THRESHOLD=4.6</code>, <code>FOV_BLOCKED_THRESHOLD=0.6</code>) calibrados con datos de vuelo real (2026-0824).</p>
+<p><strong>2. Emergencias cinemáticas (máxima prioridad absoluta).</strong> Si <code>imu_contact_event = True</code> (jitter IMU sostenido ≥ 2 ciclos con <code>cmd_speed &gt; 0.3 m/s</code>) <strong>o</strong> <code>blind_wall_event = True</code> (velocidad comandada frontal con velocidad real nula durante ≥ 2 ciclos), el router va directamente a <code>"evasive"</code>, <strong>antes</strong> de verificar si hay un pedido al VLM en vuelo. Ambas señales indican contacto físico con un obstáculo invisible al flujo óptico; esperar la respuesta del VLM en ese estado es peligroso. Estas señales son sub-campos de <code>stuck_invisible</code> pero tienen prioridad superior a <code>slm_request_id</code> — a diferencia de <code>_stopped_cycles</code>, que se evalúa después.</p>
+<p><strong>3. Continuidad de deliberación en vuelo.</strong> Si <code>slm_request_id is not None</code> (hay un pedido al VLM en vuelo), el router <strong>siempre</strong> va a <code>"deliberative"</code>, independientemente del TTC actual. Sin esta regla, el pedido queda huérfano: ningún nodo vuelve a entrar a <code>deliberative_node</code> para resolverlo, <code>_deliberation_pending</code> nunca vuelve a <code>False</code>, y el detector de atasco queda desactivado para el resto de la misión (corrida documentada: 528 ciclos de <code>keep_going</code> sin escalar, 2026-0828).</p>
+<p><strong>4. Obstáculo invisible acumulado (<code>stuck_invisible</code>).</strong> Si <code>stuck_invisible = True</code> — señal unificada que cubre <code>_stopped_cycles &gt;= STOPPED_CYCLES_THRESHOLD</code> (15 ciclos ≈ 3 s parado sin razón), además de las señales de prioridad 2 — el router va a <code>"evasive"</code>. Se evalúa <strong>después</strong> de <code>slm_request_id</code> porque un dron quieto mientras el VLM procesa es intencional (<code>_stopped_cycles</code> no debe acumularse en ese estado, y así lo implementa <code>perception_node</code>).</p>
+<p><strong>5. Suelo de altitud óptica (<code>OPTICAL_MIN_ALT_M = 4.5 m</code>).</strong> Durante el ascenso inicial, el flujo óptico ve el suelo en movimiento y genera TTC falsos. Por debajo de ese umbral, los checks de TTC y los contadores de atasco se suprimen completamente → <code>"keep_going"</code>. Las señales de emergencia (prioridades 2–4) siguen activas a cualquier altitud.</p>
+<p><strong>6. Persistencia de maniobra (anti flip-flop).</strong> Si <code>active_maneuver</code> está activo y <code>maneuver_cycles_left &gt; 0</code>, el router va incondicionalmente a <code>"evasive"</code> para completar la maniobra comprometida. A diferencia de la versión anterior, no hay condición de TTC mínimo: el escape se ejecuta <strong>hacia afuera</strong> del obstáculo, por lo que TTC bajo es precisamente el estado esperado durante una maniobra de escape. El check de TTC aquí interrumpiría el escape que fue la respuesta correcta. Las emergencias reales (prioridades 2–4) sí interrumpen porque retornan antes de llegar a este punto.</p>
+<p><strong>7. Escape de atasco (<code>evasion_stuck_cycles</code>).</strong> Si <code>evasion_stuck_cycles &gt;= effective_stall_threshold()</code> (10 ciclos por defecto) y el flujo óptico no reporta corredor transitable (<code>not has_open_corridor(field, guidance)</code>), o si se supera el umbral duro (<code>&gt;= hard_stall_threshold() = 30 ciclos</code>) → <code>"deliberative"</code>. El flujo óptico puede reportar un corredor espurio cuando el dron está embebido en la malla del árbol; el umbral duro actúa como red de seguridad final.</p>
+<p><strong>8. Disparo por trayectoria acumulada (<code>TRAJ_STALL</code>, 2026-0910).</strong> Si <code>_traj_frente_stall_rate &gt;= 0.70</code> y <code>_traj_frente_attempts &gt;= 10</code> → <code>"deliberative"</code>, aunque el campo óptico reporte corredor libre. Este trigger compensa el punto ciego estructural del flujo óptico cuando el dron está embebido en la malla convexa de un árbol (<code>foe_confidence</code> baja → <code>blocked = False</code> espurio): el historial acumulado de stalls frontales es evidencia más confiable que el campo óptico en ese estado. Los campos <code>_traj_frente_stall_rate</code> / <code>_traj_frente_attempts</code> son publicados por <code>capture_node</code> vía <code>FlightTrajectory.zone_stats()</code> y <strong>deben estar declarados en <code>DroneState</code></strong> — si no lo están, LangGraph los descarta en silencio y el trigger nunca se activa (Bug-1, documentado 2026-0911: 584 ciclos con el campo siempre <code>None</code>).</p>
+<p><strong>9. Peligro crítico inminente.</strong> Si <code>center_ttc &lt;= TTC_EVASION_THRESHOLD</code> (3.2 s) o el centro está bloqueado con <code>center_ttc &lt;= TTC_SAFE_THRESHOLD</code> (4.6 s):
+   - Si <code>blocked_fraction() &gt; FOV_BLOCKED_THRESHOLD</code> (0.6) → <code>"girar_90"</code> (bypass determinista de bloqueo total de FOV). A baja altitud (<code>&lt; SLM_MIN_ALT_M = 8 m</code>) → <code>"evasive"</code> en su lugar (el ascenso inicial no debe disparar consultas al VLM).
+   - En caso contrario → <code>"deliberative"</code> (o <code>"evasive"</code> si <code>below_slm_floor</code>).</p>
+<p><strong>10. Advertencia de proximidad.</strong> Si el centro está bloqueado o <code>min_ttc &lt;= TTC_SAFE_THRESHOLD</code> → <code>"evasive"</code> (corrección lateral rápida sin consultar el VLM).</p>
+<p><strong>11. Camino despejado.</strong> Default → <code>"keep_going"</code>.</p>
+<p>Los umbrales de TTC son variables de entorno (<code>TTC_EVASION_THRESHOLD=3.2</code>, <code>TTC_SAFE_THRESHOLD=4.6</code>, <code>FOV_BLOCKED_THRESHOLD=0.6</code>) calibrados con datos de vuelo real (2026-0824). El disparo TRAJ_STALL es configurable con <code>TRAJ_STALL_TRIGGER_RATE=0.70</code> y <code>TRAJ_STALL_TRIGGER_MIN_ATT=10</code>.</p>
 <h2 id="05-arquitectura-lazo-tactico-54-nodo-capture">5.4 Nodo <code>capture</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-54-nodo-capture" title="Permanent link">&para;</a></h2>
 <p><strong>Entradas:</strong> cliente AirSim inyectado (singleton por proceso).
 <strong>Salidas:</strong> <code>rgb_image</code>, <code>telemetry</code>, <code>degraded</code>, <code>frame_history</code>, <code>frame_history_ts</code>, <code>prev_image</code>, <code>prev_telemetry</code>.</p>
@@ -1845,10 +2042,27 @@ r.DetailMode=2
 <strong>Salidas:</strong> <code>next_action = "FRENAR"</code>, <code>route = "degraded"</code>, <code>flight_status = "degradado"</code>.</p>
 <p>Emite un comando FRENAR sin consultar percepción ni deliberación. El diseño no sustituye el dato faltante de AirSim por un dato sintético plausible: la razón es la misma que motiva el capítulo 9 — un dato sintético es indistinguible de un dato real para el resto del sistema y esconde exactamente el tipo de fallo silencioso que este trabajo documenta.</p>
 <h2 id="05-arquitectura-lazo-tactico-56-nodo-perception">5.6 Nodo <code>perception</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-56-nodo-perception" title="Permanent link">&para;</a></h2>
-<p><strong>Entradas:</strong> <code>rgb_image</code>, <code>prev_image</code>, <code>telemetry</code>, <code>prev_telemetry</code>.
-<strong>Salidas:</strong> <code>obstacle_field</code>, <code>estimated_ttc</code>, <code>scene_summary</code>.</p>
-<p>Invoca <code>FlowTTCEstimator.estimate()</code> con el par de frames consecutivos y la telemetría de ambos ciclos. El estimador produce un <code>ObstacleField</code> con tres sectores (centro, izquierda, derecha), cada uno con ocupación estimada por flujo óptico, TTC calculado y flag de bloqueo (cap. 6). El nodo escribe además <code>estimated_ttc = obstacle_field.min_ttc()</code> (el TTC mínimo entre sectores, usado directamente por <code>policy_router</code>) y <code>scene_summary = obstacle_field.summary_text()</code> (texto compacto para el prompt del VLM).</p>
-<p>El <code>ObstacleField</code> es el único objeto que consumen el router de política, el nodo de evasión, el nodo deliberativo y la FSM. Ningún consumidor accede a campos crudos de flujo óptico.</p>
+<p><strong>Entradas:</strong> <code>rgb_image</code>, <code>prev_image</code>, <code>telemetry</code>, <code>prev_telemetry</code>, <code>velocity_command</code>, estado previo de contadores.
+<strong>Salidas:</strong> <code>obstacle_field</code>, <code>estimated_ttc</code>, <code>scene_summary</code>, <code>imu_jitter_level</code>, <code>imu_contact_event</code>, <code>blind_wall_event</code>, <code>stuck_invisible</code>, <code>_depth_proximity_m</code>, <code>_depth_obstacle_type</code>.</p>
+<p>Invoca <code>FlowTTCEstimator.estimate()</code> con el par de frames consecutivos y la telemetría de ambos ciclos. El estimador produce un <code>ObstacleField</code> con tres sectores (centro, izquierda, derecha), cada uno con ocupación estimada por flujo óptico, TTC calculado y flag de bloqueo (cap. 6). El nodo escribe además <code>estimated_ttc = obstacle_field.min_ttc()</code> y <code>scene_summary = obstacle_field.summary_text()</code>.</p>
+<p>El nodo ejecuta cinco señales diagnósticas adicionales en secuencia tras el flujo óptico:</p>
+<p><strong>Señal V3 — jitter IMU.</strong> Calcula el RMS de la aceleración lateral transversal <code>(ax, ay)</code> del IMU. Si supera <code>IMU_JITTER_CRITICAL_MPS2 = 8.0</code> → <code>imu_jitter_level = "crítico"</code>; si supera <code>IMU_JITTER_ELEVATED_MPS2 = 3.0</code> → <code>"elevado"</code>. <code>imu_contact_event = True</code> cuando <code>jitter_rms &gt;= IMU_CONTACT_THRESHOLD_MPS2 = 5.0</code> y <code>cmd_speed &gt; 0.3 m/s</code> durante ≥ 2 ciclos consecutivos (<code>_imu_contact_cycles</code>).</p>
+<p><strong>Señal V3b — pared invisible por divergencia cmd/real (<code>blind_wall_event</code>).</strong> El dron comanda velocidad frontal (<code>cmd_vx &gt;= 0.45 m/s</code>) pero la velocidad real medida es nula (<code>act_spd &lt; 0.30 m/s</code>) mientras el flujo óptico reporta corredor libre (<code>blocked_fraction &lt; 0.25</code>). El contador <code>_blind_wall_cycles</code> acumula ciclos consecutivos en esa condición; <code>blind_wall_event = True</code> cuando <code>&gt;= CMD_BLIND_CYCLES = 2</code>. Una guarda previene falsos positivos al arrancar: el drone debe haber estado en movimiento en el ciclo anterior (<code>prev_act_spd &gt;= 0.20</code>) antes de que la condición empiece a contar.</p>
+<p><strong>Señal V3c — dron parado sin razón (<code>_stopped_cycles</code>).</strong> Acumula ciclos con <code>act_spd &lt; 0.10 m/s</code> mientras la ruta activa es <code>"deliberative"</code> y no hay petición VLM pendiente (<code>slm_request_id = None</code>). Se resetea cuando el dron se mueve. Captura el caso ESCANEO (<code>cmd_vx = 0</code>) donde <code>blind_wall_event</code> nunca dispara. Umbral: <code>STOPPED_CYCLES_THRESHOLD = 15</code> ciclos (3 s a 5 Hz).</p>
+<p><strong>Señal unificada <code>stuck_invisible</code>.</strong> OR de las tres señales anteriores:
+<div class="highlight"><pre><span></span><code><span class="n">stuck_invisible</span> <span class="o">=</span> <span class="n">imu_contact_event</span> <span class="n">OR</span> <span class="n">blind_wall_event</span>
+                  <span class="n">OR</span> <span class="p">(</span><span class="n">_stopped_cycles</span> <span class="o">&gt;=</span> <span class="n">STOPPED_CYCLES_THRESHOLD</span><span class="p">)</span>
+</code></pre></div>
+<code>policy_router</code> consume este campo único en lugar de acceder directamente a los tres sub-campos, simplificando el routing (§5.3, prioridades 2 y 4). Los sub-campos individuales siguen disponibles para <code>evasive_node</code> y el logger.</p>
+<p><strong>Señal V4 — profundidad monocular (Depth Anything V2 Metric, A1).</strong> Cuando el drone avanza (<code>cmd_vx &gt;= 0.30 m/s</code>), el flujo óptico reporta corredor libre (<code>blocked_fraction &lt; 0.25</code>) y la ruta no es <code>"evasive"</code>, se solicita inferencia al <code>DepthEstimator</code> (hilo background). Si el resultado es reciente (<code>depth_age_ms &lt; DEPTH_MAX_AGE_MS = 3000 ms</code>) y está por debajo del umbral de frenado (<code>depth_m &lt; DEPTH_BRAKE_M = 5.0 m</code>) durante ≥ <code>DEPTH_BELOW_THRESHOLD = 2</code> ciclos consecutivos, la profundidad se <strong>inyecta directamente en el <code>ObstacleField</code></strong> vía <code>field.merge_depth_estimate(depth_m, cmd_vx)</code>. Las tres celdas del sector centro quedan con <code>occupancy</code> por encima del umbral de bloqueo y <code>ttc_s = depth_m / cmd_vx</code>. El <code>source</code> del campo pasa a <code>"flow+depth"</code>, visible en <code>scene_summary</code>. Este diseño unificado (A1) garantiza que el router, el SLM y el logger vean un único campo de percepción coherente sin lógica especial en ninguna capa downstream — la profundidad no crea un path de routing separado.</p>
+<p><strong>Clasificación de tipo de obstáculo (E2).</strong> <code>DepthEstimator.poll()</code> devuelve también un <code>obstacle_type</code>: <code>"follaje"</code> (CV alto + fracción de píxeles lejanos alta, firma de vegetación con huecos) o <code>"superficie plana"</code> (CV bajo, firma de muro o pared lisa). Cuando la señal V4 está activa, se añade al <code>scene_summary</code> una pista táctica: <code>"follaje"</code> sugiere evasión diagonal o +1 m; <code>"superficie plana"</code> sugiere evasión lateral amplia. El SLM recibe así contexto sobre la naturaleza del obstáculo sin que el router lo necesite.</p>
+<p><strong>Señal G1 — muro invisible por contraste campo/historia (2026-0911).</strong> Al final del nodo, si <code>_traj_frente_stall_rate &gt;= G1_STALL_MIN = 0.20</code> <strong>y</strong> <code>_traj_frente_attempts &gt;= G1_ATT_MIN = 3</code> <strong>y</strong> <code>blocked_fraction &lt; G1_OCC_MAX = 0.15</code>, se añade a <code>scene_summary</code>:
+<div class="highlight"><pre><span></span><code>AVISO [G1]: stall frontal 33% (30 intentos) con campo optico despejado
+— posible obstaculo invisible (muro liso, baja textura).
+MANTENER_RUMBO agravara el bloqueo. Priorizar GIRAR_90 o evasion lateral amplia.
+</code></pre></div>
+Esta señal surge del análisis post-corrida (2026-0911): en el episodio final de la corrida extendida, el drone quedó contra una malla convexa con <code>occ = 0.0</code> y <code>foe_confidence ≈ 0.08</code> mientras la tasa de stall frontal era 33–40 %. El SLM, sin este aviso, respondía <code>MANTENER_RUMBO: "Frente libre"</code>. El warning llega al SLM vía todos los paths deliberativos (regular y <code>slam_assess</code>).</p>
+<p>El <code>ObstacleField</code> resultante — potencialmente enriquecido con profundidad monocular — es el único objeto que consumen el router de política, el nodo de evasión, el nodo deliberativo y la FSM. Ningún consumidor accede a campos crudos de flujo óptico ni de profundidad.</p>
 <h2 id="05-arquitectura-lazo-tactico-57-nodo-keep_going">5.7 Nodo <code>keep_going</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-57-nodo-keep_going" title="Permanent link">&para;</a></h2>
 <p><strong>Función:</strong> <code>reactive_node</code> en <code>src/agents/reactive.py</code>.
 <strong>Activación:</strong> camino despejado (TTC alto, sin atasco) o brazo <code>AGENT_ARM=reactive</code>.
@@ -1865,17 +2079,30 @@ r.DetailMode=2
 <strong>Salidas:</strong> <code>next_action</code>, <code>velocity_command</code>, <code>route = "evasive"</code>, actualización de <code>active_maneuver</code> / <code>maneuver_cycles_left</code>.</p>
 <p>Dos modos de operación:</p>
 <p><strong>Modo persistencia</strong> (anti-flip-flop): si <code>active_maneuver</code> está activo y <code>maneuver_cycles_left &gt; 0</code>, continúa la maniobra comprometida ciclo a ciclo. En cada ciclo recalcula la diferencia de yaw respecto al <code>target_yaw</code> de la maniobra: si <code>|yaw_diff| &gt; 3°</code> aplica un controlador P de yaw (<code>yaw_rate = clamp(0.6 * yaw_diff, ±15°/s)</code>); si el error convergió, pone <code>yaw_rate = 0</code> y avanza con <code>vx = 0.8 m/s</code>. Decrementa <code>maneuver_cycles_left</code>; cuando llega a cero, limpia <code>active_maneuver</code>.</p>
-<p><strong>Modo nueva evasión</strong>: compara <code>sector_occupancy("izquierda")</code> con <code>sector_occupancy("derecha")</code>. En caso de empate, desempata por TTC (sector con mayor TTC). Elige <code>EVADIR_IZQUIERDA</code> o <code>EVADIR_DERECHA</code> y llama a <code>action_to_command()</code> con <code>aggressive=True</code> (velocidad de evasión <code>vx = 1.2 m/s</code>).</p>
+<p><strong>Modo nueva evasión (C1 — con memoria de stalls).</strong> Compara la ocupación efectiva de cada sector lateral, penalizada por la historia de stalls:
+<div class="highlight"><pre><span></span><code>eff_occ = sector_occupancy(sector) + stall_rate × 0.5
+          si stall_rate &gt;= 0.60 y attempts &gt;= 3
+</code></pre></div>
+Los campos <code>_traj_izq_stall_rate</code> / <code>_traj_izq_attempts</code> y sus equivalentes para <code>"der"</code> son publicados por <code>capture_node</code> en cada ciclo (vía <code>FlightTrajectory.zone_stats()</code>). Si ambos lados tienen stall_rate &lt; 0.60 o <code>attempts &lt; 3</code>, la penalización no aplica y la selección es idéntica a la original (occupancy pura). Si solo un lado supera el umbral, se evita ese lado aunque el flujo óptico lo vea despejado. El rationale en logs incluye los valores efectivos: <code>"eff_occ izq=0.382 vs der=0.004 [traj izq: 75%/4int]"</code>. En caso de empate final, desempata por TTC (sector con mayor TTC). Elige <code>EVADIR_IZQUIERDA</code> o <code>EVADIR_DERECHA</code> y llama a <code>action_to_command()</code> con <code>aggressive=True</code> (velocidad de evasión <code>vx = 1.2 m/s</code>).</p>
 <p><code>action_to_command()</code> para evasión lateral calcula <code>target_yaw</code> redondeado al múltiplo de 90° más cercano (<code>_manhattan_snap_yaw</code>), apropiado para la cuadrícula urbana de los escenarios de prueba. El comando resultante tiene <code>yaw_rate = ±EVASION_LATERAL_YAW_RATE</code> (15°/s). La maniobra se compromete durante <code>EVASIVE_MANEUVER_DURATION_S</code> × <code>LOOP_HZ</code> ciclos, guardada en <code>active_maneuver</code> / <code>maneuver_command</code> para que el router de política la respete.</p>
 <h2 id="05-arquitectura-lazo-tactico-59-nodo-girar_90">5.9 Nodo <code>girar_90</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-59-nodo-girar_90" title="Permanent link">&para;</a></h2>
 <p><strong>Función:</strong> <code>girar_90_node</code> en <code>graph.py</code>.
 <strong>Activación:</strong> <code>policy_router</code> cuando <code>blocked_fraction() &gt; FOV_BLOCKED_THRESHOLD</code> (0.6) — el FOV está tan obstruido que cualquier corrección lateral es inútil.
 <strong>Salidas:</strong> <code>next_action = "GIRAR_90"</code>, <code>route = "girar_90"</code>, <code>flight_status = "exploracion_yaw"</code>, maniobra comprometida.</p>
-<p>Genera un giro de 90° sin traslación. El <strong>lado del giro</strong> lo determina el error de rumbo al waypoint (<code>bearing_err_deg</code>): si el waypoint está a la izquierda, el giro va a la izquierda, y viceversa. Antes del fix de 2026-0824, el giro era siempre a la derecha, lo que en un caso documentado mandó al dron 90° en dirección contraria al waypoint mientras la percepción reportaba el corredor despejado al otro lado.</p>
+<p>Genera un giro de 90° sin traslación. El <strong>lado del giro</strong> se determina en dos pasos (D1):</p>
+<ol>
+<li>
+<p><strong>Historia de stalls laterales.</strong> Si el lado preferido por bearing tiene <code>stall_rate &gt;= GIRAR90_STALL_THRESHOLD = 0.70</code> con <code>&gt;= GIRAR90_MIN_ATTEMPTS = 3</code> intentos, <strong>y</strong> el lado contrario NO supera ese umbral, se niega el <code>bearing_err_deg</code> para girar al lado contrario. Esto evita que el dron repita un giro hacia una zona ya conocida como bloqueada.</p>
+</li>
+<li>
+<p><strong>Bearing al waypoint (fallback).</strong> Si la historia no es concluyente (ambos lados con stall alto, o sin intentos suficientes), el giro sigue el error de rumbo estándar: waypoint a la izquierda → giro a la izquierda, y viceversa. Antes del fix de 2026-0824, el giro era siempre a la derecha, lo que en un caso documentado mandó al dron 90° en dirección contraria al waypoint.</p>
+</li>
+</ol>
 <p>El comando usa <code>yaw_rate = ±20°/s</code> con <code>target_yaw</code> redondeado a la cuadrícula de 90°. La duración es <code>GIRAR90_DURATION_S</code> (default 1.0 s) × <code>LOOP_HZ</code> ciclos. La maniobra se compromete en <code>active_maneuver</code> / <code>maneuver_cycles_left</code> para que <code>policy_router</code> la complete antes de permitir cualquier otra decisión táctica.</p>
 <h2 id="05-arquitectura-lazo-tactico-510-nodo-deliberative">5.10 Nodo <code>deliberative</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-510-nodo-deliberative" title="Permanent link">&para;</a></h2>
 <p><strong>Función:</strong> <code>make_deliberative_node(service)</code> en <code>src/agents/deliberative.py</code>. Es el nodo más complejo del grafo.
 <strong>Activación:</strong> TTC crítico, FOV no totalmente bloqueado, o atasco (<code>evasion_stuck_cycles &gt;= effective_stall_threshold()</code>).</p>
+<p><strong>Guarda de exclusividad mutua.</strong> Al inicio del nodo, si <code>_deep_scan_request_id is not None</code> (hay un pedido de <code>slam_assess</code> o <code>deep_vlm</code> en vuelo), el nodo emite <code>_wait_command()</code> y retorna sin encolar un nuevo pedido SLM regular. Sin esta guarda, el path regular podría descartar la respuesta del escaneo (la cola de <code>DeliberationService</code> tiene tamaño 1).</p>
 <p>El nodo ejecuta una de tres rutas en cada ciclo:</p>
 <h3 id="05-arquitectura-lazo-tactico-ruta-1-escape-de-deadlock-sincronico-sin-consultar-el-vlm">Ruta 1 — Escape de deadlock (sincrónico, sin consultar el VLM)<a class="headerlink" href="#05-arquitectura-lazo-tactico-ruta-1-escape-de-deadlock-sincronico-sin-consultar-el-vlm" title="Permanent link">&para;</a></h3>
 <p><strong>Condición de activación:</strong> <code>evasion_stuck_cycles &gt;= effective_stall_threshold()</code> <strong>y</strong> <code>_escape_locked = False</code> <strong>y</strong> sin corredor transitable (<code>not has_open_corridor(field, guidance)</code>).</p>
@@ -1893,7 +2120,8 @@ r.DetailMode=2
 </ul>
 <p><code>_wait_command()</code> resuelve el dilema de movilidad durante la espera: si hay un bloqueo central confirmado con TTC bajo (<code>close_structural = True</code>), emite <code>FRENAR</code> por seguridad; si no, avanza lentamente a <code>DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s</code>. La segunda opción preserva la traslación necesaria para que <code>FlowTTCEstimator</code> genere flujo óptico y mantenga la confianza de percepción. El bucle de retroalimentación que se rompía antes (frenar → sin flujo → sin confianza → volver a deliberar → frenar) se documenta en el análisis de TOWNSIM_INI (2026-0903).</p>
 <h3 id="05-arquitectura-lazo-tactico-ruta-3-nuevo-pedido-al-vlm">Ruta 3 — Nuevo pedido al VLM<a class="headerlink" href="#05-arquitectura-lazo-tactico-ruta-3-nuevo-pedido-al-vlm" title="Permanent link">&para;</a></h3>
-<p><strong>Condición:</strong> no hay pedido pendiente (<code>slm_request_id is None</code>).</p>
+<p><strong>Condición:</strong> no hay pedido pendiente (<code>slm_request_id is None</code>) ni pedido de <code>slam_assess</code>/<code>deep_vlm</code> en vuelo (<code>_deep_scan_request_id is None</code>).</p>
+<p><em>Nota: el mecanismo de consulta proactiva (V2, activo en versiones anteriores) fue eliminado en la simplificación Zona 1 (2026-0907). El VLM proactivo consultaba cada 1.5 s en vuelo libre, sin mostrar beneficio medible en ninguna corrida, y competía con el path reactivo. <code>VLM_PROACTIVE_ENABLED = False</code> es ahora una constante (no una variable de entorno).</em></p>
 <p>Construye el user prompt con <code>_build_user_prompt()</code> (cinco componentes: resumen del <code>ObstacleField</code>, objetivo/altitud, estado cinemático, motivo de consulta y historial reciente — descripción completa en §4.3). Si <code>VLM_VISION_ENABLED = True</code>, codifica <code>frame_history</code> como JPEG base64 (redimensionado a <code>VLM_IMAGE_MAX_SIZE = 384 px</code>). Encola el pedido en <code>DeliberationService.request()</code> (cola de tamaño 1 — un pedido nuevo descarta cualquier pedido pendiente no procesado). Guarda <code>_pending_delib_prompt</code> y <code>_pending_delib_frames</code> para la auditoría. Emite <code>_wait_command()</code>.</p>
 <h3 id="05-arquitectura-lazo-tactico-_finalize-resolucion-de-una-deliberacion"><code>_finalize()</code> — Resolución de una deliberación<a class="headerlink" href="#05-arquitectura-lazo-tactico-_finalize-resolucion-de-una-deliberacion" title="Permanent link">&para;</a></h3>
 <p>Aplica un override de seguridad: si el VLM eligió <code>MANTENER_RUMBO</code> pero <code>close_structural = True</code>, fuerza <code>_fallback_decision()</code> y marca <code>is_fallback = True</code>. Traduce la macro-acción a comando cinemático con <code>action_to_command()</code>. Agrega una entrada a <code>deliberations[]</code> con <code>id</code>, <code>timestamp</code>, <code>arm</code>, <code>model</code>, <code>vision_enabled</code>, <code>system_prompt</code>, <code>prompt</code>, <code>raw_response</code>, <code>macro_action</code>, <code>rationale</code>, <code>is_fallback</code>, <code>timeout</code>, <code>adherent</code>, <code>used_json_schema</code>, <code>latency_ms</code>. Si la macro-acción es evasiva (<code>EVADIR_*</code>, <code>GANAR_ALTURA</code>), la compromete como maniobra activa.</p>
@@ -1959,16 +2187,24 @@ r.DetailMode=2
 </table>
 <p>La FSM implementa las mismas salvaguardas que el brazo SLM: persistencia de maniobra, alternancia CLIMB/DESCEND en el escape de deadlock, enclavamiento del escape agotado con GIRAR_90 + <code>inject_corner</code>, y (si <code>DEADLOCK_STRATEGY = "deep_vlm"</code>) delegación al módulo <code>deep_scan</code> antes de forzar el escape ciego. Esta simetría de salvaguardas es intencional: la comparación SLM vs FSM debe medir <strong>quién elige mejor la acción</strong>, no quién tiene mejor lógica de seguridad.</p>
 <p>La diferencia de umbral clave: la FSM usa <code>FSM_TTC_BRAKE_S = 1.5 s</code> y <code>FSM_TTC_AVOID_S = 3.5 s</code> frente a los umbrales del router de política (<code>TTC_EVASION_THRESHOLD = 3.2 s</code>, <code>TTC_SAFE_THRESHOLD = 4.6 s</code>) que alimentan el brazo SLM. Esta diferencia existe porque la FSM decide sin información visual ni de dirección: sus umbrales son más conservadores para compensar la falta de contexto semántico.</p>
-<h2 id="05-arquitectura-lazo-tactico-512-modulo-de-escaneo-panoramico-en-atasco-duro-deep_scan">5.12 Módulo de escaneo panorámico en atasco duro (<code>deep_scan</code>)<a class="headerlink" href="#05-arquitectura-lazo-tactico-512-modulo-de-escaneo-panoramico-en-atasco-duro-deep_scan" title="Permanent link">&para;</a></h2>
+<h2 id="05-arquitectura-lazo-tactico-512-modulo-de-escaneo-y-evaluacion-en-atasco-duro-deep_scan">5.12 Módulo de escaneo y evaluación en atasco duro (<code>deep_scan</code>)<a class="headerlink" href="#05-arquitectura-lazo-tactico-512-modulo-de-escaneo-y-evaluacion-en-atasco-duro-deep_scan" title="Permanent link">&para;</a></h2>
 <p><strong>Archivo:</strong> <code>src/agents/deep_scan.py</code>. Compartido entre los brazos SLM y FSM.
-<strong>Activación:</strong> <code>DEADLOCK_STRATEGY = "deep_vlm"</code> (default) cuando se detecta atasco duro sin corredor transitable.</p>
+<strong>Activación:</strong> <code>DEADLOCK_STRATEGY</code> cuando se detecta atasco duro sin corredor transitable. A partir de 2026-0907, el modo por defecto es <code>"slam_assess"</code>. Los modos <code>"deep_vlm"</code> y <code>"blind"</code> están disponibles vía variable de entorno como legado seleccionable (diseñados para el factorial de corridas S6: comparar <code>deep_vlm</code> vs <code>slam_assess</code> en el cap. 11).</p>
 <p>El módulo implementa una máquina de estados de cuatro fases, sostenida a través de ciclos consecutivos vía los campos <code>_scan_*</code> del <code>DroneState</code>:</p>
 <p><strong>Fase <code>None</code> (inicialización):</strong> inicializa <code>_scan_phase = "rotando"</code>, <code>_scan_heading_index = 0</code>, <code>_scan_frames = []</code>, <code>_scan_start_yaw_deg = yaw_actual</code>. Cancela cualquier maniobra activa.</p>
 <p><strong>Fase <code>"rotando"</code>:</strong> comanda <code>target_yaw = start_yaw + index × (360° / SCAN_HEADING_COUNT_DEEP)</code> (con <code>SCAN_HEADING_COUNT_DEEP = 4</code>, los cuatro rumbos son +0°, +90°, +180°, +270° del rumbo de inicio). La traslación es cero (<code>vx = vy = vz = 0</code>). Cuando el yaw actual está dentro de <code>SCAN_YAW_TOLERANCE_DEG = 5°</code> del objetivo → transición a <code>"asentando"</code>.</p>
 <p><strong>Fase <code>"asentando"</code>:</strong> hover en el rumbo objetivo durante <code>SCAN_SETTLE_CYCLES_DEEP = 2</code> ciclos para que la física del simulador estabilice la actitud antes de capturar. Al terminar el asentamiento, captura el frame del <code>DroneState</code> (el que <code>capture_node</code> ya produjo en este ciclo, <strong>nunca</strong> una nueva llamada a AirSim), guarda la tupla <code>(heading_deg, rgb_frame, capture_ts)</code> en <code>_scan_frames</code>, avanza <code>_scan_heading_index</code> y vuelve a <code>"rotando"</code>. Al completar los cuatro rumbos → transición a <code>"capturado"</code>.</p>
 <p><strong>Fase <code>"capturado"</code>:</strong> construye el prompt del escaneo profundo (<code>_build_deep_scan_prompt()</code>) e invoca <code>service.request()</code> con los frames codificados como JPEG base64 y etiquetas por rumbo (<code>"[Rumbo 90.0°] (rumbo actual, el que viene fallando)"</code>). El modo del pedido es <code>"deep_scan"</code>, para que <code>_query_slm_impl()</code> use <code>SYSTEM_PROMPT_DEEP_SCAN</code> en vez del prompt táctico normal. En ciclos siguientes hace poll hasta que el resultado llegue o el watchdog <code>SLM_DEEP_WATCHDOG_MS = 12 000 ms</code> expire.</p>
-<p>Si el resultado es una acción válida → <code>_apply_scan_resolution()</code>: emite la macro-acción, registra en <code>deliberations[]</code> con <code>arm = "{arm}_deep_scan"</code>, limpia el estado del escaneo, escribe <code>_deadlock_event</code> y pide <code>_escape_reset</code>. Retorna <code>True</code> al llamador (el escape sincrónico queda descartado este ciclo).</p>
+<p>Si el resultado es una acción válida → <code>_apply_scan_resolution()</code>: emite la macro-acción, registra en <code>deliberations[]</code> con <code>arm = "{arm}_deep_scan"</code>, limpia el estado del escaneo, escribe <code>_deadlock_event</code> y pide <code>_escape_reset</code>. Retorna <code>True</code> al llamador (el escape sincrónico queda descartado este ciclo). Antes de emitir la acción, se aplica <code>_apply_trajectory_overrides(decision, trajectory, telemetry)</code>: si el VLM recomendó EVADIR hacia un lado con stall_rate alto y el lado contrario no está peor, el override cambia la dirección y lo registra en el log (<code>"[slam_assess] override: VLM recomendó X → Y (trajectory stats)"</code>).</p>
 <p>Si el resultado llega con acción no válida, o el watchdog expira → limpia el estado, escribe <code>_deadlock_event</code> con <code>fell_back_to_blind = True</code> y retorna <code>False</code>. El llamador continúa inmediatamente hacia el escape sincrónico (GANAR_ALTURA / PERDER_ALTURA) como red de seguridad final, <strong>en el mismo ciclo</strong>.</p>
+<h3 id="05-arquitectura-lazo-tactico-modo-slam_assess-modo-por-defecto-desde-2026-0907">Modo <code>slam_assess</code> (modo por defecto desde 2026-0907)<a class="headerlink" href="#05-arquitectura-lazo-tactico-modo-slam_assess-modo-por-defecto-desde-2026-0907" title="Permanent link">&para;</a></h3>
+<p>A diferencia de <code>deep_vlm</code>, el modo <code>slam_assess</code> <strong>no realiza rotación panorámica</strong>. En su lugar, envía al VLM el frame frontal del ciclo actual junto con el contexto de trayectoria acumulado generado por <code>FlightTrajectory.trajectory_context_text()</code> (§5.12.1). El system prompt (<code>SYSTEM_PROMPT_SLAM_ASSESS</code>) instruye al modelo a razonar sobre el historial de intentos/stalls por zona, no sobre el panorama visual de múltiples rumbos.</p>
+<p><strong>Ventaja operacional</strong>: el modo <code>slam_assess</code> resuelve el atasco dentro del mismo ciclo, sin incurrir en los 8–20 ciclos del barrido de rotación de <code>deep_vlm</code>. No interrumpe el flujo de telemetría ni produce artefactos de percepción por giros en el lugar.</p>
+<p><strong>Limitación</strong>: depende de la acumulación de historia en <code>FlightTrajectory</code>. En los primeros 3–5 ciclos de una misión (buffer vacío), el contexto dice "sin datos disponibles aún" y el VLM razona solo con el frame visual. Equivale a <code>deep_vlm</code> con un único frame.</p>
+<h3 id="05-arquitectura-lazo-tactico-5121-flighttrajectory-y-trajectory_context_text">§5.12.1 <code>FlightTrajectory</code> y <code>trajectory_context_text</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-5121-flighttrajectory-y-trajectory_context_text" title="Permanent link">&para;</a></h3>
+<p><code>FlightTrajectory</code> (<code>src/agents/spatial_history.py</code>) es un ring buffer de eventos de vuelo (<code>TrajectoryEvent</code>) instanciado una vez en <code>_build_nodes()</code> y actualizado al inicio de cada ciclo por <code>capture_node</code>. Cada evento registra posición, rumbo, acción tomada, Δ distancia al waypoint y si fue stall. El buffer guarda <code>SLAM_HISTORY_SIZE = 60</code> eventos (2× <code>SLAM_CONTEXT_MAX_EVENTS = 30</code>, por defecto).</p>
+<p><code>trajectory_context_text(current_heading_deg)</code> agrupa los últimos 30 eventos en cuatro zonas angulares relativas (FRENTE ±30°, IZQUIERDA, DERECHA, ATRÁS) y produce un resumen por zona: intentos, stalls, progreso promedio. Si el progreso promedio de una zona es <code>&lt; SLAM_MARGINAL_PROGRESS_M = 0.28 m/ciclo</code>, se emite un ADVERTENCIA de obstáculo invisible incluso cuando hay ciclos con aparente progreso (avance marginal con stalls = firma de muro liso o malla convexa). El texto diferencia dos sub-casos: <code>stalls == 0</code> con avance marginal (obstáculo 100% invisible al flujo) vs. <code>stalls &gt; 0</code> con avance neto nulo (muro liso con rebotes físicos ocasionales).</p>
+<p><code>zone_stats(current_heading_deg)</code> devuelve el mismo desglose como dict <code>{zona: {"attempts", "stall_rate"}}</code>, usado directamente por <code>capture_node</code> para publicar <code>_traj_frente_stall_rate</code> / <code>_traj_izq_stall_rate</code> / <code>_traj_der_stall_rate</code> en el estado del grafo cada ciclo.</p>
 <p>Durante todo el barrido, <code>_deliberation_pending = True</code> congela el contador <code>evasion_stuck_cycles</code> para que <code>main.py</code> no lo resetee por accidente mientras el dron gira en el lugar.</p>
 <h2 id="05-arquitectura-lazo-tactico-513-nodo-motor">5.13 Nodo <code>motor</code><a class="headerlink" href="#05-arquitectura-lazo-tactico-513-nodo-motor" title="Permanent link">&para;</a></h2>
 <p><strong>Función:</strong> <code>motor_node</code> en <code>graph.py</code>. Único nodo que interactúa con el actuador.
@@ -2195,7 +2431,11 @@ r.DetailMode=2
 </tr>
 <tr>
 <td><code>summary_text()</code></td>
-<td>Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s)"</td>
+<td>Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s, fuente: flujo óptico + profundidad monocular)"</td>
+</tr>
+<tr>
+<td><code>merge_depth_estimate(depth_m, cmd_vx)</code></td>
+<td>Inyecta una estimación de profundidad monocular en el sector centro: las tres celdas quedan con <code>occupancy</code> sobre el umbral de bloqueo, <code>ttc_s = depth_m / cmd_vx</code> y <code>source = "flow+depth"</code> (V4/A1)</td>
 </tr>
 <tr>
 <td><code>to_dict()</code></td>
@@ -2203,7 +2443,19 @@ r.DetailMode=2
 </tr>
 </tbody>
 </table>
-<p>El diseño como objeto inmutable (<code>@dataclass(frozen=True)</code>) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. Esta propiedad simplifica el razonamiento sobre el ciclo de control, donde el mismo <code>ObstacleField</code> es leído por hasta tres consumidores (router, nodo de política, logger) en el mismo ciclo.</p>
+<p>El campo <code>source</code> del <code>ObstacleField</code> indica el origen de la evidencia: <code>"flow"</code> (solo flujo óptico), <code>"flow+depth"</code> (flujo + Depth Anything V2 Metric), <code>"degraded"</code> (ciclo con rotación alta o sin flujo), <code>"holdover"</code> (campo del ciclo anterior por degradación temporal), <code>"none"</code> (sin datos). Este campo es visible en <code>summary_text()</code> y llega al SLM en el prompt, permitiéndole calibrar su confianza según las fuentes que confirmaron el obstáculo (B1).</p>
+<p>El diseño como objeto inmutable (<code>@dataclass(frozen=True)</code>) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. La excepción es <code>merge_depth_estimate()</code>, que retorna un <strong>nuevo</strong> <code>ObstacleField</code> con el sector centro modificado — el campo original no se altera.</p>
+<h2 id="06-percepcion-monocular-610b-segundo-canal-perceptual-depth-anything-v2-metric-v4">6.10b Segundo canal perceptual: Depth Anything V2 Metric (V4)<a class="headerlink" href="#06-percepcion-monocular-610b-segundo-canal-perceptual-depth-anything-v2-metric-v4" title="Permanent link">&para;</a></h2>
+<p>El estimador de flujo óptico tiene un punto ciego estructural ante obstáculos centrados en la trayectoria (cerca del FOE): la divergencia traslacional de esos píxeles es mínima precisamente porque están en el eje de aproximación. Para cubrir ese punto ciego, el sistema incorpora un segundo canal de profundidad <strong>completamente independiente del sensor de profundidad del simulador</strong>: un estimador de profundidad monocular basado en el modelo <strong>Depth Anything V2 Metric</strong> (<code>src/perception/depth_estimator.py</code>).</p>
+<p><strong>Principio.</strong> La entrada es únicamente el frame RGB del ciclo actual — el mismo frame que ya captura <code>capture_node</code>, sin ninguna llamada adicional a AirSim. El modelo de red neuronal infiere un mapa de profundidad métrico (en metros) del frame. Esta distinción arquitectural es crucial: no es el canal <code>DepthPlanar</code> de AirSim (ground truth del simulador, disponible solo en simulación), sino un estimado inferido de una imagen monocular, idéntico a lo que haría un sistema real con un drone sin LiDAR.</p>
+<p><strong>Hilo background.</strong> <code>DepthEstimator</code> corre en un hilo daemon independiente para no bloquear el lazo de control a 5 Hz. <code>perception_node</code> llama a <code>depth_estimator.request(frame)</code> (no bloqueante) y <code>depth_estimator.poll()</code> para obtener el resultado más reciente y su edad en ms. Si el resultado tiene más de <code>DEPTH_MAX_AGE_MS = 3000 ms</code>, se descarta.</p>
+<p><strong>Trigger condicional.</strong> La inferencia solo se solicita cuando: (a) el drone avanza (<code>cmd_vx &gt;= 0.30 m/s</code>), (b) el flujo óptico reporta corredor libre (<code>blocked_fraction &lt; 0.25</code>), y (c) la ruta del ciclo anterior no es <code>"evasive"</code> (no relanzar inferencia durante maniobras activas). La condición (b) es la más importante: cuando el flujo óptico ve obstáculos (<code>blocked_fraction &gt; 0.25</code>), ya tiene control; Depth Anything V2 solo se activa en el caso específico donde el flujo dice "libre" pero el drone no avanza.</p>
+<p><strong>Guarda V4b — anti-falso-positivo.</strong> El mapa de profundidad de Depth Anything V2 sobre renders sintéticos de Unreal Engine puede generar falsos positivos aislados (el modelo fue entrenado sobre imágenes del mundo real y el dominio simulado introduce artefactos). Para filtrarlos, la señal solo se inyecta en el <code>ObstacleField</code> cuando <code>depth_m &lt; DEPTH_BRAKE_M = 5.0 m</code> durante ≥ <code>DEPTH_BELOW_THRESHOLD = 2</code> ciclos consecutivos (<code>_depth_below_cycles</code>). Un solo frame con profundidad baja no activa la señal.</p>
+<p><strong>Clasificación por textura (E2).</strong> <code>DepthEstimator.poll()</code> retorna también un tipo de obstáculo estimado por análisis del mapa de profundidad del sector frontal:
+- <code>"follaje"</code>: CV (std/mean) &gt; 0.55 <strong>o</strong> fracción de píxeles con profundidad &gt; 3× el percentil-5 &gt; 0.30. El follaje tiene huecos que ven objetos lejanos; el CV es alto.
+- <code>"superficie plana"</code>: CV &lt; 0.55 y low far_fraction. La pared produce un mapa de profundidad uniforme.</p>
+<p>Esta clasificación se añade al <code>scene_summary</code> como pista táctica para el SLM (<code>"follaje: evasión diagonal o +1 m"</code> vs. <code>"superficie plana: evasión lateral amplia"</code>), mejorando la especificidad de la decisión sin modificar el routing.</p>
+<p><strong>Integración con el <code>ObstacleField</code> (A1).</strong> Cuando la señal V4 está activa, la profundidad no crea un path de routing separado: se inyecta vía <code>merge_depth_estimate()</code> en el campo existente. El resultado es que el router, el SLM y todos los consumidores downstream ven un único <code>ObstacleField</code> coherente con <code>source = "flow+depth"</code>. No hay condiciones <code>if depth_available</code> dispersas en el código de navegación.</p>
 <h2 id="06-percepcion-monocular-611-consultas-de-nivel-superior-has_open_corridor-y-sector_towards_waypoint">6.11 Consultas de nivel superior: <code>has_open_corridor</code> y <code>sector_towards_waypoint</code><a class="headerlink" href="#06-percepcion-monocular-611-consultas-de-nivel-superior-has_open_corridor-y-sector_towards_waypoint" title="Permanent link">&para;</a></h2>
 <p>Dos funciones de módulo sirven como interfaz de alto nivel compartida entre el router de política, el nodo deliberativo y la FSM:</p>
 <p><strong><code>sector_towards_waypoint(bearing_err_deg)</code></strong> mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
@@ -2298,11 +2550,12 @@ r.DetailMode=2
 </tr>
 </tbody>
 </table>
-<h2 id="06-percepcion-monocular-614-complementariedad-entre-percepcion-clasica-y-vlm">6.14 Complementariedad entre percepción clásica y VLM<a class="headerlink" href="#06-percepcion-monocular-614-complementariedad-entre-percepcion-clasica-y-vlm" title="Permanent link">&para;</a></h2>
-<p>El diseño del sistema asume explícitamente que ninguno de los dos componentes es completo por sí solo:</p>
-<p><strong>El estimador de flujo es fuerte cuando</strong> el dron se traslada a velocidad moderada (&gt; 0.5 m/s), la textura de la escena es suficiente, y la iluminación es razonablemente estable. En esas condiciones produce <code>ObstacleField</code> con <code>foe_confidence &gt; 0.35</code> y bloqueos confiables que el router resuelve en &lt; 5 ms sin consultar el VLM.</p>
-<p><strong>El VLM es fuerte cuando</strong> la percepción clásica falla: hover, giro puro, atasco donde el dron está parado y el flujo colapsó, o cuando se necesita contexto semántico (distinguir una calle libre de una fachada con ventanas, o un árbol de un edificio). El VLM recibe el fotograma directamente y puede razonar sobre la escena a pesar de la falta de movimiento, aunque con latencia de 200 ms a varios segundos.</p>
-<p><strong>La interfaz entre ambas capas</strong> es el campo <code>scene_summary</code> del <code>ObstacleField</code> y el motivo de consulta explícito del prompt (§4.3): cuando la percepción clásica tiene evidencia, el VLM la recibe como contexto cuantitativo ("CENTRO: BLOQUEADO, TTC=3.2s"); cuando no la tiene, el prompt lo dice explícitamente ("la percepción NO tiene evidencia suficiente en este ciclo, probablemente por falta de traslación"). Esta transparencia sobre la fuente y la calidad de la evidencia es el mecanismo que permite al modelo de lenguaje calibrar su propia respuesta según el nivel de confianza del canal perceptual.</p>
+<h2 id="06-percepcion-monocular-614-complementariedad-entre-los-tres-canales-de-percepcion">6.14 Complementariedad entre los tres canales de percepción<a class="headerlink" href="#06-percepcion-monocular-614-complementariedad-entre-los-tres-canales-de-percepcion" title="Permanent link">&para;</a></h2>
+<p>El diseño del sistema asume explícitamente que ningún canal de percepción es completo por sí solo. La arquitectura emplea tres capas con dominios de confiabilidad complementarios:</p>
+<p><strong>Flujo óptico (canal primario)</strong> es fuerte cuando el dron se traslada a velocidad moderada (&gt; 0.5 m/s), la textura es suficiente y la iluminación es estable. Produce <code>ObstacleField</code> con <code>foe_confidence &gt; 0.35</code> y bloqueos confiables en &lt; 5 ms sin consultar el VLM ni el estimador de profundidad.</p>
+<p><strong>Depth Anything V2 Metric (canal secundario, V4)</strong> actúa en el punto ciego estructural del flujo óptico: obstáculos centrados en la trayectoria (cerca del FOE) que generan divergencia nula o muy baja. Solo se activa cuando el flujo dice "libre" pero el drone no avanza — exactamente el escenario donde el flujo óptico más falla. Agrega información de profundidad sin costo de sensor adicional (entrada solo RGB). Sus limitaciones: latencia de inferencia (↑ algunas decenas de ms, cubierta por el hilo background), posibles falsos positivos en renders sintéticos (mitigados por la guarda V4b de N ciclos consecutivos), y dependencia de la distribución del modelo preentrenado.</p>
+<p><strong>VLM (capa deliberativa)</strong> cubre los casos donde ambos canales geométricos fallan: hover puro, giro puro, atasco crónico donde el flujo y la profundidad han colapsado, o cuando se necesita razonamiento semántico global (distinguir una calle libre de una fachada con ventanas, elegir el corredor en una intersección). Recibe el fotograma directamente junto con el resumen del <code>ObstacleField</code> (que puede llevar <code>source = "flow+depth"</code> si el canal V4 aportó evidencia) y la historia de trayectoria acumulada.</p>
+<p><strong>La interfaz entre capas</strong> es el <code>scene_summary</code> del <code>ObstacleField</code> y el motivo de consulta del prompt: cuando hay evidencia geométrica, el VLM la recibe como contexto cuantitativo con su fuente indicada (<code>"CENTRO: BLOQUEADO, TTC=3.2s, fuente: flujo óptico + profundidad monocular"</code>); cuando no la hay, el prompt lo dice explícitamente. Esta transparencia sobre fuente y calidad de la evidencia es el mecanismo que permite al modelo calibrar su respuesta según el nivel de confianza del canal perceptual.</p>
 <hr />
 <p><em>Las referencias bibliográficas citadas en este capítulo corresponden a las entradas del §13 del presente informe. La evaluación cuantitativa del estimador (curvas ROC, AUC, comparación con profundidad de referencia) se desarrolla en el capítulo 7. El análisis de los modos de falla de la percepción y su impacto en el comportamiento del lazo se presenta en el capítulo 9.</em></p></section><section class="print-page" id="07-estimacion-ttc" heading-number="8"><h1 id="07-estimacion-ttc-7-validacion-del-estimador-de-ttc-y-calibracion-del-campo-de-obstaculos">7. Validación del estimador de TTC y calibración del campo de obstáculos<a class="headerlink" href="#07-estimacion-ttc-7-validacion-del-estimador-de-ttc-y-calibracion-del-campo-de-obstaculos" title="Permanent link">&para;</a></h1>
 <p>El capítulo 6 describe el modelo algorítmico del estimador de flujo óptico y su salida, el <code>ObstacleField</code>. Este capítulo responde una pregunta diferente: <strong>¿cómo sabemos que el estimador funciona?</strong> El enfoque adoptado es experimental — se recolectó un conjunto de datos con ground truth de profundidad del simulador y se aplicó análisis de curva ROC para calibrar y evaluar ambos canales (TTC y ocupación) con datos reales de vuelo.</p>
@@ -2559,7 +2812,7 @@ r.DetailMode=2
 <p>Si las tres estrategias fallan, <code>_fallback_decision()</code> entra en vigor: devuelve <code>keep_going</code> con una nota de error, lo que es conservador (continuar la maniobra actual) y auditable (la nota aparece en el log).</p>
 <p>La métrica <code>adherence_rate</code> es una fila explícita de la tabla de resultados (cap. 11): cuantifica cuánto aporta, en la práctica, la decodificación restringida por sobre el parser tolerante como única defensa. Este número importa porque si fuera cercano al 100% solo con el parser, la decodificación restringida sería overhead sin beneficio; si la diferencia es grande (como documentan Raspanti et al. [2025] y Geng et al. [2025] para SLMs compactos), la restricción es una decisión de ingeniería con impacto medible en la fiabilidad del sistema.</p>
 <h2 id="08-decisiones-slm-83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones">8.3 Espacio de acción discreto: lista blanca de macro-acciones<a class="headerlink" href="#08-decisiones-slm-83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones" title="Permanent link">&para;</a></h2>
-<p>El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones:</p>
+<p>El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones definido en <code>PROMPT_ACTIONS</code> (<code>deliberative.py</code>):</p>
 <table>
 <thead>
 <tr>
@@ -2569,27 +2822,57 @@ r.DetailMode=2
 </thead>
 <tbody>
 <tr>
-<td><code>keep_going</code></td>
+<td><code>MANTENER_RUMBO</code></td>
 <td>Continuar hacia el waypoint activo sin alterar la velocidad ni el rumbo</td>
 </tr>
 <tr>
-<td><code>evasive</code></td>
-<td>Iniciar evasión lateral (dirección decidida por <code>evasive_node</code> según ocupación L/R)</td>
+<td><code>EVADIR_IZQUIERDA</code></td>
+<td>Iniciar evasión lateral hacia la izquierda (yaw −15°/s, vx = 0.3–1.2 m/s)</td>
 </tr>
 <tr>
-<td><code>girar_90</code></td>
-<td>Ejecutar un giro de 90° en la dirección menos bloqueada para desatasco</td>
+<td><code>EVADIR_DERECHA</code></td>
+<td>Iniciar evasión lateral hacia la derecha (yaw +15°/s, vx = 0.3–1.2 m/s)</td>
 </tr>
 <tr>
-<td><code>fsm</code></td>
-<td>Delegar la decisión a la máquina de estados FSM (brazo alternativo)</td>
+<td><code>GANAR_ALTURA</code></td>
+<td>Ascender en el lugar (vz = −1.5 m/s, vx = 0) para sobrevolar el obstáculo</td>
 </tr>
 <tr>
-<td><code>degraded</code></td>
-<td>Declarar modo degradado; pasar a <code>degraded_hover_node</code></td>
+<td><code>PERDER_ALTURA</code></td>
+<td>Descender con avance lento (vz = +0.8 m/s, vx = 1.0 m/s)</td>
+</tr>
+<tr>
+<td><code>FRENAR</code></td>
+<td>Detener el drone en el lugar (hover) con corrección de altitud por controlador P</td>
 </tr>
 </tbody>
 </table>
+<p><code>GIRAR_90</code> <strong>no está en <code>PROMPT_ACTIONS</code></strong>: es un bypass determinista que el <code>policy_router</code> activa directamente cuando <code>blocked_fraction &gt; 0.6</code>, sin consultar al VLM. El modelo nunca necesita elegirlo; si lo intentara, el parser lo descartaría.</p>
+<p>El schema JSON declarado para la decodificación restringida tiene la forma:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;json_schema&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;json_schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;macro_decision&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;macro_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span>
+<span class="w">                   </span><span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">]</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;rationale&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">}</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;macro_action&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rationale&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;additionalProperties&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Poda del enum por motivo de consulta.</strong> En lugar de enviar siempre el enum completo, <code>_schema_for_reason(reason_key)</code> genera un schema podado según el contexto:
+- <code>"TTC_CRITICO"</code>: excluye <code>MANTENER_RUMBO</code> (hay colisión inminente confirmada).
+- <code>"DEADLOCK_ESCAPE"</code>: excluye <code>MANTENER_RUMBO</code> y <code>FRENAR</code> (el drone ya está atascado; detenerse o insistir al frente es contraproducente).</p>
+<p>Esta poda semántica concentra la distribución de muestreo del modelo en las acciones físicamente coherentes con la causa de la consulta, reduciendo la tasa de respuestas subóptimas en los escenarios de mayor riesgo sin requerir fine-tuning.</p>
 <p>Esta arquitectura de lista blanca tiene tres propiedades de diseño que se derivan mutuamente:</p>
 <p><strong>1. Compatibilidad directa con la decodificación restringida.</strong> Un espacio de acción finito y conocido a priori puede representarse como una enumeración JSON (<code>enum</code>), lo que hace posible convertir la restricción de salida en una gramática aplicable en tiempo de inferencia. Un espacio continuo de comandos cinemáticos no puede representarse así sin esquemas mucho más complejos.</p>
 <p><strong>2. Comparación limpia entre brazos.</strong> El nodo deliberativo (VLM), el nodo FSM y el nodo reactivo comparten el mismo espacio de macro-acciones y el mismo traductor a comandos <code>action_to_command()</code>. La única variable que difiere entre ellos es <em>quién elige la etiqueta</em>, no <em>qué puede elegir ni cómo se ejecuta</em>. Esto hace posible la comparación experimental de los tres brazos (cap. 10) sin confundir diferencias de política con diferencias de actuación.</p>
@@ -2664,7 +2947,11 @@ r.DetailMode=2
 <h2 id="08-decisiones-slm-85-ingenieria-del-prompt-cinco-componentes">8.5 Ingeniería del prompt: cinco componentes<a class="headerlink" href="#08-decisiones-slm-85-ingenieria-del-prompt-cinco-componentes" title="Permanent link">&para;</a></h2>
 <p>El prompt de usuario construido por <code>_build_user_prompt()</code> tiene cinco componentes estructurados, cada uno respondiendo a una pregunta específica que el VLM necesita para decidir:</p>
 <p><strong>Componente 1 — Estado de vuelo y telemetría.</strong> Velocidad horizontal, velocidad vertical, altitud, actitud (pitch, roll), estado de misión, waypoint activo y distancia restante. Este componente traduce telemetría numérica cruda a descripciones en lenguaje natural ("el dron vuela a 4.2 m/s, con 23 m al próximo waypoint, pitch -3.1°"). La verbalización explícita se prefiere a la telemetría cruda por dos razones convergentes: los SLMs de 3B parámetros razonan más confiablemente sobre descripciones en lenguaje natural que sobre tuplas de números (<a href="#13-referencias-ref-zhu-2024">Zhu et al., 2024</a>), y la práctica de convertir retroalimentación de sensores y de entorno a lenguaje natural antes de dársela a un modelo de lenguaje para planificación robótica está empíricamente validada en el patrón de "monólogo interno": <a href="#13-referencias-ref-huang-2022">Huang et al. (2022)</a> muestran que un LLM que recibe la retroalimentación del entorno verbalizada explícitamente —en lugar de como estado estructurado— mejora significativamente la tasa de éxito en la ejecución de instrucciones de alto nivel en múltiples dominios robóticos.</p>
-<p><strong>Componente 2 — Resumen del <code>ObstacleField</code>.</strong> El resultado de <code>ObstacleField.summary_text()</code> para cada sector activo: TTC, ocupación, confianza, estado de bloqueo. Cuando el campo tiene evidencia, este componente provee información cuantitativa sobre la geometría del obstáculo. Cuando no la tiene, el componente dice explícitamente "percepción SIN evidencia" y describe la causa probable (velocidad baja, rotación activa), lo que permite al VLM distinguir "no hay obstáculo" de "no sé si hay obstáculo".</p>
+<p><strong>Componente 2 — Resumen del <code>ObstacleField</code> enriquecido.</strong> El resultado de <code>ObstacleField.summary_text()</code> para cada sector activo: TTC, ocupación, confianza, estado de bloqueo y <strong>fuente</strong> del campo (<code>"flujo óptico"</code>, <code>"flujo óptico + profundidad monocular (Depth Anything V2)"</code>, etc.). Cuando el campo tiene evidencia, este componente provee información cuantitativa sobre la geometría del obstáculo. Cuando no la tiene, el componente dice explícitamente "percepción SIN evidencia".</p>
+<p><code>scene_summary</code> puede además incluir avisos adicionales generados por <code>perception_node</code>:
+- <strong>E2</strong>: <code>"Obstáculo frontal (profundidad monocular): follaje. Posibles huecos entre ramas — evasión diagonal o +1 m de altura puede ser viable."</code> (cuando Depth Anything V2 clasifica el obstáculo como vegetación).
+- <strong>G1</strong>: <code>"AVISO [G1]: stall frontal 33% (30 intentos) con campo óptico despejado — posible obstáculo invisible (muro liso, baja textura). MANTENER_RUMBO agravará el bloqueo. Priorizar GIRAR_90 o evasión lateral amplia."</code> (cuando el historial acumulado contradice la ausencia de bloqueo óptico).</p>
+<p>Estos avisos llegan al VLM en todos los paths deliberativos (regular, <code>slam_assess</code>, <code>deep_vlm</code>), permitiéndole ajustar la decisión a la naturaleza específica del obstáculo invisible.</p>
 <p><strong>Componente 3 — Historial de decisiones recientes.</strong> Las últimas <code>N</code> acciones tomadas (con sus razones, si el deliberativo las reportó), incluyendo cuántos ciclos lleva activa la maniobra actual y si hay señales de atasco (progreso hacia el waypoint &lt; umbral durante varios ciclos). Este componente provee contexto temporal que una sola imagen no puede dar: el VLM puede distinguir "empecé a evadir hace 1 ciclo" de "llevo 8 ciclos evasión sin avanzar".</p>
 <p><strong>Componente 4 — Motivo explícito de consulta.</strong> El campo <code>reason_note</code> codifica <em>por qué</em> el nodo deliberativo fue activado en este ciclo: <code>"TTC_CRITICO"</code> (TTC &lt; umbral de evasión), <code>"TTC_ADVERTENCIA"</code> (zona de histéresis), <code>"FALTA_EVIDENCIA"</code> (flujo colapsado), <code>"DEADLOCK_ESCAPE"</code> (atasco detectado), <code>"DEEP_SCAN_RESULT"</code> (resultado de exploración rotacional). Este campo es crítico para calibrar la respuesta: ante <code>"FALTA_EVIDENCIA"</code>, el VLM no debe reportar obstáculos que no ve; ante <code>"TTC_CRITICO"</code>, debe priorizar evasión inmediata.</p>
 <p><strong>Componente 5 — Instrucción de formato de salida.</strong> Reiteración explícita del esquema JSON esperado y de los valores posibles del campo <code>action</code>, coherente con el <code>json_schema</code> declarado en el parámetro de formato. Esta redundancia entre prompt y schema es intencional: para modelos pequeños, la instrucción textual explícita mejora el <code>adherence_rate</code> incluso cuando la decodificación restringida está activa, especialmente en la elección del campo <code>action</code> dentro del dominio de la enumeración (<a href="#13-referencias-ref-geng-2025">Geng et al., 2025</a>).</p>
@@ -4715,7 +5002,7 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Tamaño de muestra:</strong> K=5 semillas por condición (75 corridas en total). La corrección de Bonferroni para 18 comparaciones fija α_corr ≈ 0.0028, un umbral que el p-valor mínimo alcanzable con K=5 (p ≈ 7.9×10⁻³) no puede superar. Los resultados son indicativos y cuantitativamente consistentes, pero no formalmente significativos.</p>
 </li>
 <li>
-<p><strong>Sensor monocular:</strong> el canal de flujo óptico depende del movimiento del vehículo entre frames, lo que lo hace estructuralmente ciego a obstáculos centrados en la trayectoria (Foco de Expansión). El límite observado en <code>townsim_ini</code> no es resueltamente por ajuste de parámetros; requiere un segundo canal de profundidad instantánea (cap. 11, §11.5.3; Anexo 7).</p>
+<p><strong>Sensor monocular (parcialmente mitigado):</strong> el canal de flujo óptico depende del movimiento del vehículo entre frames, lo que lo hace estructuralmente ciego a obstáculos centrados en la trayectoria (Foco de Expansión). El límite observado en <code>townsim_ini</code> no se resuelve por ajuste de parámetros. Se incorporó un segundo canal de profundidad inferida (Depth Anything V2 Metric, §5.6 V4 / §6.10b) que opera solo sobre RGB y cubre parcialmente ese punto ciego; sus falsos positivos en renders sintéticos están mitigados por la guarda V4b pero no eliminados. El límite del sensor en texturas auto-similares densas (<code>townsim_ini</code>) sigue siendo estructural y requiere validación en corridas reales (cap. 11, §11.5.3; Anexo 7).</p>
 </li>
 <li>
 <p><strong>Calibración del canal de ocupación de <code>ObstacleField</code> pendiente:</strong> el canal de TTC está formalmente validado contra profundidad ground truth (cap. 7); el umbral de ocupación(<code>OBSTACLE_OCCUPANCY_BLOCKED = 0.35</code>) es provisorio (cap. 6, §6.9; cap. 7, §7.5).</p>
@@ -4751,6 +5038,9 @@ límite del sensor, no del algoritmo.</p>
 </li>
 <li>
 <p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong> El fracaso uniforme de los tres brazos en <code>townsim_ini</code> (cap. 11, §11.4.2b) expuso un límite estructural del sensor monocular: el flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión), que son los de mayor riesgo de colisión frontal (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.1–§A7.2). Como trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del movimiento entre frames al recuperar profundidad métrica en un único instante (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, con limitaciones propias frente a follaje en movimiento y geometría subpíxel.</p>
+</li>
+<li>
+<p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="#anexos-a8-navegacion-rl">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en VLM pre-entrenado. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>, manteniendo activa la capa deliberativa VLM en modo jerárquico. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— sin el overhead de latencia del brazo <code>slm</code> (~850–1400 ms vs. &lt; 5 ms de inferencia neuronal). El <a href="#anexos-a8-navegacion-rl">Anexo 8</a> desarrolla en detalle la jerarquía VLM → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos (K=5, 3 escenarios, 60 corridas). Su prerequisito es que el brazo <code>slm</code> tenga resultados estables (fase S6 del PLAN-SLAM).</p>
 </li>
 <li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>
@@ -4839,6 +5129,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-jwo-2023" class="ref-anchor"></a><a id="13-referencias-ref-jwo-2023"></a>Jwo, D. J., Biswal, A., &amp; Mir, I. A. (2023). Artificial Neural Networks for Navigation Systems: A Review of Recent Research. <em>Applied Sciences</em>, <em>13</em>(7), 4475. <a href="https://doi.org/10.3390/app13074475">https://doi.org/10.3390/app13074475</a></p>
 <p><a id="ref-kaneko-2017" class="ref-anchor"></a><a id="13-referencias-ref-kaneko-2017"></a>Kaneko, N., Yoshida, T., &amp; Sumi, K. (2017). Fast Obstacle Detection for Monocular Autonomous Mobile Robots. <em>SICE Journal of Control, Measurement, and System Integration</em>, <em>10</em>(5), 370-377. <a href="https://doi.org/10.9746/jcmsi.10.370">https://doi.org/10.9746/jcmsi.10.370</a></p>
 <p><a id="ref-kemeny-2003" class="ref-anchor"></a><a id="13-referencias-ref-kemeny-2003"></a>Kemeny, A., &amp; Panerai, F. (2003). Evaluating perception in driving simulation experiments. <em>Trends in Cognitive Sciences</em>, <em>7</em>(1), 31-37. <a href="https://doi.org/10.1016/S1364-6613(02)00011-6">https://doi.org/10.1016/S1364-6613(02)00011-6</a></p>
+<p><a id="ref-kaufmann-2023" class="ref-anchor"></a><a id="13-referencias-ref-kaufmann-2023"></a>Kaufmann, E., Bauersfeld, L., Loquercio, A., Müller, M., Koltun, V., &amp; Scaramuzza, D. (2023). Champion-level drone racing using deep reinforcement learning. <em>Nature</em>, <em>620</em>(7976), 982–987. <a href="https://doi.org/10.1038/s41586-023-06419-4">https://doi.org/10.1038/s41586-023-06419-4</a></p>
 <p><a id="ref-koubaa-2019" class="ref-anchor"></a><a id="13-referencias-ref-koubaa-2019"></a>Koubaa, A., Allouch, A., Alajlan, M., Javed, Y., Belghith, A., &amp; Khalgui, M. (2019). Micro Air Vehicle Link (MAVLink) in a Nutshell: A Survey. <em>CoRR</em>, <em>abs/1906.10641</em>. <a href="http://arxiv.org/abs/1906.10641">http://arxiv.org/abs/1906.10641</a></p>
 <p><a id="ref-kroeger-2016" class="ref-anchor"></a><a id="13-referencias-ref-kroeger-2016"></a>Kroeger, T., Timofte, R., Dai, D., &amp; Van Gool, L. (2016). Fast Optical Flow Using Dense Inverse Search. En B. Leibe, J. Matas, N. Sebe, &amp; M. Welling (Eds.), <em>Computer Vision – ECCV 2016</em>, LNCS 9908 (pp. 471-488). Springer. <a href="https://doi.org/10.1007/978-3-319-46493-0_29">https://doi.org/10.1007/978-3-319-46493-0_29</a></p>
 <p><a id="ref-kruskal-1952" class="ref-anchor"></a><a id="13-referencias-ref-kruskal-1952"></a>Kruskal, W. H., &amp; Wallis, W. A. (1952). Use of Ranks in One-Criterion Variance Analysis. <em>Journal of the American Statistical Association</em>, <em>47</em>(260), 583-621. <a href="https://doi.org/10.1080/01621459.1952.10483441">https://doi.org/10.1080/01621459.1952.10483441</a></p>
@@ -6657,7 +6948,529 @@ como el <strong>paso intermedio natural</strong>: menor costo de implementación
 monocular semi-denso o un LiDAR real, y con un impacto directo sobre el modo de falla documentado
 en corredores arbolados. El SLAM monocular (§A7.2.1) queda como una línea posterior, complementaria
 y no sustitutiva, útil si además del canal de profundidad instantánea que aporta el estéreo se
-requiere robustez de localización y mapeo ante escena dinámica extendida en el tiempo.</p></section></section></div><style>.print-site-enumerate-headings #00-cover > h1:before { content: '1 ' }
+requiere robustez de localización y mapeo ante escena dinámica extendida en el tiempo.</p></section><section class="print-page" id="anexos-a8-navegacion-rl" heading-number="15.8"><h1 id="anexos-a8-navegacion-rl-anexo-8-politica-de-navegacion-visual-por-aprendizaje-por-refuerzo-diseno-propuesto-como-cuarto-brazo">Anexo 8: Política de Navegación Visual por Aprendizaje por Refuerzo — Diseño Propuesto como Cuarto Brazo<a class="headerlink" href="#anexos-a8-navegacion-rl-anexo-8-politica-de-navegacion-visual-por-aprendizaje-por-refuerzo-diseno-propuesto-como-cuarto-brazo" title="Permanent link">&para;</a></h1>
+<p>Este anexo desarrolla el diseño técnico de un cuarto brazo de comparación experimental
+(<code>rl</code>) basado en <strong>aprendizaje por refuerzo visual (<em>Reinforcement Learning</em>, RL)</strong>,
+propuesto como trabajo futuro en §12.4. El brazo <code>rl</code> no está implementado en el sistema
+evaluado en el capítulo 11; este anexo especifica su arquitectura, espacio de
+observaciones y acciones, función de recompensa, protocolo de entrenamiento y posición en
+el conjunto de hipótesis experimentales de la tesis, de forma que sirva como base técnica
+para la etapa de implementación.</p>
+<p>El planteamiento es complementario — no alternativo — a los avances del Anexo 3 (LoRA) y
+del Anexo 4 (gramáticas restringidas): mientras esos dos anexos proponen especializar la
+capa deliberativa existente (VLM), el brazo <code>rl</code> propone reemplazar la capa táctica
+completa por una política neuronal entrenada por interacción directa con el entorno, en el
+mismo nivel de abstracción que ocupa actualmente <code>evasive_node</code> + <code>reactive_node</code>.</p>
+<hr />
+<h2 id="anexos-a8-navegacion-rl-a81-posicion-en-la-arquitectura-jerarquica">A8.1 Posición en la arquitectura jerárquica<a class="headerlink" href="#anexos-a8-navegacion-rl-a81-posicion-en-la-arquitectura-jerarquica" title="Permanent link">&para;</a></h2>
+<p>El sistema implementado en esta tesis opera en tres capas de abstracción temporal
+diferenciada:</p>
+<div class="highlight"><pre><span></span><code>[Lenguaje / Misión]  ─ planeación de misión (GCS, cap. 4)
+        │
+        ▼
+┌───────────────────────────────────────────┐
+│ Capa deliberativa — VLM  (0.5–2 Hz)       │  brazo &quot;slm&quot;: Qwen2.5-VL-3B
+│  razonamiento semántico → macro-acción     │  (implementado, cap. 5, §5.10)
+└──────────────────┬────────────────────────┘
+                   │ macro-acción
+                   ▼
+┌───────────────────────────────────────────┐
+│ Capa táctica — control reactivo (5 Hz)    │  brazos &quot;fsm&quot;, &quot;reactive&quot; (implementados)
+│  ObstacleField → velocidad                 │  brazo &quot;rl&quot;: política neuronal (propuesto)
+└──────────────────┬────────────────────────┘
+                   │ velocity setpoints
+                   ▼
+┌───────────────────────────────────────────┐
+│ Capa motora — PX4 / PID (400 Hz)          │  controlador de actitud; intocado
+└───────────────────────────────────────────┘
+</code></pre></div>
+<p>El brazo <code>rl</code> ocupa la <strong>capa táctica</strong>: recibe el frame RGB actual, el <code>ObstacleField</code>
+producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>waypoint_guidance</code>), y
+produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
+<code>evasive_node</code>. La capa deliberativa (VLM) sigue activa en modo jerárquico: puede inyectar
+waypoints de desvío (<code>inject_corner</code>) o llamar a <code>slam_assess</code> ante atascos duros, igual
+que con los brazos existentes.</p>
+<p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
+<code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
+seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
+<ul>
+<li>El mismo <code>ObstacleField</code> como entrada perceptual.</li>
+<li>El mismo <code>action_to_command()</code> como traductor a cinemática.</li>
+<li>Las mismas salvaguardas de <code>motor_node</code> (corrección de altitud, target_yaw).</li>
+<li>El mismo <code>WaypointTracker</code> para el guiado a waypoints.</li>
+</ul>
+<hr />
+<h2 id="anexos-a8-navegacion-rl-a82-espacio-de-observaciones">A8.2 Espacio de observaciones<a class="headerlink" href="#anexos-a8-navegacion-rl-a82-espacio-de-observaciones" title="Permanent link">&para;</a></h2>
+<p>Se propone un espacio de observación de tres componentes, idénticos a los que ya produce el
+lazo en cada ciclo (sin nuevos sensores):</p>
+<div class="highlight"><pre><span></span><code><span class="n">obs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;rgb&quot;</span><span class="p">:</span>      <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>   <span class="c1"># shape (H, W, 3) — frame RGB del ciclo actual</span>
+    <span class="s2">&quot;ttc_field&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>  <span class="c1"># shape (3, 3, 3) — ObstacleField: [ttc, occ, conf] × 9 celdas</span>
+    <span class="s2">&quot;nav&quot;</span><span class="p">:</span>      <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>   <span class="c1"># shape (6,) — [dist_wp, bearing_err, vx, vy, vz, alt]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong><code>rgb</code> (entrada visual).</strong> El mismo frame que <code>capture_node</code> ya produce. Para el
+entrenamiento se escala a 84 × 84 px, suficiente para que una CNN pequeña extraiga
+patrones de textura y borde sin el costo de resolución completa. Se puede extender a
+<code>frame_history</code> (dos frames consecutivos, igual que el VLM) para que la política infiera
+dirección de movimiento.</p>
+<p><strong><code>ttc_field</code> (campo de obstáculos serializado).</strong> El <code>ObstacleField</code> se serializa como un
+tensor 3×3×3: para cada celda de la grilla, los tres valores son TTC, ocupación y
+confianza. Esta representación preserva la estructura espacial del campo sin exponer al
+modelo los internos del estimador de flujo óptico. La política aprende implícitamente el
+significado de cada componente durante el entrenamiento, igual que el VLM lo aprende del
+texto de <code>summary_text()</code>.</p>
+<p><strong><code>nav</code> (estado de guiado).</strong> Distancia al waypoint activo, error de rumbo (<code>bearing_err_deg</code>),
+velocidades actuales y altitud. Estos seis escalares proporcionan el contexto cinemático
+necesario para que la política distinga "atascado contra obstáculo frontal" de "girando
+hacia el waypoint".</p>
+<p><strong>Opción B — end-to-end puro.</strong> Una alternativa más ajustada al objetivo de bajo costo de
+sensor es usar solo <code>rgb</code> como observación. Es más difícil de entrenar (la política debe
+aprender implícitamente el TTC y la geometría de obstáculos), pero produce un sistema sin
+dependencia del estimador de flujo óptico — relevante si se quiere transferir a un drone
+real donde la calibración del flujo es incierta.</p>
+<hr />
+<h2 id="anexos-a8-navegacion-rl-a83-espacio-de-acciones">A8.3 Espacio de acciones<a class="headerlink" href="#anexos-a8-navegacion-rl-a83-espacio-de-acciones" title="Permanent link">&para;</a></h2>
+<p>Se propone un espacio discreto de seis acciones, alineado con <code>PROMPT_ACTIONS</code> del nodo
+deliberativo (§8.3, §5.14):</p>
+<table>
+<thead>
+<tr>
+<th>Índice</th>
+<th>Macro-acción</th>
+<th>Semántica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>MANTENER_RUMBO</code></td>
+<td>Avanzar hacia el waypoint activo</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>EVADIR_IZQUIERDA</code></td>
+<td>Evasión lateral izquierda</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>EVADIR_DERECHA</code></td>
+<td>Evasión lateral derecha</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>GANAR_ALTURA</code></td>
+<td>Ascender para sobrevolar obstáculo</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>PERDER_ALTURA</code></td>
+<td>Descender con avance lento</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>FRENAR</code></td>
+<td>Detener el drone (hover)</td>
+</tr>
+</tbody>
+</table>
+<p>La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
+(<code>action_to_command()</code>, §5.14): la política neuronal nunca genera velocidades directamente,
+lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
+saturaciones y convenciones de Body Frame que los brazos <code>fsm</code> y <code>slm</code>.</p>
+<p><strong>Espacio continuo (extensión futura).</strong> Una vez que el brazo discreto haya convergido, se
+puede reemplazar el cabezal de política por un <code>Box(low=-1, high=1, shape=(4,))</code>
+correspondiente a <span class="arithmatex">\([v_x, v_y, v_z, \dot\psi]\)</span> normalizados. El espacio continuo permite
+maniobras más suaves y eficientes, pero requiere guardar los límites cinemáticos como
+restricciones en la función de recompensa o como proyección post-acción.</p>
+<hr />
+<h2 id="anexos-a8-navegacion-rl-a84-funcion-de-recompensa">A8.4 Función de recompensa<a class="headerlink" href="#anexos-a8-navegacion-rl-a84-funcion-de-recompensa" title="Permanent link">&para;</a></h2>
+<p>La función de recompensa combina cuatro términos con signos y pesos diferenciados:</p>
+<div class="arithmatex">\[r_t = w_{\text{prog}} \cdot \Delta d_t + w_{\text{col}} \cdot c_t + w_{\text{near}} \cdot n_t + w_{\text{arr}} \cdot a_t - w_{\text{time}} \cdot \Delta t\]</div>
+<p>donde:</p>
+<ul>
+<li>
+<p><span class="arithmatex">\(\Delta d_t = d_{t-1} - d_t\)</span> es la reducción de distancia al waypoint activo en el ciclo
+  <span class="arithmatex">\(t\)</span> (positivo = progreso, negativo = retroceso).</p>
+</li>
+<li>
+<p><span class="arithmatex">\(c_t \in \{0, -1\}\)</span>: penalidad dura de colisión. Se activa cuando <code>telemetry["collision"]
+  = True</code> (flag de AirSim). Domina sobre todos los demás términos para que la primera
+  prioridad aprendida sea la evitación de obstáculos.</p>
+</li>
+<li>
+<p><span class="arithmatex">\(n_t = -\text{clip}(1/\text{TTC}_{\min} - 1/T_{\text{safe}},\, 0,\, 1)\)</span>: penalidad suave
+  de proximidad, proporcional al exceso de peligro por encima del umbral <code>TTC_SAFE_THRESHOLD
+  = 4.6 s</code>. Permite al agente aprender gradaciones de riesgo sin esperar la colisión.</p>
+</li>
+<li>
+<p><span class="arithmatex">\(a_t \in \{0, +1\}\)</span>: bonificación esparsa de llegada al waypoint activo
+  (<code>waypoint_guidance["is_completed"] = True</code>).</p>
+</li>
+<li>
+<p><span class="arithmatex">\(\Delta t\)</span>: penalidad de tiempo (eficiencia). Evita que el agente aprenda a hovear
+  indefinidamente cerca de los waypoints para acumular señal de proximidad sin avanzar.</p>
+</li>
+</ul>
+<p><strong>Currículo de entrenamiento.</strong> Se recomienda iniciar con <span class="arithmatex">\(w_{\text{col}} \gg w_{\text{prog}}
+\gg w_{\text{near}}\)</span> para que la política aprenda primero a no colisionar (comportamiento
+de seguridad mínimo); una vez que la tasa de colisión caiga por debajo del 20 % en el
+escenario de entrenamiento, se aumenta gradualmente <span class="arithmatex">\(w_{\text{prog}}\)</span> para impulsar el
+comportamiento de avance. La secuencia de escenarios sigue el orden de dificultad de la
+tesis: Tier 0 → Tier 1 → Tier 2.</p>
+<hr />
+<h2 id="anexos-a8-navegacion-rl-a85-algoritmo-de-entrenamiento">A8.5 Algoritmo de entrenamiento<a class="headerlink" href="#anexos-a8-navegacion-rl-a85-algoritmo-de-entrenamiento" title="Permanent link">&para;</a></h2>
+<p>Se propone <strong>PPO</strong> (<em>Proximal Policy Optimization</em>, [Schulman et al., 2017]) como algoritmo
+primario, implementado vía <strong>Stable-Baselines3</strong> ([Raffin et al., 2021]).</p>
+<h3 id="anexos-a8-navegacion-rl-justificacion-de-la-eleccion">Justificación de la elección<a class="headerlink" href="#anexos-a8-navegacion-rl-justificacion-de-la-eleccion" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Algoritmo</th>
+<th>Tipo</th>
+<th>Ventaja</th>
+<th>Limitación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PPO</strong> (recomendado)</td>
+<td>On-policy</td>
+<td>Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift (<a href="#anexos-a8-navegacion-rl-ref-kaufmann-2023">Kaufmann et al., 2023</a>)</td>
+<td>Mayor costo de muestras que off-policy</td>
+</tr>
+<tr>
+<td>SAC</td>
+<td>Off-policy</td>
+<td>Mayor eficiencia de muestras; apropiado para espacio continuo</td>
+<td>Requiere ajuste fino de temperatura de entropía</td>
+</tr>
+<tr>
+<td>DQN</td>
+<td>Off-policy (discreto)</td>
+<td>Línea base rápida; bajo costo de implementación</td>
+<td>Sin soporte nativo para observaciones imagen + vector</td>
+</tr>
+</tbody>
+</table>
+<p>PPO es el algoritmo que usa el sistema <strong>Swift</strong> de la Universidad de Zúrich
+(<a href="#anexos-a8-navegacion-rl-ref-kaufmann-2023">Kaufmann et al., 2023</a>) para control de drones de carreras; en ese
+trabajo, una política PPO entrenada en AirSim superó en tiempo de vuelta a pilotos humanos
+campeones del mundo. Es el antecedente más directo en nivel de maniobra y en uso del mismo
+simulador. La convergencia on-policy es más predecible, lo que simplifica la interpretación
+de los resultados en un contexto de tesis.</p>
+<p><strong>Advertencia sobre generalización.</strong> El resultado de Swift ilustra tanto el potencial como
+el límite central del enfoque RL en robótica aérea: la política fue entrenada y evaluada en
+el circuito de carreras de Zúrich —geometría fija, velocidades máximas constantes, ausencia
+de obstáculos imprevistos— y no puede transferirse directamente a un entorno diferente sin
+reentrenamiento completo. Cambiar el trazado del circuito o la dinámica del dron degrada la
+tasa de éxito hasta el nivel de aleatoriedad. Este fenómeno de <em>overfitting</em> a la
+distribución de entrenamiento es estructural en RL, no un artefacto del método.</p>
+<p>Para el brazo <code>rl</code> de esta tesis, el riesgo de especialización excesiva se mitiga
+parcialmente por tres decisiones de diseño:</p>
+<ol>
+<li>
+<p><strong>Espacio de acciones discretas sobre macro-acciones</strong>: en lugar de generar velocidades
+   directamente (como hace Swift), la política elige entre las seis macro-acciones ya
+   validadas en los brazos <code>fsm</code> y <code>reactive</code>. Esto reduce el espacio de comportamientos
+   "incorrectos" aprendibles a aquellos que el sistema ya sabe ejecutar con seguridad.</p>
+</li>
+<li>
+<p><strong>Currículo de escenarios por Tier</strong>: el agente se expone a tres niveles de dificultad
+   (Tier 0 → 1 → 2) y cinco mapas diferentes durante el entrenamiento, forzando
+   generalización a geometrías urbanas variadas en lugar de memorizar un circuito.</p>
+</li>
+<li>
+<p><strong>Capa deliberativa activa</strong>: cuando la política RL entra en un estado no representado
+   en el entrenamiento (alta entropía de acción, múltiples ciclos de <code>FRENAR</code>), el nodo
+   deliberativo puede invocar <code>slam_assess</code> para recuperar el control, igual que con los
+   brazos <code>fsm</code> y <code>reactive</code>. Esto limita la región de fallo catastrófico de la política
+   neuronal.</p>
+</li>
+</ol>
+<p>La validación en escenarios no vistos durante el entrenamiento —especialmente
+<code>citymap_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
+una de las incógnitas clave del protocolo de evaluación de §A8.6.</p>
+<h3 id="anexos-a8-navegacion-rl-arquitectura-de-la-politica">Arquitectura de la política<a class="headerlink" href="#anexos-a8-navegacion-rl-arquitectura-de-la-politica" title="Permanent link">&para;</a></h3>
+<p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales
+paralelos:</p>
+<div class="highlight"><pre><span></span><code>rgb (84×84×3)           ttc_field + nav (27+6)
+      │                         │
+Conv(32,8,4)            Linear(64) → ReLU
+Conv(64,4,2)
+Conv(64,3,1)
+Flatten(3136)
+      │                         │
+      └──── Concat(3136+70) ────┘
+                    │
+             Linear(512) → ReLU
+             Linear(256) → ReLU
+            ┌────────────────┐
+       Actor(6)          Critic(1)
+</code></pre></div>
+<p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de
+obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella
+fuerza la política a integrar información visual y geométrica antes de tomar la decisión.
+Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando
+se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
+<hr />
+<h2 id="anexos-a8-navegacion-rl-a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#anexos-a8-navegacion-rl-a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
+<p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
+los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, §10.2), para que la comparación sea válida:</p>
+<div class="highlight"><pre><span></span><code>K=5 semillas × 3 escenarios × 4 brazos = 60 corridas
+</code></pre></div>
+<p>Los escenarios propuestos para la evaluación del brazo <code>rl</code> son los mismos cinco de la
+tesis (§10.1):</p>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Tier</th>
+<th>Tipo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minisim_clear</code></td>
+<td>0</td>
+<td>Tránsito libre</td>
+</tr>
+<tr>
+<td><code>townsim_clear</code></td>
+<td>1</td>
+<td>Tránsito libre</td>
+</tr>
+<tr>
+<td><code>citysim_clear</code></td>
+<td>2</td>
+<td>Tránsito libre</td>
+</tr>
+<tr>
+<td><code>townsim_ini</code></td>
+<td>1</td>
+<td>Obstrucción densa (corredor arbolado)</td>
+</tr>
+<tr>
+<td><code>citymap_pilot</code></td>
+<td>2</td>
+<td>Obstrucción estructural (autopista elevada)</td>
+</tr>
+</tbody>
+</table>
+<p>Las métricas son las mismas que §10.3 (<code>success_rate</code>, <code>mission_time_s</code>, <code>collision_rate</code>,
+<code>waypoints_reached</code>, <code>deliberative_rate</code>) más dos métricas específicas del brazo <code>rl</code>:</p>
+<ul>
+<li><code>policy_latency_ms</code>: tiempo de inferencia de la política neuronal (objetivo &lt; 5 ms en
+  CPU, &lt; 1 ms en GPU dedicada).</li>
+<li><code>training_steps_to_convergence</code>: número de pasos PPO hasta superar el criterio de éxito
+  mínimo de R1 (tasa de llegada &gt; 50 % en <code>minisim_clear</code>).</li>
+</ul>
+<p>La tabla de comparación propuesta para el capítulo 11 sería:</p>
+<table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th><code>reactive</code></th>
+<th><code>fsm</code></th>
+<th><code>slm</code></th>
+<th><code>rl</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tasa de éxito — tránsito libre</td>
+<td>ref</td>
+<td>ref</td>
+<td>ref</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Tasa de éxito — obstrucción densa</td>
+<td>ref</td>
+<td>ref</td>
+<td>ref</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Ratio tiempo vs. <code>reactive</code></td>
+<td>1.0×</td>
+<td>?</td>
+<td>1.06–2.20×</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Latencia de decisión</td>
+<td>~0.1 ms</td>
+<td>~0.2 ms</td>
+<td>850–1400 ms</td>
+<td>&lt; 5 ms (estimado)</td>
+</tr>
+<tr>
+<td>Consumo adicional de VRAM</td>
+<td>—</td>
+<td>—</td>
+<td>~2 GB</td>
+<td>&lt; 50 MB (CNN pequeña)</td>
+</tr>
+</tbody>
+</table>
+<p>La hipótesis de trabajo es que el brazo <code>rl</code> superará al brazo <code>reactive</code> en escenarios de
+obstrucción densa (<code>townsim_ini</code>) donde el flujo óptico colapsa — porque la política
+neuronal puede aprender a actuar con observación visual directa, sin depender de la
+divergencia del flujo — y competirá con <code>fsm</code> en tránsito libre, donde la política debería
+aprender a elegir <code>MANTENER_RUMBO</code> de forma casi perfecta. Su comparación más relevante
+para la tesis es contra el brazo <code>slm</code>: ambos usan visión directa, pero <code>slm</code> es una
+inferencia de VLM pre-entrenado de propósito general mientras que <code>rl</code> es una política
+especializada en el espacio de maniobras de este sistema.</p>
+<hr />
+<h2 id="anexos-a8-navegacion-rl-a87-dependencias-y-prerrequisitos">A8.7 Dependencias y prerrequisitos<a class="headerlink" href="#anexos-a8-navegacion-rl-a87-dependencias-y-prerrequisitos" title="Permanent link">&para;</a></h2>
+<p>La implementación del brazo <code>rl</code> tiene las siguientes dependencias sobre el trabajo ya
+realizado:</p>
+<ul>
+<li><strong>S6 completado</strong> (PLAN-SLAM): la corrida comparativa <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
+  debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
+  tenga una línea base válida.</li>
+<li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=slam_assess</code>: la política RL se entrenará
+  en el mismo entorno de simulación en el que se midió el <code>slm</code>; si ese entorno cambia
+  durante el entrenamiento, los resultados no son comparables.</li>
+</ul>
+<p>Las dependencias de software son mínimas (sobre el entorno conda <code>airsimenv</code> existente):</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>stable-baselines3<span class="o">[</span>extra<span class="o">]</span><span class="w">   </span><span class="c1"># PPO, SAC, DQN + tensorboard</span>
+pip<span class="w"> </span>install<span class="w"> </span>gymnasium<span class="w">                  </span><span class="c1"># gym API moderna (reemplaza gym)</span>
+pip<span class="w"> </span>install<span class="w"> </span>sb3-contrib<span class="w">                </span><span class="c1"># TQC, RecurrentPPO si se necesitan</span>
+</code></pre></div>
+<p>El entrenamiento puede ejecutarse en la misma máquina de desarrollo (RTX 5060, 8 GB VRAM),
+ya que el brazo <code>rl</code> no requiere inferencia de VLM durante el entrenamiento. El presupuesto
+estimado de VRAM para PPO con la arquitectura CNN propuesta (§A8.5) es &lt; 2 GB, compatible
+con AirSim corriendo en paralelo.</p>
+<hr />
+<p><em>Las referencias citadas en este anexo corresponden a las entradas del §13 del presente
+informe. La evaluación cuantitativa del brazo <code>rl</code> y su comparación con los tres brazos
+implementados forma parte del trabajo futuro descrito en §12.4.</em></p></section><section class="print-page" id="anexos-a9-uso-ia-generativa" heading-number="15.9"><h1 id="anexos-a9-uso-ia-generativa-anexo-9-uso-de-inteligencia-artificial-generativa-en-el-desarrollo-de-esta-tesis">Anexo 9: Uso de Inteligencia Artificial Generativa en el Desarrollo de esta Tesis<a class="headerlink" href="#anexos-a9-uso-ia-generativa-anexo-9-uso-de-inteligencia-artificial-generativa-en-el-desarrollo-de-esta-tesis" title="Permanent link">&para;</a></h1>
+<p>Este anexo documenta el rol que la inteligencia artificial generativa —en particular los asistentes de código agénticos— desempeñó en el desarrollo de este trabajo, tanto en la prueba del sistema técnico como en la redacción del informe. Su propósito es triple: cumplir con el deber de transparencia académica sobre las herramientas utilizadas; registrar las prácticas que resultaron efectivas en este contexto específico; y ofrecer recomendaciones concretas para investigadores que enfrenten proyectos de complejidad similar en los que la IA agéntica ya no es un lujo opcional sino, como se argumenta aquí, una condición necesaria para que el trabajo sea realizable dentro del horizonte temporal de una tesis de maestría.</p>
+<p>La reflexión que sigue no es una apología tecnológica. El uso de IA en investigación académica introduce riesgos reales —de atribución intelectual, de verificación, de dependencia— que se discuten sin eufemismos. El objetivo es describir honestamente qué funcionó, qué no, y por qué.</p>
+<hr />
+<h2 id="anexos-a9-uso-ia-generativa-a91-contexto-una-tesis-cuya-materia-prima-es-la-ia">A9.1 Contexto: una tesis cuya materia prima es la IA<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a91-contexto-una-tesis-cuya-materia-prima-es-la-ia" title="Permanent link">&para;</a></h2>
+<p>Existe una particularidad metodológica en este trabajo que vale la pena enunciar explícitamente: la tesis <em>estudia</em> sistemas basados en modelos de lenguaje de visión (VLM), y fue <em>desarrollada con</em> un asistente basado en modelos de lenguaje. Esto no es una contradicción; es una confluencia que ilumina ambos lados de la práctica.</p>
+<p>El sistema implementado (cap. 5) usa un VLM de 3B parámetros para razonar sobre escenas de vuelo y elegir maniobras. El asistente utilizado en su desarrollo (Claude Code / Claude Opus 4.5, Anthropic, 2024–2026) es una IA agéntica con acceso al sistema de archivos, al historial de git y a las herramientas del entorno de desarrollo. La semejanza no es superficial: en ambos casos un modelo de lenguaje recibe contexto, razona sobre él y propone una acción; en ambos casos la validez de la acción propuesta debe ser verificada por un agente externo (el drone con el resultado físico del vuelo; el investigador con el
+resultado técnico del código o del texto).</p>
+<p>Esta simetría genera una forma inusual de reflexividad metodológica: el investigador que desarrolla este sistema entiende, desde adentro, qué significa confiar en la salida de un LLM y qué significa verificarla.</p>
+<hr />
+<h2 id="anexos-a9-uso-ia-generativa-a92-descripcion-del-uso">A9.2 Descripción del uso<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a92-descripcion-del-uso" title="Permanent link">&para;</a></h2>
+<h3 id="anexos-a9-uso-ia-generativa-a921-asistente-y-modalidad">A9.2.1 Asistente y modalidad<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a921-asistente-y-modalidad" title="Permanent link">&para;</a></h3>
+<p>Se utilizó <strong>Claude Code</strong> (Anthropic, 2024–2026) en modalidad agéntica con acceso al repositorio local. A lo largo del proyecto, la interacción adoptó tres modalidades diferenciadas:</p>
+<p><strong>Modo exploración:</strong> el investigador plantea una pregunta abierta sobre el código o el diseño del sistema ("¿por qué el TRAJ_STALL nunca se dispara?") y el asistente lee los archivos relevantes, propone hipótesis y verifica cada una contra el código real. Esta modalidad fue la más valiosa para el diagnóstico de errores sutiles.</p>
+<p><strong>Modo implementación guiada:</strong> el investigador especifica qué se quiere hacer y revisa cada cambio propuesto antes de aplicarlo. El asistente explica el razonamiento, y el investigador aprueba o rechaza cada decisión de diseño.</p>
+<p><strong>Modo redacción técnica:</strong> el investigador describe en lenguaje coloquial lo que hace una sección del sistema (por ejemplo, "el nodo de percepción ahora calcula tres señales nuevas para detectar cuando el drone está atascado contra una pared invisible") y el asistente transforma esa descripción en prosa académica con terminología precisa, ecuaciones y referencias al código fuente.</p>
+<p>También se utilizó <strong>Gemini 3 Pro</strong> (Google, 2026) para generar figuras e ilustraciones del informe, incluyendo los diagramas de arquitectura y los esquemas conceptuales. La interacción siguió un patrón similar al modo redacción técnica: el investigador describe la imagen que necesita y revisa cada propuesta del asistente antes de aplicarla.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a922-contribucion-cuantitativa-aproximada">A9.2.2 Contribución cuantitativa aproximada<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a922-contribucion-cuantitativa-aproximada" title="Permanent link">&para;</a></h3>
+<p>Cuantificar con precisión la contribución del asistente es difícil porque la frontera entre "código generado por IA" y "código validado/modificado por el investigador" es siempre borrosa. Una estimación honesta:</p>
+<table>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Proporción estimada de asistencia IA</th>
+<th>Nota</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Código de infraestructura (<code>batch_runner</code>, loggers, tests)</td>
+<td>Alta (~70%)</td>
+<td>Patrones repetitivos con especificación precisa</td>
+</tr>
+<tr>
+<td>Código de lógica de control (<code>graph.py</code>, <code>spatial_history.py</code>)</td>
+<td>Media (~40%)</td>
+<td>Diseño del investigador, implementación parcialmente asistida con una buena cantidad de vueltas de reingeniería posibles gracias a la iteración rápida con Claude Code</td>
+</tr>
+<tr>
+<td>Diagnóstico de bugs</td>
+<td>Alta (~60%)</td>
+<td>Especialmente bugs de contrato de datos (DroneState, LangGraph)</td>
+</tr>
+<tr>
+<td>Redacción del informe (estructura, prosa técnica, referencias cruzadas)</td>
+<td>Alta (~75%)</td>
+<td>A partir de descripciones del investigador + lectura del código</td>
+</tr>
+<tr>
+<td>Decisiones arquitectónicas (qué construir, cómo comparar)</td>
+<td>Baja (~5%)</td>
+<td>Siempre del investigador; el asistente señala implicaciones</td>
+</tr>
+</tbody>
+</table>
+<p>La columna "proporción estimada" mide cuánto del trabajo <em>de ejecución</em> fue asistido, no cuánto del trabajo <em>intelectual</em>. Las decisiones de qué hipótesis plantear, qué comparar, qué considerar un resultado relevante y qué descartar como artefacto de simulación fueron siempre del investigador.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a923-casos-concretos-de-alto-impacto">A9.2.3 Casos concretos de alto impacto<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a923-casos-concretos-de-alto-impacto" title="Permanent link">&para;</a></h3>
+<p><strong>Bug-1: descarte silencioso en DroneState (2026-09-11).</strong>
+El disparador <code>TRAJ_STALL</code> en <code>policy_router</code> estaba roto por 584 ciclos de vuelo —dos meses de desarrollo— sin que ningún test lo detectara. La causa: <code>_traj_frente_stall_rate</code> y <code>_traj_frente_attempts</code> no estaban declarados en el TypedDict <code>DroneState</code>, y LangGraph descarta silenciosamente los campos no declarados al cruzar <code>graph.invoke()</code>. El asistente identificó la causa raíz en menos de un turno de conversación, tras leer <code>graph.py</code> y <code>spatial_history.py</code> en paralelo y notar la discrepancia entre los campos que <code>capture_node</code> publicaba y los que <code>DroneState</code> declaraba. El investigador no había vinculado el síntoma (TRAJ_STALL nunca activo) con ese mecanismo de LangGraph porque el comportamiento silencioso nunca produce un error visible.</p>
+<p>Este caso ilustra una ventaja específica de la IA agéntica frente a un peer humano: el asistente no tiene "coste cognitivo" de leer 500 líneas de código en paralelo y no "asume" que un campo debe estar declarado porque el código lo usa. Lee lo que está escrito, no lo que debería estar escrito.</p>
+<p><strong>Corrección del orden de prioridades de <code>policy_router</code>.</strong>
+El informe documentaba un orden erróneo de las 11 prioridades del router principal (active_maneuver antes del guard de continuidad de VLM, sin la prioridad imu_contact/blind_wall, sin stuck_invisible). El asistente corrigió la sección completa del informe leyendo el código real de <code>policy_router</code> y comparándolo línea a línea con la documentación anterior. El proceso tomó un turno de conversación; hacerlo manualmente habría requerido leer el código, transcribir el orden correcto, reescribir la tabla y verificar cada nombre de condición.</p>
+<p><strong>Actualización masiva del informe.</strong>
+Después de tres meses de desarrollo, el informe había quedado desactualizado en cinco capítulos. El investigador describió cada cambio relevante y el asistente leyó el código actual, confrontó con el texto existente e identificó las discrepancias capítulo por capítulo, redactando las secciones nuevas (§5.3, §5.6, §6.10b, §8.3, etc.) a partir de la lectura directa del código. El trabajo de actualización que habría llevado varios días se completó en una sesión.</p>
+<hr />
+<h2 id="anexos-a9-uso-ia-generativa-a93-mejores-practicas-observadas">A9.3 Mejores prácticas observadas<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a93-mejores-practicas-observadas" title="Permanent link">&para;</a></h2>
+<p>Las siguientes prácticas emergieron de la experiencia acumulada en este proyecto, no de una evaluación sistemática. Se presentan como observaciones de campo, no como prescripciones universales.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a931-el-investigador-como-verificador-final-siempre">A9.3.1 El investigador como verificador final, siempre<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a931-el-investigador-como-verificador-final-siempre" title="Permanent link">&para;</a></h3>
+<p>La regla más importante y más frecuentemente violada en el uso productivo de IA agéntica es: <strong>nunca aceptar una edición de código o de texto sin leerla</strong>. El asistente puede generar código correcto que resuelve el problema planteado pero que introduce una suposición implícita que viola una invariante del sistema que el investigador conoce pero no expresó. En este proyecto, la práctica fue revisar cada <code>diff</code> antes de aprobarlo, con especial atención a:</p>
+<ul>
+<li>Cambios en firmas de funciones o en TypedDicts (contrato de datos).</li>
+<li>Nuevas importaciones (dependencias que quizás no están en el entorno).</li>
+<li>Cambios en constantes globales con nombres similares (e.g., <code>SLAM_HISTORY_SIZE</code> aparece en dos archivos con semánticas distintas).</li>
+</ul>
+<p>Esta vigilancia no reduce el valor del asistente; lo maximiza. Un revisor que entiende lo que lee puede aprobar en segundos lo que tardaría minutos en escribir.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a932-especificidad-del-contexto-como-palanca-principal">A9.3.2 Especificidad del contexto como palanca principal<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a932-especificidad-del-contexto-como-palanca-principal" title="Permanent link">&para;</a></h3>
+<p>La calidad de la asistencia escala directamente con la especificidad del contexto proporcionado. Una pregunta como "¿por qué no funciona la evasión?" produce una exploración costosa. Una pregunta como "el trigger TRAJ_STALL en <code>policy_router.py:83</code> nunca se activa según los logs <code>_traj_frente_stall_rate=0.0</code> en cada ciclo; la función <code>zone_stats()</code> en <code>spatial_history.py</code> sí devuelve valores no nulos" localiza el problema de inmediato.</p>
+<p>El investigador que sabe leer logs y conoce la arquitectura del sistema puede formular preguntas altamente contextualizadas. La inversión en entender el propio código —en lugar de delegarlo completamente al asistente— multiplica exponencialmente el retorno de la asistencia.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a933-separar-las-fases-de-diseno-y-de-implementacion">A9.3.3 Separar las fases de diseño y de implementación<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a933-separar-las-fases-de-diseno-y-de-implementacion" title="Permanent link">&para;</a></h3>
+<p>El asistente es más valioso en la fase de implementación que en la de diseño arquitectónico. Las decisiones sobre <em>qué construir</em> (¿cuatro brazos o tres? ¿flujo óptico + VLM o solo VLM? ¿<code>slam_assess</code> o <code>deep_vlm</code> como default?) requieren juicio sobre las restricciones del proyecto, el horizonte temporal, y los objetivos académicos que el investigador posee y el asistente no puede inferir completamente de los archivos.</p>
+<p>La práctica recomendada es: <em>decidir primero, implementar con asistencia después</em>. Intentar que el asistente decida la arquitectura produce propuestas genéricas que no tienen en cuenta las restricciones reales del proyecto (presupuesto temporal, hardware disponible, qué comparaciones son académicamente interesantes).</p>
+<h3 id="anexos-a9-uso-ia-generativa-a934-ciclos-cortos-de-verificacion-empirica">A9.3.4 Ciclos cortos de verificación empírica<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a934-ciclos-cortos-de-verificacion-empirica" title="Permanent link">&para;</a></h3>
+<p>La IA agéntica acelera el ciclo de código → informe → validación, pero no lo elimina. En este proyecto, el ciclo productivo fue:</p>
+<p><img src="anexos/a9-ciclo-verificacion-empirica.jpg"/></p>
+<p>El paso que permanece completamente fuera del alcance del asistente —la validación empírica en simulación— sigue siendo el cuello de botella del ciclo. La IA comprime los demás pasos, lo que libera tiempo para más iteraciones experimentales.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a935-gestion-del-contexto-de-conversacion">A9.3.5 Gestión del contexto de conversación<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a935-gestion-del-contexto-de-conversacion" title="Permanent link">&para;</a></h3>
+<p>Los asistentes agénticos tienen una ventana de contexto finita. En proyectos de varias semanas, el contexto acumulado supera esa ventana y el asistente pierde memoria de decisiones previas. La práctica que resultó más efectiva fue mantener un archivo <code>CHANGELOG.md</code> actualizado después de cada sesión significativa: el asistente puede releer ese archivo al inicio de cada sesión y recuperar el estado del proyecto en minutos, en lugar de reexplorar el código completo.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a936-transparencia-sobre-la-contribucion">A9.3.6 Transparencia sobre la contribución<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a936-transparencia-sobre-la-contribucion" title="Permanent link">&para;</a></h3>
+<p>El uso de IA en la redacción de tesis no es equivalente al plagio, pero sí requiere un nivel análogo de declaración. El estándar propuesto, y adoptado en este trabajo, es:</p>
+<ul>
+<li><strong>El investigador es responsable</strong> de toda afirmación técnica, toda interpretación de resultados y toda decisión arquitectónica. Si una sección fue redactada con asistencia pero contiene una afirmación incorrecta, la responsabilidad es del investigador.</li>
+<li><strong>La IA es una herramienta de producción</strong>, no un coautor. Así como un estadístico que usa R para calcular p-valores no cita a R como coautor, el uso de IA para transformar notas técnicas en prosa académica no convierte al asistente en autor.</li>
+<li><strong>Declarar el uso es parte de la metodología</strong>, no una confesión. Este anexo es esa declaración.</li>
+</ul>
+<hr />
+<h2 id="anexos-a9-uso-ia-generativa-a94-limitaciones-y-riesgos-observados">A9.4 Limitaciones y riesgos observados<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a94-limitaciones-y-riesgos-observados" title="Permanent link">&para;</a></h2>
+<h3 id="anexos-a9-uso-ia-generativa-a941-alucinacion-en-contexto-tecnico">A9.4.1 Alucinación en contexto técnico<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a941-alucinacion-en-contexto-tecnico" title="Permanent link">&para;</a></h3>
+<p>El riesgo más relevante en el uso de IA para redacción técnica no es la alucinación flagrante (nombres de paper inventados, APIs inexistentes) sino la <strong>alucinación de coherencia</strong>: el texto suena técnicamente preciso pero afirma algo sutilmente erróneo que solo el experto en el dominio puede detectar.</p>
+<p>En este proyecto se identificaron varios casos de este tipo durante la revisión: secciones del informe que describían un comportamiento del sistema que había sido verdadero en una versión anterior pero que ya había cambiado, o que usaban terminología ligeramente incorrecta para un mecanismo específico. La mitigación fue sistemática: nunca aceptar una descripción del sistema sin verificarla contra el código real. El asistente que <em>lee elcódigo</em> y describe lo que ve es más confiable que el que <em>recuerda</em> descripciones previas.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a942-dependencia-que-reduce-la-comprension-profunda">A9.4.2 Dependencia que reduce la comprensión profunda<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a942-dependencia-que-reduce-la-comprension-profunda" title="Permanent link">&para;</a></h3>
+<p>Existe un riesgo real de que la fluidez con la que el asistente genera código reduzca el tiempo que el investigador dedica a entender ese código en profundidad. Para un proyecto de tesis, donde la comprensión del sistema es un objetivo académico en sí mismo, esto es un riesgo serio.</p>
+<p>La práctica adoptada fue usar el asistente para generar la primera versión de un módulo y luego leerla completa antes de seguir —tratando la lectura del código generado como cualquier otra lectura de código ajeno. En módulos críticos (<code>graph.py</code>,<code>deliberative.py</code>), el investigador reescribió partes del código generado no porque estuviera incorrecto sino para forzarse a entender cada decisión de implementación.</p>
+<h3 id="anexos-a9-uso-ia-generativa-a943-sesgo-hacia-soluciones-conocidas">A9.4.3 Sesgo hacia soluciones conocidas<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a943-sesgo-hacia-soluciones-conocidas" title="Permanent link">&para;</a></h3>
+<p>Los modelos de lenguaje tienden a proponer soluciones que aparecen frecuentemente en sus datos de entrenamiento. En este proyecto, esto produjo ocasionalmente propuestas de infraestructura sobredimensionada (abstracciones innecesarias, patrones de diseño para sistemas más grandes) o soluciones estándar que no se ajustaban bien a las restricciones específicas del entorno AirSim/Windows/PowerShell.</p>
+<p>La mitigación fue mantener instrucciones explícitas de estilo en el contexto del asistente ("no agregar abstracciones más allá de lo que el task requiere", "preferir editar archivos existentes a crear nuevos"), que el asistente respetó consistentemente una vez establecidas.</p>
+<hr />
+<h2 id="anexos-a9-uso-ia-generativa-a95-recomendaciones-para-investigadores-en-situacion-analoga">A9.5 Recomendaciones para investigadores en situación análoga<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a95-recomendaciones-para-investigadores-en-situacion-analoga" title="Permanent link">&para;</a></h2>
+<p>Las siguientes recomendaciones están dirigidas a investigadores de maestría o doctorado que trabajan solos o en grupos pequeños en proyectos de ingeniería de sistemas con componentes de IA, y que consideran usar asistentes agénticos como herramienta de desarrollo.</p>
+<p><strong>1. Defina primero la arquitectura sin el asistente.</strong> Use la IA para implementar una arquitectura que usted ya entiende, no para que la IA diseñe una que usted luego intenta entender. El tiempo invertido en diseño propio se recupera multiplicado en la fase de verificación.</p>
+<p><strong>2. Mantenga un CHANGELOG sesión a sesión.</strong> Un registro de qué se cambió y por qué, actualizado al final de cada sesión de trabajo, es la forma más eficiente de inicializar el contexto del asistente en sesiones posteriores. Es también la bitácora metodológica que permitirá escribir la sección de métodos del informe con precisión.</p>
+<p><strong>3. Trate los tests como contrato, no como cobertura.</strong> El asistente puede generar tests para verificar comportamientos. El investigador debe asegurarse de que esos tests verifican el comportamiento correcto, no simplemente que el código no lanza excepciones. En este proyecto, la Suite de 181 tests no detectó el Bug-1 porque ningún test verificaba que <code>_traj_frente_stall_rate</code> cruzara la llamada <code>graph.invoke()</code> — nadie (humano ni IA) había pensado en ese vector de fallo.</p>
+<p><strong>4. Use la IA para comprimir los ciclos, no para saltarlos.</strong> El valor del asistente es reducir el tiempo entre hipótesis y evidencia empírica: implementación más rápida, diagnóstico más rápido, documentación más rápida. El paso de validación empírica —correr el sistema, observar el comportamiento, interpretar los resultados— no se comprime y no debe saltarse.</p>
+<p><strong>5. Verifique las referencias citadas por el asistente.</strong> En redacción técnica, el asistente puede citar papers que existen y son relevantes, papers que existen pero dicen algo diferente de lo que se afirma, o papers que no existen en absoluto. La práctica segura es tratar toda referencia generada por IA como una hipótesis a verificar antes de incluirla en el informe.</p>
+<p><strong>6. Declare el uso con precisión.</strong> La pregunta relevante para la integridad académica no es "¿usé IA?" sino "¿puedo defender intelectualmente cada afirmación de este trabajo?" Si la respuesta es sí —porque verificó el código, interpretó los resultados y tomó las decisiones arquitectónicas— el uso de IA como herramienta de producción es metodológica y éticamente análogo al uso de cualquier otro entorno de desarrollo.</p>
+<hr />
+<h2 id="anexos-a9-uso-ia-generativa-a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad">A9.6 Reflexión final: la IA agéntica como condición de posibilidad<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad" title="Permanent link">&para;</a></h2>
+<p>Este proyecto involucra un sistema de control distribuido en múltiples módulos Python (~4 000 líneas de código activo), una suite de pruebas de 181 tests, cinco capítulos técnicos del informe con referencias cruzadas precisas al código, y ocho anexos que documentan desde fundamentos matemáticos hasta propuestas de trabajo futuro.</p>
+<p>Completar todo esto en el horizonte temporal de una tesis de maestría, como investigador individual, sin el asistente agéntico, habría requerido o bien un recorte sustancial del alcance técnico o bien un tiempo de desarrollo que excedería el plazo académico disponible.</p>
+<p>Esto no significa que cualquier investigador con acceso a Claude pueda producir este sistema. Significa que el asistente multiplicó la capacidad de ejecución del investigador, que aportó la comprensión del dominio, las decisiones arquitectónicas, la interpretación de los resultados y la responsabilidad intelectual sobre el trabajo. La analogía más precisa no es la del ghostwriter sino la del taller bien equipado: las herramientas no construyen el objeto, pero sin ellas el artesano no puede construirlo en el tiempo disponible.</p>
+<p>La incorporación de herramientas de IA agéntica en el flujo de trabajo de investigación científica y de ingeniería no es una tendencia futura: es una práctica presente que la comunidad académica está comenzando a normalizar. La transparencia sobre cómo se usan estas herramientas —sus contribuciones, sus límites y sus riesgos— es el primer paso hacia estándares metodológicos que permitan evaluarlas con rigor.</p>
+<hr />
+<p><em>Este anexo fue redactado en colaboración con Claude Code (Anthropic, 2024–2026),
+usando como fuente primaria la bitácora de desarrollo (<code>CHANGELOG.md</code>), los registros
+de sesión del proyecto y la reflexión del investigador sobre el proceso. Las afirmaciones
+sobre comportamiento del sistema están verificadas contra el código fuente del repositorio.</em></p></section></section></div><style>.print-site-enumerate-headings #00-cover > h1:before { content: '1 ' }
 
                 .print-site-enumerate-headings #00-cover h2:before { content: '1.' counter(counter-00-cover-2) ' ' }
                 .print-site-enumerate-headings #00-cover h2 {  counter-reset: counter-00-cover-3 ;  counter-increment: counter-00-cover-2 }
@@ -6804,6 +7617,16 @@ requiere robustez de localización y mapeo ante escena dinámica extendida en el
 
                 .print-site-enumerate-headings #anexos-a7-maldicion-monocular-estereo h2:before { content: '15.7.' counter(counter-anexos-a7-maldicion-monocular-estereo-2) ' ' }
                 .print-site-enumerate-headings #anexos-a7-maldicion-monocular-estereo h2 {  counter-increment: counter-anexos-a7-maldicion-monocular-estereo-2 }
+            
+.print-site-enumerate-headings #anexos-a8-navegacion-rl > h1:before { content: '15.8 ' }
+
+                .print-site-enumerate-headings #anexos-a8-navegacion-rl h2:before { content: '15.8.' counter(counter-anexos-a8-navegacion-rl-2) ' ' }
+                .print-site-enumerate-headings #anexos-a8-navegacion-rl h2 {  counter-increment: counter-anexos-a8-navegacion-rl-2 }
+            
+.print-site-enumerate-headings #anexos-a9-uso-ia-generativa > h1:before { content: '15.9 ' }
+
+                .print-site-enumerate-headings #anexos-a9-uso-ia-generativa h2:before { content: '15.9.' counter(counter-anexos-a9-uso-ia-generativa-2) ' ' }
+                .print-site-enumerate-headings #anexos-a9-uso-ia-generativa h2 {  counter-increment: counter-anexos-a9-uso-ia-generativa-2 }
             </style>
 
 

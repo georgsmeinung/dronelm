@@ -151,10 +151,33 @@ Todos los consumidores del sistema de percepción — `policy_router`, `evasive_
 | `blocked_fraction()` | Fracción de celdas bloqueadas sobre el total de la grilla 3×3 |
 | `min_ttc()` | TTC mínimo global, sobre todas las celdas con confianza suficiente |
 | `has_evidence()` | `True` si `source == "flow"` y `foe_confidence > 0.0` |
-| `summary_text()` | Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s)" |
+| `summary_text()` | Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s, fuente: flujo óptico + profundidad monocular)" |
+| `merge_depth_estimate(depth_m, cmd_vx)` | Inyecta una estimación de profundidad monocular en el sector centro: las tres celdas quedan con `occupancy` sobre el umbral de bloqueo, `ttc_s = depth_m / cmd_vx` y `source = "flow+depth"` (V4/A1) |
 | `to_dict()` | Representación serializable para el JSONL de auditoría |
 
-El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. Esta propiedad simplifica el razonamiento sobre el ciclo de control, donde el mismo `ObstacleField` es leído por hasta tres consumidores (router, nodo de política, logger) en el mismo ciclo.
+El campo `source` del `ObstacleField` indica el origen de la evidencia: `"flow"` (solo flujo óptico), `"flow+depth"` (flujo + Depth Anything V2 Metric), `"degraded"` (ciclo con rotación alta o sin flujo), `"holdover"` (campo del ciclo anterior por degradación temporal), `"none"` (sin datos). Este campo es visible en `summary_text()` y llega al SLM en el prompt, permitiéndole calibrar su confianza según las fuentes que confirmaron el obstáculo (B1).
+
+El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. La excepción es `merge_depth_estimate()`, que retorna un **nuevo** `ObstacleField` con el sector centro modificado — el campo original no se altera.
+
+## 6.10b Segundo canal perceptual: Depth Anything V2 Metric (V4)
+
+El estimador de flujo óptico tiene un punto ciego estructural ante obstáculos centrados en la trayectoria (cerca del FOE): la divergencia traslacional de esos píxeles es mínima precisamente porque están en el eje de aproximación. Para cubrir ese punto ciego, el sistema incorpora un segundo canal de profundidad **completamente independiente del sensor de profundidad del simulador**: un estimador de profundidad monocular basado en el modelo **Depth Anything V2 Metric** (`src/perception/depth_estimator.py`).
+
+**Principio.** La entrada es únicamente el frame RGB del ciclo actual — el mismo frame que ya captura `capture_node`, sin ninguna llamada adicional a AirSim. El modelo de red neuronal infiere un mapa de profundidad métrico (en metros) del frame. Esta distinción arquitectural es crucial: no es el canal `DepthPlanar` de AirSim (ground truth del simulador, disponible solo en simulación), sino un estimado inferido de una imagen monocular, idéntico a lo que haría un sistema real con un drone sin LiDAR.
+
+**Hilo background.** `DepthEstimator` corre en un hilo daemon independiente para no bloquear el lazo de control a 5 Hz. `perception_node` llama a `depth_estimator.request(frame)` (no bloqueante) y `depth_estimator.poll()` para obtener el resultado más reciente y su edad en ms. Si el resultado tiene más de `DEPTH_MAX_AGE_MS = 3000 ms`, se descarta.
+
+**Trigger condicional.** La inferencia solo se solicita cuando: (a) el drone avanza (`cmd_vx >= 0.30 m/s`), (b) el flujo óptico reporta corredor libre (`blocked_fraction < 0.25`), y (c) la ruta del ciclo anterior no es `"evasive"` (no relanzar inferencia durante maniobras activas). La condición (b) es la más importante: cuando el flujo óptico ve obstáculos (`blocked_fraction > 0.25`), ya tiene control; Depth Anything V2 solo se activa en el caso específico donde el flujo dice "libre" pero el drone no avanza.
+
+**Guarda V4b — anti-falso-positivo.** El mapa de profundidad de Depth Anything V2 sobre renders sintéticos de Unreal Engine puede generar falsos positivos aislados (el modelo fue entrenado sobre imágenes del mundo real y el dominio simulado introduce artefactos). Para filtrarlos, la señal solo se inyecta en el `ObstacleField` cuando `depth_m < DEPTH_BRAKE_M = 5.0 m` durante ≥ `DEPTH_BELOW_THRESHOLD = 2` ciclos consecutivos (`_depth_below_cycles`). Un solo frame con profundidad baja no activa la señal.
+
+**Clasificación por textura (E2).** `DepthEstimator.poll()` retorna también un tipo de obstáculo estimado por análisis del mapa de profundidad del sector frontal:
+- `"follaje"`: CV (std/mean) > 0.55 **o** fracción de píxeles con profundidad > 3× el percentil-5 > 0.30. El follaje tiene huecos que ven objetos lejanos; el CV es alto.
+- `"superficie plana"`: CV < 0.55 y low far_fraction. La pared produce un mapa de profundidad uniforme.
+
+Esta clasificación se añade al `scene_summary` como pista táctica para el SLM (`"follaje: evasión diagonal o +1 m"` vs. `"superficie plana: evasión lateral amplia"`), mejorando la especificidad de la decisión sin modificar el routing.
+
+**Integración con el `ObstacleField` (A1).** Cuando la señal V4 está activa, la profundidad no crea un path de routing separado: se inyecta vía `merge_depth_estimate()` en el campo existente. El resultado es que el router, el SLM y todos los consumidores downstream ven un único `ObstacleField` coherente con `source = "flow+depth"`. No hay condiciones `if depth_available` dispersas en el código de navegación.
 
 ## 6.11 Consultas de nivel superior: `has_open_corridor` y `sector_towards_waypoint`
 
@@ -209,15 +232,17 @@ El estimador expone todos sus parámetros clave a través de variables de entorn
 | `OBSTACLE_MIN_CONFIDENCE` | 0.15 | Confianza mínima para que ocupación vote bloqueo |
 | `OBSTACLE_MIN_CONFIDENCE_TTC` | 0.35 | Confianza mínima para que TTC vote bloqueo solo |
 
-## 6.14 Complementariedad entre percepción clásica y VLM
+## 6.14 Complementariedad entre los tres canales de percepción
 
-El diseño del sistema asume explícitamente que ninguno de los dos componentes es completo por sí solo:
+El diseño del sistema asume explícitamente que ningún canal de percepción es completo por sí solo. La arquitectura emplea tres capas con dominios de confiabilidad complementarios:
 
-**El estimador de flujo es fuerte cuando** el dron se traslada a velocidad moderada (> 0.5 m/s), la textura de la escena es suficiente, y la iluminación es razonablemente estable. En esas condiciones produce `ObstacleField` con `foe_confidence > 0.35` y bloqueos confiables que el router resuelve en < 5 ms sin consultar el VLM.
+**Flujo óptico (canal primario)** es fuerte cuando el dron se traslada a velocidad moderada (> 0.5 m/s), la textura es suficiente y la iluminación es estable. Produce `ObstacleField` con `foe_confidence > 0.35` y bloqueos confiables en < 5 ms sin consultar el VLM ni el estimador de profundidad.
 
-**El VLM es fuerte cuando** la percepción clásica falla: hover, giro puro, atasco donde el dron está parado y el flujo colapsó, o cuando se necesita contexto semántico (distinguir una calle libre de una fachada con ventanas, o un árbol de un edificio). El VLM recibe el fotograma directamente y puede razonar sobre la escena a pesar de la falta de movimiento, aunque con latencia de 200 ms a varios segundos.
+**Depth Anything V2 Metric (canal secundario, V4)** actúa en el punto ciego estructural del flujo óptico: obstáculos centrados en la trayectoria (cerca del FOE) que generan divergencia nula o muy baja. Solo se activa cuando el flujo dice "libre" pero el drone no avanza — exactamente el escenario donde el flujo óptico más falla. Agrega información de profundidad sin costo de sensor adicional (entrada solo RGB). Sus limitaciones: latencia de inferencia (↑ algunas decenas de ms, cubierta por el hilo background), posibles falsos positivos en renders sintéticos (mitigados por la guarda V4b de N ciclos consecutivos), y dependencia de la distribución del modelo preentrenado.
 
-**La interfaz entre ambas capas** es el campo `scene_summary` del `ObstacleField` y el motivo de consulta explícito del prompt (§4.3): cuando la percepción clásica tiene evidencia, el VLM la recibe como contexto cuantitativo ("CENTRO: BLOQUEADO, TTC=3.2s"); cuando no la tiene, el prompt lo dice explícitamente ("la percepción NO tiene evidencia suficiente en este ciclo, probablemente por falta de traslación"). Esta transparencia sobre la fuente y la calidad de la evidencia es el mecanismo que permite al modelo de lenguaje calibrar su propia respuesta según el nivel de confianza del canal perceptual.
+**VLM (capa deliberativa)** cubre los casos donde ambos canales geométricos fallan: hover puro, giro puro, atasco crónico donde el flujo y la profundidad han colapsado, o cuando se necesita razonamiento semántico global (distinguir una calle libre de una fachada con ventanas, elegir el corredor en una intersección). Recibe el fotograma directamente junto con el resumen del `ObstacleField` (que puede llevar `source = "flow+depth"` si el canal V4 aportó evidencia) y la historia de trayectoria acumulada.
+
+**La interfaz entre capas** es el `scene_summary` del `ObstacleField` y el motivo de consulta del prompt: cuando hay evidencia geométrica, el VLM la recibe como contexto cuantitativo con su fuente indicada (`"CENTRO: BLOQUEADO, TTC=3.2s, fuente: flujo óptico + profundidad monocular"`); cuando no la hay, el prompt lo dice explícitamente. Esta transparencia sobre fuente y calidad de la evidencia es el mecanismo que permite al modelo calibrar su respuesta según el nivel de confianza del canal perceptual.
 
 ---
 

@@ -995,6 +995,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A9-USO-IA-GENERATIVA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Uso de IA Generativa en esta Tesis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1187,7 +1243,7 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Tamaño de muestra:</strong> K=5 semillas por condición (75 corridas en total). La corrección de Bonferroni para 18 comparaciones fija α_corr ≈ 0.0028, un umbral que el p-valor mínimo alcanzable con K=5 (p ≈ 7.9×10⁻³) no puede superar. Los resultados son indicativos y cuantitativamente consistentes, pero no formalmente significativos.</p>
 </li>
 <li>
-<p><strong>Sensor monocular:</strong> el canal de flujo óptico depende del movimiento del vehículo entre frames, lo que lo hace estructuralmente ciego a obstáculos centrados en la trayectoria (Foco de Expansión). El límite observado en <code>townsim_ini</code> no es resueltamente por ajuste de parámetros; requiere un segundo canal de profundidad instantánea (cap. 11, §11.5.3; Anexo 7).</p>
+<p><strong>Sensor monocular (parcialmente mitigado):</strong> el canal de flujo óptico depende del movimiento del vehículo entre frames, lo que lo hace estructuralmente ciego a obstáculos centrados en la trayectoria (Foco de Expansión). El límite observado en <code>townsim_ini</code> no se resuelve por ajuste de parámetros. Se incorporó un segundo canal de profundidad inferida (Depth Anything V2 Metric, §5.6 V4 / §6.10b) que opera solo sobre RGB y cubre parcialmente ese punto ciego; sus falsos positivos en renders sintéticos están mitigados por la guarda V4b pero no eliminados. El límite del sensor en texturas auto-similares densas (<code>townsim_ini</code>) sigue siendo estructural y requiere validación en corridas reales (cap. 11, §11.5.3; Anexo 7).</p>
 </li>
 <li>
 <p><strong>Calibración del canal de ocupación de <code>ObstacleField</code> pendiente:</strong> el canal de TTC está formalmente validado contra profundidad ground truth (cap. 7); el umbral de ocupación(<code>OBSTACLE_OCCUPANCY_BLOCKED = 0.35</code>) es provisorio (cap. 6, §6.9; cap. 7, §7.5).</p>
@@ -1223,6 +1279,9 @@ límite del sensor, no del algoritmo.</p>
 </li>
 <li>
 <p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong> El fracaso uniforme de los tres brazos en <code>townsim_ini</code> (cap. 11, §11.4.2b) expuso un límite estructural del sensor monocular: el flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión), que son los de mayor riesgo de colisión frontal (<a href="anexos/A7-MALDICION-MONOCULAR-ESTEREO.html">Anexo 7</a>, §A7.1–§A7.2). Como trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del movimiento entre frames al recuperar profundidad métrica en un único instante (<a href="anexos/A7-MALDICION-MONOCULAR-ESTEREO.html">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, con limitaciones propias frente a follaje en movimiento y geometría subpíxel.</p>
+</li>
+<li>
+<p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="anexos/A8-NAVEGACION-RL.html">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en VLM pre-entrenado. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>, manteniendo activa la capa deliberativa VLM en modo jerárquico. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— sin el overhead de latencia del brazo <code>slm</code> (~850–1400 ms vs. &lt; 5 ms de inferencia neuronal). El <a href="anexos/A8-NAVEGACION-RL.html">Anexo 8</a> desarrolla en detalle la jerarquía VLM → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos (K=5, 3 escenarios, 60 corridas). Su prerequisito es que el brazo <code>slm</code> tenga resultados estables (fase S6 del PLAN-SLAM).</p>
 </li>
 <li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>

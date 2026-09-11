@@ -328,8 +328,62 @@ def _apply_trajectory_overrides(
             ),
         }
 
-    # Override 2: VLM sugiere escape vertical pero hay laterales sin explorar.
+    # Override 3: VLM sugiere MANTENER_RUMBO con progreso frontal marginal.
+    # Avance promedio < MARGINAL_PROGRESS_M con >=3 intentos = firma de
+    # obstaculo invisible que el flujo optico no ve.
+    # MANTENER_RUMBO en este estado refuerza el bloqueo fisico.
+    #
+    # Sub-rama 3a — firma de TECHO (autopista elevada, estructura horizontal):
+    #   stall_rate < CEILING_STALL_MAX (0.10) + laterales sin explorar.
+    #   El drone avanza con friccion pero no choca frontalmente (stall bajo);
+    #   bajar es mas eficiente que evadir lateral porque libera el obstaculo
+    #   por arriba sin requerir rotacion.
+    #
+    # Sub-rama 3b — firma de MURO/ARBOL (obstaculo frontal, stall alto):
+    #   Explorar laterales primero; si ambas probadas -> GIRAR_90.
     macro = decision.get("macro_action", "")
+    if macro == "MANTENER_RUMBO":
+        frente_stats = stats["FRENTE"]
+        frente_att3 = frente_stats["attempts"]
+        _MARGINAL3 = float(os.getenv("SLAM_MARGINAL_PROGRESS_M", "0.28"))
+        if frente_att3 >= 3 and frente_stats.get("avg_prog", _MARGINAL3) < _MARGINAL3:
+            izq_att3 = izq["attempts"]
+            der_att3 = der["attempts"]
+            frente_stall3 = frente_stats.get("stall_rate", 0.0)
+            _CEILING_STALL_MAX = float(os.getenv("SLAM_CEILING_STALL_MAX", "0.10"))
+            avg_p3 = frente_stats.get("avg_prog", 0.0)
+
+            # 3a: techo — stall muy bajo, laterales inexploradas -> bajar
+            if frente_stall3 < _CEILING_STALL_MAX and izq_att3 == 0 and der_att3 == 0:
+                override3 = "PERDER_ALTURA"
+                reason3 = (
+                    f"stall_rate={frente_stall3:.0%} < {_CEILING_STALL_MAX:.0%} "
+                    f"con avance {avg_p3:.2f}m/ciclo — firma de techo; bajar para liberar."
+                )
+            # 3b: muro/arbol — explorar laterales
+            elif izq_att3 == 0:
+                override3 = "EVADIR_IZQUIERDA"
+                reason3 = f"avance {avg_p3:.2f}m/ciclo < {_MARGINAL3:.2f}m — lateral izq sin explorar."
+            elif der_att3 == 0:
+                override3 = "EVADIR_DERECHA"
+                reason3 = f"avance {avg_p3:.2f}m/ciclo < {_MARGINAL3:.2f}m — lateral der sin explorar."
+            else:
+                override3 = "GIRAR_90"
+                reason3 = f"avance {avg_p3:.2f}m/ciclo < {_MARGINAL3:.2f}m — laterales agotadas; girar."
+
+            print(
+                f"[slam_assess] mantener-override-3({'techo' if override3 == 'PERDER_ALTURA' else 'muro'}): "
+                f"VLM recomendo MANTENER_RUMBO pero FRENTE avg_prog={avg_p3:.2f}m/ciclo "
+                f"(stall={frente_stall3:.0%}, izq={izq_att3}, der={der_att3}) -> {override3}"
+            )
+            return {
+                "macro_action": override3,
+                "rationale": (
+                    f"MANTENER_RUMBO rechazado: FRENTE {frente_att3} intentos, {reason3}"
+                ),
+            }
+
+    # Override 2: VLM sugiere escape vertical pero hay laterales sin explorar.
     if macro not in ("PERDER_ALTURA", "GANAR_ALTURA"):
         return decision
 
@@ -464,7 +518,7 @@ def _slam_assess_cycle(
             original_macro = decision.get("macro_action")
             decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
             if decision.get("macro_action") != original_macro:
-                print(f"[slam_assess] override: VLM recomendó {original_macro} → {decision.get('macro_action')} (trajectory stats).")
+                print(f"[slam_assess] override: VLM recomendo {original_macro} -> {decision.get('macro_action')} (trajectory stats).")
             _apply_scan_resolution(
                 state, decision, result.raw_response, result.latency_ms,
                 guidance, telemetry, arm, deadlock_cycles, trajectory,
@@ -831,7 +885,7 @@ def _apply_scan_resolution(
                 print(
                     f"[slam_assess] retroceder-fix14: ATRÁS bloqueado "
                     f"({atras['stall_rate']:.0%} stall, {atras['attempts']} int) "
-                    f"→ factor reducido a {_retro_factor} para evitar colisión trasera."
+                    f"-> factor reducido a {_retro_factor} para evitar colision trasera."
                 )
         duration_s = DEEP_SCAN_MANEUVER_DURATION_S * _retro_factor  # nominal 2.0×2.5=5s → ~6m
         state["active_maneuver"] = macro
