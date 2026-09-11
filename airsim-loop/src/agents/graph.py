@@ -58,6 +58,14 @@ _CMD_BLIND_CYCLES      = int(os.getenv("CMD_BLIND_CYCLES",          "2"))
 # 15 ciclos = 3 s: por encima del watchdog normal de VLM (1.5 s), por debajo del
 # freeze observado (130 s). Independiente de cmd_vx → captura el caso ESCANEO.
 _STOPPED_CYCLES_THRESHOLD = int(os.getenv("STOPPED_CYCLES_THRESHOLD", "15"))
+# V4-VLM-REFINEMENT: profundidad monocular estimada (Depth Anything V2 Metric).
+# Activa solo cuando flujo óptico dice "corredor libre" y drone avanza (ver
+# perception_node). cmd_vx mínimo para disparar la inferencia; bf máximo por
+# encima del cual el flujo óptico tiene control y no se necesita profundidad.
+_DEPTH_CMD_VX_MIN   = float(os.getenv("DEPTH_CMD_VX_MIN",  "0.30"))
+_DEPTH_BF_ACTIVATE  = float(os.getenv("DEPTH_BF_ACTIVATE", "0.25"))
+_DEPTH_BRAKE_M      = float(os.getenv("DEPTH_BRAKE_M",     "2.00"))
+_DEPTH_MAX_AGE_MS   = float(os.getenv("DEPTH_MAX_AGE_MS",  "3000.0"))
 
 # Correccion activa de altitud durante FRENAR prolongado (2026-0824, opcion 3
 # de CHANGELOG.md): moveByVelocityBodyFrameAsync(vz=0,...) reemitido cada
@@ -205,11 +213,18 @@ class DroneState(TypedDict, total=False):
     # blind_wall_event nunca dispara). Se resetea sólo cuando el drone se mueve
     # (act_spd > 0.1 m/s); un RETROCEDER fallido mantiene la cuenta activa.
     _stopped_cycles: int
-    # NUNCA agregar aca una clave de profundidad (depth/depth_image/
-    # min_obstacle_dist_m o similar, ver PLAN-MEJORAS-3.md §0.2): mientras
-    # ningun nodo pueda escribir una y que sobreviva a graph.invoke(), el
-    # esquema mismo actua como segunda red de la guardia de no-profundidad
-    # (H0.2) ademas del test estatico de tests/test_no_depth_in_flight_path.py.
+    # NUNCA agregar aca una clave de profundidad RAW del sensor AirSim
+    # (depth/depth_image/min_obstacle_dist_m ni el tipo imagen planar/depth,
+    # ver PLAN-MEJORAS-3.md §0.2). El test test_no_depth_in_flight_path.py
+    # verifica esos patrones específicos.
+    #
+    # V4-VLM-REFINEMENT: EXCEPCIÓN EXPLÍCITA — profundidad INFERIDA por modelo
+    # monocular (Depth Anything V2 Metric). Diferencia arquitectural: la entrada
+    # es solo RGB (mismo frame del flujo óptico); el sensor de profundidad de
+    # AirSim NO se invoca. Equivalente real: StereoNet/MiDaS en drone sin LiDAR.
+    # Valor en metros del percentil-5 del sector frontal del mapa estimado.
+    # None si el estimador no tiene resultado reciente (<= DEPTH_MAX_AGE_MS).
+    _depth_proximity_m: Optional[float]
 
 
 # ---------------------------------------------------------------------------
@@ -231,8 +246,10 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     from .action_map import action_to_command
     from .spatial_history import FlightTrajectory, TrajectoryEvent, SLAM_STALL_THRESHOLD_M
     from src.perception import FlowTTCEstimator
+    from src.perception.depth_estimator import DepthEstimator
 
     flow_ttc_estimator = FlowTTCEstimator()
+    depth_estimator = DepthEstimator()  # V4: hilo background, inicia carga del modelo
     flight_trajectory = FlightTrajectory()  # S1: buffer de trayectoria (estado de proceso)
     deliberation_service = make_deliberation_service()
     deliberative_node = make_deliberative_node(deliberation_service, flight_trajectory)
@@ -453,6 +470,25 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         else:
             # Techo de 200 para evitar overflow en corridas muy largas.
             state["_stopped_cycles"] = min(prev_stopped + 1, 200)
+
+        # V4-VLM-REFINEMENT: profundidad monocular (Depth Anything V2 Metric).
+        # Trigger: flujo óptico dice "corredor libre" (bf < umbral) y el drone
+        # avanza hacia adelante. En esas condiciones el flujo no puede detectar
+        # objetos con foliaje transparente; la estimación de profundidad sí.
+        # No dispara durante evasión activa (flujo óptico maneja ese caso).
+        bf_now = field.blocked_fraction()
+        depth_trigger = (
+            cmd_vx >= _DEPTH_CMD_VX_MIN
+            and bf_now < _DEPTH_BF_ACTIVATE
+            and prev_route not in ("evasive",)
+        )
+        if depth_trigger:
+            depth_estimator.request(state.get("rgb_image"))
+        depth_m, depth_age_ms = depth_estimator.poll()
+        if depth_m is not None and depth_age_ms < _DEPTH_MAX_AGE_MS:
+            state["_depth_proximity_m"] = depth_m
+        else:
+            state["_depth_proximity_m"] = None
         return state
 
     def girar_90_node(state: DroneState) -> DroneState:
@@ -598,6 +634,15 @@ def policy_router(state: DroneState) -> str:
     # tiene el control (slm_request_id=None) y el drone lleva 3 s parado.
     if int(state.get("_stopped_cycles", 0)) >= _STOPPED_CYCLES_THRESHOLD:
         return "evasive"
+
+    # V4-VLM-REFINEMENT: freno de proximidad por profundidad monocular estimada.
+    # Chequeo DESPUÉS de slm_request_id para no interrumpir deliberaciones activas.
+    # Si el estimador dice que hay algo a < DEPTH_BRAKE_M con resultado reciente
+    # (<= DEPTH_MAX_AGE_MS), forzar deliberative: el drone frena y el VLM decide
+    # si es un obstáculo real o un artefacto (p. ej. follaje en primer plano).
+    depth_prox = state.get("_depth_proximity_m")
+    if depth_prox is not None and depth_prox < _DEPTH_BRAKE_M:
+        return "deliberative"
 
     telem = state.get("telemetry") or {}
     pos = telem.get("position") or {}

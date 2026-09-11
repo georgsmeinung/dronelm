@@ -1,4 +1,8 @@
 langgraph>=0.2.0
+# V4-VLM-REFINEMENT: estimación monocular de profundidad (Depth Anything V2 Metric).
+# Requiere torch>=2.0 + CUDA (ya en airsimenv). El modelo (~500 MB) se descarga
+# a caché HuggingFace en el primer arranque.
+transformers>=4.40.0
 cosysairsim>=1.8.0
 opencv-python>=4.8.0
 numpy>=1.24.0
