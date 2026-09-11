@@ -1,5 +1,82 @@
 # 2026-09-11
 
+## V4-VLM-REFINEMENT — Estimación monocular de profundidad: Depth Anything V2 Metric (`depth_estimator.py`, `graph.py`)
+
+**Motivación**: árboles en TownSim tienen mallas de colisión convexas que no coinciden con su apariencia visual (follaje con gaps). El flujo óptico reporta `blocked_fraction≈0` (ve a través del follaje), pero la malla detiene físicamente al drone. El `min_obstacle_dist_m` del sensor AirSim detecta el árbol pero viola H0.2 (equivalente a LiDAR).
+
+**Solución**: profundidad *inferida* desde el frame RGB por Depth Anything V2 Metric Outdoor-Small (ViT-S, 24M parámetros). Solo RGB como entrada — sin sensor de profundidad AirSim. Equivalente real: drone con cámara monocular y unidad de cómputo embarcada (DJI OSDK, PX4 companion computer).
+
+**Arquitectura** — `src/perception/depth_estimator.py`:
+- Hilo background con cola `maxsize=1` (drop del request anterior). Mismo patrón que `DeliberationService`.
+- `request(rgb_ndarray)`: encola frame; `poll()` → `(min_depth_m, age_ms)` sin bloquear el lazo.
+- Extrae percentil-5 del sector frontal del mapa de profundidad (15–85 % altura, 20–80 % ancho). Robusto a píxeles ruidosos.
+- Configurable: `DEPTH_MODEL_ID`, `DEPTH_SECTOR_*`, `DEPTH_PERCENTILE`.
+
+**Activación condicional** (perception_node) — no corre todo el tiempo:
+- Solo si `cmd_vx ≥ 0.30` AND `bf < 0.25` AND `route ≠ evasive`.
+- Si el flujo óptico ya detectó obstáculo (`bf ≥ 0.25`): él maneja la evasión, depth no corre.
+- Si drone parado o evadiendo: depth no corre.
+- ~15–30 ms por inferencia en RTX 5060; el hilo background no bloquea el lazo de 200 ms.
+
+**Freno de proximidad** (policy_router):
+- Si `_depth_proximity_m < 2.0 m` y resultado reciente (≤ 3 s) → forzar `deliberative`.
+- El drone frena (primer ciclo del nodo deliberativo) y el VLM evalúa la escena.
+- Check después de `slm_request_id` para no interrumpir deliberaciones activas.
+
+**Guardia H0.2**: `depth_estimator.py` agregado al whitelist del test `test_no_depth_in_flight_path.py`. El scanner de patrones AirSim no lo marca como lectura de profundidad sensor (no contiene los patrones prohibidos). El comentario en DroneState documenta la excepción explícita al H0.2.
+
+---
+
+## V3c-VLM-REFINEMENT — `_stopped_cycles`: escape de freeze ESCANEO (`graph.py`)
+
+**Diagnóstico**: durante el freeze del árbol, el drone ejecuta `ESCANEO` (slam_assess esperando VLM) con `cmd_vx=0`, `act_spd=0` por 130 s (650+ ciclos). `blind_wall_event` nunca dispara porque requiere `cmd_vx ≥ 0.45`. El watchdog del slam_assess también falla (raíz: el proactive VLM trigger resetea `age_ms`; fix anterior).
+
+**Fix**: `_stopped_cycles` — contador de ciclos consecutivos con `act_spd < 0.10 m/s`. Solo acumula cuando `route == "deliberative"` Y `slm_request_id is None` (freeze no intencional; no contar durante deliberación VLM normal). A los 15 ciclos (3 s, después del guard de `slm_request_id` en policy_router) → forzar `evasive` → RETROCEDER.
+
+**Bugs encontrados y corregidos durante implementación**:
+1. `_stopped_cycles` check posicionado *antes* del guard `slm_request_id`: disparaba durante deliberaciones normales (drone parado intencionalmente esperando VLM) → falso RETROCEDER cada 15 ciclos en vuelo abierto. Fix: mover el check después del guard.
+2. El contador acumulaba durante la espera VLM (route=deliberative, act_spd=0) y llegaba a 15 antes de que el VLM respondiera → disparo inmediato al vaciarse `slm_request_id`. Fix: agregar `slm_active` al predicado de reset en perception_node.
+
+---
+
+## V3b-VLM-REFINEMENT — `blind_wall_event`: detección de pared invisible (`graph.py`, `evasive.py`)
+
+**Motivación**: árbol con follaje transparente detiene físicamente al drone durante la fase de aproximación (`cmd_vx=0.5`, `act_spd` cae a 0) mientras `blocked_fraction≈0`. Señal cinemática pura: divergencia entre velocidad comandada y velocidad real.
+
+**Implementación** (`perception_node`):
+```
+blind_wall_cond = (cmd_vx ≥ 0.45) AND (act_spd < 0.30) AND (bf < 0.25)
+                  AND (prev_act_spd ≥ 0.20 OR _blind_wall_cycles > 0)
+```
+- `BF_MAX` 0.15 → 0.25: follaje UE5 dentro del convex hull produce `bf=0–0.222`; 0.15 rompía la cuenta consecutiva.
+- `CYCLES` 3 → 2: ventana más corta para que bf no fluctúe entre ciclos.
+- `prev_act_spd ≥ 0.20`: discrimina "frenado por árbol" (tenía velocidad) de "aceleración desde cero" (primera causa de falsos positivos — disparaba RETROCEDER en ciclo 4 de cada vuelo, haciendo que el drone subiera continuamente a 23 m AGL).
+
+**`evasive_node`** — RETROCEDER como escape de colisión invisible:
+- Si `blind_wall_event` OR `_stopped_cycles ≥ 10` → acción RETROCEDER (no EVADIR_IZQ/DER).
+- EVADIR lateral falla dentro de un convex hull (malla bloquea todos los vectores desde adentro). RETROCEDER sale por el vector de entrada, garantizado.
+- Persiste 5 ciclos (~1 s a 5 Hz) vía `active_maneuver`.
+
+---
+
+## V3-VLM-REFINEMENT — IMU pipeline completo: `imu_linear_acceleration` (`airsim_client.py`)
+
+**Motivación**: `get_imu_angular_velocity()` hacía dos RPCs separados; la aceleración lineal no estaba disponible en telemetría.
+
+**Fix** (`airsim_client.py`):
+- `get_imu_full_data()`: un único RPC `getImuData()` devuelve velocidad angular + aceleración lineal.
+- `capture()`: reemplaza llamada previa por `get_imu_full_data()`; popula `telemetry["imu_angular_velocity"]` y `telemetry["imu_linear_acceleration"]`.
+
+---
+
+## V3-VLM-REFINEMENT — Fix: proactive VLM reseteaba el watchdog de slam_assess (`graph.py`)
+
+**Diagnóstico**: el trigger proactivo del VLM (cada 1.5 s) llamaba `service.request()`, que en `DeliberationService` reemplaza `_pending_request` inmediatamente. Esto reseteaba `age_ms → 0` en `poll()`. El watchdog de `slam_assess` compara `age_ms > 1500 ms` — nunca superaba el umbral. Resultado: ESCANEO infinito.
+
+**Fix**: el proactive trigger cede la cola cuando `_deep_scan_request_id is not None` (slam_assess activo), igual que ya cedía cuando `slm_request_id is not None`.
+
+---
+
 ## PLAN-SLAM — Buffer de trayectoria ampliado a 5000 eventos (`spatial_history.py`)
 
 **Motivación**: con 80 eventos (16s a 5 Hz) el ring buffer rotaba varias veces durante una
