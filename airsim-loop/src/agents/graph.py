@@ -430,11 +430,14 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
 
         # V3c-VLM-REFINEMENT: contador de "parado sin razón" en ruta deliberativa.
         # Solo acumula cuando el ciclo ANTERIOR fue "deliberative" (ESCANEO o
-        # MANTENER_RUMBO de slam_assess). En ruta reactive/keep_going, el atasco
-        # lo maneja evasion_stuck_cycles para no interferir con ese mecanismo.
+        # MANTENER_RUMBO de slam_assess) Y el VLM normal NO está procesando
+        # (slm_request_id=None). Mientras el VLM espera respuesta, el freeze es
+        # intencional — no contar. Se resetea cuando slm_request_id pasa a None
+        # para evitar un disparo inmediato al terminar una deliberación normal.
         prev_stopped = int(state.get("_stopped_cycles") or 0)
         prev_route = state.get("route", "")
-        if act_spd > 0.10 or prev_route not in ("deliberative",):
+        slm_active = state.get("slm_request_id") is not None
+        if act_spd > 0.10 or prev_route not in ("deliberative",) or slm_active:
             state["_stopped_cycles"] = 0
         else:
             # Techo de 200 para evitar overflow en corridas muy largas.
@@ -561,8 +564,6 @@ def policy_router(state: DroneState) -> str:
     #         donde blind_wall nunca dispara porque cmd_vx=0.
     if state.get("imu_contact_event") or state.get("blind_wall_event"):
         return "evasive"
-    if int(state.get("_stopped_cycles", 0)) >= _STOPPED_CYCLES_THRESHOLD:
-        return "evasive"
 
     # No abandonar una deliberacion ya encolada (2026-0828, ver CHANGELOG.md):
     # si hay un pedido al LLM en vuelo (slm_request_id != None), seguir
@@ -579,6 +580,13 @@ def policy_router(state: DroneState) -> str:
     # escalar nunca, pese a que el dron no avanzaba.
     if state.get("slm_request_id") is not None:
         return "deliberative"
+
+    # V3c: drone parado en ruta deliberativa sin VLM activo (ESCANEO freeze).
+    # Chequeo DESPUÉS de slm_request_id: si el VLM está procesando, el stop
+    # es intencional y no debe escapar. Solo dispara cuando slam_assess/deep_scan
+    # tiene el control (slm_request_id=None) y el drone lleva 3 s parado.
+    if int(state.get("_stopped_cycles", 0)) >= _STOPPED_CYCLES_THRESHOLD:
+        return "evasive"
 
     telem = state.get("telemetry") or {}
     pos = telem.get("position") or {}
