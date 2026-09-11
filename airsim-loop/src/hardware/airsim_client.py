@@ -340,11 +340,13 @@ class AirSimClient:
             state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
             t_after_state = time.time()
             telemetry = _state_to_telemetry(state, timestamp_s=image_timestamp_s)
-            # P1 (PLAN-SLAM): añadir velocidad angular IMU para pre-integración
-            # en flow_ttc.py. En AirSim la IMU es perfecta (sin ruido ni drift).
-            imu_av = self.get_imu_angular_velocity()
-            if imu_av is not None:
-                telemetry["imu_angular_velocity"] = imu_av
+            # V3-VLM-REFINEMENT: un único RPC obtiene angular + linear acceleration.
+            # imu_angular_velocity → flow_ttc.py (P1-PLAN-SLAM, pre-integración).
+            # imu_linear_acceleration → capture_node (jitter RMS, contact detection).
+            imu_full = self.get_imu_full_data()
+            if imu_full is not None:
+                telemetry["imu_angular_velocity"] = imu_full["angular_velocity"]
+                telemetry["imu_linear_acceleration"] = imu_full["linear_acceleration"]
             
             t_total = time.time() - t_start
             dt_images = (t_after_images - t_before_images) * 1000.0
@@ -393,6 +395,34 @@ class AirSimClient:
                 "wx": float(getattr(av, "x_val", 0.0)),
                 "wy": float(getattr(av, "y_val", 0.0)),
                 "wz": float(getattr(av, "z_val", 0.0)),
+            }
+        except Exception:
+            return None
+
+    def get_imu_full_data(self) -> Optional[Dict[str, Any]]:
+        """Devuelve velocidad angular Y aceleración lineal en un único RPC.
+
+        V3-VLM-REFINEMENT: la aceleración transversal (ax, ay) se usa en
+        capture_node para calcular imu_jitter_level e imu_contact_event.
+        Llama a getImuData() una sola vez para evitar dos round-trips RPC.
+        """
+        if not self._connected or self._client is None:
+            return None
+        try:
+            imu = self._client.getImuData(vehicle_name=self.vehicle_name)
+            av = imu.angular_velocity
+            la = imu.linear_acceleration
+            return {
+                "angular_velocity": {
+                    "wx": float(getattr(av, "x_val", 0.0)),
+                    "wy": float(getattr(av, "y_val", 0.0)),
+                    "wz": float(getattr(av, "z_val", 0.0)),
+                },
+                "linear_acceleration": {
+                    "ax": float(getattr(la, "x_val", 0.0)),
+                    "ay": float(getattr(la, "y_val", 0.0)),
+                    "az": float(getattr(la, "z_val", 0.0)),
+                },
             }
         except Exception:
             return None

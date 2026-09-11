@@ -54,6 +54,10 @@ ESCAPE_MANEUVER_DURATION_S = float(os.getenv("ESCAPE_MANEUVER_DURATION_S", "1.6"
 # _wait_command() en make_deliberative_node().
 DELIB_WAIT_CREEP_SPEED_MPS = float(os.getenv("DELIB_WAIT_CREEP_SPEED_MPS", "0.5"))
 
+# VlmGoal: confianza mínima para que el táctico inyecte la sub-meta.
+VLM_GOAL_MIN_CONFIDENCE = float(os.getenv("VLM_GOAL_MIN_CONFIDENCE", "0.7"))
+VLM_PROACTIVE_ENABLED = False  # V2 eliminado (simplificación Zona 1): sin beneficio medible en runs.
+
 # Macro-acciones que el SLM puede elegir. GIRAR_90 queda fuera: es un bypass
 # determinista (ver policy_router en graph.py), nunca una eleccion del modelo.
 PROMPT_ACTIONS = {
@@ -76,6 +80,15 @@ RESPONSE_JSON_SCHEMA = {
             "properties": {
                 "macro_action": {"type": "string", "enum": sorted(PROMPT_ACTIONS)},
                 "rationale": {"type": "string"},
+                # VlmGoal (V1-VLM-REFINEMENT): campos opcionales de sub-meta semántica.
+                # dx_m/dy_m: offset body frame (adelante/derecha en metros).
+                # dz_m: NED vertical (negativo=subir). confidence: [0,1].
+                "dx_m": {"type": "number"},
+                "dy_m": {"type": "number"},
+                "dz_m": {"type": "number"},
+                "confidence": {"type": "number"},
+                "semantic_label": {"type": "string"},
+                "mode": {"type": "string", "enum": ["navegar", "inspeccionar", "buscar", "esperar"]},
             },
             "required": ["macro_action", "rationale"],
             "additionalProperties": False,
@@ -169,7 +182,16 @@ SYSTEM_PROMPT_VISION = (
     f"1. No elijas MANTENER_RUMBO si el sector central está BLOQUEADO con TTC menor a {SAFE_MARGIN_TTC_S:.1f} segundos.\n"
     "2. Evita giros innecesarios o alternantes si no hay una vía de escape abierta. Si estás rodeado por estructuras, gana altura; "
     "si estás rodeado por vegetación con salida visible abajo, perdé altura.\n"
-    "3. Salida estrictamente JSON sin texto adicional."
+    "3. Salida estrictamente JSON sin texto adicional.\n\n"
+    "SUB-META OPCIONAL (V1-VLM-REFINEMENT): Si podés estimar con confianza a dónde debería ir el dron en los próximos 5-15 segundos, "
+    "agregá estos campos al JSON (omitirlos es válido si no estás seguro):\n"
+    '  "dx_m": metros hacia adelante en la dirección actual (negativo=atrás),\n'
+    '  "dy_m": metros lateral (negativo=izquierda, positivo=derecha),\n'
+    '  "dz_m": metros vertical NED (negativo=subir, positivo=bajar),\n'
+    '  "confidence": tu confianza en esta estimación (0.0-1.0),\n'
+    '  "semantic_label": etiqueta corta (ej: "calle_libre_derecha", "rodear_edificio"),\n'
+    '  "mode": "navegar"\n'
+    "El offset debe ser de escala de bloque urbano (6-20m), no micro-correcciones."
 )
 
 SYSTEM_PROMPT = SYSTEM_PROMPT_VISION if VLM_VISION_ENABLED else SYSTEM_PROMPT_TEXT
@@ -231,6 +253,10 @@ def _build_user_prompt(
     guidance: Optional[Dict[str, Any]] = None,
     stuck_cycles: int = 0,
     recent_history: Optional[List[Dict[str, Any]]] = None,
+    vlm_goal_history: Optional[List[Dict[str, Any]]] = None,
+    frente_stall_rate: float = 0.0,
+    frente_attempts: int = 0,
+    imu_jitter_level: str = "normal",
 ) -> str:
     sector_summary = field.summary_text()
 
@@ -264,18 +290,38 @@ def _build_user_prompt(
             lines.append(f"- {h.get('macro_action', '?')}: Δdist_waypoint={delta_d_str}, Δttc_min={delta_ttc_str}")
         history_note = "\n".join(lines)
 
+    goal_history_note = ""
+    if vlm_goal_history:
+        lines = ["\nSUB-METAS VLM PREVIAS:"]
+        for g in vlm_goal_history[-3:]:
+            vg = g.get("vlm_goal") or {}
+            label = vg.get("semantic_label") or "?"
+            conf = float(vg.get("confidence") or 0.0)
+            lines.append(f"- {label} (conf={conf:.2f})")
+        goal_history_note = "\n".join(lines)
+
+    traj_note = ""
+    if frente_stall_rate >= 0.5 and frente_attempts >= 5:
+        traj_note = (
+            f"\n- TRAYECTORIA: {frente_stall_rate*100:.0f}% stall frontal "
+            f"en {frente_attempts} intentos recientes."
+        )
+
+    imu_note = f"\n- Vibración IMU: {imu_jitter_level}." if imu_jitter_level != "normal" else ""
+
     return (
         f"{sector_summary}\n\n"
         f"OBJETIVO Y ALTITUD:\n"
         f"- {wp_str}\n"
         f"- Altitud actual: {altitude:.1f}m (Cota segura: 10.0m){stuck_note}\n"
-        f"{_flight_state_note(telemetry)}\n"
+        f"{_flight_state_note(telemetry)}{traj_note}{imu_note}\n"
         f"{_query_reason_note(field)}"
-        f"{history_note}\n\n"
+        f"{history_note}"
+        f"{goal_history_note}\n\n"
         "INSTRUCCION:\n"
         "Elige la macro_action ('EVADIR_IZQUIERDA', 'EVADIR_DERECHA', 'GANAR_ALTURA' o 'MANTENER_RUMBO').\n"
-        "Responde SOLO con este JSON:\n"
-        '{"macro_action": "<ACCION>", "rationale": "<motivo corto>"}'
+        "Si ves una sub-meta clara, agrega dx_m/dy_m/dz_m/confidence/semantic_label/mode.\n"
+        "Responde SOLO con el JSON válido."
     )
 
 
@@ -362,6 +408,65 @@ def _parse_decision(raw: str) -> Optional[Dict[str, Any]]:
         rationale = m_rat.group(1).strip() if m_rat else f"Decisión SLM: {macro}."
 
     return {"macro_action": macro, "rationale": rationale}
+
+
+def parse_vlm_goal(decision: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Extrae campos VlmGoal del parsed_decision si el modelo los emitió.
+
+    Devuelve None si no hay campos de sub-meta o si confidence < umbral mínimo.
+    """
+    if not decision:
+        return None
+    dx = decision.get("dx_m")
+    dy = decision.get("dy_m")
+    dz = decision.get("dz_m")
+    if dx is None and dy is None and dz is None:
+        return None
+    confidence = float(decision.get("confidence") or 0.0)
+    return {
+        "dx_m": float(dx or 0.0),
+        "dy_m": float(dy or 0.0),
+        "dz_m": float(dz or 0.0),
+        "confidence": confidence,
+        "semantic_label": str(decision.get("semantic_label") or ""),
+        "mode": str(decision.get("mode") or "navegar"),
+        "rationale": str(decision.get("rationale") or ""),
+    }
+
+
+def vlm_goal_to_inject_corner(
+    goal: Dict[str, Any],
+    telemetry: Dict[str, Any],
+    guidance: Optional[Dict[str, Any]] = None,
+) -> Dict[str, float]:
+    """Convierte un VlmGoal (body frame) a inject_corner (world NED).
+
+    Body frame: dx_m=adelante, dy_m=derecha, dz_m=abajo (NED).
+    Rotación 2D usando el yaw actual del drone.
+    """
+    pos = (telemetry or {}).get("position") or {}
+    orient = (telemetry or {}).get("orientation") or {}
+    x0 = float(pos.get("x", 0.0))
+    y0 = float(pos.get("y", 0.0))
+    z0 = float(pos.get("z", -10.0))
+    yaw_rad = float(orient.get("yaw", 0.0))
+
+    dx = float(goal.get("dx_m", 0.0))
+    dy = float(goal.get("dy_m", 0.0))
+    dz = float(goal.get("dz_m", 0.0))
+
+    cos_y, sin_y = math.cos(yaw_rad), math.sin(yaw_rad)
+    wx = x0 + dx * cos_y - dy * sin_y
+    wy = y0 + dx * sin_y + dy * cos_y
+    wz = z0 + dz
+
+    # Preservar altitud del WP de misión si no hay componente vertical explícita.
+    if dz == 0.0:
+        target_wp = (guidance or {}).get("target_wp") if isinstance(guidance, dict) else None
+        if isinstance(target_wp, dict) and "z" in target_wp:
+            wz = float(target_wp["z"])
+
+    return {"x": round(wx, 2), "y": round(wy, 2), "z": round(wz, 2), "label": "VLM_GOAL"}
 
 
 def _encode_frame_base64(frame: Any, max_size: int = VLM_IMAGE_MAX_SIZE) -> Optional[str]:
@@ -651,7 +756,42 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
                 # ningun nodo lo producia.
                 target_yaw = cmd.get("target_yaw")
                 if target_yaw is not None:
-                    state["inject_corner"] = compute_corner_waypoint(telemetry, float(target_yaw), guidance=guidance)
+                    # F1 (Zona 2): ajustar corner según historia de stalls laterales.
+                    # Determinar qué zona lateral corresponde al giro comprometido.
+                    bearing_err_f1 = float(guidance.get("bearing_err_deg", 0.0))
+                    f1_side = "izq" if cmd.get("yaw_rate", 0.0) < 0 else "der"
+                    f1_opp  = "der" if f1_side == "izq" else "izq"
+                    f1_stall = float(state.get(f"_traj_{f1_side}_stall_rate") or 0.0)
+                    f1_att   = int(state.get(f"_traj_{f1_side}_attempts") or 0)
+                    f1_opp_stall = float(state.get(f"_traj_{f1_opp}_stall_rate") or 0.0)
+                    f1_opp_att   = int(state.get(f"_traj_{f1_opp}_attempts") or 0)
+                    _F1_STALL_MIN = 0.50
+                    _F1_ATT_MIN   = 3
+                    effective_target_yaw = float(target_yaw)
+                    _corner_offset = float(os.getenv("CORNER_OFFSET_M", "12.0"))
+                    f1_note = ""
+                    if f1_stall >= _F1_STALL_MIN and f1_att >= _F1_ATT_MIN:
+                        opp_blocked = f1_opp_stall >= _F1_STALL_MIN and f1_opp_att >= _F1_ATT_MIN
+                        if not opp_blocked:
+                            # El lado opuesto tiene mejor historia: invertir el corner.
+                            orient_f1 = (telemetry or {}).get("orientation", {}) if isinstance(telemetry, dict) else {}
+                            curr_hdg  = math.degrees(float((orient_f1 or {}).get("yaw", 0.0)))
+                            opp_sign  = 1 if f1_side == "izq" else -1  # opuesto al giro comprometido
+                            effective_target_yaw = round((curr_hdg + 90.0 * opp_sign) / 90.0) * 90.0
+                            f1_note = (
+                                f" [F1: corner invertido — {f1_side} {f1_stall:.0%}/{f1_att}int;"
+                                f" {f1_opp} {f1_opp_stall:.0%}/{f1_opp_att}int]"
+                            )
+                        else:
+                            # Ambas zonas bloqueadas: reducir offset para intentar pasar más cerca.
+                            _corner_offset = max(3.0, _corner_offset * 0.25)
+                            f1_note = (
+                                f" [F1: ambas zonas con stall — corner {_corner_offset:.0f}m]"
+                            )
+                        cmd["rationale"] = cmd.get("rationale", "") + f1_note
+                    state["inject_corner"] = compute_corner_waypoint(
+                        telemetry, effective_target_yaw, guidance=guidance, offset_m=_corner_offset,
+                    )
                 return state
 
             print(f"[Deliberativo] -> ESCAPE VERTICAL ({consecutive_escapes}/{max_escapes}, {escape_action}): {stuck_cycles} ciclos sin progresar. Forzando {escape_action} sin consultar al LLM.")
@@ -739,6 +879,21 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             state["_pending_delib_prompt"] = None
             state["_pending_delib_frames"] = None
 
+            # VlmGoal (V1-VLM-REFINEMENT): extraer sub-meta semántica si el modelo la emitió.
+            goal = parse_vlm_goal(decision)
+            if goal and float(goal.get("confidence", 0)) >= VLM_GOAL_MIN_CONFIDENCE:
+                state["vlm_goal"] = goal
+                corner = vlm_goal_to_inject_corner(goal, telemetry, guidance)
+                if not state.get("inject_corner"):  # no sobreescribir escape ya comprometido
+                    state["inject_corner"] = corner
+                history = list(state.get("_vlm_goal_history") or [])
+                history.append({
+                    "timestamp": time.time(),
+                    "trigger_type": "reactive",
+                    "vlm_goal": goal,
+                })
+                state["_vlm_goal_history"] = history[-3:]
+
             state["next_action"] = macro
             state["velocity_command"] = cmd
             state["route"] = "deliberative"
@@ -783,6 +938,16 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             state["_deliberation_pending"] = True
             return state
 
+        # Guard de exclusión mutua: si slam_assess tiene un pedido activo en la
+        # cola del DeliberationService, no lanzar un nuevo slm_request_id que
+        # compita por el mismo hilo worker. El path regular espera un ciclo.
+        if state.get("_deep_scan_request_id") is not None:
+            macro, cmd = _wait_command("slam_assess procesando — path regular en espera.")
+            state["next_action"] = macro
+            state["velocity_command"] = cmd
+            state["_deliberation_pending"] = True
+            return state
+
         # No hay pedido pendiente: construir el prompt/imagenes y encolar uno nuevo.
         frame_history = state.get("frame_history") or []
         images_b64: Optional[List[str]] = None
@@ -791,7 +956,15 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             images_b64 = encoded or None
 
         recent_history = state.get("_delib_outcomes") or []
-        prompt = _build_user_prompt(field, telemetry, guidance, stuck_cycles=stuck_cycles, recent_history=recent_history)
+        prompt = _build_user_prompt(
+            field, telemetry, guidance,
+            stuck_cycles=stuck_cycles,
+            recent_history=recent_history,
+            vlm_goal_history=state.get("_vlm_goal_history"),
+            frente_stall_rate=float(state.get("_traj_frente_stall_rate") or 0.0),
+            frente_attempts=int(state.get("_traj_frente_attempts") or 0),
+            imu_jitter_level=str(state.get("imu_jitter_level") or "normal"),
+        )
         reason_key = _get_reason_key(field)
         request_id = service.request({"prompt": prompt, "images_b64": images_b64, "reason_note": reason_key})
         state["slm_request_id"] = request_id

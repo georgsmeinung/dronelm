@@ -60,6 +60,14 @@ _CSV_FIELDNAMES = [
     # exacto de cada ciclo desde el CSV.
     "ctrl_stuck_cycles", "ctrl_active_maneuver", "ctrl_maneuver_cycles_left",
     "ctrl_slm_pending",
+    # Señales de percepción V3/V4 (Zona 1+2, simplificación 2026-09): permiten
+    # reconstruir en replay exactamente qué disparó la evasión o la inyección
+    # de profundidad sin cruzar fuentes de datos.
+    "ctrl_stuck_invisible",
+    "ctrl_imu_contact", "ctrl_blind_wall", "ctrl_imu_jitter", "ctrl_stopped_cycles",
+    "ctrl_depth_m", "ctrl_depth_cycles",
+    "ctrl_traj_stall_rate", "ctrl_traj_attempts",
+    "field_source",
 ] + [f"field_{s}_{k}" for s in _CSV_SECTORS for k in ("occ", "ttc_s", "conf", "blocked")]
 
 
@@ -303,6 +311,23 @@ class FlightLogger:
             "dist_to_wp_m": guidance.get("distance", 0.0),
             "degraded": state.get("degraded", False),
             "deadlock_event": deadlock_event,
+            # Señales de percepción V3/V4 — permiten auditar qué disparó cada decisión
+            "perception": {
+                "stuck_invisible": bool(state.get("stuck_invisible", False)),
+                "imu_contact_event": bool(state.get("imu_contact_event", False)),
+                "blind_wall_event": bool(state.get("blind_wall_event", False)),
+                "imu_jitter_level": state.get("imu_jitter_level"),
+                "stopped_cycles": int(state.get("_stopped_cycles", 0)),
+                "depth_proximity_m": state.get("_depth_proximity_m"),
+                "depth_obstacle_type": state.get("_depth_obstacle_type"),
+                "depth_below_cycles": int(state.get("_depth_below_cycles", 0)),
+                "traj_frente_stall_rate": state.get("_traj_frente_stall_rate"),
+                "traj_frente_attempts": state.get("_traj_frente_attempts"),
+                "traj_izq_stall_rate": state.get("_traj_izq_stall_rate"),
+                "traj_izq_attempts": state.get("_traj_izq_attempts"),
+                "traj_der_stall_rate": state.get("_traj_der_stall_rate"),
+                "traj_der_attempts": state.get("_traj_der_attempts"),
+            },
         }
         self._fh.write(json.dumps(record, default=str) + "\n")
         self._fh.flush()
@@ -353,6 +378,16 @@ class FlightLogger:
         csv_row["ctrl_active_maneuver"]     = state.get("active_maneuver") or ""
         csv_row["ctrl_maneuver_cycles_left"] = state.get("maneuver_cycles_left", 0)
         csv_row["ctrl_slm_pending"]         = state.get("slm_request_id") is not None
+        csv_row["ctrl_stuck_invisible"]     = bool(state.get("stuck_invisible", False))
+        csv_row["ctrl_imu_contact"]         = bool(state.get("imu_contact_event", False))
+        csv_row["ctrl_blind_wall"]          = bool(state.get("blind_wall_event", False))
+        csv_row["ctrl_imu_jitter"]          = state.get("imu_jitter_level")
+        csv_row["ctrl_stopped_cycles"]      = int(state.get("_stopped_cycles", 0))
+        csv_row["ctrl_depth_m"]             = state.get("_depth_proximity_m")
+        csv_row["ctrl_depth_cycles"]        = int(state.get("_depth_below_cycles", 0))
+        csv_row["ctrl_traj_stall_rate"]     = state.get("_traj_frente_stall_rate")
+        csv_row["ctrl_traj_attempts"]       = state.get("_traj_frente_attempts")
+        csv_row["field_source"]             = field.source if field is not None else "none"
         self._csv_writer.writerow(csv_row)
         self._csv_fh.flush()
 

@@ -125,9 +125,53 @@ class ObstacleField:
             source=source, foe=self.foe, foe_confidence=self.foe_confidence,
         )
 
+    def merge_depth_estimate(self, depth_m: float, cmd_vx: float) -> "ObstacleField":
+        """Devuelve copia con sector centro bloqueado por estimación monocular de profundidad.
+
+        Se llama desde perception_node (V4) cuando el modelo detecta un obstáculo
+        que el flujo óptico no ve (foe_confidence baja en malla del árbol). Inyecta
+        una señal conservadora en las tres celdas de centro:
+          - occupancy: justo por encima de OCCUPANCY_BLOCKED_THRESHOLD → is_blocked()=True
+          - ttc_s: depth_m / max(cmd_vx, 0.1) — estimación cinemática
+          - confidence: 0.5 → supera ambos umbrales (MIN_CONFIDENCE_FOR_BLOCKED y TTC_BLOCKED)
+        Las celdas de izquierda y derecha no se tocan.
+        """
+        speed = max(cmd_vx, 0.1)
+        ttc = depth_m / speed
+        injected_occ = OCCUPANCY_BLOCKED_THRESHOLD + 1e-3
+        new_cells: Dict[Tuple[str, str], Cell] = dict(self.cells)
+        for band in BANDS:
+            existing = new_cells.get(("centro", band))
+            if existing is None:
+                continue
+            # Conservador: tomar el mínimo TTC y máxima ocupancy entre flujo y profundidad.
+            new_cells[("centro", band)] = Cell(
+                sector="centro",
+                band=band,
+                occupancy=max(existing.occupancy, injected_occ),
+                ttc_s=min(existing.ttc_s, ttc),
+                divergence=existing.divergence,
+                confidence=max(existing.confidence, 0.5),
+            )
+        return ObstacleField(
+            cells=new_cells,
+            dt_s=self.dt_s,
+            timestamp=self.timestamp,
+            source="flow+depth",
+            foe=self.foe,
+            foe_confidence=self.foe_confidence,
+        )
+
     def summary_text(self) -> str:
         """Unica fuente del resumen de sectores para el prompt del SLM."""
-        lines = ["SECTORES VISUALES:"]
+        _source_label = {
+            "flow": "flujo óptico",
+            "flow+depth": "flujo óptico + profundidad monocular (Depth Anything V2)",
+            "degraded": "flujo óptico degradado",
+            "holdover": "estimación anterior (holdover)",
+            "none": "sin evidencia",
+        }.get(self.source, self.source)
+        lines = [f"SECTORES VISUALES (fuente: {_source_label}):"]
         labels = {"izquierda": "IZQUIERDA", "centro": "CENTRO", "derecha": "DERECHA"}
         for sector in SECTORS:
             occ = self.sector_occupancy(sector)

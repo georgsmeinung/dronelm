@@ -17,7 +17,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-SLAM_HISTORY_SIZE = int(os.getenv("SLAM_HISTORY_SIZE", "5000"))
+SLAM_HISTORY_SIZE = int(os.getenv("SLAM_HISTORY_SIZE", "60"))
 SLAM_STALL_THRESHOLD_M = float(os.getenv("SLAM_STALL_THRESHOLD_M", "0.3"))
 SLAM_CONTEXT_MAX_EVENTS = int(os.getenv("SLAM_CONTEXT_MAX_EVENTS", "30"))
 
@@ -73,10 +73,10 @@ class FlightTrajectory:
             return "HISTORIAL DE TRAYECTORIA: sin datos disponibles aún."
 
         zones: dict = {
-            "FRENTE":    {"attempts": 0, "stalls": 0, "classes": []},
-            "IZQUIERDA": {"attempts": 0, "stalls": 0, "classes": []},
-            "DERECHA":   {"attempts": 0, "stalls": 0, "classes": []},
-            "ATRÁS":     {"attempts": 0, "stalls": 0, "classes": []},
+            "FRENTE":    {"attempts": 0, "stalls": 0, "classes": [], "delta_sum": 0.0},
+            "IZQUIERDA": {"attempts": 0, "stalls": 0, "classes": [], "delta_sum": 0.0},
+            "DERECHA":   {"attempts": 0, "stalls": 0, "classes": [], "delta_sum": 0.0},
+            "ATRÁS":     {"attempts": 0, "stalls": 0, "classes": [], "delta_sum": 0.0},
         }
 
         total_delta = 0.0
@@ -94,12 +94,18 @@ class FlightTrajectory:
                 zone = "ATRÁS"
 
             zones[zone]["attempts"] += 1
+            zones[zone]["delta_sum"] += ev.delta_wp_m
             if ev.stall:
                 zones[zone]["stalls"] += 1
                 stall_count += 1
                 if ev.obstacle_class and ev.obstacle_conf >= 0.45:
                     zones[zone]["classes"].append((ev.obstacle_class, ev.obstacle_conf))
             total_delta += ev.delta_wp_m
+
+        # Umbral bajo el cual el progreso se considera marginal (posible bloqueo invisible).
+        # SLAM_STALL_THRESHOLD_M mide RETROCESO; este umbral mide avance insuficiente.
+        # Default 0.28m: el árbol invisible produce ~0.25m/ciclo; el test base usa -0.3m.
+        _MARGINAL_PROGRESS_M = float(os.getenv("SLAM_MARGINAL_PROGRESS_M", "0.28"))
 
         lines = [f"HISTORIAL DE TRAYECTORIA (últimos {len(events)} ciclos):"]
         for zone, data in zones.items():
@@ -109,11 +115,24 @@ class FlightTrajectory:
                 lines.append(f"- {zone}: 0 intentos. No explorado.")
                 continue
             progress = attempts - stalls
+            avg_prog = -data["delta_sum"] / attempts  # negativo delta = avance → positivo aquí
+
             note = ""
             if stalls >= attempts * 0.7:
                 note = " Zona probable de bloqueo."
+            elif stalls == 0 and attempts >= 3 and avg_prog < _MARGINAL_PROGRESS_M:
+                # Sin retroceso pero con avance marginal: firma típica de árbol/malla invisible.
+                note = (
+                    f" ADVERTENCIA: sin stalls registrados pero avance promedio"
+                    f" {avg_prog:.2f}m/ciclo < {_MARGINAL_PROGRESS_M:.2f}m"
+                    f" — posible colisión con obstáculo invisible al flujo óptico."
+                    " MANTENER_RUMBO en FRENTE refuerza este bloqueo."
+                )
             elif stalls == 0:
-                note = " Sin stalls registrados."
+                note = f" Sin stalls registrados (avance promedio {avg_prog:.2f}m/ciclo)."
+            else:
+                note = f" Avance promedio {avg_prog:.2f}m/ciclo."
+
             # S3b: incluir clase de obstáculo si hay anotaciones
             obs_notes = ""
             if data["classes"]:

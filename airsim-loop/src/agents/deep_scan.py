@@ -154,6 +154,8 @@ def _build_deep_scan_prompt(
     guidance: Dict[str, Any],
     deadlock_cycles: int,
     consecutive_escapes: int,
+    imu_jitter_level: str = "normal",
+    imu_contact: bool = False,
 ) -> str:
     pos = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
     altitude = abs(float(pos.get("z", 0.0))) if isinstance(pos, dict) else 0.0
@@ -168,14 +170,53 @@ def _build_deep_scan_prompt(
         wp_str = f"Meta ({label}): {dist:.1f}m hacia {direction} ({err:+.0f}°)"
 
     max_escape_alt = float(os.getenv("MAX_ESCAPE_ALT_M", "20.0"))
-    # Inclinacion actual (2026-0903, mismo pedido que deliberative.py): el
-    # barrido gira en el lugar por diseno (nunca traslacion, ver §0.3 del
-    # plan), asi que no tiene sentido reportar velocidad horizontal aca --
-    # pero el pitch/roll ayuda a distinguir un barrido estable de uno con
-    # oscilacion fisica real (rafagas, choque leve con follaje).
     orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
     pitch_deg = math.degrees(float(orient.get("pitch", 0.0))) if isinstance(orient, dict) else 0.0
     roll_deg = math.degrees(float(orient.get("roll", 0.0))) if isinstance(orient, dict) else 0.0
+
+    # Señal IMU: contacto físico o vibración elevada pueden confirmar obstáculo
+    # invisible al flujo óptico (árbol UE5, malla convexa que no genera OF).
+    if imu_contact:
+        imu_line = (
+            "- IMU: CONTACTO FÍSICO DETECTADO — el sensor de aceleración registró "
+            "un impacto. El flujo óptico puede NO detectar este obstáculo."
+        )
+    elif imu_jitter_level not in ("normal", ""):
+        imu_line = f"- IMU: vibración {imu_jitter_level} — posible contacto leve con obstáculo."
+    else:
+        imu_line = "- IMU: normal."
+
+    # Advertencia de obstáculo invisible: cuando hay atasco confirmado pero el
+    # flujo óptico ve corredor libre, la causa más probable es una malla de
+    # colisión convexa invisible (árbol UE5, cartel, etc.).
+    # MANTENER_RUMBO en ese estado empuja al drone contra la malla repetidamente.
+    if deadlock_cycles >= 3:
+        invisible_warning = (
+            "\nATENCION — POSIBLE OBSTÁCULO INVISIBLE AL SENSOR ÓPTICO:\n"
+            f"El tracker lleva {deadlock_cycles} ciclos confirmando atasco (avance < 0.5m/ciclo).\n"
+            "Si el historial de FRENTE muestra \"con progreso\" o \"sin stalls\", ese progreso\n"
+            "es MARGINAL — firma típica de colisión con malla convexa (árbol UE5) que el\n"
+            "flujo óptico no puede detectar porque no genera movimiento aparente en imagen.\n"
+            "MANTENER_RUMBO en FRENTE refuerza el bloqueo físico.\n"
+            "Prioriza EVADIR_IZQUIERDA, EVADIR_DERECHA o GANAR_ALTURA.\n"
+        )
+    else:
+        invisible_warning = ""
+
+    instruccion = (
+        "INSTRUCCION:\n"
+        f"Hay {deadlock_cycles} ciclos de atasco confirmado. "
+        + (
+            "NO elijas MANTENER_RUMBO si FRENTE ya fue intentado múltiples veces "
+            "con progreso marginal.\n"
+            if deadlock_cycles >= 3
+            else "\n"
+        )
+        + "Elegi la macro_action que mejor resuelva el atasco a partir del panorama mostrado.\n"
+        "Responde SOLO con este JSON:\n"
+        '{"macro_action": "<ACCION>", "rationale": "<motivo corto citando el rumbo>"}'
+    )
+
     return (
         f"{field.summary_text()}\n\n"
         f"ATASCO: {deadlock_cycles} ciclos sin progresar hacia el waypoint.\n"
@@ -183,15 +224,14 @@ def _build_deep_scan_prompt(
         f"OBJETIVO Y ALTITUD:\n"
         f"- {wp_str}\n"
         f"- Altitud actual: {altitude:.1f}m (Cota maxima de escape: {max_escape_alt:.1f}m)\n"
-        f"- Inclinacion actual: pitch={pitch_deg:+.1f}°, roll={roll_deg:+.1f}°.\n\n"
-        "INSTRUCCION:\n"
-        "Elegi la macro_action que mejor resuelva el atasco a partir del panorama mostrado.\n"
-        "Responde SOLO con este JSON:\n"
-        '{"macro_action": "<ACCION>", "rationale": "<motivo corto citando el rumbo>"}'
+        f"- Inclinacion actual: pitch={pitch_deg:+.1f}°, roll={roll_deg:+.1f}°.\n"
+        f"{imu_line}\n"
+        f"{invisible_warning}\n"
+        f"{instruccion}"
     )
 
 
-def _lateral_first_override(
+def _apply_trajectory_overrides(
     decision: dict,
     trajectory: "Any | None",
     telemetry: dict,
@@ -360,7 +400,7 @@ def _slam_assess_cycle(
             orient_pre = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
             yaw_pre = math.degrees(float(orient_pre.get("yaw", 0.0)))
             _dummy_decision = {"macro_action": "MANTENER_RUMBO", "rationale": "pre-scan"}
-            _pre_override = _lateral_first_override(_dummy_decision, trajectory, telemetry)
+            _pre_override = _apply_trajectory_overrides(_dummy_decision, trajectory, telemetry)
             if _pre_override.get("macro_action") == "RETROCEDER":
                 print(f"[slam_assess] pre-scan override: RETROCEDER directo (sin VLM), "
                       f"drone bloqueado yaw={yaw_pre:.0f}°.")
@@ -386,7 +426,12 @@ def _slam_assess_cycle(
         else:
             traj_text = "HISTORIAL DE TRAYECTORIA: sin datos suficientes aún (primeros ciclos de vuelo)."
 
-        prompt = _build_deep_scan_prompt(field, telemetry, guidance, deadlock_cycles, consecutive_escapes)
+        imu_jitter = str(state.get("imu_jitter_level") or "normal")
+        imu_contact = bool(state.get("imu_contact_event"))
+        prompt = _build_deep_scan_prompt(
+            field, telemetry, guidance, deadlock_cycles, consecutive_escapes,
+            imu_jitter_level=imu_jitter, imu_contact=imu_contact,
+        )
         full_prompt = f"{traj_text}\n\n{prompt}"
 
         frame = state.get("rgb_image")
@@ -416,7 +461,10 @@ def _slam_assess_cycle(
         decision = result.parsed_decision
         clear_scan_state(state)
         if decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
-            decision = _lateral_first_override(decision, trajectory, telemetry)
+            original_macro = decision.get("macro_action")
+            decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
+            if decision.get("macro_action") != original_macro:
+                print(f"[slam_assess] override: VLM recomendó {original_macro} → {decision.get('macro_action')} (trajectory stats).")
             _apply_scan_resolution(
                 state, decision, result.raw_response, result.latency_ms,
                 guidance, telemetry, arm, deadlock_cycles, trajectory,

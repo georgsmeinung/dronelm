@@ -1,3 +1,144 @@
+# 2026-09-11 (sesión 2) — Zona 1: simplificación del grafo + Zona 2: sub-ingeniería
+
+## Zona 1 — Simplificaciones del grafo de control
+
+### 1. `stuck_invisible` — señal unificada V3/V3b/V3c (`graph.py`, `perception_node`)
+
+**Motivación**: `policy_router` tenía tres checks separados para el mismo concepto ("obstáculo invisible"):
+`imu_contact_event` (V3), `blind_wall_event` (V3b) y `_stopped_cycles ≥ 15` (V3c). Había lógica duplicada y el orden de evaluación importaba de formas no obvias.
+
+**Cambio**: `perception_node` calcula un único bool `stuck_invisible = imu_contact_event OR blind_wall_event OR (_stopped_cycles ≥ STOPPED_CYCLES_THRESHOLD)`. El router consume `stuck_invisible`; los sub-campos individuales siguen disponibles en el estado para `evasive_node` y logging.
+
+---
+
+### 2. Paths SLM mutuamente exclusivos (`deliberative.py`)
+
+**Motivación**: `slam_assess` (path de deadlock recovery con `_deep_scan_request_id`) y el path regular del SLM (`slm_request_id`) competían por el mismo `DeliberationService`. Si `slam_assess` estaba procesando, el path regular podía encolar un request nuevo, descartando la respuesta del slam_assess.
+
+**Cambio**: guard explícito al inicio del path regular — si `_deep_scan_request_id is not None`, devolver `_wait_command()` sin encolar nada nuevo.
+
+---
+
+### 3. V2 proactivo eliminado (`deliberative.py`, `graph.py`)
+
+**Motivación**: el VLM proactivo (consulta cada 1.5 s en vuelo libre) no mostró beneficio medible en ninguna corrida. Agregaba 50+ líneas de lógica, un watchdog separado y competía con el path reactivo.
+
+**Cambio**: `VLM_PROACTIVE_ENABLED = False` como constante (eliminado el env var). Eliminada `build_proactive_payload()`. Eliminado el bloque proactivo de `capture_node` (~50 líneas). Eliminados `_vlm_last_proactive_ts` y `_vlm_proactive_request_id` de `DroneState`.
+
+---
+
+### 4. `_lateral_first_override` → `_apply_trajectory_overrides` + log explícito (`deep_scan.py`)
+
+**Cambio**: renombrado para que el nombre describa qué hace, no cuándo se llama. Agregado log cuando el override cambia la macro_action del VLM: `"[slam_assess] override: VLM recomendó X → Y (trajectory stats)."`.
+
+---
+
+### 5. FlightTrajectory buffer 5000 → 60 eventos (`spatial_history.py`)
+
+**Motivación**: el buffer se amplió a 5000 para cubrir misiones largas, pero `trajectory_context_text()` y `zone_stats()` solo leen los últimos 30 eventos (`SLAM_CONTEXT_MAX_EVENTS=30`). Mantener 5000 es memoria y CPU desperdiciados.
+
+**Cambio**: `SLAM_HISTORY_SIZE` default `5000` → `60` (2× `SLAM_CONTEXT_MAX_EVENTS`). El buffer nunca rota antes de que el contexto que se lee sea el mismo.
+
+---
+
+## Zona 2 — Mejoras de percepción y toma de decisiones
+
+### V4 inyección en ObstacleField (A1) — Arquitectura simplificada (`graph.py`, `obstacle_field.py`)
+
+**Decisión previa (sesión 1)**: la profundidad monocular se enrutaba como señal separada en `policy_router` (`_depth_proximity_m → "deliberative"`). Esto creaba un path paralelo al flujo óptico, duplicando lógica.
+
+**Cambio (A1)**: la profundidad se inyecta directamente en `ObstacleField` via `merge_depth_estimate(depth_m, cmd_vx)`. Las tres celdas del sector centro quedan con `occupancy = OCCUPANCY_BLOCKED_THRESHOLD + 1e-3` (siempre `is_blocked()`), `ttc_s = depth_m / max(cmd_vx, 0.1)`, `confidence = 0.5`. El `source` pasa a `"flow+depth"`. El router, el SLM y el logger ven un único campo de percepción coherente.
+
+Eliminado el bloque de routing separado de `_depth_proximity_m` en `policy_router` (6 líneas → comentario explicativo).
+
+---
+
+### B1 — Source visible en el prompt del SLM (`obstacle_field.py`, `summary_text()`)
+
+**Cambio**: la cabecera `"SECTORES VISUALES:"` ahora incluye la fuente:
+```
+SECTORES VISUALES (fuente: flujo óptico + profundidad monocular (Depth Anything V2)):
+```
+Mapa completo: `"flow"`, `"flow+depth"`, `"degraded"`, `"holdover"`, `"none"`. El SLM puede ajustar su confianza en función de cuántas fuentes confirmaron el obstáculo.
+
+---
+
+### E2 — Clasificación de tipo de obstáculo por textura de profundidad (`depth_estimator.py`, `graph.py`)
+
+**Motivación**: el SLM sabe que hay un obstáculo frontal pero no sabe si es árbol (con posibles huecos) o muro (superficie sólida). La estrategia óptima difiere: árbol → diagonal/+1 m; muro → giro amplio.
+
+**Implementación** — `_classify_depth_texture(depth_map)`:
+- **CV (std/mean)** del sector frontal: pared uniforme → ~0.1–0.25; follaje → ~0.55–1.5+.
+- **far_fraction**: fracción de píxeles con profundidad > `near * 3.0`. Follaje tiene huecos que ven el fondo lejano; pared no.
+- Clasificación: `CV > 0.55 OR far_fraction > 0.30` → `"follaje"`, sino `"superficie plana"`.
+- Configurable: `DEPTH_CV_THRESHOLD`, `DEPTH_FAR_FRACTION_THRESHOLD`, `DEPTH_FAR_RATIO`.
+
+`poll()` cambia de 2-tupla a 3-tupla: `(depth_m, obstacle_type, age_ms)`.
+
+El SLM recibe en `scene_summary`:
+```
+Obstáculo frontal (profundidad monocular): follaje. Posibles huecos entre ramas — evasión diagonal o +1 m de altura puede ser viable.
+```
+
+---
+
+### C1 — Evasión lateral con memoria de stalls (`evasive.py`, `graph.py`)
+
+**Motivación**: `evasive_node` elegía el lado de evasión solo por occupancy óptica. En malla de árbol (flujo óptico ciego), ambos lados aparecen con occ ≈ 0, y el drone elegía izquierda por defecto aunque ya hubiera fallado allí 5 veces.
+
+**Cambio**: occupancy efectiva con penalización por historia:
+```
+eff_occ = occ + stall_rate * 0.5  si stall_rate ≥ 0.60 Y attempts ≥ 3
+```
+`_traj_izq/der_stall_rate` y `_traj_izq/der_attempts` publicados por `capture_node` via `zone_stats()` (consolidando la llamada duplicada a `frente_stall_rate()` + `zone_stats()`).
+
+El rationale en logs incluye los valores efectivos: `eff_occ izq=0.382 vs der=0.004 [traj izq: 75%/4int]`.
+
+Configurable: `EVASIVE_TRAJ_MIN_ATTEMPTS=3`, `EVASIVE_TRAJ_STALL_THRESHOLD=0.60`, `EVASIVE_TRAJ_STALL_WEIGHT=0.50`.
+
+---
+
+### D1 — GIRAR_90 con historia de zonas (`graph.py`, `girar_90_node`)
+
+**Motivación**: `girar_90_node` elegía el lado del giro por el bearing al waypoint. Si el drone ya giró a ese lado y encontró muro, volvía a girarse al mismo lado.
+
+**Cambio**: antes de `action_to_command("GIRAR_90")`, comparar el lado preferido (por bearing) contra `zone_stats`. Si `stall_rate ≥ 0.70` con `≥ 3 intentos` Y el opuesto no está igualmente bloqueado → negar el `bearing_err_deg` para invertir el giro.
+
+Configurable: `GIRAR90_STALL_THRESHOLD=0.70`, `GIRAR90_MIN_ATTEMPTS=3`.
+
+---
+
+### F1 — Corner injection con zone_stats (`deliberative.py`, escape path)
+
+**Motivación**: en el escape GIRAR_90 del path deliberativo (cuando se agotan los escapes verticales), el corner waypoint se inyectaba sin considerar si ese lado ya había fallado.
+
+**Cambio**: después de `action_to_command("GIRAR_90")`, verificar zone_stats del lado elegido:
+- **Stall ≥ 50%, ≥ 3 intentos, opuesto libre**: invertir el `effective_target_yaw` al lado contrario.
+- **Ambas zonas bloqueadas (stall ≥ 50%)**: reducir `offset_m` a `max(3m, CORNER_OFFSET_M × 0.25)`.
+
+El rationale incluye: `[F1: corner invertido — izq 75%/4int; der 0%/0int]`.
+
+---
+
+### Logging de auditoría — nuevos campos (`flight_logger.py`)
+
+**JSONL** — nuevo sub-objeto `"perception"` en cada registro:
+```json
+"perception": {
+  "stuck_invisible": bool,
+  "imu_contact_event": bool, "blind_wall_event": bool, "imu_jitter_level": str,
+  "stopped_cycles": int,
+  "depth_proximity_m": float|null, "depth_obstacle_type": str|null, "depth_below_cycles": int,
+  "traj_frente_stall_rate": float, "traj_frente_attempts": int,
+  "traj_izq_stall_rate": float, "traj_izq_attempts": int,
+  "traj_der_stall_rate": float, "traj_der_attempts": int
+}
+```
+
+**CSV** — 10 columnas nuevas: `ctrl_stuck_invisible`, `ctrl_imu_contact`, `ctrl_blind_wall`, `ctrl_imu_jitter`, `ctrl_stopped_cycles`, `ctrl_depth_m`, `ctrl_depth_cycles`, `ctrl_traj_stall_rate`, `ctrl_traj_attempts`, `field_source`.
+
+---
+
 # 2026-09-11
 
 ## V4-VLM-REFINEMENT — Estimación monocular de profundidad: Depth Anything V2 Metric (`depth_estimator.py`, `graph.py`)

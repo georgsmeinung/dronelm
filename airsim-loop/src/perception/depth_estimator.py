@@ -40,6 +40,14 @@ DEPTH_SECTOR_RIGHT  = float(os.getenv("DEPTH_SECTOR_RIGHT",  "0.80"))
 # Percentil robusto: 5 % es más resistente que el mínimo puro a píxeles ruidosos,
 # pero aún captura obstáculos reales que cubren una fracción pequeña del sector.
 DEPTH_PERCENTILE    = int(os.getenv("DEPTH_PERCENTILE", "5"))
+# E2 (Zona 2): clasificación de textura de profundidad para inferir tipo de obstáculo.
+# CV (std/mean) alto → profundidad irregular → follaje con huecos.
+# far_fraction alto → muchos píxeles lejanos mezclados con los cercanos → misma firma.
+# Umbral CV calibrado en renders UE5: pared ~0.10–0.25, árbol ~0.55–1.5.
+_DEPTH_CV_THRESHOLD          = float(os.getenv("DEPTH_CV_THRESHOLD",          "0.55"))
+_DEPTH_FAR_FRACTION_THRESHOLD = float(os.getenv("DEPTH_FAR_FRACTION_THRESHOLD", "0.30"))
+# Razón near/far: píxel "lejano" = más de N× la profundidad mínima del sector.
+_DEPTH_FAR_RATIO             = float(os.getenv("DEPTH_FAR_RATIO",             "3.0"))
 
 
 class DepthEstimator:
@@ -54,7 +62,7 @@ class DepthEstimator:
         # Cola maxsize=1: un request nuevo descarta el pendiente anterior.
         self._queue: queue.Queue = queue.Queue(maxsize=1)
         self._lock = threading.Lock()
-        self._result: Optional[Tuple[float, float]] = None  # (min_depth_m, submitted_at)
+        self._result: Optional[Tuple[float, str, float]] = None  # (min_depth_m, obstacle_type, submitted_at)
         self._ready = threading.Event()  # señaliza que el modelo está cargado
         self._thread = threading.Thread(target=self._worker, name="DepthEstimator", daemon=True)
         self._thread.start()
@@ -78,14 +86,14 @@ class DepthEstimator:
         except queue.Full:
             pass
 
-    def poll(self) -> Tuple[Optional[float], float]:
-        """Devuelve (min_depth_m, age_ms). age_ms=0.0 si aún no hay resultado."""
+    def poll(self) -> Tuple[Optional[float], Optional[str], float]:
+        """Devuelve (min_depth_m, obstacle_type, age_ms). Nones si aún no hay resultado."""
         with self._lock:
             if self._result is None:
-                return None, 0.0
-            min_depth, submitted_at = self._result
+                return None, None, 0.0
+            min_depth, obstacle_type, submitted_at = self._result
             age_ms = (time.time() - submitted_at) * 1000.0
-            return min_depth, age_ms
+            return min_depth, obstacle_type, age_ms
 
     def is_ready(self) -> bool:
         """True cuando el modelo ya terminó de cargarse."""
@@ -125,9 +133,9 @@ class DepthEstimator:
 
             rgb_ndarray, submitted_at = item
             try:
-                min_depth = self._infer(pipe, rgb_ndarray)
+                min_depth, obstacle_type = self._infer(pipe, rgb_ndarray)
                 with self._lock:
-                    self._result = (min_depth, submitted_at)
+                    self._result = (min_depth, obstacle_type, submitted_at)
             except Exception as exc:
                 logger.warning("DepthEstimator: error en inferencia — %s", exc)
 
@@ -142,7 +150,7 @@ class DepthEstimator:
         model = model.to(device).eval()
         return (processor, model, device)
 
-    def _infer(self, pipe, rgb_ndarray: np.ndarray) -> float:
+    def _infer(self, pipe, rgb_ndarray: np.ndarray) -> Tuple[float, str]:
         import torch
         from PIL import Image
 
@@ -156,7 +164,9 @@ class DepthEstimator:
             predicted_depth = outputs.predicted_depth  # (1, H, W), metros
 
         depth_np = predicted_depth.squeeze().cpu().numpy()
-        return _min_forward_depth(depth_np)
+        min_depth = _min_forward_depth(depth_np)
+        obstacle_type = _classify_depth_texture(depth_np)
+        return min_depth, obstacle_type
 
 
 def _cuda_available() -> bool:
@@ -165,6 +175,35 @@ def _cuda_available() -> bool:
         return torch.cuda.is_available()
     except Exception:
         return False
+
+
+def _classify_depth_texture(depth_map: np.ndarray) -> str:
+    """Infiere el tipo de obstáculo frontal a partir de la textura del mapa de profundidad.
+
+    Métricas sobre el sector frontal (mismo recorte que _min_forward_depth):
+      - CV (std/mean): uniformidad de la profundidad. Pared → bajo; follaje → alto.
+      - far_fraction: fracción de píxeles más de N× más lejanos que el percentil-5.
+        Follaje → alto (huecos entre ramas que ven el fondo); pared → bajo.
+
+    Retorna "follaje" o "superficie plana". "desconocido" si no hay suficientes datos.
+    """
+    h, w = depth_map.shape
+    y0 = int(h * DEPTH_SECTOR_TOP)
+    y1 = int(h * DEPTH_SECTOR_BOTTOM)
+    x0 = int(w * DEPTH_SECTOR_LEFT)
+    x1 = int(w * DEPTH_SECTOR_RIGHT)
+    sector = depth_map[y0:y1, x0:x1]
+    valid = sector[sector > 0.1]
+    if len(valid) < 10:
+        return "desconocido"
+    mean_d = float(np.mean(valid))
+    std_d = float(np.std(valid))
+    cv = std_d / mean_d if mean_d > 0.0 else 0.0
+    near = float(np.percentile(valid, DEPTH_PERCENTILE))
+    far_fraction = float(np.mean(valid > near * _DEPTH_FAR_RATIO)) if near > 0.5 else 0.0
+    if cv > _DEPTH_CV_THRESHOLD or far_fraction > _DEPTH_FAR_FRACTION_THRESHOLD:
+        return "follaje"
+    return "superficie plana"
 
 
 def _min_forward_depth(depth_map: np.ndarray) -> float:

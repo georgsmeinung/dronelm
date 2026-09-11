@@ -40,8 +40,13 @@ def test_moderate_ttc_without_center_block_triggers_evasive(monkeypatch):
     # Centro sin ocupacion (no "bloqueado"), pero TTC dentro de la ventana de
     # advertencia: corresponde a una correccion evasiva rapida, no a
     # deliberacion (que se reserva para bloqueo estructural o TTC critico).
+    # alt=10m: sobre OPTICAL_MIN_ALT_M (4.5m) — guarda de altitud no aplica.
     field = _field_with(center_ttc=4.0, center_occ=0.0)
-    state = {"obstacle_field": field, "evasion_stuck_cycles": 0}
+    state = {
+        "obstacle_field": field,
+        "evasion_stuck_cycles": 0,
+        "telemetry": {"position": {"z": -10.0}},
+    }
     assert graph_mod.policy_router(state) == "evasive"
 
 
@@ -87,7 +92,11 @@ def test_imminent_with_high_blocked_fraction_triggers_girar_90(monkeypatch):
 
 def test_stuck_deadlock_forces_deliberative_regardless_of_field(monkeypatch):
     monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
-    state = {"obstacle_field": empty_field(), "evasion_stuck_cycles": 999}
+    state = {
+        "obstacle_field": empty_field(),
+        "evasion_stuck_cycles": 999,
+        "telemetry": {"position": {"z": -10.0}},  # sobre OPTICAL_MIN_ALT_M
+    }
     assert graph_mod.policy_router(state) == "deliberative"
 
 
@@ -106,6 +115,7 @@ def test_stuck_does_not_short_circuit_an_open_corridor(monkeypatch):
         "obstacle_field": field,
         "waypoint_guidance": {"bearing_err_deg": 30.0},  # waypoint a la derecha
         "evasion_stuck_cycles": effective_stall_threshold(),
+        "telemetry": {"position": {"z": -10.0}},  # sobre OPTICAL_MIN_ALT_M
     }
     assert graph_mod.policy_router(state) == "keep_going"
 
@@ -120,6 +130,7 @@ def test_hard_stuck_overrides_the_open_corridor_bypass(monkeypatch):
         "obstacle_field": field,
         "waypoint_guidance": {"bearing_err_deg": 30.0},
         "evasion_stuck_cycles": hard_stall_threshold(),
+        "telemetry": {"position": {"z": -10.0}},  # sobre OPTICAL_MIN_ALT_M
     }
     assert graph_mod.policy_router(state) == "deliberative"
 
@@ -135,6 +146,7 @@ def test_committed_maneuver_is_not_preempted_by_the_stall_counter(monkeypatch):
         "evasion_stuck_cycles": 999,
         "active_maneuver": "GIRAR_90",
         "maneuver_cycles_left": 3,
+        "telemetry": {"position": {"z": -10.0}},  # sobre OPTICAL_MIN_ALT_M
     }
     assert graph_mod.policy_router(state) == "evasive"
 
