@@ -1,4 +1,91 @@
+# 2026-09-11
+
+## PLAN-SLAM — Fix 11: Corner post-scan — inyectar el corner DESPUÉS del scan post-RETROCEDER (`deep_scan.py`)
+
+**Diagnóstico** (seed_1, c929→c1067): el corner inyectado al despachar RETROCEDER usaba la
+dirección lateral calculada a ciegas (+90°) con datos de trayectoria previos al retroceso.
+En seed_1, el corner del c929 dirigió el drone a un waypoint lateral que terminó siendo la
+entrada a otro árbol distinto (árbol final WP=3). El corner 90° fijo no consideraba qué
+dirección estaba realmente libre tras el retroceso.
+
+**Fix**: al despachar RETROCEDER, se setea `state["_post_retroceder_corner_pending"] = True`
+en lugar de inyectar el corner inmediatamente. El pre-scan Override saltea el check cuando
+esta flag está activa (para que el VLM tenga oportunidad de correr). Cuando el VLM post-RETROCEDER
+retorna con EVADIR_X, se inyecta el corner en esa dirección (la que el VLM determinó como libre
+viendo la nueva vista tras el retroceso). MANTENER_RUMBO y escapes verticales no generan corner.
+
+**Código**: `_apply_scan_resolution` (macro=RETROCEDER): elimina el bloque de cálculo de
+`turn_sign` y reemplaza `state["inject_corner"]` por `state["_post_retroceder_corner_pending"]`.
+`_slam_assess_cycle`: usa `state.pop("_post_retroceder_corner_pending", False)` al aplicar
+el resultado VLM para inyectar el corner con la dirección que el VLM eligió.
+
+## PLAN-SLAM — Fix 10: Override 1c — gap entre 1a y 1b (`deep_scan.py` + tests)
+
+**Diagnóstico** (seed_1 c1267-1315): drone atascado en árbol final de WP=3 durante 248 ciclos
+sin despachar RETROCEDER. EVADIR_IZQUIERDA se probó 2 veces (c1267-1268, posición invariante →
+100% stall). DERECHA nunca explorada. Override 1a requería ≥3 intentos por lateral (izq<3 →
+falla). Override 1b requería izq=0 (izq=2 → falla). Gap documentado: 1-2 intentos por lateral
+(todos stall) + lado opuesto inexplorado bloquea ambos overrides.
+
+**Fix**: Override 1c — mismos umbrales de FRENTE que 1b (≥90% stall, ≥20 eventos), pero la
+condición lateral acepta `(intentos==0 OR stall_rate≥70%)` para cada lateral. Cubre:
+- izq=N intentos todos stall + der=0 (caso diagnosticado)
+- izq=0 + der=N intentos todos stall (simétrico)
+- ambas laterales con ≥1 intento y ≥70% stall (extensión natural)
+No dispara si alguna lateral tiene intentos con baja tasa de stall (≥1 éxito → aún explorable).
+
+**Tests añadidos** (9/9 pasan): `test_override_1c_fires_izq_stalled_der_zero` (caso seed_1 exacto),
+`test_override_1c_not_fires_when_izq_not_stalled` (guarda que laterales con éxito no disparan).
+
 # 2026-09-10
+
+## PLAN-SLAM — Fix 9: Protección incondicional de RETROCEDER en policy_router (`graph.py`)
+
+**Diagnóstico**: la condición `ttc > TTC_EVASION_THRESHOLD` en la protección de maneuvers
+causaba que `traj_stall` preemptara RETROCEDER cuando el drone estaba embebido en el árbol
+(TTC bajo). Cada ciclo: `active_maneuver="RETROCEDER"` pero ttc bajo → falla la protección
+→ `traj_stall` activa deliberative → RETROCEDER sobreescrito por ESCANEO. El maneuver
+solo ejecutaba 1 ciclo antes de ser reemplazado.
+
+**Fix**: RETROCEDER es el único maneuver que protegemos incondicionalmente (sin ttc check).
+El drone siempre se mueve alejándose del obstáculo → TTC debería aumentar, no bajar. Si TTC
+baja durante RETROCEDER es porque el fix7 (MaxDegreeOfFreedom) aún no había surtido efecto.
+
+## PLAN-SLAM — Fix 8: Pre-scan Override 1b en `_slam_assess_cycle` (`deep_scan.py`)
+
+**Diagnóstico** (corrida post-Fix7, c621–c1282): 662 ciclos consecutivos de ESCANEO. El drone
+estaba inmovilizado (FRENTE≥90%, laterales=0) pero Override 1b solo se evaluaba DESPUÉS de
+recibir la respuesta del VLM. Cuando el VLM cuelga (timeout u Ollama sobrecargado), el ciclo
+completo es: `pending_id=None → send request → ESCANEO × N → watchdog → next_action stays ESCANEO`
+(el watchdog retorna False pero `next_action` no se resetea en ese path). RETROCEDER = 0 en 1282
+ciclos totales.
+
+**Fix**: antes de enviar el request al VLM, `_slam_assess_cycle` llama `_lateral_first_override`
+con decisión dummy. Si Override 1b dispara → `_apply_scan_resolution` con RETROCEDER inmediato,
+sin esperar VLM. Cubre el caso de drone embebido que no puede esperar respuesta.
+
+## PLAN-SLAM — Fix 7: ForwardOnly causa giro 180° en RETROCEDER (`airsim_client.py`)
+
+**Diagnóstico** (corrida post-Fix 6, c577–584): pese a `yaw_rate=0.0` en el comando, el yaw
+giraba de 158° a -36° (194°) en 9 ciclos. Causa raíz: `execute_velocity` con `yaw_rate=0.0` y
+`target_yaw=None` usaba `DrivetrainType.ForwardOnly`. ForwardOnly rota la proa hacia la dirección
+de traslación en world frame. Con vx=-1.2 en body frame y heading 158° (SSE), la traslación world
+es northward → AirSim rota el drone de 158° hacia 0° norte. El drone giraba 200° en vez de
+retroceder en línea recta, lo que también colapsaba el TTC al apuntar hacia un nuevo obstáculo,
+haciendo que GIRAR_90 preemptara el maneuver a los 9 ciclos en vez de los 15 previstos.
+
+**Fix**: `execute_velocity` detecta `vx < -0.05` (marcha atrás) y usa `MaxDegreeOfFreedom` +
+`YawMode(is_rate=True, yaw_or_rate=0.0)` para congelar el rumbo durante el retroceso. ForwardOnly
+se mantiene para movimiento lateral (EVADIR) y adelante (MANTENER_RUMBO).
+
+## PLAN-SLAM — Fix 6: yaw_rate=0 en RETROCEDER para no amplificar guidance del corner (`action_map.py`)
+
+**Diagnóstico** (`code_version=0359d764`, c632–646): `action_to_command("RETROCEDER")` propagaba
+`yaw_rate_guidance` sin clampear. Al inyectar el corner en el mismo ciclo, guidance rotaba ~90°,
+produciendo giro durante el maneuver. Fix parcial: yaw_rate=0 reduce la señal de entrada, pero
+el giro real venía del drivetrain ForwardOnly (Fix 7 arriba).
+
+---
 
 ## PLAN-SLAM — Mejoras de desatasco post-S4: RETROCEDER, Override 1b, trigger de trayectoria, corner injection
 

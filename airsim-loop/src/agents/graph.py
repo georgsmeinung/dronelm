@@ -417,8 +417,12 @@ def policy_router(state: DroneState) -> str:
     # interrumpa.
     active_man = state.get("active_maneuver")
     cycles_left = int(state.get("maneuver_cycles_left", 0))
-    if active_man and cycles_left > 0 and ttc > TTC_EVASION_THRESHOLD:
-        return "evasive"
+    if active_man and cycles_left > 0:
+        # RETROCEDER siempre protegido: el drone se mueve hacia atrás del obstáculo,
+        # el TTC aumenta con el tiempo — no cortarlo por TTC bajo. Para otros
+        # maneuvers se mantiene la condición original (emergencia real sí interrumpe).
+        if active_man == "RETROCEDER" or ttc > TTC_EVASION_THRESHOLD:
+            return "evasive"
 
     # Escape de deadlock: ya no cortocircuita la percepcion. Si el campo tiene
     # evidencia valida y ve un sector transitable, la decision tactica normal

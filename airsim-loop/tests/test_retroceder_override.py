@@ -3,6 +3,8 @@
 # Cubre Override 1a (3 zonas bloqueadas con intentos confirmados),
 # Override 1b (drone inmovilizado: buffer saturado de stalls FRENTE sin
 # ningún intento lateral — escenario confirmado con code_version=35367d3b),
+# Override 1c (gap 1a/1b: pocos intentos laterales pero todos con stall —
+# diagnosticado seed_1 c1267-1315: izq=2 stall 100%, der=0),
 # y Override 2 (VLM vertical pero laterales no exploradas).
 from __future__ import annotations
 
@@ -74,6 +76,33 @@ def test_override_1b_not_fires_when_laterals_have_attempts():
     # 2 intentos IZQUIERDA
     for _ in range(2):
         traj.record(_event(-90.0, stall=False))
+    decision = {"macro_action": "GANAR_ALTURA", "rationale": "VLM"}
+    result = _lateral_first_override(decision, traj, _telemetry(0.0))
+    assert result["macro_action"] != "RETROCEDER"
+
+
+# ── Override 1c ───────────────────────────────────────────────────────────────
+
+def test_override_1c_fires_izq_stalled_der_zero():
+    """FRENTE>=90%/>=20 + izq=2 intentos (100% stall) + der=0 -> RETROCEDER.
+    Caso exacto de seed_1 c1267-1315 donde 1a falló (izq<3) y 1b falló (izq≠0)."""
+    traj = FlightTrajectory(max_size=100)
+    for _ in range(25):
+        traj.record(_event(0.0, stall=True))    # FRENTE: 25 stalls (100%)
+    for _ in range(2):
+        traj.record(_event(-90.0, stall=True))  # IZQUIERDA: 2 intentos, todos stall
+    decision = {"macro_action": "GANAR_ALTURA", "rationale": "VLM"}
+    result = _lateral_first_override(decision, traj, _telemetry(0.0))
+    assert result["macro_action"] == "RETROCEDER"
+
+
+def test_override_1c_not_fires_when_izq_not_stalled():
+    """izq=2 intentos con éxito (stall=False): Override 1c no dispara (hay dirección libre)."""
+    traj = FlightTrajectory(max_size=100)
+    for _ in range(25):
+        traj.record(_event(0.0, stall=True))
+    for _ in range(2):
+        traj.record(_event(-90.0, stall=False))  # IZQUIERDA: 2 intentos sin stall
     decision = {"macro_action": "GANAR_ALTURA", "rationale": "VLM"}
     result = _lateral_first_override(decision, traj, _telemetry(0.0))
     assert result["macro_action"] != "RETROCEDER"

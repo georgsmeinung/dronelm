@@ -509,6 +509,13 @@ class AirSimClient:
             elif target_yaw is not None:
                 drivetrain = airsim.DrivetrainType.MaxDegreeOfFreedom
                 yaw_mode = airsim.YawMode(is_rate=False, yaw_or_rate=float(target_yaw))
+            elif vx < -0.05:
+                # Marcha atrás: ForwardOnly giraría la proa hacia la dirección
+                # de traslación en world frame (≈180° cuando el drone apunta
+                # hacia el obstáculo). MaxDegreeOfFreedom + rate=0 congela el
+                # rumbo actual para que el retroceso sea recto.
+                drivetrain = airsim.DrivetrainType.MaxDegreeOfFreedom
+                yaw_mode = airsim.YawMode(is_rate=True, yaw_or_rate=0.0)
             else:
                 drivetrain = airsim.DrivetrainType.ForwardOnly
                 yaw_mode = airsim.YawMode(is_rate=False, yaw_or_rate=0.0)

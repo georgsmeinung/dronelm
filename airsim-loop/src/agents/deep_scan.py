@@ -263,6 +263,31 @@ def _lateral_first_override(
             ),
         }
 
+    # Override 1c: gap entre 1a y 1b — pocos intentos laterales pero todos con stall.
+    # Caso típico: izq=1-2 intentos (100% stall) + der=0 → 1a falla (izq<3),
+    # 1b falla (izq≠0). Diagnosticado en seed_1 c1267-1315 donde EVADIR_IZQUIERDA
+    # se probó 2 veces (posición sin cambio) y DERECHA nunca se exploró.
+    # Mismos umbrales de FRENTE que 1b (>=90%, >=20 eventos) para no disparar
+    # prematuramente; la diferencia es que permite laterales intentadas-y-fallidas.
+    if (frente_rate >= 0.90 and frente_att >= 20
+            and (izq["attempts"] == 0 or izq["stall_rate"] >= 0.70)
+            and (der["attempts"] == 0 or der["stall_rate"] >= 0.70)):
+        print(
+            f"[slam_assess] retroceder-override-1c: FRENTE saturado + laterales sin salida "
+            f"(frente={frente_rate:.0%} [{frente_att}int], "
+            f"izq={izq['attempts']}int={izq['stall_rate']:.0%}stall, "
+            f"der={der['attempts']}int={der['stall_rate']:.0%}stall) -> RETROCEDER"
+        )
+        return {
+            "macro_action": "RETROCEDER",
+            "rationale": (
+                f"FRENTE {frente_rate:.0%} stall ({frente_att} intentos); "
+                f"IZQUIERDA {izq['attempts']} int/{izq['stall_rate']:.0%} stall, "
+                f"DERECHA {der['attempts']} int/{der['stall_rate']:.0%} stall — "
+                f"intentos laterales fallidos; retroceder para crear margen."
+            ),
+        }
+
     # Override 2: VLM sugiere escape vertical pero hay laterales sin explorar.
     macro = decision.get("macro_action", "")
     if macro not in ("PERDER_ALTURA", "GANAR_ALTURA"):
@@ -326,6 +351,26 @@ def _slam_assess_cycle(
     pending_id = state.get("_deep_scan_request_id")
 
     if pending_id is None:
+        # Pre-scan Overrides 1b/1c: drone bloqueado sin salida (FRENTE saturado,
+        # laterales inexploradas o fallidas). Evaluar ANTES de enviar al VLM para
+        # no quedar en ESCANEO infinito si el VLM cuelga.
+        # Excepción: si _post_retroceder_corner_pending está activo, el RETROCEDER
+        # ya se ejecutó; dejar correr el VLM para que elija la dirección del corner.
+        if trajectory is not None and not state.get("_post_retroceder_corner_pending"):
+            orient_pre = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+            yaw_pre = math.degrees(float(orient_pre.get("yaw", 0.0)))
+            _dummy_decision = {"macro_action": "MANTENER_RUMBO", "rationale": "pre-scan"}
+            _pre_override = _lateral_first_override(_dummy_decision, trajectory, telemetry)
+            if _pre_override.get("macro_action") == "RETROCEDER":
+                print(f"[slam_assess] pre-scan override: RETROCEDER directo (sin VLM), "
+                      f"drone bloqueado yaw={yaw_pre:.0f}°.")
+                clear_scan_state(state)
+                _apply_scan_resolution(
+                    state, _pre_override, "pre-scan-override", 0.0,
+                    guidance, telemetry, arm, deadlock_cycles, trajectory,
+                )
+                return True
+
         # Construir contexto de trayectoria
         orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
         current_yaw_deg = math.degrees(float(orient.get("yaw", 0.0)))
@@ -379,6 +424,31 @@ def _slam_assess_cycle(
             # Sobrescribir strategy en _deadlock_event para el log
             if state.get("_deadlock_event"):
                 state["_deadlock_event"]["strategy"] = "slam_assess"
+
+            # Fix 11: inyectar corner post-RETROCEDER usando el resultado del scan.
+            # El scan ve la vista despejada después del retroceso y elige una dirección
+            # limpia. Si el VLM dice EVADIR_X, el corner apunta hacia ese lado.
+            # MANTENER_RUMBO y escapes verticales no necesitan corner (WP accesible).
+            macro_post = decision.get("macro_action", "")
+            if state.pop("_post_retroceder_corner_pending", False) and macro_post != "RETROCEDER":
+                from .action_map import compute_corner_waypoint, _manhattan_snap_yaw
+                orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+                hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
+                if macro_post == "EVADIR_IZQUIERDA":
+                    corner_yaw = _manhattan_snap_yaw(hdg_pc, -90.0)
+                elif macro_post == "EVADIR_DERECHA":
+                    corner_yaw = _manhattan_snap_yaw(hdg_pc, 90.0)
+                else:
+                    corner_yaw = None  # MANTENER_RUMBO / GANAR / PERDER: sin corner
+                if corner_yaw is not None:
+                    state["inject_corner"] = compute_corner_waypoint(
+                        telemetry, corner_yaw, guidance=guidance,
+                        offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
+                    )
+                    side = "IZQUIERDA" if macro_post == "EVADIR_IZQUIERDA" else "DERECHA"
+                    print(f"[slam_assess] retroceder-corner post-scan: {corner_yaw:.0f}° ({side}) "
+                          f"basado en VLM={macro_post}.")
+
             return True
         print(f"[slam_assess] ({arm}) respuesta sin acción viable. Cae al escape sincrónico.")
         state["_deadlock_event"] = {
@@ -698,57 +768,13 @@ def _apply_scan_resolution(
         state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))
         state["maneuver_command"] = cmd
 
-        # Inyectar corner waypoint lateral para que al terminar RETROCEDER el
-        # guiado no apunte de vuelta al árbol bloqueado (mismo mecanismo que
-        # GIRAR_90 en deliberative.py y fsm.py).
-        #
-        # Jerarquía de señales para elegir la dirección lateral:
-        #   1. Trayectoria: lateral con stall_rate menor (si alguna tiene intentos).
-        #   2. Campo óptico: lateral con TTC mayor (más despejada según flow).
-        #   3. Fallback: lateral que acorta el error de rumbo al WP.
-        # El corner sigue sujeto al reactive/evasive normal mientras el drone
-        # navega hacia él, así que no se requiere que el punto esté 100% libre.
-        orient_r = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
-        current_hdg_r = math.degrees(float(orient_r.get("yaw", 0.0)))
-
-        turn_sign: float
-        if trajectory is not None:
-            stats_r = trajectory.zone_stats(current_hdg_r)
-            izq_r = stats_r["IZQUIERDA"]
-            der_r = stats_r["DERECHA"]
-            if izq_r["attempts"] > 0 or der_r["attempts"] > 0:
-                # Señal 1: trayectoria — lateral con menor stall rate
-                if izq_r["stall_rate"] <= der_r["stall_rate"]:
-                    turn_sign = -1.0  # IZQUIERDA menos bloqueada
-                else:
-                    turn_sign = 1.0   # DERECHA menos bloqueada
-            else:
-                # Señal 2: campo óptico — lateral con mayor TTC
-                _field = state.get("obstacle_field")
-                ttc_izq = (_field.sector_ttc("izquierda") or 0.0) if _field is not None else 0.0
-                ttc_der = (_field.sector_ttc("derecha") or 0.0) if _field is not None else 0.0
-                if ttc_izq != ttc_der:
-                    turn_sign = -1.0 if ttc_izq >= ttc_der else 1.0
-                else:
-                    # Señal 3: acortar error de rumbo al WP
-                    turn_sign = -1.0 if float(guidance.get("bearing_err_deg", 0.0)) < 0.0 else 1.0
-        else:
-            _field = state.get("obstacle_field")
-            ttc_izq = (_field.sector_ttc("izquierda") or 0.0) if _field is not None else 0.0
-            ttc_der = (_field.sector_ttc("derecha") or 0.0) if _field is not None else 0.0
-            if ttc_izq != ttc_der:
-                turn_sign = -1.0 if ttc_izq >= ttc_der else 1.0
-            else:
-                turn_sign = -1.0 if float(guidance.get("bearing_err_deg", 0.0)) < 0.0 else 1.0
-
-        from .action_map import compute_corner_waypoint, _manhattan_snap_yaw
-        lateral_yaw = _manhattan_snap_yaw(current_hdg_r, 90.0 * turn_sign)
-        side_name = "IZQUIERDA" if turn_sign < 0 else "DERECHA"
-        print(f"[slam_assess] retroceder-corner: rumbo lateral {lateral_yaw:.0f}° ({side_name}) inyectado como corner.")
-        state["inject_corner"] = compute_corner_waypoint(
-            telemetry, lateral_yaw, guidance=guidance,
-            offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
-        )
+        # Fix 11: no inyectar el corner a ciegas al dispatchar RETROCEDER.
+        # El corner 90° fijo podía llevar el drone a otro árbol (diagnosticado
+        # seed_1 c929→c1067). En cambio, marcar pendiente y esperar al scan
+        # VLM post-RETROCEDER: ese scan verá la vista despejada tras el retroceso
+        # y elegirá una dirección limpia hacia el WP (ver _slam_assess_cycle).
+        state["_post_retroceder_corner_pending"] = True
+        print("[slam_assess] retroceder-corner: corner diferido al scan post-RETROCEDER.")
     else:
         state["active_maneuver"] = None
         state["maneuver_cycles_left"] = 0

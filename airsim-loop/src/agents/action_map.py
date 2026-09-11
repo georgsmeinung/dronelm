@@ -158,12 +158,17 @@ def action_to_command(
         }
 
     if action == "RETROCEDER":
+        # yaw_rate=0 + vx<0: execute_velocity detecta marcha atrás y usa
+        # MaxDegreeOfFreedom + rate=0 para congelar el rumbo. ForwardOnly
+        # (el default para yaw_rate=0) giraría la proa hacia la dirección de
+        # traslación en world frame, produciendo un giro ~180° (confirmado
+        # code_version=0359d764 c632-646 y nueva corrida, c577-584).
         return {
             "macro_action": action,
             "vx": -EVASION_BACK_SPEED,
             "vy": 0.0,
             "vz": vz_guidance,
-            "yaw_rate": safe_yaw_rate(yaw_rate_guidance, near_obstacle),
+            "yaw_rate": 0.0,
             "target_yaw": None,
         }
 
