@@ -150,12 +150,12 @@ primario, implementado vía **Stable-Baselines3** ([Raffin et al., 2021]).
 
 | Algoritmo | Tipo | Ventaja | Limitación |
 |---|---|---|---|
-| **PPO** (recomendado) | On-policy | Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift ([Kaufmann et al., 2023](#ref-kaufmann-2023)) | Mayor costo de muestras que off-policy |
+| **PPO** (recomendado) | On-policy | Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift ([Kaufmann et al., 2023](../13-REFERENCIAS.md#ref-kaufmann-2023)) | Mayor costo de muestras que off-policy |
 | SAC | Off-policy | Mayor eficiencia de muestras; apropiado para espacio continuo | Requiere ajuste fino de temperatura de entropía |
 | DQN | Off-policy (discreto) | Línea base rápida; bajo costo de implementación | Sin soporte nativo para observaciones imagen + vector |
 
 PPO es el algoritmo que usa el sistema **Swift** de la Universidad de Zúrich
-([Kaufmann et al., 2023](#ref-kaufmann-2023)) para control de drones de carreras; en ese
+([Kaufmann et al., 2023](../13-REFERENCIAS.md#ref-kaufmann-2023)) para control de drones de carreras; en ese
 trabajo, una política PPO entrenada en AirSim superó en tiempo de vuelta a pilotos humanos
 campeones del mundo. Es el antecedente más directo en nivel de maniobra y en uso del mismo
 simulador. La convergencia on-policy es más predecible, lo que simplifica la interpretación

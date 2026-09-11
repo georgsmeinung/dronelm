@@ -570,9 +570,10 @@
 
         <h3><code>policy_router</code> — la cascada</h3>
         <p>El orden de evaluación <strong>es</strong> la política. Se evalúa de arriba hacia abajo y el primer match
-          gana:</p>
+          gana. El orden ha evolucionado respecto a versiones anteriores: las señales de obstáculo invisible (V3/V3b/V3c)
+          tienen ahora prioridad máxima, por encima de la persistencia de maniobra y del escape de deadlock.</p>
 
-        <div class="table-container">
+        <div class=”table-container”>
           <table>
             <thead>
               <tr>
@@ -584,56 +585,103 @@
             </thead>
             <tbody>
               <tr>
-                <td class="step">0</td>
-                <td class="mono wrap">AGENT_ARM ∈ {reactive, fsm}</td>
-                <td class="mono wrap">keep_going / fsm</td>
-                <td>Selección de brazo</td>
+                <td class=”step”>0</td>
+                <td class=”mono wrap”>AGENT_ARM ∈ {reactive, fsm}</td>
+                <td class=”mono wrap”>keep_going / fsm</td>
+                <td>Selección de brazo — cortocircuita toda la lógica táctica</td>
               </tr>
               <tr>
-                <td class="step">1</td>
-                <td class="mono wrap">active_maneuver &gt; 0 ciclos ∧ min_ttc &gt; 3.2 s</td>
-                <td class="mono">evasive</td>
-                <td>Persistencia anti flip-flop. Una maniobra comprometida no se preempta; la condición de TTC seguro
-                  garantiza que una emergencia real sí la interrumpa</td>
+                <td class=”step”>1</td>
+                <td class=”mono wrap”>imu_contact_event ∨ blind_wall_event</td>
+                <td class=”mono”>evasive</td>
+                <td><strong>Prioridad máxima.</strong> Contacto físico (vibración IMU) o pared invisible (cmd vs. velocidad real):
+                  RETROCEDER es el único escape garantizado desde el interior de un convex hull. Actúa antes que cualquier
+                  maniobra comprometida.</td>
               </tr>
               <tr>
-                <td class="step">2</td>
-                <td class="mono wrap">stuck ≥ 10 ∧ (stuck ≥ 30 ∨ ¬corredor abierto)</td>
-                <td class="mono">deliberative</td>
-                <td>Escape de deadlock, ya <strong>no</strong> ciego a la percepción</td>
+                <td class=”step”>2</td>
+                <td class=”mono wrap”>slm_request_id ≠ None</td>
+                <td class=”mono”>deliberative</td>
+                <td>No abandonar una deliberación encolada. Sin este check, el pedido queda huérfano: el poll nunca se
+                  resuelve, <code>_deliberation_pending</code> queda activo para siempre y el detector de atasco se
+                  desactiva el resto de la misión.</td>
               </tr>
               <tr>
-                <td class="step">3</td>
-                <td class="mono wrap">ttc_centro ≤ 3.2 s ∨ (centro bloq. ∧ ttc_centro ≤ 4.6 s)</td>
-                <td class="mono wrap">girar_90 <span class="muted">si FOV bloq. &gt; 60 %</span><br />deliberative <span
-                    class="muted">si no</span></td>
+                <td class=”step”>3</td>
+                <td class=”mono wrap”>stuck_invisible</td>
+                <td class=”mono”>evasive</td>
+                <td>V3c — drone parado sin razón: ≥ 15 ciclos (3 s) con velocidad real ≈ 0 mientras el SLM no procesa.
+                  Se evalúa después del check de <code>slm_request_id</code> porque el freeze puede ser intencional
+                  mientras el modelo delibera.</td>
+              </tr>
+              <tr>
+                <td class=”step”>4</td>
+                <td class=”mono wrap”>altitud &lt; OPTICAL_MIN_ALT_M (4.5 m)</td>
+                <td class=”mono”>keep_going</td>
+                <td><strong>V4c — floor de altitud óptica.</strong> Durante el ascenso inicial el flujo óptico ve el
+                  suelo y genera TTC falsos. Los checks TTC/occupancy quedan suspendidos hasta superar el piso;
+                  los checks [1-3] (contacto físico, SLM pendiente) siguen activos.</td>
+              </tr>
+              <tr>
+                <td class=”step”>5</td>
+                <td class=”mono wrap”>active_maneuver ∧ maneuver_cycles_left &gt; 0</td>
+                <td class=”mono”>evasive</td>
+                <td><strong>Persistencia anti flip-flop.</strong> Una maniobra comprometida se sostiene
+                  incondicionalmente — se mueve <em>lejos</em> del obstáculo, así que TTC bajo es precisamente por qué se
+                  comprometió. Las emergencias reales (pasos 1-3) ya retornan antes de llegar aquí.</td>
+              </tr>
+              <tr>
+                <td class=”step”>6</td>
+                <td class=”mono wrap”>stuck ≥ 10 ∧ (stuck ≥ 30 ∨ ¬corredor abierto)</td>
+                <td class=”mono”>deliberative</td>
+                <td><strong>Escape de deadlock</strong>, ya no ciego a la percepción. Con evidencia válida de sector
+                  transitable la decisión táctica normal (pasos 7-8) es estrictamente mejor que forzar el escape. El
+                  bypass tiene techo (umbral duro = 30) para que un campo espurio no lo desactive indefinidamente.</td>
+              </tr>
+              <tr>
+                <td class=”step”>7</td>
+                <td class=”mono wrap”>traj_frente_stall_rate ≥ 70 % ∧ attempts ≥ 10</td>
+                <td class=”mono”>deliberative</td>
+                <td><strong>TRAJ_STALL (2026-09-10).</strong> El historial acumulado confirma bloqueo frontal
+                  persistente aunque el campo óptico reporte corredor libre (flujo óptico no fiable cuando el drone está
+                  embebido en la malla del árbol → <code>foe_confidence</code> baja → <code>blocked = False</code>
+                  espurio). Escala a deliberativo antes del deadlock duro.</td>
+              </tr>
+              <tr>
+                <td class=”step”>8</td>
+                <td class=”mono wrap”>ttc_centro ≤ 3.2 s ∨ (centro bloq. ∧ ttc_centro ≤ 4.6 s)</td>
+                <td class=”mono wrap”>girar_90 <span class=”muted”>si FOV &gt; 60 % ∧ alt ≥ 8 m</span><br />
+                  deliberative <span class=”muted”>si FOV ≤ 60 % ∧ alt ≥ 8 m</span><br />
+                  evasive <span class=”muted”>si alt &lt; 8 m</span></td>
                 <td>Peligro estructural al frente: bypass determinista si no hay nada que decidir, deliberación si hay
-                  opciones</td>
+                  opciones, evasivo si aún por debajo del piso SLM</td>
               </tr>
               <tr>
-                <td class="step">4</td>
-                <td class="mono wrap">centro bloqueado ∨ min_ttc ≤ 4.6 s</td>
-                <td class="mono">evasive</td>
+                <td class=”step”>8b</td>
+                <td class=”mono wrap”>centro bloqueado ∨ min_ttc ≤ 4.6 s</td>
+                <td class=”mono”>evasive</td>
                 <td>Ventana de advertencia: corrección lateral rápida sin gastar una consulta al SLM</td>
               </tr>
               <tr>
-                <td class="step">5</td>
-                <td class="mono">—</td>
-                <td class="mono">keep_going</td>
+                <td class=”step”>—</td>
+                <td class=”mono”>todo lo demás</td>
+                <td class=”mono”>keep_going</td>
                 <td>Camino despejado</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p>Dos propiedades del orden actual que importan:</p>
+        <p>Tres propiedades del orden actual que importan:</p>
         <ul>
-          <li><strong>La persistencia (paso 1) está por encima del escape (paso 2).</strong> Si no lo estuviera, el giro
+          <li><strong>Las señales de obstáculo invisible [1, 3] tienen prioridad sobre la persistencia [5].</strong>
+            Un contacto con malla invisible mientras se ejecuta un giro de escape sigue exigiendo RETROCEDER.</li>
+          <li><strong>La persistencia [5] está por encima del escape [6].</strong> Si no lo estuviera, el giro
             de cambio de estrategia que emite el escape agotado sería preemptado por el propio contador de atasco antes
             de llegar a ejecutarse.</li>
-          <li><strong>El escape (paso 2) ya no cortocircuita la percepción.</strong> Con evidencia válida de sector
-            transitable manda la decisión táctica normal. El bypass tiene techo —el umbral duro— para que un campo
-            “despejado” espurio no desactive el escape indefinidamente.</li>
+          <li><strong>TRAJ_STALL [7] escala antes del deadlock duro.</strong> Permite deliberar con la vista panorámica
+            del barrido (<code>deep_vlm</code>) cuando el historial confirma bloqueo sistemático, sin esperar a que el
+            contador de atasco llegue al umbral duro (30 ciclos = 6 s).</li>
         </ul>
 
         <h3><code>has_open_corridor()</code></h3>
@@ -972,15 +1020,152 @@
           </table>
         </div>
 
-        <div class="note caution">
-          <span class="tag">Caveat de calibración</span>
+        <div class=”note caution”>
+          <span class=”tag”>Caveat de calibración</span>
           <p>AUC 0.96–0.97 para “colisión dentro de τ” pese a correlación punto a punto baja (r = −0.034, error relativo
             mediano 66 %) — el <em>ranking</em> de riesgo separa bien las clases aunque la magnitud puntual sea ruidosa.
             Una sola sesión de vuelo, sin variación de <code>|yaw_rate|</code>: valida la detección frontal,
             <strong>no</strong> valida aún la derotación en giros fuertes.</p>
         </div>
 
-        <h4 class="label">Atasco y escape</h4>
+        <h4 class=”label”>Obstáculo invisible (V3 / V3b / V3c)</h4>
+        <div class=”table-container”>
+          <table>
+            <thead>
+              <tr><th>Variable</th><th>Valor</th><th>Señal</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class=”mono”>IMU_JITTER_ELEVATED_MPS2</td><td class=”num”>3.0 m/s²</td>
+                <td>RMS(ax,ay) sobre el que el jitter se clasifica “elevado”</td>
+              </tr>
+              <tr>
+                <td class=”mono”>IMU_JITTER_CRITICAL_MPS2</td><td class=”num”>8.0 m/s²</td>
+                <td>RMS(ax,ay) sobre el que el jitter se clasifica “crítico”</td>
+              </tr>
+              <tr>
+                <td class=”mono”>IMU_CONTACT_THRESHOLD_MPS2</td><td class=”num”>5.0 m/s²</td>
+                <td>Umbral para contar ciclo de contacto. Si persiste 2 ciclos con cmd_speed &gt; 0.3 m/s → <code>imu_contact_event</code></td>
+              </tr>
+              <tr>
+                <td class=”mono”>CMD_BLIND_FWD_MIN_MPS</td><td class=”num”>0.45 m/s</td>
+                <td>V3b: velocidad comandada mínima para activar la condición de pared invisible</td>
+              </tr>
+              <tr>
+                <td class=”mono”>CMD_BLIND_ACT_MAX_MPS</td><td class=”num”>0.30 m/s</td>
+                <td>V3b: velocidad real máxima mientras se considera “parado”</td>
+              </tr>
+              <tr>
+                <td class=”mono”>CMD_BLIND_BF_MAX</td><td class=”num”>0.25</td>
+                <td>V3b: fracción bloqueada máxima — por encima, el flujo óptico detecta el obstáculo y manda</td>
+              </tr>
+              <tr>
+                <td class=”mono”>CMD_BLIND_CYCLES</td><td class=”num”>2</td>
+                <td>V3b: ciclos consecutivos para activar <code>blind_wall_event</code> (0.4 s a 5 Hz)</td>
+              </tr>
+              <tr>
+                <td class=”mono”>STOPPED_CYCLES_THRESHOLD</td><td class=”num”>15</td>
+                <td>V3c: ciclos consecutivos con velocidad real ≈ 0 para activar <code>stuck_invisible</code> vía <code>_stopped_cycles</code></td>
+              </tr>
+              <tr>
+                <td class=”mono”>RETROCEDER_ESCAPE_CYCLES</td><td class=”num”>5</td>
+                <td>Ciclos de RETROCEDER al detectar colisión invisible (1 s a 5 Hz)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class=”label”>Profundidad monocular (V4)</h4>
+        <div class=”table-container”>
+          <table>
+            <thead>
+              <tr><th>Variable</th><th>Valor</th><th>Rol</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class=”mono”>DEPTH_CMD_VX_MIN</td><td class=”num”>0.30 m/s</td>
+                <td>Velocidad mínima para solicitar estimación de profundidad</td>
+              </tr>
+              <tr>
+                <td class=”mono”>DEPTH_BF_ACTIVATE</td><td class=”num”>0.25</td>
+                <td>Fracción bloqueada máxima para activar — por encima, el flujo óptico ya detecta el obstáculo</td>
+              </tr>
+              <tr>
+                <td class=”mono”>DEPTH_BRAKE_M</td><td class=”num”>5.0 m</td>
+                <td>Profundidad frontal por debajo de la cual se inyecta señal en el ObstacleField</td>
+              </tr>
+              <tr>
+                <td class=”mono”>DEPTH_MAX_AGE_MS</td><td class=”num”>3000 ms</td>
+                <td>Edad máxima de la estimación; por encima se descarta</td>
+              </tr>
+              <tr>
+                <td class=”mono”>DEPTH_BELOW_THRESHOLD</td><td class=”num”>2</td>
+                <td>Ciclos consecutivos con depth &lt; BRAKE_M antes de inyectar en ObstacleField (evita falsos positivos aislados)</td>
+              </tr>
+              <tr>
+                <td class=”mono”>OPTICAL_MIN_ALT_M</td><td class=”num”>4.5 m</td>
+                <td>V4c: altitud por debajo de la cual los checks TTC/occupancy se suprimen (ascenso inicial)</td>
+              </tr>
+              <tr>
+                <td class=”mono”>SLM_MIN_ALT_M</td><td class=”num”>8.0 m</td>
+                <td>Por debajo de este piso, el disparador TTC desemboca en <code>evasive</code>, no en <code>deliberative</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class=”label”>Historia de trayectoria (TRAJ_STALL / C1 / D1 / G1)</h4>
+        <div class=”table-container”>
+          <table>
+            <thead>
+              <tr><th>Variable</th><th>Valor</th><th>Rol</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class=”mono”>TRAJ_STALL_TRIGGER_RATE</td><td class=”num”>0.70</td>
+                <td>Tasa de stall frontal para activar TRAJ_STALL → deliberative (policy_router paso 7)</td>
+              </tr>
+              <tr>
+                <td class=”mono”>TRAJ_STALL_TRIGGER_MIN_ATT</td><td class=”num”>10</td>
+                <td>Intentos mínimos para que la tasa frontal sea estadísticamente fiable (2 s a 5 Hz)</td>
+              </tr>
+              <tr>
+                <td class=”mono”>EVASIVE_TRAJ_STALL_THRESHOLD</td><td class=”num”>0.60</td>
+                <td>C1: tasa de stall lateral a partir de la cual se aplica penalización en evasive_node</td>
+              </tr>
+              <tr>
+                <td class=”mono”>EVASIVE_TRAJ_MIN_ATTEMPTS</td><td class=”num”>3</td>
+                <td>C1: intentos mínimos para confiar en la tasa lateral</td>
+              </tr>
+              <tr>
+                <td class=”mono”>EVASIVE_TRAJ_STALL_WEIGHT</td><td class=”num”>0.50</td>
+                <td>C1: peso de la penalización de ocupación efectiva por historia de stalls</td>
+              </tr>
+              <tr>
+                <td class=”mono”>GIRAR90_STALL_THRESHOLD</td><td class=”num”>0.70</td>
+                <td>D1: tasa de stall del lado preferido para invertir el giro</td>
+              </tr>
+              <tr>
+                <td class=”mono”>GIRAR90_MIN_ATTEMPTS</td><td class=”num”>3</td>
+                <td>D1: intentos mínimos en ese lado</td>
+              </tr>
+              <tr>
+                <td class=”mono”>G1_STALL_MIN</td><td class=”num”>0.20</td>
+                <td>G1: tasa de stall frontal mínima para emitir aviso en scene_summary</td>
+              </tr>
+              <tr>
+                <td class=”mono”>G1_ATT_MIN</td><td class=”num”>3</td>
+                <td>G1: intentos mínimos</td>
+              </tr>
+              <tr>
+                <td class=”mono”>G1_OCC_MAX</td><td class=”num”>0.15</td>
+                <td>G1: ocupación máxima del campo óptico — si supera esto, el flujo ya detecta el obstáculo y no hace falta el aviso</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class=”label”>Atasco y escape</h4>
         <div class="table-container">
           <table>
             <thead>
@@ -1180,8 +1365,8 @@
               </tr>
               <tr>
                 <td class="mono">VLM_FRAME_HISTORY_SIZE</td>
-                <td class="num">1</td>
-                <td>Fotogramas enviados al VLM</td>
+                <td class="num">2</td>
+                <td>Fotogramas enviados al VLM (t y t-1 para contexto temporal)</td>
               </tr>
               <tr>
                 <td class="mono">VLM_USE_JSON_SCHEMA</td>
@@ -1301,11 +1486,35 @@
                 <td>Ningún componente del lazo consulta el canal de profundidad del simulador</td>
                 <td class="mono wrap">test_no_depth_in_flight_path.py</td>
               </tr>
+              <tr>
+                <td>V3b blind_wall_event desvía a evasive con prioridad máxima</td>
+                <td class="mono wrap">test_blind_wall_routes_to_evasive_above_maneuver</td>
+              </tr>
+              <tr>
+                <td>TRAJ_STALL escala a deliberative sin TTC elevado</td>
+                <td class="mono wrap">test_traj_stall_escalates_to_deliberative</td>
+              </tr>
+              <tr>
+                <td>C1 penaliza el lado con historial de stalls laterales</td>
+                <td class="mono wrap">test_evasive_penalizes_stall_side</td>
+              </tr>
+              <tr>
+                <td>D1 invierte el giro si el lado preferido tiene stall alto</td>
+                <td class="mono wrap">test_girar90_flips_to_opposite_side_on_stall</td>
+              </tr>
+              <tr>
+                <td>V4c suprime TTC durante el ascenso inicial (below_optical_floor)</td>
+                <td class="mono wrap">test_optical_floor_suppresses_ttc_during_climb</td>
+              </tr>
+              <tr>
+                <td>stuck_invisible → evasive después de slm_request_id, no antes</td>
+                <td class="mono wrap">test_stuck_invisible_after_slm_request_id_check</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
-        <p><strong>138 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
+        <p><strong>181 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
         <pre><code>pytest tests/ -q</code></pre>
 
         <div class="note">
@@ -1336,6 +1545,15 @@
             watchdog y el parser tolerante cubren timeout y formato inválido, pero una macro-acción sintácticamente
             válida y semánticamente errónea se ejecuta igual — la red de seguridad es el resto de los mecanismos del
             lazo, no una segunda opinión del propio barrido.</li>
+          <li><strong>V4: la profundidad monocular se calibró sobre renders sintéticos de AirSim/UE5.</strong>
+            Depth Anything V2 Metric produce estimaciones métrica razonables en esa distribución, pero su precisión
+            puntual sobre superficies planas con poca textura o reflejos puede divergir. El filtro de 2 ciclos
+            consecutivos (<code>DEPTH_BELOW_THRESHOLD</code>) reduce los falsos positivos aislados pero no los elimina.
+            La inyección en el <code>ObstacleField</code> (no como señal de routing separada) limita el impacto a lo que
+            el flujo óptico habría decidido de haber visto el obstáculo.</li>
+          <li><strong>TRAJ_STALL requiere historia mínima (10 intentos = 2 s a 5 Hz).</strong> En los primeros ciclos de
+            una maniobra, el historial es insuficiente para activar el trigger; el mecanismo de deadlock clásico sigue
+            siendo la primera línea de defensa.</li>
         </ul>
 
         <h3>Referencias</h3>
@@ -1362,7 +1580,7 @@
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>airsim-loop · lazo táctico</p>
-        <p>Estado al 2026-09-07</p>
+        <p>Estado al 2026-09-11</p>
       </footer>
     </main>
   </div>

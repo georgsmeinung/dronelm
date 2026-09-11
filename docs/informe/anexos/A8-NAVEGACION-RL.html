@@ -1245,25 +1245,7 @@ mismo nivel de abstracción que ocupa actualmente <code>evasive_node</code> + <c
 <h2 id="a81-posicion-en-la-arquitectura-jerarquica">A8.1 Posición en la arquitectura jerárquica<a class="headerlink" href="#a81-posicion-en-la-arquitectura-jerarquica" title="Permanent link">&para;</a></h2>
 <p>El sistema implementado en esta tesis opera en tres capas de abstracción temporal
 diferenciada:</p>
-<div class="highlight"><pre><span></span><code>[Lenguaje / Misión]  ─ planeación de misión (GCS, cap. 4)
-        │
-        ▼
-┌───────────────────────────────────────────┐
-│ Capa deliberativa — VLM  (0.5–2 Hz)       │  brazo &quot;slm&quot;: Qwen2.5-VL-3B
-│  razonamiento semántico → macro-acción     │  (implementado, cap. 5, §5.10)
-└──────────────────┬────────────────────────┘
-                   │ macro-acción
-                   ▼
-┌───────────────────────────────────────────┐
-│ Capa táctica — control reactivo (5 Hz)    │  brazos &quot;fsm&quot;, &quot;reactive&quot; (implementados)
-│  ObstacleField → velocidad                 │  brazo &quot;rl&quot;: política neuronal (propuesto)
-└──────────────────┬────────────────────────┘
-                   │ velocity setpoints
-                   ▼
-┌───────────────────────────────────────────┐
-│ Capa motora — PX4 / PID (400 Hz)          │  controlador de actitud; intocado
-└───────────────────────────────────────────┘
-</code></pre></div>
+<p><img src="a8-tres-capas-control.jpg"></p>
 <p>El brazo <code>rl</code> ocupa la <strong>capa táctica</strong>: recibe el frame RGB actual, el <code>ObstacleField</code>
 producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>waypoint_guidance</code>), y
 produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
@@ -1416,7 +1398,7 @@ primario, implementado vía <strong>Stable-Baselines3</strong> ([Raffin et al., 
 <tr>
 <td><strong>PPO</strong> (recomendado)</td>
 <td>On-policy</td>
-<td>Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift (<a href="#ref-kaufmann-2023">Kaufmann et al., 2023</a>)</td>
+<td>Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift (<a href="../13-REFERENCIAS.html#ref-kaufmann-2023">Kaufmann et al., 2023</a>)</td>
 <td>Mayor costo de muestras que off-policy</td>
 </tr>
 <tr>
@@ -1434,7 +1416,7 @@ primario, implementado vía <strong>Stable-Baselines3</strong> ([Raffin et al., 
 </tbody>
 </table>
 <p>PPO es el algoritmo que usa el sistema <strong>Swift</strong> de la Universidad de Zúrich
-(<a href="#ref-kaufmann-2023">Kaufmann et al., 2023</a>) para control de drones de carreras; en ese
+(<a href="../13-REFERENCIAS.html#ref-kaufmann-2023">Kaufmann et al., 2023</a>) para control de drones de carreras; en ese
 trabajo, una política PPO entrenada en AirSim superó en tiempo de vuelta a pilotos humanos
 campeones del mundo. Es el antecedente más directo en nivel de maniobra y en uso del mismo
 simulador. La convergencia on-policy es más predecible, lo que simplifica la interpretación
@@ -1472,27 +1454,9 @@ parcialmente por tres decisiones de diseño:</p>
 <code>citymap_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
 una de las incógnitas clave del protocolo de evaluación de §A8.6.</p>
 <h3 id="arquitectura-de-la-politica">Arquitectura de la política<a class="headerlink" href="#arquitectura-de-la-politica" title="Permanent link">&para;</a></h3>
-<p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales
-paralelos:</p>
-<div class="highlight"><pre><span></span><code>rgb (84×84×3)           ttc_field + nav (27+6)
-      │                         │
-Conv(32,8,4)            Linear(64) → ReLU
-Conv(64,4,2)
-Conv(64,3,1)
-Flatten(3136)
-      │                         │
-      └──── Concat(3136+70) ────┘
-                    │
-             Linear(512) → ReLU
-             Linear(256) → ReLU
-            ┌────────────────┐
-       Actor(6)          Critic(1)
-</code></pre></div>
-<p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de
-obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella
-fuerza la política a integrar información visual y geométrica antes de tomar la decisión.
-Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando
-se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
+<p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales paralelos:</p>
+<p><img src="a8-arquitectura-dos-cabezales.jpg"></p>
+<p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella fuerza la política a integrar información visual y geométrica antes de tomar la decisión. Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
 <hr />
 <h2 id="a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
 <p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que

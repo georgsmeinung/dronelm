@@ -3847,15 +3847,6 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong>Ausencia de obstáculos dinámicos.</strong> Todo el diseño asume geometría estática. Las conclusiones no se extienden a entornos con agentes móviles, que es precisamente el escalón de dificultad que la literatura de conducción autónoma identifica como decisivo (<a href="#13-referencias-ref-codevilla-2019">Codevilla et al., 2019</a>). La mitigación es la extensión con agentes de IA descrita en §10.10.3.</li>
 </ol>
 <p>Ninguna de estas limitaciones invalida el diseño para las preguntas que sí responde; todas acotan el alcance de lo que puede afirmarse a partir de él.</p></section><section class="print-page" id="11-resultados" heading-number="12"><h1 id="11-resultados-11-resultados-comparativos-slm-vs-fsm">11. Resultados comparativos SLM vs. FSM<a class="headerlink" href="#11-resultados-11-resultados-comparativos-slm-vs-fsm" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p><strong>Estado (2026-09-10):</strong> lote base y pruebas extendidas completos — 75 corridas en total (5 escenarios × 3 brazos × 5 semillas). Escenarios de control: 45/45 éxitos, 0 colisiones. Escenarios de obstrucción: ningún brazo completa la ruta dentro del presupuesto temporal en ningún escenario.
-Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos.</p>
-<p><strong>Corte de datos:</strong> todos los resultados provienen de corridas con <code>code_version</code> en la familia
-de commits posterior al 2026-09-03. Las variaciones de <code>code_version</code> dentro del Lote B (Tier 1)
-reflejan commits de documentación realizados durante la ejecución del batch (~1.5 h); ninguno de
-esos commits tocó <code>airsim-loop/src/</code>. El flight loop es idéntico entre las 5 semillas de cada brazo.</p>
-</blockquote>
-<hr />
 <h2 id="11-resultados-111-resultados-del-lote-base-5-semillas">11.1 Resultados del lote base (5 semillas)<a class="headerlink" href="#11-resultados-111-resultados-del-lote-base-5-semillas" title="Permanent link">&para;</a></h2>
 <p>Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos. Las celdas muestran media ± desviación
 estándar sobre las 5 semillas independientes. Tasa de éxito: 5/5 y 0 colisiones en los 45 runs.</p>
@@ -5040,7 +5031,7 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong> El fracaso uniforme de los tres brazos en <code>townsim_ini</code> (cap. 11, §11.4.2b) expuso un límite estructural del sensor monocular: el flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión), que son los de mayor riesgo de colisión frontal (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.1–§A7.2). Como trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del movimiento entre frames al recuperar profundidad métrica en un único instante (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, con limitaciones propias frente a follaje en movimiento y geometría subpíxel.</p>
 </li>
 <li>
-<p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="#anexos-a8-navegacion-rl">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en VLM pre-entrenado. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>, manteniendo activa la capa deliberativa VLM en modo jerárquico. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— sin el overhead de latencia del brazo <code>slm</code> (~850–1400 ms vs. &lt; 5 ms de inferencia neuronal). El <a href="#anexos-a8-navegacion-rl">Anexo 8</a> desarrolla en detalle la jerarquía VLM → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos (K=5, 3 escenarios, 60 corridas). Su prerequisito es que el brazo <code>slm</code> tenga resultados estables (fase S6 del PLAN-SLAM).</p>
+<p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="#anexos-a8-navegacion-rl">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en VLM pre-entrenado. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>, manteniendo activa la capa deliberativa VLM en modo jerárquico. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— sin el overhead de latencia del brazo <code>slm</code> (~850–1400 ms vs. &lt; 5 ms de inferencia neuronal). El <a href="#anexos-a8-navegacion-rl">Anexo 8</a> desarrolla en detalle la jerarquía VLM → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos (K=5, 3 escenarios, 60 corridas). Su prerequisito es que el brazo <code>slm</code> tenga resultados estables.</p>
 </li>
 <li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>
@@ -6965,25 +6956,7 @@ mismo nivel de abstracción que ocupa actualmente <code>evasive_node</code> + <c
 <h2 id="anexos-a8-navegacion-rl-a81-posicion-en-la-arquitectura-jerarquica">A8.1 Posición en la arquitectura jerárquica<a class="headerlink" href="#anexos-a8-navegacion-rl-a81-posicion-en-la-arquitectura-jerarquica" title="Permanent link">&para;</a></h2>
 <p>El sistema implementado en esta tesis opera en tres capas de abstracción temporal
 diferenciada:</p>
-<div class="highlight"><pre><span></span><code>[Lenguaje / Misión]  ─ planeación de misión (GCS, cap. 4)
-        │
-        ▼
-┌───────────────────────────────────────────┐
-│ Capa deliberativa — VLM  (0.5–2 Hz)       │  brazo &quot;slm&quot;: Qwen2.5-VL-3B
-│  razonamiento semántico → macro-acción     │  (implementado, cap. 5, §5.10)
-└──────────────────┬────────────────────────┘
-                   │ macro-acción
-                   ▼
-┌───────────────────────────────────────────┐
-│ Capa táctica — control reactivo (5 Hz)    │  brazos &quot;fsm&quot;, &quot;reactive&quot; (implementados)
-│  ObstacleField → velocidad                 │  brazo &quot;rl&quot;: política neuronal (propuesto)
-└──────────────────┬────────────────────────┘
-                   │ velocity setpoints
-                   ▼
-┌───────────────────────────────────────────┐
-│ Capa motora — PX4 / PID (400 Hz)          │  controlador de actitud; intocado
-└───────────────────────────────────────────┘
-</code></pre></div>
+<p><img src="anexos/a8-tres-capas-control.jpg"></p>
 <p>El brazo <code>rl</code> ocupa la <strong>capa táctica</strong>: recibe el frame RGB actual, el <code>ObstacleField</code>
 producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>waypoint_guidance</code>), y
 produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
@@ -7136,7 +7109,7 @@ primario, implementado vía <strong>Stable-Baselines3</strong> ([Raffin et al., 
 <tr>
 <td><strong>PPO</strong> (recomendado)</td>
 <td>On-policy</td>
-<td>Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift (<a href="#anexos-a8-navegacion-rl-ref-kaufmann-2023">Kaufmann et al., 2023</a>)</td>
+<td>Estable en entornos con dinámica compleja; buen comportamiento en AirSim según Swift (<a href="#13-referencias-ref-kaufmann-2023">Kaufmann et al., 2023</a>)</td>
 <td>Mayor costo de muestras que off-policy</td>
 </tr>
 <tr>
@@ -7154,7 +7127,7 @@ primario, implementado vía <strong>Stable-Baselines3</strong> ([Raffin et al., 
 </tbody>
 </table>
 <p>PPO es el algoritmo que usa el sistema <strong>Swift</strong> de la Universidad de Zúrich
-(<a href="#anexos-a8-navegacion-rl-ref-kaufmann-2023">Kaufmann et al., 2023</a>) para control de drones de carreras; en ese
+(<a href="#13-referencias-ref-kaufmann-2023">Kaufmann et al., 2023</a>) para control de drones de carreras; en ese
 trabajo, una política PPO entrenada en AirSim superó en tiempo de vuelta a pilotos humanos
 campeones del mundo. Es el antecedente más directo en nivel de maniobra y en uso del mismo
 simulador. La convergencia on-policy es más predecible, lo que simplifica la interpretación
@@ -7192,27 +7165,9 @@ parcialmente por tres decisiones de diseño:</p>
 <code>citymap_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
 una de las incógnitas clave del protocolo de evaluación de §A8.6.</p>
 <h3 id="anexos-a8-navegacion-rl-arquitectura-de-la-politica">Arquitectura de la política<a class="headerlink" href="#anexos-a8-navegacion-rl-arquitectura-de-la-politica" title="Permanent link">&para;</a></h3>
-<p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales
-paralelos:</p>
-<div class="highlight"><pre><span></span><code>rgb (84×84×3)           ttc_field + nav (27+6)
-      │                         │
-Conv(32,8,4)            Linear(64) → ReLU
-Conv(64,4,2)
-Conv(64,3,1)
-Flatten(3136)
-      │                         │
-      └──── Concat(3136+70) ────┘
-                    │
-             Linear(512) → ReLU
-             Linear(256) → ReLU
-            ┌────────────────┐
-       Actor(6)          Critic(1)
-</code></pre></div>
-<p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de
-obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella
-fuerza la política a integrar información visual y geométrica antes de tomar la decisión.
-Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando
-se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
+<p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales paralelos:</p>
+<p><img src="anexos/a8-arquitectura-dos-cabezales.jpg"></p>
+<p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella fuerza la política a integrar información visual y geométrica antes de tomar la decisión. Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
 <hr />
 <h2 id="anexos-a8-navegacion-rl-a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#anexos-a8-navegacion-rl-a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
 <p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
