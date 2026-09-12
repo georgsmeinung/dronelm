@@ -173,6 +173,11 @@ class DroneState(TypedDict, total=False):
     _deep_scan_request_id: Optional[int]
     _deadlock_cycles: int
     _deadlock_event: Optional[Dict[str, Any]]  # H3.2: metricas de resolucion, consumido por main.py/flight_logger
+    # Corner diferido post-RETROCEDER (deep_scan.py fix 16): el flag se setea al
+    # dispatchar RETROCEDER y se consume en el scan VLM siguiente. Debe declararse
+    # aqui o LangGraph lo descarta entre graph.invoke() calls y el corner nunca
+    # se inyecta (diagnosticado seed_1 c1744: flag desaparece antes de c1783).
+    _post_retroceder_corner_pending: bool
     # Instrumentacion de auditoria VLM (2026-0901, pedido explicito para
     # analisis): _pending_delib_prompt/_pending_delib_frames se fijan al
     # encolar un pedido (deliberative.py/deep_scan.py) y se leen al
@@ -442,7 +447,12 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         prev_stopped = int(state.get("_stopped_cycles") or 0)
         prev_route = state.get("route", "")
         slm_active = state.get("slm_request_id") is not None
-        if act_spd > 0.10 or prev_route not in ("deliberative",) or slm_active:
+        # Contar ciclos detenido en CUALQUIER route (no solo deliberative):
+        # la restriccion original al route deliberativo excluia el caso del
+        # mesh incompleto (route=reactive, act_spd=0, sin sensores activos).
+        # slm_active cubre el freeze intencional de ESCANEO, que es el caso
+        # que la restriccion de route intentaba proteger.
+        if act_spd > 0.10 or slm_active:
             state["_stopped_cycles"] = 0
         else:
             # Techo de 200 para evitar overflow en corridas muy largas.

@@ -932,8 +932,27 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
 
             watchdog_ms = float(os.getenv("SLM_WATCHDOG_MS", "1500"))
             if age_ms > watchdog_ms:
-                print(f"[Deliberativo] -> WATCHDOG: sin respuesta del SLM en {age_ms:.0f}ms. Aplicando fallback.")
                 decision = _fallback_decision(field, guidance)
+                # Aplicar override de trayectoria sobre el fallback: si el
+                # fallback devuelve MANTENER_RUMBO pero la historia de vuelo
+                # indica bloqueo invisible (avg_prog < MARGINAL, izq/der=0),
+                # el watchdog tomaria la misma accion erronea en cada ciclo
+                # sin que el SLM pudiera corregirla. Con el override, el drone
+                # actua determinísticamente (EVADIR/PERDER_ALTURA) en lugar
+                # de creep-into-wall indefinido.
+                if trajectory is not None:
+                    overridden = deep_scan._apply_trajectory_overrides(decision, trajectory, telemetry)
+                    if overridden.get("macro_action") != decision.get("macro_action"):
+                        print(
+                            f"[Deliberativo] -> WATCHDOG ({age_ms:.0f}ms): fallback "
+                            f"{decision.get('macro_action')} -> {overridden.get('macro_action')} "
+                            f"(trajectory override)."
+                        )
+                        decision = overridden
+                    else:
+                        print(f"[Deliberativo] -> WATCHDOG: sin respuesta del SLM en {age_ms:.0f}ms. Aplicando fallback.")
+                else:
+                    print(f"[Deliberativo] -> WATCHDOG: sin respuesta del SLM en {age_ms:.0f}ms. Aplicando fallback.")
                 return _finalize(decision, "", age_ms, is_fallback=True, err="timeout", timed_out=True)
 
             # Sigue pendiente y dentro del watchdog: no re-encolar, pero ya no
