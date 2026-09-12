@@ -534,33 +534,51 @@ def _slam_assess_cycle(
             if state.get("_deadlock_event"):
                 state["_deadlock_event"]["strategy"] = "slam_assess"
 
-            # Fix 16: corner post-RETROCEDER con ángulo fijo pequeño, siempre en la
-            # misma dirección relativa al heading actual.
-            # Fix 11-15 usaban lógica adaptativa (bearing_err, VLM direction) que resultó
-            # en corners inconsistentes: la dirección variaba con cada rotación del heading
-            # haciendo que el drone rebotara entre zonas bloqueadas distintas en lugar de
-            # resolver sistemáticamente el mismo obstáculo (diagnosticado seed_1 run 3:
-            # c527→(-36,7)→vuelve a (-43,7), c681→mismo, c810→EVADIR_DER→cae en (-44,3)).
-            # Solución: ángulo fijo RETROCEDER_CORNER_ANGLE_DEG (default 45°) en la dirección
-            # que indica el VLM (IZQ → negativo, DER o cualquier otro → positivo).
-            # Sin Manhattan snap: el ángulo diagonal crea desplazamiento lateral progresivo.
+            # Fix 17: corner post-RETROCEDER usando bearing al WP como referencia,
+            # perpendicular al path, en el lado OPUESTO al que sugiere el VLM.
+            #
+            # Fix 16 (hdg + 45°) fallaba porque el heading puede distar ~90° del
+            # bearing real al WP (diagnosticado seed_1 new run: drone facing N=-9°,
+            # WP al W=-88°, VLM dice EVADIR_IZQUIERDA → corner_yaw=-54° → corner
+            # va hacia el NO, cruza la fachada del edificio a los 0.3m y queda
+            # dentro del bloque → drone oscila a 12.8m del corner para siempre).
+            #
+            # Fix 11-15 usaban bearing_err directamente como ángulo, lo que variaba
+            # con cada rotación del heading causando corners inconsistentes.
+            #
+            # Fix 17: bearing_to_wp = hdg + bearing_err es el ángulo ABSOLUTO al WP
+            # (estable geometricamente: solo cambia cuando el drone se mueve, no
+            # cuando rota). El corner va a 90° perpendicular de ese bearing, en el
+            # lado OPUESTO al VLM: el VLM recomienda la dirección donde VE espacio
+            # (cámara) pero eso suele ser HACIA la fachada bloqueante cuando el
+            # heading está desfasado → invertir pone el corner en el lado libre.
+            # Ejemplo confirmado: bearing_to_wp=-88° (W), VLM=EVADIR_IZQ (→N dentro
+            # del edificio), invert → DERECHA (+90°) → corner a 2° (N) = libre ✓.
             macro_post = decision.get("macro_action", "")
             if state.pop("_post_retroceder_corner_pending", False) and macro_post != "RETROCEDER":
                 from .action_map import compute_corner_waypoint
-                _corner_angle = float(os.getenv("RETROCEDER_CORNER_ANGLE_DEG", "45.0"))
                 orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
                 hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
-                # EVADIR_IZQUIERDA → ángulo negativo (giro a la izquierda del heading).
-                # Todo lo demás (EVADIR_DERECHA, MANTENER_RUMBO, vertical) → positivo.
-                _sign = -1.0 if macro_post == "EVADIR_IZQUIERDA" else 1.0
-                corner_yaw = hdg_pc + _sign * _corner_angle
+                bearing_err_pc = float(
+                    (guidance or {}).get("bearing_err_deg", 0.0)
+                ) if isinstance(guidance, dict) else 0.0
+                bearing_to_wp = hdg_pc + bearing_err_pc  # bearing absoluto al WP, estable
+                # Invertir dirección del VLM: VLM recomienda el lado donde percibe
+                # apertura visual, que cuando el heading está desfasado suele ser la
+                # fachada → el lado opuesto es el libre.
+                _sign = 1.0 if macro_post == "EVADIR_IZQUIERDA" else -1.0
+                corner_yaw = bearing_to_wp + _sign * 90.0  # perpendicular al path WP
                 state["inject_corner"] = compute_corner_waypoint(
                     telemetry, corner_yaw, guidance=guidance,
                     offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
                 )
-                side = "IZQUIERDA" if _sign < 0 else "DERECHA"
-                print(f"[slam_assess] retroceder-corner fix16: hdg={hdg_pc:.0f}°{_sign:+.0f}×{_corner_angle:.0f}°"
-                      f"={corner_yaw:.0f}° ({side}) VLM={macro_post}.")
+                side = "DER(opp-IZQ)" if _sign > 0 else "IZQ(opp-DER)"
+                print(
+                    f"[slam_assess] retroceder-corner fix17: "
+                    f"hdg={hdg_pc:.0f}° bear_err={bearing_err_pc:.0f}° "
+                    f"bearing_to_wp={bearing_to_wp:.0f}°{_sign:+.0f}×90°"
+                    f"={corner_yaw:.0f}° ({side}) VLM={macro_post}."
+                )
 
             return True
         print(f"[slam_assess] ({arm}) respuesta sin acción viable. Cae al escape sincrónico.")

@@ -1,3 +1,56 @@
+# 2026-09-12 (sesión 8) — Fix 17: corner post-RETROCEDER perpendicular al bearing WP
+
+## Contexto
+
+Análisis de la corrida con Fix 16 activo (`seed_1`, 2000 ciclos, path=250.62 m).
+El fix anterior (`_post_retroceder_corner_pending` en DroneState) confirmó que el corner
+se inyectaba correctamente (96 ciclos con CORNER_WP como target), pero el drone seguía
+bloqueado a 12.8 m de la misma fachada del edificio.
+
+**Causa raíz de Fix 16**: `corner_yaw = hdg_pc + sign * 45°` usaba el heading del drone
+como referencia angular. En c1703 el drone apuntaba norte (`hdg=-9°`) pero el WP estaba
+al oeste (`bearing≈-88°`). VLM recomendó EVADIR_IZQUIERDA → sign=-1 →
+`corner_yaw = -9 - 45 = -54°` (noroeste) → corner en (70, -120) = **dentro del edificio**
+(fachada norte a y≈-111, interior llega a y=-145). El drone se acercó al corner hasta 12.8 m
+pero la fachada bloqueaba el acceso.
+
+---
+
+## Fix 17 — Corner perpendicular al bearing WP con signo invertido (`deep_scan.py`)
+
+**Archivo**: `src/agents/deep_scan.py` — bloque Fix 16 (líneas 537-581)
+
+**Cambio**:
+
+Reemplaza la referencia angular `hdg_pc` por `bearing_to_wp = hdg_pc + bearing_err_deg`
+(bearing absoluto al WP, geométricamente estable: solo varía cuando el drone se desplaza,
+no cuando rota) y usa offset 90° perpendicular en lugar de 45° diagonal.
+
+**Sign inversion (clave del fix)**:
+- Fix 16: `sign = -1 si EVADIR_IZQUIERDA` → corner en la dirección que el VLM percibe libre
+- Fix 17: `sign = +1 si EVADIR_IZQUIERDA` (invertido) → corner en el lado OPUESTO al VLM
+
+Justificación de la inversión: el VLM percibe apertura visual con la cámara apuntando
+en la dirección del heading. Cuando heading ≠ bearing_to_wp (diferencia ≥ 45°), el lado
+"libre" visual es paralelo a la fachada bloqueante, no perpendicular al path real.
+El lado opuesto al VLM es el que queda libre en el plano del WP.
+
+**Verificación geométrica (caso citysim_pilot c1703)**:
+
+| Parámetro | Fix 16 | Fix 17 |
+|---|---|---|
+| Referencia angular | `hdg=-9°` | `bearing_to_wp = -9+(-79) = -88°` |
+| Sign (EVADIR_IZQ) | -1 | +1 |
+| corner_yaw | -54° (NO) | 2° (N) |
+| Corner posición | (70, -120) — dentro edificio ❌ | (72, -110) — norte del edificio ✓ |
+
+**Impacto esperado**: con corner_yaw≈2° el drone rodea el edificio por el norte
+en lugar de intentar penetrarlo, permitiendo continuar hacia WP_3 (67.7, -145.0).
+
+181 tests unitarios pasan.
+
+---
+
 # 2026-09-11 (sesión 6) — Override 3: MANTENER_RUMBO rechazado por progreso frontal marginal
 
 ## Contexto
