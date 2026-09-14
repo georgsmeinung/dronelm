@@ -895,34 +895,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="anexos/A9-USO-IA-GENERATIVA.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    A9. Uso de IA Generativa en esta Tesis
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -1202,17 +1174,6 @@
     <span class="md-ellipsis">
       
         15.8 A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#anexos-a9-uso-ia-generativa" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        15.9 A9. Uso de IA Generativa en esta Tesis
       
     </span>
   </a>
@@ -7301,131 +7262,7 @@ con AirSim corriendo en paralelo.</p>
 <hr />
 <p><em>Las referencias citadas en este anexo corresponden a las entradas del §13 del presente
 informe. La evaluación cuantitativa del brazo <code>rl</code> y su comparación con los tres brazos
-implementados forma parte del trabajo futuro descrito en §12.4.</em></p></section><section class="print-page" id="anexos-a9-uso-ia-generativa" heading-number="15.9"><h1 id="anexos-a9-uso-ia-generativa-anexo-9-uso-de-inteligencia-artificial-generativa-en-el-desarrollo-de-esta-tesis">Anexo 9: Uso de Inteligencia Artificial Generativa en el Desarrollo de esta Tesis<a class="headerlink" href="#anexos-a9-uso-ia-generativa-anexo-9-uso-de-inteligencia-artificial-generativa-en-el-desarrollo-de-esta-tesis" title="Permanent link">&para;</a></h1>
-<p>Este anexo documenta el rol que la inteligencia artificial generativa —en particular los asistentes de código agénticos— desempeñó en el desarrollo de este trabajo, tanto en la prueba del sistema técnico como en la redacción del informe. Su propósito es triple: cumplir con el deber de transparencia académica sobre las herramientas utilizadas; registrar las prácticas que resultaron efectivas en este contexto específico; y ofrecer recomendaciones concretas para investigadores que enfrenten proyectos de complejidad similar en los que la IA agéntica ya no es un lujo opcional sino, como se argumenta aquí, una condición necesaria para que el trabajo sea realizable dentro del horizonte temporal de una tesis de maestría.</p>
-<p>La reflexión que sigue no es una apología tecnológica. El uso de IA en investigación académica introduce riesgos reales —de atribución intelectual, de verificación, de dependencia— que se discuten sin eufemismos. El objetivo es describir honestamente qué funcionó, qué no, y por qué.</p>
-<hr />
-<h2 id="anexos-a9-uso-ia-generativa-a91-contexto-una-tesis-cuya-materia-prima-es-la-ia">A9.1 Contexto: una tesis cuya materia prima es la IA<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a91-contexto-una-tesis-cuya-materia-prima-es-la-ia" title="Permanent link">&para;</a></h2>
-<p>Existe una particularidad metodológica en este trabajo que vale la pena enunciar explícitamente: la tesis <em>estudia</em> sistemas basados en modelos de lenguaje de visión (VLM), y fue <em>desarrollada con</em> un asistente basado en modelos de lenguaje. Esto no es una contradicción; es una confluencia que ilumina ambos lados de la práctica.</p>
-<p>El sistema implementado (cap. 5) usa un VLM de 3B parámetros para razonar sobre escenas de vuelo y elegir maniobras. El asistente utilizado en su desarrollo (Claude Code / Claude Opus 4.5, Anthropic, 2024–2026) es una IA agéntica con acceso al sistema de archivos, al historial de git y a las herramientas del entorno de desarrollo. La semejanza no es superficial: en ambos casos un modelo de lenguaje recibe contexto, razona sobre él y propone una acción; en ambos casos la validez de la acción propuesta debe ser verificada por un agente externo (el drone con el resultado físico del vuelo; el investigador con el
-resultado técnico del código o del texto).</p>
-<p>Esta simetría genera una forma inusual de reflexividad metodológica: el investigador que desarrolla este sistema entiende, desde adentro, qué significa confiar en la salida de un LLM y qué significa verificarla.</p>
-<hr />
-<h2 id="anexos-a9-uso-ia-generativa-a92-descripcion-del-uso">A9.2 Descripción del uso<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a92-descripcion-del-uso" title="Permanent link">&para;</a></h2>
-<h3 id="anexos-a9-uso-ia-generativa-a921-asistente-y-modalidad">A9.2.1 Asistente y modalidad<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a921-asistente-y-modalidad" title="Permanent link">&para;</a></h3>
-<p>Se utilizó <strong>Claude Code</strong> (Anthropic, 2024–2026) en modalidad agéntica con acceso al repositorio local. A lo largo del proyecto, la interacción adoptó tres modalidades diferenciadas:</p>
-<p><strong>Modo exploración:</strong> el investigador plantea una pregunta abierta sobre el código o el diseño del sistema ("¿por qué el TRAJ_STALL nunca se dispara?") y el asistente lee los archivos relevantes, propone hipótesis y verifica cada una contra el código real. Esta modalidad fue la más valiosa para el diagnóstico de errores sutiles.</p>
-<p><strong>Modo implementación guiada:</strong> el investigador especifica qué se quiere hacer y revisa cada cambio propuesto antes de aplicarlo. El asistente explica el razonamiento, y el investigador aprueba o rechaza cada decisión de diseño.</p>
-<p><strong>Modo redacción técnica:</strong> el investigador describe en lenguaje coloquial lo que hace una sección del sistema (por ejemplo, "el nodo de percepción ahora calcula tres señales nuevas para detectar cuando el drone está atascado contra una pared invisible") y el asistente transforma esa descripción en prosa académica con terminología precisa, ecuaciones y referencias al código fuente.</p>
-<p>También se utilizó <strong>Gemini 3 Pro</strong> (Google, 2026) para generar figuras e ilustraciones del informe, incluyendo los diagramas de arquitectura y los esquemas conceptuales. La interacción siguió un patrón similar al modo redacción técnica: el investigador describe la imagen que necesita y revisa cada propuesta del asistente antes de aplicarla.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a922-contribucion-cuantitativa-aproximada">A9.2.2 Contribución cuantitativa aproximada<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a922-contribucion-cuantitativa-aproximada" title="Permanent link">&para;</a></h3>
-<p>Cuantificar con precisión la contribución del asistente es difícil porque la frontera entre "código generado por IA" y "código validado/modificado por el investigador" es siempre borrosa. Una estimación honesta:</p>
-<table>
-<thead>
-<tr>
-<th>Categoría</th>
-<th>Proporción estimada de asistencia IA</th>
-<th>Nota</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Código de infraestructura (<code>batch_runner</code>, loggers, tests)</td>
-<td>Alta (~70%)</td>
-<td>Patrones repetitivos con especificación precisa</td>
-</tr>
-<tr>
-<td>Código de lógica de control (<code>graph.py</code>, <code>spatial_history.py</code>)</td>
-<td>Media (~40%)</td>
-<td>Diseño del investigador, implementación parcialmente asistida con una buena cantidad de vueltas de reingeniería posibles gracias a la iteración rápida con Claude Code</td>
-</tr>
-<tr>
-<td>Diagnóstico de bugs</td>
-<td>Alta (~60%)</td>
-<td>Especialmente bugs de contrato de datos (DroneState, LangGraph)</td>
-</tr>
-<tr>
-<td>Redacción del informe (estructura, prosa técnica, referencias cruzadas)</td>
-<td>Alta (~75%)</td>
-<td>A partir de descripciones del investigador + lectura del código</td>
-</tr>
-<tr>
-<td>Decisiones arquitectónicas (qué construir, cómo comparar)</td>
-<td>Baja (~5%)</td>
-<td>Siempre del investigador; el asistente señala implicaciones</td>
-</tr>
-</tbody>
-</table>
-<p>La columna "proporción estimada" mide cuánto del trabajo <em>de ejecución</em> fue asistido, no cuánto del trabajo <em>intelectual</em>. Las decisiones de qué hipótesis plantear, qué comparar, qué considerar un resultado relevante y qué descartar como artefacto de simulación fueron siempre del investigador.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a923-casos-concretos-de-alto-impacto">A9.2.3 Casos concretos de alto impacto<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a923-casos-concretos-de-alto-impacto" title="Permanent link">&para;</a></h3>
-<p><strong>Bug-1: descarte silencioso en DroneState (2026-09-11).</strong>
-El disparador <code>TRAJ_STALL</code> en <code>policy_router</code> estaba roto por 584 ciclos de vuelo —dos meses de desarrollo— sin que ningún test lo detectara. La causa: <code>_traj_frente_stall_rate</code> y <code>_traj_frente_attempts</code> no estaban declarados en el TypedDict <code>DroneState</code>, y LangGraph descarta silenciosamente los campos no declarados al cruzar <code>graph.invoke()</code>. El asistente identificó la causa raíz en menos de un turno de conversación, tras leer <code>graph.py</code> y <code>spatial_history.py</code> en paralelo y notar la discrepancia entre los campos que <code>capture_node</code> publicaba y los que <code>DroneState</code> declaraba. El investigador no había vinculado el síntoma (TRAJ_STALL nunca activo) con ese mecanismo de LangGraph porque el comportamiento silencioso nunca produce un error visible.</p>
-<p>Este caso ilustra una ventaja específica de la IA agéntica frente a un peer humano: el asistente no tiene "coste cognitivo" de leer 500 líneas de código en paralelo y no "asume" que un campo debe estar declarado porque el código lo usa. Lee lo que está escrito, no lo que debería estar escrito.</p>
-<p><strong>Corrección del orden de prioridades de <code>policy_router</code>.</strong>
-El informe documentaba un orden erróneo de las 11 prioridades del router principal (active_maneuver antes del guard de continuidad de VLM, sin la prioridad imu_contact/blind_wall, sin stuck_invisible). El asistente corrigió la sección completa del informe leyendo el código real de <code>policy_router</code> y comparándolo línea a línea con la documentación anterior. El proceso tomó un turno de conversación; hacerlo manualmente habría requerido leer el código, transcribir el orden correcto, reescribir la tabla y verificar cada nombre de condición.</p>
-<p><strong>Actualización masiva del informe.</strong>
-Después de tres meses de desarrollo, el informe había quedado desactualizado en cinco capítulos. El investigador describió cada cambio relevante y el asistente leyó el código actual, confrontó con el texto existente e identificó las discrepancias capítulo por capítulo, redactando las secciones nuevas (§5.3, §5.6, §6.10b, §8.3, etc.) a partir de la lectura directa del código. El trabajo de actualización que habría llevado varios días se completó en una sesión.</p>
-<hr />
-<h2 id="anexos-a9-uso-ia-generativa-a93-mejores-practicas-observadas">A9.3 Mejores prácticas observadas<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a93-mejores-practicas-observadas" title="Permanent link">&para;</a></h2>
-<p>Las siguientes prácticas emergieron de la experiencia acumulada en este proyecto, no de una evaluación sistemática. Se presentan como observaciones de campo, no como prescripciones universales.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a931-el-investigador-como-verificador-final-siempre">A9.3.1 El investigador como verificador final, siempre<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a931-el-investigador-como-verificador-final-siempre" title="Permanent link">&para;</a></h3>
-<p>La regla más importante y más frecuentemente violada en el uso productivo de IA agéntica es: <strong>nunca aceptar una edición de código o de texto sin leerla</strong>. El asistente puede generar código correcto que resuelve el problema planteado pero que introduce una suposición implícita que viola una invariante del sistema que el investigador conoce pero no expresó. En este proyecto, la práctica fue revisar cada <code>diff</code> antes de aprobarlo, con especial atención a:</p>
-<ul>
-<li>Cambios en firmas de funciones o en TypedDicts (contrato de datos).</li>
-<li>Nuevas importaciones (dependencias que quizás no están en el entorno).</li>
-<li>Cambios en constantes globales con nombres similares (e.g., <code>SLAM_HISTORY_SIZE</code> aparece en dos archivos con semánticas distintas).</li>
-</ul>
-<p>Esta vigilancia no reduce el valor del asistente; lo maximiza. Un revisor que entiende lo que lee puede aprobar en segundos lo que tardaría minutos en escribir.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a932-especificidad-del-contexto-como-palanca-principal">A9.3.2 Especificidad del contexto como palanca principal<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a932-especificidad-del-contexto-como-palanca-principal" title="Permanent link">&para;</a></h3>
-<p>La calidad de la asistencia escala directamente con la especificidad del contexto proporcionado. Una pregunta como "¿por qué no funciona la evasión?" produce una exploración costosa. Una pregunta como "el trigger TRAJ_STALL en <code>policy_router.py:83</code> nunca se activa según los logs <code>_traj_frente_stall_rate=0.0</code> en cada ciclo; la función <code>zone_stats()</code> en <code>spatial_history.py</code> sí devuelve valores no nulos" localiza el problema de inmediato.</p>
-<p>El investigador que sabe leer logs y conoce la arquitectura del sistema puede formular preguntas altamente contextualizadas. La inversión en entender el propio código —en lugar de delegarlo completamente al asistente— multiplica exponencialmente el retorno de la asistencia.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a933-separar-las-fases-de-diseno-y-de-implementacion">A9.3.3 Separar las fases de diseño y de implementación<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a933-separar-las-fases-de-diseno-y-de-implementacion" title="Permanent link">&para;</a></h3>
-<p>El asistente es más valioso en la fase de implementación que en la de diseño arquitectónico. Las decisiones sobre <em>qué construir</em> (¿cuatro brazos o tres? ¿flujo óptico + VLM o solo VLM? ¿<code>slam_assess</code> o <code>deep_vlm</code> como default?) requieren juicio sobre las restricciones del proyecto, el horizonte temporal, y los objetivos académicos que el investigador posee y el asistente no puede inferir completamente de los archivos.</p>
-<p>La práctica recomendada es: <em>decidir primero, implementar con asistencia después</em>. Intentar que el asistente decida la arquitectura produce propuestas genéricas que no tienen en cuenta las restricciones reales del proyecto (presupuesto temporal, hardware disponible, qué comparaciones son académicamente interesantes).</p>
-<h3 id="anexos-a9-uso-ia-generativa-a934-ciclos-cortos-de-verificacion-empirica">A9.3.4 Ciclos cortos de verificación empírica<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a934-ciclos-cortos-de-verificacion-empirica" title="Permanent link">&para;</a></h3>
-<p>La IA agéntica acelera el ciclo de código → informe → validación, pero no lo elimina. En este proyecto, el ciclo productivo fue:</p>
-<p><img src="anexos/a9-ciclo-verificacion-empirica.jpg"/></p>
-<p>El paso que permanece completamente fuera del alcance del asistente —la validación empírica en simulación— sigue siendo el cuello de botella del ciclo. La IA comprime los demás pasos, lo que libera tiempo para más iteraciones experimentales.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a935-gestion-del-contexto-de-conversacion">A9.3.5 Gestión del contexto de conversación<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a935-gestion-del-contexto-de-conversacion" title="Permanent link">&para;</a></h3>
-<p>Los asistentes agénticos tienen una ventana de contexto finita. En proyectos de varias semanas, el contexto acumulado supera esa ventana y el asistente pierde memoria de decisiones previas. La práctica que resultó más efectiva fue mantener un archivo <code>CHANGELOG.md</code> actualizado después de cada sesión significativa: el asistente puede releer ese archivo al inicio de cada sesión y recuperar el estado del proyecto en minutos, en lugar de reexplorar el código completo.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a936-transparencia-sobre-la-contribucion">A9.3.6 Transparencia sobre la contribución<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a936-transparencia-sobre-la-contribucion" title="Permanent link">&para;</a></h3>
-<p>El uso de IA en la redacción de tesis no es equivalente al plagio, pero sí requiere un nivel análogo de declaración. El estándar propuesto, y adoptado en este trabajo, es:</p>
-<ul>
-<li><strong>El investigador es responsable</strong> de toda afirmación técnica, toda interpretación de resultados y toda decisión arquitectónica. Si una sección fue redactada con asistencia pero contiene una afirmación incorrecta, la responsabilidad es del investigador.</li>
-<li><strong>La IA es una herramienta de producción</strong>, no un coautor. Así como un estadístico que usa R para calcular p-valores no cita a R como coautor, el uso de IA para transformar notas técnicas en prosa académica no convierte al asistente en autor.</li>
-<li><strong>Declarar el uso es parte de la metodología</strong>, no una confesión. Este anexo es esa declaración.</li>
-</ul>
-<hr />
-<h2 id="anexos-a9-uso-ia-generativa-a94-limitaciones-y-riesgos-observados">A9.4 Limitaciones y riesgos observados<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a94-limitaciones-y-riesgos-observados" title="Permanent link">&para;</a></h2>
-<h3 id="anexos-a9-uso-ia-generativa-a941-alucinacion-en-contexto-tecnico">A9.4.1 Alucinación en contexto técnico<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a941-alucinacion-en-contexto-tecnico" title="Permanent link">&para;</a></h3>
-<p>El riesgo más relevante en el uso de IA para redacción técnica no es la alucinación flagrante (nombres de paper inventados, APIs inexistentes) sino la <strong>alucinación de coherencia</strong>: el texto suena técnicamente preciso pero afirma algo sutilmente erróneo que solo el experto en el dominio puede detectar.</p>
-<p>En este proyecto se identificaron varios casos de este tipo durante la revisión: secciones del informe que describían un comportamiento del sistema que había sido verdadero en una versión anterior pero que ya había cambiado, o que usaban terminología ligeramente incorrecta para un mecanismo específico. La mitigación fue sistemática: nunca aceptar una descripción del sistema sin verificarla contra el código real. El asistente que <em>lee elcódigo</em> y describe lo que ve es más confiable que el que <em>recuerda</em> descripciones previas.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a942-dependencia-que-reduce-la-comprension-profunda">A9.4.2 Dependencia que reduce la comprensión profunda<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a942-dependencia-que-reduce-la-comprension-profunda" title="Permanent link">&para;</a></h3>
-<p>Existe un riesgo real de que la fluidez con la que el asistente genera código reduzca el tiempo que el investigador dedica a entender ese código en profundidad. Para un proyecto de tesis, donde la comprensión del sistema es un objetivo académico en sí mismo, esto es un riesgo serio.</p>
-<p>La práctica adoptada fue usar el asistente para generar la primera versión de un módulo y luego leerla completa antes de seguir —tratando la lectura del código generado como cualquier otra lectura de código ajeno. En módulos críticos (<code>graph.py</code>,<code>deliberative.py</code>), el investigador reescribió partes del código generado no porque estuviera incorrecto sino para forzarse a entender cada decisión de implementación.</p>
-<h3 id="anexos-a9-uso-ia-generativa-a943-sesgo-hacia-soluciones-conocidas">A9.4.3 Sesgo hacia soluciones conocidas<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a943-sesgo-hacia-soluciones-conocidas" title="Permanent link">&para;</a></h3>
-<p>Los modelos de lenguaje tienden a proponer soluciones que aparecen frecuentemente en sus datos de entrenamiento. En este proyecto, esto produjo ocasionalmente propuestas de infraestructura sobredimensionada (abstracciones innecesarias, patrones de diseño para sistemas más grandes) o soluciones estándar que no se ajustaban bien a las restricciones específicas del entorno AirSim/Windows/PowerShell.</p>
-<p>La mitigación fue mantener instrucciones explícitas de estilo en el contexto del asistente ("no agregar abstracciones más allá de lo que el task requiere", "preferir editar archivos existentes a crear nuevos"), que el asistente respetó consistentemente una vez establecidas.</p>
-<hr />
-<h2 id="anexos-a9-uso-ia-generativa-a95-recomendaciones-para-investigadores-en-situacion-analoga">A9.5 Recomendaciones para investigadores en situación análoga<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a95-recomendaciones-para-investigadores-en-situacion-analoga" title="Permanent link">&para;</a></h2>
-<p>Las siguientes recomendaciones están dirigidas a investigadores de maestría o doctorado que trabajan solos o en grupos pequeños en proyectos de ingeniería de sistemas con componentes de IA, y que consideran usar asistentes agénticos como herramienta de desarrollo.</p>
-<p><strong>1. Defina primero la arquitectura sin el asistente.</strong> Use la IA para implementar una arquitectura que usted ya entiende, no para que la IA diseñe una que usted luego intenta entender. El tiempo invertido en diseño propio se recupera multiplicado en la fase de verificación.</p>
-<p><strong>2. Mantenga un CHANGELOG sesión a sesión.</strong> Un registro de qué se cambió y por qué, actualizado al final de cada sesión de trabajo, es la forma más eficiente de inicializar el contexto del asistente en sesiones posteriores. Es también la bitácora metodológica que permitirá escribir la sección de métodos del informe con precisión.</p>
-<p><strong>3. Trate los tests como contrato, no como cobertura.</strong> El asistente puede generar tests para verificar comportamientos. El investigador debe asegurarse de que esos tests verifican el comportamiento correcto, no simplemente que el código no lanza excepciones. En este proyecto, la Suite de 181 tests no detectó el Bug-1 porque ningún test verificaba que <code>_traj_frente_stall_rate</code> cruzara la llamada <code>graph.invoke()</code> — nadie (humano ni IA) había pensado en ese vector de fallo.</p>
-<p><strong>4. Use la IA para comprimir los ciclos, no para saltarlos.</strong> El valor del asistente es reducir el tiempo entre hipótesis y evidencia empírica: implementación más rápida, diagnóstico más rápido, documentación más rápida. El paso de validación empírica —correr el sistema, observar el comportamiento, interpretar los resultados— no se comprime y no debe saltarse.</p>
-<p><strong>5. Verifique las referencias citadas por el asistente.</strong> En redacción técnica, el asistente puede citar papers que existen y son relevantes, papers que existen pero dicen algo diferente de lo que se afirma, o papers que no existen en absoluto. La práctica segura es tratar toda referencia generada por IA como una hipótesis a verificar antes de incluirla en el informe.</p>
-<p><strong>6. Declare el uso con precisión.</strong> La pregunta relevante para la integridad académica no es "¿usé IA?" sino "¿puedo defender intelectualmente cada afirmación de este trabajo?" Si la respuesta es sí —porque verificó el código, interpretó los resultados y tomó las decisiones arquitectónicas— el uso de IA como herramienta de producción es metodológica y éticamente análogo al uso de cualquier otro entorno de desarrollo.</p>
-<hr />
-<h2 id="anexos-a9-uso-ia-generativa-a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad">A9.6 Reflexión final: la IA agéntica como condición de posibilidad<a class="headerlink" href="#anexos-a9-uso-ia-generativa-a96-reflexion-final-la-ia-agentica-como-condicion-de-posibilidad" title="Permanent link">&para;</a></h2>
-<p>Este proyecto involucra un sistema de control distribuido en múltiples módulos Python (~4 000 líneas de código activo), una suite de pruebas de 181 tests, cinco capítulos técnicos del informe con referencias cruzadas precisas al código, y ocho anexos que documentan desde fundamentos matemáticos hasta propuestas de trabajo futuro.</p>
-<p>Completar todo esto en el horizonte temporal de una tesis de maestría, como investigador individual, sin el asistente agéntico, habría requerido o bien un recorte sustancial del alcance técnico o bien un tiempo de desarrollo que excedería el plazo académico disponible.</p>
-<p>Esto no significa que cualquier investigador con acceso a Claude pueda producir este sistema. Significa que el asistente multiplicó la capacidad de ejecución del investigador, que aportó la comprensión del dominio, las decisiones arquitectónicas, la interpretación de los resultados y la responsabilidad intelectual sobre el trabajo. La analogía más precisa no es la del ghostwriter sino la del taller bien equipado: las herramientas no construyen el objeto, pero sin ellas el artesano no puede construirlo en el tiempo disponible.</p>
-<p>La incorporación de herramientas de IA agéntica en el flujo de trabajo de investigación científica y de ingeniería no es una tendencia futura: es una práctica presente que la comunidad académica está comenzando a normalizar. La transparencia sobre cómo se usan estas herramientas —sus contribuciones, sus límites y sus riesgos— es el primer paso hacia estándares metodológicos que permitan evaluarlas con rigor.</p>
-<hr />
-<p><em>Este anexo fue redactado en colaboración con Claude Code (Anthropic, 2024–2026),
-usando como fuente primaria la bitácora de desarrollo (<code>CHANGELOG.md</code>), los registros
-de sesión del proyecto y la reflexión del investigador sobre el proceso. Las afirmaciones
-sobre comportamiento del sistema están verificadas contra el código fuente del repositorio.</em></p></section></section></div><style>.print-site-enumerate-headings #00-cover > h1:before { content: '1 ' }
+implementados forma parte del trabajo futuro descrito en §12.4.</em></p></section></section></div><style>.print-site-enumerate-headings #00-cover > h1:before { content: '1 ' }
 
                 .print-site-enumerate-headings #00-cover h2:before { content: '1.' counter(counter-00-cover-2) ' ' }
                 .print-site-enumerate-headings #00-cover h2 {  counter-reset: counter-00-cover-3 ;  counter-increment: counter-00-cover-2 }
@@ -7577,11 +7414,6 @@ sobre comportamiento del sistema están verificadas contra el código fuente del
 
                 .print-site-enumerate-headings #anexos-a8-navegacion-rl h2:before { content: '15.8.' counter(counter-anexos-a8-navegacion-rl-2) ' ' }
                 .print-site-enumerate-headings #anexos-a8-navegacion-rl h2 {  counter-increment: counter-anexos-a8-navegacion-rl-2 }
-            
-.print-site-enumerate-headings #anexos-a9-uso-ia-generativa > h1:before { content: '15.9 ' }
-
-                .print-site-enumerate-headings #anexos-a9-uso-ia-generativa h2:before { content: '15.9.' counter(counter-anexos-a9-uso-ia-generativa-2) ' ' }
-                .print-site-enumerate-headings #anexos-a9-uso-ia-generativa h2 {  counter-increment: counter-anexos-a9-uso-ia-generativa-2 }
             </style>
 
 
