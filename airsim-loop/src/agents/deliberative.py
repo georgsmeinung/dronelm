@@ -45,6 +45,12 @@ VLM_VISION_ENABLED = os.getenv("VLM_VISION_ENABLED", "true").lower() == "true"
 VLM_IMAGE_MAX_SIZE = int(os.getenv("VLM_IMAGE_MAX_SIZE", "384"))
 VLM_FRAME_HISTORY_SIZE = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "2"))  # 2026-0903: t y t-1, no solo t (pedido explicito)
 VLM_USE_JSON_SCHEMA = os.getenv("VLM_USE_JSON_SCHEMA", "true").lower() == "true"
+# Timeout del cliente HTTP para llamadas al VLM. Debe ser >= latencia máxima
+# esperada del modelo (qwen2.5-vl-3b con imagen: ~10-11s). El escaneo profundo
+# incluye múltiples imágenes → presupuesto mayor. Configurar en config/.env;
+# el watchdog SLM_WATCHDOG_MS debe ser menor que estos valores.
+SLM_HTTP_TIMEOUT_S      = float(os.getenv("SLM_HTTP_TIMEOUT_S",      "15.0"))
+SLM_DEEP_HTTP_TIMEOUT_S = float(os.getenv("SLM_DEEP_HTTP_TIMEOUT_S", "20.0"))
 
 MANEUVER_DURATION_S = float(os.getenv("MANEUVER_DURATION_S", "1.0"))
 ESCAPE_MANEUVER_DURATION_S = float(os.getenv("ESCAPE_MANEUVER_DURATION_S", "1.6"))
@@ -194,6 +200,26 @@ SYSTEM_PROMPT_VISION = (
     "El offset debe ser de escala de bloque urbano (6-20m), no micro-correcciones."
 )
 
+def _load_prompt_file(env_var: str, fallback: str, **fmt_kwargs: Any) -> str:
+    """Carga un system prompt desde archivo configurado en .env, con fallback hardcodeado.
+
+    El archivo puede usar placeholders {nombre} que se sustituyen con fmt_kwargs.
+    Si la variable de entorno no está configurada o el archivo no existe, usa fallback.
+    """
+    path_str = os.getenv(env_var)
+    if path_str:
+        try:
+            txt = Path(path_str).read_text(encoding="utf-8").strip()
+            return txt.format(**fmt_kwargs) if fmt_kwargs else txt
+        except Exception as exc:
+            import warnings
+            warnings.warn(f"[deliberative] No se pudo cargar {env_var}={path_str}: {exc}. Usando prompt interno.")
+    return fallback  # fallback es un string Python ya definido, no necesita .format()
+
+
+_FMT = {"safe_margin_ttc_s": SAFE_MARGIN_TTC_S}
+SYSTEM_PROMPT_TEXT   = _load_prompt_file("SYSTEM_PROMPT_TEXT_FILE",   SYSTEM_PROMPT_TEXT,   **_FMT)
+SYSTEM_PROMPT_VISION = _load_prompt_file("SYSTEM_PROMPT_VISION_FILE", SYSTEM_PROMPT_VISION, **_FMT)
 SYSTEM_PROMPT = SYSTEM_PROMPT_VISION if VLM_VISION_ENABLED else SYSTEM_PROMPT_TEXT
 
 
@@ -224,26 +250,31 @@ def _flight_state_note(telemetry: Dict[str, Any]) -> str:
     return f"- Velocidad horizontal: {speed:.2f} m/s{stationary_note}. Inclinacion: pitch={pitch_deg:+.1f}°, roll={roll_deg:+.1f}°."
 
 
-def _query_reason_note(field: ObstacleField) -> str:
-    """Por que se esta consultando al VLM en este ciclo (2026-0903, pedido
+def _query_reason_note(field: ObstacleField, use_vision: bool = False) -> str:
+    """Por que se esta consultando al VLM en este ciclo.
 
-    explicito): distingue "el ObstacleField detecto un bloqueo real" de
-    "la percepcion no tiene evidencia suficiente" -- son causas MUY
-    distintas (la segunda no implica que haya nada bloqueando de verdad,
-    ver PLAN-MEJORAS-3.md y el analisis de TOWNSIM_INI) y el prompt anterior
-    no se lo decia al modelo, dejandolo tratar ambos casos igual.
+    Distingue bloqueo real de baja confianza de sensores. Cuando los sensores
+    tienen baja confianza Y hay imagen disponible, indica explicitamente que la
+    imagen es la fuente primaria — el modelo no debe sobre-indexar en los sectores.
     """
     if field.is_blocked("centro"):
         ttc = field.sector_ttc("centro")
         ttc_str = f"{ttc:.1f}s" if ttc != float("inf") else "inf"
-        return f"- Motivo de consulta: el sector CENTRO muestra un obstaculo real (TTC={ttc_str})."
+        return f"- Motivo de consulta: el sector CENTRO muestra un obstáculo real (TTC={ttc_str})."
     if not field.has_evidence():
-        return (
-            "- Motivo de consulta: la percepcion NO tiene evidencia suficiente en este ciclo "
-            "(confianza baja, probablemente por falta de traslacion o rotacion reciente) -- "
-            "esto NO significa necesariamente que haya un obstaculo real, solo que el sistema "
-            "no puede confirmar que el camino este despejado."
+        base = (
+            "- Motivo de consulta: los sensores de flujo óptico tienen BAJA CONFIANZA en este ciclo "
+            "(probablemente por vegetación densa, baja velocidad o movimiento caótico) — "
+            "esto no implica necesariamente que haya un obstáculo real."
         )
+        if use_vision:
+            base += (
+                "\n  → IMPORTANTE: dado que los sensores son poco confiables, "
+                "usá LA IMAGEN como fuente primaria para decidir la dirección. "
+                "Si ves un corredor o espacio abierto a un lado, elegí EVADIR hacia ese lado "
+                "aunque los sectores digan 'sin evidencia'."
+            )
+        return base
     return "- Motivo de consulta: bloqueo lateral o corredor cerrado, sin peligro central inmediato."
 
 
@@ -257,6 +288,7 @@ def _build_user_prompt(
     frente_stall_rate: float = 0.0,
     frente_attempts: int = 0,
     imu_jitter_level: str = "normal",
+    use_vision: bool = False,
 ) -> str:
     sector_summary = field.summary_text()
 
@@ -315,7 +347,7 @@ def _build_user_prompt(
         f"- {wp_str}\n"
         f"- Altitud actual: {altitude:.1f}m (Cota segura: 10.0m){stuck_note}\n"
         f"{_flight_state_note(telemetry)}{traj_note}{imu_note}\n"
-        f"{_query_reason_note(field)}"
+        f"{_query_reason_note(field, use_vision=use_vision)}"
         f"{history_note}"
         f"{goal_history_note}\n\n"
         "INSTRUCCION:\n"
@@ -544,7 +576,7 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
             ],
             temperature=0.2,
             max_tokens=200,
-            timeout=15.0 if is_deep_scan else 8.0,
+            timeout=SLM_DEEP_HTTP_TIMEOUT_S if is_deep_scan else SLM_HTTP_TIMEOUT_S,
         )
 
         raw = ""
@@ -869,7 +901,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
                 "timestamp": time.time(),
                 "arm": "slm",
                 "model": LOCAL_LLM_MODEL_NAME,
-                "vision_enabled": VLM_VISION_ENABLED,
+                "vision_enabled": state.get("_delib_vision_used", VLM_VISION_ENABLED),
                 "system_prompt": SYSTEM_PROMPT,
                 # Instrumentacion de auditoria (2026-0901): el prompt de
                 # usuario efectivamente enviado, para poder reconstruir la
@@ -926,6 +958,22 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
 
         if pending_id is not None:
             if result is not None and result.request_id == pending_id:
+                # A: validación de frescura — descartar si la escena cambió mucho.
+                _freshness_m  = float(os.getenv("DELIB_FRESHNESS_DIST_M", "8.0"))
+                _snap_wp      = state.get("_delib_snapshot_wp")
+                _snap_dist    = float(state.get("_delib_snapshot_dist") or 0.0)
+                _cur_wp       = state.get("wp_index")
+                _cur_dist     = float(state.get("dist_to_wp_m") or 0.0)
+                _wp_changed   = _snap_wp is not None and _snap_wp != _cur_wp
+                _dist_changed = _snap_dist > 0 and _cur_dist > 0 and abs(_cur_dist - _snap_dist) > _freshness_m
+                if _wp_changed or _dist_changed:
+                    logger.info(
+                        f"[DELIB-STALE] wp {_snap_wp}→{_cur_wp} "
+                        f"dist Δ{abs(_cur_dist - _snap_dist):.1f}m (umbral {_freshness_m:.0f}m) "
+                        "— respuesta VLM descartada"
+                    )
+                    return _finalize(_fallback_decision(field, guidance), result.raw_response,
+                                     result.latency_ms, is_fallback=True, err="stale_response", timed_out=False)
                 is_fallback = result.parsed_decision is None
                 decision = result.parsed_decision or _fallback_decision(field, guidance)
                 return _finalize(decision, result.raw_response, result.latency_ms, is_fallback, result.error, timed_out=False)
@@ -982,8 +1030,23 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
 
         # No hay pedido pendiente: construir el prompt/imagenes y encolar uno nuevo.
         frame_history = state.get("frame_history") or []
+        # C: visión solo en bloqueo duro confirmado.
+        # En triggers tácticos suaves (primer escalado) la escena puede cambiar
+        # antes de que llegue la respuesta (~10s); texto puro (~0.6s) es más
+        # oportuno. Imagen aporta valor real solo cuando el drone está
+        # genuinamente detenido (bloqueo duro, imu_contact, blind_wall).
+        _use_vision = (
+            VLM_VISION_ENABLED
+            and bool(frame_history)
+            and (
+                int(state.get("evasion_stuck_cycles", 0)) >= hard_stall_threshold()
+                or bool(state.get("imu_contact_event"))
+                or bool(state.get("blind_wall_event"))
+            )
+        )
+        state["_delib_vision_used"] = _use_vision
         images_b64: Optional[List[str]] = None
-        if VLM_VISION_ENABLED and frame_history:
+        if _use_vision:
             encoded = [enc for f in frame_history if (enc := _encode_frame_base64(f)) is not None]
             images_b64 = encoded or None
 
@@ -996,6 +1059,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             frente_stall_rate=float(state.get("_traj_frente_stall_rate") or 0.0),
             frente_attempts=int(state.get("_traj_frente_attempts") or 0),
             imu_jitter_level=str(state.get("imu_jitter_level") or "normal"),
+            use_vision=_use_vision,
         )
         reason_key = _get_reason_key(field)
         request_id = service.request({"prompt": prompt, "images_b64": images_b64, "reason_note": reason_key})
@@ -1006,9 +1070,12 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
         # deliberations[] cuando _finalize() resuelva el pedido, varios
         # ciclos despues.
         state["_pending_delib_prompt"] = prompt
+        # A: snapshot de posición para validación de frescura al recibir la respuesta.
+        state["_delib_snapshot_wp"]   = state.get("wp_index")
+        state["_delib_snapshot_dist"] = float(state.get("dist_to_wp_m") or 0.0)
         frame_history_ts = state.get("frame_history_ts") or []
         state["_pending_delib_frames"] = (
-            list(zip(frame_history, frame_history_ts)) if VLM_VISION_ENABLED and frame_history else []
+            list(zip(frame_history, frame_history_ts)) if _use_vision and frame_history else []
         )
 
         macro, cmd = _wait_command("Pedido de deliberación recién encolado.")

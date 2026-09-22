@@ -27,7 +27,7 @@ import os
 import time
 from typing import Any, Dict, List, Optional
 
-from .action_map import action_to_command
+from .action_map import action_to_command, compute_corner_waypoint
 from .deliberation_service import DeliberationService
 
 # S4 (PLAN-SLAM): slam_assess es ahora el modo por defecto y único activo.
@@ -102,6 +102,8 @@ SYSTEM_PROMPT_DEEP_SCAN = (
     "- MANTENER_RUMBO: el rumbo que viene fallando en realidad esta despejado (falso atasco).\n"
     "- EVADIR_IZQUIERDA / EVADIR_DERECHA: hay una calle o pasaje despejado en alguno de los rumbos "
     "mostrados a la izquierda o derecha del rumbo actual.\n"
+    "- RETROCEDER: todos los rumbos muestran obstaculos y el dron esta embebido en la malla de "
+    "colision -- retroceder 5-6m para ganar margen antes de intentar una nueva evasion.\n"
     "- GANAR_ALTURA: todos los rumbos muestran estructuras (edificios/paredes) -- sobrevolar.\n"
     "- PERDER_ALTURA: el bloqueo es vegetacion (arboles/ramas) y se ve espacio despejado mas abajo.\n"
     "- FRENAR: ningun rumbo del panorama ofrece una salida clara; mejor esperar a la proxima deliberacion.\n\n"
@@ -773,9 +775,62 @@ def deep_scan_cycle(
             decision = result.parsed_decision
             clear_scan_state(state)
             if decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
+                # Romper loop infinito RETROCEDER: si el scan post-RETROCEDER vuelve
+                # a pedir RETROCEDER, el drone esta en una esquina fisicamente cerrada.
+                # Escalar a GANAR_ALTURA para salir verticalmente.
+                _had_retroceder_pending = state.get("_post_retroceder_corner_pending", False)
+                if _had_retroceder_pending and decision.get("macro_action") == "RETROCEDER":
+                    print(
+                        "[deep_vlm] post-RETROCEDER VLM insiste en RETROCEDER "
+                        "- esquina cerrada, forzando GANAR_ALTURA."
+                    )
+                    decision = {
+                        "macro_action": "GANAR_ALTURA",
+                        "rationale": (
+                            "Esquina sin salida lateral confirmada por barrido panoramico; "
+                            "subir para superar obstaculos."
+                        ),
+                    }
+                    state.pop("_post_retroceder_corner_pending", None)
+
+                original_macro = decision.get("macro_action")
+                decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
+                if decision.get("macro_action") != original_macro:
+                    print(
+                        f"[deep_vlm] override: VLM recomendo {original_macro}"
+                        f" -> {decision.get('macro_action')} (trajectory stats)."
+                    )
                 _apply_scan_resolution(
-                    state, decision, result.raw_response, result.latency_ms, guidance, telemetry, arm, deadlock_cycles
+                    state, decision, result.raw_response, result.latency_ms,
+                    guidance, telemetry, arm, deadlock_cycles, trajectory,
                 )
+
+                # Fix 17-equivalente para deep_vlm: corner post-RETROCEDER.
+                # Mismo algoritmo que _slam_assess_cycle: angulo perpendicular al
+                # bearing al WP, lado opuesto al VLM, para que el drone no se dirija
+                # de frente a la fachada bloqueante al salir del retroceso.
+                macro_post = decision.get("macro_action", "")
+                _had_pending = state.pop("_post_retroceder_corner_pending", False)
+                if _had_pending and macro_post not in ("RETROCEDER", "GANAR_ALTURA", "PERDER_ALTURA"):
+                    orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+                    hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
+                    bearing_err_pc = float(
+                        (guidance or {}).get("bearing_err_deg", 0.0)
+                    ) if isinstance(guidance, dict) else 0.0
+                    bearing_to_wp = hdg_pc + bearing_err_pc
+                    _sign = 1.0 if macro_post == "EVADIR_IZQUIERDA" else -1.0
+                    corner_yaw = bearing_to_wp + _sign * 90.0
+                    state["inject_corner"] = compute_corner_waypoint(
+                        telemetry, corner_yaw, guidance=guidance,
+                        offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
+                    )
+                    print(
+                        f"[deep_vlm] retroceder-corner fix17: "
+                        f"hdg={hdg_pc:.0f} bear_err={bearing_err_pc:.0f} "
+                        f"bearing_to_wp={bearing_to_wp:.0f}{_sign:+.0f}x90"
+                        f"={corner_yaw:.0f} VLM={macro_post}."
+                    )
+
                 return True
             print(f"[deep_scan] ({arm}) respuesta sin accion viable. Cae al escape sincronico.")
             state["_deadlock_event"] = {

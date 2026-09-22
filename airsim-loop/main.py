@@ -496,7 +496,7 @@ def main() -> None:
                 if flight_logger is not None:
                     flight_logger.mark_success(True)
 
-                airsim_client.land()
+                airsim_client.land_smooth()
                 print("[Misión] Aterrizaje completado y motores desarmados. Devolviendo control a WebDCS.\n")
 
                 break

@@ -185,6 +185,52 @@ class AirSimClient:
             print(f"[AirSimClient] Error durante el aterrizaje: {exc}")
             return False
 
+    def land_smooth(self) -> bool:
+        """Descenso gradual: frena, desciende a baja altitud y corta motores.
+
+        Evita la caída libre que ocurre cuando landAsync() se llama desde
+        altura de crucero (~10 m) en SimpleFlight. Secuencia:
+          1. Detener movimiento horizontal (1.5 s de hover).
+          2. Descender con moveToZAsync a LAND_DESCENT_SPEED_MPS hasta z=-0.3 m.
+          3. armDisarm(False) desde baja altitud (caída ≤30 cm).
+        """
+        if not self._connected or self._client is None:
+            print("[AirSimClient][simulado] Aterrizaje suave simulado.")
+            return True
+        import os as _os
+        speed = float(_os.getenv("LAND_DESCENT_SPEED_MPS", "0.5"))
+        try:
+            print(f"[AirSimClient] Aterrizaje suave: frenando (descent={speed:.1f} m/s)...")
+            # 1. Hover: detener velocidad horizontal
+            self._client.moveByVelocityAsync(
+                0.0, 0.0, 0.0, 1.5, vehicle_name=self.vehicle_name
+            ).join()
+            # 2. Descender a z=-0.3 m NED (30 cm sobre el suelo)
+            telem = self.get_telemetry()
+            z_current = telem.get("position", {}).get("z", -5.0)
+            z_target = -0.3
+            if z_current < z_target - 0.1:
+                timeout_s = abs(z_target - z_current) / speed + 6.0
+                print(
+                    f"[AirSimClient] Descendiendo: z={z_current:.1f} → {z_target:.1f} m "
+                    f"(timeout={timeout_s:.0f} s)..."
+                )
+                self._client.moveToZAsync(
+                    z_target, speed, timeout_sec=timeout_s,
+                    vehicle_name=self.vehicle_name,
+                ).join()
+            # 3. Cortar motores desde baja altitud
+            self._client.armDisarm(False, vehicle_name=self.vehicle_name)
+            print(f"[AirSimClient] Aterrizaje suave completado.")
+            return True
+        except Exception as exc:
+            print(f"[AirSimClient] Error en aterrizaje suave: {exc}")
+            try:
+                self._client.armDisarm(False, vehicle_name=self.vehicle_name)
+            except Exception:
+                pass
+            return False
+
     def set_vehicle_pose(self, x: float, y: float, z: float, yaw_deg: float = 0.0) -> bool:
         """Posiciona / teletransporta el vehículo en coordenadas NED ignorando colisiones."""
         if not self._connected or self._client is None:

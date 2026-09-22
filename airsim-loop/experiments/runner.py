@@ -231,6 +231,23 @@ def run_one(
                 except Exception:
                     pass  # Si falla la captura de depth, solo no registramos la métrica
 
+            # Seguridad de proximidad: aborta solo si el drone esta fisicamente
+            # embebido en la malla (depth < umbral Y velocidad casi cero).
+            # Sin la condicion de velocidad, 0.30 m dispara durante navegacion
+            # normal al acercarse a un obstaculo, abortando corridas validas.
+            _emergency_dist = float(os.getenv("DEPTH_EMERGENCY_DIST_M", "0.30"))
+            if min_obstacle_dist_m is not None and min_obstacle_dist_m < _emergency_dist:
+                _vel = telem.get("velocity", {})
+                _spd = (_vel.get("vx", 0.0)**2 + _vel.get("vy", 0.0)**2 + _vel.get("vz", 0.0)**2) ** 0.5
+                _stuck_spd = float(os.getenv("DEPTH_EMERGENCY_MAX_SPEED_MPS", "0.3"))
+                if _spd < _stuck_spd:
+                    print(
+                        f"[runner] PROXIMIDAD CRITICA c{cycles}: "
+                        f"min_dist={min_obstacle_dist_m:.3f} m < {_emergency_dist:.2f} m, "
+                        f"speed={_spd:.2f} m/s -> abortar"
+                    )
+                    break
+
             logger.log_cycle(
                 state,
                 latency_ms={"graph": (time.time() - t0) * 1000.0},
@@ -251,10 +268,7 @@ def run_one(
         logger.mark_success(success)
         summary = logger.close()
         service.stop()
-        try:
-            client.land()
-        except Exception:
-            pass
+        client.land_smooth()
         client.disconnect()
 
     return summary

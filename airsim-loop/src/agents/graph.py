@@ -54,6 +54,12 @@ _CMD_BLIND_CYCLES      = int(os.getenv("CMD_BLIND_CYCLES",          "2"))
 # 15 ciclos = 3 s: por encima del watchdog normal de VLM (1.5 s), por debajo del
 # freeze observado (130 s). Independiente de cmd_vx → captura el caso ESCANEO.
 _STOPPED_CYCLES_THRESHOLD = int(os.getenv("STOPPED_CYCLES_THRESHOLD", "15"))
+# V3d: freeze por posicion neta (captura oscilacion de malla UE5 donde velocity > 0).
+# POS_FREEZE_DIST_M: desplazamiento XY minimo desde referencia para NO contar (m).
+# POS_FREEZE_THRESHOLD: ciclos sin progreso antes de sumar a stuck_invisible.
+# 30 ciclos = 6 s -- por encima de GIRAR_90 (~15 c) y ESCANEO deep_vlm (~25 c).
+_POS_FREEZE_DIST_M    = float(os.getenv("POS_FREEZE_DIST_M",    "0.50"))
+_POS_FREEZE_THRESHOLD = int(os.getenv("POS_FREEZE_THRESHOLD",   "30"))
 # V4-VLM-REFINEMENT: profundidad monocular estimada (Depth Anything V2 Metric).
 # Activa solo cuando flujo óptico dice "corredor libre" y drone avanza (ver
 # perception_node). cmd_vx mínimo para disparar la inferencia; bf máximo por
@@ -236,8 +242,13 @@ class DroneState(TypedDict, total=False):
     # blind_wall_event nunca dispara). Se resetea sólo cuando el drone se mueve
     # (act_spd > 0.1 m/s); un RETROCEDER fallido mantiene la cuenta activa.
     _stopped_cycles: int
+    # V3d: freeze por posicion neta. _pos_freeze_cycles acumula cuando el drone no
+    # se desplaza POS_FREEZE_DIST_M desde _pos_freeze_ref. Complementa _stopped_cycles
+    # para el caso de oscilacion de malla (velocity > 0, desplazamiento neto ~ 0).
+    _pos_freeze_cycles: int
+    _pos_freeze_ref: Optional[Dict[str, Any]]
     # Señal unificada de obstáculo invisible (simplificación Zona 1): True cuando
-    # cualquiera de V3/V3b/V3c está activa. policy_router usa este campo en lugar
+    # cualquiera de V3/V3b/V3c/V3d está activa. policy_router usa este campo en lugar
     # de acceder directamente al contador _stopped_cycles; imu_contact_event y
     # blind_wall_event se mantienen como sub-campos para evasive_node y deliberative.
     stuck_invisible: bool
@@ -458,13 +469,37 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             # Techo de 200 para evitar overflow en corridas muy largas.
             state["_stopped_cycles"] = min(prev_stopped + 1, 200)
 
-        # Señal unificada para policy_router: OR de las tres señales de obstáculo
-        # invisible (V3/V3b/V3c). imu_contact y blind_wall tienen prioridad sobre
-        # slm_request_id en el router; _stopped_cycles no (ver ordering en policy_router).
+        # V3d: freeze por posicion neta. Detecta oscilacion de malla UE5 donde el
+        # drone bota a alta velocidad pero no avanza. Inmune a velocity > 0.
+        # Supresiones: slm_active (SLM procesando) y _scan_phase (escaneo profundo).
+        scan_active = state.get("_scan_phase") is not None
+        pos_now = telemetry.get("position") or {}
+        _px = float(pos_now.get("x", 0.0))
+        _py = float(pos_now.get("y", 0.0))
+        _pf_ref = state.get("_pos_freeze_ref") or {}
+        _pf_rx = float(_pf_ref.get("x", _px))
+        _pf_ry = float(_pf_ref.get("y", _py))
+        _pf_age = int(_pf_ref.get("age", 0)) + 1
+        _disp = math.sqrt((_px - _pf_rx) ** 2 + (_py - _pf_ry) ** 2)
+        if _disp >= _POS_FREEZE_DIST_M or slm_active or scan_active:
+            state["_pos_freeze_cycles"] = 0
+            state["_pos_freeze_ref"] = {"x": _px, "y": _py, "age": 0}
+        else:
+            state["_pos_freeze_cycles"] = min(int(state.get("_pos_freeze_cycles") or 0) + 1, 200)
+            if _pf_age >= _POS_FREEZE_THRESHOLD:
+                # Refrescar referencia periodicamente para capturar drifts lentos
+                state["_pos_freeze_ref"] = {"x": _px, "y": _py, "age": 0}
+            else:
+                state["_pos_freeze_ref"] = {"x": _pf_rx, "y": _pf_ry, "age": _pf_age}
+
+        # Señal unificada para policy_router: OR de las cuatro señales de obstaculo
+        # invisible (V3/V3b/V3c/V3d). imu_contact y blind_wall tienen prioridad sobre
+        # slm_request_id en el router; _stopped_cycles/_pos_freeze no (ver ordering).
         state["stuck_invisible"] = (
             bool(state.get("imu_contact_event"))
             or bool(state.get("blind_wall_event"))
             or int(state.get("_stopped_cycles", 0)) >= _STOPPED_CYCLES_THRESHOLD
+            or int(state.get("_pos_freeze_cycles", 0)) >= _POS_FREEZE_THRESHOLD
         )
 
         # V4 (A1): profundidad monocular inyectada en ObstacleField.
@@ -714,7 +749,11 @@ def policy_router(state: DroneState) -> str:
 
     # V3c (freeze): stuck_invisible cubre _stopped_cycles. Se evalúa DESPUÉS de
     # slm_request_id porque el freeze es intencional mientras el SLM procesa.
+    # Escalada: si el escape evasivo acumuló ciclos suficientes sin resolver
+    # (>= hard_stall_threshold), el obstáculo requiere razonamiento deliberativo.
     if state.get("stuck_invisible"):
+        if int(state.get("evasion_stuck_cycles", 0)) >= hard_stall_threshold():
+            return "deliberative"
         return "evasive"
 
     # V4 (A1): la profundidad monocular ya está inyectada en obstacle_field

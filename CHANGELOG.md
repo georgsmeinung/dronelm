@@ -1,3 +1,91 @@
+# 2026-09-22 - Ejecución de Test pilotos y detectados estos deep_vlm fixes: DEPTH_EMERGENCY, escape adaptivo, loop RETROCEDER, V3d pos-freeze
+
+## Contexto
+
+Corridas piloto `townsim_ini / slm / deep_vlm / seed_99` (PLAN-PRUEBAS-TESIS-V2.md).
+Se identificaron y corrigieron cuatro bugs independientes en el modo `deep_vlm` que impedian
+completar la mision. Hilo: run 2 aborta por DEPTH_EMERGENCY, run 4 oscila en arbol, run 5 loop
+infinito RETROCEDER, run 6+ stuck con velocidad > 0 sin que ningun detector disparara.
+
+---
+
+## Fix A — DEPTH_EMERGENCY_DIST_M mas agresivo de lo necesario (`config/.env`)
+
+**Causa raiz**: umbral 0.30 m abortaba vuelo normal cerca de obstaculos (run 1 exitosa con
+min_dist=0.104 m). El drone llega a 10 cm de arboles sin colapso fisico.
+
+**Cambio** (`config/.env`):
+- `DEPTH_EMERGENCY_DIST_M`: 0.30 → 0.05 m (solo para embedding real en malla)
+- `DEPTH_EMERGENCY_MAX_SPEED_MPS`: 0.30 → 0.10 m/s (velocidad umbral de "realmente parado")
+
+---
+
+## Fix B — Escape adaptivo y trajectory overrides ausentes en deep_vlm (`deep_scan.py`)
+
+**Causa raiz**: `_apply_scan_resolution` era llamada sin `trajectory` en el path
+`phase == "capturado"` de `deep_vlm`. Consecuencia: escape siempre 1x duracion (~1s)
+independientemente del historial de stalls; `_apply_trajectory_overrides` nunca se aplicaba.
+
+**Cambios** (`src/agents/deep_scan.py`):
+- Agrega import de `compute_corner_waypoint` desde `action_map`
+- Agrega RETROCEDER al `SYSTEM_PROMPT_DEEP_SCAN` como accion valida
+- Pasa `trajectory` a `_apply_scan_resolution` (habilita escape adaptivo 1x/2x/3x)
+- Llama `_apply_trajectory_overrides` antes de despachar la decision VLM
+
+---
+
+## Fix C — Loop infinito RETROCEDER en deep_vlm (`deep_scan.py`)
+
+**Causa raiz**: `_post_retroceder_corner_pending` se seteaba en `_apply_scan_resolution`
+al despachar RETROCEDER (como en slam_assess), pero el consumo del flag (Fix 17) solo
+existia en `_slam_assess_cycle`. En deep_vlm el flag nunca se consumia → el barrido
+panoramico post-RETROCEDER siempre veia paredes → VLM recomendaba RETROCEDER de nuevo
+→ loop infinito hasta timeout.
+
+**Cambio** (`src/agents/deep_scan.py`) — bloque `phase == "capturado"`:
+
+1. **Romper loop**: si `_post_retroceder_corner_pending` es True y VLM recomienda
+   RETROCEDER de nuevo → forzar GANAR_ALTURA (esquina sin salida lateral confirmada).
+
+2. **Fix 17-equivalente para deep_vlm**: si `_post_retroceder_corner_pending` es True
+   y VLM recomienda accion lateral → inyectar corner waypoint perpendicular al
+   bearing_to_wp con signo opuesto a la recomendacion VLM (misma logica que Fix 17
+   en slam_assess).
+
+---
+
+## Fix D — V3d: detector de freeze por posicion neta (`graph.py`, `config/.env`)
+
+**Causa raiz**: drone en reactive + MANTENER_RUMBO oscilando a ~1.85 m/s dentro
+de la malla convexa de arboles UE5. Ningun detector disparaba:
+- `_stopped_cycles` V3c: act_spd 1.85 >> 0.10 → reset cada ciclo
+- `blind_wall` V3b: act_spd 1.85 >> 0.30
+- `TRAJ_STALL`: stall_rate 13.3% << 70%
+- `evasion_stuck_cycles`: oscilacion alterna progress/stall → nunca acumula
+
+**Nuevo campo** `_pos_freeze_cycles` / `_pos_freeze_ref` en `DroneState`:
+cuenta ciclos consecutivos donde el desplazamiento XY neto desde un punto de referencia
+es menor a `POS_FREEZE_DIST_M` (0.50 m). Inmune a velocity — mide posicion, no velocidad.
+
+**Supresiones** (no acumula cuando la inmovilidad es intencional):
+- `slm_active = True` (SLM/VLM procesando)
+- `_scan_phase is not None` (barrido panoramico deep_scan)
+
+Referencia se refresca cada `POS_FREEZE_THRESHOLD` ciclos para capturar drifts lentos.
+
+**Cambios**:
+- `src/agents/graph.py`: constantes `_POS_FREEZE_DIST_M` / `_POS_FREEZE_THRESHOLD`,
+  nuevos campos TypedDict `_pos_freeze_cycles` / `_pos_freeze_ref`, logica en
+  `perception_node`, OR en `stuck_invisible`
+- `config/.env`: `POS_FREEZE_DIST_M=0.50`, `POS_FREEZE_THRESHOLD=30`
+
+Threshold 30 ciclos (6 s) elegido por encima de GIRAR_90 (~15 c) y ESCANEO deep_vlm
+(~25 c) para evitar falsos positivos en maniobras intencionales.
+
+181 tests unitarios pasan.
+
+---
+
 # 2026-09-12 (sesión 8) — Fix 17: corner post-RETROCEDER perpendicular al bearing WP
 
 ## Contexto
