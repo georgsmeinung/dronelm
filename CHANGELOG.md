@@ -84,6 +84,109 @@ Threshold 30 ciclos (6 s) elegido por encima de GIRAR_90 (~15 c) y ESCANEO deep_
 
 181 tests unitarios pasan.
 
+## Fix E — Timeout de rotacion en barrido panoramico deep_vlm (`deep_scan.py`, `config/.env`)
+
+**Causa raiz**: en la fase `rotando` del deep_scan, si el drone no podia girar (malla de
+colision invisible, pata trabada en arbol) el contador `_scan_rot_stall` no existia y el
+barrido ciclaba para siempre con `_deliberation_pending=True` sin progresar.
+
+**Cambio**:
+- `src/agents/deep_scan.py`: agrega contador `_scan_rot_stall`; si `rot_stall > SCAN_ROT_TIMEOUT_CYCLES`
+  llama `clear_scan_state()` y retorna `False` para derivar al escape sincronico (GANAR_ALTURA).
+- `config/.env`: `SCAN_ROT_TIMEOUT_CYCLES=10` (2 s a 5 Hz; por encima del tiempo normal de giro).
+
+---
+
+## Fix F — WP_0b intermedio sobre la plaza para evitar copas de arboles (`townsim_ini.json`)
+
+**Causa raiz**: la ruta directa WP_0→WP_1 a z=-10 (nivel calle) atravesaba las copas de los
+arboles del patio central de TownSim (12-15 m de altura segun telemetria de corridas piloto).
+El drone entraba en malla de colision antes de llegar al corredor norte.
+
+**Cambio** (`airsim-plan/missions/flightplans/townsim_ini.json`):
+- Agrega `WP_0b_SOBRE_PLAZA` en (-60, 5, -22), intermedio entre el ascenso inicial y la
+  entrada al corredor norte. Altura -22 m mantiene clearance de ~7 m sobre la canopy.
+
+---
+
+## Fix H — VLM EVADIR cancelado por TRAJ_STALL en ciclo inmediato (`deliberative.py`)
+
+**Causa raiz**: cuando deliberative_node despacha EVADIR_DERECHA (o cualquier maniobra de escape),
+pone `active_maneuver=EVADIR_DERECHA` y `maneuver_cycles_left=N` pero NO pone `_escape_reset=True`.
+En el ciclo siguiente, `evasion_stuck_cycles = progress_stall_cycles` sigue siendo >= `hard_stall_threshold(15)`
+(no fue reseteado) → TRAJ_STALL en policy_router dispara "deliberative" ANTES de llegar al check
+de `active_maneuver` (que esta al final del router) → nueva llamada VLM → `active_maneuver` se
+sobreescribe → EVADIR_DERECHA nunca llega a ejecutarse. El VLM retorno EVADIR_DERECHA 200 ciclos
+consecutivos (c2585-c2784, seed_99) sin que la maniobra se ejecutara ni una vez.
+
+**Cambio** (`src/agents/deliberative.py`, funcion `_finalize`):
+- Agrega `state["_escape_reset"] = True` cuando `macro in (EVADIR_DERECHA, EVADIR_IZQUIERDA,
+  GANAR_ALTURA, PERDER_ALTURA)`. Esto llama `waypoint_tracker.reset_progress()` al final del ciclo
+  (via main.py), reseteando `progress_stall_cycles=0` y `evasion_stuck_cycles=0` al ciclo N+1 →
+  TRAJ_STALL no dispara → active_maneuver se ejecuta normalmente.
+
+---
+
+## Fix J — WP_1b_PASO_MOLDURA: desvio al centro-este antes de la moldura (`townsim_ini.json`)
+
+**Causa raiz**: al entrar al corredor desde WP_1_ENTRADA_NORTE (-75,10), el drone navega sur
+hacia WP_2_CENTRO_CORREDOR (-75,-35). Las maniobras de evasi&oacute;n y el sesgo del reactor lo
+desplazan a x=-78, donde la moldura del edificio oeste (saliente de cornisa a y≈-14, x≈-78)
+lo bloquea. 960 ciclos (192s) consumidos intentando EVADIR_IZQUIERDA sin salir de y≈-14.
+
+**Cambio** (`airsim-plan/missions/flightplans/townsim_ini.json`):
+- Agrega WP_1b_PASO_MOLDURA en (-70, 0, -10) entre WP_1 y WP_2.
+- Ruteado: en (-70,0) el drone esta 8m al este del saliente (x=-78).
+- Cuando luego navega de (-70,0) a (-75,-35), cruza y=-14 a x≈-71.5 — libre de la moldura.
+
+---
+
+## Fix I — VLM EVADIR huerfano: deadlock path intercepta antes de pending_id check (`deliberative.py`)
+
+**Causa raiz**: `deliberative_node` ejecuta el path de deadlock (linea 704, condicion
+`evasion_stuck_cycles >= stuck_threshold`) ANTES del check de `pending_id` (linea 868).
+Cuando `_deliberation_pending=True` congela `progress_stall_cycles` en >= 10, el deadlock
+path intercepta cada ciclo y retorna antes de llegar a `_finalize`. El resultado VLM
+(EVADIR_DERECHA) queda huerfano indefinidamente: `service.poll()` nunca se alcanza, el
+resultado nunca se procesa, `active_maneuver` nunca se setea.
+
+**Sintoma observado** (seed_99, c2048-c2135, 80 ciclos):
+- `slm.raw_response` contiene JSON valido con EVADIR_DERECHA (latencia 3731 ms real)
+- `action=MANTENER_RUMBO` o `action=FRENAR` en todos los ciclos
+- Solo c2063-c2064 y similares ejecutan EVADIR via `stuck_invisible=True` (ruta evasive directa)
+  pero ese path no usa active_maneuver y no tiene acumulacion de intentos
+
+**Cambio** (`src/agents/deliberative.py`, inicio de `deliberative_node`):
+- Antes del check de deadlock (linea 704), consulta `service.poll()` si `slm_request_id is not None`
+- Si el resultado ya llego y coincide con el ID pendiente → `_vlm_result_ready = True`
+- Condicion de deadlock modificada: `stuck_cycles >= stuck_threshold AND ... AND not _vlm_result_ready`
+- Cuando `_vlm_result_ready=True`, el deadlock se omite ese ciclo; el flow cae a la linea 868
+  donde `_finalize` procesa EVADIR_DERECHA → `active_maneuver=EVADIR_DERECHA, _escape_reset=True`
+- Ciclo N+1: `reset_progress() → progress_stall=0`; policy_router: `active_maneuver` -> "evasive"
+
+`service.poll()` es idempotente (no consume el resultado), por lo que llamarlo dos veces
+en el mismo ciclo es seguro.
+
+---
+
+## Fix G — V3e: escalada directa a deliberativo por vel=0 prolongado (`graph.py`, `config/.env`)
+
+**Causa raiz**: durante el loop RETROCEDER (c694-c1019, seed_99), `stuck_invisible=True`
+pero `evasion_stuck_cycles` nunca llego a `hard_stall_threshold()=15`. La escalada existente
+depende de `progress_stall_cycles` del waypoint_tracker, que se resetea internamente antes de
+acumular. Con `vel=0` el drone ejecuta RETROCEDER 326 ciclos consecutivos sin escalar.
+
+**Nuevo mecanismo**: `_stopped_cycles` SI acumula cuando `act_spd=0` (inmune a los resets
+de `progress_stall_cycles`). Si `stuck_invisible=True` y `_stopped_cycles >= STUCK_RETROCEDER_LIMIT`
+→ forzar ruta `deliberative` directamente (GANAR_ALTURA libera la pata trabada).
+
+**Cambios**:
+- `src/agents/graph.py`: en `policy_router`, bloque `stuck_invisible` ahora evalua
+  `stopped >= STUCK_RETROCEDER_LIMIT` ademas de `evasion_stuck_cycles >= hard_stall_threshold()`.
+- `config/.env`: `STUCK_RETROCEDER_LIMIT=30` (6 s; >= STOPPED_CYCLES_THRESHOLD=15).
+
+Con este fix, seed_99 habria escalado a deliberativo en c724 (c694+30) en lugar de c1019+.
+
 ---
 
 # 2026-09-12 (sesión 8) — Fix 17: corner post-RETROCEDER perpendicular al bearing WP

@@ -1,13 +1,15 @@
 {
   "mission_id": "TOWNSIM_INI",
-  "summary": "Tier 1 (escenario con obstrucción): atraviesa el corredor peatonal arbolado central de townsim_calib.png de norte a sur a nivel de calle (z=-10, bajo la copa de los árboles). Spawn en el costado este; WP_0 sube verticalmente en el spawn (climb-first) antes de trasladarse al interior. WP_1 entra al extremo norte del corredor (entre los edificios norte y centro), WP_2 cruza la zona central con mayor densidad de árboles, WP_3 alcanza la avenida sur. WP_4 sale al este subiendo a altitud segura y WP_5 regresa al spawn. Primer escenario de obstrucción real para H1: el VLM debe navegar el corredor vegetal sin colisionar. Coordenadas: validar con plot_mission_route.py en viewport TownSim antes de correr el batch.",
+  "summary": "Tier 1 (escenario con obstruccion): atraviesa el corredor peatonal arbolado central de townsim_calib.png de norte a sur a nivel de calle (z=-10, bajo la copa de los arboles del corredor). Spawn en el costado este; WP_0 sube verticalmente en el spawn (climb-first). WP_0b cruza la plaza central a 22m de altitud para evitar las copas de los arboles del patio (z=-10 atravesaria la canopy a ~12-15m segun telemetria de corridas piloto). WP_1 entra al extremo norte del corredor (entre los edificios norte y centro) ya a nivel de calle. WP_1b desvia al drone al centro-este del corredor (x=-70) antes de la moldura del edificio oeste (x=-78, y=-14). WP_2 cruza la zona central con mayor densidad de arboles, WP_3 alcanza la avenida sur. WP_4 sale al este subiendo a altitud segura y WP_5 regresa al spawn. Primer escenario de obstruccion real para H1: el VLM debe navegar el corredor vegetal sin colisionar. Coordenadas: validar con plot_mission_route.py en viewport TownSim antes de correr el batch.",
   "waypoints": [
-    { "x": 0.0,   "y": 0.0,   "z": -30.0, "label": "WP_0_ASCENSO" },
+    { "x":  0.0,  "y":  0.0,  "z": -30.0, "label": "WP_0_ASCENSO" },
+    { "x": -60.0, "y":  5.0,  "z": -22.0, "label": "WP_0b_SOBRE_PLAZA" },
     { "x": -75.0, "y": 10.0,  "z": -10.0, "label": "WP_1_ENTRADA_NORTE" },
+    { "x": -70.0, "y":  0.0,  "z": -10.0, "label": "WP_1b_PASO_MOLDURA" },
     { "x": -75.0, "y": -35.0, "z": -10.0, "label": "WP_2_CENTRO_CORREDOR" },
     { "x": -75.0, "y": -70.0, "z": -10.0, "label": "WP_3_SALIDA_SUR" },
-    { "x": 0.0,   "y": -70.0, "z": -30.0, "label": "WP_4_CLIMB_ESTE" },
-    { "x": 0.0,   "y": 0.0,   "z": -10.0, "label": "WP_5_RETORNO" }
+    { "x":  0.0,  "y": -70.0, "z": -30.0, "label": "WP_4_CLIMB_ESTE" },
+    { "x":  0.0,  "y":  0.0,  "z": -10.0, "label": "WP_5_RETORNO" }
   ],
   "map": "townsim_calib.png"
 }

@@ -37,6 +37,11 @@ DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "slam_assess")  # "slam_asses
 SCAN_HEADING_COUNT_DEEP = int(os.getenv("SCAN_HEADING_COUNT_DEEP", "4"))
 SCAN_SETTLE_CYCLES_DEEP = int(os.getenv("SCAN_SETTLE_CYCLES_DEEP", "2"))
 SCAN_YAW_TOLERANCE_DEG = float(os.getenv("SCAN_YAW_TOLERANCE_DEG", "5.0"))
+# Timeout de rotacion en fase "rotando": si el drone no alcanza el rumbo target en
+# SCAN_ROT_TIMEOUT_CYCLES ciclos, el barrido se abandona y cae al escape sincronico.
+# Captura el caso de drone embebido en malla de arbol donde AirSim no puede rotar.
+# 10 ciclos = 2s a 5Hz: suficiente para una rotacion libre de 90deg; si falla = mesh.
+SCAN_ROT_TIMEOUT_CYCLES = int(os.getenv("SCAN_ROT_TIMEOUT_CYCLES", "10"))
 SLM_DEEP_WATCHDOG_MS = float(os.getenv("SLM_DEEP_WATCHDOG_MS", "12000"))
 MAX_DEEP_SCAN_IMAGES = int(os.getenv("MAX_DEEP_SCAN_IMAGES", "5"))
 DEEP_SCAN_MANEUVER_DURATION_S = float(os.getenv("MANEUVER_DURATION_S", "1.0"))
@@ -147,6 +152,7 @@ def clear_scan_state(state: Dict[str, Any]) -> None:
     state["_scan_frames"] = []
     state["_scan_start_yaw_deg"] = None
     state["_scan_settle_left"] = 0
+    state["_scan_rot_stall"] = 0
     state["_deep_scan_request_id"] = None
 
 
@@ -651,6 +657,7 @@ def deep_scan_cycle(
         state["_scan_frames"] = []
         state["_scan_start_yaw_deg"] = current_yaw_deg
         state["_scan_settle_left"] = 0
+        state["_scan_rot_stall"] = 0
         state["_deep_scan_request_id"] = None
         state["active_maneuver"] = None
         state["maneuver_cycles_left"] = 0
@@ -684,8 +691,27 @@ def deep_scan_cycle(
         if abs(yaw_err) <= SCAN_YAW_TOLERANCE_DEG:
             state["_scan_phase"] = "asentando"
             state["_scan_settle_left"] = SCAN_SETTLE_CYCLES_DEEP
+            state["_scan_rot_stall"] = 0
             cmd = _hover_cmd(f"Escaneo profundo ({arm}): rumbo {target_heading:.0f}° alcanzado, asentando.")
         else:
+            # Timeout de rotacion: si el drone no puede girar (malla de arbol),
+            # abandonar el barrido y caer al escape sincronico (GANAR_ALTURA).
+            rot_stall = int(state.get("_scan_rot_stall") or 0) + 1
+            state["_scan_rot_stall"] = rot_stall
+            if rot_stall > SCAN_ROT_TIMEOUT_CYCLES:
+                print(
+                    f"[deep_scan] ({arm}) timeout de rotacion: yaw_err={yaw_err:.0f}° "
+                    f"sin corregir en {rot_stall} ciclos. Cae al escape sincronico."
+                )
+                clear_scan_state(state)
+                state["_deadlock_event"] = {
+                    "strategy": "deep_vlm",
+                    "arm": arm,
+                    "resolved_by_scan": False,
+                    "cycles_to_resolve": None,
+                    "fell_back_to_blind": True,
+                }
+                return False
             # Giro puro en el lugar hacia un rumbo absoluto (mismo mecanismo
             # que action_map.GIRAR_90/EVADIR_*: yaw_rate=0 + target_yaw
             # absoluto hace que AirSimClient.execute_velocity use YawMode
@@ -699,7 +725,7 @@ def deep_scan_cycle(
                 "target_yaw": target_heading,
                 "rationale": (
                     f"Escaneo profundo ({arm}): girando a rumbo {target_heading:.0f}° "
-                    f"({heading_index + 1}/{SCAN_HEADING_COUNT_DEEP})."
+                    f"({heading_index + 1}/{SCAN_HEADING_COUNT_DEEP}, intento {rot_stall}/{SCAN_ROT_TIMEOUT_CYCLES})."
                 ),
             }
         state["next_action"] = "ESCANEO"

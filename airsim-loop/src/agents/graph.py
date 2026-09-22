@@ -60,6 +60,10 @@ _STOPPED_CYCLES_THRESHOLD = int(os.getenv("STOPPED_CYCLES_THRESHOLD", "15"))
 # 30 ciclos = 6 s -- por encima de GIRAR_90 (~15 c) y ESCANEO deep_vlm (~25 c).
 _POS_FREEZE_DIST_M    = float(os.getenv("POS_FREEZE_DIST_M",    "0.50"))
 _POS_FREEZE_THRESHOLD = int(os.getenv("POS_FREEZE_THRESHOLD",   "30"))
+# V3e: escalada directa a deliberativo cuando stuck_invisible=True y vel=0 prolongado.
+# Necesario cuando progress_stall_cycles se resetea antes de llegar a hard_stall_threshold
+# (pata trabada en malla de colision invisible). _stopped_cycles no se reseta en ese caso.
+_STUCK_RETROCEDER_LIMIT = int(os.getenv("STUCK_RETROCEDER_LIMIT", "30"))
 # V4-VLM-REFINEMENT: profundidad monocular estimada (Depth Anything V2 Metric).
 # Activa solo cuando flujo óptico dice "corredor libre" y drone avanza (ver
 # perception_node). cmd_vx mínimo para disparar la inferencia; bf máximo por
@@ -176,6 +180,7 @@ class DroneState(TypedDict, total=False):
     _scan_frames: List[Any]
     _scan_start_yaw_deg: Optional[float]
     _scan_settle_left: int
+    _scan_rot_stall: int  # ciclos consecutivos sin alcanzar el rumbo target (timeout rotacion)
     _deep_scan_request_id: Optional[int]
     _deadlock_cycles: int
     _deadlock_event: Optional[Dict[str, Any]]  # H3.2: metricas de resolucion, consumido por main.py/flight_logger
@@ -749,10 +754,16 @@ def policy_router(state: DroneState) -> str:
 
     # V3c (freeze): stuck_invisible cubre _stopped_cycles. Se evalúa DESPUÉS de
     # slm_request_id porque el freeze es intencional mientras el SLM procesa.
-    # Escalada: si el escape evasivo acumuló ciclos suficientes sin resolver
-    # (>= hard_stall_threshold), el obstáculo requiere razonamiento deliberativo.
+    # Escalada primaria: evasion_stuck_cycles >= hard_stall_threshold.
+    # Escalada directa: _stopped_cycles >= STUCK_RETROCEDER_LIMIT (default 30).
+    # La escalada directa es necesaria cuando la pata queda trabada en malla de
+    # colision invisible (vel=0, RETROCEDER no mueve el drone) y progress_stall_cycles
+    # no acumula por resets internos. Empiricamente comprobado con seed_99 c694-c1019
+    # (326 ciclos RETROCEDER sin escalada). Con vel=0 _stopped_cycles SI acumula.
     if state.get("stuck_invisible"):
-        if int(state.get("evasion_stuck_cycles", 0)) >= hard_stall_threshold():
+        stopped = int(state.get("_stopped_cycles", 0))
+        if (int(state.get("evasion_stuck_cycles", 0)) >= hard_stall_threshold()
+                or stopped >= _STUCK_RETROCEDER_LIMIT):
             return "deliberative"
         return "evasive"
 

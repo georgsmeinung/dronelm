@@ -701,7 +701,23 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
         # percepcion ve un corredor transitable (salvo atasco duro).
         corridor_open = (not hard_stuck) and has_open_corridor(field, guidance)
 
-        if stuck_cycles >= stuck_threshold and not escape_locked and not corridor_open:
+        # Fix I: si hay un resultado VLM regular listo, procesarlo ANTES de
+        # entrar al path de deadlock. El path de deadlock (abajo) se ejecuta
+        # antes del check de pending_id (linea ~868), por lo que cuando
+        # evasion_stuck_cycles >= stuck_threshold pero el VLM ya respondio
+        # con EVADIR, _deliberation_pending=True congela progress_stall en
+        # >= stuck_threshold y el deadlock intercepta cada ciclo sin dejar
+        # llegar a _finalize -- el resultado EVADIR queda huerfano indefinidamente.
+        _fix_i_pid = state.get("slm_request_id")
+        if _fix_i_pid is not None:
+            _fix_i_res, _, _ = service.poll()
+            _vlm_result_ready = (
+                _fix_i_res is not None and _fix_i_res.request_id == _fix_i_pid
+            )
+        else:
+            _vlm_result_ready = False
+
+        if stuck_cycles >= stuck_threshold and not escape_locked and not corridor_open and not _vlm_result_ready:
             state["_deadlock_cycles"] = int(state.get("_deadlock_cycles", 0)) + 1
 
             # H2 (PLAN-MEJORAS-3): antes de forzar el escape ciego, intentar
@@ -950,6 +966,12 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
                 state["active_maneuver"] = macro
                 state["maneuver_cycles_left"] = max(1, round(MANEUVER_DURATION_S * loop_hz))
                 state["maneuver_command"] = cmd
+                # Resetear progress_stall_cycles para que TRAJ_STALL no cancele
+                # el active_maneuver en el ciclo inmediato siguiente. Sin esto,
+                # evasion_stuck_cycles sigue alto y TRAJ_STALL vuelve a disparar
+                # deliberativo antes de que el maneuver pueda ejecutarse (el
+                # VLM dice EVADIR_DERECHA pero nunca se ejecuta -- seed_99 c2585+).
+                state["_escape_reset"] = True
             else:
                 state["active_maneuver"] = None
                 state["maneuver_cycles_left"] = 0
