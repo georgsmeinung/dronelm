@@ -1010,6 +1010,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#6-grabacion-de-video-y-viewport" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1103,6 +1114,17 @@
     <span class="md-ellipsis">
       
         A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (citysim_clear.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (townsim_ini.json, versión V2)
       
     </span>
   </a>
@@ -1458,6 +1480,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#6-grabacion-de-video-y-viewport" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1551,6 +1584,17 @@
     <span class="md-ellipsis">
       
         A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (citysim_clear.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (townsim_ini.json, versión V2)
       
     </span>
   </a>
@@ -1849,13 +1893,33 @@
 </tr>
 <tr>
 <td><code>SLM_WATCHDOG_MS</code></td>
-<td><code>6000</code></td>
-<td>Tiempo límite del perro guardián (en ms) para la respuesta del SLM en hilo asíncrono. Si expira, se cancela y se aplica el fallback determinista.</td>
+<td><code>13000</code></td>
+<td>Tiempo límite del perro guardián (en ms) para la respuesta del SLM en hilo asíncrono. Si expira, se aplica el fallback determinista (con overrides de trayectoria). Recalibrado el 2026-09-22 (era 6000 en el lote base y 1500 en el diseño inicial) porque las consultas con imagen se midieron en ~10–11 s; debe ser menor que <code>SLM_HTTP_TIMEOUT_S</code>.</td>
+</tr>
+<tr>
+<td><code>SLM_HTTP_TIMEOUT_S</code></td>
+<td><code>15.0</code></td>
+<td>Timeout del cliente HTTP en consultas tácticas al VLM. Debe ser mayor que <code>SLM_WATCHDOG_MS</code> para que el watchdog gane siempre al corte HTTP.</td>
+</tr>
+<tr>
+<td><code>SLM_DEEP_HTTP_TIMEOUT_S</code></td>
+<td><code>20.0</code></td>
+<td>Timeout HTTP del barrido profundo (varias imágenes → prefill mayor).</td>
+</tr>
+<tr>
+<td><code>SYSTEM_PROMPT_VISION_FILE</code> / <code>SYSTEM_PROMPT_TEXT_FILE</code></td>
+<td><code>../config/prompts/system_vision.txt</code> / <code>system_text.txt</code></td>
+<td>Archivos de system prompt (con y sin visión), relativos a <code>airsim-loop/</code>. Admiten el placeholder <code>{safe_margin_ttc_s}</code>. Si no se configuran, se usa el prompt interno.</td>
+</tr>
+<tr>
+<td><code>DELIB_FRESHNESS_DIST_M</code></td>
+<td><code>8.0</code></td>
+<td>Variación de distancia al waypoint (m) a partir de la cual se descartaría una respuesta VLM por obsolescencia. <strong>Sin efecto en el estado actual del código</strong> (cap. 9, §9.5.4).</td>
 </tr>
 <tr>
 <td><code>DEADLOCK_STRATEGY</code></td>
-<td><code>"deep_vlm"</code></td>
-<td>Estrategia ante atasco: <code>"deep_vlm"</code> ejecuta barrido panorámico de 6 rumbos con consulta VLM; <code>"blind"</code> realiza escape puramente vertical por FSM.</td>
+<td><code>"slam_assess"</code></td>
+<td>Estrategia ante atasco duro: <code>"slam_assess"</code> (por defecto en <code>config/.env</code>) usa historial de trayectoria + frame frontal sin rotación; <code>"deep_vlm"</code> ejecuta un barrido panorámico de 4 rumbos con consulta VLM (la usan las corridas experimentales, vía <code>--deadlock-strategies</code>); <code>"blind"</code> realiza escape vertical sin VLM.</td>
 </tr>
 </tbody>
 </table>
@@ -1950,8 +2014,8 @@
 <tbody>
 <tr>
 <td><code>OBSTACLE_OCCUPANCY_BLOCKED</code></td>
-<td><code>0.35</code></td>
-<td>Fracción mínima de la celda con TTC <span class="arithmatex">\(&lt; 2.5\text{ s}\)</span> para declarar bloqueo por ocupación.</td>
+<td><code>0.011</code></td>
+<td>Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden el 2026-09-10 (AUC 0.87; cap. 7, §7.5); el valor histórico era 0.35.</td>
 </tr>
 <tr>
 <td><code>OBSTACLE_TTC_BLOCKED_S</code></td>
@@ -1967,6 +2031,78 @@
 <td><code>OBSTACLE_MIN_CONFIDENCE_TTC</code></td>
 <td><code>0.35</code></td>
 <td>Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22">5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)<a class="headerlink" href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valor nominal</th>
+<th>Justificación y efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STUCK_HARD_FACTOR</code></td>
+<td><code>1.5</code></td>
+<td>Umbral de atasco duro = factor × umbral efectivo (10 ciclos) = 15 ciclos (3 s). Por defecto en código es 3.0.</td>
+</tr>
+<tr>
+<td><code>STOPPED_CYCLES_THRESHOLD</code></td>
+<td><code>15</code></td>
+<td>Ciclos parado (V3c) para sumar a <code>stuck_invisible</code>.</td>
+</tr>
+<tr>
+<td><code>POS_FREEZE_DIST_M</code> / <code>POS_FREEZE_THRESHOLD</code></td>
+<td><code>0.50</code> / <code>30</code></td>
+<td>V3d: desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta.</td>
+</tr>
+<tr>
+<td><code>STUCK_RETROCEDER_LIMIT</code></td>
+<td><code>30</code></td>
+<td>V3e: ciclos a velocidad nula con <code>stuck_invisible</code> que fuerzan la ruta deliberativa.</td>
+</tr>
+<tr>
+<td><code>SCAN_ROT_TIMEOUT_CYCLES</code></td>
+<td><code>10</code></td>
+<td>Timeout de rotación del barrido panorámico (2 s).</td>
+</tr>
+<tr>
+<td><code>SLAM_HISTORY_SIZE</code></td>
+<td><code>80</code></td>
+<td>Tamaño del ring buffer de trayectoria (≈ 16 s a 5 Hz).</td>
+</tr>
+<tr>
+<td><code>CORNER_OFFSET_M</code></td>
+<td><code>15.0</code></td>
+<td>Distancia del waypoint de esquina (m); el default en código es 12.0.</td>
+</tr>
+<tr>
+<td><code>MANEUVER_DURATION_S</code></td>
+<td><code>2.0</code></td>
+<td>Duración base de las maniobras de evasión (s), multiplicada de forma adaptativa según el stall (cap. 5, §5.12.3).</td>
+</tr>
+<tr>
+<td><code>EVASION_BACK_SPEED</code></td>
+<td><code>1.2</code></td>
+<td>Velocidad de <code>RETROCEDER</code> (m/s).</td>
+</tr>
+<tr>
+<td><code>DEPTH_EMERGENCY_DIST_M</code> / <code>DEPTH_EMERGENCY_MAX_SPEED_MPS</code></td>
+<td><code>0.05</code> / <code>0.1</code></td>
+<td>Aborto de corrida por dron embebido en la malla (solo en el runner; cap. 5, §5.19). <code>0.0</code> deshabilita.</td>
+</tr>
+<tr>
+<td><code>LAND_DESCENT_SPEED_MPS</code></td>
+<td><code>0.5</code></td>
+<td>Velocidad del descenso de <code>land_smooth()</code> al final de la misión.</td>
+</tr>
+<tr>
+<td><code>FLOW_HOLDOVER_MAX_FRAMES</code> / <code>FLOW_MAX_YAW_DPS_NEAR_OBSTACLE</code></td>
+<td><code>3</code> / <code>5.0</code></td>
+<td>Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, §6.12).</td>
 </tr>
 </tbody>
 </table>
@@ -2098,6 +2234,23 @@
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">130.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2&quot;</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">130.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-50.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_3&quot;</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_4&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2">A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (<code>townsim_ini.json</code>, versión V2)<a class="headerlink" href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2" title="Permanent link">&para;</a></h3>
+<p>Versión vigente desde 2026-09-22 (8 waypoints, ~340 m). Respecto de la versión con la que se ejecutó el lote base, agrega <code>WP_0b_SOBRE_PLAZA</code> (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y <code>WP_1b_PASO_MOLDURA</code> (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_INI&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_0_ASCENSO&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-60.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-22.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_0b_SOBRE_PLAZA&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1_ENTRADA_NORTE&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-70.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1b_PASO_MOLDURA&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-35.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2_CENTRO_CORREDOR&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-70.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_3_SALIDA_SUR&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-70.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_4_CLIMB_ESTE&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_5_RETORNO&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>

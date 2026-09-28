@@ -537,10 +537,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#75-calibracion-del-canal-de-ocupacion-estado-y-pendientes" class="md-nav__link">
+  <a href="#75-calibracion-del-canal-de-ocupacion-d2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.5 Calibración del canal de ocupación (estado y pendientes)
+        7.5 Calibración del canal de ocupación (D2)
       
     </span>
   </a>
@@ -548,10 +548,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#76-validacion-de-la-derotacion-en-giros-agresivos-pendiente" class="md-nav__link">
+  <a href="#76-validacion-de-la-derotacion-en-giros-agresivos-d3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.6 Validación de la derotación en giros agresivos (pendiente)
+        7.6 Validación de la derotación en giros agresivos (D3)
       
     </span>
   </a>
@@ -1123,10 +1123,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#75-calibracion-del-canal-de-ocupacion-estado-y-pendientes" class="md-nav__link">
+  <a href="#75-calibracion-del-canal-de-ocupacion-d2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.5 Calibración del canal de ocupación (estado y pendientes)
+        7.5 Calibración del canal de ocupación (D2)
       
     </span>
   </a>
@@ -1134,10 +1134,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#76-validacion-de-la-derotacion-en-giros-agresivos-pendiente" class="md-nav__link">
+  <a href="#76-validacion-de-la-derotacion-en-giros-agresivos-d3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7.6 Validación de la derotación en giros agresivos (pendiente)
+        7.6 Validación de la derotación en giros agresivos (D3)
       
     </span>
   </a>
@@ -1289,16 +1289,12 @@
 </table>
 <p>El umbral para <span class="arithmatex">\(\tau = 2\)</span> s (3.18 s) fue adoptado como <code>TTC_EVASION_THRESHOLD</code> (redondeado a 3.2 s), reemplazando el valor provisorio de 3.0 s que se usaba antes de la validación. El umbral para <span class="arithmatex">\(\tau = 3\)</span> s (4.58 s) fue adoptado como <code>TTC_SAFE_THRESHOLD</code> (redondeado a 4.6 s), reemplazando 6.0 s. Ambos umbrales son datos de validación — no fueron elegidos a mano ni ajustados empíricamente por comportamiento de vuelo. La elección de <span class="arithmatex">\(\tau = 2\)</span> s como umbral de evasión y <span class="arithmatex">\(\tau = 3\)</span> s como umbral de zona segura refleja el tiempo de reacción del lazo (5 Hz → 200 ms por ciclo) más el tiempo de ejecución de la maniobra de evasión (1–2 ciclos); a esa velocidad de crucero el margen de 2 s es suficiente para iniciar evasión antes del impacto en los escenarios ensayados.</p>
 <p><strong>Interpretación de la banda entre umbrales.</strong> La zona <span class="arithmatex">\(TTC \in (3.2,\ 4.6)\)</span> s corresponde al estado "advertencia" en el <code>policy_router</code> (cap. 5): no hay bloqueo activo pero el riesgo es elevado; el sistema emite una solicitud al deliberativo y reduce la agresividad lateral de <code>evasive_node</code>. La banda de histéresis entre evasión (3.2 s) y zona segura (4.6 s) previene el <em>chattering</em> — oscilación rápida entre maniobra de evasión y crucero normal cuando el TTC estimado flota alrededor del umbral de evasión.</p>
-<h2 id="75-calibracion-del-canal-de-ocupacion-estado-y-pendientes">7.5 Calibración del canal de ocupación (estado y pendientes)<a class="headerlink" href="#75-calibracion-del-canal-de-ocupacion-estado-y-pendientes" title="Permanent link">&para;</a></h2>
-<p>A diferencia del canal de TTC, el canal de ocupación (divergencia escalada → <code>occupancy</code>) no pasó todavía por el mismo protocolo de validación contra profundidad. La calibración actual del factor <span class="arithmatex">\(0.450/8.0\)</span> (descrita en §6.8 del capítulo 6) se realizó con un subconjunto reducido de los datos de <code>runs/ttc/</code> y no produjo una curva ROC completa; el factor fue ajustado manualmente hasta que el comportamiento de vuelo en los escenarios de prueba fue satisfactorio. No es un proceso de calibración estadísticamente controlado.</p>
-<p>La validación pendiente consiste en:</p>
-<ol>
-<li>Ejecutar <code>experiments/analyze_occupancy.py</code> sobre el conjunto completo (3735 registros), usando como referencia binaria la profundidad de celda &lt; 10 m.</li>
-<li>Construir la curva ROC del predicado <code>occupancy ≥ OBSTACLE_OCCUPANCY_BLOCKED</code>.</li>
-<li>Calcular el umbral óptimo por Youden, análogamente a §7.4.</li>
-<li>Verificar que el umbral derivado estadísticamente coincida con el valor operativo actual (0.35), o actualizarlo.</li>
-</ol>
-<p>El <code>OBSTACLE_OCCUPANCY_BLOCKED = 0.35</code> es por tanto un valor provisorio que funciona en la práctica pero no tiene respaldo estadístico equivalente al del canal de TTC. Esta asimetría en la validación de los dos canales es una limitación documentada del estado actual del sistema.</p>
+<h2 id="75-calibracion-del-canal-de-ocupacion-d2">7.5 Calibración del canal de ocupación (D2)<a class="headerlink" href="#75-calibracion-del-canal-de-ocupacion-d2" title="Permanent link">&para;</a></h2>
+<p>A diferencia del canal de TTC, el canal de ocupación (divergencia escalada → <code>occupancy</code>) no había pasado por el protocolo de validación contra profundidad: el umbral de 0.35 se fijó a ojo durante el desarrollo, sin dataset de respaldo. El experimento D2 (2026-09-10) lo cerró parcialmente.</p>
+<p><strong>Protocolo.</strong> Dataset capturado con <code>callibration-flight/d2_occupancy_capture.py</code>: 196 frames en TownSim frente a una pared sólida en (x = 61, y = −42), a cuatro velocidades de aproximación (0.5, 1, 2 y 3 m/s). Verdad de terreno binaria: <code>gt_depth_centro &lt; 5.0 m</code> (29 frames positivos, 167 negativos). Curva ROC del predicado <code>occ_centro ≥ t</code> barriendo 500 umbrales (<code>d2_roc_analysis.py</code>) y umbral óptimo por índice de Youden, análogo al de §7.4.</p>
+<p><strong>Resultado.</strong> AUC = 0.87; umbral óptimo t = 0.011 con TPR = 0.931 y FPR = 0.222. El máximo de ocupación central observado en todo el dataset fue 0.082, de modo que con el umbral original 0.35 la TPR era 0: <strong>el canal de ocupación no se disparó en ningún frame</strong> y la detección recaía íntegramente en el TTC. Ambas cifras (AUC y umbral) se reprodujeron al redactar este informe recalculando la curva sobre el archivo del dataset. <code>OBSTACLE_OCCUPANCY_BLOCKED</code> pasó de 0.35 a 0.011.</p>
+<p><strong>Consecuencia para los resultados del capítulo 11.</strong> Las corridas del lote base se ejecutaron con commits del 8 y 9 de septiembre, <strong>anteriores</strong> a la calibración (10 de septiembre): en ellas el canal de ocupación estuvo efectivamente inactivo. Es una diferencia de versión más entre el lote base y el código V2 (cap. 10, §10.12), y una razón adicional para no comparar ambos.</p>
+<p><strong>Límites de la calibración.</strong> (i) Una sola escena y una sola geometría (una pared lisa), no la diversidad de vegetación y fachadas de los tiers 1 y 2; (ii) 29 positivos: el intervalo de confianza del umbral es amplio y no se estimó; (iii) FPR = 0.22 significa que aproximadamente uno de cada cinco frames sin obstáculo cercano vota bloqueo por ocupación, un costo de falsos positivos aceptado a cambio de la sensibilidad; (iv) los valores de ocupación dependen de la textura de la escena, por lo que un umbral fijo calibrado en TownSim puede ser inadecuado en CitySim. Para (iv), <code>main.py</code> incorpora un <code>OccupancyCalibrator</code> (§6.9) que mide el ruido de ocupación durante los primeros ciclos de cada misión (diseñado para ejecutarse con el dron quieto en zona despejada); su efecto no se validó en ningún experimento, y el runner de lotes no lo emplea. La validación cruzada del umbral en escenas distintas queda pendiente.</p>
 <table>
 <thead>
 <tr>
@@ -1311,34 +1307,34 @@
 <tr>
 <td>Protocolo de validación ROC</td>
 <td>✓ Completo</td>
-<td>✗ Pendiente</td>
+<td>✓ Realizado (dataset reducido)</td>
 </tr>
 <tr>
 <td>Umbral derivado por Youden</td>
 <td>✓ (<code>TTC_EVASION_THRESHOLD = 3.2 s</code>)</td>
-<td>✗ (valor provisorio = 0.35)</td>
+<td>✓ (<code>OBSTACLE_OCCUPANCY_BLOCKED = 0.011</code>)</td>
 </tr>
 <tr>
 <td>AUC reportada</td>
 <td>0.96–0.97</td>
-<td>No disponible</td>
+<td>0.87</td>
 </tr>
 <tr>
 <td>Conjunto de datos</td>
 <td>3735 registros</td>
-<td>Subconjunto no documentado</td>
+<td>196 frames, una escena</td>
 </tr>
 </tbody>
 </table>
-<h2 id="76-validacion-de-la-derotacion-en-giros-agresivos-pendiente">7.6 Validación de la derotación en giros agresivos (pendiente)<a class="headerlink" href="#76-validacion-de-la-derotacion-en-giros-agresivos-pendiente" title="Permanent link">&para;</a></h2>
-<p>El guard <code>FLOW_MAX_ROTATION_DEG = 2°</code> descarta todos los ciclos donde la rotación entre frames supera ese umbral (cap. 6). El conjunto de datos de validación actual no ejercita este guard de forma significativa: el 97% de los registros del escenario de guiñada cae en <span class="arithmatex">\(|\dot{\psi}| &lt; 0.05\)</span> rad/s.</p>
-<p>Para completar la validación, es necesario un escenario específico con guiñada de <span class="arithmatex">\(\pm 0.3\)</span>–<span class="arithmatex">\(0.5\)</span> rad/s sin traslación, que ejercite tanto la correcta inhibición del estimador (el guard debe activarse y retornar <code>empty_field</code>) como la eventual reanudación correcta de la estimación una vez que la rotación decrece. También sería informativo estratificar el error relativo de TTC por bins de tasa de guiñada con los datos existentes: si el error en <span class="arithmatex">\(|\dot{\psi}| \in [0.03, 0.05)\)</span> rad/s es significativamente mayor que en bins más bajos, sugeriría un error de escala o de sincronización entre la telemetría de actitud y el timestamp del frame que debería corregirse antes de considerar cerrada la validación del canal de TTC.</p>
-<p>Esta ampliación queda como trabajo pendiente para la versión final del sistema antes de pruebas en hardware real (cap. 9).</p>
+<h2 id="76-validacion-de-la-derotacion-en-giros-agresivos-d3">7.6 Validación de la derotación en giros agresivos (D3)<a class="headerlink" href="#76-validacion-de-la-derotacion-en-giros-agresivos-d3" title="Permanent link">&para;</a></h2>
+<p>El guard <code>FLOW_MAX_ROTATION_DEG = 2°</code> descarta todos los ciclos donde la rotación entre frames supera ese umbral (cap. 6). El conjunto de validación original no lo ejercitaba: el 97 % de los registros del escenario de guiñada caía en <span class="arithmatex">\(|\dot{\psi}| &lt; 0.05\)</span> rad/s. El experimento D3 (2026-09-10; <code>d3_derotation_capture.py</code>) lo ejercita con 250 frames frente a una pared sólida a 5 m de distancia constante, a cinco tasas de guiñada comandadas (0.0, 0.3, 0.5, 0.8 y 1.0 rad/s; 50 frames por tasa tras descartar 5 de estabilización).</p>
+<p><strong>Resultado.</strong> En las cuatro tasas no nulas (guiñadas reales medias de 18.7, 32.9, 51.4 y 63.9 °/s) el 100 % de los frames quedó con <code>source = "degraded"</code> y <code>foe_confidence = 0</code>: el estimador <strong>se inhibe por sí mismo</strong> y no entrega TTC contaminado con confianza alta. Coincide con el umbral teórico: 2°/frame a 5 Hz equivale a ~10 °/s (0.175 rad/s), y la primera tasa ensayada por encima de él (0.3 rad/s) ya produce confianza cero. Los datos se reprodujeron al redactar este informe a partir del archivo del dataset.</p>
+<p><strong>Alcance de la validación.</strong> Se validó la <em>inhibición</em>, no la <em>exactitud</em> de la derotación. Dos preguntas siguen abiertas: (i) no se ensayaron tasas entre 0 y 0.3 rad/s, de modo que no se midió el error de TTC en el tramo previo al guard ni se confirmó que 0.175 rad/s sea el punto de corte; (ii) la condición de referencia (0.0 rad/s) tampoco tiene traslación, por lo que su <code>foe_confidence</code> es también casi nula (media 0.005) y no permite contrastar con un caso de traslación sin giro; la reanudación correcta de la estimación una vez que la rotación decrece no se ejercitó. La estratificación del error relativo de TTC por bins de tasa de guiñada con los datos existentes sigue siendo informativa. Estas dos preguntas, junto con la validación en hardware real, quedan como trabajo pendiente.</p>
 <h2 id="77-implicaciones-para-el-diseno-del-sistema">7.7 Implicaciones para el diseño del sistema<a class="headerlink" href="#77-implicaciones-para-el-diseno-del-sistema" title="Permanent link">&para;</a></h2>
 <p>Los resultados de validación tienen consecuencias directas sobre el diseño del lazo de control:</p>
 <p><strong>El AUC de 0.96–0.97 justifica usar TTC como señal primaria de evasión.</strong> Una tasa de verdaderos positivos del 93% con especificidad del 89% (a <span class="arithmatex">\(\tau = 2\)</span> s) es suficiente para evasión reactiva en entorno simulado; los falsos negativos (11%) son la fracción de situaciones peligrosas que el estimador no detecta a tiempo, justificando la capa deliberativa como red de seguridad.</p>
 <p><strong>La baja correlación puntual justifica la banda de histéresis y el rol del VLM.</strong> Si el TTC fuera un cronómetro confiable, bastaría un solo umbral. La incertidumbre de escala hace necesaria la zona de advertencia (3.2–4.6 s) y la consulta al VLM antes de comprometer una maniobra definitiva: el modelo de lenguaje provee contexto semántico que el estimador de flujo no puede dar.</p>
-<p><strong>La validación pendiente del canal de ocupación es deuda técnica controlada.</strong> El sistema funciona con el umbral provisorio de ocupación porque en los escenarios ensayados, el TTC es el canal primario de decisión y la ocupación actúa como corroboración secundaria. Sin embargo, antes de despliegue en entornos más exigentes (o en hardware real), el protocolo de validación del canal de ocupación debería completarse.</p>
+<p><strong>La validación del canal de ocupación es parcial, y esa deuda es controlada pero no nula.</strong> Con la calibración D2 el canal de ocupación dejó de estar inactivo y actúa como detector temprano independiente del TTC, pero se calibró con una escena y 29 positivos (§7.5). Antes de despliegue en entornos más exigentes (o en hardware real), la validación cruzada del umbral en escenas distintas debería completarse. Nótese además que el lote base del capítulo 11 se ejecutó antes de esta calibración, con el canal de ocupación efectivamente inactivo.</p>
 
 
 

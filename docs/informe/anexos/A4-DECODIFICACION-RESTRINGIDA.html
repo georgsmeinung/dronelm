@@ -1633,7 +1633,7 @@
 2. <strong>Encapsulamiento en Markdown irregular:</strong> uso intermitente de triples comillas invertidas (<code>```json ... ```</code>), a menudo con saltos de línea mal posicionados.
 3. <strong>Malformación sintáctica:</strong> comas terminales huérfanas (<em>trailing commas</em>), omisión de llaves de cierre <code>}</code> por corte de contexto o escape defectuoso de caracteres en cadenas.
 4. <strong>Alucinación de macro-acciones fuera de lista blanca:</strong> emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., <code>"girar_rapido"</code>, <code>"subir_diagonal"</code>, <code>"stop"</code> en lugar de <code>keep_going</code>, <code>evasive</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>).
-5. <strong>Latencia descontrolada por verbosidad:</strong> generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>) y forzando la degradación del lazo.</p>
+5. <strong>Latencia descontrolada por verbosidad:</strong> generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (<code>SLM_WATCHDOG_MS</code> (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)) y forzando la degradación del lazo.</p>
 <div class="highlight"><pre><span></span><code>Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
 &quot;Based on the camera feed showing an obstacle ahead, the drone should initiate an evasive 
  maneuver to the right corridor. Action: evasive_right, reason: obstacle in front.&quot;
@@ -1888,7 +1888,7 @@ ws <span class="o">::=</span> [ \t\n]*
     <span class="k">return</span> <span class="n">default_action</span><span class="p">,</span> <span class="s2">&quot;fallback_total_parse_error&quot;</span><span class="p">,</span> <span class="kc">False</span>
 </code></pre></div>
 <h3 id="paso-4-sincronizacion-con-el-perro-guardian-y-velocidad-de-deslizamiento-creep-speed">Paso 4: Sincronización con el perro guardián y velocidad de deslizamiento (<em>Creep Speed</em>)<a class="headerlink" href="#paso-4-sincronizacion-con-el-perro-guardian-y-velocidad-de-deslizamiento-creep-speed" title="Permanent link">&para;</a></h3>
-<p>En <code>deliberative_node</code>, la integración con la temporalidad del lazo de control se articula mediante el perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>) y el avance mínimo garantizado:
+<p>En <code>deliberative_node</code>, la integración con la temporalidad del lazo de control se articula mediante el perro guardián (<code>SLM_WATCHDOG_MS</code> (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)) y el avance mínimo garantizado:
 * Mientras la inferencia está en vuelo (<code>slm_request_id is not None</code>), el dron ejecuta <code>DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s</code>. Esto evita el colapso del campo de flujo óptico por falta de movimiento traslacional (§8.6).
 * Gracias a la decodificación restringida, el 95% de las llamadas resuelven en <strong><span class="arithmatex">\(320 - 480\text{ ms}\)</span></strong>, lo que significa que el dron solo pasa 2 o 3 ciclos en estado de espera antes de aplicar la macro-acción definitiva.</p>
 <hr />

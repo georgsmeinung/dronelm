@@ -82,6 +82,8 @@ El estado que circula entre los nodos es un `TypedDict` llamado `DroneState` (`g
 | `_pending_delib_prompt` | `str\|None` | Prompt enviado al VLM, guardado para adjuntarlo al registro cuando llegue la respuesta |
 | `_pending_delib_frames` | `List\|None` | Frames RAW + timestamps enviados al VLM, guardados para auditoría |
 | `_last_delib_frames` | `List\|None` | Canal de una sola pasada hacia `FlightLogger`: solo tiene contenido en el ciclo exacto en que una deliberación se resuelve; se consume con `pop()` y nunca se acumula en `deliberations` |
+| `vlm_goal` | `Dict\|None` | Sub-meta semántica emitida por el VLM (`dx_m`, `dy_m`, `dz_m`, `confidence`, `semantic_label`, `mode`) cuando su confianza supera `VLM_GOAL_MIN_CONFIDENCE = 0.7` (§5.10) |
+| `_vlm_goal_history` | `List[Dict]` | Últimas tres sub-metas, reinyectadas al prompt como contexto de las decisiones previas |
 
 **Lógica de escape de deadlock:**
 
@@ -94,6 +96,8 @@ El estado que circula entre los nodos es un `TypedDict` llamado `DroneState` (`g
 | `_escape_reset` | `bool` | Señal de flanco (no de nivel): `True` en el ciclo exacto en que un escape se resuelve, para que `main.py` llame a `WaypointTracker.reset_progress()` |
 | `_deadlock_cycles` | `int` | Ciclos dentro del estado de atasco duro (acumula mientras el escaneo profundo está activo) |
 | `_deadlock_event` | `Dict\|None` | Métricas de resolución del atasco, consumidas por `FlightLogger` |
+| `_post_retroceder_corner_pending` | `bool` | Se activa al despachar `RETROCEDER` como resolución de atasco y se consume en la siguiente consulta de escape, donde inyecta un waypoint de esquina perpendicular al rumbo al waypoint (§5.12.3) |
+| `inject_corner` | `Dict\|None` | Waypoint de desvío temporal `{x, y, z}` que `WaypointTracker` adopta como objetivo hasta alcanzarlo; lo producen el agotamiento del escape vertical (§5.10), la esquina post-retroceso (§5.12.3) y la sub-meta semántica del VLM (§5.10) |
 
 **Estado del escaneo panorámico profundo (`deep_scan`):**
 
@@ -104,9 +108,10 @@ El estado que circula entre los nodos es un `TypedDict` llamado `DroneState` (`g
 | `_scan_frames` | `List` | Fotogramas capturados hasta ahora: `[(heading_deg, rgb_frame, capture_ts)]` |
 | `_scan_start_yaw_deg` | `float\|None` | Yaw al inicio del barrido, referencia para calcular los rumbos objetivo |
 | `_scan_settle_left` | `int` | Ciclos de asentamiento restantes en el rumbo actual |
+| `_scan_rot_stall` | `int` | Ciclos consecutivos en fase `"rotando"` sin alcanzar el rumbo objetivo; al superar `SCAN_ROT_TIMEOUT_CYCLES = 10` el barrido se abandona (§5.12) |
 | `_deep_scan_request_id` | `int\|None` | ID del pedido VLM panorámico pendiente |
 
-**Señales de obstáculo invisible (V3 / V3b / V3c):**
+**Señales de obstáculo invisible (V3 / V3b / V3c / V3d):**
 
 | Campo | Tipo | Descripción |
 |---|---|---|
@@ -115,8 +120,10 @@ El estado que circula entre los nodos es un `TypedDict` llamado `DroneState` (`g
 | `_imu_contact_cycles` | `int` | Contador interno de ciclos consecutivos de jitter alto |
 | `blind_wall_event` | `bool` | `True` cuando `_blind_wall_cycles >= CMD_BLIND_CYCLES` |
 | `_blind_wall_cycles` | `int` | Ciclos consecutivos de condición activa (cmd frontal sin velocidad real, flujo libre) |
-| `_stopped_cycles` | `int` | Ciclos con `act_spd < 0.10 m/s` en ruta deliberativa sin VLM pendiente |
-| `stuck_invisible` | `bool` | OR unificado de las tres señales anteriores; consumido por `policy_router` |
+| `_stopped_cycles` | `int` | Ciclos consecutivos con `act_spd < 0.10 m/s`, en cualquier ruta, sin pedido VLM pendiente; se reinicia apenas el dron se mueve o mientras el VLM procesa (V3c, tope 200) |
+| `_pos_freeze_cycles` | `int` | Ciclos consecutivos en que el desplazamiento XY neto respecto de `_pos_freeze_ref` es menor que `POS_FREEZE_DIST_M = 0.50 m` (V3d); inmune a la velocidad instantánea |
+| `_pos_freeze_ref` | `Dict\|None` | Posición de referencia `{x, y, age}` de V3d; se refresca cada `POS_FREEZE_THRESHOLD` ciclos para capturar derivas lentas |
+| `stuck_invisible` | `bool` | OR unificado de las señales anteriores (contacto IMU, pared ciega, parado, congelamiento por posición); consumido por `policy_router` |
 
 **Estadísticas de trayectoria para routing:**
 
@@ -143,7 +150,7 @@ El estado que circula entre los nodos es un `TypedDict` llamado `DroneState` (`g
 |---|---|---|
 | `_hover_alt_anchor` | `float\|None` | Altitud anclada al primer ciclo de FRENAR; `motor_node` la usa para corregir la deriva vertical con un controlador P |
 
-**Regla de diseño crítica.** Todo campo que cruce la frontera entre invocaciones de `graph.invoke()` debe estar declarado en este `TypedDict`. LangGraph no lanza error si un nodo escribe una clave no declarada: la descarta en silencio. Esta propiedad causó al menos cuatro bugs documentados: `_escape_reset` nunca se propagaba (el tracker de atasco nunca se reiniciaba, produciendo un deadlock duro de 76 ciclos), `_escape_locked` se perdía (reseteando el escape agotado en un ciclo límite de período 3), `_delib_baseline` nunca acumulaba evidencia, e `inject_corner` nunca se producía.
+**Regla de diseño crítica.** Todo campo que cruce la frontera entre invocaciones de `graph.invoke()` debe estar declarado en este `TypedDict`. LangGraph no lanza error si un nodo escribe una clave no declarada: la descarta en silencio. Esta propiedad causó al menos cuatro bugs documentados: `_escape_reset` nunca se propagaba (el tracker de atasco nunca se reiniciaba, produciendo un deadlock duro de 76 ciclos), `_escape_locked` se perdía (reseteando el escape agotado en un ciclo límite de período 3), `_delib_baseline` nunca acumulaba evidencia, e `inject_corner` nunca se producía. Una quinta instancia apareció al implementar la esquina post-retroceso (2026-09-12): `_post_retroceder_corner_pending` se activaba correctamente al despachar `RETROCEDER` pero, al no estar declarada, desaparecía entre invocaciones y la esquina nunca se inyectaba (diagnóstico en la corrida `seed_1`, ciclo 1744). El capítulo 9 (§9.5.4) documenta además un caso abierto en el mecanismo de frescura de respuestas del VLM.
 
 ## 5.3 Routers condicionales
 
@@ -164,13 +171,13 @@ Es el corazón de la arquitectura. Ejecuta la decisión táctica completa en un 
 
 **3. Continuidad de deliberación en vuelo.** Si `slm_request_id is not None` (hay un pedido al VLM en vuelo), el router **siempre** va a `"deliberative"`, independientemente del TTC actual. Sin esta regla, el pedido queda huérfano: ningún nodo vuelve a entrar a `deliberative_node` para resolverlo, `_deliberation_pending` nunca vuelve a `False`, y el detector de atasco queda desactivado para el resto de la misión (corrida documentada: 528 ciclos de `keep_going` sin escalar, 2026-0828).
 
-**4. Obstáculo invisible acumulado (`stuck_invisible`).** Si `stuck_invisible = True` — señal unificada que cubre `_stopped_cycles >= STOPPED_CYCLES_THRESHOLD` (15 ciclos ≈ 3 s parado sin razón), además de las señales de prioridad 2 — el router va a `"evasive"`. Se evalúa **después** de `slm_request_id` porque un dron quieto mientras el VLM procesa es intencional (`_stopped_cycles` no debe acumularse en ese estado, y así lo implementa `perception_node`).
+**4. Obstáculo invisible acumulado (`stuck_invisible`).** Si `stuck_invisible = True` — señal unificada que cubre `_stopped_cycles >= STOPPED_CYCLES_THRESHOLD` (15 ciclos ≈ 3 s parado sin razón) y `_pos_freeze_cycles >= POS_FREEZE_THRESHOLD` (30 ciclos ≈ 6 s sin desplazarse `POS_FREEZE_DIST_M`), además de las señales de prioridad 2 — el router va a `"evasive"`, con una **escalada directa a `"deliberative"`** (V3e) cuando `evasion_stuck_cycles >= hard_stall_threshold()` o `_stopped_cycles >= STUCK_RETROCEDER_LIMIT` (30 ciclos ≈ 6 s a velocidad nula). La escalada por `_stopped_cycles` es necesaria porque, con la pata del dron trabada en una malla de colisión invisible, `RETROCEDER` no produce movimiento y `progress_stall_cycles` se reinicia internamente antes de acumular: en la corrida piloto `seed_99` (ciclos 694–1019) el dron ejecutó 326 ciclos consecutivos de `RETROCEDER` sin escalar; con el límite actual habría escalado en el ciclo 724. Se evalúa **después** de `slm_request_id` porque un dron quieto mientras el VLM procesa es intencional (`_stopped_cycles` y `_pos_freeze_cycles` no acumulan en ese estado, y así lo implementa `perception_node`).
 
 **5. Suelo de altitud óptica (`OPTICAL_MIN_ALT_M = 4.5 m`).** Durante el ascenso inicial, el flujo óptico ve el suelo en movimiento y genera TTC falsos. Por debajo de ese umbral, los checks de TTC y los contadores de atasco se suprimen completamente → `"keep_going"`. Las señales de emergencia (prioridades 2–4) siguen activas a cualquier altitud.
 
 **6. Persistencia de maniobra (anti flip-flop).** Si `active_maneuver` está activo y `maneuver_cycles_left > 0`, el router va incondicionalmente a `"evasive"` para completar la maniobra comprometida. A diferencia de la versión anterior, no hay condición de TTC mínimo: el escape se ejecuta **hacia afuera** del obstáculo, por lo que TTC bajo es precisamente el estado esperado durante una maniobra de escape. El check de TTC aquí interrumpiría el escape que fue la respuesta correcta. Las emergencias reales (prioridades 2–4) sí interrumpen porque retornan antes de llegar a este punto.
 
-**7. Escape de atasco (`evasion_stuck_cycles`).** Si `evasion_stuck_cycles >= effective_stall_threshold()` (10 ciclos por defecto) y el flujo óptico no reporta corredor transitable (`not has_open_corridor(field, guidance)`), o si se supera el umbral duro (`>= hard_stall_threshold() = 30 ciclos`) → `"deliberative"`. El flujo óptico puede reportar un corredor espurio cuando el dron está embebido en la malla del árbol; el umbral duro actúa como red de seguridad final.
+**7. Escape de atasco (`evasion_stuck_cycles`).** Si `evasion_stuck_cycles >= effective_stall_threshold()` (10 ciclos por defecto) y el flujo óptico no reporta corredor transitable (`not has_open_corridor(field, guidance)`), o si se supera el umbral duro (`>= hard_stall_threshold() = 15 ciclos` con `STUCK_HARD_FACTOR = 1.5`) → `"deliberative"`. El flujo óptico puede reportar un corredor espurio cuando el dron está embebido en la malla del árbol; el umbral duro actúa como red de seguridad final.
 
 **8. Disparo por trayectoria acumulada (`TRAJ_STALL`, 2026-0910).** Si `_traj_frente_stall_rate >= 0.70` y `_traj_frente_attempts >= 10` → `"deliberative"`, aunque el campo óptico reporte corredor libre. Este trigger compensa el punto ciego estructural del flujo óptico cuando el dron está embebido en la malla convexa de un árbol (`foe_confidence` baja → `blocked = False` espurio): el historial acumulado de stalls frontales es evidencia más confiable que el campo óptico en ese estado. Los campos `_traj_frente_stall_rate` / `_traj_frente_attempts` son publicados por `capture_node` vía `FlightTrajectory.zone_stats()` y **deben estar declarados en `DroneState`** — si no lo están, LangGraph los descarta en silencio y el trigger nunca se activa (Bug-1, documentado 2026-0911: 584 ciclos con el campo siempre `None`).
 
@@ -207,20 +214,23 @@ Emite un comando FRENAR sin consultar percepción ni deliberación. El diseño n
 
 Invoca `FlowTTCEstimator.estimate()` con el par de frames consecutivos y la telemetría de ambos ciclos. El estimador produce un `ObstacleField` con tres sectores (centro, izquierda, derecha), cada uno con ocupación estimada por flujo óptico, TTC calculado y flag de bloqueo (cap. 6). El nodo escribe además `estimated_ttc = obstacle_field.min_ttc()` y `scene_summary = obstacle_field.summary_text()`.
 
-El nodo ejecuta cinco señales diagnósticas adicionales en secuencia tras el flujo óptico:
+El nodo ejecuta seis señales diagnósticas adicionales en secuencia tras el flujo óptico:
 
 **Señal V3 — jitter IMU.** Calcula el RMS de la aceleración lateral transversal `(ax, ay)` del IMU. Si supera `IMU_JITTER_CRITICAL_MPS2 = 8.0` → `imu_jitter_level = "crítico"`; si supera `IMU_JITTER_ELEVATED_MPS2 = 3.0` → `"elevado"`. `imu_contact_event = True` cuando `jitter_rms >= IMU_CONTACT_THRESHOLD_MPS2 = 5.0` y `cmd_speed > 0.3 m/s` durante ≥ 2 ciclos consecutivos (`_imu_contact_cycles`).
 
 **Señal V3b — pared invisible por divergencia cmd/real (`blind_wall_event`).** El dron comanda velocidad frontal (`cmd_vx >= 0.45 m/s`) pero la velocidad real medida es nula (`act_spd < 0.30 m/s`) mientras el flujo óptico reporta corredor libre (`blocked_fraction < 0.25`). El contador `_blind_wall_cycles` acumula ciclos consecutivos en esa condición; `blind_wall_event = True` cuando `>= CMD_BLIND_CYCLES = 2`. Una guarda previene falsos positivos al arrancar: el drone debe haber estado en movimiento en el ciclo anterior (`prev_act_spd >= 0.20`) antes de que la condición empiece a contar.
 
-**Señal V3c — dron parado sin razón (`_stopped_cycles`).** Acumula ciclos con `act_spd < 0.10 m/s` mientras la ruta activa es `"deliberative"` y no hay petición VLM pendiente (`slm_request_id = None`). Se resetea cuando el dron se mueve. Captura el caso ESCANEO (`cmd_vx = 0`) donde `blind_wall_event` nunca dispara. Umbral: `STOPPED_CYCLES_THRESHOLD = 15` ciclos (3 s a 5 Hz).
+**Señal V3c — dron parado sin razón (`_stopped_cycles`).** Acumula ciclos con `act_spd < 0.10 m/s` **en cualquier ruta** y sin petición VLM pendiente (`slm_request_id = None`); se resetea cuando el dron se mueve o mientras el VLM procesa (el freeze intencional del ESCANEO). La versión original restringía el conteo a la ruta `"deliberative"`, lo que excluía el caso de malla de colisión incompleta (ruta `"reactive"`, velocidad real nula, ningún sensor activo). Captura el caso ESCANEO (`cmd_vx = 0`) donde `blind_wall_event` nunca dispara. Umbral: `STOPPED_CYCLES_THRESHOLD = 15` ciclos (3 s a 5 Hz).
 
-**Señal unificada `stuck_invisible`.** OR de las tres señales anteriores:
+**Señal V3d — congelamiento por posición neta (`_pos_freeze_cycles`, 2026-09-22).** Ninguna de las señales anteriores detecta el dron que *oscila* dentro de la malla convexa de un árbol de UE5: con velocidad instantánea de ~1.85 m/s, `_stopped_cycles` y `blind_wall_event` se reinician cada ciclo, `TRAJ_STALL` no alcanza el 70 % (13.3 % observado) y `evasion_stuck_cycles` no acumula porque el ciclo alterna progreso y estancamiento. V3d mide en cambio el **desplazamiento XY neto** respecto de una posición de referencia: si es menor que `POS_FREEZE_DIST_M = 0.50 m` durante `POS_FREEZE_THRESHOLD = 30` ciclos (6 s, por encima de un `GIRAR_90` de ~15 ciclos y de un barrido `deep_vlm` de ~25 ciclos), suma a `stuck_invisible`. La referencia se refresca cada `POS_FREEZE_THRESHOLD` ciclos para capturar derivas lentas y el contador no acumula mientras el VLM procesa o hay un barrido panorámico activo (`_scan_phase is not None`), casos en que la inmovilidad es intencional.
+
+**Señal unificada `stuck_invisible`.** OR de las cuatro señales anteriores:
 ```python
 stuck_invisible = imu_contact_event OR blind_wall_event
-                  OR (_stopped_cycles >= STOPPED_CYCLES_THRESHOLD)
+                  OR (_stopped_cycles   >= STOPPED_CYCLES_THRESHOLD)
+                  OR (_pos_freeze_cycles >= POS_FREEZE_THRESHOLD)
 ```
-`policy_router` consume este campo único en lugar de acceder directamente a los tres sub-campos, simplificando el routing (§5.3, prioridades 2 y 4). Los sub-campos individuales siguen disponibles para `evasive_node` y el logger.
+`policy_router` consume este campo único en lugar de acceder directamente a los sub-campos, simplificando el routing (§5.3, prioridades 2 y 4). Los sub-campos individuales siguen disponibles para `evasive_node` y el logger.
 
 **Señal V4 — profundidad monocular (Depth Anything V2 Metric, A1).** Cuando el drone avanza (`cmd_vx >= 0.30 m/s`), el flujo óptico reporta corredor libre (`blocked_fraction < 0.25`) y la ruta no es `"evasive"`, se solicita inferencia al `DepthEstimator` (hilo background). Si el resultado es reciente (`depth_age_ms < DEPTH_MAX_AGE_MS = 3000 ms`) y está por debajo del umbral de frenado (`depth_m < DEPTH_BRAKE_M = 5.0 m`) durante ≥ `DEPTH_BELOW_THRESHOLD = 2` ciclos consecutivos, la profundidad se **inyecta directamente en el `ObstacleField`** vía `field.merge_depth_estimate(depth_m, cmd_vx)`. Las tres celdas del sector centro quedan con `occupancy` por encima del umbral de bloqueo y `ttc_s = depth_m / cmd_vx`. El `source` del campo pasa a `"flow+depth"`, visible en `scene_summary`. Este diseño unificado (A1) garantiza que el router, el SLM y el logger vean un único campo de percepción coherente sin lógica especial en ninguna capa downstream — la profundidad no crea un path de routing separado.
 
@@ -298,6 +308,8 @@ Antes de ejecutar el escape, el nodo evalúa si el escape previo resolvió el at
 
 Si el atasco persiste, delega al módulo `deep_scan` (§5.12) antes de forzar el escape cinemático. Si `deep_scan` resuelve el ciclo, retorna; si falla (timeout o respuesta no válida), continúa hacia el escape sincrónico.
 
+**Precedencia del resultado VLM (Fix I, 2026-09-22).** Antes de evaluar la condición de escape, el nodo consulta `service.poll()` (idempotente: no consume el resultado) y, si hay un resultado con el ID del pedido pendiente, **omite el escape ese ciclo** para que el flujo llegue a `_finalize()`. Sin esta precedencia, `_deliberation_pending = True` congelaba `progress_stall_cycles` por encima del umbral y la ruta de deadlock interceptaba cada ciclo antes de la comprobación del pedido: el resultado válido del VLM (`EVADIR_DERECHA`) quedaba huérfano indefinidamente. La evidencia es una ventana de 80 ciclos (c2048–c2135, `seed_99`) en la que el log del VLM contenía la respuesta correcta y la acción ejecutada era `MANTENER_RUMBO` o `FRENAR`.
+
 El escape sincrónico **alterna** entre `GANAR_ALTURA` (intentos impares) y `PERDER_ALTURA` (intentos pares) para no insistir hacia arriba si el obstáculo bloquea también por encima. Guarda `_escape_baseline_dist = dist_xy` actual y la acción como maniobra comprometida (`ESCAPE_MANEUVER_DURATION_S` × `LOOP_HZ` ciclos).
 
 **Agotamiento del escape** (`_consecutive_escapes > MAX_CONSECUTIVE_ESCAPES = 3` o altitud > `MAX_ESCAPE_ALT_M = 20 m`): en vez de frenar indefinidamente (el comportamiento anterior, que producía un ciclo límite documentado), el nodo **enclava** el escape (`_escape_locked = True`) y cambia de estrategia: emite un `GIRAR_90` hacia el lado del waypoint e inyecta un waypoint de desvío temporal (`inject_corner`) a `CORNER_OFFSET_M` metros en esa dirección, para que `WaypointTracker` apunte al corredor lateral en vez de insistir hacia la línea bloqueada.
@@ -308,9 +320,13 @@ El escape sincrónico **alterna** entre `GANAR_ALTURA` (intentos impares) y `PER
 
 Llama a `service.poll()` para obtener el resultado más reciente y la edad del pedido pendiente:
 
-- **Resultado disponible con ID coincidente** → `_finalize()` (descripción abajo).
-- **Watchdog expirado** (`age_ms > SLM_WATCHDOG_MS = 1500 ms`) → `_fallback_decision()` → `_finalize()` marcando `timeout = True`.
+- **Resultado disponible con ID coincidente** → validación de frescura (abajo) y luego `_finalize()` (descripción abajo).
+- **Watchdog expirado** (`age_ms > SLM_WATCHDOG_MS`) → `_fallback_decision()`, sobre la que se aplica `_apply_trajectory_overrides()` (§5.12.2) antes de `_finalize()` marcando `timeout = True`. El override sobre el fallback evita que el watchdog repita, ciclo a ciclo, la misma acción errónea (típicamente `MANTENER_RUMBO` contra un obstáculo invisible que solo la historia de trayectoria delata).
 - **Pendiente dentro del watchdog** → emite `_wait_command()` y marca `_deliberation_pending = True`.
+
+El valor de `SLM_WATCHDOG_MS` es un parámetro calibrado contra la latencia medida, no una constante de diseño: 1 500 ms en el diseño inicial; 6 000 ms desde la calibración de 2026-0824 (régimen de 2–3.5 s con arranque en frío de ~8 s), valor con el que se ejecutó el lote base del capítulo 11; y 13 000 ms desde 2026-09-22, cuando los pilotos de depuración midieron ~10–11 s para consultas con imagen. Debe mantenerse por debajo de `SLM_HTTP_TIMEOUT_S = 15 s` para que el watchdog gane siempre al corte HTTP. La latencia efectiva observada en cada configuración se discute en §8.6.
+
+**Validación de frescura (A).** Al recibir la respuesta se compara el waypoint activo y la distancia al waypoint con un *snapshot* tomado al encolar el pedido; si el waypoint cambió o la distancia varió más de `DELIB_FRESHNESS_DIST_M = 8 m`, la respuesta se descarta (`err = "stale_response"`) y se aplica el fallback: la escena sobre la que razonó el VLM ya no es la actual. **Estado de verificación:** la revisión de código realizada para este informe encontró que el snapshot lee las claves `wp_index` y `dist_to_wp_m`, que no existen en `DroneState` (los nombres vigentes son `current_wp_index` y `waypoint_guidance["distance"]`), y que `_delib_snapshot_wp` / `_delib_snapshot_dist` no están declaradas en el `TypedDict`. En la versión evaluada la condición de descarte no puede activarse (§9.5.4); el efecto es que la respuesta se aplica como antes de la mejora, pero el mecanismo **no está en vigor** y no debe atribuírsele ningún resultado hasta corregirlo.
 
 `_wait_command()` resuelve el dilema de movilidad durante la espera: si hay un bloqueo central confirmado con TTC bajo (`close_structural = True`), emite `FRENAR` por seguridad; si no, avanza lentamente a `DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s`. La segunda opción preserva la traslación necesaria para que `FlowTTCEstimator` genere flujo óptico y mantenga la confianza de percepción. El bucle de retroalimentación que se rompía antes (frenar → sin flujo → sin confianza → volver a deliberar → frenar) se documenta en el análisis de TOWNSIM_INI (2026-0903).
 
@@ -320,11 +336,17 @@ Llama a `service.poll()` para obtener el resultado más reciente y la edad del p
 
 *Nota: el mecanismo de consulta proactiva (V2, activo en versiones anteriores) fue eliminado en la simplificación Zona 1 (2026-0907). El VLM proactivo consultaba cada 1.5 s en vuelo libre, sin mostrar beneficio medible en ninguna corrida, y competía con el path reactivo. `VLM_PROACTIVE_ENABLED = False` es ahora una constante (no una variable de entorno).*
 
-Construye el user prompt con `_build_user_prompt()` (cinco componentes: resumen del `ObstacleField`, objetivo/altitud, estado cinemático, motivo de consulta y historial reciente — descripción completa en §4.3). Si `VLM_VISION_ENABLED = True`, codifica `frame_history` como JPEG base64 (redimensionado a `VLM_IMAGE_MAX_SIZE = 384 px`). Encola el pedido en `DeliberationService.request()` (cola de tamaño 1 — un pedido nuevo descarta cualquier pedido pendiente no procesado). Guarda `_pending_delib_prompt` y `_pending_delib_frames` para la auditoría. Emite `_wait_command()`.
+Construye el user prompt con `_build_user_prompt()` (cinco componentes: resumen del `ObstacleField`, objetivo/altitud, estado cinemático, motivo de consulta e historial reciente — descripción completa en §8.5). Encola el pedido en `DeliberationService.request()` (cola de tamaño 1 — un pedido nuevo descarta cualquier pedido pendiente no procesado), guarda `_pending_delib_prompt` y `_pending_delib_frames` para la auditoría y emite `_wait_command()`.
+
+**Política de visión (C, 2026-09-22).** La imagen se adjunta **solo en bloqueo duro confirmado**: `VLM_VISION_ENABLED` activo, historial de frames disponible y (`evasion_stuck_cycles >= hard_stall_threshold()` **o** `imu_contact_event` **o** `blind_wall_event`). En los disparos tácticos blandos se envía texto puro: en las mediciones de depuración una respuesta de solo texto tarda ~0.6 s frente a ~10–11 s con imagen, y a esa latencia la escena puede haber cambiado antes de que llegue la respuesta. Cuando hay imagen, la nota de motivo de consulta le indica al modelo que, si los sensores de flujo reportan baja confianza, **la imagen es la fuente primaria** y debe evadir hacia el corredor que vea aunque los sectores digan «sin evidencia». Los frames se codifican como JPEG base64 redimensionado a `VLM_IMAGE_MAX_SIZE = 384 px`. Los system prompts (variante con visión y variante solo texto) se cargan desde `config/prompts/system_vision.txt` y `system_text.txt` (§8.5), con fallback al prompt interno si el archivo no existe.
+
+*Nota: el mecanismo de consulta proactiva (V2, activo en versiones anteriores) fue eliminado en la simplificación Zona 1 (2026-0907). El VLM proactivo consultaba cada 1.5 s en vuelo libre, sin mostrar beneficio medible en ninguna corrida, y competía con el path reactivo. `VLM_PROACTIVE_ENABLED = False` es ahora una constante (no una variable de entorno).*
+
+**Sub-meta semántica opcional (`VlmGoal`).** Además de la macro-acción, el esquema JSON admite campos opcionales `dx_m`, `dy_m`, `dz_m` (offset en el marco del cuerpo: adelante, derecha, abajo NED), `confidence`, `semantic_label` y `mode`. Si el VLM los emite con `confidence >= VLM_GOAL_MIN_CONFIDENCE = 0.7`, `vlm_goal_to_inject_corner()` rota el offset con el yaw actual y lo convierte en un `inject_corner` (waypoint de desvío en coordenadas NED de mundo), siempre que no haya ya un escape comprometido; se conservan las últimas tres sub-metas para el prompt siguiente. El prompt con visión solicita explícitamente offsets de escala real (6–20 m), no micro-correcciones.
 
 ### `_finalize()` — Resolución de una deliberación
 
-Aplica un override de seguridad: si el VLM eligió `MANTENER_RUMBO` pero `close_structural = True`, fuerza `_fallback_decision()` y marca `is_fallback = True`. Traduce la macro-acción a comando cinemático con `action_to_command()`. Agrega una entrada a `deliberations[]` con `id`, `timestamp`, `arm`, `model`, `vision_enabled`, `system_prompt`, `prompt`, `raw_response`, `macro_action`, `rationale`, `is_fallback`, `timeout`, `adherent`, `used_json_schema`, `latency_ms`. Si la macro-acción es evasiva (`EVADIR_*`, `GANAR_ALTURA`), la compromete como maniobra activa.
+Aplica un override de seguridad: si el VLM eligió `MANTENER_RUMBO` pero `close_structural = True`, fuerza `_fallback_decision()` y marca `is_fallback = True`. Traduce la macro-acción a comando cinemático con `action_to_command()`. Agrega una entrada a `deliberations[]` con `id`, `timestamp`, `arm`, `model`, `vision_enabled`, `system_prompt`, `prompt`, `raw_response`, `macro_action`, `rationale`, `is_fallback`, `timeout`, `adherent`, `used_json_schema`, `latency_ms`. Si la macro-acción es de escape (`EVADIR_*`, `GANAR_ALTURA`, `PERDER_ALTURA`), la compromete como maniobra activa **y activa `_escape_reset`** (Fix H, 2026-09-22). Sin ese reinicio, `evasion_stuck_cycles` seguía por encima de `hard_stall_threshold()` en el ciclo siguiente y un disparador basado en ese contador volvía a enrutar al nodo deliberativo; el nuevo pedido sobrescribía la maniobra sin que llegara a ejecutarse. El CHANGELOG atribuye la preempción a `TRAJ_STALL`; en el orden de prioridades vigente (§5.3) la persistencia de maniobra (prioridad 6) se evalúa antes que `TRAJ_STALL` (8), por lo que el camino efectivo pudo ser la escalada de la prioridad 4 (`stuck_invisible` con contador sobre el umbral duro). No se aislaron por separado; el reinicio de `_escape_reset` neutraliza a ambos. En la corrida piloto `seed_99` el VLM devolvió `EVADIR_DERECHA` durante 200 ciclos consecutivos (c2585–c2784) sin que la maniobra se ejecutara una sola vez. Con el reinicio, `WaypointTracker.reset_progress()` pone `progress_stall_cycles` y `evasion_stuck_cycles` en cero en el ciclo N+1 y el router respeta la maniobra comprometida (prioridad 6).
 
 ### `_fallback_decision()` — Heurística determinista
 
@@ -344,7 +366,7 @@ Red de seguridad para respuestas que no siguen el formato JSON exacto, incluso c
 
 `DeliberationService` (`src/agents/deliberation_service.py`) mantiene un hilo daemon (`threading.Thread`) con una cola de entrada de tamaño 1 (`Queue(maxsize=1)`). `request(payload)` vacía la cola antes de poner el nuevo pedido (garantiza que el worker procese siempre el pedido más reciente, nunca uno stale). `poll()` retorna `(resultado_más_reciente, edad_ms_pedido_pendiente, hay_pedido_pendiente)` con protección de lock. El servicio es compartido entre el brazo SLM (`deliberative_node`) y el módulo `deep_scan` — un único hilo worker para toda la misión.
 
-La consulta HTTP al servidor LLM (`_query_slm_impl`) intenta primero con `response_format=json_schema` (decodificación restringida, temperatura 0.2, max_tokens 200, timeout 8 s); si el servidor no soporta el modo o devuelve vacío, reintenta en modo libre y deja el parser tolerante como red de seguridad. El resultado incluye `used_json_schema: bool` para auditoría.
+La consulta HTTP al servidor LLM (`_query_slm_impl`) intenta primero con `response_format=json_schema` (decodificación restringida, temperatura 0.2, max_tokens 200; timeout HTTP configurable: `SLM_HTTP_TIMEOUT_S = 15 s` en consultas tácticas y `SLM_DEEP_HTTP_TIMEOUT_S = 20 s` en el barrido profundo, que envía varias imágenes); si el servidor no soporta el modo o devuelve vacío, reintenta en modo libre y deja el parser tolerante como red de seguridad. El resultado incluye `used_json_schema: bool` para auditoría.
 
 ## 5.11 Nodo `fsm`
 
@@ -371,19 +393,19 @@ La diferencia de umbral clave: la FSM usa `FSM_TTC_BRAKE_S = 1.5 s` y `FSM_TTC_A
 ## 5.12 Módulo de escaneo y evaluación en atasco duro (`deep_scan`)
 
 **Archivo:** `src/agents/deep_scan.py`. Compartido entre los brazos SLM y FSM.
-**Activación:** `DEADLOCK_STRATEGY` cuando se detecta atasco duro sin corredor transitable. A partir de 2026-0907, el modo por defecto es `"slam_assess"`. Los modos `"deep_vlm"` y `"blind"` están disponibles vía variable de entorno como legado seleccionable (diseñados para el factorial de corridas S6: comparar `deep_vlm` vs `slam_assess` en el cap. 11).
+**Activación:** `DEADLOCK_STRATEGY` cuando se detecta atasco duro sin corredor transitable. A partir de 2026-0907, el modo por defecto es `"slam_assess"`. Los modos `"deep_vlm"` y `"blind"` están disponibles vía variable de entorno como legado seleccionable (diseñados para el factorial de corridas S6: comparar `deep_vlm` vs `slam_assess` en el cap. 11). La batería experimental del capítulo 10 y el plan de pruebas V2 usan `deep_vlm`.
 
 El módulo implementa una máquina de estados de cuatro fases, sostenida a través de ciclos consecutivos vía los campos `_scan_*` del `DroneState`:
 
 **Fase `None` (inicialización):** inicializa `_scan_phase = "rotando"`, `_scan_heading_index = 0`, `_scan_frames = []`, `_scan_start_yaw_deg = yaw_actual`. Cancela cualquier maniobra activa.
 
-**Fase `"rotando"`:** comanda `target_yaw = start_yaw + index × (360° / SCAN_HEADING_COUNT_DEEP)` (con `SCAN_HEADING_COUNT_DEEP = 4`, los cuatro rumbos son +0°, +90°, +180°, +270° del rumbo de inicio). La traslación es cero (`vx = vy = vz = 0`). Cuando el yaw actual está dentro de `SCAN_YAW_TOLERANCE_DEG = 5°` del objetivo → transición a `"asentando"`.
+**Fase `"rotando"`:** comanda `target_yaw = start_yaw + index × (360° / SCAN_HEADING_COUNT_DEEP)` (con `SCAN_HEADING_COUNT_DEEP = 4`, los cuatro rumbos son +0°, +90°, +180°, +270° del rumbo de inicio). La traslación es cero (`vx = vy = vz = 0`). Cuando el yaw actual está dentro de `SCAN_YAW_TOLERANCE_DEG = 5°` del objetivo → transición a `"asentando"`. **Timeout de rotación (Fix E, 2026-09-22):** si el dron no puede girar —pata trabada en la malla de un árbol— el contador `_scan_rot_stall` supera `SCAN_ROT_TIMEOUT_CYCLES = 10` (2 s a 5 Hz, por encima del tiempo de un giro libre de 90°), el barrido se abandona con `clear_scan_state()`, se registra `_deadlock_event` con `fell_back_to_blind = True` y el llamador cae al escape sincrónico. Antes del timeout, el barrido ciclaba indefinidamente con `_deliberation_pending = True` sin progresar.
 
 **Fase `"asentando"`:** hover en el rumbo objetivo durante `SCAN_SETTLE_CYCLES_DEEP = 2` ciclos para que la física del simulador estabilice la actitud antes de capturar. Al terminar el asentamiento, captura el frame del `DroneState` (el que `capture_node` ya produjo en este ciclo, **nunca** una nueva llamada a AirSim), guarda la tupla `(heading_deg, rgb_frame, capture_ts)` en `_scan_frames`, avanza `_scan_heading_index` y vuelve a `"rotando"`. Al completar los cuatro rumbos → transición a `"capturado"`.
 
 **Fase `"capturado"`:** construye el prompt del escaneo profundo (`_build_deep_scan_prompt()`) e invoca `service.request()` con los frames codificados como JPEG base64 y etiquetas por rumbo (`"[Rumbo 90.0°] (rumbo actual, el que viene fallando)"`). El modo del pedido es `"deep_scan"`, para que `_query_slm_impl()` use `SYSTEM_PROMPT_DEEP_SCAN` en vez del prompt táctico normal. En ciclos siguientes hace poll hasta que el resultado llegue o el watchdog `SLM_DEEP_WATCHDOG_MS = 12 000 ms` expire.
 
-Si el resultado es una acción válida → `_apply_scan_resolution()`: emite la macro-acción, registra en `deliberations[]` con `arm = "{arm}_deep_scan"`, limpia el estado del escaneo, escribe `_deadlock_event` y pide `_escape_reset`. Retorna `True` al llamador (el escape sincrónico queda descartado este ciclo). Antes de emitir la acción, se aplica `_apply_trajectory_overrides(decision, trajectory, telemetry)`: si el VLM recomendó EVADIR hacia un lado con stall_rate alto y el lado contrario no está peor, el override cambia la dirección y lo registra en el log (`"[slam_assess] override: VLM recomendó X → Y (trajectory stats)"`).
+Si el resultado es una acción válida → `_apply_scan_resolution()`: emite la macro-acción, registra en `deliberations[]` con `arm = "{arm}_deep_scan"`, limpia el estado del escaneo, escribe `_deadlock_event` y pide `_escape_reset`. Retorna `True` al llamador (el escape sincrónico queda descartado este ciclo). Antes de emitir la acción, se aplica `_apply_trajectory_overrides(decision, trajectory, telemetry)` (§5.12.2) y `_apply_scan_resolution()` recibe la trayectoria para dimensionar la maniobra (§5.12.3). Hasta 2026-09-22 el camino `deep_vlm` llamaba a `_apply_scan_resolution` sin trayectoria y nunca aplicaba los overrides: el escape duraba siempre un ciclo nominal (~1 s) independientemente del historial de stalls (Fix B). El prompt del barrido incluye ahora `RETROCEDER` entre las acciones válidas (`SYSTEM_PROMPT_DEEP_SCAN`).
 
 Si el resultado llega con acción no válida, o el watchdog expira → limpia el estado, escribe `_deadlock_event` con `fell_back_to_blind = True` y retorna `False`. El llamador continúa inmediatamente hacia el escape sincrónico (GANAR_ALTURA / PERDER_ALTURA) como red de seguridad final, **en el mismo ciclo**.
 
@@ -397,13 +419,50 @@ A diferencia de `deep_vlm`, el modo `slam_assess` **no realiza rotación panorá
 
 ### §5.12.1 `FlightTrajectory` y `trajectory_context_text`
 
-`FlightTrajectory` (`src/agents/spatial_history.py`) es un ring buffer de eventos de vuelo (`TrajectoryEvent`) instanciado una vez en `_build_nodes()` y actualizado al inicio de cada ciclo por `capture_node`. Cada evento registra posición, rumbo, acción tomada, Δ distancia al waypoint y si fue stall. El buffer guarda `SLAM_HISTORY_SIZE = 60` eventos (2× `SLAM_CONTEXT_MAX_EVENTS = 30`, por defecto).
+`FlightTrajectory` (`src/agents/spatial_history.py`) es un ring buffer de eventos de vuelo (`TrajectoryEvent`) instanciado una vez en `_build_nodes()` y actualizado al inicio de cada ciclo por `capture_node`. Cada evento registra posición, rumbo, acción tomada, Δ distancia al waypoint y si fue stall. El buffer guarda `SLAM_HISTORY_SIZE` eventos (80 en la configuración de producción, ≈ 16 s a 5 Hz; el contexto textual usa como máximo `SLAM_CONTEXT_MAX_EVENTS = 30`).
 
 `trajectory_context_text(current_heading_deg)` agrupa los últimos 30 eventos en cuatro zonas angulares relativas (FRENTE ±30°, IZQUIERDA, DERECHA, ATRÁS) y produce un resumen por zona: intentos, stalls, progreso promedio. Si el progreso promedio de una zona es `< SLAM_MARGINAL_PROGRESS_M = 0.28 m/ciclo`, se emite un ADVERTENCIA de obstáculo invisible incluso cuando hay ciclos con aparente progreso (avance marginal con stalls = firma de muro liso o malla convexa). El texto diferencia dos sub-casos: `stalls == 0` con avance marginal (obstáculo 100% invisible al flujo) vs. `stalls > 0` con avance neto nulo (muro liso con rebotes físicos ocasionales).
 
-`zone_stats(current_heading_deg)` devuelve el mismo desglose como dict `{zona: {"attempts", "stall_rate"}}`, usado directamente por `capture_node` para publicar `_traj_frente_stall_rate` / `_traj_izq_stall_rate` / `_traj_der_stall_rate` en el estado del grafo cada ciclo.
+`zone_stats(current_heading_deg)` devuelve el mismo desglose como dict `{zona: {"attempts", "stall_rate", "delta_sum", "avg_prog"}}` (con `avg_prog = -delta_sum / attempts`, el mismo criterio que `trajectory_context_text`), usado directamente por `capture_node` para publicar `_traj_frente_stall_rate` / `_traj_izq_stall_rate` / `_traj_der_stall_rate` en el estado del grafo cada ciclo.
 
 Durante todo el barrido, `_deliberation_pending = True` congela el contador `evasion_stuck_cycles` para que `main.py` no lo resetee por accidente mientras el dron gira en el lugar.
+
+### §5.12.2 Overrides deterministas de trayectoria (`_apply_trajectory_overrides`)
+
+El VLM decide con un único fotograma frontal y, por construcción, no ve los obstáculos que el flujo óptico tampoco ve. La historia de zonas de `FlightTrajectory` sí los delata (stall alto, avance marginal). Por eso toda decisión de escape del VLM pasa por una capa determinista que la contrasta con esa historia antes de despacharla. Se aplica en `slam_assess`, en `deep_vlm` (desde 2026-09-22; antes solo en `slam_assess`) y sobre el fallback del watchdog (§5.10, Ruta 2). Las reglas se evalúan en este orden y la primera que dispara devuelve su acción:
+
+| Override | Condición (estadísticas por zona sobre los últimos eventos) | Acción forzada |
+|---|---|---|
+| **1a** | FRENTE con stall ≥ 70 %, e IZQUIERDA y DERECHA con ≥ 3 intentos y stall ≥ 70 % | `RETROCEDER` (tres zonas bloqueadas) |
+| **1b** | FRENTE con stall ≥ 90 % y ≥ 20 eventos, sin intentos laterales | `RETROCEDER` (dron inmovilizado: `EVADIR` se ejecutó pero no pudo rotar, así que los eventos siguen en la zona FRENTE) |
+| **1c** | FRENTE con stall ≥ 90 % y ≥ 20 eventos, laterales sin intentos o con stall ≥ 70 % | `RETROCEDER` (cierra el hueco entre 1a y 1b: laterales intentadas una o dos veces y fallidas) |
+| **3a** | El VLM propone `MANTENER_RUMBO` o `EVADIR_*`; FRENTE con ≥ 3 intentos y avance medio < `SLAM_MARGINAL_PROGRESS_M` (0.28 m/ciclo); altitud ≤ `SLAM_CEILING_ALT_MAX_M` (7.5 m); laterales sin rotar | `PERDER_ALTURA` (firma de techo: autopista elevada o estructura horizontal) |
+| **3b** | Igual que 3a pero sin cumplir la condición de techo | `EVADIR_IZQUIERDA` si la izquierda no se probó; si no, `EVADIR_DERECHA`; si ambas se probaron, `GIRAR_90` (firma de muro o árbol) |
+| **2** | El VLM propone `GANAR_ALTURA` o `PERDER_ALTURA`; FRENTE con stall ≥ 70 %; algún lateral sin explorar | `EVADIR` hacia el lateral sin explorar (*lateral-first*: no escalar en vertical antes de probar los costados) |
+
+El Override 3 discrimina por altitud y no por tasa de stall porque `EVADIR_*` estrafa sin rotar: sus eventos quedan registrados en la zona FRENTE e inflan `frente_stall_rate` a 0.40–1.00 incluso bajo un techo, sin choque frontal real. La altitud de crucero bajo la autopista elevada de CitySim es ~6 m; el umbral original de 5 m (2026-09-11) se elevó a 7.5 m para cubrirla. La regla se generalizó de `MANTENER_RUMBO` a `EVADIR_IZQUIERDA` y `EVADIR_DERECHA` (2026-09-12) porque un `EVADIR` sin rotación real es tan inútil como `MANTENER_RUMBO`: el dron se desplaza lateralmente sin girar y el bloqueo no se resuelve. Validación sobre corridas piloto:
+
+| Caso | Stall FRENTE | Sub-rama de Override 3 |
+|---|---|---|
+| Autopista elevada de CitySim (c449) | 0.0 % | 3a → `PERDER_ALTURA` |
+| Estructura final de TownSim (c1121) | 6.7 % | 3a → `PERDER_ALTURA` |
+| Edificio de TownSim (sesión 3, 2000 ciclos) | 40 % | 3b → `EVADIR` lateral |
+
+Los tres casos provienen de corridas de depuración (n = 1 por caso) y sirvieron para fijar el umbral; no constituyen validación estadística.
+
+### §5.12.3 `RETROCEDER` y esquina post-retroceso
+
+`RETROCEDER` es la octava acción del vocabulario del sistema (§5.14) y la respuesta al caso en que las tres zonas frontales están cerradas. Se ejecuta durante `MANEUVER_DURATION_S × RETROCEDER_DURATION_FACTOR` (2.0 s × 2.5 = 5 s, ≈ 6 m a 1.2 m/s): el factor se calibró (Fix 12) porque un retroceso de 3 m resultó insuficiente para salir de la «burbuja» de colisión de 4–5 m de radio de una malla de árbol, y el dron volvía al mismo árbol en todos los casos observados. Si la historia registra stalls en la zona ATRÁS (≥ 2 intentos, ≥ 70 %), el factor se reduce a 1.5 (Fix 14) para no chocar contra un obstáculo trasero. La duración de las maniobras `EVADIR_*` también es adaptativa: ×2 con stall frontal ≥ 50 % y ×3 con velocidad agresiva (`vx = 1.2 m/s`) con stall ≥ 70 %.
+
+Al despachar `RETROCEDER` **no se inyecta una esquina a ciegas** (Fix 11: una esquina fija a 90° podía llevar al dron contra otro árbol): se marca `_post_retroceder_corner_pending` y se espera al escaneo siguiente, que ve la escena despejada tras el retroceso. Cuando esa segunda consulta elige una acción lateral, el sistema inyecta un waypoint de esquina a `CORNER_OFFSET_M` metros (15 m en la configuración de producción; 12 m por defecto en código) calculado así (Fix 17):
+
+```
+bearing_to_wp = yaw_actual + bearing_err_deg          # rumbo absoluto al waypoint
+corner_yaw    = bearing_to_wp ± 90°                    # perpendicular al camino
+signo         = +1 si el VLM dijo EVADIR_IZQUIERDA, -1 en otro caso   # lado OPUESTO
+```
+
+Dos decisiones no obvias. Primero, la referencia angular es el rumbo *al waypoint* y no el rumbo del dron (Fix 16, `yaw ± 45°`): el rumbo al waypoint solo cambia cuando el dron se desplaza, no cuando rota, mientras que el yaw del dron puede distar ~90° del camino real. En el caso que motivó el cambio (`citysim_pilot`, c1703) el dron apuntaba al norte (−9°) con el waypoint al oeste (−88°); con el criterio anterior la esquina caía dentro de la fachada del edificio y el dron oscilaba a 12.8 m de ella indefinidamente. Segundo, el lado se **invierte** respecto del que sugiere el VLM: el modelo percibe apertura visual en la dirección de la cámara, que cuando el rumbo está desfasado del camino suele ser el lado paralelo a la fachada bloqueante; el lado opuesto es el que queda libre en el plano del waypoint. La inversión está verificada geométricamente en un caso (esquina en (72, −110), al norte del edificio) y no está validada estadísticamente. Si tras el retroceso el VLM vuelve a pedir `RETROCEDER`, el sistema lo interpreta como esquina cerrada y fuerza `GANAR_ALTURA` (Fix C): sin esa ruptura, el barrido panorámico posterior al retroceso veía paredes, el VLM recomendaba `RETROCEDER` de nuevo y el ciclo se repetía hasta el timeout de la corrida.
 
 ## 5.13 Nodo `motor`
 
@@ -431,7 +490,10 @@ Todos los nodos de política comparten `action_to_command()` (`src/agents/action
 | `GANAR_ALTURA` | 0 | 0 | −`EVASION_UP_SPEED` (1.5) | guidance | None |
 | `PERDER_ALTURA` | 1.0 | 0 | +`EVASION_DOWN_SPEED` (0.8) | 0 | None |
 | `GIRAR_90` | 0 | 0 | 0 | ±20 | snap 90° hacia WP |
+| `RETROCEDER` | −`EVASION_BACK_SPEED` (1.2) | 0 | guidance | 0 | None (rumbo congelado) |
 | `FRENAR` | 0 | 0 | 0 | 0 | None |
+
+`RETROCEDER` usa `yaw_rate = 0` con `vx < 0`: `execute_velocity` detecta la marcha atrás y congela el rumbo (`MaxDegreeOfFreedom` con tasa cero). Con el modo por defecto para `yaw_rate = 0` (`ForwardOnly`), AirSim gira la proa hacia la dirección de traslación en el marco de mundo y el dron completaba un giro de ~180° en lugar de retroceder (confirmado en corridas de diagnóstico). No está en `PROMPT_ACTIONS` del nodo deliberativo regular —el enum del esquema JSON no la admite— pero sí en el del barrido `deep_vlm`/`slam_assess` y en los overrides deterministas (§5.12.2).
 
 `GANAR_ALTURA` usa `vx = 0` (asciende en el lugar) desde el fix de 2026-0824: la versión anterior tenía `vy = 0.5 m/s` de deriva lateral constante, que alejaba el waypoint en el plano XY, la misma métrica que mide si el atasco se resolvió, produciendo un escape que se retroalimentaba a sí mismo.
 
@@ -451,7 +513,7 @@ Todos los nodos de política comparten `action_to_command()` (`src/agents/action
 - Si `|bearing_err_deg| > PROGRESS_STALL_BEARING_EXEMPT_DEG` (30°) → el ciclo se exime (el dron está girando activamente hacia el waypoint, no atascado), pero solo hasta `PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES = 15` ciclos consecutivos (un giro que no converge no puede eximirse indefinidamente).
 - En caso contrario → incrementa `evasion_stuck_cycles`.
 
-`effective_stall_threshold()` calcula el umbral mínimo de ciclos sin progreso que es **físicamente demostrable**: `eps_m / (min_speed × 1/loop_hz)`. Con los defaults (`eps_m = 0.5 m`, `min_speed = 0.25 m/s`, `loop_hz = 5`), el umbral coherente es 10 ciclos. `hard_stall_threshold()` es 3× ese valor (30 ciclos), a partir del cual el escape se fuerza aunque la percepción crea ver un corredor libre.
+`effective_stall_threshold()` calcula el umbral mínimo de ciclos sin progreso que es **físicamente demostrable**: `eps_m / (min_speed × 1/loop_hz)`. Con los defaults (`eps_m = 0.5 m`, `min_speed = 0.25 m/s`, `loop_hz = 5`), el umbral coherente es 10 ciclos. `hard_stall_threshold()` es `STUCK_HARD_FACTOR` veces ese valor, a partir del cual el escape se fuerza aunque la percepción crea ver un corredor libre. El factor por defecto en código es 3.0 (30 ciclos, 6 s), pero la configuración de producción lo fija en **1.5** (15 ciclos, 3 s a 5 Hz): con 3.0, en una corrida de diagnóstico el dron tardó 254 ciclos en llegar al primer `RETROCEDER` y ya estaba físicamente embebido en la malla del árbol; con 1.5 el escape se activa antes de la embebida.
 
 ## 5.16 Salvaguardas y contratos de diseño
 
@@ -470,3 +532,10 @@ Cuando `degraded = True` (AirSim no disponible), el sistema no sustituye el dato
 ## 5.18 Registro de vuelo y auditoría post-vuelo
 
 Cada ejecución del lazo táctico genera una carpeta autocontenida en `airsim-runs/` (descripción completa en §4.4), con traza JSONL/CSV, resumen por waypoint, fotogramas de auditoría VLM y video anotado. La traza CSV/JSONL es el contrato de evidencia primaria del que se derivan las métricas del capítulo 10 y el análisis de modos de falla del capítulo 9. Para la inspección cualitativa, el visor HTML sincroniza en ambos sentidos el video con la traza (descripción de las anotaciones del video en §4.4).
+
+## 5.19 Cierre de misión y seguridad de proximidad
+
+**Aterrizaje suave (`land_smooth`, 2026-09-22).** Al completar la misión, `main.py` y el runner de experimentos llaman a `AirSimClient.land_smooth()` en lugar de `land()`. Con `landAsync()` invocado desde la altura de crucero (~10 m) SimpleFlight producía una caída libre; la secuencia actual es: (1) 1.5 s de hover para anular la velocidad horizontal; (2) descenso con `moveToZAsync` a `LAND_DESCENT_SPEED_MPS = 0.5 m/s` hasta z = −0.3 m NED, con un timeout proporcional a la distancia; (3) `armDisarm(False)` desde 30 cm de altura. Ante cualquier excepción desarma igualmente. A 0.5 m/s el descenso desde 10 m tarda ~20 s.
+
+**Aborto por proximidad crítica (`DEPTH_EMERGENCY`).** El runner de experimentos mide la distancia mínima al obstáculo con la cámara de profundidad del simulador **solo como métrica de evaluación** (nunca como entrada del lazo de vuelo, §5.16) y aborta la corrida si el dron está físicamente embebido en la malla: distancia mínima < `DEPTH_EMERGENCY_DIST_M` **y** velocidad < `DEPTH_EMERGENCY_MAX_SPEED_MPS`. La condición de velocidad es necesaria: sin ella, el umbral original de 0.30 m disparaba durante la navegación normal al aproximarse a un obstáculo y abortaba corridas válidas. En las corridas piloto de TownSim el dron llega naturalmente a ~10 cm de los árboles (mínimo registrado: 0.104 m en una corrida exitosa) y se recupera, por lo que el umbral se recalibró de 0.30 a 0.05 m y el de velocidad de 0.30 a 0.10 m/s: solo dispara si la profundidad medida es prácticamente nula. Poner `DEPTH_EMERGENCY_DIST_M=0.0` deshabilita el chequeo.
+

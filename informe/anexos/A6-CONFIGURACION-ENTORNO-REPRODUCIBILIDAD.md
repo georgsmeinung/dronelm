@@ -136,8 +136,12 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_VISION_ENABLED` | `true` | Habilita el envío del fotograma visual en base64 en el prompt multimodal. |
 | `VLM_IMAGE_MAX_SIZE` | `384` | Resolución máxima de la imagen enviada al VLM. Limita la cantidad de tokens visuales generados por el codificador ViT, manteniendo la latencia acotada. |
 | `VLM_USE_JSON_SCHEMA` | `true` | Activa la decodificación gramaticalmente restringida por esquema JSON (Anexo 4). |
-| `SLM_WATCHDOG_MS` | `6000` | Tiempo límite del perro guardián (en ms) para la respuesta del SLM en hilo asíncrono. Si expira, se cancela y se aplica el fallback determinista. |
-| `DEADLOCK_STRATEGY` | `"deep_vlm"` | Estrategia ante atasco: `"deep_vlm"` ejecuta barrido panorámico de 6 rumbos con consulta VLM; `"blind"` realiza escape puramente vertical por FSM. |
+| `SLM_WATCHDOG_MS` | `13000` | Tiempo límite del perro guardián (en ms) para la respuesta del SLM en hilo asíncrono. Si expira, se aplica el fallback determinista (con overrides de trayectoria). Recalibrado el 2026-09-22 (era 6000 en el lote base y 1500 en el diseño inicial) porque las consultas con imagen se midieron en ~10–11 s; debe ser menor que `SLM_HTTP_TIMEOUT_S`. |
+| `SLM_HTTP_TIMEOUT_S` | `15.0` | Timeout del cliente HTTP en consultas tácticas al VLM. Debe ser mayor que `SLM_WATCHDOG_MS` para que el watchdog gane siempre al corte HTTP. |
+| `SLM_DEEP_HTTP_TIMEOUT_S` | `20.0` | Timeout HTTP del barrido profundo (varias imágenes → prefill mayor). |
+| `SYSTEM_PROMPT_VISION_FILE` / `SYSTEM_PROMPT_TEXT_FILE` | `../config/prompts/system_vision.txt` / `system_text.txt` | Archivos de system prompt (con y sin visión), relativos a `airsim-loop/`. Admiten el placeholder `{safe_margin_ttc_s}`. Si no se configuran, se usa el prompt interno. |
+| `DELIB_FRESHNESS_DIST_M` | `8.0` | Variación de distancia al waypoint (m) a partir de la cual se descartaría una respuesta VLM por obsolescencia. **Sin efecto en el estado actual del código** (cap. 9, §9.5.4). |
+| `DEADLOCK_STRATEGY` | `"slam_assess"` | Estrategia ante atasco duro: `"slam_assess"` (por defecto en `config/.env`) usa historial de trayectoria + frame frontal sin rotación; `"deep_vlm"` ejecuta un barrido panorámico de 4 rumbos con consulta VLM (la usan las corridas experimentales, vía `--deadlock-strategies`); `"blind"` realiza escape vertical sin VLM. |
 
 ### 3. Lazo de Control Táctico
 | Variable | Valor Nominal | Justificación y Efecto |
@@ -161,10 +165,26 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 ### 5. Umbrales del `ObstacleField`
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
-| `OBSTACLE_OCCUPANCY_BLOCKED`| `0.35` | Fracción mínima de la celda con TTC $< 2.5\text{ s}$ para declarar bloqueo por ocupación. |
+| `OBSTACLE_OCCUPANCY_BLOCKED`| `0.011` | Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden el 2026-09-10 (AUC 0.87; cap. 7, §7.5); el valor histórico era 0.35. |
 | `OBSTACLE_TTC_BLOCKED_S` | `2.5` | Umbral temporal de TTC (en segundos) por debajo del cual una celda se considera en colisión inminente. |
 | `OBSTACLE_MIN_CONFIDENCE` | `0.15` | Piso de píxeles válidos para que una celda participe en la votación. |
 | `OBSTACLE_MIN_CONFIDENCE_TTC`| `0.35` | Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación. |
+
+### 5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)
+| Variable | Valor nominal | Justificación y efecto |
+|---|---|---|
+| `STUCK_HARD_FACTOR` | `1.5` | Umbral de atasco duro = factor × umbral efectivo (10 ciclos) = 15 ciclos (3 s). Por defecto en código es 3.0. |
+| `STOPPED_CYCLES_THRESHOLD` | `15` | Ciclos parado (V3c) para sumar a `stuck_invisible`. |
+| `POS_FREEZE_DIST_M` / `POS_FREEZE_THRESHOLD` | `0.50` / `30` | V3d: desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta. |
+| `STUCK_RETROCEDER_LIMIT` | `30` | V3e: ciclos a velocidad nula con `stuck_invisible` que fuerzan la ruta deliberativa. |
+| `SCAN_ROT_TIMEOUT_CYCLES` | `10` | Timeout de rotación del barrido panorámico (2 s). |
+| `SLAM_HISTORY_SIZE` | `80` | Tamaño del ring buffer de trayectoria (≈ 16 s a 5 Hz). |
+| `CORNER_OFFSET_M` | `15.0` | Distancia del waypoint de esquina (m); el default en código es 12.0. |
+| `MANEUVER_DURATION_S` | `2.0` | Duración base de las maniobras de evasión (s), multiplicada de forma adaptativa según el stall (cap. 5, §5.12.3). |
+| `EVASION_BACK_SPEED` | `1.2` | Velocidad de `RETROCEDER` (m/s). |
+| `DEPTH_EMERGENCY_DIST_M` / `DEPTH_EMERGENCY_MAX_SPEED_MPS` | `0.05` / `0.1` | Aborto de corrida por dron embebido en la malla (solo en el runner; cap. 5, §5.19). `0.0` deshabilita. |
+| `LAND_DESCENT_SPEED_MPS` | `0.5` | Velocidad del descenso de `land_smooth()` al final de la misión. |
+| `FLOW_HOLDOVER_MAX_FRAMES` / `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` | `3` / `5.0` | Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, §6.12). |
 
 ### 6. Grabación de Video y Viewport
 | Variable | Valor nominal | Default si ausente | Justificación y efecto |
@@ -286,6 +306,27 @@ El mapa `CitySim` presenta rascacielos masivos. Para evitar atravesar estructura
     { "x": 130.0, "y": 75.0, "z": -30.0, "label": "WP_2" },
     { "x": 130.0, "y": 0.0,  "z": -50.0, "label": "WP_3" },
     { "x": 0.0,   "y": 0.0,  "z": -10.0, "label": "WP_4" }
+  ]
+}
+```
+
+### A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (`townsim_ini.json`, versión V2)
+
+Versión vigente desde 2026-09-22 (8 waypoints, ~340 m). Respecto de la versión con la que se ejecutó el lote base, agrega `WP_0b_SOBRE_PLAZA` (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y `WP_1b_PASO_MOLDURA` (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.
+
+```json
+{
+  "mission_id": "TOWNSIM_INI",
+  "map": "townsim_calib.png",
+  "waypoints": [
+    { "x": 0.0, "y": 0.0, "z": -30.0, "label": "WP_0_ASCENSO" },
+    { "x": -60.0, "y": 5.0, "z": -22.0, "label": "WP_0b_SOBRE_PLAZA" },
+    { "x": -75.0, "y": 10.0, "z": -10.0, "label": "WP_1_ENTRADA_NORTE" },
+    { "x": -70.0, "y": 0.0, "z": -10.0, "label": "WP_1b_PASO_MOLDURA" },
+    { "x": -75.0, "y": -35.0, "z": -10.0, "label": "WP_2_CENTRO_CORREDOR" },
+    { "x": -75.0, "y": -70.0, "z": -10.0, "label": "WP_3_SALIDA_SUR" },
+    { "x": 0.0, "y": -70.0, "z": -30.0, "label": "WP_4_CLIMB_ESTE" },
+    { "x": 0.0, "y": 0.0, "z": -10.0, "label": "WP_5_RETORNO" }
   ]
 }
 ```

@@ -236,7 +236,7 @@ La tabla de comparación propuesta para el capítulo 11 sería:
 | Tasa de éxito — tránsito libre | ref | ref | ref | ? |
 | Tasa de éxito — obstrucción densa | ref | ref | ref | ? |
 | Ratio tiempo vs. `reactive` | 1.0× | ? | 1.06–2.20× | ? |
-| Latencia de decisión | ~0.1 ms | ~0.2 ms | 850–1400 ms | < 5 ms (estimado) |
+| Latencia de decisión | ~0.1 ms | ~0.2 ms | 1,2–4,6 s (piloto V2; cap. 8, §8.6) | < 5 ms (estimado) |
 | Consumo adicional de VRAM | — | — | ~2 GB | < 50 MB (CNN pequeña) |
 
 La hipótesis de trabajo es que el brazo `rl` superará al brazo `reactive` en escenarios de

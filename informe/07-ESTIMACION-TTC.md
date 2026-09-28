@@ -75,33 +75,32 @@ El umbral para $\tau = 2$ s (3.18 s) fue adoptado como `TTC_EVASION_THRESHOLD` (
 
 **Interpretación de la banda entre umbrales.** La zona $TTC \in (3.2,\ 4.6)$ s corresponde al estado "advertencia" en el `policy_router` (cap. 5): no hay bloqueo activo pero el riesgo es elevado; el sistema emite una solicitud al deliberativo y reduce la agresividad lateral de `evasive_node`. La banda de histéresis entre evasión (3.2 s) y zona segura (4.6 s) previene el *chattering* — oscilación rápida entre maniobra de evasión y crucero normal cuando el TTC estimado flota alrededor del umbral de evasión.
 
-## 7.5 Calibración del canal de ocupación (estado y pendientes)
+## 7.5 Calibración del canal de ocupación (D2)
 
-A diferencia del canal de TTC, el canal de ocupación (divergencia escalada → `occupancy`) no pasó todavía por el mismo protocolo de validación contra profundidad. La calibración actual del factor $0.450/8.0$ (descrita en §6.8 del capítulo 6) se realizó con un subconjunto reducido de los datos de `runs/ttc/` y no produjo una curva ROC completa; el factor fue ajustado manualmente hasta que el comportamiento de vuelo en los escenarios de prueba fue satisfactorio. No es un proceso de calibración estadísticamente controlado.
+A diferencia del canal de TTC, el canal de ocupación (divergencia escalada → `occupancy`) no había pasado por el protocolo de validación contra profundidad: el umbral de 0.35 se fijó a ojo durante el desarrollo, sin dataset de respaldo. El experimento D2 (2026-09-10) lo cerró parcialmente.
 
-La validación pendiente consiste en:
+**Protocolo.** Dataset capturado con `callibration-flight/d2_occupancy_capture.py`: 196 frames en TownSim frente a una pared sólida en (x = 61, y = −42), a cuatro velocidades de aproximación (0.5, 1, 2 y 3 m/s). Verdad de terreno binaria: `gt_depth_centro < 5.0 m` (29 frames positivos, 167 negativos). Curva ROC del predicado `occ_centro ≥ t` barriendo 500 umbrales (`d2_roc_analysis.py`) y umbral óptimo por índice de Youden, análogo al de §7.4.
 
-1. Ejecutar `experiments/analyze_occupancy.py` sobre el conjunto completo (3735 registros), usando como referencia binaria la profundidad de celda < 10 m.
-2. Construir la curva ROC del predicado `occupancy ≥ OBSTACLE_OCCUPANCY_BLOCKED`.
-3. Calcular el umbral óptimo por Youden, análogamente a §7.4.
-4. Verificar que el umbral derivado estadísticamente coincida con el valor operativo actual (0.35), o actualizarlo.
+**Resultado.** AUC = 0.87; umbral óptimo t = 0.011 con TPR = 0.931 y FPR = 0.222. El máximo de ocupación central observado en todo el dataset fue 0.082, de modo que con el umbral original 0.35 la TPR era 0: **el canal de ocupación no se disparó en ningún frame** y la detección recaía íntegramente en el TTC. Ambas cifras (AUC y umbral) se reprodujeron al redactar este informe recalculando la curva sobre el archivo del dataset. `OBSTACLE_OCCUPANCY_BLOCKED` pasó de 0.35 a 0.011.
 
-El `OBSTACLE_OCCUPANCY_BLOCKED = 0.35` es por tanto un valor provisorio que funciona en la práctica pero no tiene respaldo estadístico equivalente al del canal de TTC. Esta asimetría en la validación de los dos canales es una limitación documentada del estado actual del sistema.
+**Consecuencia para los resultados del capítulo 11.** Las corridas del lote base se ejecutaron con commits del 8 y 9 de septiembre, **anteriores** a la calibración (10 de septiembre): en ellas el canal de ocupación estuvo efectivamente inactivo. Es una diferencia de versión más entre el lote base y el código V2 (cap. 10, §10.12), y una razón adicional para no comparar ambos.
+
+**Límites de la calibración.** (i) Una sola escena y una sola geometría (una pared lisa), no la diversidad de vegetación y fachadas de los tiers 1 y 2; (ii) 29 positivos: el intervalo de confianza del umbral es amplio y no se estimó; (iii) FPR = 0.22 significa que aproximadamente uno de cada cinco frames sin obstáculo cercano vota bloqueo por ocupación, un costo de falsos positivos aceptado a cambio de la sensibilidad; (iv) los valores de ocupación dependen de la textura de la escena, por lo que un umbral fijo calibrado en TownSim puede ser inadecuado en CitySim. Para (iv), `main.py` incorpora un `OccupancyCalibrator` (§6.9) que mide el ruido de ocupación durante los primeros ciclos de cada misión (diseñado para ejecutarse con el dron quieto en zona despejada); su efecto no se validó en ningún experimento, y el runner de lotes no lo emplea. La validación cruzada del umbral en escenas distintas queda pendiente.
 
 | Métrica de validación | Canal TTC | Canal Ocupación |
 |---|---|---|
-| Protocolo de validación ROC | ✓ Completo | ✗ Pendiente |
-| Umbral derivado por Youden | ✓ (`TTC_EVASION_THRESHOLD = 3.2 s`) | ✗ (valor provisorio = 0.35) |
-| AUC reportada | 0.96–0.97 | No disponible |
-| Conjunto de datos | 3735 registros | Subconjunto no documentado |
+| Protocolo de validación ROC | ✓ Completo | ✓ Realizado (dataset reducido) |
+| Umbral derivado por Youden | ✓ (`TTC_EVASION_THRESHOLD = 3.2 s`) | ✓ (`OBSTACLE_OCCUPANCY_BLOCKED = 0.011`) |
+| AUC reportada | 0.96–0.97 | 0.87 |
+| Conjunto de datos | 3735 registros | 196 frames, una escena |
 
-## 7.6 Validación de la derotación en giros agresivos (pendiente)
+## 7.6 Validación de la derotación en giros agresivos (D3)
 
-El guard `FLOW_MAX_ROTATION_DEG = 2°` descarta todos los ciclos donde la rotación entre frames supera ese umbral (cap. 6). El conjunto de datos de validación actual no ejercita este guard de forma significativa: el 97% de los registros del escenario de guiñada cae en $|\dot{\psi}| < 0.05$ rad/s.
+El guard `FLOW_MAX_ROTATION_DEG = 2°` descarta todos los ciclos donde la rotación entre frames supera ese umbral (cap. 6). El conjunto de validación original no lo ejercitaba: el 97 % de los registros del escenario de guiñada caía en $|\dot{\psi}| < 0.05$ rad/s. El experimento D3 (2026-09-10; `d3_derotation_capture.py`) lo ejercita con 250 frames frente a una pared sólida a 5 m de distancia constante, a cinco tasas de guiñada comandadas (0.0, 0.3, 0.5, 0.8 y 1.0 rad/s; 50 frames por tasa tras descartar 5 de estabilización).
 
-Para completar la validación, es necesario un escenario específico con guiñada de $\pm 0.3$–$0.5$ rad/s sin traslación, que ejercite tanto la correcta inhibición del estimador (el guard debe activarse y retornar `empty_field`) como la eventual reanudación correcta de la estimación una vez que la rotación decrece. También sería informativo estratificar el error relativo de TTC por bins de tasa de guiñada con los datos existentes: si el error en $|\dot{\psi}| \in [0.03, 0.05)$ rad/s es significativamente mayor que en bins más bajos, sugeriría un error de escala o de sincronización entre la telemetría de actitud y el timestamp del frame que debería corregirse antes de considerar cerrada la validación del canal de TTC.
+**Resultado.** En las cuatro tasas no nulas (guiñadas reales medias de 18.7, 32.9, 51.4 y 63.9 °/s) el 100 % de los frames quedó con `source = "degraded"` y `foe_confidence = 0`: el estimador **se inhibe por sí mismo** y no entrega TTC contaminado con confianza alta. Coincide con el umbral teórico: 2°/frame a 5 Hz equivale a ~10 °/s (0.175 rad/s), y la primera tasa ensayada por encima de él (0.3 rad/s) ya produce confianza cero. Los datos se reprodujeron al redactar este informe a partir del archivo del dataset.
 
-Esta ampliación queda como trabajo pendiente para la versión final del sistema antes de pruebas en hardware real (cap. 9).
+**Alcance de la validación.** Se validó la *inhibición*, no la *exactitud* de la derotación. Dos preguntas siguen abiertas: (i) no se ensayaron tasas entre 0 y 0.3 rad/s, de modo que no se midió el error de TTC en el tramo previo al guard ni se confirmó que 0.175 rad/s sea el punto de corte; (ii) la condición de referencia (0.0 rad/s) tampoco tiene traslación, por lo que su `foe_confidence` es también casi nula (media 0.005) y no permite contrastar con un caso de traslación sin giro; la reanudación correcta de la estimación una vez que la rotación decrece no se ejercitó. La estratificación del error relativo de TTC por bins de tasa de guiñada con los datos existentes sigue siendo informativa. Estas dos preguntas, junto con la validación en hardware real, quedan como trabajo pendiente.
 
 ## 7.7 Implicaciones para el diseño del sistema
 
@@ -111,4 +110,4 @@ Los resultados de validación tienen consecuencias directas sobre el diseño del
 
 **La baja correlación puntual justifica la banda de histéresis y el rol del VLM.** Si el TTC fuera un cronómetro confiable, bastaría un solo umbral. La incertidumbre de escala hace necesaria la zona de advertencia (3.2–4.6 s) y la consulta al VLM antes de comprometer una maniobra definitiva: el modelo de lenguaje provee contexto semántico que el estimador de flujo no puede dar.
 
-**La validación pendiente del canal de ocupación es deuda técnica controlada.** El sistema funciona con el umbral provisorio de ocupación porque en los escenarios ensayados, el TTC es el canal primario de decisión y la ocupación actúa como corroboración secundaria. Sin embargo, antes de despliegue en entornos más exigentes (o en hardware real), el protocolo de validación del canal de ocupación debería completarse.
+**La validación del canal de ocupación es parcial, y esa deuda es controlada pero no nula.** Con la calibración D2 el canal de ocupación dejó de estar inactivo y actúa como detector temprano independiente del TTC, pero se calibró con una escena y 29 positivos (§7.5). Antes de despliegue en entornos más exigentes (o en hardware real), la validación cruzada del umbral en escenas distintas debería completarse. Nótese además que el lote base del capítulo 11 se ejecutó antes de esta calibración, con el canal de ocupación efectivamente inactivo.

@@ -169,6 +169,21 @@ La combinación de las cuatro vulnerabilidades produjo en una corrida de validac
 
 Desde el exterior, la corrida registraba una misión "sin errores" (no hay excepciones en el log) que simplemente "no llegó a destino". Sin el análisis del viewer frame a frame y la lectura del JSONL de auditoría, el patrón era opaco.
 
+### 9.5.4 Instancias posteriores (2026-09-12 a 2026-09-22)
+
+La revisión de las corridas piloto del código V2 (cap. 10, §10.12) produjo tres hallazgos posteriores a la redacción original de esta sección: dos corregidos y uno abierto. Los tres comparten la propiedad que organiza el capítulo: el sistema producía respuestas válidas y plausibles, sin excepciones en el log, y aun así no las ejecutaba.
+
+**(a) Un flag descartado por LangGraph (corregido).** `_post_retroceder_corner_pending`, que difiere la inyección de la esquina hasta el escaneo posterior a un `RETROCEDER` (§5.12.3), se escribía correctamente pero no estaba declarada en `DroneState`. Desaparecía entre invocaciones de `graph.invoke()` y la esquina nunca se inyectaba: el dron volvía a la misma fachada. Se diagnosticó en la corrida `seed_1`, donde el flag desaparecía antes del ciclo 1783. Es la quinta instancia de la Vulnerabilidad A (§9.5.2).
+
+**(b) Resultados válidos del VLM que nunca se ejecutan (corregido).** Dos errores de *precedencia* entre rutas, no de estado descartado, con el mismo síntoma:
+
+- *Maniobra cancelada por un disparador de atasco (Fix H).* Al despachar `EVADIR_DERECHA`, el nodo deliberativo no reiniciaba el contador de atasco; en el ciclo siguiente un disparador basado en ese contador (el CHANGELOG lo atribuye a `TRAJ_STALL`; §5.10 discute por qué el camino efectivo pudo ser otro) volvía a enrutar al nodo deliberativo, cuyo nuevo pedido sobrescribía `active_maneuver` antes de que se ejecutara. En la corrida `seed_99` el VLM devolvió `EVADIR_DERECHA` durante 200 ciclos consecutivos (c2585–c2784) sin que la maniobra se ejecutara una sola vez.
+- *Resultado huérfano por el camino de deadlock (Fix I).* La rama de escape por deadlock se evaluaba antes que la lectura del pedido pendiente. Con `_deliberation_pending = True` el contador de progreso queda congelado por encima del umbral, de modo que la rama interceptaba todos los ciclos y `service.poll()` nunca se alcanzaba: en c2048–c2135 (80 ciclos) el log del VLM contenía la respuesta correcta —latencia real de 3 731 ms— y la acción ejecutada era `MANTENER_RUMBO` o `FRENAR`.
+
+Ninguno de los dos se veía en las métricas agregadas. Ambos se encontraron comparando, ciclo a ciclo, el campo `slm.raw_response` de la traza JSONL con la acción realmente ejecutada; es decir, la técnica 2 de §9.7 (guardar los datos crudos enviados y recibidos por el modelo) fue la que los hizo visibles.
+
+**(c) Snapshot de frescura inoperante (abierto).** El descarte de respuestas obsoletas (§5.10, «Validación de frescura») compara el waypoint y la distancia actuales con un *snapshot* tomado al encolar el pedido. La revisión de código realizada para este informe encontró tres defectos que lo vuelven inoperante: (i) el snapshot y la comparación leen las claves `wp_index` y `dist_to_wp_m`, que no existen en `DroneState` (los nombres vigentes son `current_wp_index` y `waypoint_guidance["distance"]`), de modo que `state.get()` devuelve `None`; (ii) `_delib_snapshot_wp` y `_delib_snapshot_dist` no están declaradas en el `TypedDict`, por lo que LangGraph las descartaría aunque las claves fueran las correctas; (iii) `_delib_vision_used`, que registra si la consulta usó imagen, tampoco está declarada, y el campo `vision_enabled` del registro de auditoría cae siempre al valor de configuración. La condición de descarte nunca es verdadera, con lo que el efecto neto es que las respuestas se aplican como antes de la mejora. No tiene consecuencia de seguridad, pero es un caso donde una *feature* documentada como implementada no está en vigor, sin ningún síntoma visible; se declara como riesgo residual (§9.8) y como condición previa a atribuir resultados al mecanismo.
+
 ## 9.6 Falla 5 — Degradaciones sensoriales silenciosas
 
 ### 9.6.1 Inversión de canales de color RGB/BGR
@@ -227,9 +242,9 @@ Las técnicas de diagnóstico que sí funcionaron en este proyecto fueron:
 
 ## 9.8 Riesgos residuales y trabajo pendiente
 
-Los cinco modos de falla documentados están corregidos en la implementación actual. Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:
+Los cinco modos de falla documentados están corregidos en la implementación actual; queda abierto el caso (c) de §9.5.4. Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:
 
-**Riesgo A — Nuevas claves de DroneState.** Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en `DroneState`. La mitigación es el modo `LANGGRAPH_DEBUG_STATE_CLIPPING=1` y el proceso de revisión de `DroneState` en el CHANGELOG antes de cada nueva feature.
+**Riesgo A — Nuevas claves de DroneState.** Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en `DroneState`. La mitigación es el modo `LANGGRAPH_DEBUG_STATE_CLIPPING=1` y el proceso de revisión de `DroneState` en el CHANGELOG antes de cada nueva feature. El riesgo se materializó dos veces más tras la redacción original (§9.5.4, casos (a) y (c)), lo que indica que la mitigación depende demasiado de la disciplina manual. Una defensa estructural sería un test de contrato que recorra el código fuente de `src/agents/`, extraiga todas las claves `state["_..."]` y `state.get("...")` y falle si alguna no pertenece a `DroneState`; hoy no existe.
 
 **Riesgo B — Cambios de API del binding de AirSim.** El binding `cosysairsim` es un fork activamente mantenido ([Jansen et al., 2023](13-REFERENCIAS.md#ref-jansen-2023)). Actualizaciones del binding pueden modificar el comportamiento de métodos (como ocurrió con la corrección del cuaternión). Los tests unitarios de conversión de telemetría son la mitigación; deben ejecutarse tras cada actualización del binding.
 

@@ -1,3 +1,39 @@
+# 2026-09-28 - Actualizacion del informe al estado del codigo del 2026-09-22 (caps. 5-12, A6, A8, A9) + Anexo 9 (LeWorldModel)
+
+## Alcance
+
+El informe se actualizo con todo lo hecho hasta el 2026-09-22. El unico trabajo experimental pendiente es la
+re-ejecucion de los escenarios con obstruccion bajo el codigo V2 (lotes D/E/F); el cap. 11 conserva los
+resultados del lote base pre-V2 con un aviso de estado explicito.
+
+## Cambios por capitulo
+
+- **Cap. 5**: V3d/V3e, escalada `stuck_invisible`, `STUCK_HARD_FACTOR=1.5` (umbral duro 15 ciclos), Fix I (precedencia del
+  resultado VLM), Fix H (`_escape_reset`), politica de vision (C), validacion de frescura (A, documentada como NO operativa),
+  `VlmGoal`, timeouts HTTP, `deep_vlm` (timeout de rotacion, overrides, ruptura del bucle RETROCEDER), nuevas secciones 5.12.2
+  (overrides 1a/1b/1c/2/3), 5.12.3 (RETROCEDER + esquina Fix 11/12/14/16/17) y 5.19 (`land_smooth`, `DEPTH_EMERGENCY`).
+- **Cap. 6**: P1 (IMU pre-integracion), P2 (holdover TTC), P3 (supresion de yaw), calibracion D2 del umbral de ocupacion,
+  `OccupancyCalibrator`, tabla de variables.
+- **Cap. 7**: 7.5 (D2: AUC 0.87, Youden 0.011, TPR 0.931, FPR 0.222; recalculado desde `d2_dataset`) y 7.6 (D3: inhibicion del
+  estimador con yaw >= 0.3 rad/s, foe_confidence=0; recalculado desde `d3_dataset`) con sus limites.
+- **Cap. 8**: vocabulario de 8 acciones (RETROCEDER no esta en el enum del nodo regular), prompts externalizados, latencia
+  observada (piloto seed_99: mediana 1.46 s, p95 3.73 s, max 4.57 s) y evolucion del watchdog (1500 -> 6000 -> 13000 ms).
+- **Cap. 9**: nueva 9.5.4 (flag `_post_retroceder_corner_pending` descartado, resultados VLM huerfanos Fix H/I, snapshot de frescura inoperante).
+- **Cap. 10**: manifiesto `townsim_ini` V2, warm-up del modelo, versionado del codigo, quinta amenaza a la validez, nueva 10.12
+  (corte de version V2, lotes D/E/F, estado).
+- **Cap. 11**: aviso de estado (lote base pre-V2 y pre-calibracion D2). **Cap. 12**: alcance temporal de la evidencia, limitaciones
+  y trabajo futuro actualizados. **A6, A8, A9, README**: variables, manifiesto, latencias, estados.
+
+## Hallazgos abiertos (no corregidos en codigo, documentados en el informe)
+
+1. `deliberative.py`: el snapshot de frescura lee `wp_index` / `dist_to_wp_m` (inexistentes en `DroneState`) y
+   `_delib_snapshot_wp/_dist` y `_delib_vision_used` no estan declaradas -> el descarte por frescura nunca se activa.
+2. `RETROCEDER` figura en `config/prompts/system_*.txt` pero no en `PROMPT_ACTIONS`/enum del nodo deliberativo regular.
+3. `OccupancyCalibrator` solo esta integrado en `main.py`, no en `experiments/runner.py`.
+4. `PLAN-PRUEBAS-TESIS-V2.md` busca `[TRAJ-OVERRIDE-3]` en los logs, pero el codigo imprime `[slam_assess] override-3`.
+
+---
+
 # 2026-09-22 - Ejecución de Test pilotos y detectados estos deep_vlm fixes: DEPTH_EMERGENCY, escape adaptivo, loop RETROCEDER, V3d pos-freeze
 
 ## Contexto

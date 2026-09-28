@@ -28,7 +28,7 @@ El modelo adoptado en la implementación definitiva es **Qwen2.5-VL-3B-Instruct*
 | **Qwen2.5-VL-3B-Instruct** | ~2 GB | **~2.0 GB** | **Adoptado** |
 | Qwen2.5-VL-7B-Instruct | ~4.5 GB | ~4–5 GB | VRAM insuficiente con UE5.5 activo |
 
-El criterio de selección fue: **(a)** soporte de visión nativa, **(b)** VRAM < 2.5 GB con Q4_K_M, **(c)** soporte de `response_format: json_schema` en el backend de inferencia, **(d)** latencia de inferencia < 2 s en el hardware disponible para prompts de ~500 tokens con dos imágenes.
+El criterio de selección fue: **(a)** soporte de visión nativa, **(b)** VRAM < 2.5 GB con Q4_K_M, **(c)** soporte de `response_format: json_schema` en el backend de inferencia, **(d)** latencia de inferencia < 2 s en el hardware disponible para prompts de ~500 tokens con dos imágenes. Es un criterio de diseño; las latencias efectivamente observadas en la configuración de producción, que en consultas con imagen lo superan, se documentan en §8.6.
 
 ### 8.1.3 Posicionamiento respecto al estado del arte
 
@@ -44,24 +44,25 @@ La respuesta del modelo se solicita con el parámetro `response_format={"type": 
 
 El efecto práctico es que, cuando la decodificación restringida está activa, es estructuralmente imposible producir una respuesta que no sea JSON conforme al esquema. El `adherence_rate` (fracción de respuestas parseables al primer intento) medido en los escenarios de validación sube de ~73% (solo prompt) a ~98% (con `json_schema`).
 
-El esquema declarado tiene la forma mínima necesaria para la toma de decisión:
+El esquema declarado (`RESPONSE_JSON_SCHEMA`, `deliberative.py`) tiene la forma mínima necesaria para la toma de decisión, más un grupo de campos opcionales de sub-meta (§8.3):
 
 ```json
 {
   "type": "object",
   "properties": {
-    "action": {
-      "type": "string",
-      "enum": ["keep_going", "evasive", "girar_90", "fsm", "degraded"]
-    },
-    "reason": { "type": "string", "maxLength": 120 }
+    "macro_action": { "type": "string", "enum": ["EVADIR_DERECHA", "EVADIR_IZQUIERDA", "FRENAR",
+                                                "GANAR_ALTURA", "MANTENER_RUMBO", "PERDER_ALTURA"] },
+    "rationale":    { "type": "string" },
+    "dx_m": { "type": "number" }, "dy_m": { "type": "number" }, "dz_m": { "type": "number" },
+    "confidence": { "type": "number" }, "semantic_label": { "type": "string" },
+    "mode": { "type": "string", "enum": ["navegar", "inspeccionar", "buscar", "esperar"] }
   },
-  "required": ["action", "reason"],
+  "required": ["macro_action", "rationale"],
   "additionalProperties": false
 }
 ```
 
-La enumeración explícita de los valores posibles de `action` (§8.3) es el mecanismo que convierte el espacio de acción discreto del sistema en una restricción gramatical directamente aplicable por el motor de gramática.
+La enumeración explícita de los valores posibles de `macro_action` (§8.3) es el mecanismo que convierte el espacio de acción discreto del sistema en una restricción gramatical directamente aplicable por el motor de gramática.
 
 ### 8.2.2 Parser tolerante como red de seguridad
 
@@ -69,9 +70,9 @@ La garantía de `json_schema` depende de que el backend local soporte la versió
 
 1. **`json.loads()` directo**: para respuestas bien formadas sin envoltura.
 2. **Extracción de bloque JSON con regex**: detecta el bloque `{...}` más externo en una respuesta que incluye markdown, texto explicativo o prefijos conversacionales.
-3. **Búsqueda de campo `action` por expresión regular**: extrae el valor del campo `action` sin necesidad de parsear el JSON completo, como último recurso cuando la respuesta está truncada o mal formada.
+3. **Búsqueda de campo `macro_action` por expresión regular** (y, en última instancia, búsqueda de cualquier acción válida como subcadena del texto): extrae el valor sin necesidad de parsear el JSON completo, como último recurso cuando la respuesta está truncada o mal formada.
 
-Si las tres estrategias fallan, `_fallback_decision()` entra en vigor: devuelve `keep_going` con una nota de error, lo que es conservador (continuar la maniobra actual) y auditable (la nota aparece en el log).
+Si las estrategias fallan, `_fallback_decision()` entra en vigor: un árbol de decisión determinista sobre el `ObstacleField` (§5.10) —`FRENAR` sin evidencia de percepción, `GANAR_ALTURA` con los tres sectores bloqueados, evasión hacia el lado libre, `MANTENER_RUMBO` con el centro libre— con una nota de error auditable en el log. Desde 2026-09-22 el fallback por *timeout* del watchdog pasa además por los overrides deterministas de trayectoria (§5.12.2), para que no repita una acción que la historia de vuelo ya refutó.
 
 La métrica `adherence_rate` es una fila explícita de la tabla de resultados (cap. 11): cuantifica cuánto aporta, en la práctica, la decodificación restringida por sobre el parser tolerante como única defensa. Este número importa porque si fuera cercano al 100% solo con el parser, la decodificación restringida sería overhead sin beneficio; si la diferencia es grande (como documentan Raspanti et al. [2025] y Geng et al. [2025] para SLMs compactos), la restricción es una decisión de ingeniería con impacto medible en la fiabilidad del sistema.
 
@@ -87,8 +88,12 @@ El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas 
 | `GANAR_ALTURA` | Ascender en el lugar (vz = −1.5 m/s, vx = 0) para sobrevolar el obstáculo |
 | `PERDER_ALTURA` | Descender con avance lento (vz = +0.8 m/s, vx = 1.0 m/s) |
 | `FRENAR` | Detener el drone en el lugar (hover) con corrección de altitud por controlador P |
+| `RETROCEDER` | Marcha atrás con rumbo congelado (vx = −1.2 m/s) durante ~5 s (≈ 6 m) para salir de la malla de colisión de un obstáculo (§5.12.3) |
 
-`GIRAR_90` **no está en `PROMPT_ACTIONS`**: es un bypass determinista que el `policy_router` activa directamente cuando `blocked_fraction > 0.6`, sin consultar al VLM. El modelo nunca necesita elegirlo; si lo intentara, el parser lo descartaría.
+El vocabulario completo del sistema tiene **ocho** acciones (`VALID_ACTIONS` en `action_map.py`), pero no todas son elegibles por el VLM en todos los caminos:
+
+- `GIRAR_90` **no está en ningún `PROMPT_ACTIONS`**: es un bypass determinista que el `policy_router` activa directamente cuando `blocked_fraction > 0.6`, sin consultar al VLM. Si el modelo lo intentara, el parser lo descartaría.
+- `RETROCEDER` (incorporada en septiembre de 2026) está en el `PROMPT_ACTIONS` del escaneo `deep_vlm`/`slam_assess` y en los overrides deterministas, pero **no** en el del nodo deliberativo regular (seis acciones): su enum de decodificación restringida no la admite y `_parse_decision()` la descartaría. Los archivos de system prompt (§8.5) sí la listan entre los valores permitidos; la discrepancia es una inconsistencia conocida del estado actual, sin efecto observado porque el camino regular nunca puede producirla, y debe resolverse alineando prompt y esquema antes de las corridas V2.
 
 El schema JSON declarado para la decodificación restringida tiene la forma:
 
@@ -105,7 +110,10 @@ El schema JSON declarado para la decodificación restringida tiene la forma:
           "enum": ["EVADIR_DERECHA", "EVADIR_IZQUIERDA", "FRENAR",
                    "GANAR_ALTURA", "MANTENER_RUMBO", "PERDER_ALTURA"]
         },
-        "rationale": {"type": "string"}
+        "rationale": {"type": "string"},
+        "dx_m": {"type": "number"}, "dy_m": {"type": "number"}, "dz_m": {"type": "number"},
+        "confidence": {"type": "number"}, "semantic_label": {"type": "string"},
+        "mode": {"type": "string", "enum": ["navegar", "inspeccionar", "buscar", "esperar"]}
       },
       "required": ["macro_action", "rationale"],
       "additionalProperties": false
@@ -118,7 +126,9 @@ El schema JSON declarado para la decodificación restringida tiene la forma:
 - `"TTC_CRITICO"`: excluye `MANTENER_RUMBO` (hay colisión inminente confirmada).
 - `"DEADLOCK_ESCAPE"`: excluye `MANTENER_RUMBO` y `FRENAR` (el drone ya está atascado; detenerse o insistir al frente es contraproducente).
 
-Esta poda semántica concentra la distribución de muestreo del modelo en las acciones físicamente coherentes con la causa de la consulta, reduciendo la tasa de respuestas subóptimas en los escenarios de mayor riesgo sin requerir fine-tuning.
+Esta poda semántica concentra la distribución de muestreo del modelo en las acciones físicamente coherentes con la causa de la consulta, sin requerir fine-tuning. Su efecto sobre la tasa de respuestas subóptimas no se ha medido de forma aislada.
+
+**Sub-meta semántica (`VlmGoal`).** Los campos opcionales `dx_m`, `dy_m`, `dz_m`, `confidence`, `semantic_label` y `mode` permiten que el VLM, además de la etiqueta de macro-acción, proponga un punto de destino próximo en el marco del cuerpo (adelante, derecha, abajo NED). El sistema solo lo adopta si `confidence >= 0.7` y lo convierte en un waypoint de desvío en coordenadas de mundo (`inject_corner`, §5.10). La macro-acción sigue siendo la decisión de seguridad; la sub-meta solo orienta *hacia dónde*.
 
 Esta arquitectura de lista blanca tiene tres propiedades de diseño que se derivan mutuamente:
 
@@ -143,8 +153,9 @@ Cada macro-acción se traduce a un comando cinemático concreto a través de `ac
 | `PERDER_ALTURA` | 0 | 0 | `+EVASION_DOWN_SPEED` | 0 |
 | `FRENAR` | 0 | 0 | (P-ctrl. alt.) | 0 |
 | `GIRAR_90` | (manejado por `girar_90_node`) | — | — | — |
+| `RETROCEDER` | `-EVASION_BACK_SPEED` | 0 | según guiado | 0 (rumbo congelado) |
 
-Los valores constantes son variables de entorno: `EVASION_LATERAL_YAW_RATE = 15.0` °/s, `EVASION_UP_SPEED = 1.5` m/s, `EVASION_DOWN_SPEED = 0.8` m/s, `CORNER_OFFSET_M = 12.0` m.
+Los valores constantes son variables de entorno: `EVASION_LATERAL_YAW_RATE = 15.0` °/s, `EVASION_UP_SPEED = 1.5` m/s, `EVASION_DOWN_SPEED = 0.8` m/s, `EVASION_BACK_SPEED = 1.2` m/s, `CORNER_OFFSET_M = 12.0` m (15.0 m en la configuración de producción).
 
 **Invariante de diseño.** Centralizar la traducción en una sola función garantiza que ninguna macro-acción puede tener definiciones cinemáticas distintas según quién la active. Antes de que `action_to_command()` fuera la única fuente de verdad, el nodo FSM y el nodo deliberativo tenían sus propias tablas de velocidades, que diveraron sutilmente (el FSM usaba `vx = 1.5 m/s` para `GANAR_ALTURA`, el deliberativo usaba `1.0 m/s`). Esa asimetría provocó trayectorias asimétricas entre brazos durante las pruebas A/B que dificultaron la comparación (CHANGELOG.md 2026-0824). La función centralizada elimina esa clase de divergencia estructuralmente.
 
@@ -164,19 +175,35 @@ Estos avisos llegan al VLM en todos los paths deliberativos (regular, `slam_asse
 
 **Componente 3 — Historial de decisiones recientes.** Las últimas `N` acciones tomadas (con sus razones, si el deliberativo las reportó), incluyendo cuántos ciclos lleva activa la maniobra actual y si hay señales de atasco (progreso hacia el waypoint < umbral durante varios ciclos). Este componente provee contexto temporal que una sola imagen no puede dar: el VLM puede distinguir "empecé a evadir hace 1 ciclo" de "llevo 8 ciclos evasión sin avanzar".
 
-**Componente 4 — Motivo explícito de consulta.** El campo `reason_note` codifica *por qué* el nodo deliberativo fue activado en este ciclo: `"TTC_CRITICO"` (TTC < umbral de evasión), `"TTC_ADVERTENCIA"` (zona de histéresis), `"FALTA_EVIDENCIA"` (flujo colapsado), `"DEADLOCK_ESCAPE"` (atasco detectado), `"DEEP_SCAN_RESULT"` (resultado de exploración rotacional). Este campo es crítico para calibrar la respuesta: ante `"FALTA_EVIDENCIA"`, el VLM no debe reportar obstáculos que no ve; ante `"TTC_CRITICO"`, debe priorizar evasión inmediata.
+**Componente 4 — Motivo explícito de consulta.** El campo `reason_note` codifica *por qué* el nodo deliberativo fue activado en este ciclo (y, cuando hay imagen y los sensores tienen baja confianza, le indica al modelo que use **la imagen como fuente primaria**, sin sobre-indexar en los sectores «sin evidencia»): `"TTC_CRITICO"` (TTC < umbral de evasión), `"TTC_ADVERTENCIA"` (zona de histéresis), `"FALTA_EVIDENCIA"` (flujo colapsado), `"DEADLOCK_ESCAPE"` (atasco detectado), `"DEEP_SCAN_RESULT"` (resultado de exploración rotacional). Este campo es crítico para calibrar la respuesta: ante `"FALTA_EVIDENCIA"`, el VLM no debe reportar obstáculos que no ve; ante `"TTC_CRITICO"`, debe priorizar evasión inmediata.
 
 **Componente 5 — Instrucción de formato de salida.** Reiteración explícita del esquema JSON esperado y de los valores posibles del campo `action`, coherente con el `json_schema` declarado en el parámetro de formato. Esta redundancia entre prompt y schema es intencional: para modelos pequeños, la instrucción textual explícita mejora el `adherence_rate` incluso cuando la decodificación restringida está activa, especialmente en la elección del campo `action` dentro del dominio de la enumeración ([Geng et al., 2025](13-REFERENCIAS.md#ref-geng-2025)).
 
-**Parámetros de inferencia.** `temperature = 0.2` (baja entropía, respuestas reproducibles y conservadoras), `max_tokens = 200` (suficiente para la estructura JSON más una razón breve; evita respuestas extensas que agoten el presupuesto de la KV cache y aumenten la latencia). El límite de tokens no es arbitrario: con `max_tokens = 200` y el esquema mínimo, la generación termina en 0.8–1.2 s en el hardware disponible; con `max_tokens = 500` subiría a 2–3 s, cruzando el watchdog `SLM_WATCHDOG_MS = 1500`.
+**Prompts de sistema externalizados (2026-09-22).** Los system prompts ya no están fijos en el código: `SYSTEM_PROMPT_VISION_FILE` y `SYSTEM_PROMPT_TEXT_FILE` (`config/prompts/system_vision.txt`, `system_text.txt`) permiten editarlos sin tocar Python; el archivo admite el placeholder `{safe_margin_ttc_s}`, sustituido al cargar, y si no existe se usa el prompt interno como fallback. Ambos comparten la misma jerarquía de reglas, en orden de prioridad: (1) `MANTENER_RUMBO` solo con trayectoria libre hacia el waypoint; (2) evasión lateral si el sector lateral está despejado; (3) `GANAR_ALTURA` solo con bloqueo total por estructuras sólidas, `PERDER_ALTURA` si el obstáculo es vegetación con espacio debajo, `RETROCEDER` si el dron está pegado al obstáculo o las maniobras previas no avanzaron; (4) `FRENAR` ante peligro crítico en todas las direcciones. La variante con visión añade la regla «imagen frente a sensores» —la imagen es la fuente primaria cuando el prompt indica baja confianza— y la solicitud de sub-meta opcional con offsets de escala real (6–20 m). La regla estricta común prohíbe `MANTENER_RUMBO` si el sector central está bloqueado con TTC menor que `SAFE_MARGIN_TTC_S`, y declara `GANAR_ALTURA` como último recurso: un corredor lateral, aunque estrecho, es preferible a subir.
+
+**Política de visión (C).** La imagen solo se envía en bloqueo duro confirmado (`evasion_stuck_cycles >= hard_stall_threshold()`, `imu_contact_event` o `blind_wall_event`); en los disparos tácticos blandos el pedido es de texto puro (§5.10, Ruta 3). El registro de auditoría de cada deliberación indica, en `vision_enabled`, si esa consulta usó imagen.
+
+**Parámetros de inferencia.** `temperature = 0.2` (baja entropía, respuestas reproducibles y conservadoras), `max_tokens = 200` (suficiente para la estructura JSON más una razón breve; limita la longitud de generación y, con ella, la latencia y la presión sobre la KV cache).
 
 ## 8.6 Gestión de latencia: el watchdog y el creep speed
 
-El tiempo de inferencia del VLM (0.8–2.0 s en el hardware disponible) es un orden de magnitud mayor que el período del lazo de control (200 ms a 5 Hz). Esto hace imposible bloquear el lazo esperando la respuesta; el nodo deliberativo opera de forma asincrónica a través de `DeliberationService` (§5.10 del cap. 5), que corre en un daemon thread independiente. Esta separación entre una capa de ejecución rápida que nunca deja de responder y una capa de razonamiento lenta que se consulta de forma desacoplada no es una solución ad hoc de este sistema: es la instancia concreta, con un VLM en el rol deliberativo, del patrón de arquitecturas de tres capas (reactiva / secuenciamiento / deliberativa) documentado como solución general al problema de integrar planificación lenta con control robótico en tiempo real ([Gat, 1998](13-REFERENCIAS.md#ref-gat-1998)). El watchdog cumple el rol de la capa de secuenciamiento: arbitra si la respuesta deliberativa llega a tiempo para gobernar el ciclo, o si la capa reactiva (`creep_speed`, fallback determinista) debe seguir teniendo la última palabra.
+El tiempo de inferencia del VLM es un orden de magnitud mayor que el período del lazo de control (200 ms a 5 Hz). Esto hace imposible bloquear el lazo esperando la respuesta; el nodo deliberativo opera de forma asincrónica a través de `DeliberationService` (§5.10 del cap. 5), que corre en un daemon thread independiente. Esta separación entre una capa de ejecución rápida que nunca deja de responder y una capa de razonamiento lenta que se consulta de forma desacoplada no es una solución ad hoc de este sistema: es la instancia concreta, con un VLM en el rol deliberativo, del patrón de arquitecturas de tres capas (reactiva / secuenciamiento / deliberativa) documentado como solución general al problema de integrar planificación lenta con control robótico en tiempo real ([Gat, 1998](13-REFERENCIAS.md#ref-gat-1998)). El watchdog cumple el rol de la capa de secuenciamiento: arbitra si la respuesta deliberativa llega a tiempo para gobernar el ciclo, o si la capa reactiva (`creep_speed`, fallback determinista) debe seguir teniendo la última palabra.
+
+**Latencia observada.** La latencia del VLM no es un número único; depende de si la consulta lleva imagen, de la carga de la GPU compartida con Unreal Engine y del arranque en frío del modelo. Las fuentes disponibles, que no provienen de una medición controlada que aísle esos factores, son:
+
+| Fuente | Condición | Latencia |
+|---|---|---|
+| Diseño inicial del sistema | Prompt de ~500 tokens, `max_tokens = 200` | ≈ 0.85–1.4 s |
+| Calibración de 2026-0824 (comentario de `config/.env`) | Régimen de vuelo; arranque en frío | 2–3.5 s; ~8 s en frío |
+| Piloto V2 `townsim_ini`, `slm`, semilla 99 (traza JSONL, 102 invocaciones) | Configuración de producción | mediana 1.46 s · p95 3.73 s · máx 4.57 s · mín 1.24 s; 0 *fallbacks*, 0 *timeouts* |
+| Depuración de 2026-09-22 (comentario de `config/.env`) | Consulta con imagen base64 | ≈ 10–11 s |
+| Ídem | Consulta de texto puro | ≈ 0.6 s |
+
+La discrepancia entre las dos últimas filas y el piloto V2 no se ha resuelto con los datos disponibles. El plan V2 registra `slm.latency_ms` por invocación en cada corrida, lo que permitirá caracterizar la distribución real por condición en el capítulo 11. Lo que sí es firme es la consecuencia de diseño: ninguna de estas latencias cabe en el ciclo de 200 ms, y las de consulta con imagen pueden superar el valor original del watchdog.
 
 La consecuencia directa es que, durante el tiempo que el VLM procesa, el lazo de control continúa operando. En esos ciclos, el estado `"pending_deliberation"` activa `DELIB_WAIT_CREEP_SPEED_MPS = 0.5` m/s como velocidad de avance reducida — el dron continúa moviéndose muy lentamente en dirección al waypoint en lugar de detenerse, previniendo que la pérdida de velocidad traslacional colapse el campo de flujo óptico y elimine la evidencia perceptual justo cuando el sistema la necesita para la decisión pendiente.
 
-El guard `SLM_WATCHDOG_MS = 1500` (§5.10) descarta respuestas que lleguen después de ese límite y activa `_fallback_decision()`. El watchdog tiene el efecto de que latencias de inferencia mayores a 1.5 s — frecuentes con el modelo de 7B bajo carga — equivalen a no tener deliberativo: el sistema cae en `keep_going` con nota de timeout. Esto refuerza la elección del modelo de 3B: una respuesta de calidad media entregada en 1.0 s vale más en este sistema que una respuesta de calidad alta entregada en 2.5 s.
+El guard `SLM_WATCHDOG_MS` (§5.10) descarta respuestas que lleguen después de ese límite y activa `_fallback_decision()`. Su valor evolucionó con la latencia medida: 1 500 ms en el diseño inicial —con el que las latencias de 2 s o más equivalían a no tener deliberativo—, 6 000 ms tras la calibración de 2026-0824 (lote base del capítulo 11) y 13 000 ms desde 2026-09-22, siempre por debajo del timeout HTTP del cliente (`SLM_HTTP_TIMEOUT_S = 15 s`; `SLM_DEEP_HTTP_TIMEOUT_S = 20 s` y `SLM_DEEP_WATCHDOG_MS = 12 000 ms` en el barrido profundo). Ampliar el watchdog evita descartar respuestas válidas pero traslada el compromiso a la **frescura**: durante la espera el dron avanza a `DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s`, de modo que una respuesta de 10 s se refiere a una escena ~5 m atrás. De ahí el par de mecanismos incorporados el 2026-09-22: la política de visión (imagen solo en bloqueo duro, donde el dron está quieto y la escena no cambia) y la validación de frescura por waypoint y distancia (`DELIB_FRESHNESS_DIST_M = 8 m`, calibrada para 10 s × 0.5 m/s; su estado de verificación se detalla en §5.10 y §9.5.4). Esto refuerza la elección del modelo de 3B: una respuesta de calidad media entregada rápido vale más en este sistema que una respuesta de calidad alta entregada tarde.
 
 ## 8.7 Nota: LoRA como alternativa explorada y no adoptada
 

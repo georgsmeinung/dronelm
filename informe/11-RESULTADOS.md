@@ -1,5 +1,7 @@
 # 11. Resultados comparativos SLM vs. FSM
 
+> **Estado de este capítulo (2026-09-28).** Todos los resultados que siguen corresponden al **lote base**, ejecutado con el código previo a las mejoras V2 (§10.12). Los tres escenarios de control (§11.1, §11.4.1, §11.4.2, §11.4.3) no ejercen esas mejoras y siguen siendo válidos. Los resultados **con obstrucción** (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`; §11.4.2b, §11.4.2c, §11.4.3b y las conclusiones de §11.5.2–§11.5.4 que se apoyan en ellos) describen el comportamiento del sistema *anterior* a esas mejoras —incluido el manifiesto de `townsim_ini` sin los waypoints WP_0b y WP_1b— y **no deben leerse como el desempeño del sistema actual**. Además, los `summary.json` del lote base registran `code_version` correspondientes a commits del 8 y 9 de septiembre —más de un hash por escenario— y por lo tanto anteriores a la calibración del canal de ocupación del 10 de septiembre (cap. 7, §7.5), por lo que en ellos ese canal estuvo efectivamente inactivo. Su re-ejecución con el código V2 (lotes D, E y F del §10.12.2) está pendiente; hasta entonces estas secciones se conservan como línea de base *pre-V2* para la comparación entre versiones.
+
 ## 11.1 Resultados del lote base (5 semillas)
 
 Estrategia de desbloqueo: `deep_vlm` en todos los casos. Las celdas muestran media ± desviación

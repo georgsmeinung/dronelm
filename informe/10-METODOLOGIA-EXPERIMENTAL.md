@@ -31,7 +31,7 @@ Esta última hipótesis es la que dicta la arquitectura de escenarios en tres ni
 
 La evaluación compara tres brazos de decisión sobre **el mismo `ObstacleField`** (cap. 6), **el mismo espacio de macro-acciones** y **el mismo traductor a comandos cinemáticos** (`action_to_command`, cap. 8). Esta invariancia es lo que hace legítima la comparación: la única diferencia entre brazos es *quién elige la macro-acción*, no qué percibe el sistema ni cómo ejecuta la decisión.
 
-- **`slm`** — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como capa táctica y deliberativa (cap. 8). Durante la espera de respuesta del modelo, el sistema aplica un **avance cauto** a velocidad reducida (`DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s`) en lugar de un frenado total, preservando la traslación necesaria para que el estimador de flujo óptico mantenga confianza; sólo se comanda detención total incondicional ante un bloqueo frontal inminente y confirmado (`close_structural`). El modelo delibera de forma **asíncrona** bajo un watchdog de seguridad (`SLM_WATCHDOG_MS`, 6000 ms en la configuración de producción; 12000 ms para el barrido profundo, `SLM_DEEP_WATCHDOG_MS`) con respaldo determinista ante timeout o respuestas no conformes, recibiendo un historial temporal de fotogramas ($t$ y $t-1$), notas cinemáticas (`pitch`, `roll`, velocidad) y el motivo explícito de la consulta (`reason_note`).
+- **`slm`** — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como capa táctica y deliberativa (cap. 8). Durante la espera de respuesta del modelo, el sistema aplica un **avance cauto** a velocidad reducida (`DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s`) en lugar de un frenado total, preservando la traslación necesaria para que el estimador de flujo óptico mantenga confianza; sólo se comanda detención total incondicional ante un bloqueo frontal inminente y confirmado (`close_structural`). El modelo delibera de forma **asíncrona** bajo un watchdog de seguridad (`SLM_WATCHDOG_MS`: 6000 ms en la configuración con la que se ejecutó el lote base y 13000 ms en el código V2, §10.12; 12000 ms para el barrido profundo, `SLM_DEEP_WATCHDOG_MS`) con respaldo determinista ante timeout o respuestas no conformes, recibiendo un historial temporal de fotogramas ($t$ y $t-1$), notas cinemáticas (`pitch`, `roll`, velocidad) y el motivo explícito de la consulta (`reason_note`).
 - **`fsm`** — una máquina de estados finitos explícita (`CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE`), con transiciones gobernadas por umbrales fijos sobre el mismo `ObstacleField`. Es la línea de base directa contra la que se evalúa la hipótesis: alta predictibilidad y costo computacional mínimo, sin capacidad de razonamiento contextual ni interpretación semántica del entorno.
 - **`reactive`** — navegación guiada al waypoint sin evasión de obstáculos: **cota inferior de rendimiento** que permite desacoplar qué porción del desempeño proviene del lazo táctico de evasión y cuánto del seguimiento cinemático de base. Sin este brazo, cualquier diferencia entre `slm` y `fsm` sería inseparable del ruido introducido por el guiado.
 
@@ -126,9 +126,9 @@ Perímetro completo del complejo, 6 waypoints, ~640 m, altitud de tránsito −3
 
 #### Escenario 1.B — `townsim_ini` (recorrido con vegetación en ruta)
 
-Vuelta a la manzana arrancando en el *PlayerStart* real (0,0), con una particularidad estructural: **WP_0_ASCENSO sube en el lugar** (mismo $x,y$ del *spawn*) antes de trasladarse, para no cruzar la copa de los árboles de la plaza durante el ascenso. Recién después sale por el lado este a altitud de tránsito, se une al perímetro ya validado (WP_2…WP_5) y vuelve a ~5 m del punto de partida descendiendo a −10 m.
+Travesía norte–sur del corredor peatonal arbolado central de TownSim, arrancando en el *PlayerStart* real (0,0), con dos particularidades estructurales. Primera: **WP_0_ASCENSO sube en el lugar** (mismo $x,y$ del *spawn*, hasta −30 m) antes de trasladarse, para no cruzar la copa de los árboles durante el ascenso. Segunda, incorporada en la versión V2 del manifiesto (2026-09-22) a partir de las corridas piloto: **WP_0b_SOBRE_PLAZA** (−60, 5, −22) cruza la plaza central a 22 m de altitud, porque la ruta directa a −10 m atravesaba la canopy de los árboles del patio (12–15 m de altura según la telemetría piloto) y el dron entraba en la malla de colisión antes de llegar al corredor. Recién entonces desciende a nivel de calle (−10 m): WP_1_ENTRADA_NORTE (−75, 10) entra por el extremo norte, entre los edificios norte y centro; **WP_1b_PASO_MOLDURA** (−70, 0) lo desplaza 8 m al este del saliente de cornisa del edificio oeste (x ≈ −78, y ≈ −14), donde las maniobras de evasión y el sesgo del controlador reactivo lo dejaban trabado (960 ciclos, 192 s, sin salir de y ≈ −14); WP_2_CENTRO_CORREDOR (−75, −35) cruza la zona de mayor densidad de árboles y WP_3_SALIDA_SUR (−75, −70) alcanza la avenida sur. WP_4 sale al este subiendo a −30 m y WP_5 regresa al punto de partida. La ruta total es de ~340 m (8 waypoints); el lote base (§11.4.2b) se ejecutó con la versión previa del manifiesto, sin WP_0b ni WP_1b.
 
-**Qué se quiere probar.** Es el escenario de **interés real** de Tier 1: cruza el interior del complejo con corredores vegetados, e incorpora los dos tramos de mayor dificultad de todo el batch — el ascenso inicial entre follaje y el descenso final de retorno. El desglose `summary_by_wp.csv` es aquí la herramienta central: permite aislar el comportamiento del tramo `WP_0_ASCENSO` (que ya concentró la dificultad en corridas previas) de la fase de crucero.
+**Qué se quiere probar.** Es el escenario de **interés real** de Tier 1: cruza el interior del complejo por un corredor vegetado e incorpora los tramos de mayor dificultad de todo el batch —el corredor bajo la copa de los árboles y el paso junto a la moldura del edificio oeste—. El desglose `summary_by_wp.csv` es aquí la herramienta central: permite aislar el comportamiento de cada tramo (ascenso, cruce de la plaza, entrada al corredor, paso de la moldura, cruce central) de la fase de crucero.
 
 **Dificultad.** Media-alta. La obstrucción no es un muro sino un dosel: el sistema debe decidir con evidencia geométrica degradada. Es el escenario donde se espera la primera manifestación de H1.
 
@@ -180,7 +180,7 @@ Circuito de 7 waypoints en grilla urbana a −10 m de altitud constante, atraves
 |---|---|---|---|---|---|---|---|
 | 0 | MiniSim (`crater.png`) | `minisim_clear` | Control / cota inferior | ~180 m | −10 m | Nula | H2, H3 (costo puro) |
 | 1 | TownSim (`townsim_calib.png`) | `townsim_clear` | Control de crucero largo | ~640 m | −30 m | Baja | H2 (dilución del costo) |
-| 1 | TownSim | `townsim_ini` | Vegetación en ruta | ~640 m | −30/−10 m | Media-alta | H1 |
+| 1 | TownSim | `townsim_ini` | Vegetación en ruta | ~340 m | −30/−22/−10 m | Media-alta | H1 |
 | 1 | TownSim | `townsim_calib_cruce_frontal` | Bloqueo frontal masivo | ~320 m | −30/−10 m | Alta | **H1** |
 | 2 | CitySim (`citysim_calib.png`) | `citysim_clear` | Control a altitud franca | ~430 m | −70 m | Baja | H2, H3 |
 | 2 | CitySim | `citymap_pilot` | Elección de corredor | ~290 m | −10 m | **Máxima** | **H1, H3** |
@@ -247,7 +247,7 @@ En consecuencia, la unidad de ejecución del protocolo es el **batch = conjunto 
 
 Cada batch se ejecuta según la siguiente secuencia, en este orden estricto:
 
-1. **Preparación del entorno.** Lanzar el proyecto de UE correspondiente al tier; aplicar el perfil de escalabilidad mínima documentado en el capítulo 3 (`Config/DefaultScalability.ini` con `sg.ShadowQuality` forzado, necesario para que la estimación de TTC disponga de las sombras que usa el flujo); verificar que el servidor de inferencia responde (`GET {LOCAL_LLM_URL}/models`, chequeo que el propio runner ejecuta antes de cada corrida del brazo `slm` y que aborta la corrida si falla).
+1. **Preparación del entorno.** Lanzar el proyecto de UE correspondiente al tier; aplicar el perfil de escalabilidad mínima documentado en el capítulo 3 (`Config/DefaultScalability.ini` con `sg.ShadowQuality` forzado, necesario para que la estimación de TTC disponga de las sombras que usa el flujo); verificar que el servidor de inferencia responde (`GET {LOCAL_LLM_URL}/models`, chequeo que el propio runner ejecuta antes de cada corrida del brazo `slm` y que aborta la corrida si falla); **precargar el modelo en VRAM** con una consulta trivial antes de cada corrida (`curl` al endpoint `/chat/completions`; ~8–10 s), porque el arranque en frío del modelo produjo el único *timeout* observado del brazo `slm` en las corridas de verificación del 2026-09-10 y esta mitigación operacional evita alterar el código o el watchdog.
 2. **Higiene de estado.** El runner ejecuta `client.reset()` y `client.clear_debug_markers()` al inicio de cada corrida. No se depende de que el operador recuerde limpiar los marcadores de `plot_mission_route.py`.
 3. **Piloto de validación.** Una corrida `slm`, una semilla, por cada escenario nuevo del batch (§10.3.0, punto 4).
 4. **Batch completo.** Un subproceso por combinación (escenario × brazo × estrategia × semilla).
@@ -497,6 +497,8 @@ Se establece además una **política estricta de cuarentena de datos**: ningún 
 
 Las corridas en cuarentena **no se descartan como evidencia**: siguen siendo válidas para establecer que una geometría es volable y que un corredor es transitable. Pero sus métricas de `slm_invocations`, `deliberation_rate` e histograma de rutas **no son comparables** con corridas posteriores al fix, y por tanto no entran a ninguna prueba estadística. La magnitud del efecto de los fixes justifica la severidad de la política: la `deliberation_rate` de `townsim_clear` cayó de 15.4 % (pre-fix) a 0.82 % (post-fix), una reducción de ×19 que ninguna diferencia entre brazos podría igualar.
 
+**Versionado del código dentro de la cuarentena.** La política anterior trata artefactos instrumentales; el mismo criterio se aplica a los cambios de *software de decisión*. Los resultados del lote base con obstrucción (§11.4) se obtuvieron con el código previo a las mejoras V2 (§10.12) y no se agrupan con los del lote V2 en ninguna prueba estadística: comparar entre versiones mezclaría el efecto de las mejoras con el de los brazos. Cada `summary.json` registra el hash de commit (`code_version`); conviene notar que el hash identifica el último commit y **no** garantiza un árbol de trabajo limpio (el `summary.json` del piloto `seed_99` registra `28b3f8ca`, el commit de las 15:48 del 22/09, mientras que las correcciones de esa sesión se confirmaron recién a las 18:02 en `95c9f71d`, de modo que el piloto corrió con cambios sin confirmar sobre el hash registrado), por lo que el lote V2 debe correrse con el árbol confirmado y verificado antes de cada lote (§10.12).
+
 ### 10.9.4 Publicación
 
 El conjunto de validación de TTC (cap. 7, 3735 registros), los archivos de telemetría del batch definitivo, los manifiestos de misión y la configuración completa (`config/.env`) serán archivados y publicados con un identificador digital persistente (DOI vía Zenodo), acompañados del hash de commit correspondiente, garantizando la auditabilidad y reproducibilidad de los resultados.
@@ -549,11 +551,56 @@ Si el presupuesto sólo permite un subconjunto, el orden de prioridad es: (1) el
 
 ## 10.11 Amenazas a la validez
 
-El protocolo tiene cuatro limitaciones conocidas que se declaran explícitamente y se arrastran a las conclusiones del capítulo 12:
+El protocolo tiene cinco limitaciones conocidas que se declaran explícitamente y se arrastran a las conclusiones del capítulo 12:
 
 1. **Potencia estadística.** Con $K = 5$, ninguna comparación puede superar el umbral de Bonferroni salvo separación perfecta (§10.4.4). Todo resultado no significativo del lote base debe leerse como "no detectado con esta potencia", nunca como "ausente". La mitigación es la elevación de $K$ a 10 en las celdas decisivas (§10.10.4).
 2. **Validez externa respecto del modelo.** Todas las conclusiones sobre el brazo `slm` son conclusiones sobre Qwen2.5-VL-3B cuantizado, no sobre "modelos de lenguaje pequeños" en general. La mitigación es la comparación de modelos descrita en §10.10.4.
 3. **Efecto de sesión entre tiers.** Los tres batches corren en sesiones y proyectos distintos, de modo que las comparaciones absolutas entre tiers no son limpias (§10.5.1). La mitigación parcial es el uso de razones normalizadas; la mitigación completa es la repetición de un batch en segunda sesión descrita en §10.10.4.
 4. **Ausencia de obstáculos dinámicos.** Todo el diseño asume geometría estática. Las conclusiones no se extienden a entornos con agentes móviles, que es precisamente el escalón de dificultad que la literatura de conducción autónoma identifica como decisivo ([Codevilla et al., 2019](13-REFERENCIAS.md#ref-codevilla-2019)). La mitigación es la extensión con agentes de IA descrita en §10.10.3.
+5. **Cambio de versión del software entre el lote base y el lote V2.** Las mejoras de control y percepción incorporadas entre septiembre 7 y 22 (§10.12) cambian el comportamiento del brazo `slm` —y también del `fsm`, que comparte los módulos de escape— en presencia de obstáculos. Las comparaciones válidas son *dentro* de una versión; entre versiones solo es legítima la comparación descriptiva. La mitigación es fijar y verificar `CODE_VERSION_V2` antes de cada lote y descartar las corridas con otro hash.
 
 Ninguna de estas limitaciones invalida el diseño para las preguntas que sí responde; todas acotan el alcance de lo que puede afirmarse a partir de él.
+
+## 10.12 Corte de versión V2 y lotes con obstrucción
+
+### 10.12.1 Qué cambió entre el lote base y el código V2
+
+El lote base (§10.5, 45 corridas de control y 30 de prueba extendida) se ejecutó con el software de decisión tal como estaba a comienzos de septiembre. Entre el 7 y el 22 de septiembre se incorporaron las mejoras que se agrupan aquí como **V2**. Las de percepción y memoria (Zonas 1 y 2) cambian el comportamiento observable del brazo `slm` en presencia de obstáculos; las del 22 de septiembre surgieron de las corridas piloto sobre `townsim_ini` (semilla 99) y corrigen fallos que las volvían no concluyentes.
+
+| Módulo | Qué cambia en el comportamiento | Referencia |
+|---|---|---|
+| V4 — Depth Anything V2 Metric | Freno proactivo por profundidad monocular (≤ 5 m) sin esperar obstrucción de flujo óptico | §6.10b |
+| E2 — clasificación de textura de profundidad | Pista «follaje» / «superficie plana» en el prompt | §5.6 |
+| C1 / D1 / F1 — memoria de trayectoria | La evasión lateral y `GIRAR_90` no repiten el lado con stall ≥ 60–70 %; esquina reducida cuando ambos lados fallaron | §5.8, §5.9 |
+| G1 — pared invisible | Aviso al VLM cuando stall frontal ≥ 20 % con ocupación < 15 % | §5.6 |
+| Zona 1 — `stuck_invisible` unificada; V2 proactivo eliminado | Menos falsos positivos y menos carga de tokens | §5.3, §5.6 |
+| Overrides deterministas 1a/1b/1c/2/3 y `RETROCEDER` | El VLM no puede repetir acciones que la historia refutó; nueva macro-acción de marcha atrás | §5.12.2, §5.12.3 |
+| V3d / V3e — congelamiento por posición y escalada por velocidad nula | Detecta la oscilación dentro de mallas de árbol y evita el bucle indefinido de `RETROCEDER` | §5.3, §5.6 |
+| Fix B / C / E / H / I / 16–17 — `deep_vlm` y precedencia de rutas | Overrides y escape adaptativo en `deep_vlm`; ruptura del bucle `RETROCEDER`; timeout de rotación; resultados del VLM que llegan a ejecutarse; esquina perpendicular al rumbo al waypoint | §5.10, §5.12, §9.5.4 |
+| Visión condicionada, prompts externalizados, sub-meta `VlmGoal` | Imagen solo en bloqueo duro; prompts editables sin tocar código | §5.10, §8.5 |
+| Watchdog 13 000 ms; timeouts HTTP 15/20 s | Consultas con imagen ya no se descartan por *timeout* | §5.10, §8.6 |
+| `land_smooth` y aborto por proximidad recalibrado | Aterrizaje sin caída libre; umbral 0.05 m con velocidad < 0.1 m/s | §5.19 |
+| Manifiesto `townsim_ini` con WP_0b y WP_1b | Evita la canopy de la plaza y la moldura del edificio oeste | §10.3.2 |
+
+Estas mejoras son irrelevantes en los escenarios despejados (los 45 runs de control no las ejercen); son necesarias corridas con obstáculos bajo el código V2 para validarlas y para comparar `slm`, `fsm` y `reactive` en escenarios con obstrucción. Debe tenerse presente que la mayoría se incorporó reaccionando a fallos observados en corridas puntuales y que los umbrales resultantes (por ejemplo, 7.5 m de altitud de techo o 30 ciclos de congelamiento) se fijaron sobre ejemplos únicos (§5.12.2); ninguno está validado estadísticamente todavía.
+
+### 10.12.2 Lotes previstos
+
+Se definen tres lotes con `AGENT_ARM ∈ {slm, fsm, reactive}` × 5 semillas × `DEADLOCK_STRATEGY = deep_vlm`, precedidos cada uno por un piloto de validación (semilla 99):
+
+| Lote | Escenario | Mejoras que ejerce | Corridas | Presupuesto por corrida | Tiempo estimado |
+|---|---|---|---|---|---|
+| D | `townsim_ini` (Tier 1, vegetación) | E2, C1, G1, Override 3, V3d/V3e | 15 | 900 s · 4500 ciclos | ~2.0–2.5 h |
+| E | `townsim_calib_cruce_frontal` (Tier 1, bloqueo frontal) | G1, D1, F1, Override 3 | 15 | 900 s · 4500 ciclos | ~2.0–3.0 h |
+| F | `citymap_pilot` (Tier 2, corredores) | Override 3a, C1, D1+F1, G1 | 15 | 1200 s · 5000 ciclos | ~4.0–5.0 h |
+
+Criterios de pase de cada piloto: en D, `success = True`, Override 3 disparado al menos una vez y `deep_scan_resolution_rate > 0`; en E, el dron llega al waypoint tras el edificio o al menos lo rodea; en F, avanza al menos dos waypoints sin colisión. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si el lote E o F muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (semillas 6–10; ~6–8 h adicionales), que es el camino previsto hacia la potencia que K = 5 no alcanza (§10.11, punto 1).
+
+**Métricas adicionales del lote V2.** Además de las de §10.6, se registran: `ctrl_depth_proximity_m` y `ctrl_depth_obstacle_type` (cuánto y cuándo la profundidad fue el sensor decisivo, y con qué tipo de obstáculo); `ctrl_traj_{frente,izq,der}_stall_rate` (evidencia de que la memoria de trayectoria penalizó el lado más bloqueado); `field_source` (fracción de ciclos en que la profundidad contribuyó al campo); los campos `stuck_invisible`, `imu_contact`, `blind_wall`, `depth_below_cycles` del sub-objeto `perception` de la traza JSONL; y la frecuencia de disparo de los overrides deterministas, como validación cualitativa de que el mecanismo está activo.
+
+**Condiciones de descarte y de invalidación.** Se descarta una corrida individual si su `code_version` difiere del de referencia del lote, si el estimador de profundidad no inicializó, o si `total_cycles < 50` (falla de infraestructura, no del dron). Se invalida un lote si contiene corridas con hashes distintos que no puedan reemplazarse, o si `depth_proximity_m` es cero en todos los eventos del brazo `slm` (estimador deshabilitado durante toda la corrida). Una corrida abortada por proximidad crítica (§5.19) termina con éxito falso y se cuenta como falla de misión, al igual que una colisión.
+
+### 10.12.3 Estado
+
+A la fecha de este informe **no se ejecutó ningún lote V2**. Las corridas de septiembre 22 sobre `townsim_ini` (semilla 99, brazo `slm`, `deep_vlm`) fueron pilotos de depuración: a lo largo de la sesión se encontraron y corrigieron, uno a uno, los fallos de la tabla anterior (y el bucle de `RETROCEDER`, el `DEPTH_EMERGENCY` demasiado agresivo, las trayectorias que atravesaban la canopy), de modo que **cada piloto se ejecutó con un código distinto** y ninguno constituye evidencia estadística ni entra al capítulo 11. Se los usa únicamente como evidencia de diagnóstico, con esa etiqueta, en los capítulos 5 y 9. La actualización del capítulo 11 (§11.4.2b, §11.4.2c, §11.4.3b y §11.5) y de la evaluación de H1 en el capítulo 12 queda pendiente de la ejecución de los lotes D, E y F sobre un `CODE_VERSION_V2` fijo.
+

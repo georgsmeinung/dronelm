@@ -37,7 +37,7 @@ El paper también reporta que el espacio latente codifica cantidades físicas re
 
 ## A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente
 
-El SLM del sistema evaluado es un **decisor discreto y semántico**: recibe un resumen verbalizado del `ObstacleField`, la telemetría y una imagen, y emite una macro-acción (`evasive`, `girar_90`, …) en ~850–1400 ms [T]. Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
+El SLM del sistema evaluado es un **decisor discreto y semántico**: recibe un resumen verbalizado del `ObstacleField`, la telemetría y una imagen, y emite una macro-acción (`evasive`, `girar_90`, …) con una latencia de 1,2–4,6 s (mediana 1,46 s) en el piloto V2 sobre la RTX 5060, y ~10–11 s reportados para consultas con imagen en la depuración del 2026-09-22 [T] (cap. 8, §8.6). Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
 
 | Dimensión | SLM/VLM (Qwen2.5-VL-3B, §8) | LeWM-like (15 M) |
 |---|---|---|
@@ -50,7 +50,7 @@ El SLM del sistema evaluado es un **decisor discreto y semántico**: recibe un r
 | Huella de memoria | ~2,0 GB (Q4_K_M) [T] | ~30 MB en FP16 [E] |
 | Interpretabilidad | Texto (`reason`) auditable; la auditoría de contratos del cap. 9 se apoya en ello | Latente opaco; requiere *probes* para inspeccionarlo |
 | Modo de falla característico | Alucinación, JSON inválido, *timeout* del watchdog (cap. 9) | Deriva de rollouts a horizonte largo, fuera de distribución, costo latente mal condicionado |
-| Latencia por decisión | ~850–1400 ms [T] | ~1 s en el paper con 300 × 10–30 iteraciones [P]; reducible (§A9.5) |
+| Latencia por decisión | 1,2–4,6 s (mediana 1,46 s) en RTX 5060; ~10–11 s con imagen en depuración [T] | ~1 s en el paper con 300 × 10–30 iteraciones [P]; reducible (§A9.5) |
 
 El SLM aporta exactamente aquello que el modelo de mundo no tiene (semántica y razonamiento global entre corredores ambiguos: régimen 2 del cap. 12, `citymap_pilot`), mientras que el modelo de mundo aporta lo que el SLM no tiene: **predicción explícita de consecuencias de acciones continuas a bajo costo**, útil justamente en el régimen 3 (obstrucción frontal con escape lateral accesible), donde el SLM perdía por latencia.
 
@@ -111,14 +111,14 @@ Estimación analítica del costo por plan, con las dimensiones del paper [P] y c
 
 Los rangos de throughput efectivo son **hipótesis** a validar en §A9.7: los *matmuls* pequeños y batcheados rara vez saturan las unidades tensoriales. Dos consecuencias:
 
-1. **Con la configuración del paper, el modelo de mundo no es más rápido que el SLM en el borde**: su ventaja (48× sobre DINO-WM) es relativa a otros modelos de mundo, no al SLM del sistema. En una Orin Nano el plan completo caería en el mismo orden de magnitud que la latencia del VLM (850–1400 ms [T]) y del watchdog (`SLM_WATCHDOG_MS = 1500 ms`).
+1. **Con la configuración del paper, el modelo de mundo no es claramente más rápido que el SLM en el borde**: su ventaja (48× sobre DINO-WM) es relativa a otros modelos de mundo, no al SLM del sistema. En una Orin Nano el plan completo caería en el mismo orden de magnitud que la latencia del VLM en la estación de desarrollo (mediana 1,46 s [T]; en la Orin Nano, con menos ancho de banda que una GPU de escritorio, sería mayor [E]) y del watchdog original (`SLM_WATCHDOG_MS = 1500 ms`; el valor vigente es 13 000 ms, ampliado precisamente para no descartar respuestas del VLM, cap. 8, §8.6).
 2. **Reduciendo el presupuesto de muestreo** (menos candidatos e iteraciones, *warm start* de la distribución CEM con el plan previo, horizonte corto) el plan baja a decenas de milisegundos en Orin Nano, compatible con el lazo de 5 Hz (200 ms por ciclo, con el ciclo también ocupado por percepción y flujo óptico). El costo es calidad de plan, cuyo impacto no está caracterizado y debe medirse (el paper fija sus hiperparámetros por tarea [P]).
 
 En la Jetson Nano original (Maxwell, sin unidades tensoriales), solo la configuración reducida es plausible, y la pila de software heredada (JetPack 4.x, versiones antiguas de PyTorch/TensorRT) añade fricción de portabilidad [E]. La Orin Nano es la plataforma realista para esta línea.
 
 ### A9.5.4 Ejecutar el SLM y el modelo de mundo a la vez
 
-En el escenario de las Opciones B/C ambos modelos coexisten. Como el modelo de mundo pesa decenas de MB, la contención principal sería de **ancho de banda de memoria y de tiempo de GPU**, no de capacidad. El decodificado autorregresivo del VLM está limitado por ancho de banda: con ~2 GB de pesos por token y ~102 GB/s de la Orin Nano 8 GB, la cota superior teórica es ≈ 50 tokens/s [E] (dato de ancho de banda según el fabricante del kit de desarrollo; no verificado en el datasheet del módulo). Con el prompt actual (~500 tokens, cap. 12) y la imagen, es probable que el SLM del sistema quede cerca o por encima del watchdog en esa plataforma, lo que refuerza el argumento del Anexo 3 (LoRA para reducir el prompt) **independientemente** de esta línea.
+En el escenario de las Opciones B/C ambos modelos coexisten. Como el modelo de mundo pesa decenas de MB, la contención principal sería de **ancho de banda de memoria y de tiempo de GPU**, no de capacidad. El decodificado autorregresivo del VLM está limitado por ancho de banda: con ~2 GB de pesos por token y ~102 GB/s de la Orin Nano 8 GB, la cota superior teórica es ≈ 50 tokens/s [E] (dato de ancho de banda según el fabricante del kit de desarrollo; no verificado en el datasheet del módulo). Con el prompt actual (~500 tokens, cap. 12) y la imagen, es probable que el SLM del sistema, que ya tarda 1,2–4,6 s en la RTX 5060, se alargue en esa plataforma y deba apoyarse en un watchdog holgado a costa de la frescura de la escena, lo que refuerza el argumento del Anexo 3 (LoRA para reducir el prompt) **independientemente** de esta línea.
 
 ### A9.5.5 Optimizaciones de despliegue aplicables
 
@@ -136,7 +136,7 @@ En el escenario de las Opciones B/C ambos modelos coexisten. Como el modelo de m
 | Semántica y razonamiento global | Fuerte | Ausente | Favorece SLM |
 | Predicción de consecuencias de acciones continuas | Nula (decide macro-acciones) | Núcleo del método | Favorece modelo de mundo |
 | Memoria | ~2 GB | ~30 MB | Favorece modelo de mundo |
-| Latencia (config. del paper, borde) | ~1 s | ~1 s (estimado) | Empate; el modelo de mundo mejora con presupuesto reducido |
+| Latencia en el borde | 1,2–4,6 s en RTX 5060 [T]; mayor en Orin Nano [E] | 0,2–2,7 s con la config. del paper; 25–100 ms con presupuesto reducido (Orin Nano) [E] | Favorece al modelo de mundo, condicionado a medirlo (§A9.7) |
 | Datos y costo de entrenamiento | Cero (zero-shot) | Dataset propio + horas de GPU | Favorece SLM |
 | Robustez a cambio de dominio | Alta relativa | Baja (reentrenar) | Favorece SLM |
 | Auditabilidad | Texto explícito | Latente opaco | Favorece SLM |

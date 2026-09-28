@@ -730,6 +730,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#954-instancias-posteriores-2026-09-12-a-2026-09-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.4 Instancias posteriores (2026-09-12 a 2026-09-22)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1446,6 +1457,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#954-instancias-posteriores-2026-09-12-a-2026-09-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.4 Instancias posteriores (2026-09-12 a 2026-09-22)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1700,6 +1722,16 @@
 <li>El ciclo se repitió centenares de veces, produciendo un ascenso neto acumulado.</li>
 </ol>
 <p>Desde el exterior, la corrida registraba una misión "sin errores" (no hay excepciones en el log) que simplemente "no llegó a destino". Sin el análisis del viewer frame a frame y la lectura del JSONL de auditoría, el patrón era opaco.</p>
+<h3 id="954-instancias-posteriores-2026-09-12-a-2026-09-22">9.5.4 Instancias posteriores (2026-09-12 a 2026-09-22)<a class="headerlink" href="#954-instancias-posteriores-2026-09-12-a-2026-09-22" title="Permanent link">&para;</a></h3>
+<p>La revisión de las corridas piloto del código V2 (cap. 10, §10.12) produjo tres hallazgos posteriores a la redacción original de esta sección: dos corregidos y uno abierto. Los tres comparten la propiedad que organiza el capítulo: el sistema producía respuestas válidas y plausibles, sin excepciones en el log, y aun así no las ejecutaba.</p>
+<p><strong>(a) Un flag descartado por LangGraph (corregido).</strong> <code>_post_retroceder_corner_pending</code>, que difiere la inyección de la esquina hasta el escaneo posterior a un <code>RETROCEDER</code> (§5.12.3), se escribía correctamente pero no estaba declarada en <code>DroneState</code>. Desaparecía entre invocaciones de <code>graph.invoke()</code> y la esquina nunca se inyectaba: el dron volvía a la misma fachada. Se diagnosticó en la corrida <code>seed_1</code>, donde el flag desaparecía antes del ciclo 1783. Es la quinta instancia de la Vulnerabilidad A (§9.5.2).</p>
+<p><strong>(b) Resultados válidos del VLM que nunca se ejecutan (corregido).</strong> Dos errores de <em>precedencia</em> entre rutas, no de estado descartado, con el mismo síntoma:</p>
+<ul>
+<li><em>Maniobra cancelada por un disparador de atasco (Fix H).</em> Al despachar <code>EVADIR_DERECHA</code>, el nodo deliberativo no reiniciaba el contador de atasco; en el ciclo siguiente un disparador basado en ese contador (el CHANGELOG lo atribuye a <code>TRAJ_STALL</code>; §5.10 discute por qué el camino efectivo pudo ser otro) volvía a enrutar al nodo deliberativo, cuyo nuevo pedido sobrescribía <code>active_maneuver</code> antes de que se ejecutara. En la corrida <code>seed_99</code> el VLM devolvió <code>EVADIR_DERECHA</code> durante 200 ciclos consecutivos (c2585–c2784) sin que la maniobra se ejecutara una sola vez.</li>
+<li><em>Resultado huérfano por el camino de deadlock (Fix I).</em> La rama de escape por deadlock se evaluaba antes que la lectura del pedido pendiente. Con <code>_deliberation_pending = True</code> el contador de progreso queda congelado por encima del umbral, de modo que la rama interceptaba todos los ciclos y <code>service.poll()</code> nunca se alcanzaba: en c2048–c2135 (80 ciclos) el log del VLM contenía la respuesta correcta —latencia real de 3 731 ms— y la acción ejecutada era <code>MANTENER_RUMBO</code> o <code>FRENAR</code>.</li>
+</ul>
+<p>Ninguno de los dos se veía en las métricas agregadas. Ambos se encontraron comparando, ciclo a ciclo, el campo <code>slm.raw_response</code> de la traza JSONL con la acción realmente ejecutada; es decir, la técnica 2 de §9.7 (guardar los datos crudos enviados y recibidos por el modelo) fue la que los hizo visibles.</p>
+<p><strong>(c) Snapshot de frescura inoperante (abierto).</strong> El descarte de respuestas obsoletas (§5.10, «Validación de frescura») compara el waypoint y la distancia actuales con un <em>snapshot</em> tomado al encolar el pedido. La revisión de código realizada para este informe encontró tres defectos que lo vuelven inoperante: (i) el snapshot y la comparación leen las claves <code>wp_index</code> y <code>dist_to_wp_m</code>, que no existen en <code>DroneState</code> (los nombres vigentes son <code>current_wp_index</code> y <code>waypoint_guidance["distance"]</code>), de modo que <code>state.get()</code> devuelve <code>None</code>; (ii) <code>_delib_snapshot_wp</code> y <code>_delib_snapshot_dist</code> no están declaradas en el <code>TypedDict</code>, por lo que LangGraph las descartaría aunque las claves fueran las correctas; (iii) <code>_delib_vision_used</code>, que registra si la consulta usó imagen, tampoco está declarada, y el campo <code>vision_enabled</code> del registro de auditoría cae siempre al valor de configuración. La condición de descarte nunca es verdadera, con lo que el efecto neto es que las respuestas se aplican como antes de la mejora. No tiene consecuencia de seguridad, pero es un caso donde una <em>feature</em> documentada como implementada no está en vigor, sin ningún síntoma visible; se declara como riesgo residual (§9.8) y como condición previa a atribuir resultados al mecanismo.</p>
 <h2 id="96-falla-5-degradaciones-sensoriales-silenciosas">9.6 Falla 5 — Degradaciones sensoriales silenciosas<a class="headerlink" href="#96-falla-5-degradaciones-sensoriales-silenciosas" title="Permanent link">&para;</a></h2>
 <h3 id="961-inversion-de-canales-de-color-rgbbgr">9.6.1 Inversión de canales de color RGB/BGR<a class="headerlink" href="#961-inversion-de-canales-de-color-rgbbgr" title="Permanent link">&para;</a></h3>
 <p>Durante varios meses de experimentación, el cliente de captura de AirSim (<code>AirSimClient.capture()</code>) entregaba el buffer de imagen en el orden de canales RGB nativo del motor Unreal, mientras que el pipeline asumía la convención BGR de OpenCV — la convención estándar de OpenCV en la que el canal azul ocupa el índice 0.</p>
@@ -1733,8 +1765,8 @@ $$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))\]</div>
 <p><strong>3. Tests de invariantes de contrato, no de comportamiento.</strong> Un test que verifique "el dron evadió el obstáculo" es frágil y dependiente de la escena. Un test que verifique "si <code>has_evidence()</code> es False, ningún consumidor reporta el campo como 'despejado'" es un test de contrato que captura la Falla 1 sin necesitar una corrida de vuelo.</p>
 <p><strong>4. Inyección de valores límite en el estado de LangGraph.</strong> Para detectar las claves no declaradas (Falla 4-A), la técnica fue instrumentar el lazo con un interceptor que comparaba <code>state</code> al entrar a cada nodo con <code>state</code> al salir, reportando cualquier clave presente en la salida que no estuviera en el <code>TypedDict</code>. Esta verificación se convirtió en un modo de debug permanente activable via variable de entorno (<code>LANGGRAPH_DEBUG_STATE_CLIPPING=1</code>).</p>
 <h2 id="98-riesgos-residuales-y-trabajo-pendiente">9.8 Riesgos residuales y trabajo pendiente<a class="headerlink" href="#98-riesgos-residuales-y-trabajo-pendiente" title="Permanent link">&para;</a></h2>
-<p>Los cinco modos de falla documentados están corregidos en la implementación actual. Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:</p>
-<p><strong>Riesgo A — Nuevas claves de DroneState.</strong> Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en <code>DroneState</code>. La mitigación es el modo <code>LANGGRAPH_DEBUG_STATE_CLIPPING=1</code> y el proceso de revisión de <code>DroneState</code> en el CHANGELOG antes de cada nueva feature.</p>
+<p>Los cinco modos de falla documentados están corregidos en la implementación actual; queda abierto el caso (c) de §9.5.4. Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:</p>
+<p><strong>Riesgo A — Nuevas claves de DroneState.</strong> Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en <code>DroneState</code>. La mitigación es el modo <code>LANGGRAPH_DEBUG_STATE_CLIPPING=1</code> y el proceso de revisión de <code>DroneState</code> en el CHANGELOG antes de cada nueva feature. El riesgo se materializó dos veces más tras la redacción original (§9.5.4, casos (a) y (c)), lo que indica que la mitigación depende demasiado de la disciplina manual. Una defensa estructural sería un test de contrato que recorra el código fuente de <code>src/agents/</code>, extraiga todas las claves <code>state["_..."]</code> y <code>state.get("...")</code> y falle si alguna no pertenece a <code>DroneState</code>; hoy no existe.</p>
 <p><strong>Riesgo B — Cambios de API del binding de AirSim.</strong> El binding <code>cosysairsim</code> es un fork activamente mantenido (<a href="13-REFERENCIAS.html#ref-jansen-2023">Jansen et al., 2023</a>). Actualizaciones del binding pueden modificar el comportamiento de métodos (como ocurrió con la corrección del cuaternión). Los tests unitarios de conversión de telemetría son la mitigación; deben ejecutarse tras cada actualización del binding.</p>
 <p><strong>Riesgo C — Distribución de imágenes fuera del dominio de entrenamiento del VLM.</strong> La corrección de inversión RGB/BGR es una transformación fija. Pero la brecha de dominio entre imágenes de AirSim/UE5 y el dominio de entrenamiento del VLM (predominantemente imágenes reales del mundo) es una fuente estructural de error que no se elimina con ninguna corrección puntual. La calibración de la frecuencia de respuestas subóptimas del VLM en los escenarios de esta tesis (cap. 11) es el mecanismo de caracterización de ese riesgo residual.</p>
 

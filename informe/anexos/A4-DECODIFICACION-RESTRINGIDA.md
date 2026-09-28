@@ -22,7 +22,7 @@ Cuando se solicita una salida JSON únicamente mediante instrucciones en el *sys
 2. **Encapsulamiento en Markdown irregular:** uso intermitente de triples comillas invertidas (```` ```json ... ``` ````), a menudo con saltos de línea mal posicionados.
 3. **Malformación sintáctica:** comas terminales huérfanas (*trailing commas*), omisión de llaves de cierre `}` por corte de contexto o escape defectuoso de caracteres en cadenas.
 4. **Alucinación de macro-acciones fuera de lista blanca:** emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., `"girar_rapido"`, `"subir_diagonal"`, `"stop"` en lugar de `keep_going`, `evasive`, `girar_90`, `fsm`, `degraded`).
-5. **Latencia descontrolada por verbosidad:** generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (`SLM_WATCHDOG_MS = 1500 ms`) y forzando la degradación del lazo.
+5. **Latencia descontrolada por verbosidad:** generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (`SLM_WATCHDOG_MS` (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)) y forzando la degradación del lazo.
 
 ```
 Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
@@ -311,7 +311,7 @@ def _parse_decision(raw_text: str, default_action: str = "keep_going") -> tuple[
 ```
 
 ### Paso 4: Sincronización con el perro guardián y velocidad de deslizamiento (*Creep Speed*)
-En `deliberative_node`, la integración con la temporalidad del lazo de control se articula mediante el perro guardián (`SLM_WATCHDOG_MS = 1500 ms`) y el avance mínimo garantizado:
+En `deliberative_node`, la integración con la temporalidad del lazo de control se articula mediante el perro guardián (`SLM_WATCHDOG_MS` (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)) y el avance mínimo garantizado:
 * Mientras la inferencia está en vuelo (`slm_request_id is not None`), el dron ejecuta `DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s`. Esto evita el colapso del campo de flujo óptico por falta de movimiento traslacional (§8.6).
 * Gracias a la decodificación restringida, el 95% de las llamadas resuelven en **$320 - 480\text{ ms}$**, lo que significa que el dron solo pasa 2 o 3 ciclos en estado de espera antes de aplicar la macro-acción definitiva.
 
