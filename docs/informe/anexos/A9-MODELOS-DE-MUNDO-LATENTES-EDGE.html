@@ -1,0 +1,1705 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html">
+      
+      
+        <link rel="prev" href="A8-NAVEGACION-RL.html">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A9. Modelos de Mundo Latentes en Edge (Propuesta) - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A9. Modelos de Mundo Latentes en Edge (Propuesta)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A7-MALDICION-MONOCULAR-ESTEREO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Modelos de Mundo Latentes en Edge (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Modelos de Mundo Latentes en Edge (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a91-que-es-leworldmodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.1 Qué es LeWorldModel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a93-brechas-de-aplicabilidad-al-problema-del-dron" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3 Brechas de aplicabilidad al problema del dron
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a94-tres-formas-de-incorporarlo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4 Tres formas de incorporarlo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a95-viabilidad-en-hardware-edge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5 Viabilidad en hardware edge
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.5 Viabilidad en hardware edge">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a951-plataformas-de-referencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.1 Plataformas de referencia
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a952-memoria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.2 Memoria
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a953-computo-por-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.3 Cómputo por plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a954-ejecutar-el-slm-y-el-modelo-de-mundo-a-la-vez" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.4 Ejecutar el SLM y el modelo de mundo a la vez
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a955-optimizaciones-de-despliegue-aplicables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.5 Optimizaciones de despliegue aplicables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a96-trade-offs-sintesis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.6 Trade-offs: síntesis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a97-protocolo-de-evaluacion-propuesto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.7 Protocolo de evaluación propuesto
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a98-consideraciones-finales" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.8 Consideraciones finales
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a91-que-es-leworldmodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.1 Qué es LeWorldModel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a93-brechas-de-aplicabilidad-al-problema-del-dron" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.3 Brechas de aplicabilidad al problema del dron
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a94-tres-formas-de-incorporarlo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.4 Tres formas de incorporarlo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a95-viabilidad-en-hardware-edge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5 Viabilidad en hardware edge
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A9.5 Viabilidad en hardware edge">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a951-plataformas-de-referencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.1 Plataformas de referencia
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a952-memoria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.2 Memoria
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a953-computo-por-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.3 Cómputo por plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a954-ejecutar-el-slm-y-el-modelo-de-mundo-a-la-vez" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.4 Ejecutar el SLM y el modelo de mundo a la vez
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a955-optimizaciones-de-despliegue-aplicables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.5.5 Optimizaciones de despliegue aplicables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a96-trade-offs-sintesis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.6 Trade-offs: síntesis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a97-protocolo-de-evaluacion-propuesto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.7 Protocolo de evaluación propuesto
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a98-consideraciones-finales" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A9.8 Consideraciones finales
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge">Anexo 9: Modelos de Mundo Latentes (LeWorldModel) como Alternativa al SLM — Trade-offs y Viabilidad en Hardware Edge<a class="headerlink" href="#anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge" title="Permanent link">&para;</a></h1>
+<p>Este anexo analiza, como línea de trabajo futuro (§12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (Qwen2.5-VL-3B-Instruct, cap. 8) por un <strong>modelo de mundo latente</strong> del tipo <em>Joint-Embedding Predictive Architecture</em> (JEPA), tomando como caso de estudio <strong>LeWorldModel</strong> (LeWM; <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo <code>slm</code>, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una <em>companion computer</em> como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).</p>
+<p><img src="a9-alternativa-con-lewm.jpg"/></p>
+<p><strong>Alcance y convención de rigor.</strong> Nada de lo aquí descrito está implementado ni medido en el sistema evaluado en el capítulo 11. Las cifras se rotulan según su origen:</p>
+<ul>
+<li><strong>[P]</strong> — reportada por el paper de LeWM u otra fuente citada.</li>
+<li><strong>[E]</strong> — estimación analítica del autor (orden de magnitud, con supuestos explícitos); <strong>no es una medición</strong> y debe reemplazarse por el protocolo de §A9.7.</li>
+<li><strong>[T]</strong> — medida en esta tesis (capítulos 8–11).</li>
+</ul>
+<hr />
+<h2 id="a91-que-es-leworldmodel">A9.1 Qué es LeWorldModel<a class="headerlink" href="#a91-que-es-leworldmodel" title="Permanent link">&para;</a></h2>
+<p>Los modelos de mundo aprenden cómo cambia el entorno en función de las acciones del agente y permiten planificar "en imaginación" (<a href="../13-REFERENCIAS.html#ref-ha-2018">Ha &amp; Schmidhuber, 2018</a>; <a href="../13-REFERENCIAS.html#ref-hafner-2020">Hafner et al., 2020</a>). La familia JEPA (<a href="../13-REFERENCIAS.html#ref-lecun-2022">LeCun, 2022</a>; <a href="../13-REFERENCIAS.html#ref-assran-2023">Assran et al., 2023</a>; <a href="../13-REFERENCIAS.html#ref-assran-2025">Assran et al., 2025</a>) evita predecir píxeles: predice la <strong>representación</strong> (embedding) del siguiente estado, lo que descarta detalle irrelevante y abarata la predicción. Su dificultad histórica es el <em>colapso de representación</em>; los trabajos previos lo resolvían con encoders congelados preentrenados (<a href="../13-REFERENCIAS.html#ref-zhou-g-2025">DINO-WM, Zhou et al., 2025</a>) o con objetivos de muchos términos (<a href="../13-REFERENCIAS.html#ref-sobal-2025">PLDM, Sobal et al., 2025</a>).</p>
+<p>LeWM (<a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>, publicado en marzo de 2026 con Y. LeCun entre sus autores) es, según sus autores, el primer JEPA que entrena de forma estable de extremo a extremo desde píxeles con solo dos términos de pérdida: predicción del siguiente embedding más el regularizador SIGReg, que empuja los embeddings hacia una gaussiana isotrópica (<a href="../13-REFERENCIAS.html#ref-balestriero-2025">Balestriero &amp; LeCun, 2025</a>).</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Valor reportado [P]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parámetros totales</td>
+<td>~15 M (encoder ~5 M + predictor ~10 M)</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>ViT-Tiny, patch 14, 12 capas, dimensión oculta 192; embedding = token <code>[CLS]</code> proyectado (192 dim)</td>
+</tr>
+<tr>
+<td>Predictor</td>
+<td>Transformer de 6 capas, 16 cabezas; acciones inyectadas por AdaLN; historial de N embeddings con máscara causal</td>
+</tr>
+<tr>
+<td>Entrada visual</td>
+<td>Frames RGB de 224 × 224</td>
+</tr>
+<tr>
+<td>Planificación</td>
+<td>Minimización del costo terminal <code>‖z_H − z_g‖²</code> por CEM con MPC; 300 secuencias candidatas, 10–30 iteraciones, horizonte H = 5 (frameskip 5)</td>
+</tr>
+<tr>
+<td>Tiempo de planificación</td>
+<td>0,98 s por plan vs. 47 s de DINO-WM (hasta 48× más rápido), promedio sobre 50 corridas</td>
+</tr>
+<tr>
+<td>Entrenamiento</td>
+<td>Una GPU, pocas horas</td>
+</tr>
+<tr>
+<td>Entornos evaluados</td>
+<td>Push-T, Reacher, OGBench-Cube, Two-Room (2D y manipulación 3D simple)</td>
+</tr>
+</tbody>
+</table>
+<p>El paper también reporta que el espacio latente codifica cantidades físicas recuperables por <em>probing</em> lineal y que un test de violación de expectativa detecta trayectorias físicamente implausibles. Entre las <strong>limitaciones declaradas</strong> por los autores: horizontes de planificación cortos, dependencia de datasets <em>offline</em> con cobertura suficiente (con baja diversidad SIGReg se debilita) y dependencia de etiquetas de acción.</p>
+<p><strong>Trabajos de contexto aéreo.</strong> El antecedente más cercano al dominio de esta tesis es SkyJEPA (<a href="../13-REFERENCIAS.html#ref-rao-2026">Rao et al., 2026</a>), que aplica un modelo de dinámica latente de estilo JEPA al control de cuadrirrotores con transferencia <em>sim-to-real</em> y optimización por muestreo en hardware embebido; según su resumen opera sobre <strong>estado</strong>, no sobre imágenes, por lo que no valida el caso visual monocular. En navegación con imagen objetivo, <a href="../13-REFERENCIAS.html#ref-chahe-2026">Chahe et al. (2026)</a> muestran que el costo de planificación en el espacio latente requiere diseño explícito (monotonía respecto del progreso). No se realizó un relevamiento exhaustivo de esta literatura, muy activa en 2026.</p>
+<hr />
+<h2 id="a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente">A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente<a class="headerlink" href="#a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente" title="Permanent link">&para;</a></h2>
+<p>El SLM del sistema evaluado es un <strong>decisor discreto y semántico</strong>: recibe un resumen verbalizado del <code>ObstacleField</code>, la telemetría y una imagen, y emite una macro-acción (<code>evasive</code>, <code>girar_90</code>, …) en ~850–1400 ms [T]. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
+<table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>SLM/VLM (Qwen2.5-VL-3B, §8)</th>
+<th>LeWM-like (15 M)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Función</td>
+<td>Clasifica la situación y elige macro-acción</td>
+<td>Predice el embedding futuro dada una secuencia de acciones; el plan surge de optimizar</td>
+</tr>
+<tr>
+<td>Salida</td>
+<td>JSON discreto (5 macro-acciones)</td>
+<td>Secuencia continua de acciones (p. ej., <code>vx, vy, vz, yaw_rate</code>)</td>
+</tr>
+<tr>
+<td>Conocimiento previo</td>
+<td>Preentrenamiento masivo (sentido común, semántica urbana)</td>
+<td>Ninguno: aprende solo de los datos de dominio</td>
+</tr>
+<tr>
+<td>Especificación del objetivo</td>
+<td>Lenguaje natural / waypoints en el prompt</td>
+<td>Imagen objetivo (o función de costo sobre el latente)</td>
+</tr>
+<tr>
+<td>Datos requeridos</td>
+<td>Ninguno (<em>zero-shot</em>) o dataset de maniobras para LoRA (Anexo 3)</td>
+<td>Trayectorias (imagen, acción) offline con buena cobertura</td>
+</tr>
+<tr>
+<td>Parámetros</td>
+<td>~3 B</td>
+<td>~15 M (≈200× menos)</td>
+</tr>
+<tr>
+<td>Huella de memoria</td>
+<td>~2,0 GB (Q4_K_M) [T]</td>
+<td>~30 MB en FP16 [E]</td>
+</tr>
+<tr>
+<td>Interpretabilidad</td>
+<td>Texto (<code>reason</code>) auditable; la auditoría de contratos del cap. 9 se apoya en ello</td>
+<td>Latente opaco; requiere <em>probes</em> para inspeccionarlo</td>
+</tr>
+<tr>
+<td>Modo de falla característico</td>
+<td>Alucinación, JSON inválido, <em>timeout</em> del watchdog (cap. 9)</td>
+<td>Deriva de rollouts a horizonte largo, fuera de distribución, costo latente mal condicionado</td>
+</tr>
+<tr>
+<td>Latencia por decisión</td>
+<td>~850–1400 ms [T]</td>
+<td>~1 s en el paper con 300 × 10–30 iteraciones [P]; reducible (§A9.5)</td>
+</tr>
+</tbody>
+</table>
+<p>El SLM aporta exactamente aquello que el modelo de mundo no tiene (semántica y razonamiento global entre corredores ambiguos: régimen 2 del cap. 12, <code>citymap_pilot</code>), mientras que el modelo de mundo aporta lo que el SLM no tiene: <strong>predicción explícita de consecuencias de acciones continuas a bajo costo</strong>, útil justamente en el régimen 3 (obstrucción frontal con escape lateral accesible), donde el SLM perdía por latencia.</p>
+<hr />
+<h2 id="a93-brechas-de-aplicabilidad-al-problema-del-dron">A9.3 Brechas de aplicabilidad al problema del dron<a class="headerlink" href="#a93-brechas-de-aplicabilidad-al-problema-del-dron" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Objetivo por imagen.</strong> El costo de LeWM es <code>‖z_H − z_g‖²</code> con <code>z_g = enc(o_g)</code>. La misión del dron se especifica por waypoints, no por imágenes. En simulación es posible renderizar una vista objetivo por waypoint, pero en un vuelo real no existe esa imagen. Alternativa propuesta: entrenar <em>probes</em> livianos sobre el latente para obtener cantidades ya usadas por el sistema (ocupación/TTC del <code>ObstacleField</code>, distancia a obstáculo, rumbo relativo al waypoint) y definir el costo sobre ellas; el paper reporta que el latente admite <em>probing</em> de cantidades físicas en sus entornos [P], pero no en escenas urbanas aéreas.</li>
+<li><strong>Horizonte corto.</strong> H = 5 pasos de predictor [P]. Con el lazo táctico a <code>LOOP_HZ = 5</code> [T], si cada paso del predictor equivale a un ciclo (200 ms), el horizonte es ~1 s: escaso para evasión a velocidad de crucero. Si cada paso agrupa varios ciclos (como el frameskip del paper), el horizonte se alarga pero se pierde resolución de control. Es un parámetro de diseño, no una constante.</li>
+<li><strong>Dominio y datos.</strong> Los resultados de LeWM son en tareas 2D/3D simples con datasets cuidadosamente recolectados [P]. Escenas urbanas 3D con vegetación, tráfico y multitud (Tiers 1–2, cap. 3) son de complejidad visual muy superior, y los propios autores señalan que la baja diversidad de datos degrada SIGReg [P]. El sistema podría generar datos en AirSim de forma barata, pero <strong>la cobertura de casos de colisión</strong> (raros por construcción) es el cuello de botella real.</li>
+<li><strong>Etiquetas de acción y dinámica.</strong> El predictor condiciona en acciones; para el dron habría que fijar qué representa la acción (velocidad comandada vs. macro-acción) y cómo se trata el retardo de actuación/autopiloto, que el paper no aborda.</li>
+<li><strong>Sin semántica ni razonamiento global.</strong> Un modelo de 15 M entrenado solo con datos de vuelo no distingue "corredor de servicio" de "autopista elevada" salvo que esa distinción esté visualmente y estadísticamente presente en los datos. Es el régimen donde el VLM mostró valor (H1, <code>citymap_pilot</code>).</li>
+<li><strong>Seguridad y verificabilidad.</strong> La optimización por CEM es estocástica y sin garantías de optimalidad global [P]. Cualquier integración debe conservar las salvaguardas determinísticas del sistema (<code>motor_node</code>, guardas de altitud, <code>DEPTH_EMERGENCY</code>).</li>
+<li><strong>Costo de reentrenamiento.</strong> Un cambio de cámara, altura de vuelo o escena exige reentrenar o ajustar el modelo; el SLM <em>zero-shot</em> es más robusto a ese cambio, aunque más lento.</li>
+</ol>
+<hr />
+<h2 id="a94-tres-formas-de-incorporarlo">A9.4 Tres formas de incorporarlo<a class="headerlink" href="#a94-tres-formas-de-incorporarlo" title="Permanent link">&para;</a></h2>
+<p><strong>Opción A — Reemplazo del SLM (no recomendada).</strong> Sustituir la capa deliberativa por un planificador LeWM-like. Elimina la semántica (§A9.3, punto 5), exige resolver el objetivo por imagen y pierde la auditabilidad textual del cap. 9. Solo se justificaría si el objetivo fuera exclusivamente evasión local reactiva, que es el terreno del brazo <code>reactive</code>/<code>rl</code>, no de la capa deliberativa.</p>
+<p><strong>Opción B — Verificador de consecuencias y detector de sorpresa (recomendada como primer paso).</strong> Mantener el SLM como decisor semántico y usar el modelo de mundo como <strong>capa de verificación</strong>: dada la macro-acción propuesta por el SLM (convertida a secuencia de comandos por <code>action_to_command()</code>), predecir en el latente si conduce a un estado con mayor riesgo (vía <em>probe</em> de ocupación/TTC) y vetarla o pedir reformulación antes de ejecutarla; además, usar el error de predicción como señal de <em>sorpresa</em> (fuera de distribución) para disparar la ruta deliberativa o el aterrizaje seguro. Esto reutiliza las dos propiedades que el paper sí demuestra (probing y detección de eventos implausibles [P]) sin exigirle planificar de extremo a extremo.</p>
+<p><strong>Opción C — Modelo de mundo para el brazo <code>rl</code> (complementaria con el Anexo 8).</strong> Usar el modelo de mundo como simulador latente barato para entrenar la política del cuarto brazo (imaginación, al estilo de <a href="../13-REFERENCIAS.html#ref-hafner-2020">Hafner et al., 2020</a>), reduciendo la cantidad de interacciones con AirSim/UE5.5, que es el costo dominante del entrenamiento. La política final seguiría siendo una red pequeña (&lt; 5 ms) ejecutable en el borde.</p>
+<hr />
+<h2 id="a95-viabilidad-en-hardware-edge">A9.5 Viabilidad en hardware edge<a class="headerlink" href="#a95-viabilidad-en-hardware-edge" title="Permanent link">&para;</a></h2>
+<h3 id="a951-plataformas-de-referencia">A9.5.1 Plataformas de referencia<a class="headerlink" href="#a951-plataformas-de-referencia" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Plataforma</th>
+<th>Cómputo declarado por el fabricante</th>
+<th>Memoria</th>
+<th>Potencia</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jetson Nano (original)</td>
+<td>472 GFLOPS</td>
+<td>4 GB</td>
+<td>5–10 W</td>
+<td><a href="../13-REFERENCIAS.html#ref-nvidia-2025">NVIDIA, 2025</a></td>
+</tr>
+<tr>
+<td>Jetson Orin Nano (4/8 GB)</td>
+<td>hasta 67 TOPS (cifra de "AI performance" del fabricante)</td>
+<td>4 o 8 GB</td>
+<td>7–25 W</td>
+<td><a href="../13-REFERENCIAS.html#ref-nvidia-orin-sf">NVIDIA, s. f.</a></td>
+</tr>
+<tr>
+<td>Jetson Orin NX (8/16 GB)</td>
+<td>hasta 157 TOPS</td>
+<td>8 o 16 GB</td>
+<td>—</td>
+<td><a href="../13-REFERENCIAS.html#ref-nvidia-orin-sf">NVIDIA, s. f.</a></td>
+</tr>
+<tr>
+<td>Estación de desarrollo de la tesis</td>
+<td>RTX 5060, 8 GB VRAM compartidos con UE5.5</td>
+<td>8 GB</td>
+<td>—</td>
+<td>[T] (cap. 8)</td>
+</tr>
+</tbody>
+</table>
+<p>Las cifras en TOPS son de marketing (típicamente INT8 y con esparcidad estructurada); para inferencia FP16 densa de <em>matmuls</em> pequeños el rendimiento sostenible es una fracción de ese valor. Por eso la tabla siguiente parte de supuestos conservadores.</p>
+<h3 id="a952-memoria">A9.5.2 Memoria<a class="headerlink" href="#a952-memoria" title="Permanent link">&para;</a></h3>
+<p>Con ~15 M de parámetros, LeWM ocupa ≈ 30 MB en FP16 y ≈ 15 MB en INT8 [E], frente a ~2,0 GB del VLM cuantizado [T]: unas 65× menos en el formato desplegado. Incluso la Jetson Nano de 4 GB podría alojar el modelo de mundo con holgura; la restricción de memoria, que condicionó la elección del VLM (cap. 8), <strong>deja de ser el factor limitante</strong>. Lo que sí pesa es el lote de candidatos del CEM (300 secuencias × historial de 3 tokens × 192 dimensiones), del orden de unos pocos MB de activaciones [E].</p>
+<h3 id="a953-computo-por-plan">A9.5.3 Cómputo por plan<a class="headerlink" href="#a953-computo-por-plan" title="Permanent link">&para;</a></h3>
+<p>Estimación analítica del costo por plan, con las dimensiones del paper [P] y contando solo multiplicaciones matriciales dominantes (2 FLOP por parámetro y token):</p>
+<ul>
+<li><strong>Encoder</strong> (ViT-Tiny, 224 × 224, patch 14 → 256 + 1 tokens): ≈ 3,4 GFLOP por frame [E]. Se evalúa una vez por ciclo (observación actual); el embedding objetivo se cachea.</li>
+<li><strong>Predictor</strong> (10 M parámetros, historial de 3 tokens): ≈ 60 MFLOP por paso de rollout y por candidato [E].</li>
+<li><strong>Rollout CEM:</strong> <code>N × iteraciones × H × 60 MFLOP</code>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Configuración CEM (H = 5)</th>
+<th>Rollouts/plan</th>
+<th>FLOP/plan [E]</th>
+<th>Latencia Orin Nano<br>(1–4 TFLOP/s efectivos, supuesto) [E]</th>
+<th>Latencia Nano original<br>(0,1–0,25 TFLOP/s efectivos, supuesto) [E]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Paper, Push-T: 300 × 30</td>
+<td>9 000</td>
+<td>≈ 2,7 T</td>
+<td>≈ 0,7–2,7 s</td>
+<td>≈ 11–27 s</td>
+</tr>
+<tr>
+<td>Paper, otros: 300 × 10</td>
+<td>3 000</td>
+<td>≈ 0,9 T</td>
+<td>≈ 0,2–0,9 s</td>
+<td>≈ 4–9 s</td>
+</tr>
+<tr>
+<td>Reducida: 64 × 5</td>
+<td>320</td>
+<td>≈ 0,1 T</td>
+<td>≈ 25–100 ms</td>
+<td>≈ 0,4–1 s</td>
+</tr>
+</tbody>
+</table>
+<p>Los rangos de throughput efectivo son <strong>hipótesis</strong> a validar en §A9.7: los <em>matmuls</em> pequeños y batcheados rara vez saturan las unidades tensoriales. Dos consecuencias:</p>
+<ol>
+<li><strong>Con la configuración del paper, el modelo de mundo no es más rápido que el SLM en el borde</strong>: su ventaja (48× sobre DINO-WM) es relativa a otros modelos de mundo, no al SLM del sistema. En una Orin Nano el plan completo caería en el mismo orden de magnitud que la latencia del VLM (850–1400 ms [T]) y del watchdog (<code>SLM_WATCHDOG_MS = 1500 ms</code>).</li>
+<li><strong>Reduciendo el presupuesto de muestreo</strong> (menos candidatos e iteraciones, <em>warm start</em> de la distribución CEM con el plan previo, horizonte corto) el plan baja a decenas de milisegundos en Orin Nano, compatible con el lazo de 5 Hz (200 ms por ciclo, con el ciclo también ocupado por percepción y flujo óptico). El costo es calidad de plan, cuyo impacto no está caracterizado y debe medirse (el paper fija sus hiperparámetros por tarea [P]).</li>
+</ol>
+<p>En la Jetson Nano original (Maxwell, sin unidades tensoriales), solo la configuración reducida es plausible, y la pila de software heredada (JetPack 4.x, versiones antiguas de PyTorch/TensorRT) añade fricción de portabilidad [E]. La Orin Nano es la plataforma realista para esta línea.</p>
+<h3 id="a954-ejecutar-el-slm-y-el-modelo-de-mundo-a-la-vez">A9.5.4 Ejecutar el SLM y el modelo de mundo a la vez<a class="headerlink" href="#a954-ejecutar-el-slm-y-el-modelo-de-mundo-a-la-vez" title="Permanent link">&para;</a></h3>
+<p>En el escenario de las Opciones B/C ambos modelos coexisten. Como el modelo de mundo pesa decenas de MB, la contención principal sería de <strong>ancho de banda de memoria y de tiempo de GPU</strong>, no de capacidad. El decodificado autorregresivo del VLM está limitado por ancho de banda: con ~2 GB de pesos por token y ~102 GB/s de la Orin Nano 8 GB, la cota superior teórica es ≈ 50 tokens/s [E] (dato de ancho de banda según el fabricante del kit de desarrollo; no verificado en el datasheet del módulo). Con el prompt actual (~500 tokens, cap. 12) y la imagen, es probable que el SLM del sistema quede cerca o por encima del watchdog en esa plataforma, lo que refuerza el argumento del Anexo 3 (LoRA para reducir el prompt) <strong>independientemente</strong> de esta línea.</p>
+<h3 id="a955-optimizaciones-de-despliegue-aplicables">A9.5.5 Optimizaciones de despliegue aplicables<a class="headerlink" href="#a955-optimizaciones-de-despliegue-aplicables" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Exportar encoder y predictor a ONNX/TensorRT en FP16 o INT8 (cuantización posterior con calibración sobre frames de AirSim).</li>
+<li>Reducir la resolución de entrada (p. ej., 112 × 112 con patch 14 → 64 tokens, ≈ 4× menos costo de encoder) reentrenando; sujeto a pérdida de detalle para obstáculos finos (cables, ramas).</li>
+<li><em>Warm start</em> de CEM y ejecución solo bajo disparo del router táctico (no en cada ciclo).</li>
+<li>Sustituir CEM por un optimizador basado en gradiente sobre el predictor diferenciable, o destilar el plan en una política amortizada (vinculado a la Opción C).</li>
+</ul>
+<hr />
+<h2 id="a96-trade-offs-sintesis">A9.6 Trade-offs: síntesis<a class="headerlink" href="#a96-trade-offs-sintesis" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>SLM (actual)</th>
+<th>Modelo de mundo latente</th>
+<th>Veredicto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Semántica y razonamiento global</td>
+<td>Fuerte</td>
+<td>Ausente</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Predicción de consecuencias de acciones continuas</td>
+<td>Nula (decide macro-acciones)</td>
+<td>Núcleo del método</td>
+<td>Favorece modelo de mundo</td>
+</tr>
+<tr>
+<td>Memoria</td>
+<td>~2 GB</td>
+<td>~30 MB</td>
+<td>Favorece modelo de mundo</td>
+</tr>
+<tr>
+<td>Latencia (config. del paper, borde)</td>
+<td>~1 s</td>
+<td>~1 s (estimado)</td>
+<td>Empate; el modelo de mundo mejora con presupuesto reducido</td>
+</tr>
+<tr>
+<td>Datos y costo de entrenamiento</td>
+<td>Cero (zero-shot)</td>
+<td>Dataset propio + horas de GPU</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Robustez a cambio de dominio</td>
+<td>Alta relativa</td>
+<td>Baja (reentrenar)</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Auditabilidad</td>
+<td>Texto explícito</td>
+<td>Latente opaco</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Madurez y evidencia en el dominio</td>
+<td>Evaluado en esta tesis (75 corridas)</td>
+<td>Sin evidencia en dron visual urbano</td>
+<td>Favorece SLM</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusión del análisis.</strong> La viabilidad <strong>técnica</strong> de ejecutar un modelo de mundo latente de ~15 M de parámetros en hardware edge es alta en memoria y condicional en latencia (requiere Orin Nano y presupuesto de muestreo reducido). La viabilidad <strong>de reemplazar</strong> al SLM es baja con la evidencia actual; la viabilidad de <strong>complementarlo</strong> (Opciones B y C) es la línea con mejor relación beneficio/riesgo.</p>
+<hr />
+<h2 id="a97-protocolo-de-evaluacion-propuesto">A9.7 Protocolo de evaluación propuesto<a class="headerlink" href="#a97-protocolo-de-evaluacion-propuesto" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Recolección de datos.</strong> Generar trayectorias (frame RGB, acción, telemetría) en AirSim para los tres tiers, incluyendo trayectorias de casi-colisión y maniobras de escape; las corridas ya registradas del lote de la tesis pueden reutilizarse como semilla, evaluando su cobertura antes de entrenar.</li>
+<li><strong>Entrenamiento y diagnóstico del latente.</strong> Entrenar LeWM (código oficial del paper, <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>); entrenar <em>probes</em> lineales para TTC/ocupación usando la profundidad <em>ground truth</em> ya disponible (cap. 7) y medir su error; medir error de rollout vs. horizonte.</li>
+<li><strong>Medición en el borde.</strong> Medir latencia real de <code>encoder</code>, <code>predictor</code> y plan CEM en la estación de desarrollo y en Jetson Orin Nano (FP16 y INT8/TensorRT), variando <code>N</code>, iteraciones y <code>H</code>; reportar p50/p95/p99 y potencia. Esto reemplaza las estimaciones [E] de §A9.5.3.</li>
+<li><strong>Evaluación en lazo cerrado.</strong> Comparar, sobre los mismos escenarios y semillas del cap. 10, <code>slm</code> contra <code>slm + verificador latente</code> (Opción B), con las mismas métricas (éxito, colisiones, tiempo, distancia). Con K = 5 los resultados serían indicativos (cap. 12, §12.3); se recomienda K ≥ 10–15.</li>
+<li><strong>Criterio go/no-go.</strong> Continuar solo si (a) el <em>probe</em> de riesgo alcanza una capacidad discriminativa medida (AUC/Youden, como en el Anexo 5) sobre escenas fuera del conjunto de entrenamiento, y (b) el plan completo cabe en el presupuesto del lazo táctico en Jetson Orin Nano sin degradar el ciclo de percepción.</li>
+</ol>
+<hr />
+<h2 id="a98-consideraciones-finales">A9.8 Consideraciones finales<a class="headerlink" href="#a98-consideraciones-finales" title="Permanent link">&para;</a></h2>
+<p>LeWorldModel es relevante para esta tesis no porque reemplace al SLM sino porque <strong>desplaza la pregunta</strong>: de "qué maniobra elegir" (decisión semántica discreta) a "qué ocurrirá si ejecuto esta secuencia de acciones" (predicción de consecuencias), con una huella de memoria compatible con un nodo edge. La evidencia disponible es de dominios simples y de otros grupos; su validez en visión monocular urbana aérea es una hipótesis abierta y el presente anexo la formula, junto con los criterios para refutarla, en lugar de asumirla.</p>
+<hr />
+<p><em>Las referencias citadas en este anexo corresponden a las entradas del §13 del presente informe. Las cifras marcadas [E] son estimaciones analíticas no medidas; su reemplazo por mediciones forma parte del trabajo futuro descrito en §12.4.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

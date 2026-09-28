@@ -34,9 +34,15 @@
 
 <a id="ref-uav-satellite-wildfire-2026" class="ref-anchor"></a><a id="13-referencias-ref-uav-satellite-wildfire-2026"></a>[Autores por confirmar]. (2026). A UAV–satellite hybrid pipeline for wildfire detection and dynamic perimeter prediction. *Drones*, *10*(4), 263. <https://doi.org/10.3390/drones10040263>
 
+<a id="ref-assran-2025" class="ref-anchor"></a><a id="13-referencias-ref-assran-2025"></a>Assran, M., Bardes, A., Fan, D., Garrido, Q., Howes, R., Muckley, M., Rizvi, A., Roberts, C., Sinha, K., Zholus, A., ... Ballas, N. (2025). *V-JEPA 2: Self-Supervised Video Models Enable Understanding, Prediction and Planning*. arXiv:2506.09985. <https://arxiv.org/abs/2506.09985>
+
+<a id="ref-assran-2023" class="ref-anchor"></a><a id="13-referencias-ref-assran-2023"></a>Assran, M., Duval, Q., Misra, I., Bojanowski, P., Vincent, P., Rabbat, M., LeCun, Y., & Ballas, N. (2023). Self-Supervised Learning from Images with a Joint-Embedding Predictive Architecture. *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, 15619-15629. arXiv:2301.08243. <https://arxiv.org/abs/2301.08243>
+
 <a id="ref-badrloo-2017" class="ref-anchor"></a><a id="13-referencias-ref-badrloo-2017"></a>Badrloo, S., & Varshosaz, M. (2017). Monocular vision based obstacle detection. *Earth Observation and Geomatics Engineering*, *1*(2), 122-130. <https://doi.org/10.22059/eoge.2017.244709.1015>
 
 <a id="ref-baheri-2020" class="ref-anchor"></a><a id="13-referencias-ref-baheri-2020"></a>Baheri, A. (2020). *Safe Reinforcement Learning with Mixture Density Network: A Case Study in Autonomous Highway Driving*. <https://arxiv.org/abs/2007.01698>
+
+<a id="ref-balestriero-2025" class="ref-anchor"></a><a id="13-referencias-ref-balestriero-2025"></a>Balestriero, R., & LeCun, Y. (2025). *LeJEPA: Provable and Scalable Self-Supervised Learning Without the Heuristics*. arXiv:2511.08544. <https://arxiv.org/abs/2511.08544>
 
 <a id="ref-barisic-2025" class="ref-anchor"></a><a id="13-referencias-ref-barisic-2025"></a>Barišić Kulas, A., Petric, F., & Bogdan, S. (2025). *Aerial maritime vessel detection and identification*. ICUAS 2025. arXiv:2507.07153. <https://arxiv.org/abs/2507.07153>
 
@@ -55,6 +61,8 @@
 <a id="ref-castro-2020" class="ref-anchor"></a><a id="13-referencias-ref-castro-2020"></a>Castro, W., Marcato Junior, J., Polidoro, C., Osco, L. P., Gonçalves, W., Rodrigues, L., Santos, M., Jank, L., Barrios, S., Valle, C., Simeão, R., Carromeu, C., Silveira, E., Jorge, L. A. de C., & Matsubara, E. (2020). Deep Learning Applied to Phenotyping of Biomass in Forages with UAV-Based RGB Imagery. *Sensors*, *20*(17). <https://doi.org/10.3390/s20174802>
 
 <a id="ref-csis-2024" class="ref-anchor"></a><a id="13-referencias-ref-csis-2024"></a>Center for Strategic and International Studies (CSIS). (2024). *Ukraine's future vision and current capabilities for waging AI-enabled autonomous warfare*. <https://www.csis.org/analysis/ukraines-future-vision-and-current-capabilities-waging-ai-enabled-autonomous-warfare>
+
+<a id="ref-chahe-2026" class="ref-anchor"></a><a id="13-referencias-ref-chahe-2026"></a>Chahe, A., Cai, S., & Zhou, L. (2026). *Latent World Models with Monotone Planning Costs for Image-Goal Navigation*. arXiv:2608.09073. <https://arxiv.org/abs/2608.09073>
 
 <a id="ref-chahine-2023" class="ref-anchor"></a><a id="13-referencias-ref-chahine-2023"></a>Chahine, M., Hasani, R., Kao, P., Ray, A., Shubert, R., Lechner, M., Amini, A., & Rus, D. (2023). Robust flight navigation out of distribution with liquid neural networks. *Science Robotics*, *8*(77). <https://doi.org/10.1126/scirobotics.adc8892>
 
@@ -120,6 +128,10 @@
 
 <a id="ref-guan-2024" class="ref-anchor"></a><a id="13-referencias-ref-guan-2024"></a>Guan, T., Liu, F., Wu, X., Xian, R., Li, Z., Liu, X., Wang, X., Chen, L., Huang, F., Yacoob, Y., Manocha, D., & Zhou, T. (2024). HallusionBench: An Advanced Diagnostic Suite for Entangled Language Hallucination and Visual Illusion in Large Vision-Language Models. *2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, 13490-13500. <https://doi.org/10.1109/CVPR52733.2024.01282>
 
+<a id="ref-ha-2018" class="ref-anchor"></a><a id="13-referencias-ref-ha-2018"></a>Ha, D., & Schmidhuber, J. (2018). Recurrent World Models Facilitate Policy Evolution. *Advances in Neural Information Processing Systems (NeurIPS)*, *31*. arXiv:1803.10122. <https://arxiv.org/abs/1803.10122>
+
+<a id="ref-hafner-2020" class="ref-anchor"></a><a id="13-referencias-ref-hafner-2020"></a>Hafner, D., Lillicrap, T., Ba, J., & Norouzi, M. (2020). Dream to Control: Learning Behaviors by Latent Imagination. *International Conference on Learning Representations (ICLR)*. arXiv:1912.01603. <https://arxiv.org/abs/1912.01603>
+
 <a id="ref-han-2023" class="ref-anchor"></a><a id="13-referencias-ref-han-2023"></a>Han, D., & Han, M. (2023). *Unsloth: Fast and Memory-Efficient Language Model Fine-Tuning* [Software]. GitHub. <https://github.com/unslothai/unsloth>
 
 <a id="ref-he-2025" class="ref-anchor"></a><a id="13-referencias-ref-he-2025"></a>He, H., y colaboradores de Thinking Machines Lab. (2025, 10 de septiembre). *Defeating Nondeterminism in LLM Inference*. Thinking Machines Lab. <https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/>
@@ -172,6 +184,8 @@
 
 <a id="ref-langaker-2021" class="ref-anchor"></a><a id="13-referencias-ref-langaker-2021"></a>Langåker, H.-A., Kjerkreit, H., Syversen, C. L., Moore, R. J. D., Holhjem, Ø. H., Jensen, I., Morrison, A., Transeth, A. A., Kvien, O., Berg, G., Olsen, T. A., Hatlestad, A., Negård, T., Broch, R., & Johnsen, J. E. (2021). An autonomous drone-based system for inspection of electrical substations. *International Journal of Advanced Robotic Systems*, *18*(2), 17298814211002972. <https://doi.org/10.1177/17298814211002973>
 
+<a id="ref-lecun-2022" class="ref-anchor"></a><a id="13-referencias-ref-lecun-2022"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence* (versión 0.9.2). OpenReview. <https://openreview.net/forum?id=BZ5a1r-kVsf>
+
 <a id="ref-lee-1976" class="ref-anchor"></a><a id="13-referencias-ref-lee-1976"></a>Lee, D. N. (1976). A theory of visual control of braking based on information about time-to-collision. *Perception*, *5*(4), 437-459. <https://doi.org/10.1068/p050437>
 
 <a id="ref-lesy-2026" class="ref-anchor"></a><a id="13-referencias-ref-lesy-2026"></a>Lesy, B., Herremans, S., Kerstens, R., Steckel, J., Daems, W., Mercelis, S., & Anwar, A. (2026). ASVSim (AirSim for Surface Vehicles): A High-Fidelity Simulation Framework for Autonomous Surface Vehicle Research. *IEEE Access*, *14*, 63803-63820. arXiv:2506.22174. <https://arxiv.org/abs/2506.22174>
@@ -206,6 +220,8 @@
 
 <a id="ref-madridano-2020" class="ref-anchor"></a><a id="13-referencias-ref-madridano-2020"></a>Madridano Carrasco, Á. (2020). *Arquitectura de software para navegación autónoma y coordinada de enjambres de drones en labores de lucha contra incendios forestales y urbanos* [Tesis doctoral, Universidad Carlos III de Madrid]. <https://hdl.handle.net/10016/32463>
 
+<a id="ref-maes-2026" class="ref-anchor"></a><a id="13-referencias-ref-maes-2026"></a>Maes, L., Le Lidec, Q., Scieur, D., LeCun, Y., & Balestriero, R. (2026). *LeWorldModel: Stable End-to-End Joint-Embedding Predictive Architecture from Pixels*. arXiv:2603.19312. <https://arxiv.org/abs/2603.19312>
+
 <a id="ref-mangrulkar-2022" class="ref-anchor"></a><a id="13-referencias-ref-mangrulkar-2022"></a>Mangrulkar, S., Gugger, S., Debut, L., von Platen, P., Paul, S., & Bossan, B. (2022). *PEFT: State-of-the-art Parameter-Efficient Fine-Tuning methods* [Software]. GitHub. <https://github.com/huggingface/peft>
 
 <a id="ref-mann-1947" class="ref-anchor"></a><a id="13-referencias-ref-mann-1947"></a>Mann, H. B., & Whitney, D. R. (1947). On a Test of Whether one of Two Random Variables is Stochastically Larger than the Other. *The Annals of Mathematical Statistics*, *18*(1), 50-60. <https://doi.org/10.1214/aoms/1177730491>
@@ -236,6 +252,8 @@
 
 <a id="ref-nvidia-2025" class="ref-anchor"></a><a id="13-referencias-ref-nvidia-2025"></a>NVIDIA. (2025). *Jetson Nano Brings the Power of Modern AI to Edge Devices*. <https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-nano/product-development/>
 
+<a id="ref-nvidia-orin-sf" class="ref-anchor"></a><a id="13-referencias-ref-nvidia-orin-sf"></a>NVIDIA. (s. f.). *Jetson Modules: Jetson Orin Nano and Orin NX Series*. Recuperado en septiembre de 2026, de <https://developer.nvidia.com/embedded/jetson-modules>
+
 <a id="ref-px4-sf" class="ref-anchor"></a><a id="13-referencias-ref-px4-sf"></a>_Open Source Autopilot for Drones - PX4 Autopilot_. (s. f.). Recuperado 29 de junio de 2025, de <https://px4.io/>
 
 <a id="ref-perfil-2026" class="ref-anchor"></a><a id="13-referencias-ref-perfil-2026"></a>Perfil. (2026, 8 de septiembre). *La vigilancia de Javier Milei y Jorge Macri: tecnología, millones y control del espacio público*. <https://www.perfil.com/noticias/politica/la-vigilancia-de-javier-milei-y-jorge-macri-tecnologia-millones-y-control-del-espacio-publico.phtml>
@@ -253,6 +271,8 @@
 <a id="ref-rafailov-2024" class="ref-anchor"></a><a id="13-referencias-ref-rafailov-2024"></a>Rafailov, R., Sharma, A., Mitchell, E., Ermon, S., Manning, C. D., & Finn, C. (2024). Direct Preference Optimization: Your Language Model is Secretly a Reward Model. *Advances in Neural Information Processing Systems (NeurIPS)*, *36*. <https://arxiv.org/abs/2305.18290>
 
 <a id="ref-ramezani-sf" class="ref-anchor"></a><a id="13-referencias-ref-ramezani-sf"></a>Ramezani, M., Voos, H., Habibi, H., & Sanchez-Lopez, J. L. (2023). UAV path planning employing MPC-reinforcement learning method considering collision avoidance. *2023 International Conference on Unmanned Aircraft Systems (ICUAS)*, 507-514. <https://arxiv.org/abs/2302.10669>
+
+<a id="ref-rao-2026" class="ref-anchor"></a><a id="13-referencias-ref-rao-2026"></a>Rao, P., Zhang, W., Balestriero, R., LeCun, Y., & Loianno, G. (2026). *SkyJEPA: Learning Long-Horizon World Models for Zero-Shot Sim-to-Real Control of Quadrotors*. arXiv:2606.23444. <https://arxiv.org/abs/2606.23444>
 
 <a id="ref-raspanti-2025" class="ref-anchor"></a><a id="13-referencias-ref-raspanti-2025"></a>Raspanti, F., Ozcelebi, T., & Holenderski, M. (2025). Grammar-Constrained Decoding Makes Large Language Models Better Logical Parsers. *ACL 2025 Industry Track*, 485-499. <https://doi.org/10.18653/v1/2025.acl-industry.34>
 
@@ -277,6 +297,8 @@
 <a id="ref-shi-s-2024" class="ref-anchor"></a><a id="13-referencias-ref-shi-s-2024"></a>Shi, S., Ni, J., Kong, X., Zhu, H., Zhan, J., Sun, Q., & Xu, Y. (2024). An Obstacle Detection Method Based on Longitudinal Active Vision. *Sensors*, *24*(13), 4407. <https://doi.org/10.3390/s24134407>
 
 <a id="ref-shin-2019" class="ref-anchor"></a><a id="13-referencias-ref-shin-2019"></a>Shin, Y.-S., & Kim, A. (2019). Sparse Depth Enhanced Direct Thermal-infrared SLAM Beyond the Visible Spectrum. *IEEE Robotics and Automation Letters*, *4*(3), 2918-2925. <https://arxiv.org/abs/1902.10892>
+
+<a id="ref-sobal-2025" class="ref-anchor"></a><a id="13-referencias-ref-sobal-2025"></a>Sobal, V., Zhang, W., Cho, K., Balestriero, R., Rudner, T. G. J., & LeCun, Y. (2025). *Learning from Reward-Free Offline Data: A Case for Planning with Latent Dynamics Models*. arXiv:2502.14819. <https://arxiv.org/abs/2502.14819>
 
 <a id="ref-song-2025" class="ref-anchor"></a><a id="13-referencias-ref-song-2025"></a>Song, C., Guo, X., & Sui, J. (2025). Improved Model Predictive Control Algorithm for the Path Tracking Control of Ship Autonomous Berthing. *Journal of Marine Science and Engineering*, *13*(7). <https://doi.org/10.3390/jmse13071273>
 
@@ -319,6 +341,8 @@
 <a id="ref-zhang-tinyllama-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhang-tinyllama-2024"></a>Zhang, P., Zeng, G., Wang, T., & Lu, W. (2024). *TinyLlama: An Open-Source Small Language Model*. arXiv:2401.02385. <https://arxiv.org/abs/2401.02385>
 
 <a id="ref-zhen-sf" class="ref-anchor"></a><a id="13-referencias-ref-zhen-sf"></a>Zhen (s. f.). *Training-efficient deep reinforcement learning for autonomous driving*. [Autoría completa pendiente de confirmar.]
+
+<a id="ref-zhou-g-2025" class="ref-anchor"></a><a id="13-referencias-ref-zhou-g-2025"></a>Zhou, G., Pan, H., LeCun, Y., & Pinto, L. (2025). DINO-WM: World Models on Pre-trained Visual Features Enable Zero-shot Planning. *Proceedings of the 42nd International Conference on Machine Learning (ICML)*. arXiv:2411.04983. <https://arxiv.org/abs/2411.04983>
 
 <a id="ref-zhou-2025" class="ref-anchor"></a><a id="13-referencias-ref-zhou-2025"></a>Zhou, Y., Bautista, J., Yao, W., & de Marina, H. G. (2025). *Inverse Kinematics on Guiding Vector Fields for Robot Path Following*. <https://arxiv.org/abs/2502.17313>
 

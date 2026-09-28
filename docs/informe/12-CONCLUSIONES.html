@@ -1023,6 +1023,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Modelos de Mundo Latentes en Edge (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1229,7 +1257,7 @@ límite del sensor, no del algoritmo.</p>
 </ul>
 <hr />
 <h2 id="124-trabajo-futuro-y-mejoras">12.4 Trabajo futuro y mejoras<a class="headerlink" href="#124-trabajo-futuro-y-mejoras" title="Permanent link">&para;</a></h2>
-<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en cinco ejes prioritarios, integrando la transferencia física, la arquitectura del nodo deliberativo y la infraestructura perceptual:</p>
+<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en siete ejes prioritarios, integrando la transferencia física, la arquitectura del nodo deliberativo y la infraestructura perceptual:</p>
 <ul>
 <li>
 <p><strong>Especialización y adaptación ligera del modelo deliberativo vía LoRA/QLoRA (Anexo 3):</strong> En la implementación evaluada, el modelo multimodal (<strong>Qwen2.5-VL-3B-Instruct</strong>) opera en régimen <em>zero-shot / in-context learning</em>, lo cual exige verbalizar en cada ciclo la telemetría, el resumen del <code>ObstacleField</code>, el historial y las restricciones sintácticas (~500 tokens de prompt), empujando la latencia de inferencia (850–1400 ms) hacia el límite del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>). Como se fundamenta en el capítulo 8 (§8.7) y se desarrolla en detalle en el <a href="anexos/A3-OPTIMIZACION-LORA.html">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras inicial y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las   matrices de atención (<span class="arithmatex">\(W_q, W_v\)</span>) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT) utilizando la telemetría de vuelos exitosos. Esto permitirá internalizar el espacio cinemático y el formato estructurado en los pesos de la red, reduciendo el prompt a &lt;100 tokens y la latencia a &lt;500 ms sin incurrir en degradaciones por timeout.</p>
@@ -1256,11 +1284,13 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="anexos/A8-NAVEGACION-RL.html">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en VLM pre-entrenado. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>, manteniendo activa la capa deliberativa VLM en modo jerárquico. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— sin el overhead de latencia del brazo <code>slm</code> (~850–1400 ms vs. &lt; 5 ms de inferencia neuronal). El <a href="anexos/A8-NAVEGACION-RL.html">Anexo 8</a> desarrolla en detalle la jerarquía VLM → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos (K=5, 3 escenarios, 60 corridas). Su prerequisito es que el brazo <code>slm</code> tenga resultados estables.</p>
 </li>
 <li>
+<p><strong>Modelos de mundo latentes (LeWorldModel) como complemento o alternativa parcial al SLM (<a href="anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html">Anexo 9</a>):</strong> En marzo de 2026 se presentó LeWorldModel (<a href="13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>), un modelo de mundo de tipo JEPA de ~15 M de parámetros que aprende la dinámica del entorno de extremo a extremo desde píxeles y planifica en su espacio latente con tiempos del orden de un segundo, frente a los ~3 B parámetros del VLM empleado en esta tesis. El Anexo 9 analiza qué aportaría y qué perdería el sistema con este tipo de modelo (predicción de consecuencias de acciones continuas frente a la semántica y el razonamiento global del VLM), estima analíticamente su viabilidad en una <em>companion computer</em> Jetson Nano / Orin Nano —memoria holgada, latencia condicionada al presupuesto de muestreo de la planificación— y concluye que, con la evidencia actual (resultados en tareas 2D/3D simples, sin validación en visión monocular urbana aérea), no corresponde reemplazar al brazo <code>slm</code> sino <strong>complementarlo</strong> como verificador de consecuencias y detector de sorpresa, o usarlo como simulador latente para entrenar el brazo <code>rl</code> del Anexo 8. Las cifras de latencia del anexo son estimaciones; su reemplazo por mediciones en hardware edge y el protocolo de evaluación en lazo cerrado (§A9.7) constituyen el trabajo futuro concreto.</p>
+</li>
+<li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>
 </li>
 <li>Validación en plataforma física real: integración en una <em>companion computer</em> de bajo consumo (NVIDIA Jetson Nano / Orin) conectada vía MAVLink/ROS a un cuadrirrotor físico con sensor monocular, evaluando el lazo reactivo-táctico en entornos reales según las fases delineadas en el plan de trabajo aprobado.</li>
-<li>Extensión a navegación cooperativa en enjambre y fusión sensorial con sensores
-    complementarios (flujo óptico diferencial con sensores acústicos o ToF ultraligeros).</li>
+<li>Extensión a navegación cooperativa en enjambre y fusión sensorial con sensores complementarios (flujo óptico diferencial con sensores acústicos o ToF ultraligeros).</li>
 </ul>
 
 

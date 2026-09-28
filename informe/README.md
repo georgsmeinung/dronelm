@@ -31,6 +31,7 @@ reescribir la estructura cada vez.
 | — | [`anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md`](anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md) | Material de referencia — configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad | — |
 | — | [`anexos/A7-MALDICION-MONOCULAR-ESTEREO.md`](anexos/A7-MALDICION-MONOCULAR-ESTEREO.md) | Material de referencia — formaliza la "maldición monocular" (ambigüedad de escala + flujo nulo cerca del FOE) como causa raíz del fracaso 0/5 en `townsim_ini` (§11.4.2b) y evalúa mitigación estéreo (dos cámaras / adaptador de un sensor) frente a LiDAR, con sus propias limitaciones en follaje denso | §11.4.2b, §12.4 |
 | — | [`anexos/A8-NAVEGACION-RL.md`](anexos/A8-NAVEGACION-RL.md) | Trabajo futuro — diseño técnico del cuarto brazo experimental `rl` (PPO visual): jerarquía VLM → RL → PX4, espacio de observación `{rgb, ttc_field, nav}`, espacio de acciones discretas (6 macro-acciones), función de recompensa con currículo, justificación PPO vs SAC/DQN, arquitectura CNN+FC, advertencia sobre generalización (caso Swift/ETH), protocolo de evaluación 4 brazos (60 corridas) | §12.4 |
+| — | [`anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.md`](anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.md) | Trabajo futuro — análisis de LeWorldModel (JEPA, ~15 M parámetros) como alternativa/complemento del SLM: trade-offs, brechas de aplicabilidad, tres opciones de integración, estimación de viabilidad en Jetson Nano/Orin Nano y protocolo de evaluación | §12.4 |
 
 ## Convenciones
 

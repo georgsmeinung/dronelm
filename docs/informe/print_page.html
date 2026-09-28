@@ -895,6 +895,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Modelos de Mundo Latentes en Edge (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1174,6 +1202,17 @@
     <span class="md-ellipsis">
       
         15.8 A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anexos-a9-modelos-de-mundo-latentes-edge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.9 A9. Modelos de Mundo Latentes en Edge (Propuesta)
       
     </span>
   </a>
@@ -4968,7 +5007,7 @@ límite del sensor, no del algoritmo.</p>
 </ul>
 <hr />
 <h2 id="12-conclusiones-124-trabajo-futuro-y-mejoras">12.4 Trabajo futuro y mejoras<a class="headerlink" href="#12-conclusiones-124-trabajo-futuro-y-mejoras" title="Permanent link">&para;</a></h2>
-<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en cinco ejes prioritarios, integrando la transferencia física, la arquitectura del nodo deliberativo y la infraestructura perceptual:</p>
+<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en siete ejes prioritarios, integrando la transferencia física, la arquitectura del nodo deliberativo y la infraestructura perceptual:</p>
 <ul>
 <li>
 <p><strong>Especialización y adaptación ligera del modelo deliberativo vía LoRA/QLoRA (Anexo 3):</strong> En la implementación evaluada, el modelo multimodal (<strong>Qwen2.5-VL-3B-Instruct</strong>) opera en régimen <em>zero-shot / in-context learning</em>, lo cual exige verbalizar en cada ciclo la telemetría, el resumen del <code>ObstacleField</code>, el historial y las restricciones sintácticas (~500 tokens de prompt), empujando la latencia de inferencia (850–1400 ms) hacia el límite del perro guardián (<code>SLM_WATCHDOG_MS = 1500 ms</code>). Como se fundamenta en el capítulo 8 (§8.7) y se desarrolla en detalle en el <a href="#anexos-a3-optimizacion-lora">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras inicial y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las   matrices de atención (<span class="arithmatex">\(W_q, W_v\)</span>) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT) utilizando la telemetría de vuelos exitosos. Esto permitirá internalizar el espacio cinemático y el formato estructurado en los pesos de la red, reduciendo el prompt a &lt;100 tokens y la latencia a &lt;500 ms sin incurrir en degradaciones por timeout.</p>
@@ -4995,11 +5034,13 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="#anexos-a8-navegacion-rl">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en VLM pre-entrenado. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>, manteniendo activa la capa deliberativa VLM en modo jerárquico. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— sin el overhead de latencia del brazo <code>slm</code> (~850–1400 ms vs. &lt; 5 ms de inferencia neuronal). El <a href="#anexos-a8-navegacion-rl">Anexo 8</a> desarrolla en detalle la jerarquía VLM → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos (K=5, 3 escenarios, 60 corridas). Su prerequisito es que el brazo <code>slm</code> tenga resultados estables.</p>
 </li>
 <li>
+<p><strong>Modelos de mundo latentes (LeWorldModel) como complemento o alternativa parcial al SLM (<a href="#anexos-a9-modelos-de-mundo-latentes-edge">Anexo 9</a>):</strong> En marzo de 2026 se presentó LeWorldModel (<a href="#13-referencias-ref-maes-2026">Maes et al., 2026</a>), un modelo de mundo de tipo JEPA de ~15 M de parámetros que aprende la dinámica del entorno de extremo a extremo desde píxeles y planifica en su espacio latente con tiempos del orden de un segundo, frente a los ~3 B parámetros del VLM empleado en esta tesis. El Anexo 9 analiza qué aportaría y qué perdería el sistema con este tipo de modelo (predicción de consecuencias de acciones continuas frente a la semántica y el razonamiento global del VLM), estima analíticamente su viabilidad en una <em>companion computer</em> Jetson Nano / Orin Nano —memoria holgada, latencia condicionada al presupuesto de muestreo de la planificación— y concluye que, con la evidencia actual (resultados en tareas 2D/3D simples, sin validación en visión monocular urbana aérea), no corresponde reemplazar al brazo <code>slm</code> sino <strong>complementarlo</strong> como verificador de consecuencias y detector de sorpresa, o usarlo como simulador latente para entrenar el brazo <code>rl</code> del Anexo 8. Las cifras de latencia del anexo son estimaciones; su reemplazo por mediciones en hardware edge y el protocolo de evaluación en lazo cerrado (§A9.7) constituyen el trabajo futuro concreto.</p>
+</li>
+<li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>
 </li>
 <li>Validación en plataforma física real: integración en una <em>companion computer</em> de bajo consumo (NVIDIA Jetson Nano / Orin) conectada vía MAVLink/ROS a un cuadrirrotor físico con sensor monocular, evaluando el lazo reactivo-táctico en entornos reales según las fases delineadas en el plan de trabajo aprobado.</li>
-<li>Extensión a navegación cooperativa en enjambre y fusión sensorial con sensores
-    complementarios (flujo óptico diferencial con sensores acústicos o ToF ultraligeros).</li>
+<li>Extensión a navegación cooperativa en enjambre y fusión sensorial con sensores complementarios (flujo óptico diferencial con sensores acústicos o ToF ultraligeros).</li>
 </ul></section><section class="print-page" id="13-referencias" heading-number="14"><h1 id="13-referencias-13-referencias">13. Referencias<a class="headerlink" href="#13-referencias-13-referencias" title="Permanent link">&para;</a></h1>
 <p><a id="ref-abdin-2024" class="ref-anchor"></a><a id="13-referencias-ref-abdin-2024"></a>Abdin, M., Aneja, J., Awadalla, H., Awadallah, A., Awan, A. A., Bach, N., Bahree, A., Bakhtiari, A., Bao, J., Behl, H., Benhaim, A., Bilenko, M., Bjorck, J., Bubeck, S., Cai, M., Cai, Q., Chaudhary, V., Chen, D., Chen, D., ... Zhang, X. (2024). <em>Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone</em>. arXiv:2404.14219. <a href="https://arxiv.org/abs/2404.14219">https://arxiv.org/abs/2404.14219</a></p>
 <p><a id="ref-agarwal-2021" class="ref-anchor"></a><a id="13-referencias-ref-agarwal-2021"></a>Agarwal, R., Schwarzer, M., Castro, P. S., Courville, A., &amp; Bellemare, M. G. (2021). Deep Reinforcement Learning at the Edge of the Statistical Precipice. <em>Advances in Neural Information Processing Systems (NeurIPS)</em>, <em>34</em>. arXiv:2108.13264. <a href="https://arxiv.org/abs/2108.13264">https://arxiv.org/abs/2108.13264</a></p>
@@ -5018,8 +5059,11 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-argentina-sf" class="ref-anchor"></a><a id="13-referencias-ref-argentina-sf"></a>Argentina.gob.ar. (s. f.). <em>Ambiente incorpora drones en parques nacionales para la detección temprana de incendios forestales</em>. Ministerio de Ambiente y Desarrollo Sostenible. <a href="https://www.argentina.gob.ar/noticias/ambiente-incorpora-drones-en-parques-nacionales-para-la-deteccion-temprana-de-incendios">https://www.argentina.gob.ar/noticias/ambiente-incorpora-drones-en-parques-nacionales-para-la-deteccion-temprana-de-incendios</a></p>
 <p><a id="ref-arnold-2018" class="ref-anchor"></a><a id="13-referencias-ref-arnold-2018"></a>Arnold, R., Yamaguchi, H., &amp; Tanaka, T. (2018). Search and rescue with autonomous flying robots through behavior-based cooperative intelligence. <em>Journal of International Humanitarian Action</em>, <em>3</em>. <a href="https://doi.org/10.1186/s41018-018-0045-4">https://doi.org/10.1186/s41018-018-0045-4</a></p>
 <p><a id="ref-uav-satellite-wildfire-2026" class="ref-anchor"></a><a id="13-referencias-ref-uav-satellite-wildfire-2026"></a>[Autores por confirmar]. (2026). A UAV–satellite hybrid pipeline for wildfire detection and dynamic perimeter prediction. <em>Drones</em>, <em>10</em>(4), 263. <a href="https://doi.org/10.3390/drones10040263">https://doi.org/10.3390/drones10040263</a></p>
+<p><a id="ref-assran-2025" class="ref-anchor"></a><a id="13-referencias-ref-assran-2025"></a>Assran, M., Bardes, A., Fan, D., Garrido, Q., Howes, R., Muckley, M., Rizvi, A., Roberts, C., Sinha, K., Zholus, A., ... Ballas, N. (2025). <em>V-JEPA 2: Self-Supervised Video Models Enable Understanding, Prediction and Planning</em>. arXiv:2506.09985. <a href="https://arxiv.org/abs/2506.09985">https://arxiv.org/abs/2506.09985</a></p>
+<p><a id="ref-assran-2023" class="ref-anchor"></a><a id="13-referencias-ref-assran-2023"></a>Assran, M., Duval, Q., Misra, I., Bojanowski, P., Vincent, P., Rabbat, M., LeCun, Y., &amp; Ballas, N. (2023). Self-Supervised Learning from Images with a Joint-Embedding Predictive Architecture. <em>Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 15619-15629. arXiv:2301.08243. <a href="https://arxiv.org/abs/2301.08243">https://arxiv.org/abs/2301.08243</a></p>
 <p><a id="ref-badrloo-2017" class="ref-anchor"></a><a id="13-referencias-ref-badrloo-2017"></a>Badrloo, S., &amp; Varshosaz, M. (2017). Monocular vision based obstacle detection. <em>Earth Observation and Geomatics Engineering</em>, <em>1</em>(2), 122-130. <a href="https://doi.org/10.22059/eoge.2017.244709.1015">https://doi.org/10.22059/eoge.2017.244709.1015</a></p>
 <p><a id="ref-baheri-2020" class="ref-anchor"></a><a id="13-referencias-ref-baheri-2020"></a>Baheri, A. (2020). <em>Safe Reinforcement Learning with Mixture Density Network: A Case Study in Autonomous Highway Driving</em>. <a href="https://arxiv.org/abs/2007.01698">https://arxiv.org/abs/2007.01698</a></p>
+<p><a id="ref-balestriero-2025" class="ref-anchor"></a><a id="13-referencias-ref-balestriero-2025"></a>Balestriero, R., &amp; LeCun, Y. (2025). <em>LeJEPA: Provable and Scalable Self-Supervised Learning Without the Heuristics</em>. arXiv:2511.08544. <a href="https://arxiv.org/abs/2511.08544">https://arxiv.org/abs/2511.08544</a></p>
 <p><a id="ref-barisic-2025" class="ref-anchor"></a><a id="13-referencias-ref-barisic-2025"></a>Barišić Kulas, A., Petric, F., &amp; Bogdan, S. (2025). <em>Aerial maritime vessel detection and identification</em>. ICUAS 2025. arXiv:2507.07153. <a href="https://arxiv.org/abs/2507.07153">https://arxiv.org/abs/2507.07153</a></p>
 <p><a id="ref-bouhamed-2020" class="ref-anchor"></a><a id="13-referencias-ref-bouhamed-2020"></a>Bouhamed, O., Ghazzai, H., Besbes, H., &amp; Massoud, Y. (2020). <em>Autonomous UAV Navigation: A DDPG-based Deep Reinforcement Learning Approach</em>. <em>CoRR</em>, <em>abs/2003.10923</em>. <a href="https://arxiv.org/abs/2003.10923">https://arxiv.org/abs/2003.10923</a></p>
 <p><a id="ref-breaking-defense-2025" class="ref-anchor"></a><a id="13-referencias-ref-breaking-defense-2025"></a>Breaking Defense. (2025, marzo). <em>Trained on classified battlefield data, AI multiplies effectiveness of Ukraine's drones: Report</em>. <a href="https://breakingdefense.com/2025/03/trained-on-classified-battlefield-data-ai-multiplies-effectiveness-of-ukraines-drones-report/">https://breakingdefense.com/2025/03/trained-on-classified-battlefield-data-ai-multiplies-effectiveness-of-ukraines-drones-report/</a></p>
@@ -5029,6 +5073,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-castelli-2016" class="ref-anchor"></a><a id="13-referencias-ref-castelli-2016"></a>Castelli, T., Sharghi, A., Harper, D., Trémeau, A., &amp; Shah, M. (2016). Autonomous navigation for low-altitude UAVs in urban areas. <em>CoRR</em>, <em>abs/1602.08141</em>. <a href="http://arxiv.org/abs/1602.08141">http://arxiv.org/abs/1602.08141</a></p>
 <p><a id="ref-castro-2020" class="ref-anchor"></a><a id="13-referencias-ref-castro-2020"></a>Castro, W., Marcato Junior, J., Polidoro, C., Osco, L. P., Gonçalves, W., Rodrigues, L., Santos, M., Jank, L., Barrios, S., Valle, C., Simeão, R., Carromeu, C., Silveira, E., Jorge, L. A. de C., &amp; Matsubara, E. (2020). Deep Learning Applied to Phenotyping of Biomass in Forages with UAV-Based RGB Imagery. <em>Sensors</em>, <em>20</em>(17). <a href="https://doi.org/10.3390/s20174802">https://doi.org/10.3390/s20174802</a></p>
 <p><a id="ref-csis-2024" class="ref-anchor"></a><a id="13-referencias-ref-csis-2024"></a>Center for Strategic and International Studies (CSIS). (2024). <em>Ukraine's future vision and current capabilities for waging AI-enabled autonomous warfare</em>. <a href="https://www.csis.org/analysis/ukraines-future-vision-and-current-capabilities-waging-ai-enabled-autonomous-warfare">https://www.csis.org/analysis/ukraines-future-vision-and-current-capabilities-waging-ai-enabled-autonomous-warfare</a></p>
+<p><a id="ref-chahe-2026" class="ref-anchor"></a><a id="13-referencias-ref-chahe-2026"></a>Chahe, A., Cai, S., &amp; Zhou, L. (2026). <em>Latent World Models with Monotone Planning Costs for Image-Goal Navigation</em>. arXiv:2608.09073. <a href="https://arxiv.org/abs/2608.09073">https://arxiv.org/abs/2608.09073</a></p>
 <p><a id="ref-chahine-2023" class="ref-anchor"></a><a id="13-referencias-ref-chahine-2023"></a>Chahine, M., Hasani, R., Kao, P., Ray, A., Shubert, R., Lechner, M., Amini, A., &amp; Rus, D. (2023). Robust flight navigation out of distribution with liquid neural networks. <em>Science Robotics</em>, <em>8</em>(77). <a href="https://doi.org/10.1126/scirobotics.adc8892">https://doi.org/10.1126/scirobotics.adc8892</a></p>
 <p><a id="ref-chen-f-2014" class="ref-anchor"></a><a id="13-referencias-ref-chen-f-2014"></a>Chen, F., Wu, Q., Tao, G., &amp; Jiang, B. (2014). A Reconfiguration Control Scheme for a Quadrotor Helicopter via Combined Multiple Models. <em>International Journal of Advanced Robotic Systems</em>, <em>11</em>(8), 122. <a href="https://doi.org/10.5772/58833">https://doi.org/10.5772/58833</a></p>
 <p><a id="ref-chen-w-2022" class="ref-anchor"></a><a id="13-referencias-ref-chen-w-2022"></a>Chen, W., Shang, G., Hu, K., Zhou, C., Wang, X., Fang, G., &amp; Ji, A. (2022). A Monocular-Visual SLAM System with Semantic and Optical-Flow Fusion for Indoor Dynamic Environments. <em>Micromachines</em>, <em>13</em>(11). <a href="https://doi.org/10.3390/mi13112006">https://doi.org/10.3390/mi13112006</a></p>
@@ -5061,6 +5106,8 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-graf-2021" class="ref-anchor"></a><a id="13-referencias-ref-graf-2021"></a>Graf, M., Speidel, O., Ruof, J., &amp; Dietmayer, K. (2021). <em>On-Road Motion Planning for Automated Vehicles at Ulm University</em>. <a href="http://arxiv.org/abs/2012.04028">http://arxiv.org/abs/2012.04028</a></p>
 <p><a id="ref-grando-2020" class="ref-anchor"></a><a id="13-referencias-ref-grando-2020"></a>Grando, R. B., Pinheiro, P. M., Bortoluzzi, N. P., da Silva, C. B., Zauk, O. F., Piñeiro, M. O., Aoki, V. M., Kelbouscas, A. L., Lima, Y. B., Drews, P. L., &amp; Neto, A. A. (2020). Visual-based Autonomous Unmanned Aerial Vehicle for Inspection in Indoor Environments. <em>2020 Latin American Robotics Symposium (LARS) / 2020 Brazilian Symposium on Robotics (SBR) / 2020 Workshop on Robotics in Education (WRE)</em>, 1-6. <a href="https://doi.org/10.1109/LARS/SBR/WRE51543.2020.9307024">https://doi.org/10.1109/LARS/SBR/WRE51543.2020.9307024</a></p>
 <p><a id="ref-guan-2024" class="ref-anchor"></a><a id="13-referencias-ref-guan-2024"></a>Guan, T., Liu, F., Wu, X., Xian, R., Li, Z., Liu, X., Wang, X., Chen, L., Huang, F., Yacoob, Y., Manocha, D., &amp; Zhou, T. (2024). HallusionBench: An Advanced Diagnostic Suite for Entangled Language Hallucination and Visual Illusion in Large Vision-Language Models. <em>2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 13490-13500. <a href="https://doi.org/10.1109/CVPR52733.2024.01282">https://doi.org/10.1109/CVPR52733.2024.01282</a></p>
+<p><a id="ref-ha-2018" class="ref-anchor"></a><a id="13-referencias-ref-ha-2018"></a>Ha, D., &amp; Schmidhuber, J. (2018). Recurrent World Models Facilitate Policy Evolution. <em>Advances in Neural Information Processing Systems (NeurIPS)</em>, <em>31</em>. arXiv:1803.10122. <a href="https://arxiv.org/abs/1803.10122">https://arxiv.org/abs/1803.10122</a></p>
+<p><a id="ref-hafner-2020" class="ref-anchor"></a><a id="13-referencias-ref-hafner-2020"></a>Hafner, D., Lillicrap, T., Ba, J., &amp; Norouzi, M. (2020). Dream to Control: Learning Behaviors by Latent Imagination. <em>International Conference on Learning Representations (ICLR)</em>. arXiv:1912.01603. <a href="https://arxiv.org/abs/1912.01603">https://arxiv.org/abs/1912.01603</a></p>
 <p><a id="ref-han-2023" class="ref-anchor"></a><a id="13-referencias-ref-han-2023"></a>Han, D., &amp; Han, M. (2023). <em>Unsloth: Fast and Memory-Efficient Language Model Fine-Tuning</em> [Software]. GitHub. <a href="https://github.com/unslothai/unsloth">https://github.com/unslothai/unsloth</a></p>
 <p><a id="ref-he-2025" class="ref-anchor"></a><a id="13-referencias-ref-he-2025"></a>He, H., y colaboradores de Thinking Machines Lab. (2025, 10 de septiembre). <em>Defeating Nondeterminism in LLM Inference</em>. Thinking Machines Lab. <a href="https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/">https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/</a></p>
 <p><a id="ref-henderson-2018" class="ref-anchor"></a><a id="13-referencias-ref-henderson-2018"></a>Henderson, P., Islam, R., Bachman, P., Pineau, J., Precup, D., &amp; Meger, D. (2018). Deep Reinforcement Learning That Matters. <em>Proceedings of the AAAI Conference on Artificial Intelligence</em>, <em>32</em>(1). arXiv:1709.06560. <a href="https://arxiv.org/abs/1709.06560">https://arxiv.org/abs/1709.06560</a></p>
@@ -5087,6 +5134,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-kruskal-1952" class="ref-anchor"></a><a id="13-referencias-ref-kruskal-1952"></a>Kruskal, W. H., &amp; Wallis, W. A. (1952). Use of Ranks in One-Criterion Variance Analysis. <em>Journal of the American Statistical Association</em>, <em>47</em>(260), 583-621. <a href="https://doi.org/10.1080/01621459.1952.10483441">https://doi.org/10.1080/01621459.1952.10483441</a></p>
 <p><a id="ref-lanacion-2026" class="ref-anchor"></a><a id="13-referencias-ref-lanacion-2026"></a>LA NACION (Content Lab). (2026, 13 de marzo). <em>El campo del futuro: cómo son los drones agrícolas y por qué crece su uso</em>. <a href="https://www.lanacion.com.ar/economia/campo/el-campo-del-futuro-como-son-los-drones-agricolas-y-por-que-crece-su-uso-nid13032026/">https://www.lanacion.com.ar/economia/campo/el-campo-del-futuro-como-son-los-drones-agricolas-y-por-que-crece-su-uso-nid13032026/</a></p>
 <p><a id="ref-langaker-2021" class="ref-anchor"></a><a id="13-referencias-ref-langaker-2021"></a>Langåker, H.-A., Kjerkreit, H., Syversen, C. L., Moore, R. J. D., Holhjem, Ø. H., Jensen, I., Morrison, A., Transeth, A. A., Kvien, O., Berg, G., Olsen, T. A., Hatlestad, A., Negård, T., Broch, R., &amp; Johnsen, J. E. (2021). An autonomous drone-based system for inspection of electrical substations. <em>International Journal of Advanced Robotic Systems</em>, <em>18</em>(2), 17298814211002972. <a href="https://doi.org/10.1177/17298814211002973">https://doi.org/10.1177/17298814211002973</a></p>
+<p><a id="ref-lecun-2022" class="ref-anchor"></a><a id="13-referencias-ref-lecun-2022"></a>LeCun, Y. (2022). <em>A Path Towards Autonomous Machine Intelligence</em> (versión 0.9.2). OpenReview. <a href="https://openreview.net/forum?id=BZ5a1r-kVsf">https://openreview.net/forum?id=BZ5a1r-kVsf</a></p>
 <p><a id="ref-lee-1976" class="ref-anchor"></a><a id="13-referencias-ref-lee-1976"></a>Lee, D. N. (1976). A theory of visual control of braking based on information about time-to-collision. <em>Perception</em>, <em>5</em>(4), 437-459. <a href="https://doi.org/10.1068/p050437">https://doi.org/10.1068/p050437</a></p>
 <p><a id="ref-lesy-2026" class="ref-anchor"></a><a id="13-referencias-ref-lesy-2026"></a>Lesy, B., Herremans, S., Kerstens, R., Steckel, J., Daems, W., Mercelis, S., &amp; Anwar, A. (2026). ASVSim (AirSim for Surface Vehicles): A High-Fidelity Simulation Framework for Autonomous Surface Vehicle Research. <em>IEEE Access</em>, <em>14</em>, 63803-63820. arXiv:2506.22174. <a href="https://arxiv.org/abs/2506.22174">https://arxiv.org/abs/2506.22174</a></p>
 <p><a id="ref-leviathan-2023" class="ref-anchor"></a><a id="13-referencias-ref-leviathan-2023"></a>Leviathan, Y., Kalman, M., &amp; Matias, Y. (2023). Fast Inference from Transformers via Speculative Decoding. <em>Proceedings of the 40th International Conference on Machine Learning (ICML)</em>, PMLR 202, 19274-19286. <a href="https://arxiv.org/abs/2211.17192">https://arxiv.org/abs/2211.17192</a></p>
@@ -5104,6 +5152,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-machado-2018" class="ref-anchor"></a><a id="13-referencias-ref-machado-2018"></a>Machado, M. C., Bellemare, M. G., Talvitie, E., Veness, J., Hausknecht, M., &amp; Bowling, M. (2018). Revisiting the Arcade Learning Environment: Evaluation Protocols and Open Problems for General Agents. <em>Journal of Artificial Intelligence Research</em>, <em>61</em>, 523-562. arXiv:1709.06009. <a href="https://doi.org/10.1613/jair.5699">https://doi.org/10.1613/jair.5699</a></p>
 <p><a id="ref-madaan-2020" class="ref-anchor"></a><a id="13-referencias-ref-madaan-2020"></a>Madaan, R., Gyde, N., Vemprala, S., Brown, M., Nagami, K., Taubner, T., Cristofalo, E., Scaramuzza, D., Schwager, M., &amp; Kapoor, A. (2020). AirSim Drone Racing Lab. <em>Proceedings of the NeurIPS 2019 Competition and Demonstration Track</em>, PMLR 123, 177-191. arXiv:2003.05654. <a href="https://arxiv.org/abs/2003.05654">https://arxiv.org/abs/2003.05654</a></p>
 <p><a id="ref-madridano-2020" class="ref-anchor"></a><a id="13-referencias-ref-madridano-2020"></a>Madridano Carrasco, Á. (2020). <em>Arquitectura de software para navegación autónoma y coordinada de enjambres de drones en labores de lucha contra incendios forestales y urbanos</em> [Tesis doctoral, Universidad Carlos III de Madrid]. <a href="https://hdl.handle.net/10016/32463">https://hdl.handle.net/10016/32463</a></p>
+<p><a id="ref-maes-2026" class="ref-anchor"></a><a id="13-referencias-ref-maes-2026"></a>Maes, L., Le Lidec, Q., Scieur, D., LeCun, Y., &amp; Balestriero, R. (2026). <em>LeWorldModel: Stable End-to-End Joint-Embedding Predictive Architecture from Pixels</em>. arXiv:2603.19312. <a href="https://arxiv.org/abs/2603.19312">https://arxiv.org/abs/2603.19312</a></p>
 <p><a id="ref-mangrulkar-2022" class="ref-anchor"></a><a id="13-referencias-ref-mangrulkar-2022"></a>Mangrulkar, S., Gugger, S., Debut, L., von Platen, P., Paul, S., &amp; Bossan, B. (2022). <em>PEFT: State-of-the-art Parameter-Efficient Fine-Tuning methods</em> [Software]. GitHub. <a href="https://github.com/huggingface/peft">https://github.com/huggingface/peft</a></p>
 <p><a id="ref-mann-1947" class="ref-anchor"></a><a id="13-referencias-ref-mann-1947"></a>Mann, H. B., &amp; Whitney, D. R. (1947). On a Test of Whether one of Two Random Variables is Stochastically Larger than the Other. <em>The Annals of Mathematical Statistics</em>, <em>18</em>(1), 50-60. <a href="https://doi.org/10.1214/aoms/1177730491">https://doi.org/10.1214/aoms/1177730491</a></p>
 <p><a id="ref-marazzato-2015" class="ref-anchor"></a><a id="13-referencias-ref-marazzato-2015"></a>Marazzato, R., &amp; Sparavigna, A. C. (2015). Retinex filtering of foggy images: generation of a bulk set with selection and ranking. <em>CoRR</em>, <em>abs/1509.08715</em>. <a href="http://arxiv.org/abs/1509.08715">http://arxiv.org/abs/1509.08715</a></p>
@@ -5119,6 +5168,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-norte-misionero-2026" class="ref-anchor"></a><a id="13-referencias-ref-norte-misionero-2026"></a>Norte Misionero. (2026). <em>Alerta temprana, drones y respuesta rápida: Misiones refuerza su esquema de prevención de incendios</em>. <a href="https://nortemisionero.com.ar/provinciales/alerta-temprana-drones-y-respuesta-rapida-misiones-refuerza-su-esquema-de-prevencion-de-incendios-n516147/">https://nortemisionero.com.ar/provinciales/alerta-temprana-drones-y-respuesta-rapida-misiones-refuerza-su-esquema-de-prevencion-de-incendios-n516147/</a></p>
 <p><a id="ref-nothdurft-2011" class="ref-anchor"></a><a id="13-referencias-ref-nothdurft-2011"></a>Nothdurft, T., Hecker, P., Ohl, S., Saust, F., Maurer, M., Reschka, A., &amp; Böhmer, J. R. (2011). <em>Stadtpilot: First Fully Autonomous Test Drives in Urban Traffic</em>. <a href="https://www.tu-braunschweig.de/fileadmin/Redaktionsgruppen/Institute_Fakultaet_5/IFR/Dateien_EFS/Publikationen/Stadtpilot_FirstFullyAutonomous.pdf">https://www.tu-braunschweig.de/fileadmin/Redaktionsgruppen/Institute_Fakultaet_5/IFR/Dateien_EFS/Publikationen/Stadtpilot_FirstFullyAutonomous.pdf</a></p>
 <p><a id="ref-nvidia-2025" class="ref-anchor"></a><a id="13-referencias-ref-nvidia-2025"></a>NVIDIA. (2025). <em>Jetson Nano Brings the Power of Modern AI to Edge Devices</em>. <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-nano/product-development/">https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-nano/product-development/</a></p>
+<p><a id="ref-nvidia-orin-sf" class="ref-anchor"></a><a id="13-referencias-ref-nvidia-orin-sf"></a>NVIDIA. (s. f.). <em>Jetson Modules: Jetson Orin Nano and Orin NX Series</em>. Recuperado en septiembre de 2026, de <a href="https://developer.nvidia.com/embedded/jetson-modules">https://developer.nvidia.com/embedded/jetson-modules</a></p>
 <p><a id="ref-px4-sf" class="ref-anchor"></a><a id="13-referencias-ref-px4-sf"></a><em>Open Source Autopilot for Drones - PX4 Autopilot</em>. (s. f.). Recuperado 29 de junio de 2025, de <a href="https://px4.io/">https://px4.io/</a></p>
 <p><a id="ref-perfil-2026" class="ref-anchor"></a><a id="13-referencias-ref-perfil-2026"></a>Perfil. (2026, 8 de septiembre). <em>La vigilancia de Javier Milei y Jorge Macri: tecnología, millones y control del espacio público</em>. <a href="https://www.perfil.com/noticias/politica/la-vigilancia-de-javier-milei-y-jorge-macri-tecnologia-millones-y-control-del-espacio-publico.phtml">https://www.perfil.com/noticias/politica/la-vigilancia-de-javier-milei-y-jorge-macri-tecnologia-millones-y-control-del-espacio-publico.phtml</a></p>
 <p><a id="ref-pestana-2017" class="ref-anchor"></a><a id="13-referencias-ref-pestana-2017"></a>Pestana Puerta, J. (2017). <em>Vision-Based Autonomous Navigation of Multirotor Micro Aerial Vehicles</em> [PhD Thesis, Universidad Politécnica de Madrid]. <a href="https://doi.org/10.20868/UPM.thesis.47726">https://doi.org/10.20868/UPM.thesis.47726</a></p>
@@ -5128,6 +5178,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-qwen-team-2025" class="ref-anchor"></a><a id="13-referencias-ref-qwen-team-2025"></a>Qwen Team. (2025). <em>Qwen2.5-VL Technical Report</em>. arXiv:2502.13923. <a href="https://arxiv.org/abs/2502.13923">https://arxiv.org/abs/2502.13923</a></p>
 <p><a id="ref-rafailov-2024" class="ref-anchor"></a><a id="13-referencias-ref-rafailov-2024"></a>Rafailov, R., Sharma, A., Mitchell, E., Ermon, S., Manning, C. D., &amp; Finn, C. (2024). Direct Preference Optimization: Your Language Model is Secretly a Reward Model. <em>Advances in Neural Information Processing Systems (NeurIPS)</em>, <em>36</em>. <a href="https://arxiv.org/abs/2305.18290">https://arxiv.org/abs/2305.18290</a></p>
 <p><a id="ref-ramezani-sf" class="ref-anchor"></a><a id="13-referencias-ref-ramezani-sf"></a>Ramezani, M., Voos, H., Habibi, H., &amp; Sanchez-Lopez, J. L. (2023). UAV path planning employing MPC-reinforcement learning method considering collision avoidance. <em>2023 International Conference on Unmanned Aircraft Systems (ICUAS)</em>, 507-514. <a href="https://arxiv.org/abs/2302.10669">https://arxiv.org/abs/2302.10669</a></p>
+<p><a id="ref-rao-2026" class="ref-anchor"></a><a id="13-referencias-ref-rao-2026"></a>Rao, P., Zhang, W., Balestriero, R., LeCun, Y., &amp; Loianno, G. (2026). <em>SkyJEPA: Learning Long-Horizon World Models for Zero-Shot Sim-to-Real Control of Quadrotors</em>. arXiv:2606.23444. <a href="https://arxiv.org/abs/2606.23444">https://arxiv.org/abs/2606.23444</a></p>
 <p><a id="ref-raspanti-2025" class="ref-anchor"></a><a id="13-referencias-ref-raspanti-2025"></a>Raspanti, F., Ozcelebi, T., &amp; Holenderski, M. (2025). Grammar-Constrained Decoding Makes Large Language Models Better Logical Parsers. <em>ACL 2025 Industry Track</em>, 485-499. <a href="https://doi.org/10.18653/v1/2025.acl-industry.34">https://doi.org/10.18653/v1/2025.acl-industry.34</a></p>
 <p><a id="ref-redmon-2015" class="ref-anchor"></a><a id="13-referencias-ref-redmon-2015"></a>Redmon, J., Divvala, S. K., Girshick, R. B., &amp; Farhadi, A. (2015). You Only Look Once: Unified, Real-Time Object Detection. <em>CoRR</em>, <em>abs/1506.02640</em>. <a href="http://arxiv.org/abs/1506.02640">http://arxiv.org/abs/1506.02640</a></p>
 <p><a id="ref-anac-880-2019" class="ref-anchor"></a><a id="13-referencias-ref-anac-880-2019"></a>Resolución ANAC — Reglamento de Vehículos Aéreos No Tripulados, Pub. L. No. 880/2019. (2019). <a href="https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-880-2019-333259">https://www.argentina.gob.ar/normativa/nacional/resoluci%C3%B3n-880-2019-333259</a></p>
@@ -5140,6 +5191,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-shah-2017" class="ref-anchor"></a><a id="13-referencias-ref-shah-2017"></a>Shah, S., Dey, D., Lovett, C., &amp; Kapoor, A. (2017). <em>AirSim: High-Fidelity Visual and Physical Simulation for Autonomous Vehicles</em>. <a href="http://arxiv.org/abs/1705.05065">http://arxiv.org/abs/1705.05065</a></p>
 <p><a id="ref-shi-s-2024" class="ref-anchor"></a><a id="13-referencias-ref-shi-s-2024"></a>Shi, S., Ni, J., Kong, X., Zhu, H., Zhan, J., Sun, Q., &amp; Xu, Y. (2024). An Obstacle Detection Method Based on Longitudinal Active Vision. <em>Sensors</em>, <em>24</em>(13), 4407. <a href="https://doi.org/10.3390/s24134407">https://doi.org/10.3390/s24134407</a></p>
 <p><a id="ref-shin-2019" class="ref-anchor"></a><a id="13-referencias-ref-shin-2019"></a>Shin, Y.-S., &amp; Kim, A. (2019). Sparse Depth Enhanced Direct Thermal-infrared SLAM Beyond the Visible Spectrum. <em>IEEE Robotics and Automation Letters</em>, <em>4</em>(3), 2918-2925. <a href="https://arxiv.org/abs/1902.10892">https://arxiv.org/abs/1902.10892</a></p>
+<p><a id="ref-sobal-2025" class="ref-anchor"></a><a id="13-referencias-ref-sobal-2025"></a>Sobal, V., Zhang, W., Cho, K., Balestriero, R., Rudner, T. G. J., &amp; LeCun, Y. (2025). <em>Learning from Reward-Free Offline Data: A Case for Planning with Latent Dynamics Models</em>. arXiv:2502.14819. <a href="https://arxiv.org/abs/2502.14819">https://arxiv.org/abs/2502.14819</a></p>
 <p><a id="ref-song-2025" class="ref-anchor"></a><a id="13-referencias-ref-song-2025"></a>Song, C., Guo, X., &amp; Sui, J. (2025). Improved Model Predictive Control Algorithm for the Path Tracking Control of Ship Autonomous Berthing. <em>Journal of Marine Science and Engineering</em>, <em>13</em>(7). <a href="https://doi.org/10.3390/jmse13071273">https://doi.org/10.3390/jmse13071273</a></p>
 <p><a id="ref-sun-2026" class="ref-anchor"></a><a id="13-referencias-ref-sun-2026"></a>Sun, X., Si, W., Ni, W., Li, Y., Wu, D., Xie, F., Guan, R., Xu, H.-Y., Ding, H., &amp; Wu, Y. (2026). <em>AutoFly: Vision-Language-Action model for UAV autonomous navigation in the wild</em>. arXiv:2602.09657. <a href="https://arxiv.org/abs/2602.09657">https://arxiv.org/abs/2602.09657</a></p>
 <p><a id="ref-sanchez-sf" class="ref-anchor"></a><a id="13-referencias-ref-sanchez-sf"></a>Sánchez Rodríguez, J. P. (2018). <em>Navegación autónoma de un dron hexacóptero con visión estereoscópica para mapeo y evasión de obstáculos en tiempo real</em> [Tesis de maestría]. Instituto Tecnológico y de Estudios Superiores de Monterrey. <a href="https://repositorio.tec.mx/items/5eec523b-b8ba-4baa-9a78-c9935486fb8b">https://repositorio.tec.mx/items/5eec523b-b8ba-4baa-9a78-c9935486fb8b</a></p>
@@ -5161,6 +5213,7 @@ límite del sensor, no del algoritmo.</p>
 <p><a id="ref-zhang-g-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhang-g-2024"></a>Zhang, G., Liu, J., Luo, W., Zhao, Y., Tang, R., Mei, K., &amp; Wang, P. (2024). A Shortest Distance Priority UAV Path Planning Algorithm for Precision Agriculture. <em>Sensors</em>, <em>24</em>(23), 7514. <a href="https://doi.org/10.3390/s24237514">https://doi.org/10.3390/s24237514</a></p>
 <p><a id="ref-zhang-tinyllama-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhang-tinyllama-2024"></a>Zhang, P., Zeng, G., Wang, T., &amp; Lu, W. (2024). <em>TinyLlama: An Open-Source Small Language Model</em>. arXiv:2401.02385. <a href="https://arxiv.org/abs/2401.02385">https://arxiv.org/abs/2401.02385</a></p>
 <p><a id="ref-zhen-sf" class="ref-anchor"></a><a id="13-referencias-ref-zhen-sf"></a>Zhen (s. f.). <em>Training-efficient deep reinforcement learning for autonomous driving</em>. [Autoría completa pendiente de confirmar.]</p>
+<p><a id="ref-zhou-g-2025" class="ref-anchor"></a><a id="13-referencias-ref-zhou-g-2025"></a>Zhou, G., Pan, H., LeCun, Y., &amp; Pinto, L. (2025). DINO-WM: World Models on Pre-trained Visual Features Enable Zero-shot Planning. <em>Proceedings of the 42nd International Conference on Machine Learning (ICML)</em>. arXiv:2411.04983. <a href="https://arxiv.org/abs/2411.04983">https://arxiv.org/abs/2411.04983</a></p>
 <p><a id="ref-zhou-2025" class="ref-anchor"></a><a id="13-referencias-ref-zhou-2025"></a>Zhou, Y., Bautista, J., Yao, W., &amp; de Marina, H. G. (2025). <em>Inverse Kinematics on Guiding Vector Fields for Robot Path Following</em>. <a href="https://arxiv.org/abs/2502.17313">https://arxiv.org/abs/2502.17313</a></p>
 <p><a id="ref-zhou-2026" class="ref-anchor"></a><a id="13-referencias-ref-zhou-2026"></a>Zhou, Z., Liao, Y., Wang, B., Wang, M., Fu, M., &amp; Hu, Z. (2026). Near obstacles detection by inverse perspective mapping of AVM for intelligent vehicles. <em>PLOS ONE</em>, <em>21</em>(1), e0336851. <a href="https://doi.org/10.1371/journal.pone.0336851">https://doi.org/10.1371/journal.pone.0336851</a></p>
 <p><a id="ref-zhu-2024" class="ref-anchor"></a><a id="13-referencias-ref-zhu-2024"></a>Zhu, Y., Moniz, J. R. A., Bhargava, S., Lu, J., Piraviperumal, D., Li, S., Zhang, Y., Yu, H., &amp; Tseng, B.-H. (2024). <em>Can Large Language Models Understand Context?</em> <a href="https://arxiv.org/abs/2402.00858">https://arxiv.org/abs/2402.00858</a></p></section>
@@ -7262,7 +7315,324 @@ con AirSim corriendo en paralelo.</p>
 <hr />
 <p><em>Las referencias citadas en este anexo corresponden a las entradas del §13 del presente
 informe. La evaluación cuantitativa del brazo <code>rl</code> y su comparación con los tres brazos
-implementados forma parte del trabajo futuro descrito en §12.4.</em></p></section></section></div><style>.print-site-enumerate-headings #00-cover > h1:before { content: '1 ' }
+implementados forma parte del trabajo futuro descrito en §12.4.</em></p></section><section class="print-page" id="anexos-a9-modelos-de-mundo-latentes-edge" heading-number="15.9"><h1 id="anexos-a9-modelos-de-mundo-latentes-edge-anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge">Anexo 9: Modelos de Mundo Latentes (LeWorldModel) como Alternativa al SLM — Trade-offs y Viabilidad en Hardware Edge<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge" title="Permanent link">&para;</a></h1>
+<p>Este anexo analiza, como línea de trabajo futuro (§12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (Qwen2.5-VL-3B-Instruct, cap. 8) por un <strong>modelo de mundo latente</strong> del tipo <em>Joint-Embedding Predictive Architecture</em> (JEPA), tomando como caso de estudio <strong>LeWorldModel</strong> (LeWM; <a href="#13-referencias-ref-maes-2026">Maes et al., 2026</a>). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo <code>slm</code>, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una <em>companion computer</em> como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).</p>
+<p><img src="anexos/a9-alternativa-con-lewm.jpg"/></p>
+<p><strong>Alcance y convención de rigor.</strong> Nada de lo aquí descrito está implementado ni medido en el sistema evaluado en el capítulo 11. Las cifras se rotulan según su origen:</p>
+<ul>
+<li><strong>[P]</strong> — reportada por el paper de LeWM u otra fuente citada.</li>
+<li><strong>[E]</strong> — estimación analítica del autor (orden de magnitud, con supuestos explícitos); <strong>no es una medición</strong> y debe reemplazarse por el protocolo de §A9.7.</li>
+<li><strong>[T]</strong> — medida en esta tesis (capítulos 8–11).</li>
+</ul>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a91-que-es-leworldmodel">A9.1 Qué es LeWorldModel<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a91-que-es-leworldmodel" title="Permanent link">&para;</a></h2>
+<p>Los modelos de mundo aprenden cómo cambia el entorno en función de las acciones del agente y permiten planificar "en imaginación" (<a href="#13-referencias-ref-ha-2018">Ha &amp; Schmidhuber, 2018</a>; <a href="#13-referencias-ref-hafner-2020">Hafner et al., 2020</a>). La familia JEPA (<a href="#13-referencias-ref-lecun-2022">LeCun, 2022</a>; <a href="#13-referencias-ref-assran-2023">Assran et al., 2023</a>; <a href="#13-referencias-ref-assran-2025">Assran et al., 2025</a>) evita predecir píxeles: predice la <strong>representación</strong> (embedding) del siguiente estado, lo que descarta detalle irrelevante y abarata la predicción. Su dificultad histórica es el <em>colapso de representación</em>; los trabajos previos lo resolvían con encoders congelados preentrenados (<a href="#13-referencias-ref-zhou-g-2025">DINO-WM, Zhou et al., 2025</a>) o con objetivos de muchos términos (<a href="#13-referencias-ref-sobal-2025">PLDM, Sobal et al., 2025</a>).</p>
+<p>LeWM (<a href="#13-referencias-ref-maes-2026">Maes et al., 2026</a>, publicado en marzo de 2026 con Y. LeCun entre sus autores) es, según sus autores, el primer JEPA que entrena de forma estable de extremo a extremo desde píxeles con solo dos términos de pérdida: predicción del siguiente embedding más el regularizador SIGReg, que empuja los embeddings hacia una gaussiana isotrópica (<a href="#13-referencias-ref-balestriero-2025">Balestriero &amp; LeCun, 2025</a>).</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Valor reportado [P]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parámetros totales</td>
+<td>~15 M (encoder ~5 M + predictor ~10 M)</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>ViT-Tiny, patch 14, 12 capas, dimensión oculta 192; embedding = token <code>[CLS]</code> proyectado (192 dim)</td>
+</tr>
+<tr>
+<td>Predictor</td>
+<td>Transformer de 6 capas, 16 cabezas; acciones inyectadas por AdaLN; historial de N embeddings con máscara causal</td>
+</tr>
+<tr>
+<td>Entrada visual</td>
+<td>Frames RGB de 224 × 224</td>
+</tr>
+<tr>
+<td>Planificación</td>
+<td>Minimización del costo terminal <code>‖z_H − z_g‖²</code> por CEM con MPC; 300 secuencias candidatas, 10–30 iteraciones, horizonte H = 5 (frameskip 5)</td>
+</tr>
+<tr>
+<td>Tiempo de planificación</td>
+<td>0,98 s por plan vs. 47 s de DINO-WM (hasta 48× más rápido), promedio sobre 50 corridas</td>
+</tr>
+<tr>
+<td>Entrenamiento</td>
+<td>Una GPU, pocas horas</td>
+</tr>
+<tr>
+<td>Entornos evaluados</td>
+<td>Push-T, Reacher, OGBench-Cube, Two-Room (2D y manipulación 3D simple)</td>
+</tr>
+</tbody>
+</table>
+<p>El paper también reporta que el espacio latente codifica cantidades físicas recuperables por <em>probing</em> lineal y que un test de violación de expectativa detecta trayectorias físicamente implausibles. Entre las <strong>limitaciones declaradas</strong> por los autores: horizontes de planificación cortos, dependencia de datasets <em>offline</em> con cobertura suficiente (con baja diversidad SIGReg se debilita) y dependencia de etiquetas de acción.</p>
+<p><strong>Trabajos de contexto aéreo.</strong> El antecedente más cercano al dominio de esta tesis es SkyJEPA (<a href="#13-referencias-ref-rao-2026">Rao et al., 2026</a>), que aplica un modelo de dinámica latente de estilo JEPA al control de cuadrirrotores con transferencia <em>sim-to-real</em> y optimización por muestreo en hardware embebido; según su resumen opera sobre <strong>estado</strong>, no sobre imágenes, por lo que no valida el caso visual monocular. En navegación con imagen objetivo, <a href="#13-referencias-ref-chahe-2026">Chahe et al. (2026)</a> muestran que el costo de planificación en el espacio latente requiere diseño explícito (monotonía respecto del progreso). No se realizó un relevamiento exhaustivo de esta literatura, muy activa en 2026.</p>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente">A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente" title="Permanent link">&para;</a></h2>
+<p>El SLM del sistema evaluado es un <strong>decisor discreto y semántico</strong>: recibe un resumen verbalizado del <code>ObstacleField</code>, la telemetría y una imagen, y emite una macro-acción (<code>evasive</code>, <code>girar_90</code>, …) en ~850–1400 ms [T]. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
+<table>
+<thead>
+<tr>
+<th>Dimensión</th>
+<th>SLM/VLM (Qwen2.5-VL-3B, §8)</th>
+<th>LeWM-like (15 M)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Función</td>
+<td>Clasifica la situación y elige macro-acción</td>
+<td>Predice el embedding futuro dada una secuencia de acciones; el plan surge de optimizar</td>
+</tr>
+<tr>
+<td>Salida</td>
+<td>JSON discreto (5 macro-acciones)</td>
+<td>Secuencia continua de acciones (p. ej., <code>vx, vy, vz, yaw_rate</code>)</td>
+</tr>
+<tr>
+<td>Conocimiento previo</td>
+<td>Preentrenamiento masivo (sentido común, semántica urbana)</td>
+<td>Ninguno: aprende solo de los datos de dominio</td>
+</tr>
+<tr>
+<td>Especificación del objetivo</td>
+<td>Lenguaje natural / waypoints en el prompt</td>
+<td>Imagen objetivo (o función de costo sobre el latente)</td>
+</tr>
+<tr>
+<td>Datos requeridos</td>
+<td>Ninguno (<em>zero-shot</em>) o dataset de maniobras para LoRA (Anexo 3)</td>
+<td>Trayectorias (imagen, acción) offline con buena cobertura</td>
+</tr>
+<tr>
+<td>Parámetros</td>
+<td>~3 B</td>
+<td>~15 M (≈200× menos)</td>
+</tr>
+<tr>
+<td>Huella de memoria</td>
+<td>~2,0 GB (Q4_K_M) [T]</td>
+<td>~30 MB en FP16 [E]</td>
+</tr>
+<tr>
+<td>Interpretabilidad</td>
+<td>Texto (<code>reason</code>) auditable; la auditoría de contratos del cap. 9 se apoya en ello</td>
+<td>Latente opaco; requiere <em>probes</em> para inspeccionarlo</td>
+</tr>
+<tr>
+<td>Modo de falla característico</td>
+<td>Alucinación, JSON inválido, <em>timeout</em> del watchdog (cap. 9)</td>
+<td>Deriva de rollouts a horizonte largo, fuera de distribución, costo latente mal condicionado</td>
+</tr>
+<tr>
+<td>Latencia por decisión</td>
+<td>~850–1400 ms [T]</td>
+<td>~1 s en el paper con 300 × 10–30 iteraciones [P]; reducible (§A9.5)</td>
+</tr>
+</tbody>
+</table>
+<p>El SLM aporta exactamente aquello que el modelo de mundo no tiene (semántica y razonamiento global entre corredores ambiguos: régimen 2 del cap. 12, <code>citymap_pilot</code>), mientras que el modelo de mundo aporta lo que el SLM no tiene: <strong>predicción explícita de consecuencias de acciones continuas a bajo costo</strong>, útil justamente en el régimen 3 (obstrucción frontal con escape lateral accesible), donde el SLM perdía por latencia.</p>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a93-brechas-de-aplicabilidad-al-problema-del-dron">A9.3 Brechas de aplicabilidad al problema del dron<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a93-brechas-de-aplicabilidad-al-problema-del-dron" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Objetivo por imagen.</strong> El costo de LeWM es <code>‖z_H − z_g‖²</code> con <code>z_g = enc(o_g)</code>. La misión del dron se especifica por waypoints, no por imágenes. En simulación es posible renderizar una vista objetivo por waypoint, pero en un vuelo real no existe esa imagen. Alternativa propuesta: entrenar <em>probes</em> livianos sobre el latente para obtener cantidades ya usadas por el sistema (ocupación/TTC del <code>ObstacleField</code>, distancia a obstáculo, rumbo relativo al waypoint) y definir el costo sobre ellas; el paper reporta que el latente admite <em>probing</em> de cantidades físicas en sus entornos [P], pero no en escenas urbanas aéreas.</li>
+<li><strong>Horizonte corto.</strong> H = 5 pasos de predictor [P]. Con el lazo táctico a <code>LOOP_HZ = 5</code> [T], si cada paso del predictor equivale a un ciclo (200 ms), el horizonte es ~1 s: escaso para evasión a velocidad de crucero. Si cada paso agrupa varios ciclos (como el frameskip del paper), el horizonte se alarga pero se pierde resolución de control. Es un parámetro de diseño, no una constante.</li>
+<li><strong>Dominio y datos.</strong> Los resultados de LeWM son en tareas 2D/3D simples con datasets cuidadosamente recolectados [P]. Escenas urbanas 3D con vegetación, tráfico y multitud (Tiers 1–2, cap. 3) son de complejidad visual muy superior, y los propios autores señalan que la baja diversidad de datos degrada SIGReg [P]. El sistema podría generar datos en AirSim de forma barata, pero <strong>la cobertura de casos de colisión</strong> (raros por construcción) es el cuello de botella real.</li>
+<li><strong>Etiquetas de acción y dinámica.</strong> El predictor condiciona en acciones; para el dron habría que fijar qué representa la acción (velocidad comandada vs. macro-acción) y cómo se trata el retardo de actuación/autopiloto, que el paper no aborda.</li>
+<li><strong>Sin semántica ni razonamiento global.</strong> Un modelo de 15 M entrenado solo con datos de vuelo no distingue "corredor de servicio" de "autopista elevada" salvo que esa distinción esté visualmente y estadísticamente presente en los datos. Es el régimen donde el VLM mostró valor (H1, <code>citymap_pilot</code>).</li>
+<li><strong>Seguridad y verificabilidad.</strong> La optimización por CEM es estocástica y sin garantías de optimalidad global [P]. Cualquier integración debe conservar las salvaguardas determinísticas del sistema (<code>motor_node</code>, guardas de altitud, <code>DEPTH_EMERGENCY</code>).</li>
+<li><strong>Costo de reentrenamiento.</strong> Un cambio de cámara, altura de vuelo o escena exige reentrenar o ajustar el modelo; el SLM <em>zero-shot</em> es más robusto a ese cambio, aunque más lento.</li>
+</ol>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a94-tres-formas-de-incorporarlo">A9.4 Tres formas de incorporarlo<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a94-tres-formas-de-incorporarlo" title="Permanent link">&para;</a></h2>
+<p><strong>Opción A — Reemplazo del SLM (no recomendada).</strong> Sustituir la capa deliberativa por un planificador LeWM-like. Elimina la semántica (§A9.3, punto 5), exige resolver el objetivo por imagen y pierde la auditabilidad textual del cap. 9. Solo se justificaría si el objetivo fuera exclusivamente evasión local reactiva, que es el terreno del brazo <code>reactive</code>/<code>rl</code>, no de la capa deliberativa.</p>
+<p><strong>Opción B — Verificador de consecuencias y detector de sorpresa (recomendada como primer paso).</strong> Mantener el SLM como decisor semántico y usar el modelo de mundo como <strong>capa de verificación</strong>: dada la macro-acción propuesta por el SLM (convertida a secuencia de comandos por <code>action_to_command()</code>), predecir en el latente si conduce a un estado con mayor riesgo (vía <em>probe</em> de ocupación/TTC) y vetarla o pedir reformulación antes de ejecutarla; además, usar el error de predicción como señal de <em>sorpresa</em> (fuera de distribución) para disparar la ruta deliberativa o el aterrizaje seguro. Esto reutiliza las dos propiedades que el paper sí demuestra (probing y detección de eventos implausibles [P]) sin exigirle planificar de extremo a extremo.</p>
+<p><strong>Opción C — Modelo de mundo para el brazo <code>rl</code> (complementaria con el Anexo 8).</strong> Usar el modelo de mundo como simulador latente barato para entrenar la política del cuarto brazo (imaginación, al estilo de <a href="#13-referencias-ref-hafner-2020">Hafner et al., 2020</a>), reduciendo la cantidad de interacciones con AirSim/UE5.5, que es el costo dominante del entrenamiento. La política final seguiría siendo una red pequeña (&lt; 5 ms) ejecutable en el borde.</p>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a95-viabilidad-en-hardware-edge">A9.5 Viabilidad en hardware edge<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a95-viabilidad-en-hardware-edge" title="Permanent link">&para;</a></h2>
+<h3 id="anexos-a9-modelos-de-mundo-latentes-edge-a951-plataformas-de-referencia">A9.5.1 Plataformas de referencia<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a951-plataformas-de-referencia" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Plataforma</th>
+<th>Cómputo declarado por el fabricante</th>
+<th>Memoria</th>
+<th>Potencia</th>
+<th>Fuente</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jetson Nano (original)</td>
+<td>472 GFLOPS</td>
+<td>4 GB</td>
+<td>5–10 W</td>
+<td><a href="#13-referencias-ref-nvidia-2025">NVIDIA, 2025</a></td>
+</tr>
+<tr>
+<td>Jetson Orin Nano (4/8 GB)</td>
+<td>hasta 67 TOPS (cifra de "AI performance" del fabricante)</td>
+<td>4 o 8 GB</td>
+<td>7–25 W</td>
+<td><a href="#13-referencias-ref-nvidia-orin-sf">NVIDIA, s. f.</a></td>
+</tr>
+<tr>
+<td>Jetson Orin NX (8/16 GB)</td>
+<td>hasta 157 TOPS</td>
+<td>8 o 16 GB</td>
+<td>—</td>
+<td><a href="#13-referencias-ref-nvidia-orin-sf">NVIDIA, s. f.</a></td>
+</tr>
+<tr>
+<td>Estación de desarrollo de la tesis</td>
+<td>RTX 5060, 8 GB VRAM compartidos con UE5.5</td>
+<td>8 GB</td>
+<td>—</td>
+<td>[T] (cap. 8)</td>
+</tr>
+</tbody>
+</table>
+<p>Las cifras en TOPS son de marketing (típicamente INT8 y con esparcidad estructurada); para inferencia FP16 densa de <em>matmuls</em> pequeños el rendimiento sostenible es una fracción de ese valor. Por eso la tabla siguiente parte de supuestos conservadores.</p>
+<h3 id="anexos-a9-modelos-de-mundo-latentes-edge-a952-memoria">A9.5.2 Memoria<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a952-memoria" title="Permanent link">&para;</a></h3>
+<p>Con ~15 M de parámetros, LeWM ocupa ≈ 30 MB en FP16 y ≈ 15 MB en INT8 [E], frente a ~2,0 GB del VLM cuantizado [T]: unas 65× menos en el formato desplegado. Incluso la Jetson Nano de 4 GB podría alojar el modelo de mundo con holgura; la restricción de memoria, que condicionó la elección del VLM (cap. 8), <strong>deja de ser el factor limitante</strong>. Lo que sí pesa es el lote de candidatos del CEM (300 secuencias × historial de 3 tokens × 192 dimensiones), del orden de unos pocos MB de activaciones [E].</p>
+<h3 id="anexos-a9-modelos-de-mundo-latentes-edge-a953-computo-por-plan">A9.5.3 Cómputo por plan<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a953-computo-por-plan" title="Permanent link">&para;</a></h3>
+<p>Estimación analítica del costo por plan, con las dimensiones del paper [P] y contando solo multiplicaciones matriciales dominantes (2 FLOP por parámetro y token):</p>
+<ul>
+<li><strong>Encoder</strong> (ViT-Tiny, 224 × 224, patch 14 → 256 + 1 tokens): ≈ 3,4 GFLOP por frame [E]. Se evalúa una vez por ciclo (observación actual); el embedding objetivo se cachea.</li>
+<li><strong>Predictor</strong> (10 M parámetros, historial de 3 tokens): ≈ 60 MFLOP por paso de rollout y por candidato [E].</li>
+<li><strong>Rollout CEM:</strong> <code>N × iteraciones × H × 60 MFLOP</code>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Configuración CEM (H = 5)</th>
+<th>Rollouts/plan</th>
+<th>FLOP/plan [E]</th>
+<th>Latencia Orin Nano<br>(1–4 TFLOP/s efectivos, supuesto) [E]</th>
+<th>Latencia Nano original<br>(0,1–0,25 TFLOP/s efectivos, supuesto) [E]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Paper, Push-T: 300 × 30</td>
+<td>9 000</td>
+<td>≈ 2,7 T</td>
+<td>≈ 0,7–2,7 s</td>
+<td>≈ 11–27 s</td>
+</tr>
+<tr>
+<td>Paper, otros: 300 × 10</td>
+<td>3 000</td>
+<td>≈ 0,9 T</td>
+<td>≈ 0,2–0,9 s</td>
+<td>≈ 4–9 s</td>
+</tr>
+<tr>
+<td>Reducida: 64 × 5</td>
+<td>320</td>
+<td>≈ 0,1 T</td>
+<td>≈ 25–100 ms</td>
+<td>≈ 0,4–1 s</td>
+</tr>
+</tbody>
+</table>
+<p>Los rangos de throughput efectivo son <strong>hipótesis</strong> a validar en §A9.7: los <em>matmuls</em> pequeños y batcheados rara vez saturan las unidades tensoriales. Dos consecuencias:</p>
+<ol>
+<li><strong>Con la configuración del paper, el modelo de mundo no es más rápido que el SLM en el borde</strong>: su ventaja (48× sobre DINO-WM) es relativa a otros modelos de mundo, no al SLM del sistema. En una Orin Nano el plan completo caería en el mismo orden de magnitud que la latencia del VLM (850–1400 ms [T]) y del watchdog (<code>SLM_WATCHDOG_MS = 1500 ms</code>).</li>
+<li><strong>Reduciendo el presupuesto de muestreo</strong> (menos candidatos e iteraciones, <em>warm start</em> de la distribución CEM con el plan previo, horizonte corto) el plan baja a decenas de milisegundos en Orin Nano, compatible con el lazo de 5 Hz (200 ms por ciclo, con el ciclo también ocupado por percepción y flujo óptico). El costo es calidad de plan, cuyo impacto no está caracterizado y debe medirse (el paper fija sus hiperparámetros por tarea [P]).</li>
+</ol>
+<p>En la Jetson Nano original (Maxwell, sin unidades tensoriales), solo la configuración reducida es plausible, y la pila de software heredada (JetPack 4.x, versiones antiguas de PyTorch/TensorRT) añade fricción de portabilidad [E]. La Orin Nano es la plataforma realista para esta línea.</p>
+<h3 id="anexos-a9-modelos-de-mundo-latentes-edge-a954-ejecutar-el-slm-y-el-modelo-de-mundo-a-la-vez">A9.5.4 Ejecutar el SLM y el modelo de mundo a la vez<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a954-ejecutar-el-slm-y-el-modelo-de-mundo-a-la-vez" title="Permanent link">&para;</a></h3>
+<p>En el escenario de las Opciones B/C ambos modelos coexisten. Como el modelo de mundo pesa decenas de MB, la contención principal sería de <strong>ancho de banda de memoria y de tiempo de GPU</strong>, no de capacidad. El decodificado autorregresivo del VLM está limitado por ancho de banda: con ~2 GB de pesos por token y ~102 GB/s de la Orin Nano 8 GB, la cota superior teórica es ≈ 50 tokens/s [E] (dato de ancho de banda según el fabricante del kit de desarrollo; no verificado en el datasheet del módulo). Con el prompt actual (~500 tokens, cap. 12) y la imagen, es probable que el SLM del sistema quede cerca o por encima del watchdog en esa plataforma, lo que refuerza el argumento del Anexo 3 (LoRA para reducir el prompt) <strong>independientemente</strong> de esta línea.</p>
+<h3 id="anexos-a9-modelos-de-mundo-latentes-edge-a955-optimizaciones-de-despliegue-aplicables">A9.5.5 Optimizaciones de despliegue aplicables<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a955-optimizaciones-de-despliegue-aplicables" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Exportar encoder y predictor a ONNX/TensorRT en FP16 o INT8 (cuantización posterior con calibración sobre frames de AirSim).</li>
+<li>Reducir la resolución de entrada (p. ej., 112 × 112 con patch 14 → 64 tokens, ≈ 4× menos costo de encoder) reentrenando; sujeto a pérdida de detalle para obstáculos finos (cables, ramas).</li>
+<li><em>Warm start</em> de CEM y ejecución solo bajo disparo del router táctico (no en cada ciclo).</li>
+<li>Sustituir CEM por un optimizador basado en gradiente sobre el predictor diferenciable, o destilar el plan en una política amortizada (vinculado a la Opción C).</li>
+</ul>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a96-trade-offs-sintesis">A9.6 Trade-offs: síntesis<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a96-trade-offs-sintesis" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>SLM (actual)</th>
+<th>Modelo de mundo latente</th>
+<th>Veredicto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Semántica y razonamiento global</td>
+<td>Fuerte</td>
+<td>Ausente</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Predicción de consecuencias de acciones continuas</td>
+<td>Nula (decide macro-acciones)</td>
+<td>Núcleo del método</td>
+<td>Favorece modelo de mundo</td>
+</tr>
+<tr>
+<td>Memoria</td>
+<td>~2 GB</td>
+<td>~30 MB</td>
+<td>Favorece modelo de mundo</td>
+</tr>
+<tr>
+<td>Latencia (config. del paper, borde)</td>
+<td>~1 s</td>
+<td>~1 s (estimado)</td>
+<td>Empate; el modelo de mundo mejora con presupuesto reducido</td>
+</tr>
+<tr>
+<td>Datos y costo de entrenamiento</td>
+<td>Cero (zero-shot)</td>
+<td>Dataset propio + horas de GPU</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Robustez a cambio de dominio</td>
+<td>Alta relativa</td>
+<td>Baja (reentrenar)</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Auditabilidad</td>
+<td>Texto explícito</td>
+<td>Latente opaco</td>
+<td>Favorece SLM</td>
+</tr>
+<tr>
+<td>Madurez y evidencia en el dominio</td>
+<td>Evaluado en esta tesis (75 corridas)</td>
+<td>Sin evidencia en dron visual urbano</td>
+<td>Favorece SLM</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusión del análisis.</strong> La viabilidad <strong>técnica</strong> de ejecutar un modelo de mundo latente de ~15 M de parámetros en hardware edge es alta en memoria y condicional en latencia (requiere Orin Nano y presupuesto de muestreo reducido). La viabilidad <strong>de reemplazar</strong> al SLM es baja con la evidencia actual; la viabilidad de <strong>complementarlo</strong> (Opciones B y C) es la línea con mejor relación beneficio/riesgo.</p>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a97-protocolo-de-evaluacion-propuesto">A9.7 Protocolo de evaluación propuesto<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a97-protocolo-de-evaluacion-propuesto" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Recolección de datos.</strong> Generar trayectorias (frame RGB, acción, telemetría) en AirSim para los tres tiers, incluyendo trayectorias de casi-colisión y maniobras de escape; las corridas ya registradas del lote de la tesis pueden reutilizarse como semilla, evaluando su cobertura antes de entrenar.</li>
+<li><strong>Entrenamiento y diagnóstico del latente.</strong> Entrenar LeWM (código oficial del paper, <a href="#13-referencias-ref-maes-2026">Maes et al., 2026</a>); entrenar <em>probes</em> lineales para TTC/ocupación usando la profundidad <em>ground truth</em> ya disponible (cap. 7) y medir su error; medir error de rollout vs. horizonte.</li>
+<li><strong>Medición en el borde.</strong> Medir latencia real de <code>encoder</code>, <code>predictor</code> y plan CEM en la estación de desarrollo y en Jetson Orin Nano (FP16 y INT8/TensorRT), variando <code>N</code>, iteraciones y <code>H</code>; reportar p50/p95/p99 y potencia. Esto reemplaza las estimaciones [E] de §A9.5.3.</li>
+<li><strong>Evaluación en lazo cerrado.</strong> Comparar, sobre los mismos escenarios y semillas del cap. 10, <code>slm</code> contra <code>slm + verificador latente</code> (Opción B), con las mismas métricas (éxito, colisiones, tiempo, distancia). Con K = 5 los resultados serían indicativos (cap. 12, §12.3); se recomienda K ≥ 10–15.</li>
+<li><strong>Criterio go/no-go.</strong> Continuar solo si (a) el <em>probe</em> de riesgo alcanza una capacidad discriminativa medida (AUC/Youden, como en el Anexo 5) sobre escenas fuera del conjunto de entrenamiento, y (b) el plan completo cabe en el presupuesto del lazo táctico en Jetson Orin Nano sin degradar el ciclo de percepción.</li>
+</ol>
+<hr />
+<h2 id="anexos-a9-modelos-de-mundo-latentes-edge-a98-consideraciones-finales">A9.8 Consideraciones finales<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-a98-consideraciones-finales" title="Permanent link">&para;</a></h2>
+<p>LeWorldModel es relevante para esta tesis no porque reemplace al SLM sino porque <strong>desplaza la pregunta</strong>: de "qué maniobra elegir" (decisión semántica discreta) a "qué ocurrirá si ejecuto esta secuencia de acciones" (predicción de consecuencias), con una huella de memoria compatible con un nodo edge. La evidencia disponible es de dominios simples y de otros grupos; su validez en visión monocular urbana aérea es una hipótesis abierta y el presente anexo la formula, junto con los criterios para refutarla, en lugar de asumirla.</p>
+<hr />
+<p><em>Las referencias citadas en este anexo corresponden a las entradas del §13 del presente informe. Las cifras marcadas [E] son estimaciones analíticas no medidas; su reemplazo por mediciones forma parte del trabajo futuro descrito en §12.4.</em></p></section></section></div><style>.print-site-enumerate-headings #00-cover > h1:before { content: '1 ' }
 
                 .print-site-enumerate-headings #00-cover h2:before { content: '1.' counter(counter-00-cover-2) ' ' }
                 .print-site-enumerate-headings #00-cover h2 {  counter-reset: counter-00-cover-3 ;  counter-increment: counter-00-cover-2 }
@@ -7414,6 +7784,11 @@ implementados forma parte del trabajo futuro descrito en §12.4.</em></p></secti
 
                 .print-site-enumerate-headings #anexos-a8-navegacion-rl h2:before { content: '15.8.' counter(counter-anexos-a8-navegacion-rl-2) ' ' }
                 .print-site-enumerate-headings #anexos-a8-navegacion-rl h2 {  counter-increment: counter-anexos-a8-navegacion-rl-2 }
+            
+.print-site-enumerate-headings #anexos-a9-modelos-de-mundo-latentes-edge > h1:before { content: '15.9 ' }
+
+                .print-site-enumerate-headings #anexos-a9-modelos-de-mundo-latentes-edge h2:before { content: '15.9.' counter(counter-anexos-a9-modelos-de-mundo-latentes-edge-2) ' ' }
+                .print-site-enumerate-headings #anexos-a9-modelos-de-mundo-latentes-edge h2 {  counter-increment: counter-anexos-a9-modelos-de-mundo-latentes-edge-2 }
             </style>
 
 
