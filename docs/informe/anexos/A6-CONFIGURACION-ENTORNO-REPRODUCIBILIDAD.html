@@ -1010,10 +1010,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22" class="md-nav__link">
+  <a href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)
+        5b. Detección de atasco, escape y cierre de misión
       
     </span>
   </a>
@@ -1121,10 +1121,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2" class="md-nav__link">
+  <a href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (townsim_ini.json, versión V2)
+        A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (townsim_ini.json)
       
     </span>
   </a>
@@ -1480,10 +1480,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22" class="md-nav__link">
+  <a href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)
+        5b. Detección de atasco, escape y cierre de misión
       
     </span>
   </a>
@@ -1591,10 +1591,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2" class="md-nav__link">
+  <a href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (townsim_ini.json, versión V2)
+        A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (townsim_ini.json)
       
     </span>
   </a>
@@ -1894,7 +1894,7 @@
 <tr>
 <td><code>SLM_WATCHDOG_MS</code></td>
 <td><code>13000</code></td>
-<td>Tiempo límite del perro guardián (en ms) para la respuesta del SLM en hilo asíncrono. Si expira, se aplica el fallback determinista (con overrides de trayectoria). Recalibrado el 2026-09-22 (era 6000 en el lote base y 1500 en el diseño inicial) porque las consultas con imagen se midieron en ~10–11 s; debe ser menor que <code>SLM_HTTP_TIMEOUT_S</code>.</td>
+<td>Tiempo límite del perro guardián (en ms) para la respuesta del SLM en el servicio asíncrono; debe ser menor que <code>SLM_HTTP_TIMEOUT_S</code>. El escaneo de resolución de atasco usa su propio watchdog, <code>SLM_DEEP_WATCHDOG_MS</code> (12 000 ms).</td>
 </tr>
 <tr>
 <td><code>SLM_HTTP_TIMEOUT_S</code></td>
@@ -2015,7 +2015,7 @@
 <tr>
 <td><code>OBSTACLE_OCCUPANCY_BLOCKED</code></td>
 <td><code>0.011</code></td>
-<td>Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden el 2026-09-10 (AUC 0.87; cap. 7, §7.5); el valor histórico era 0.35.</td>
+<td>Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden (AUC 0.87; cap. 7, §7.5); un valor de 0.35 dejaría el canal inactivo.</td>
 </tr>
 <tr>
 <td><code>OBSTACLE_TTC_BLOCKED_S</code></td>
@@ -2034,7 +2034,7 @@
 </tr>
 </tbody>
 </table>
-<h3 id="5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22">5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)<a class="headerlink" href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision-anadido-2026-09-22" title="Permanent link">&para;</a></h3>
+<h3 id="5b-deteccion-de-atasco-escape-y-cierre-de-mision">5b. Detección de atasco, escape y cierre de misión<a class="headerlink" href="#5b-deteccion-de-atasco-escape-y-cierre-de-mision" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -2050,19 +2050,54 @@
 <td>Umbral de atasco duro = factor × umbral efectivo (10 ciclos) = 15 ciclos (3 s). Por defecto en código es 3.0.</td>
 </tr>
 <tr>
-<td><code>STOPPED_CYCLES_THRESHOLD</code></td>
-<td><code>15</code></td>
-<td>Ciclos parado (V3c) para sumar a <code>stuck_invisible</code>.</td>
+<td><code>STOPPED_CYCLES_THRESHOLD</code> / <code>STOPPED_DELIBERATIVE_CYCLES</code></td>
+<td><code>15</code> / <code>10</code></td>
+<td>Ciclos parado para sumar a <code>stuck_invisible</code> y para escalar directamente a la resolución de atasco (<code>stopped_prolonged</code>).</td>
 </tr>
 <tr>
 <td><code>POS_FREEZE_DIST_M</code> / <code>POS_FREEZE_THRESHOLD</code></td>
 <td><code>0.50</code> / <code>30</code></td>
-<td>V3d: desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta.</td>
+<td>Desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta.</td>
+</tr>
+<tr>
+<td><code>WP_NO_PROGRESS_MIN_M</code> / <code>WP_NO_PROGRESS_THRESHOLD</code></td>
+<td><code>2.0</code> / <code>50</code></td>
+<td>Mejora mínima de la distancia al waypoint y ciclos (10 s) sin ella antes de escalar (<code>wp_no_progress</code>).</td>
 </tr>
 <tr>
 <td><code>STUCK_RETROCEDER_LIMIT</code></td>
 <td><code>30</code></td>
-<td>V3e: ciclos a velocidad nula con <code>stuck_invisible</code> que fuerzan la ruta deliberativa.</td>
+<td>Ciclos a velocidad nula con <code>stuck_invisible</code> que fuerzan la resolución de atasco.</td>
+</tr>
+<tr>
+<td><code>ESCAPE_MIN_DISP_M</code> / <code>VERTICAL_ESCAPE_FUTILE_SCANS</code> / <code>VERTICAL_ESCAPE_FREEZE_CYCLES</code> / <code>VERTICAL_ESCAPE_MAX_ALT_M</code></td>
+<td><code>2.0</code> / <code>2</code> / <code>50</code> / <code>25.0</code></td>
+<td>Escape vertical forzado: desplazamiento mínimo entre escaneos para no considerarlos fútiles, escaneos fútiles consecutivos, ciclos de posición congelada y altitud máxima (cap. 5, §5.3.4).</td>
+</tr>
+<tr>
+<td><code>MAX_CONSECUTIVE_ESCAPES</code></td>
+<td><code>2</code></td>
+<td>Escapes verticales consecutivos sin progreso horizontal antes de enclavar el escape.</td>
+</tr>
+<tr>
+<td><code>SCAN_HEADING_COUNT_DEEP</code></td>
+<td><code>2</code></td>
+<td>Rumbos del barrido panorámico <code>deep_vlm</code> (+0° y +180°).</td>
+</tr>
+<tr>
+<td><code>SCAN_EVADIR_REPEAT_LIMIT</code></td>
+<td><code>2</code></td>
+<td>Repeticiones del mismo lado de evasión que escalan a <code>RETROCEDER</code>.</td>
+</tr>
+<tr>
+<td><code>CEILING_DETECT_CYCLES</code> / <code>CEILING_DETECT_DZ_M</code> / <code>CEILING_MARGIN_M</code> / <code>CEILING_RELEASE_M</code></td>
+<td><code>10</code> / <code>0.15</code> / <code>1.0</code> / <code>15.0</code></td>
+<td>Detección de techo del guiado (cap. 5, §5.15.3).</td>
+</tr>
+<tr>
+<td><code>CORNER_CHAIN_ENABLED</code> / <code>CORNER_CHAIN_CLEARANCE_M</code> / <code>CORNER_CHAIN_STEP_M</code> / <code>CORNER_CHAIN_MAX</code></td>
+<td><code>true</code> / <code>10.0</code> / <code>12.0</code> / <code>4</code></td>
+<td>Cadena de esquinas alrededor de puntos de contacto (cap. 5, §5.15.4).</td>
 </tr>
 <tr>
 <td><code>SCAN_ROT_TIMEOUT_CYCLES</code></td>
@@ -2076,7 +2111,7 @@
 </tr>
 <tr>
 <td><code>CORNER_OFFSET_M</code></td>
-<td><code>15.0</code></td>
+<td><code>30.0</code></td>
 <td>Distancia del waypoint de esquina (m); el default en código es 12.0.</td>
 </tr>
 <tr>
@@ -2117,6 +2152,12 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>FLIGHT_VIDEO_SCALE</code> / <code>FLIGHT_VIDEO_QUEUE_MAX</code></td>
+<td><code>0.6</code> / <code>300</code></td>
+<td><code>0.6</code> / <code>300</code></td>
+<td>Escala del video respecto del cuadro de la cámara y tamaño de la cola del hilo codificador (la codificación corre fuera del lazo de control, cap. 5, §5.18).</td>
+</tr>
 <tr>
 <td><code>FLIGHT_RECORD_VIDEO</code></td>
 <td><code>true</code></td>
@@ -2237,8 +2278,8 @@
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
-<h3 id="a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2">A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (<code>townsim_ini.json</code>, versión V2)<a class="headerlink" href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson-version-v2" title="Permanent link">&para;</a></h3>
-<p>Versión vigente desde 2026-09-22 (8 waypoints, ~340 m). Respecto de la versión con la que se ejecutó el lote base, agrega <code>WP_0b_SOBRE_PLAZA</code> (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y <code>WP_1b_PASO_MOLDURA</code> (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.</p>
+<h3 id="a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson">A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (<code>townsim_ini.json</code>)<a class="headerlink" href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson" title="Permanent link">&para;</a></h3>
+<p>Ocho waypoints, ~340 m. Incluye <code>WP_0b_SOBRE_PLAZA</code> (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y <code>WP_1b_PASO_MOLDURA</code> (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_INI&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_calib.png&quot;</span><span class="p">,</span>

@@ -67,10 +67,19 @@ def test_deep_scan_never_touches_depth_capture(monkeypatch):
     try:
         state = _base_state()
         state["obstacle_field"] = empty_field()
+        # Fix M: deep_scan ahora retrocede antes de escanear (RETROCEDER-first).
+        # La secuencia es: RETROCEDER (pre-scan) -> ESCANEO (barrido) -> EVADIR_IZQUIERDA.
+        # Corremos mas ciclos y omitimos tanto ESCANEO como RETROCEDER al evaluar
+        # cuando parar; el ultimo no-scan no-retroceder debe ser EVADIR_IZQUIERDA.
         state, actions = _run_cycles(
-            node, state, 40, on_action=lambda s, acts: acts[-1] not in ("ESCANEO",)
+            node, state, 60,
+            on_action=lambda s, acts: acts[-1] not in ("ESCANEO", "RETROCEDER"),
         )
-        assert actions[-1] == "EVADIR_IZQUIERDA"
+        non_scan = [a for a in actions if a not in ("ESCANEO", "RETROCEDER")]
+        assert non_scan and non_scan[-1] == "EVADIR_IZQUIERDA", (
+            f"Esperaba EVADIR_IZQUIERDA como ultima accion no-scan/no-retroceder, "
+            f"got={non_scan[-1] if non_scan else 'ninguna'}"
+        )
     finally:
         service.stop()
 
@@ -97,12 +106,15 @@ def test_deep_scan_resolution_does_not_also_force_blind_escape_same_cycle(monkey
     try:
         state = _base_state()
         state["obstacle_field"] = empty_field()
+        # Fix M: RETROCEDER-first -> ESCANEO -> EVADIR_DERECHA
         state, actions = _run_cycles(
-            node, state, 40, on_action=lambda s, acts: acts[-1] not in ("ESCANEO",)
+            node, state, 60,
+            on_action=lambda s, acts: acts[-1] not in ("ESCANEO", "RETROCEDER"),
         )
         assert "GANAR_ALTURA" not in actions
         assert "PERDER_ALTURA" not in actions
-        assert actions[-1] == "EVADIR_DERECHA"
+        non_scan = [a for a in actions if a not in ("ESCANEO", "RETROCEDER")]
+        assert non_scan and non_scan[-1] == "EVADIR_DERECHA", f"got={non_scan}"
 
         deliberations = state.get("deliberations") or []
         assert deliberations, "el escaneo resuelto debe dejar una entrada en deliberations[]"
@@ -194,6 +206,8 @@ def test_fsm_arm_shares_the_deep_scan_capability(monkeypatch):
     try:
         state = _base_state()
         state["obstacle_field"] = empty_field()
+        # Fix M: bypassear retroceder-first (ya testeado en test_deep_scan_never_touches_depth_capture)
+        state["_post_retroceder_corner_pending"] = True
         node = lambda s: fsm_mod.fsm_node(s, service=service)
         state, actions = _run_cycles(
             node, state, 40, on_action=lambda s, acts: acts[-1] not in ("ESCANEO",)
@@ -246,6 +260,9 @@ def test_deep_scan_state_survives_compiled_graph_invoke(monkeypatch):
     try:
         state = _base_state()
         state["evasion_stuck_cycles"] = 999
+        # Fix M: bypassear retroceder-first para testear directamente la
+        # supervivencia del estado de scan en graph.invoke() sucesivos.
+        state["_post_retroceder_corner_pending"] = True
 
         state = graph.invoke(state)
         assert state.get("_scan_phase") in ("rotando", "asentando", "capturado")

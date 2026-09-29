@@ -15,10 +15,23 @@
 # (columna `cycle` del CSV) en vez de por tiempo de video.
 from __future__ import annotations
 
+import os
+import queue
+import threading
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
 import numpy as np
+
+# 2026-0929: escala del video respecto del frame de la camara. Con 1080x720 la
+# codificacion VP8 costaba ~275 ms/frame, ejecutada EN el lazo de control: el
+# ciclo pasaba de 0.21 s a 0.45 s y volvian los corcoveos de la trayectoria
+# (el control da tirones mas grandes con dt mayor). Ahora la codificacion corre
+# en un hilo aparte y ademas se reduce la escala para que el encoder alcance el
+# ritmo del lazo. 1.0 = resolucion original.
+VIDEO_SCALE = float(os.getenv("FLIGHT_VIDEO_SCALE", "0.6"))
+_QUEUE_MAX = int(os.getenv("FLIGHT_VIDEO_QUEUE_MAX", "300"))
+_SENTINEL = object()
 
 
 class FlightVideoRecorder:
@@ -42,11 +55,21 @@ class FlightVideoRecorder:
     """
 
     def __init__(self, out_path: str, frame_size: Tuple[int, int], fps: float,
-                 with_viewport: bool = False) -> None:
+                 with_viewport: bool = False, scale: Optional[float] = None,
+                 threaded: bool = True) -> None:
         self.out_path = Path(out_path).with_suffix(".webm")
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         self.fps = max(1.0, float(fps))
-        self._drone_size = (int(frame_size[0]), int(frame_size[1]))  # (ancho, alto), convencion cv2.VideoWriter
+        sc = VIDEO_SCALE if scale is None else float(scale)
+        sc = min(1.0, max(0.1, sc))
+        # (ancho, alto), convencion cv2.VideoWriter; pares (VP8 lo prefiere).
+        self._drone_size = (max(2, int(frame_size[0] * sc) // 2 * 2), max(2, int(frame_size[1] * sc) // 2 * 2))
+        self._queue: Optional[queue.Queue] = None
+        self._thread: Optional[threading.Thread] = None
+        if threaded:
+            self._queue = queue.Queue(maxsize=max(1, _QUEUE_MAX))
+            self._thread = threading.Thread(target=self._worker, name="flight-video", daemon=True)
+            self._thread.start()
         self._with_viewport = with_viewport
         self._writer = None
         self._size: Optional[Tuple[int, int]] = None  # se fija en _init_writer
@@ -69,8 +92,31 @@ class FlightVideoRecorder:
         if not self._opened:
             print(f"[FlightVideoRecorder] No se pudo abrir {self.out_path} para escritura (codec VP8/webm no disponible?).")
 
+    def _worker(self) -> None:
+        while True:
+            item = self._queue.get()  # type: ignore[union-attr]
+            if item is _SENTINEL:
+                return
+            try:
+                self._write_sync(*item)
+            except Exception as exc:  # la grabacion nunca debe tumbar el vuelo
+                print(f"[FlightVideoRecorder] error codificando frame: {exc}")
+
     def write_frame(self, frame: Optional[Any], viewport_frame: Optional[Any] = None) -> None:
-        """Agrega un frame al video.
+        """Encola un frame (un frame por ciclo, orden preservado).
+
+        La codificacion corre en un hilo aparte; put() solo bloquea si el
+        encoder lleva mas de FLIGHT_VIDEO_QUEUE_MAX frames de atraso.
+        """
+        if frame is None:
+            return
+        if self._queue is None:
+            self._write_sync(frame, viewport_frame)
+        else:
+            self._queue.put((frame, viewport_frame))
+
+    def _write_sync(self, frame: Optional[Any], viewport_frame: Optional[Any] = None) -> None:
+        """Agrega un frame al video (codifica; corre en el hilo del recorder).
 
         Si `with_viewport=True` (pasado al constructor), viewport_frame se escala
         al alto del frame de drone y se concatena a la derecha. El VideoWriter se
@@ -100,7 +146,7 @@ class FlightVideoRecorder:
             drone_w = self._size[0]              # type: ignore[index]
             drone_h = self._size[1] - self._vp_panel_h  # type: ignore[operator]
             if w != drone_w or h != drone_h:
-                frame = cv2.resize(frame, (drone_w, drone_h), interpolation=cv2.INTER_NEAREST)
+                frame = cv2.resize(frame, (drone_w, drone_h), interpolation=cv2.INTER_AREA)
 
             if viewport_frame is not None:
                 panel = cv2.resize(viewport_frame, (drone_w, self._vp_panel_h), interpolation=cv2.INTER_AREA)
@@ -112,7 +158,8 @@ class FlightVideoRecorder:
             if not self._opened:
                 return
             if (w, h) != self._size:
-                frame = cv2.resize(frame, self._size, interpolation=cv2.INTER_NEAREST)
+                interp = cv2.INTER_AREA if (w > self._size[0] or h > self._size[1]) else cv2.INTER_NEAREST
+                frame = cv2.resize(frame, self._size, interpolation=interp)
             out_frame = frame
 
         if self._opened and out_frame is not None:
@@ -120,6 +167,10 @@ class FlightVideoRecorder:
             self._frame_count += 1
 
     def close(self) -> int:
+        if self._thread is not None:
+            self._queue.put(_SENTINEL)  # type: ignore[union-attr]
+            self._thread.join()
+            self._thread = None
         if self._opened and self._writer is not None:
             self._writer.release()
             self._opened = False

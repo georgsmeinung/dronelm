@@ -29,6 +29,7 @@ FLIGHT_WHITELIST: List[str] = [
     "src/agents/reactive.py",
     "src/agents/spatial_history.py",
     "src/agents/spatial_scan.py",
+    "src/agents/stall_detector.py",
     "src/perception/__init__.py",
     "src/perception/depth_estimator.py",  # V4: profundidad monocular estimada (transformers, NO AirSim depth sensor)
     "src/perception/flow_ttc.py",

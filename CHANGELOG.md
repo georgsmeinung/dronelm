@@ -1,3 +1,237 @@
+# 2026-09-29 (c) - CSV aplanado y cadena de esquinas
+
+- CSV: sin campos JSON. `latency_ms_json` -> `latency_graph_ms`/`latency_telemetry_ms`; el DroneState completo va como
+  columnas `state.<ruta>` (dicts con punto, listas cortas `.0 .1`, lista de dicts como `state.waypoints.0.x`; listas
+  largas siguen como un JSON). Se escribe en streaming con las columnas fijas y `close()` lo reescribe con todas las
+  columnas `state.*` (solo se conocen al final; ~220 en `slm`). El JSONL conserva el estado anidado; el visor toma el
+  arbol de ahi (`write_viewer_html(..., jsonl_path=)`). Notebook `auditoria_interactiva_telemetria` compatible.
+- Cadena de esquinas (`waypoint_tracker.py`): los deadlocks registran puntos de contacto (`record_contact`); al alcanzar
+  un `CORNER_*`, si el tramo al siguiente WP pasa a < `CORNER_CHAIN_CLEARANCE_M` (10) de un contacto se inserta
+  `CORNER_CHAIN_k` a `CORNER_CHAIN_STEP_M` (12) hacia el lado contrario al contacto (max `CORNER_CHAIN_MAX`=4 por
+  WP objetivo; contactos y cadena se limpian al alcanzar un WP real; `CORNER_CHAIN_ENABLED=false` la desactiva).
+- Telemetria: `landed_state` de AirSim (diagnostico de un dron "posado" sobre una moldura, seed_99 00:19 c1349+).
+
+# 2026-09-29 (b) - Video en hilo aparte: el lazo de control vuelve a ~5 Hz
+
+- Causa de los corcoveos y de las evasiones espurias: `FlightVideoRecorder.write_frame` codificaba VP8 a 1080x720
+  (~275 ms/frame) DENTRO del lazo. Ciclo 0.21 s -> 0.45 s; flow_ttc degradado 64-82 % de los ciclos y
+  |delta pitch| de 3-5 grados/ciclo (vs 0.1-2 con ciclo de 0.20 s). Correlacion confirmada en 80 corridas previas:
+  todas las de main.py con video sincrono (dt >= 0.32 s) muestran el mismo patron.
+- Ahora la codificacion corre en un hilo con cola acotada (`FLIGHT_VIDEO_QUEUE_MAX`, 300) y el video se reduce a
+  `FLIGHT_VIDEO_SCALE` (default 0.6): `write_frame` bloquea ~0.03 ms y el encoder sigue el ritmo (0.07 MB/frame).
+
+# 2026-09-29 - Runner: directorio por corrida, video/visor y DroneState completo en el log
+
+- `experiments/runner.py`: cada corrida en `<out>/<escenario>/<brazo>/<estrategia>/seed_N_<ts>/` (jsonl, csv,
+  summary, photo-*.png, `.webm`, `.viewer.html`). Video y visor por defecto; `--no-video` y `--viewport` para
+  cambiarlo. Una falla de grabacion no tumba la corrida.
+- Overlay del video extraido a `src/logging/flight_overlay.py` (compartido con `main.py`; agrega `ceil=` si hay techo).
+- CSV/JSONL: DroneState completo por ciclo. Una columna `state__<campo>` por cada campo de `DroneState` mas
+  `state_json` (snapshot completo, sin imagenes); clave `state` en el JSONL. Ver `src/logging/state_serializer.py`.
+- `stall_detector.publish` ahora publica `_pos_freeze_cycles` y `_wp_no_progress_cycles` (antes
+  `ctrl_no_progress_cycles` salia siempre 0); `_scan_track` expone escaneos futiles y escapes verticales.
+- `viewer.html`: sincronia video<->fila por indice de ciclo (antes por `t`, que derivaba) y arbol colapsable del DroneState.
+
+# 2026-09-28 - Reimplementacion del grafo de navegacion: arquitectura en capas
+
+## Contexto
+
+Analisis del grafo de control (2026-09-28) identifico 5 problemas estructurales en la
+implementacion original: pipeline plano disfrazado de jerarquia (policy_router como switch
+con 7 ramas al mismo nivel), VLM que frenaba el drone al consultar (matando percepcion),
+slots de tiempo compitiendo entre reactivo y deliberativo, respuestas VLM aplicadas
+tardias (a destiempo del input que las genero), y DroneState con 80+ campos actuando como
+FSM implicito.
+
+Solucion: reimplementacion completa del grafo con arquitectura en 3 capas dentro de un
+unico `navigate_node`, eliminando el branching plano de `policy_router`.
+
+---
+
+## Arquitectura nueva (graph.py)
+<img src="informe/2026-0928 drone_graph_layered_architecture.png"/>
+
+**Capa 1 — Siempre reactiva (latencia 0)**:
+- `active_maneuver` continuation (no interrumpir maniobras en curso)
+- IMU contact / blind_wall → `evasive_node()`
+- Altitud < `OPTICAL_MIN_ALT_M` → `reactive_node()` (piso optico)
+- TTC ≤ 4.6s → `evasive_node()` o `_dispatch_girar_90()`
+- Sin amenaza → `reactive_node()` (MANTENER_RUMBO)
+
+**Capa 2 — Tactica determinista (latencia 0)**:
+- `StallDetector` (nuevo, proceso-level) encapsula 15+ contadores de atasco
+- `FlightTrajectory.zone_stats(heading)` → resolucion por zona menos bloqueada
+- Triggers: `stopped_prolonged`, `stuck_invisible`, `wp_no_progress`, `traj_stall`, `stuck_cycles`
+- Todos escalan a `_deadlock_resolve()` que resuelve con trajectory zones
+
+**Capa 3 — VLM asincrona (latencia 1-N ciclos)**:
+- VLM proactivo: `_maybe_request_vlm()` envia ANTES del deadlock (stuck ≥ threshold/2)
+- `_poll_vlm()` guarda respuesta en `_vlm_intention` (store & poll, no bloquea)
+- En deadlock: `_slam_assess_cycle` envia + hover 1 ciclo + aplica o fallback determinista
+- VLM nunca frena el drone; si no responde, capa 2 resuelve sola
+- `DeliberationService`: hilo daemon, queue(maxsize=1), poll() idempotente
+
+---
+
+## StallDetector (stall_detector.py — NUEVO)
+
+Extrae 15+ campos de contadores de DroneState a un objeto proceso-level que persiste
+entre `graph.invoke()` calls:
+- `imu_contact`: ≥2 ciclos de jitter RMS > 5.0 m/s² con velocidad comandada > 0.3 m/s
+- `blind_wall`: ≥2 ciclos comandando avance sin movimiento real ni obstaculo visible
+- `stopped_prolonged`: ≥10 ciclos detenido (< 0.10 m/s)
+- `stuck_invisible`: OR de imu_contact, blind_wall, stopped ≥ 15, pos_freeze ≥ 30
+- `wp_no_progress`: ≥50 ciclos sin mejora de distancia al WP
+- `jitter_level`: normal/elevado/critico
+
+Metodos: `update(state)` corre todos los detectores, `publish(state)` escribe seniales
+al state para logging y compat.
+
+---
+
+## Archivos legacy (src/agents/legacy/ — NUEVO)
+
+Copia de la arquitectura anterior para referencia:
+- `graph_v1.py`, `deliberative_v1.py`, `deep_scan_v1.py`, `__init__.py`
+
+---
+
+## Cambios en archivos existentes
+
+**`src/agents/graph.py`** (reescrito):
+- `DroneState`: 66 campos (antes ~80+). Removidos: `_imu_contact_cycles`,
+  `_blind_wall_cycles`, `_pos_freeze_*`, `_wp_best_dist`, `_wp_no_progress_cycles`,
+  `_wp_np_wp_idx`, `_delib_outcomes`. Agregado: `_vlm_intention`, `_delib_baseline`.
+- Grafo: `capture → [degraded_hover | perception → navigate] → motor → END`
+- `policy_router()`: reimplementado para replicar la logica de navigate_node (compat tests).
+- `_send_vlm_request()`: ya no setea `_deliberation_pending=True` (proactivo no debe
+  congelar el contador de atasco del lazo externo).
+
+**`src/agents/__init__.py`**: agrega `StallDetector` a imports y `__all__`.
+
+**`tests/test_no_depth_in_flight_path.py`**: agrega `stall_detector.py` al whitelist.
+
+---
+
+## Bugs corregidos durante la reimplementacion
+
+**VLM fallback silencioso**: cuando `_slam_assess_cycle` recibia respuesta None del VLM
+(sin accion viable), el codigo retornaba sin escalar — el drone quedaba en hover
+indefinido. Fix: `resolved=False` cae al fallback determinista de trajectory zones.
+
+**Proactivo congela stuck counter**: `_send_vlm_request()` seteaba
+`_deliberation_pending=True`, y el lazo externo (runner.py) dejaba de contar
+`progress_stall_cycles` mientras estuviera en True. Con pedidos proactivos cada ciclo
+(re-seteando el flag), el stuck counter quedaba congelado en 5 para siempre. Fix: solo
+`_slam_assess_cycle` y `deep_scan_cycle` setean `_deliberation_pending`.
+
+**Escape tracking post-scan**: `_slam_assess_cycle` resuelve con ESCANEO en el primer
+ciclo, sin setear `_escape_reset` ni `_consecutive_escapes`. Fix: despues de `resolved`,
+se trackea el macro resultante — si es altitud escape, incrementa `_consecutive_escapes`;
+si no es ESCANEO/FRENAR, setea `_escape_reset`.
+
+181 tests pasan.
+
+---
+
+# 2026-09-28 - Fix R/S/T: deteccion de deadlock por false-progress; timestamp en logs del runner
+
+## Contexto
+
+Analisis de telemetria de la corrida citysim_pilot/slm/deep_vlm/seed_99 (1815 ciclos, WP4):
+el drone raspa una fachada a 0.3-0.7 m/s durante 205 ciclos sin que ningun detector dispare.
+Causa raiz: doble mecanismo que congela `ctrl_stuck_cycles = 0` indefinidamente aunque el
+drone no se acerque al WP.
+
+---
+
+## Fix T — `_bearing_exempt_streak` solo resetea con progreso real al WP (`waypoint_tracker.py`)
+
+**Causa raiz**: el reset de `_bearing_exempt_streak` ocurria cuando `bearing_err` bajaba por
+debajo de `PROGRESS_STALL_BEARING_EXEMPT_DEG=30` (ej. durante GIRAR_90). Cada vez que
+GIRAR_90 rotaba y el drone cruzaba momentaneamente el umbral de 30 deg, el cap de exenciones
+se renovaba a 0 — permitiendo exenciones indefinidas aunque el drone estuviera girando contra
+una fachada sin ningun avance real al WP.
+
+**Cambio** (`src/navigation/waypoint_tracker.py`, metodo `record_progress()`):
+- `_bearing_exempt_streak = 0` se mueve de la rama `bearing_err < umbral` a la rama
+  de progreso real (`dist_to_wp < _min_dist_seen - PROGRESS_EPS_M`).
+- El streak solo se cancela cuando el drone genuinamente se acerca al WP, no cuando gira.
+
+---
+
+## Fix S — `_stopped_cycles >= 10` escala directo a deliberative (`graph.py`, `config/.env`)
+
+**Causa raiz**: la fase final de arrastre tenia vel=0 (drone fisicamente detenido por la
+fachada), pero `stuck_invisible` requeria alcanzar `_STOPPED_CYCLES_THRESHOLD` (20 ciclos)
+que a su vez disparaba evasive, no deliberative. Para ese punto la maniobra evasiva ya habia
+fallado multiples veces.
+
+**Cambio** (`src/agents/graph.py`, funcion `policy_router()`):
+- Nueva condicion despues del check `active_maneuver`:
+  si `_stopped_cycles >= STOPPED_DELIBERATIVE_CYCLES=10` -> return `"deliberative"` directamente.
+- Actua despues del check `active_maneuver` para no interrumpir maniobras en curso.
+
+**Config** (`config/.env`): `STOPPED_DELIBERATIVE_CYCLES=10`
+
+---
+
+## Fix R — Contador de progreso neto al WP inmune al heading (`graph.py`, `config/.env`, `flight_logger.py`)
+
+**Causa raiz**: `ctrl_stuck_cycles` (= `waypoint_tracker.progress_stall_cycles`) requiere
+que `bearing_err <= 30 deg` para acumular. Con el drone rasando una fachada en direccion SW
+y el WP al W, `bearing_err ~= 45 deg` -> TODOS los ciclos son bearing-exempt -> contador
+congela en 0 indefinidamente. Vel > 0 evitaba Fix S. El drone podia arrastrarse cientos de
+ciclos sin ninguna escalada a deliberative.
+
+**Nuevo campo** `_wp_no_progress_cycles` / `_wp_best_dist` / `_wp_np_wp_idx` en `DroneState`:
+cuenta ciclos consecutivos donde `dist_to_wp` no mejora `WP_NO_PROGRESS_MIN_M=2.0m` desde
+la mejor distancia vista. Inmune al heading del drone; solo mide distancia euclidea al WP.
+
+**Supresiones** (no acumula durante operaciones intencionales que consumen distancia):
+- `slm_active = True` (SLM/VLM procesando)
+- `_scan_phase is not None` (barrido profundo)
+- altitud por debajo de `_OPTICAL_MIN_ALT_M` (ascenso inicial)
+- cambio de WP o flag `_escape_reset`
+
+**Trigger** en `policy_router()`: `_wp_no_progress_cycles >= WP_NO_PROGRESS_THRESHOLD=50`
+(10s) -> return `"deliberative"`, igual que TRAJ_STALL.
+
+**Cambios**:
+- `src/agents/graph.py`: constantes `_STOPPED_DELIBERATIVE_CYCLES`, `_WP_NO_PROGRESS_MIN_M`,
+  `_WP_NO_PROGRESS_THRESHOLD`; campos TypedDict nuevos; logica en `perception_node` (bloque
+  Fix R) y dos nuevas condiciones en `policy_router`.
+- `src/logging/flight_logger.py`: columna `ctrl_no_progress_cycles` en CSV.
+- `config/.env`: `WP_NO_PROGRESS_MIN_M=2.0`, `WP_NO_PROGRESS_THRESHOLD=50`.
+
+**Bugfix adicional**: la condicion `_fp_suppress` en el bloque Fix R usaba `below_optical_floor`
+que aun no estaba definida en ese punto del codigo. Corregido inlineando el calculo:
+`abs(telemetry["position"]["z"]) < _OPTICAL_MIN_ALT_M`.
+
+181 tests unitarios pasan.
+
+---
+
+## Log con timestamp ISO en runner.py (`experiments/runner.py`)
+
+**Problema**: `run_one()` construia la ruta de salida como `seed_{seed}.jsonl` (fija). Reruns
+del mismo escenario/arm/seed sobrescribian el archivo anterior, perdiendo la corrida previa.
+`main.py` ya usaba un directorio por vuelo con timestamp (`{mission_id}-{iso_ts}/`) desde
+2026-09-01 y no tenia este problema.
+
+**Cambio** (`experiments/runner.py`, linea 80`):
+```
+# antes:
+out_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / f"seed_{seed}.jsonl"
+# ahora:
+iso_ts = datetime.now().strftime("%Y%m%dT%H%M%SZ")
+out_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / f"seed_{seed}_{iso_ts}.jsonl"
+```
+Cada corrida del runner produce un archivo nuevo; todas las corridas del mismo seed quedan
+preservadas en el mismo directorio.
+
+---
+
 # 2026-09-28 - Actualizacion del informe al estado del codigo del 2026-09-22 (caps. 5-12, A6, A8, A9) + Anexo 9 (LeWorldModel)
 
 ## Alcance

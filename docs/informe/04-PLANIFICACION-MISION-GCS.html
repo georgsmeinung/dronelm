@@ -1294,16 +1294,17 @@
 <li><strong><code>waypoints</code>:</strong> lista ordenada de puntos de paso tridimensionales en el marco <strong>NED</strong> (<em>North-East-Down</em>): <span class="arithmatex">\(z &lt; 0\)</span> representa altitud sobre el punto de despegue. Cada waypoint lleva una etiqueta opcional (<code>label</code>) para identificación en la traza.</li>
 <li><strong><code>map</code>:</strong> nombre del archivo de imagen de carta de territorio empleado por WebDCS para la visualización de la trayectoria (por defecto <code>map.png</code>).</li>
 </ul>
-<p><strong>Separación entre manifiesto y prompt táctico.</strong> El manifiesto entrega únicamente metas geométricas; el prompt del nodo deliberativo no forma parte de él porque no puede ser un texto estático: se construye dinámicamente en cada ciclo de vuelo a partir del estado percibido en ese instante. Su estructura es la siguiente:</p>
+<p><strong>Separación entre manifiesto y prompt táctico.</strong> El manifiesto entrega únicamente metas geométricas; el prompt táctico del VLM no forma parte de él porque no puede ser un texto estático: se construye dinámicamente en cada ciclo de vuelo a partir del estado percibido en ese instante. Su estructura es la siguiente:</p>
 <p><strong>System prompt (estático, fijo en <code>deliberative.py</code>):</strong> define el rol del modelo, las reglas de navegación urbana y el conjunto cerrado de macro-acciones posibles. Existen dos variantes — <code>SYSTEM_PROMPT_TEXT</code> (solo texto, para SLMs sin capacidad visual) y <code>SYSTEM_PROMPT_VISION</code> (texto + imágenes, para VLMs multimodales) — seleccionadas en tiempo de ejecución por la variable de entorno <code>VLM_VISION_ENABLED</code>.</p>
-<p><strong>User prompt (dinámico, construido por <code>_build_user_prompt()</code> en cada ciclo):</strong> combina cinco componentes:</p>
+<p><strong>User prompt (dinámico, construido por <code>_build_user_prompt()</code> en cada ciclo):</strong> combina los siguientes componentes:</p>
 <ol>
 <li><strong>Resumen del ObstacleField:</strong> estado de los tres sectores de percepción (centro, izquierda, derecha), con TTC estimado y nivel de ocupación por sector.</li>
 <li><strong>Objetivo y altitud:</strong> waypoint activo (etiqueta, distancia horizontal, error de rumbo en grados y dirección relativa), altitud actual y cota segura de operación.</li>
 <li><strong>Estado cinemático:</strong> velocidad horizontal y actitud (pitch, roll) en el ciclo actual. Si el dron está prácticamente detenido (<code>&lt; 0.3 m/s</code>), se indica explícitamente — porque un frame estático sin traslación no aporta evidencia de flujo óptico, y sin ese contexto el modelo tiende a sobre-interpretar la imagen.</li>
+<li><strong>Avisos de contexto:</strong> ciclos sin progreso hacia el waypoint, tasa de stall frontal de la trayectoria reciente (cuando supera el 50 %) y nivel de vibración del IMU (cuando no es normal), que le dan al modelo la evidencia de bloqueo que el flujo óptico no ve.</li>
 <li><strong>Motivo de consulta:</strong> distingue si se consulta al VLM porque el sector central registra un obstáculo real (con TTC medido) o porque la percepción no tiene evidencia suficiente en este ciclo (confianza baja por falta de traslación o rotación reciente) — dos causas con implicaciones muy distintas para la decisión.</li>
-<li><strong>Historial reciente:</strong> las últimas tres deliberaciones con su macro-acción y sus resultados medidos (variación de distancia al waypoint, variación del TTC mínimo), para que el modelo pueda evaluar si una estrategia previa funcionó antes de repetirla.</li>
 </ol>
+<p>El constructor admite además un historial de las últimas deliberaciones (macro-acción y resultado medido) y las sub-metas semánticas previas; el pedido táctico del lazo no los incluye.</p>
 <p>La respuesta del modelo se fuerza mediante decodificación restringida (<code>json_schema</code>, si el servidor lo soporta) al formato <code>{"macro_action": "&lt;ACCION&gt;", "rationale": "&lt;texto&gt;"}</code>, con temperatura 0.2 y límite de 200 tokens. Si el servidor no soporta <code>json_schema</code>, un parser tolerante (<code>_parse_decision()</code>) extrae la decisión del texto libre como red de seguridad. Ante timeout del watchdog o respuesta no parseable, se activa una heurística determinista sobre el ObstacleField (<code>_fallback_decision()</code>).</p>
 <p>Este nivel de dinamismo hace inviable delegar el prompt al manifiesto: el contenido útil depende de percepciones que solo existen en vuelo.</p>
 <p>En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la <strong>reproducibilidad experimental</strong>: los escenarios de benchmark por Tiers (<code>minisim_clear</code>, <code>townsim_ini</code>, <code>citysim_clear</code>) se definen a través de manifiestos fijos e inmutables, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.</p>
@@ -1322,7 +1323,7 @@
 </li>
 </ol>
 <h3 id="dataset-de-corridas-estructura-de-airsim-runs">Dataset de corridas: estructura de <code>airsim-runs/</code><a class="headerlink" href="#dataset-de-corridas-estructura-de-airsim-runs" title="Permanent link">&para;</a></h3>
-<p>Cada ejecución de una misión escribe una carpeta autocontenida en <code>airsim-runs/</code>. El nombre de la carpeta — y el prefijo común (<code>&lt;stem&gt;</code>) de todos los archivos dentro de ella — se construye concatenando el <code>mission_id</code> del manifiesto con la marca de tiempo de inicio de la ejecución en UTC, en formato ISO 8601 compacto sin separadores: <code>&lt;MISSION_ID&gt;-&lt;YYYYMMDDTHHMMSSZ&gt;</code>. Por ejemplo, lanzar la misión <code>CITYSIM_CLEAR</code> el 7 de septiembre de 2026 a las 19:12:26 UTC produce la carpeta y el stem <code>CITYSIM_CLEAR-20260907T191226Z</code>. Si la misma misión se lanza dos veces, cada ejecución queda en su propia carpeta gracias al timestamp — nunca se sobreescriben corridas anteriores. La tabla siguiente describe los archivos que produce cada ejecución:</p>
+<p>Cada ejecución de una misión escribe una carpeta autocontenida en <code>airsim-runs/</code>. El nombre de la carpeta — y el prefijo común (<code>&lt;stem&gt;</code>) de todos los archivos dentro de ella — se construye concatenando el <code>mission_id</code> del manifiesto con la marca de tiempo de inicio de la ejecución en UTC, en formato ISO 8601 compacto sin separadores: <code>&lt;MISSION_ID&gt;-&lt;YYYYMMDDTHHMMSSZ&gt;</code>. Por ejemplo, lanzar la misión <code>CITYSIM_CLEAR</code> el 7 de septiembre de 2026 a las 19:12:26 UTC produce la carpeta y el stem <code>CITYSIM_CLEAR-20260907T191226Z</code>. Si la misma misión se lanza dos veces, cada ejecución queda en su propia carpeta gracias al timestamp — nunca se sobreescriben corridas anteriores. El ejecutor de experimentos (<code>experiments/runner.py</code>) usa la misma convención dentro de una jerarquía por celda experimental, <code>&lt;escenario&gt;/&lt;brazo&gt;/&lt;estrategia&gt;/seed_&lt;N&gt;_&lt;timestamp&gt;/</code>, de modo que cada corrida de una celda queda en su propio directorio con todos sus artefactos. La tabla siguiente describe los archivos que produce cada ejecución:</p>
 <table>
 <thead>
 <tr>
@@ -1337,7 +1338,7 @@
 </tr>
 <tr>
 <td><code>&lt;stem&gt;.csv</code></td>
-<td>Mismas columnas en formato plano, para inspección directa en Excel / pandas</td>
+<td>Traza plana, sin campos JSON: columnas fijas más una columna <code>state.&lt;ruta&gt;</code> por cada campo escalar del <code>DroneState</code>, para inspección directa en Excel / pandas (§5.18)</td>
 </tr>
 <tr>
 <td><code>&lt;stem&gt;.summary.json</code></td>
@@ -1375,13 +1376,13 @@
 <p>Para consultarlo: abrir el archivo directamente en Chrome desde <code>airsim-runs/&lt;carpeta&gt;/&lt;stem&gt;.viewer.html</code> — no requiere servidor.</p>
 <h4 id="anotaciones-del-video">Anotaciones del video<a class="headerlink" href="#anotaciones-del-video" title="Permanent link">&para;</a></h4>
 <p>El video (<code>.webm</code>) registra un fotograma por ciclo del lazo, a la misma cadencia de <code>LOOP_HZ</code>. Cada fotograma lleva un overlay de cuatro líneas superpuesto <strong>sobre una copia del fotograma</strong>; el original enviado al VLM y guardado como <code>.png</code> de auditoría queda sin modificar para no contaminar la evidencia perceptual.</p>
-<p><strong>Línea 1 — nodo activo y macro-acción</strong> (texto grande, color codificado):</p>
+<p><strong>Línea 1 — ruta activa y macro-acción</strong> (texto grande, color codificado):</p>
 <div class="highlight"><pre><span></span><code>[KEEP_GOING] ACT: MANTENER_RUMBO  WP 3/7 (42m)
 </code></pre></div>
 <ul>
-<li>El tag entre corchetes es el <strong>nodo del grafo de decisión</strong> que resolvió el ciclo (§5.1): <code>KEEP_GOING</code> (crucero sin novedad), <code>EVASIVE</code> (evasión reactiva), <code>GIRAR_90</code> (bypass de bloqueo severo), <code>FSM</code> (máquina de estados, brazo FSM), <code>DELIBERATIVE</code> (consulta al VLM, §5.2) o <code>DEGRADED_HOVER</code> (modo degradado, §5.4).</li>
+<li>El tag entre corchetes es la <strong>ruta</strong> (<code>route</code>) del comportamiento que resolvió el ciclo (§5.3): <code>REACTIVE</code> (crucero sin novedad), <code>EVASIVE</code> (evasión reactiva o continuación de una maniobra comprometida), <code>TACTICAL</code> (resolución de atasco: escape, retroceso o decisión del VLM), <code>GIRAR_90</code> (bypass de bloqueo severo), <code>FSM</code> (máquina de estados, brazo FSM) o <code>DEGRADED</code> (modo degradado, §5.5).</li>
 <li><code>ACT:</code> es la <strong>macro-acción</strong> traducida a comando cinemático por el nodo <code>motor</code>.</li>
-<li><code>WP X/N (Ym)</code> indica el waypoint activo y la distancia horizontal restante según <code>WaypointTracker</code> (§5.3).</li>
+<li><code>WP X/N (Ym)</code> indica el waypoint activo y la distancia restante según <code>WaypointTracker</code> (§5.15).</li>
 <li><strong>Color:</strong> verde para <code>MANTENER_RUMBO</code> (avance sin novedad), naranja para maniobras de evasión o giro, rosa/magenta para decisiones del VLM, <code>PARADA</code> o <code>FRENAR</code>.</li>
 </ul>
 <p><strong>Línea 2 — TTC frontal y estado de vuelo</strong> (derecha del fotograma):</p>
@@ -1396,7 +1397,7 @@
 </code></pre></div>
 <ul>
 <li><code>t</code> y <code>cy</code> permiten cruzar el fotograma con la fila exacta del CSV por número de ciclo (la sincronización por tiempo es aproximada, la de ciclo es exacta; ver <code>flight_video.py</code>).</li>
-<li><code>pos</code> es la posición 3D en el marco NED del simulador.</li>
+<li><code>pos</code> es la posición 3D en el marco NED del simulador; si el guiado detectó un techo (§5.15.3), se agrega <code>ceil=&lt;cota&gt;</code> a continuación.</li>
 <li><code>v</code>, <code>pitch</code>, <code>roll</code> son la velocidad horizontal y la actitud del vehículo en ese instante.</li>
 </ul>
 <p><strong>Línea 4 — estado del ObstacleField por sector</strong> (cap. 6):</p>
@@ -1405,9 +1406,9 @@
 <ul>
 <li>Los tres sectores son <code>C</code> (centro / frente), <code>I</code> (izquierda) y <code>D</code> (derecha).</li>
 <li><code>occ</code> es la fracción de ocupación estimada por flujo óptico monocular; <code>ttc</code> es el tiempo a colisión estimado del sector; <code>!</code> marca el sector como bloqueado según el umbral de <code>is_blocked()</code>.</li>
-<li>Estos valores son los mismos que alimentan <code>_build_user_prompt()</code> (§4.3) y el enrutador de política (§5.1): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1.</li>
+<li>Estos valores son los mismos que alimentan <code>_build_user_prompt()</code> (§4.3) y la capa de decisión (§5.3): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1.</li>
 </ul>
-<p>La combinación de estas cuatro líneas permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema, por qué derivó al nodo de grafo que aparece en el tag, y qué orden cinemática emitió — sin necesidad de cruzar a mano el video con el CSV.</p>
+<p>La combinación de estas cuatro líneas permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema, por qué se activó el comportamiento que aparece en el tag, y qué orden cinemática emitió — sin necesidad de cruzar a mano el video con el CSV.</p>
 
 
 

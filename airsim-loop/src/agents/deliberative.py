@@ -694,6 +694,8 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             state["_escape_locked"] = False
             state["_escape_baseline_dist"] = None
             state["_deadlock_cycles"] = 0
+            state["_scan_last_evadir_dir"] = None   # Fix L: reset al escapar
+            state["_scan_evadir_count"] = 0         # Fix L2: reset contador
 
         escape_locked = bool(state.get("_escape_locked", False))
         hard_stuck = stuck_cycles >= hard_stall_threshold()

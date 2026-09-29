@@ -1234,22 +1234,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1012-corte-de-version-v2-y-lotes-con-obstruccion" class="md-nav__link">
+  <a href="#1012-lotes-con-obstruccion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.12 Corte de versión V2 y lotes con obstrucción
+        10.12 Lotes con obstrucción
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="10.12 Corte de versión V2 y lotes con obstrucción">
+    <nav class="md-nav" aria-label="10.12 Lotes con obstrucción">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#10121-que-cambio-entre-el-lote-base-y-el-codigo-v2" class="md-nav__link">
+  <a href="#10121-componentes-del-sistema-que-ejercen-los-escenarios-con-obstruccion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.12.1 Qué cambió entre el lote base y el código V2
+        10.12.1 Componentes del sistema que ejercen los escenarios con obstrucción
       
     </span>
   </a>
@@ -2372,22 +2372,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1012-corte-de-version-v2-y-lotes-con-obstruccion" class="md-nav__link">
+  <a href="#1012-lotes-con-obstruccion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.12 Corte de versión V2 y lotes con obstrucción
+        10.12 Lotes con obstrucción
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="10.12 Corte de versión V2 y lotes con obstrucción">
+    <nav class="md-nav" aria-label="10.12 Lotes con obstrucción">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#10121-que-cambio-entre-el-lote-base-y-el-codigo-v2" class="md-nav__link">
+  <a href="#10121-componentes-del-sistema-que-ejercen-los-escenarios-con-obstruccion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.12.1 Qué cambió entre el lote base y el código V2
+        10.12.1 Componentes del sistema que ejercen los escenarios con obstrucción
       
     </span>
   </a>
@@ -2458,7 +2458,7 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <h3 id="1021-factor-principal-brazo-de-decision-agent_arm">10.2.1 Factor principal: brazo de decisión (<code>AGENT_ARM</code>)<a class="headerlink" href="#1021-factor-principal-brazo-de-decision-agent_arm" title="Permanent link">&para;</a></h3>
 <p>La evaluación compara tres brazos de decisión sobre <strong>el mismo <code>ObstacleField</code></strong> (cap. 6), <strong>el mismo espacio de macro-acciones</strong> y <strong>el mismo traductor a comandos cinemáticos</strong> (<code>action_to_command</code>, cap. 8). Esta invariancia es lo que hace legítima la comparación: la única diferencia entre brazos es <em>quién elige la macro-acción</em>, no qué percibe el sistema ni cómo ejecuta la decisión.</p>
 <ul>
-<li><strong><code>slm</code></strong> — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como capa táctica y deliberativa (cap. 8). Durante la espera de respuesta del modelo, el sistema aplica un <strong>avance cauto</strong> a velocidad reducida (<code>DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s</code>) en lugar de un frenado total, preservando la traslación necesaria para que el estimador de flujo óptico mantenga confianza; sólo se comanda detención total incondicional ante un bloqueo frontal inminente y confirmado (<code>close_structural</code>). El modelo delibera de forma <strong>asíncrona</strong> bajo un watchdog de seguridad (<code>SLM_WATCHDOG_MS</code>: 6000 ms en la configuración con la que se ejecutó el lote base y 13000 ms en el código V2, §10.12; 12000 ms para el barrido profundo, <code>SLM_DEEP_WATCHDOG_MS</code>) con respaldo determinista ante timeout o respuestas no conformes, recibiendo un historial temporal de fotogramas (<span class="arithmatex">\(t\)</span> y <span class="arithmatex">\(t-1\)</span>), notas cinemáticas (<code>pitch</code>, <code>roll</code>, velocidad) y el motivo explícito de la consulta (<code>reason_note</code>).</li>
+<li><strong><code>slm</code></strong> — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como capa deliberativa del grafo en capas (cap. 5, 8). El modelo se consulta de forma <strong>asíncrona</strong>: los pedidos proactivos no frenan al dron (las capas reactiva y táctica siguen gobernando el vuelo) y la respuesta se almacena con marca temporal y se consume con caducidad. En la resolución de atasco (<code>slam_assess</code>), el dron permanece en hover bajo un watchdog de seguridad (<code>SLM_DEEP_WATCHDOG_MS</code> = 12000 ms) con respaldo determinista por historia de trayectoria ante timeout o respuestas no conformes. El modelo recibe un historial temporal de fotogramas (<span class="arithmatex">\(t\)</span> y <span class="arithmatex">\(t-1\)</span>), notas cinemáticas y avisos de contexto (<code>pitch</code>, <code>roll</code>, velocidad, ciclos sin progreso, stall frontal, vibración del IMU) y el motivo explícito de la consulta.</li>
 <li><strong><code>fsm</code></strong> — una máquina de estados finitos explícita (<code>CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE</code>), con transiciones gobernadas por umbrales fijos sobre el mismo <code>ObstacleField</code>. Es la línea de base directa contra la que se evalúa la hipótesis: alta predictibilidad y costo computacional mínimo, sin capacidad de razonamiento contextual ni interpretación semántica del entorno.</li>
 <li><strong><code>reactive</code></strong> — navegación guiada al waypoint sin evasión de obstáculos: <strong>cota inferior de rendimiento</strong> que permite desacoplar qué porción del desempeño proviene del lazo táctico de evasión y cuánto del seguimiento cinemático de base. Sin este brazo, cualquier diferencia entre <code>slm</code> y <code>fsm</code> sería inseparable del ruido introducido por el guiado.</li>
 </ul>
@@ -2466,7 +2466,7 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <h3 id="1022-mecanismo-de-resolucion-de-atascos">10.2.2 Mecanismo de resolución de atascos<a class="headerlink" href="#1022-mecanismo-de-resolucion-de-atascos" title="Permanent link">&para;</a></h3>
 <p>Los brazos <code>slm</code> y <code>fsm</code> utilizan el mecanismo <strong><code>deep_vlm</code></strong> como procedimiento de resolución de atascos duros: ante un <code>deadlock</code> declarado, ejecuta un barrido panorámico espacial multifotograma <strong>dentro del lazo de control</strong> (<code>SCAN_HEADING_COUNT_DEEP = 4</code> rumbos, <code>SCAN_SETTLE_CYCLES_DEEP = 2</code> ciclos de asentamiento por rumbo, hasta <code>MAX_DEEP_SCAN_IMAGES = 5</code> imágenes) seguido de una única consulta deliberativa al VLM con el panorama completo, para identificar visualmente un corredor despejado antes de forzar el escape cinemático como último recurso.</p>
 <p>El brazo <code>reactive</code> nunca declara atasco ni ejecuta escape: el concepto de "objetivo pendiente bloqueado" no existe en un control reactivo puro.</p>
-<p><code>deep_vlm</code> <strong>no introduce macro-acciones nuevas</strong>: elige entre las mismas del vocabulario <code>PROMPT_ACTIONS</code> que usa el nodo deliberativo ordinario. El procedimiento aporta evidencia visual multiángulo que el nodo deliberativo ordinario, que opera con un único fotograma frontal, no tiene disponible en condiciones de bloqueo.</p>
+<p><code>deep_vlm</code> <strong>no introduce macro-acciones nuevas</strong>: elige entre las mismas del vocabulario <code>PROMPT_ACTIONS</code> que usa la consulta táctica ordinaria. El procedimiento aporta evidencia visual multiángulo que la consulta ordinaria, que opera con uno o dos fotogramas frontales, no tiene disponible en condiciones de bloqueo.</p>
 <h3 id="1023-estructura-de-celdas">10.2.3 Estructura de celdas<a class="headerlink" href="#1023-estructura-de-celdas" title="Permanent link">&para;</a></h3>
 <p>La celda elemental es la tupla</p>
 <div class="arithmatex">\[\text{celda} = (\text{Escenario} \times \text{Brazo})\]</div>
@@ -2902,7 +2902,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </blockquote>
 <h3 id="1062-dinamica-del-lazo-tactico-y-latencias">10.6.2 Dinámica del lazo táctico y latencias<a class="headerlink" href="#1062-dinamica-del-lazo-tactico-y-latencias" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Latencia total por ciclo</strong> (<span class="arithmatex">\(p_{50}\)</span> y <span class="arithmatex">\(p_{95}\)</span>), desagregada por brazo y por <strong>nodo activo del grafo de control</strong> (<code>reactive</code>, <code>evasive</code>, <code>deliberative</code>, <code>girar_90</code>, <code>fsm</code>, <code>deep_scan</code>). El <span class="arithmatex">\(p_{95}\)</span> es la métrica relevante para la viabilidad en tiempo real: un <span class="arithmatex">\(p_{50}\)</span> aceptable con un <span class="arithmatex">\(p_{95}\)</span> que excede el presupuesto de ciclo describe un sistema que cumple "en promedio" y falla justo cuando importa.</li>
+<li><strong>Latencia total por ciclo</strong> (<span class="arithmatex">\(p_{50}\)</span> y <span class="arithmatex">\(p_{95}\)</span>), desagregada por brazo y por <strong>ruta activa del grafo de control</strong> (<code>reactive</code>, <code>evasive</code>, <code>tactical</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>). El <span class="arithmatex">\(p_{95}\)</span> es la métrica relevante para la viabilidad en tiempo real: un <span class="arithmatex">\(p_{50}\)</span> aceptable con un <span class="arithmatex">\(p_{95}\)</span> que excede el presupuesto de ciclo describe un sistema que cumple "en promedio" y falla justo cuando importa.</li>
 <li><strong>Histograma de rutas</strong> por corrida: la distribución de ciclos entre nodos del grafo. Es la caracterización más informativa del comportamiento cualitativo de un brazo — una corrida 77 % <code>reactive</code> describe un vuelo que sobrevoló los obstáculos en lugar de negociarlos, independientemente de lo que digan sus métricas de éxito.</li>
 <li><strong><code>deliberation_rate</code></strong>: fracción de ciclos que invocan efectivamente al modelo. Se contabiliza por <strong>transición de identificador único de deliberación</strong>, no por ciclo con ruta <code>deliberative</code>; sin esa distinción, una deliberación que abarca varios ciclos de espera se contaría múltiples veces e inflaría la tasa muy por encima de la real.</li>
 <li>La latencia del <strong>escaneo espacial pre-vuelo</strong> (<code>spatial_scan</code>, cap. 5) es un costo de inicialización de única vez y se registra por separado del presupuesto por ciclo.</li>
@@ -3009,7 +3009,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong>Supresión espuria de los ángulos de <em>pitch<em> y </em>roll</em></strong> en las notas cinemáticas del prompt.</li>
 </ol>
 <p>Las corridas en cuarentena <strong>no se descartan como evidencia</strong>: siguen siendo válidas para establecer que una geometría es volable y que un corredor es transitable. Pero sus métricas de <code>slm_invocations</code>, <code>deliberation_rate</code> e histograma de rutas <strong>no son comparables</strong> con corridas posteriores al fix, y por tanto no entran a ninguna prueba estadística. La magnitud del efecto de los fixes justifica la severidad de la política: la <code>deliberation_rate</code> de <code>townsim_clear</code> cayó de 15.4 % (pre-fix) a 0.82 % (post-fix), una reducción de ×19 que ninguna diferencia entre brazos podría igualar.</p>
-<p><strong>Versionado del código dentro de la cuarentena.</strong> La política anterior trata artefactos instrumentales; el mismo criterio se aplica a los cambios de <em>software de decisión</em>. Los resultados del lote base con obstrucción (§11.4) se obtuvieron con el código previo a las mejoras V2 (§10.12) y no se agrupan con los del lote V2 en ninguna prueba estadística: comparar entre versiones mezclaría el efecto de las mejoras con el de los brazos. Cada <code>summary.json</code> registra el hash de commit (<code>code_version</code>); conviene notar que el hash identifica el último commit y <strong>no</strong> garantiza un árbol de trabajo limpio (el <code>summary.json</code> del piloto <code>seed_99</code> registra <code>28b3f8ca</code>, el commit de las 15:48 del 22/09, mientras que las correcciones de esa sesión se confirmaron recién a las 18:02 en <code>95c9f71d</code>, de modo que el piloto corrió con cambios sin confirmar sobre el hash registrado), por lo que el lote V2 debe correrse con el árbol confirmado y verificado antes de cada lote (§10.12).</p>
+<p><strong>Versionado del código.</strong> La política anterior trata artefactos instrumentales; el mismo criterio se aplica a los cambios de <em>software de decisión</em>. Cada <code>summary.json</code> registra el hash de commit (<code>code_version</code>) y solo se agrupan corridas con el mismo hash: agrupar corridas con software de decisión distinto mezclaría el efecto del software con el de los brazos. Los resultados del lote base (§11) corresponden a la configuración fijada al 8–9 de septiembre y no se agrupan con las corridas con obstrucción de §10.12 en ninguna prueba estadística. El hash identifica el último commit y <strong>no</strong> garantiza un árbol de trabajo limpio (una corrida con cambios sin confirmar registra el hash del commit anterior), por lo que cada lote debe correrse con el árbol confirmado y verificado antes de comenzar (§10.12).</p>
 <h3 id="1094-publicacion">10.9.4 Publicación<a class="headerlink" href="#1094-publicacion" title="Permanent link">&para;</a></h3>
 <p>El conjunto de validación de TTC (cap. 7, 3735 registros), los archivos de telemetría del batch definitivo, los manifiestos de misión y la configuración completa (<code>config/.env</code>) serán archivados y publicados con un identificador digital persistente (DOI vía Zenodo), acompañados del hash de commit correspondiente, garantizando la auditabilidad y reproducibilidad de los resultados.</p>
 <p><em>(Para la especificación formal del archivo <code>settings.json</code>, el perfil de escalabilidad, la estructura detallada de los manifiestos de misión JSON y el protocolo de ejecución paso a paso, véase el <a href="anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html">Anexo 6</a>).</em></p>
@@ -3118,73 +3118,68 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong>Validez externa respecto del modelo.</strong> Todas las conclusiones sobre el brazo <code>slm</code> son conclusiones sobre Qwen2.5-VL-3B cuantizado, no sobre "modelos de lenguaje pequeños" en general. La mitigación es la comparación de modelos descrita en §10.10.4.</li>
 <li><strong>Efecto de sesión entre tiers.</strong> Los tres batches corren en sesiones y proyectos distintos, de modo que las comparaciones absolutas entre tiers no son limpias (§10.5.1). La mitigación parcial es el uso de razones normalizadas; la mitigación completa es la repetición de un batch en segunda sesión descrita en §10.10.4.</li>
 <li><strong>Ausencia de obstáculos dinámicos.</strong> Todo el diseño asume geometría estática. Las conclusiones no se extienden a entornos con agentes móviles, que es precisamente el escalón de dificultad que la literatura de conducción autónoma identifica como decisivo (<a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>). La mitigación es la extensión con agentes de IA descrita en §10.10.3.</li>
-<li><strong>Cambio de versión del software entre el lote base y el lote V2.</strong> Las mejoras de control y percepción incorporadas entre septiembre 7 y 22 (§10.12) cambian el comportamiento del brazo <code>slm</code> —y también del <code>fsm</code>, que comparte los módulos de escape— en presencia de obstáculos. Las comparaciones válidas son <em>dentro</em> de una versión; entre versiones solo es legítima la comparación descriptiva. La mitigación es fijar y verificar <code>CODE_VERSION_V2</code> antes de cada lote y descartar las corridas con otro hash.</li>
+<li><strong>Configuración distinta entre el lote base y los lotes con obstrucción.</strong> Las corridas con obstrucción (§10.12) se ejecutan con el sistema descrito en los capítulos 5–8, que difiere en control y percepción de la configuración con la que se ejecutó el lote base. Las comparaciones válidas son <em>dentro</em> de una configuración (mismo <code>code_version</code>); entre configuraciones solo es legítima la comparación descriptiva. La mitigación es fijar y verificar el hash antes de cada lote y descartar las corridas con otro hash.</li>
 </ol>
 <p>Ninguna de estas limitaciones invalida el diseño para las preguntas que sí responde; todas acotan el alcance de lo que puede afirmarse a partir de él.</p>
-<h2 id="1012-corte-de-version-v2-y-lotes-con-obstruccion">10.12 Corte de versión V2 y lotes con obstrucción<a class="headerlink" href="#1012-corte-de-version-v2-y-lotes-con-obstruccion" title="Permanent link">&para;</a></h2>
-<h3 id="10121-que-cambio-entre-el-lote-base-y-el-codigo-v2">10.12.1 Qué cambió entre el lote base y el código V2<a class="headerlink" href="#10121-que-cambio-entre-el-lote-base-y-el-codigo-v2" title="Permanent link">&para;</a></h3>
-<p>El lote base (§10.5, 45 corridas de control y 30 de prueba extendida) se ejecutó con el software de decisión tal como estaba a comienzos de septiembre. Entre el 7 y el 22 de septiembre se incorporaron las mejoras que se agrupan aquí como <strong>V2</strong>. Las de percepción y memoria (Zonas 1 y 2) cambian el comportamiento observable del brazo <code>slm</code> en presencia de obstáculos; las del 22 de septiembre surgieron de las corridas piloto sobre <code>townsim_ini</code> (semilla 99) y corrigen fallos que las volvían no concluyentes.</p>
+<h2 id="1012-lotes-con-obstruccion">10.12 Lotes con obstrucción<a class="headerlink" href="#1012-lotes-con-obstruccion" title="Permanent link">&para;</a></h2>
+<h3 id="10121-componentes-del-sistema-que-ejercen-los-escenarios-con-obstruccion">10.12.1 Componentes del sistema que ejercen los escenarios con obstrucción<a class="headerlink" href="#10121-componentes-del-sistema-que-ejercen-los-escenarios-con-obstruccion" title="Permanent link">&para;</a></h3>
+<p>Los escenarios despejados (los 45 runs de control del lote base) no ejercen la capa táctica: el TTC no baja del umbral y los detectores de atasco no disparan. Los escenarios con obstrucción sí, y son los que permiten validar los componentes siguientes y comparar <code>slm</code>, <code>fsm</code> y <code>reactive</code>:</p>
 <table>
 <thead>
 <tr>
-<th>Módulo</th>
-<th>Qué cambia en el comportamiento</th>
+<th>Componente</th>
+<th>Comportamiento que se evalúa</th>
 <th>Referencia</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>V4 — Depth Anything V2 Metric</td>
-<td>Freno proactivo por profundidad monocular (≤ 5 m) sin esperar obstrucción de flujo óptico</td>
+<td>Profundidad monocular (Depth Anything V2 Metric)</td>
+<td>Freno proactivo (≤ 5 m) sin esperar obstrucción de flujo óptico</td>
 <td>§6.10b</td>
 </tr>
 <tr>
-<td>E2 — clasificación de textura de profundidad</td>
+<td>Clasificación de textura de profundidad</td>
 <td>Pista «follaje» / «superficie plana» en el prompt</td>
 <td>§5.6</td>
 </tr>
 <tr>
-<td>C1 / D1 / F1 — memoria de trayectoria</td>
-<td>La evasión lateral y <code>GIRAR_90</code> no repiten el lado con stall ≥ 60–70 %; esquina reducida cuando ambos lados fallaron</td>
-<td>§5.8, §5.9</td>
+<td>Memoria de trayectoria (<code>FlightTrajectory</code>)</td>
+<td>La evasión lateral y <code>GIRAR_90</code> no repiten el lado con stall ≥ 60–70 %; historia de zonas para la resolución de atasco</td>
+<td>§5.8, §5.9, §5.12.1</td>
 </tr>
 <tr>
-<td>G1 — pared invisible</td>
+<td>Aviso de obstáculo invisible (G1)</td>
 <td>Aviso al VLM cuando stall frontal ≥ 20 % con ocupación &lt; 15 %</td>
 <td>§5.6</td>
 </tr>
 <tr>
-<td>Zona 1 — <code>stuck_invisible</code> unificada; V2 proactivo eliminado</td>
-<td>Menos falsos positivos y menos carga de tokens</td>
-<td>§5.3, §5.6</td>
+<td><code>StallDetector</code></td>
+<td>Contacto IMU, pared ciega, parado, posición congelada y falta de progreso neto al waypoint</td>
+<td>§5.3.1</td>
 </tr>
 <tr>
-<td>Overrides deterministas 1a/1b/1c/2/3 y <code>RETROCEDER</code></td>
-<td>El VLM no puede repetir acciones que la historia refutó; nueva macro-acción de marcha atrás</td>
+<td>Overrides deterministas y <code>RETROCEDER</code></td>
+<td>El VLM no puede repetir acciones que la historia refutó; marcha atrás y esquina perpendicular al rumbo al waypoint</td>
 <td>§5.12.2, §5.12.3</td>
 </tr>
 <tr>
-<td>V3d / V3e — congelamiento por posición y escalada por velocidad nula</td>
-<td>Detecta la oscilación dentro de mallas de árbol y evita el bucle indefinido de <code>RETROCEDER</code></td>
-<td>§5.3, §5.6</td>
+<td>Escape vertical forzado</td>
+<td>Rompe el bloqueo cuando los escaneos son fútiles o la posición está congelada</td>
+<td>§5.3.4</td>
 </tr>
 <tr>
-<td>Fix B / C / E / H / I / 16–17 — <code>deep_vlm</code> y precedencia de rutas</td>
-<td>Overrides y escape adaptativo en <code>deep_vlm</code>; ruptura del bucle <code>RETROCEDER</code>; timeout de rotación; resultados del VLM que llegan a ejecutarse; esquina perpendicular al rumbo al waypoint</td>
-<td>§5.10, §5.12, §9.5.4</td>
+<td>Detección de techo y cadena de esquinas</td>
+<td>Altitud limitada bajo estructuras horizontales; esquinas encadenadas alrededor de un obstáculo</td>
+<td>§5.15.3, §5.15.4</td>
 </tr>
 <tr>
-<td>Visión condicionada, prompts externalizados, sub-meta <code>VlmGoal</code></td>
-<td>Imagen solo en bloqueo duro; prompts editables sin tocar código</td>
-<td>§5.10, §8.5</td>
-</tr>
-<tr>
-<td>Watchdog 13 000 ms; timeouts HTTP 15/20 s</td>
-<td>Consultas con imagen ya no se descartan por <em>timeout</em></td>
+<td>Consulta asíncrona con caducidad</td>
+<td>El resultado del VLM llega a ejecutarse sin frenar el vuelo</td>
 <td>§5.10, §8.6</td>
 </tr>
 <tr>
-<td><code>land_smooth</code> y aborto por proximidad recalibrado</td>
+<td><code>land_smooth</code> y aborto por proximidad</td>
 <td>Aterrizaje sin caída libre; umbral 0.05 m con velocidad &lt; 0.1 m/s</td>
 <td>§5.19</td>
 </tr>
@@ -3195,15 +3190,15 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </tr>
 </tbody>
 </table>
-<p>Estas mejoras son irrelevantes en los escenarios despejados (los 45 runs de control no las ejercen); son necesarias corridas con obstáculos bajo el código V2 para validarlas y para comparar <code>slm</code>, <code>fsm</code> y <code>reactive</code> en escenarios con obstrucción. Debe tenerse presente que la mayoría se incorporó reaccionando a fallos observados en corridas puntuales y que los umbrales resultantes (por ejemplo, 7.5 m de altitud de techo o 30 ciclos de congelamiento) se fijaron sobre ejemplos únicos (§5.12.2); ninguno está validado estadísticamente todavía.</p>
+<p>La mayoría de los umbrales de la capa táctica (por ejemplo, 7.5 m de altitud de techo o 30 ciclos de congelamiento) se fijaron sobre ejemplos únicos observados en corridas piloto (§5.12.2); ninguno está validado estadísticamente todavía.</p>
 <h3 id="10122-lotes-previstos">10.12.2 Lotes previstos<a class="headerlink" href="#10122-lotes-previstos" title="Permanent link">&para;</a></h3>
-<p>Se definen tres lotes con <code>AGENT_ARM ∈ {slm, fsm, reactive}</code> × 5 semillas × <code>DEADLOCK_STRATEGY = deep_vlm</code>, precedidos cada uno por un piloto de validación (semilla 99):</p>
+<p>Se definen tres lotes con <code>AGENT_ARM ∈ {slm, fsm, reactive}</code> × 5 semillas, precedidos cada uno por un piloto de validación (semilla 99):</p>
 <table>
 <thead>
 <tr>
 <th>Lote</th>
 <th>Escenario</th>
-<th>Mejoras que ejerce</th>
+<th>Componentes que ejerce</th>
 <th>Corridas</th>
 <th>Presupuesto por corrida</th>
 <th>Tiempo estimado</th>
@@ -3213,7 +3208,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <tr>
 <td>D</td>
 <td><code>townsim_ini</code> (Tier 1, vegetación)</td>
-<td>E2, C1, G1, Override 3, V3d/V3e</td>
+<td>Clasificación de profundidad, memoria de trayectoria, G1, Override 3, <code>StallDetector</code></td>
 <td>15</td>
 <td>900 s · 4500 ciclos</td>
 <td>~2.0–2.5 h</td>
@@ -3229,18 +3224,19 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <tr>
 <td>F</td>
 <td><code>citymap_pilot</code> (Tier 2, corredores)</td>
-<td>Override 3a, C1, D1+F1, G1</td>
+<td>Override 3a, memoria de trayectoria, G1, techo, cadena de esquinas</td>
 <td>15</td>
 <td>1200 s · 5000 ciclos</td>
 <td>~4.0–5.0 h</td>
 </tr>
 </tbody>
 </table>
-<p>Criterios de pase de cada piloto: en D, <code>success = True</code>, Override 3 disparado al menos una vez y <code>deep_scan_resolution_rate &gt; 0</code>; en E, el dron llega al waypoint tras el edificio o al menos lo rodea; en F, avanza al menos dos waypoints sin colisión. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si el lote E o F muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (semillas 6–10; ~6–8 h adicionales), que es el camino previsto hacia la potencia que K = 5 no alcanza (§10.11, punto 1).</p>
-<p><strong>Métricas adicionales del lote V2.</strong> Además de las de §10.6, se registran: <code>ctrl_depth_proximity_m</code> y <code>ctrl_depth_obstacle_type</code> (cuánto y cuándo la profundidad fue el sensor decisivo, y con qué tipo de obstáculo); <code>ctrl_traj_{frente,izq,der}_stall_rate</code> (evidencia de que la memoria de trayectoria penalizó el lado más bloqueado); <code>field_source</code> (fracción de ciclos en que la profundidad contribuyó al campo); los campos <code>stuck_invisible</code>, <code>imu_contact</code>, <code>blind_wall</code>, <code>depth_below_cycles</code> del sub-objeto <code>perception</code> de la traza JSONL; y la frecuencia de disparo de los overrides deterministas, como validación cualitativa de que el mecanismo está activo.</p>
+<p>Las estrategias de resolución de atasco (<code>slam_assess</code>, <code>deep_vlm</code>, <code>blind</code>) se comparan dentro de cada lote como factor adicional en el brazo <code>slm</code>. Criterios de pase de cada piloto: en D, <code>success = True</code>, Override 3 disparado al menos una vez y <code>deep_scan_resolution_rate &gt; 0</code>; en E, el dron llega al waypoint tras el edificio o al menos lo rodea; en F, avanza al menos dos waypoints sin colisión. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si el lote E o F muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (semillas 6–10; ~6–8 h adicionales), que es el camino previsto hacia la potencia que K = 5 no alcanza (§10.11, punto 1).</p>
+<p>Cada corrida se guarda en su propio directorio (<code>&lt;escenario&gt;/&lt;brazo&gt;/&lt;estrategia&gt;/seed_N_&lt;timestamp&gt;/</code>) con traza JSONL, CSV plano con el <code>DroneState</code> completo, video y visor (§5.18), de modo que ninguna corrida sobrescribe a otra.</p>
+<p><strong>Métricas adicionales.</strong> Además de las de §10.6, se registran: <code>ctrl_depth_proximity_m</code> y <code>ctrl_depth_obstacle_type</code> (cuánto y cuándo la profundidad fue el sensor decisivo, y con qué tipo de obstáculo); <code>ctrl_traj_{frente,izq,der}_stall_rate</code> (evidencia de que la memoria de trayectoria penalizó el lado más bloqueado); <code>ctrl_no_progress_cycles</code>, <code>_pos_freeze_cycles</code> y <code>_stopped_cycles</code> del <code>StallDetector</code>; los escaneos fútiles y escapes verticales (<code>_scan_track</code>); <code>field_source</code> (fracción de ciclos en que la profundidad contribuyó al campo); los campos <code>stuck_invisible</code>, <code>imu_contact</code>, <code>blind_wall</code>, <code>depth_below_cycles</code> de la traza; y la frecuencia de disparo de los overrides deterministas, como validación cualitativa de que el mecanismo está activo.</p>
 <p><strong>Condiciones de descarte y de invalidación.</strong> Se descarta una corrida individual si su <code>code_version</code> difiere del de referencia del lote, si el estimador de profundidad no inicializó, o si <code>total_cycles &lt; 50</code> (falla de infraestructura, no del dron). Se invalida un lote si contiene corridas con hashes distintos que no puedan reemplazarse, o si <code>depth_proximity_m</code> es cero en todos los eventos del brazo <code>slm</code> (estimador deshabilitado durante toda la corrida). Una corrida abortada por proximidad crítica (§5.19) termina con éxito falso y se cuenta como falla de misión, al igual que una colisión.</p>
 <h3 id="10123-estado">10.12.3 Estado<a class="headerlink" href="#10123-estado" title="Permanent link">&para;</a></h3>
-<p>A la fecha de este informe <strong>no se ejecutó ningún lote V2</strong>. Las corridas de septiembre 22 sobre <code>townsim_ini</code> (semilla 99, brazo <code>slm</code>, <code>deep_vlm</code>) fueron pilotos de depuración: a lo largo de la sesión se encontraron y corrigieron, uno a uno, los fallos de la tabla anterior (y el bucle de <code>RETROCEDER</code>, el <code>DEPTH_EMERGENCY</code> demasiado agresivo, las trayectorias que atravesaban la canopy), de modo que <strong>cada piloto se ejecutó con un código distinto</strong> y ninguno constituye evidencia estadística ni entra al capítulo 11. Se los usa únicamente como evidencia de diagnóstico, con esa etiqueta, en los capítulos 5 y 9. La actualización del capítulo 11 (§11.4.2b, §11.4.2c, §11.4.3b y §11.5) y de la evaluación de H1 en el capítulo 12 queda pendiente de la ejecución de los lotes D, E y F sobre un <code>CODE_VERSION_V2</code> fijo.</p>
+<p>A la fecha de este informe <strong>no se ejecutó ningún lote con obstrucción con hash fijo</strong>. Las corridas piloto sobre <code>townsim_ini</code> (semilla 99, brazo <code>slm</code>) y <code>citysim_pilot</code> son corridas de diagnóstico: en cada una se ajustó el sistema a partir de lo observado, de modo que ninguna constituye evidencia estadística ni entra al capítulo 11. Se las usa únicamente, con esa etiqueta, como evidencia de diagnóstico en los capítulos 5 y 9. La actualización del capítulo 11 (§11.4.2b, §11.4.2c, §11.4.3b y §11.5) y de la evaluación de H1 en el capítulo 12 queda pendiente de la ejecución de los lotes D, E y F sobre un <code>code_version</code> fijo.</p>
 
 
 

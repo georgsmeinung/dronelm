@@ -1449,7 +1449,7 @@
 <hr />
 <h2 id="a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft">A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT<a class="headerlink" href="#a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" title="Permanent link">&para;</a></h2>
 <p>El ajuste fino completo (<em>Full Fine-Tuning</em>, FFT) de una red neuronal profunda requiere actualizar y almacenar en memoria los gradientes y momentos del optimizador (e.g., AdamW en precisión simple FP32) para la totalidad de los parámetros entrenables <span class="arithmatex">\(\Phi_0\)</span>. Para un modelo de 3B parámetros, esto demanda más de 24 GB de VRAM únicamente para el estado del optimizador, tornando inviable el entrenamiento en GPUs de escritorio (tales como la NVIDIA RTX 5060 de 8 GB utilizada en este proyecto).</p>
-<p>Las técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT; Mangrulkar et al., 2022) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.</p>
+<p>Las técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT; <a href="../13-REFERENCIAS.html#ref-mangrulkar-2022">Mangrulkar et al., 2022</a>) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.</p>
 <p><img src="a3-fundamentos-de-peft.jpg"/></p>
 <h3 id="a311-formulacion-matematica-de-lora">A3.1.1 Formulación matemática de LoRA<a class="headerlink" href="#a311-formulacion-matematica-de-lora" title="Permanent link">&para;</a></h3>
 <p>La premisa matemática de LoRA (<a href="../13-REFERENCIAS.html#ref-hu-2022">Hu et al., 2022</a>) se basa en la hipótesis de que las actualizaciones de peso <span class="arithmatex">\(\Delta W\)</span> durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (<em>low intrinsic dimension</em>). Para una matriz lineal preentrenada <span class="arithmatex">\(W_0 \in \mathbb{R}^{d \times k}\)</span>, la actualización se descompone como el producto de dos matrices de bajo rango:</p>
@@ -1536,7 +1536,7 @@
 </table>
 <hr />
 <h2 id="a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm">A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM<a class="headerlink" href="#a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" title="Permanent link">&para;</a></h2>
-<p>La integración de un adaptador LoRA en el nodo deliberativo transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
+<p>La integración de un adaptador LoRA en la consulta al VLM transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
 <p><img src="a3-impacto-lora.jpg"/></p>
 <h3 id="a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia">A3.2.1 Reducción del presupuesto de tokens y compresión de latencia<a class="headerlink" href="#a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" title="Permanent link">&para;</a></h3>
 <p>En la implementación <em>zero-shot</em> de referencia (§8.5), el prompt de usuario debe reiterar en cada invocación:
@@ -1566,13 +1566,13 @@
 * <span class="arithmatex">\(r_t^*\)</span> es una cadena de justificación condensada (&lt; 120 caracteres) que verbaliza el razonamiento causal subyacente (e.g., <code>"TTC crítico de 1.2s en cuadrante frontal-izquierdo; espacio despejado a la derecha; iniciar maniobra evasiva"</code>).</p>
 <h3 id="a332-mitigacion-de-la-deriva-cinematica-mediante-dagger">A3.3.2 Mitigación de la deriva cinemática mediante DAgger<a class="headerlink" href="#a332-mitigacion-de-la-deriva-cinematica-mediante-dagger" title="Permanent link">&para;</a></h3>
 <p>El entrenamiento mediante simple Clonación de Comportamiento (<em>Behavioral Cloning</em>, BC) a partir de vuelos nominales perfectos sufre del problema de <strong>deriva covariada (<em>Covariate Shift</em>)</strong> (<a href="../13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.</p>
-<p>Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo <strong>DAgger (<em>Dataset Aggregation</em>; Ross et al., 2011)</strong> adaptado a simulación en AirSim / Unreal Engine 5:
+<p>Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo <strong>DAgger (<em>Dataset Aggregation</em>; <a href="../13-REFERENCIAS.html#ref-ross-2011">Ross et al., 2011</a>)</strong> adaptado a simulación en AirSim / Unreal Engine 5:
 1. <strong>Vuelo con política actual</strong> <span class="arithmatex">\(\pi_{\text{LoRA}}\)</span> en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
 2. <strong>Consulta al oráculo experto</strong> (FSM determinista o supervisor experto) ante desvíos: determinación de la acción correctiva óptima <span class="arithmatex">\(a^*\)</span>.
 3. <strong>Agregación de tuplas críticas</strong> <span class="arithmatex">\(\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, a^*_{\text{experto}})\}\)</span>.
 4. <strong>Reentrenamiento iterativo</strong> de los adaptadores LoRA sobre el conjunto enriquecido.</p>
 <h3 id="a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion">A3.3.3 Aumentación sintética y métricas objetivo de evaluación<a class="headerlink" href="#a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion" title="Permanent link">&para;</a></h3>
-<p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; Marazzato &amp; Sparavigna, 2015) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
+<p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; <a href="../13-REFERENCIAS.html#ref-marazzato-2015">Marazzato &amp; Sparavigna, 2015</a>) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
 <table>
 <thead>
 <tr>
@@ -1626,7 +1626,7 @@
 1. <strong>Supervisión Jerárquica por FSM:</strong> la máquina de estados retiene la potestad para anular cualquier macro-acción deliberativa ante condiciones de riesgo inminente (<span class="arithmatex">\(TTC &lt; 1.0\text{ s}\)</span>).
 2. <strong>Parser Tolerante de Tres Etapas:</strong> permanece activo en <code>_parse_decision()</code> como red de contención frente a anomalías de serialización.
 3. <strong>Perro Guardián Temporal (<code>SLM_WATCHDOG_MS</code> (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)):</strong> cualquier sobrepaso temporal fuerza el retorno inmediato al régimen conservador de sustentación.</p>
-<p>Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia del nodo deliberativo a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.</p>
+<p>Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia de la capa deliberativa a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.</p>
 
 
 

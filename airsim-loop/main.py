@@ -382,6 +382,9 @@ def main() -> None:
             # blind vs. deep_vlm. Mismo patron que _escape_reset arriba: se
             # consume con pop() en el lazo, nunca queda pisando el estado.
             deadlock_event = drone_state.pop("_deadlock_event", None)
+            if deadlock_event:
+                # Punto de contacto para la cadena de esquinas (waypoint_tracker.py).
+                waypoint_tracker.record_contact(pos_now.get("x", 0.0), pos_now.get("y", 0.0))
             # Instrumentacion de auditoria VLM (2026-0901): frames RAW del
             # ciclo exacto en que una deliberacion se resolvio, si los hay.
             # Mismo patron de canal de una sola pasada -- se consumen aca y
@@ -411,80 +414,16 @@ def main() -> None:
                     delib_frames=delib_frames,
                 )
 
-            frame = final_state.get("rgb_image")
             annotated_frame = None
-            if frame is not None:
-                # pyrefly: ignore [missing-import]
-                import cv2
-                annotated_frame = frame.copy()
+            if final_state.get("rgb_image") is not None:
+                # Overlay compartido con experiments/runner.py (2026-0929).
+                from src.logging.flight_overlay import annotate_frame
 
-                decision = final_state.get("next_action", "MANTENER_RUMBO")
-                flight_status = final_state.get("flight_status", "vuelo")
-                # Ruta del grafo (que nodo de LangGraph decidio este ciclo:
-                # reactive/deliberative/evasive/girar_90/fsm) -- mismo dato
-                # que ya imprime la consola (route_tag, ver _print_state
-                # mas abajo), pedido explicito para que el video tambien lo
-                # muestre y quede claro en que estado del lazo de control
-                # esta el sistema en cada instante, no solo que accion tomo.
-                route_ov = final_state.get("route", "")
-                route_tag_ov = route_ov.upper() if route_ov else "DIRECT"
-                ttc_val = final_state.get("estimated_ttc", float("inf"))
-                ttc_str = f"{ttc_val:.1f}s" if ttc_val != float("inf") else "inf"
-
-                h, w = annotated_frame.shape[:2]
-                # 2026-0903 (pedido explicito): overlay ampliado a 4 lineas
-                # con mas info del propio DroneState -- MISMA fuente que
-                # alimenta el CSV, ver src/logging/flight_logger.py, no hace
-                # falta leerlo de vuelta. Seguro desde el punto de vista de
-                # auditoria: se dibuja sobre `annotated_frame`, una COPIA de
-                # `frame` hecha DESPUES de que el original ya viajo (sin
-                # tocar) hacia frame_history/el VLM y hacia el .png de
-                # auditoria -- nunca vuelve al pipeline de percepcion,
-                # fundamentalmente distinto del bug de los marcadores de
-                # debug (esos contaminaban la imagen en el simulador, antes
-                # de que el codigo la viera).
-                cv2.rectangle(annotated_frame, (0, 0), (w, 88), (10, 10, 15), -1)
-
-                dec_color = (0, 255, 100) if "MANTENER" in decision else (0, 165, 255)
-                if "SLM" in decision or "PARADA" in decision or "FRENAR" in decision:
-                    dec_color = (255, 100, 200)
-
-                wp_str = f"WP {waypoint_tracker.current_index + 1}/{len(waypoints_list)} ({guidance.get('distance', 0.0):.0f}m)" if waypoints_list else ""
-                cv2.putText(annotated_frame, f"[{route_tag_ov}] ACT: {decision} {wp_str}", (10, 26),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.52, dec_color, 2, cv2.LINE_AA)
-
-                cv2.putText(annotated_frame, f"TTC: {ttc_str} | {flight_status}", (w - 280, 26),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
-
-                telem_ov = final_state.get("telemetry") or {}
-                pos_ov = telem_ov.get("position", {}) or {}
-                vel_ov = telem_ov.get("velocity", {}) or {}
-                orient_ov = telem_ov.get("orientation", {}) or {}
-                speed_ov = math.hypot(float(vel_ov.get("vx", 0.0)), float(vel_ov.get("vy", 0.0)))
-                cv2.putText(
-                    annotated_frame,
-                    f"t={time.time() - mission_start_time:6.1f}s cy={cycle_count} | "
-                    f"pos=({pos_ov.get('x', 0.0):+.1f},{pos_ov.get('y', 0.0):+.1f},{pos_ov.get('z', 0.0):+.1f}) | "
-                    # "°" no lo soporta la fuente Hershey de cv2.putText (sale
-                    # "??" en el video) -- "deg" en su lugar.
-                    f"v={speed_ov:.2f}m/s pitch={math.degrees(float(orient_ov.get('pitch', 0.0))):+.1f}deg "
-                    f"roll={math.degrees(float(orient_ov.get('roll', 0.0))):+.1f}deg",
-                    (10, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1, cv2.LINE_AA,
+                annotated_frame = annotate_frame(
+                    final_state, guidance,
+                    wp_index=waypoint_tracker.current_index, wp_total=len(waypoints_list),
+                    elapsed_s=time.time() - mission_start_time, cycle=cycle_count,
                 )
-
-                field_ov = final_state.get("obstacle_field")
-                if field_ov is not None:
-                    sector_bits = []
-                    for sector, code in (("izquierda", "IZQ"), ("centro", "CEN"), ("derecha", "DER")):
-                        occ = field_ov.sector_occupancy(sector)
-                        ttc = field_ov.sector_ttc(sector)
-                        ttc_txt = f"{ttc:.1f}s" if ttc != float("inf") else "inf"
-                        bloq_txt = "!" if field_ov.is_blocked(sector) else ""
-                        sector_bits.append(f"{code} occ={occ:.2f} ttc={ttc_txt}{bloq_txt}")
-                    cv2.putText(
-                        annotated_frame, " | ".join(sector_bits),
-                        (10, 76), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1, cv2.LINE_AA,
-                    )
 
                 if video_recorder is not None:
                     vp_frame = viewport_capture.capture() if viewport_capture is not None else None
@@ -544,6 +483,7 @@ def main() -> None:
                         str(viewer_path),
                         video_filename=video_recorder.out_path.name,
                         csv_path=str(flight_logger.csv_path),
+                        jsonl_path=str(flight_logger.out_path),
                     )
                     print(f"[FlightViewer] Herramienta de auditoria en {viewer_path} (abrir con doble clic).")
                 except Exception as exc:

@@ -2,7 +2,7 @@
 
 La incorporación de modelos de lenguaje pequeños (*Small Language Models*, SLMs) y modelos multimodales compactos (*Small Vision-Language Models*, sVLMs) en el lazo de control táctico de un vehículo aéreo no tripulado (UAV) introduce una paradoja arquitectónica fundamental: **la naturaleza probabilística y estocástica de los modelos neuronales frente a los requerimientos deterministas, de baja latencia y tolerancia cero a fallas de sintaxis propios de la robótica aérea**.
 
-En el diseño de DroneLM, el nodo deliberativo (`deliberative_node`, §5.10) está encargado de desempatar maniobras de evasión complejas, resolver atascos cinemáticos (*deadlocks*) e interpretar escenas visuales ambiguas cuando el estimador de flujo óptico colapsa (§6.12). Sin embargo, si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador sintáctico del lazo de control colapsa. En versiones tempranas del sistema, este modo de fallo provocaba la pérdida de 3 a 5 ciclos consecutivos de control mientras el dron avanzaba a ciegas o caía en modos de emergencia espurios (§8.2, §9.1).
+En el diseño de DroneLM, la consulta asíncrona al VLM (§5.10) está encargado de desempatar maniobras de evasión complejas, resolver atascos cinemáticos (*deadlocks*) e interpretar escenas visuales ambiguas cuando el estimador de flujo óptico colapsa (§6.12). Sin embargo, si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador sintáctico del lazo de control colapsa. En versiones tempranas del sistema, este modo de fallo provocaba la pérdida de 3 a 5 ciclos consecutivos de control mientras el dron avanzaba a ciegas o caía en modos de emergencia espurios (§8.2, §9.1).
 
 Este anexo desarrolla los fundamentos teóricos, los mecanismos algorítmicos y el procedimiento exhaustivo de ingeniería para implementar **decodificación restringida (*constrained decoding*) basada en gramáticas formales y esquemas estrictos (`json_schema` / GBNF)**. Se demuestra cómo esta técnica erradica las alucinaciones estructurales, comprime el tiempo de inferencia hasta en un 60–80% y optimiza el grafo de control (`StateGraph`) de DroneLM mediante gramáticas acotadas dinámicas adaptadas al contexto de vuelo.
 
@@ -116,11 +116,11 @@ En sistemas avanzados, las restricciones gramaticales se combinan con **decodifi
 La interacción entre el modelo de lenguaje y el grafo de control táctico (`src/agents/graph.py`) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una **arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo**.
 
 ### A4.4.1 Invariantes del lazo táctico garantizados por la gramática
-En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los nodos de política (`reactive_node`, `evasive_node`, `deliberative_node`, `girar_90_node`) convergen en una interfaz estricta gobernada por `action_to_command()` (§8.4):
+En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los comportamientos de la capa de decisión (`reactive_node`, `evasive_node`, la consulta al VLM y `_dispatch_girar_90`) convergen en una interfaz estricta gobernada por `action_to_command()` (§8.4):
 
 <img src="a4-invariante-lazo-tactico.jpg"/>
 
-Al imponer decodificación restringida en `deliberative_node`, se garantizan tres invariantes operativas fundamentales:
+Al imponer decodificación restringida en la consulta al VLM, se garantizan tres invariantes operativas fundamentales:
 1. **Ausencia total de fallas de parseo en el lazo:** se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un **98%–100%**, como se verifica empíricamente en el informe (§8.2, §11).
 2. **Determinismo en el espacio de acción:** el campo `action` se constriñe a la enumeración canónica:
    $$\text{action} \in \{\text{"keep\_going"}, \text{"evasive"}, \text{"girar\_90"}, \text{"fsm"}, \text{"degraded"}\}$$
@@ -130,7 +130,7 @@ Al imponer decodificación restringida en `deliberative_node`, se garantizan tre
 ### A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo
 Una de las innovaciones de mayor impacto para optimizar el lazo deliberativo consiste en la **parametrización dinámica de la gramática en función del estado de vuelo actual**.
 
-En lugar de emplear un esquema JSON estático para todas las consultas, el nodo deliberativo selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (`reason_note`, §8.5):
+En lugar de emplear un esquema JSON estático para todas las consultas, la consulta al VLM selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (`reason_note`, §8.5):
 
 | Motivo de Consulta (`reason_note`) | Condición de Activación en Grafo | Gramática / Restricción Dinámica del Enum `action` | Racionalidad Operativa y Beneficio |
 |---|---|---|---|
@@ -311,7 +311,7 @@ def _parse_decision(raw_text: str, default_action: str = "keep_going") -> tuple[
 ```
 
 ### Paso 4: Sincronización con el perro guardián y velocidad de deslizamiento (*Creep Speed*)
-En `deliberative_node`, la integración con la temporalidad del lazo de control se articula mediante el perro guardián (`SLM_WATCHDOG_MS` (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)) y el avance mínimo garantizado:
+En la consulta al VLM, la integración con la temporalidad del lazo de control se articula mediante un perro guardián (`SLM_DEEP_WATCHDOG_MS` = 12 000 ms en la resolución de atasco, cap. 8, §8.6) y la continuidad del vuelo por las capas reactiva y táctica:
 * Mientras la inferencia está en vuelo (`slm_request_id is not None`), el dron ejecuta `DELIB_WAIT_CREEP_SPEED_MPS = 0.5 m/s`. Esto evita el colapso del campo de flujo óptico por falta de movimiento traslacional (§8.6).
 * Gracias a la decodificación restringida, el 95% de las llamadas resuelven en **$320 - 480\text{ ms}$**, lo que significa que el dron solo pasa 2 o 3 ciclos en estado de espera antes de aplicar la macro-acción definitiva.
 

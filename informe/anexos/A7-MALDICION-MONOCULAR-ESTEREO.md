@@ -83,7 +83,7 @@ avanza porque no puede confiar en su propia percepción frontal, y no colisiona 
 esa falta de confianza lo mantiene en modo cauteloso. El `deep_vlm` resuelve el 100% de los
 deadlocks individuales (repone evidencia puntual vía descripción semántica de la escena), pero la
 tasa de generación de nuevos deadlocks excede la capacidad de avance neto — un régimen de
-"deadlock crónico" que ningún ajuste del nodo deliberativo (Anexos 3 y 4) puede resolver, porque el
+"deadlock crónico" que ningún ajuste de la capa deliberativa (Anexos 3 y 4) puede resolver, porque el
 cuello de botella está en la capa de percepción, no en la de decisión.
 
 ### A7.2.1 ¿Ayudaría SLAM monocular disperso o semi-denso?

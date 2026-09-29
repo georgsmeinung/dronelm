@@ -24,7 +24,7 @@ El denominador común en los cinco casos es la ausencia de excepción en tiempo 
 
 En una arquitectura temprana del sistema, el estado del campo de obstáculos se comunicaba como una lista de objetos detectados (`detected_obstacles: List[dict]`), con una lista vacía como valor por defecto. La decisión de qué hacer cuando la lista estaba vacía era ambigua: podía significar "la percepción corrió y no detectó nada" (espacio despejado) o "la percepción no corrió, no tiene confianza, o falló silenciosamente" (ausencia de información).
 
-Los módulos consumidores — el router de política, el constructor del prompt del VLM, el nodo FSM — resolvían esa ambigüedad en favor de la primera interpretación. El resultado en la práctica fue:
+Los módulos consumidores — la capa de decisión (`navigate`), el constructor del prompt del VLM y la FSM — resolvían esa ambigüedad en favor de la primera interpretación. El resultado en la práctica fue:
 
 1. El generador de contexto construía un prompt que afirmaba al modelo "trayectoria frontal sin obstáculos detectados".
 2. El VLM, actuando con perfecta coherencia lógica respecto de la información provista, emitía `keep_going` con alta confianza.
@@ -43,15 +43,15 @@ La solución adoptada fue rediseñar el contrato de percepción como el tipo `Ob
 
 La invariante que impone `ObstacleField` es que **ningún consumidor puede confundir "sin obstáculos detectados" con "sin información"** sin leer explícitamente `has_evidence()`. El prompt del VLM verbaliza esta distinción en el componente 2 (§8.5): "percepción SIN evidencia por baja velocidad traslacional" es un texto distinto de "todos los sectores despejados".
 
-En los nodos de control, `degraded_hover_node` es el destino de cualquier ciclo donde `has_evidence()` es `False` y el router no tiene una maniobra persistente activa — el sistema no puede decidir "avanzar" si no sabe nada del entorno.
+En los nodos de control, `degraded_hover_node` es el destino de cualquier ciclo donde `has_evidence()` es `False` y no hay una maniobra comprometida activa — el sistema no puede decidir "avanzar" si no sabe nada del entorno.
 
 ## 9.3 Falla 2 — Desalineación temporal del historial de frames
 
 ### 9.3.1 Descripción del modo de falla
 
-El nodo deliberativo multimodal envía al VLM un historial de `VLM_FRAME_HISTORY_SIZE = 2` frames (frames $t$ y $t-1$) para que el modelo pueda estimar la dirección de movimiento comparando dos instantes temporales distintos. Esta funcionalidad depende de que los dos frames sean genuinamente distintos en el tiempo.
+La consulta multimodal envía al VLM un historial de `VLM_FRAME_HISTORY_SIZE = 2` frames (frames $t$ y $t-1$) para que el modelo pueda estimar la dirección de movimiento comparando dos instantes temporales distintos. Esta funcionalidad depende de que los dos frames sean genuinamente distintos en el tiempo.
 
-En versiones tempranas, el buffer de historial era una lista Python simple que se actualizaba sin verificación de timestamps. Dos situaciones producían frames duplicados silenciosamente:
+Un buffer de historial implementado como lista Python simple, actualizada sin verificación de timestamps, es vulnerable. Dos situaciones producen frames duplicados silenciosamente:
 
 1. **Reinicio del buffer sin vaciado:** al saltar al siguiente waypoint, se vaciaba el historial pero el nodo de captura podía inyectar el último frame del waypoint anterior como "t-1" del nuevo waypoint. El VLM recibía el frame de un punto de la misión completamente distinto como contexto temporal inmediato.
 
@@ -72,7 +72,7 @@ Si la verificación falla, el prompt se adapta dinámicamente: en lugar de envia
 
 ### 9.4.1 Descripción del modo de falla
 
-El canal de divergencia del `ObstacleField` (cap. 6, §6.7) estima $\partial u / \partial x + \partial v / \partial y$ usando `np.gradient()` sobre el campo de flujo. En versiones anteriores, el cálculo usaba gradientes de Sobel 3×3 sin el factor de normalización $1/8$ que el kernel estándar requiere para ser un estimador de derivada de primer orden en unidades de píxel-por-píxel:
+El canal de divergencia del `ObstacleField` (cap. 6, §6.7) estima $\partial u / \partial x + \partial v / \partial y$ usando `np.gradient()` sobre el campo de flujo. Un cálculo con gradientes de Sobel 3×3 sin el factor de normalización $1/8$ que el kernel estándar requiere para ser un estimador de derivada de primer orden en unidades de píxel-por-píxel:
 
 $$K_{\text{Sobel}} = \frac{1}{8}\begin{pmatrix} -1 & 0 & 1 \\ -2 & 0 & 2 \\ -1 & 0 & 1 \end{pmatrix}$$
 
@@ -110,14 +110,14 @@ Esta propiedad del runtime es documentada en la implementación (§5.2 del cap. 
 Tres claves de control cruzaban la frontera entre nodo y lazo sin estar declaradas en `DroneState`:
 
 - `_reset_stall_counter`: debía reiniciar el contador de progreso estancado al llegar a un waypoint. No declarada → el contador crecía monótonamente desde el inicio de la misión, independientemente del progreso real.
-- `_delib_memory`: debía acumular un historial corto de resultados del deliberativo para que el VLM pudiera referirse a decisiones previas. No declarada → el historial siempre estaba vacío; cada ciclo el VLM era consultado sin contexto de lo que había decidido un ciclo antes.
-- `_corner_wp`: debía inyectar un sub-waypoint de esquina intermedia para la maniobra `GIRAR_90`. No declarada → el nodo de girar_90 lo escribía en su retorno, el router lo leía en el ciclo siguiente... como el valor inicial (None), nunca como el punto calculado.
+- `_delib_memory`: debía acumular un historial corto de resultados de la consulta al VLM para que el VLM pudiera referirse a decisiones previas. No declarada → el historial siempre estaba vacío; cada ciclo el VLM era consultado sin contexto de lo que había decidido un ciclo antes.
+- `_corner_wp`: debía inyectar un sub-waypoint de esquina intermedia para la maniobra `GIRAR_90`. No declarada → el comportamiento de giro lo escribía en su retorno y el decisor lo leía en el ciclo siguiente... como el valor inicial (None), nunca como el punto calculado.
 
 El diagnóstico de estas tres claves requirió instrumentar el runtime con un interceptor de estado entre cada par de nodos — el equivalente de "printear el estado completo antes y después de cada nodo" — porque ningún log de nivel de aplicación mostraba el descarte.
 
 **Vulnerabilidad B — Ciclo límite de período 3 en la red de seguridad.**
 
-El mecanismo de reintento de maniobra de escape funcionaba así (versión con el bug):
+El mecanismo de reintento de maniobra de escape, con el defecto, funcionaba así:
 
 ```
 si stall_count > hard_threshold:
@@ -144,17 +144,17 @@ La corrección fue medir el progreso solo en el plano horizontal XY (distancia 2
 
 **Vulnerabilidad D — Escape ciego a la percepción.**
 
-En la versión con el bug, el `policy_router` evaluaba las condiciones de escape de atasco *antes* de leer el `ObstacleField`:
+Con el defecto, el decisor evaluaba las condiciones de escape de atasco *antes* de leer el `ObstacleField`:
 
 ```python
-# versión con bug
+# con el defecto
 if state["stall_count"] > hard_threshold:
     return "deadlock_escape"   # ← sin verificar percepción
 if field.is_blocked("centro"):
     return "evasive"
 ```
 
-La consecuencia era que en ciclos donde el estimador de flujo tenía evidencia válida de que un sector lateral estaba despejado (`has_open_corridor() = True`), el router seleccionaba igualmente la rama de escape de atasco. El dron ascendía aunque la percepción indicara una salida horizontal disponible. La corrección fue consultar `has_open_corridor()` como condición de guarda antes de activar el escape: si hay evidencia de corredor, la maniobra de escape no se activa aunque el contador de atasco haya excedido su umbral.
+La consecuencia era que en ciclos donde el estimador de flujo tenía evidencia válida de que un sector lateral estaba despejado (`has_open_corridor() = True`), el decisor seleccionaba igualmente la rama de escape de atasco. El dron ascendía aunque la percepción indicara una salida horizontal disponible. La corrección fue consultar `has_open_corridor()` como condición de guarda antes de activar el escape: si hay evidencia de corredor, la maniobra de escape no se activa aunque el contador de atasco haya excedido su umbral.
 
 ### 9.5.3 El ascenso acumulado como síntoma compuesto
 
@@ -162,27 +162,27 @@ La combinación de las cuatro vulnerabilidades produjo en una corrida de validac
 
 1. `_reset_stall_counter` no declarada → `stall_count` creció desde el ciclo 1 sin resetearse al llegar a cada waypoint.
 2. A los ~8 ciclos de misión, `stall_count > hard_threshold` a pesar de que el dron avanzaba normalmente.
-3. El router activó `deadlock_escape` (ciego a percepción), que en esa versión ejecutaba `GANAR_ALTURA` con deriva lateral no justificada.
-4. `stall_count` se reseteó (ciclo límite B) → el siguiente ciclo, el router volvió a crucero normal.
+3. El decisor activó `deadlock_escape` (ciego a percepción), que ejecutaba `GANAR_ALTURA` con deriva lateral no justificada.
+4. `stall_count` se reseteó (ciclo límite B) → el siguiente ciclo, el decisor volvió a crucero normal.
 5. `stall_count` volvió a crecer rápidamente (umbral demasiado bajo por la métrica inconsistente C).
 6. El ciclo se repitió centenares de veces, produciendo un ascenso neto acumulado.
 
 Desde el exterior, la corrida registraba una misión "sin errores" (no hay excepciones en el log) que simplemente "no llegó a destino". Sin el análisis del viewer frame a frame y la lectura del JSONL de auditoría, el patrón era opaco.
 
-### 9.5.4 Instancias posteriores (2026-09-12 a 2026-09-22)
+### 9.5.4 Instancias adicionales: estado descartado y precedencia entre rutas
 
-La revisión de las corridas piloto del código V2 (cap. 10, §10.12) produjo tres hallazgos posteriores a la redacción original de esta sección: dos corregidos y uno abierto. Los tres comparten la propiedad que organiza el capítulo: el sistema producía respuestas válidas y plausibles, sin excepciones en el log, y aun así no las ejecutaba.
+Otras tres situaciones comparten la propiedad que organiza el capítulo: el sistema producía respuestas válidas y plausibles, sin excepciones en el log, y aun así no las ejecutaba.
 
-**(a) Un flag descartado por LangGraph (corregido).** `_post_retroceder_corner_pending`, que difiere la inyección de la esquina hasta el escaneo posterior a un `RETROCEDER` (§5.12.3), se escribía correctamente pero no estaba declarada en `DroneState`. Desaparecía entre invocaciones de `graph.invoke()` y la esquina nunca se inyectaba: el dron volvía a la misma fachada. Se diagnosticó en la corrida `seed_1`, donde el flag desaparecía antes del ciclo 1783. Es la quinta instancia de la Vulnerabilidad A (§9.5.2).
+**(a) Un flag descartado por LangGraph.** `_post_retroceder_corner_pending`, que difiere la inyección de la esquina hasta el escaneo posterior a un `RETROCEDER` (§5.12.3), se escribía correctamente pero no estaba declarada en `DroneState`. Desaparecía entre invocaciones de `graph.invoke()` y la esquina nunca se inyectaba: el dron volvía a la misma fachada. Se diagnosticó en la corrida `seed_1`, donde el flag desaparecía antes del ciclo 1783. Es otra instancia de la Vulnerabilidad A (§9.5.2).
 
-**(b) Resultados válidos del VLM que nunca se ejecutan (corregido).** Dos errores de *precedencia* entre rutas, no de estado descartado, con el mismo síntoma:
+**(b) Resultados válidos del VLM que nunca se ejecutan.** Dos errores de *precedencia* entre rutas, no de estado descartado, con el mismo síntoma:
 
-- *Maniobra cancelada por un disparador de atasco (Fix H).* Al despachar `EVADIR_DERECHA`, el nodo deliberativo no reiniciaba el contador de atasco; en el ciclo siguiente un disparador basado en ese contador (el CHANGELOG lo atribuye a `TRAJ_STALL`; §5.10 discute por qué el camino efectivo pudo ser otro) volvía a enrutar al nodo deliberativo, cuyo nuevo pedido sobrescribía `active_maneuver` antes de que se ejecutara. En la corrida `seed_99` el VLM devolvió `EVADIR_DERECHA` durante 200 ciclos consecutivos (c2585–c2784) sin que la maniobra se ejecutara una sola vez.
-- *Resultado huérfano por el camino de deadlock (Fix I).* La rama de escape por deadlock se evaluaba antes que la lectura del pedido pendiente. Con `_deliberation_pending = True` el contador de progreso queda congelado por encima del umbral, de modo que la rama interceptaba todos los ciclos y `service.poll()` nunca se alcanzaba: en c2048–c2135 (80 ciclos) el log del VLM contenía la respuesta correcta —latencia real de 3 731 ms— y la acción ejecutada era `MANTENER_RUMBO` o `FRENAR`.
+- *Maniobra cancelada por un disparador de atasco.* Si al despachar `EVADIR_DERECHA` no se reinicia el contador de atasco, en el ciclo siguiente un disparador basado en ese contador vuelve a enrutar hacia una nueva consulta, cuyo resultado sobrescribe la maniobra comprometida antes de que se ejecute. En la corrida `seed_99` el VLM devolvió `EVADIR_DERECHA` durante 200 ciclos consecutivos (c2585–c2784) sin que la maniobra se ejecutara una sola vez.
+- *Resultado huérfano por el camino de deadlock.* Si la rama de escape por deadlock se evalúa antes que la lectura del pedido pendiente, y el contador de progreso queda congelado por encima del umbral mientras hay un pedido pendiente, la rama intercepta todos los ciclos y el resultado nunca se lee: en c2048–c2135 (80 ciclos) el log del VLM contenía la respuesta correcta —latencia real de 3 731 ms— y la acción ejecutada era `MANTENER_RUMBO` o `FRENAR`.
 
-Ninguno de los dos se veía en las métricas agregadas. Ambos se encontraron comparando, ciclo a ciclo, el campo `slm.raw_response` de la traza JSONL con la acción realmente ejecutada; es decir, la técnica 2 de §9.7 (guardar los datos crudos enviados y recibidos por el modelo) fue la que los hizo visibles.
+Ninguno de los dos se veía en las métricas agregadas. Ambos se encontraron comparando, ciclo a ciclo, el campo `slm.raw_response` de la traza JSONL con la acción realmente ejecutada; es decir, la técnica 2 de §9.7 (guardar los datos crudos enviados y recibidos por el modelo) fue la que los hizo visibles. Dos decisiones de la arquitectura en capas (§5.3) los previenen por construcción: la continuación de una maniobra comprometida es la primera condición que evalúa `navigate`, antes que cualquier disparador de atasco, y el resultado del VLM no se «espera» en una ruta propia sino que se deposita en un almacén (`_vlm_intention`) que se consulta al inicio de cada ciclo y se consume con caducidad.
 
-**(c) Snapshot de frescura inoperante (abierto).** El descarte de respuestas obsoletas (§5.10, «Validación de frescura») compara el waypoint y la distancia actuales con un *snapshot* tomado al encolar el pedido. La revisión de código realizada para este informe encontró tres defectos que lo vuelven inoperante: (i) el snapshot y la comparación leen las claves `wp_index` y `dist_to_wp_m`, que no existen en `DroneState` (los nombres vigentes son `current_wp_index` y `waypoint_guidance["distance"]`), de modo que `state.get()` devuelve `None`; (ii) `_delib_snapshot_wp` y `_delib_snapshot_dist` no están declaradas en el `TypedDict`, por lo que LangGraph las descartaría aunque las claves fueran las correctas; (iii) `_delib_vision_used`, que registra si la consulta usó imagen, tampoco está declarada, y el campo `vision_enabled` del registro de auditoría cae siempre al valor de configuración. La condición de descarte nunca es verdadera, con lo que el efecto neto es que las respuestas se aplican como antes de la mejora. No tiene consecuencia de seguridad, pero es un caso donde una *feature* documentada como implementada no está en vigor, sin ningún síntoma visible; se declara como riesgo residual (§9.8) y como condición previa a atribuir resultados al mecanismo.
+**(c) Un pedido pendiente que nunca se cierra.** Por lectura de código —no reproducido en una corrida— existe una interacción sin resolver entre el pedido proactivo y el escaneo de resolución de atasco: ambos comparten la cola del servicio (tamaño 1), de modo que un escaneo que se encola mientras hay un pedido proactivo en vuelo lo invalida, y `_poll_vlm` solo cierra `slm_request_id` cuando llega un resultado con *ese* identificador. Si eso ocurre, `slm_request_id` permanece activo: `StallDetector` interpreta la espera como intencional y detiene los contadores de inmovilidad, y se inhiben nuevos pedidos proactivos y el escape vertical forzado. Se declara como riesgo residual (§9.8); una corrección posible es cerrar `slm_request_id` cuando el servicio informa que el pedido fue reemplazado o al expirar un plazo.
 
 ## 9.6 Falla 5 — Degradaciones sensoriales silenciosas
 
@@ -242,9 +242,9 @@ Las técnicas de diagnóstico que sí funcionaron en este proyecto fueron:
 
 ## 9.8 Riesgos residuales y trabajo pendiente
 
-Los cinco modos de falla documentados están corregidos en la implementación actual; queda abierto el caso (c) de §9.5.4. Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:
+Los cinco modos de falla documentados están corregidos en la implementación actual; queda abierto el caso (c) de §9.5.4 (por lectura de código, sin reproducir). Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:
 
-**Riesgo A — Nuevas claves de DroneState.** Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en `DroneState`. La mitigación es el modo `LANGGRAPH_DEBUG_STATE_CLIPPING=1` y el proceso de revisión de `DroneState` en el CHANGELOG antes de cada nueva feature. El riesgo se materializó dos veces más tras la redacción original (§9.5.4, casos (a) y (c)), lo que indica que la mitigación depende demasiado de la disciplina manual. Una defensa estructural sería un test de contrato que recorra el código fuente de `src/agents/`, extraiga todas las claves `state["_..."]` y `state.get("...")` y falle si alguna no pertenece a `DroneState`; hoy no existe.
+**Riesgo A — Nuevas claves de DroneState.** Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en `DroneState`. La mitigación es el modo `LANGGRAPH_DEBUG_STATE_CLIPPING=1` y el proceso de revisión de `DroneState` antes de cada nueva funcionalidad. El riesgo se materializó en más de una ocasión (§9.5.2 y §9.5.4), lo que indica que la mitigación depende demasiado de la disciplina manual. Una defensa estructural sería un test de contrato que recorra el código fuente de `src/agents/`, extraiga todas las claves `state["_..."]` y `state.get("...")` y falle si alguna no pertenece a `DroneState`; hoy no existe.
 
 **Riesgo B — Cambios de API del binding de AirSim.** El binding `cosysairsim` es un fork activamente mantenido ([Jansen et al., 2023](13-REFERENCIAS.md#ref-jansen-2023)). Actualizaciones del binding pueden modificar el comportamiento de métodos (como ocurrió con la corrección del cuaternión). Los tests unitarios de conversión de telemetría son la mitigación; deben ejecutarse tras cada actualización del binding.
 

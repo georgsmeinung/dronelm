@@ -38,7 +38,8 @@ _CSV_FIELDNAMES = [
     "route", "action", "wp_index", "dist_to_wp_m", "degraded",
     "pos_x", "pos_y", "pos_z", "vel_x", "vel_y", "vel_z", "yaw_deg", "pitch_deg", "roll_deg",
     "has_collided", "collision_object", "min_obstacle_dist_m",
-    "latency_ms_json",
+    # Latencias por etapa aplanadas (antes un unico JSON `latency_ms_json`).
+    "latency_graph_ms", "latency_telemetry_ms",
     "slm_invoked", "slm_latency_ms", "slm_fallback", "slm_timeout", "slm_adherent",
     # Pedido explicito de instrumentacion para analisis (2026-0901, ampliado
     # 2026-0903 a pedido del usuario -- el prompt/respuesta completos tienen
@@ -67,6 +68,8 @@ _CSV_FIELDNAMES = [
     "ctrl_imu_contact", "ctrl_blind_wall", "ctrl_imu_jitter", "ctrl_stopped_cycles",
     "ctrl_depth_m", "ctrl_depth_cycles",
     "ctrl_traj_stall_rate", "ctrl_traj_attempts",
+    # Fix R: ciclos sin progreso neto al WP (anti false-progress / arrastre lateral).
+    "ctrl_no_progress_cycles",
     "field_source",
 ] + [f"field_{s}_{k}" for s in _CSV_SECTORS for k in ("occ", "ttc_s", "conf", "blocked")]
 
@@ -80,7 +83,9 @@ class FlightLogger:
     JSONL a mano.
     """
 
-    def __init__(self, out_path: str, scenario: str = "default", seed: int = 0, arm: str = "slm") -> None:
+    def __init__(self, out_path: str, scenario: str = "default", seed: int = 0, arm: str = "slm",
+                 record_state: bool = True) -> None:
+        self.record_state = record_state
         self.out_path = Path(out_path)
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         self.scenario = scenario
@@ -90,6 +95,12 @@ class FlightLogger:
         self._fh = open(self.out_path, "w", encoding="utf-8")
         self.csv_path = self.out_path.with_suffix(".csv")
         self._csv_fh = open(self.csv_path, "w", newline="", encoding="utf-8")
+        # 2026-0929: durante el vuelo el CSV se escribe en streaming solo con las
+        # columnas fijas (sirve de respaldo si el proceso muere). Al cerrar, close()
+        # lo reescribe agregando TODO el DroneState aplanado (`state.<ruta>`), cuyo
+        # conjunto de columnas solo se conoce al final. El JSONL conserva el
+        # estado anidado.
+        self._flat_rows: list = []
         self._csv_writer = csv.DictWriter(self._csv_fh, fieldnames=_CSV_FIELDNAMES)
         self._csv_writer.writeheader()
         # Fotogramas enviados al VLM (2026-0901, pedido explicito para poder
@@ -329,6 +340,16 @@ class FlightLogger:
                 "traj_der_attempts": state.get("_traj_der_attempts"),
             },
         }
+        flat_state: Dict[str, Any] = {}
+        if self.record_state:
+            try:
+                from .state_serializer import flatten_state, serialize_drone_state
+
+                snapshot = serialize_drone_state(state)
+                record["state"] = snapshot
+                flat_state = flatten_state(snapshot)
+            except Exception as exc:  # la auditoria nunca debe tumbar el vuelo
+                flat_state = {"state._serialize_error": repr(exc)[:200]}
         self._fh.write(json.dumps(record, default=str) + "\n")
         self._fh.flush()
 
@@ -357,7 +378,8 @@ class FlightLogger:
             "has_collided": record["collision"]["has_collided"],
             "collision_object": record["collision"]["object"],
             "min_obstacle_dist_m": record["min_obstacle_dist_m"],
-            "latency_ms_json": json.dumps(latency_ms, default=str),
+            "latency_graph_ms": (latency_ms or {}).get("graph"),
+            "latency_telemetry_ms": (latency_ms or {}).get("telemetry"),
             "slm_invoked": slm_block is not None,
             "slm_latency_ms": slm_block.get("latency_ms") if slm_block else None,
             "slm_fallback": slm_block.get("fallback") if slm_block else None,
@@ -387,9 +409,32 @@ class FlightLogger:
         csv_row["ctrl_depth_cycles"]        = int(state.get("_depth_below_cycles", 0))
         csv_row["ctrl_traj_stall_rate"]     = state.get("_traj_frente_stall_rate")
         csv_row["ctrl_traj_attempts"]       = state.get("_traj_frente_attempts")
+        csv_row["ctrl_no_progress_cycles"]  = int(state.get("_wp_no_progress_cycles", 0))
         csv_row["field_source"]             = field.source if field is not None else "none"
         self._csv_writer.writerow(csv_row)
         self._csv_fh.flush()
+        if self.record_state:
+            self._flat_rows.append((csv_row, flat_state))
+
+    def _write_flat_csv(self) -> None:
+        """Reescribe el CSV con las columnas fijas + el DroneState aplanado (`state.*`)."""
+        import os as _os
+
+        extra: Dict[str, None] = {}
+        for _, flat in self._flat_rows:
+            for k in flat:
+                extra.setdefault(k, None)
+        extra_cols = sorted(extra)
+        tmp = self.csv_path.with_suffix(".csv.tmp")
+        with open(tmp, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=_CSV_FIELDNAMES + extra_cols, restval="")
+            w.writeheader()
+            for row, flat in self._flat_rows:
+                merged = dict(row)
+                merged.update(flat)
+                w.writerow(merged)
+        _os.replace(tmp, self.csv_path)
+        self._flat_rows = []
 
     def mark_success(self, success: bool) -> None:
         self._success = success
@@ -443,6 +488,12 @@ class FlightLogger:
             "deep_scan_avg_cycles_to_resolve": (
                 sum(cycles_to_resolve) / len(cycles_to_resolve) if cycles_to_resolve else None
             ),
+            "deep_scan_futile_rate": (
+                sum(1 for e in deep_vlm_events if e.get("prev_scan_futile"))
+                / max(1, sum(1 for e in deep_vlm_events if "prev_scan_futile" in e))
+                if any("prev_scan_futile" in e for e in deep_vlm_events) else None
+            ),
+            "vertical_escapes": sum(1 for e in self._deadlock_events if e.get("strategy") == "vertical_escape"),
             "deep_scan_fallback_rate": (
                 sum(1 for e in deep_vlm_events if e.get("fell_back_to_blind")) / len(deep_vlm_events)
                 if deep_vlm_events else None
@@ -456,6 +507,11 @@ class FlightLogger:
 
         self._fh.close()
         self._csv_fh.close()
+        if self.record_state and self._flat_rows:
+            try:
+                self._write_flat_csv()
+            except Exception as exc:  # queda el CSV de streaming (columnas fijas)
+                print(f"[FlightLogger] No se pudo escribir el CSV aplanado: {exc}")
         return summary
 
     def _write_wp_summary_csv(self) -> None:

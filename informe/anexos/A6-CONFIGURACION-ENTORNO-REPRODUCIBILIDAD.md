@@ -136,7 +136,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_VISION_ENABLED` | `true` | Habilita el envío del fotograma visual en base64 en el prompt multimodal. |
 | `VLM_IMAGE_MAX_SIZE` | `384` | Resolución máxima de la imagen enviada al VLM. Limita la cantidad de tokens visuales generados por el codificador ViT, manteniendo la latencia acotada. |
 | `VLM_USE_JSON_SCHEMA` | `true` | Activa la decodificación gramaticalmente restringida por esquema JSON (Anexo 4). |
-| `SLM_WATCHDOG_MS` | `13000` | Tiempo límite del perro guardián (en ms) para la respuesta del SLM en hilo asíncrono. Si expira, se aplica el fallback determinista (con overrides de trayectoria). Recalibrado el 2026-09-22 (era 6000 en el lote base y 1500 en el diseño inicial) porque las consultas con imagen se midieron en ~10–11 s; debe ser menor que `SLM_HTTP_TIMEOUT_S`. |
+| `SLM_WATCHDOG_MS` | `13000` | Tiempo límite del perro guardián (en ms) para la respuesta del SLM en el servicio asíncrono; debe ser menor que `SLM_HTTP_TIMEOUT_S`. El escaneo de resolución de atasco usa su propio watchdog, `SLM_DEEP_WATCHDOG_MS` (12 000 ms). |
 | `SLM_HTTP_TIMEOUT_S` | `15.0` | Timeout del cliente HTTP en consultas tácticas al VLM. Debe ser mayor que `SLM_WATCHDOG_MS` para que el watchdog gane siempre al corte HTTP. |
 | `SLM_DEEP_HTTP_TIMEOUT_S` | `20.0` | Timeout HTTP del barrido profundo (varias imágenes → prefill mayor). |
 | `SYSTEM_PROMPT_VISION_FILE` / `SYSTEM_PROMPT_TEXT_FILE` | `../config/prompts/system_vision.txt` / `system_text.txt` | Archivos de system prompt (con y sin visión), relativos a `airsim-loop/`. Admiten el placeholder `{safe_margin_ttc_s}`. Si no se configuran, se usa el prompt interno. |
@@ -165,21 +165,28 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 ### 5. Umbrales del `ObstacleField`
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
-| `OBSTACLE_OCCUPANCY_BLOCKED`| `0.011` | Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden el 2026-09-10 (AUC 0.87; cap. 7, §7.5); el valor histórico era 0.35. |
+| `OBSTACLE_OCCUPANCY_BLOCKED`| `0.011` | Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden (AUC 0.87; cap. 7, §7.5); un valor de 0.35 dejaría el canal inactivo. |
 | `OBSTACLE_TTC_BLOCKED_S` | `2.5` | Umbral temporal de TTC (en segundos) por debajo del cual una celda se considera en colisión inminente. |
 | `OBSTACLE_MIN_CONFIDENCE` | `0.15` | Piso de píxeles válidos para que una celda participe en la votación. |
 | `OBSTACLE_MIN_CONFIDENCE_TTC`| `0.35` | Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación. |
 
-### 5b. Detección de atasco, escape y cierre de misión (añadido 2026-09-22)
+### 5b. Detección de atasco, escape y cierre de misión
 | Variable | Valor nominal | Justificación y efecto |
 |---|---|---|
 | `STUCK_HARD_FACTOR` | `1.5` | Umbral de atasco duro = factor × umbral efectivo (10 ciclos) = 15 ciclos (3 s). Por defecto en código es 3.0. |
-| `STOPPED_CYCLES_THRESHOLD` | `15` | Ciclos parado (V3c) para sumar a `stuck_invisible`. |
-| `POS_FREEZE_DIST_M` / `POS_FREEZE_THRESHOLD` | `0.50` / `30` | V3d: desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta. |
-| `STUCK_RETROCEDER_LIMIT` | `30` | V3e: ciclos a velocidad nula con `stuck_invisible` que fuerzan la ruta deliberativa. |
+| `STOPPED_CYCLES_THRESHOLD` / `STOPPED_DELIBERATIVE_CYCLES` | `15` / `10` | Ciclos parado para sumar a `stuck_invisible` y para escalar directamente a la resolución de atasco (`stopped_prolonged`). |
+| `POS_FREEZE_DIST_M` / `POS_FREEZE_THRESHOLD` | `0.50` / `30` | Desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta. |
+| `WP_NO_PROGRESS_MIN_M` / `WP_NO_PROGRESS_THRESHOLD` | `2.0` / `50` | Mejora mínima de la distancia al waypoint y ciclos (10 s) sin ella antes de escalar (`wp_no_progress`). |
+| `STUCK_RETROCEDER_LIMIT` | `30` | Ciclos a velocidad nula con `stuck_invisible` que fuerzan la resolución de atasco. |
+| `ESCAPE_MIN_DISP_M` / `VERTICAL_ESCAPE_FUTILE_SCANS` / `VERTICAL_ESCAPE_FREEZE_CYCLES` / `VERTICAL_ESCAPE_MAX_ALT_M` | `2.0` / `2` / `50` / `25.0` | Escape vertical forzado: desplazamiento mínimo entre escaneos para no considerarlos fútiles, escaneos fútiles consecutivos, ciclos de posición congelada y altitud máxima (cap. 5, §5.3.4). |
+| `MAX_CONSECUTIVE_ESCAPES` | `2` | Escapes verticales consecutivos sin progreso horizontal antes de enclavar el escape. |
+| `SCAN_HEADING_COUNT_DEEP` | `2` | Rumbos del barrido panorámico `deep_vlm` (+0° y +180°). |
+| `SCAN_EVADIR_REPEAT_LIMIT` | `2` | Repeticiones del mismo lado de evasión que escalan a `RETROCEDER`. |
+| `CEILING_DETECT_CYCLES` / `CEILING_DETECT_DZ_M` / `CEILING_MARGIN_M` / `CEILING_RELEASE_M` | `10` / `0.15` / `1.0` / `15.0` | Detección de techo del guiado (cap. 5, §5.15.3). |
+| `CORNER_CHAIN_ENABLED` / `CORNER_CHAIN_CLEARANCE_M` / `CORNER_CHAIN_STEP_M` / `CORNER_CHAIN_MAX` | `true` / `10.0` / `12.0` / `4` | Cadena de esquinas alrededor de puntos de contacto (cap. 5, §5.15.4). |
 | `SCAN_ROT_TIMEOUT_CYCLES` | `10` | Timeout de rotación del barrido panorámico (2 s). |
 | `SLAM_HISTORY_SIZE` | `80` | Tamaño del ring buffer de trayectoria (≈ 16 s a 5 Hz). |
-| `CORNER_OFFSET_M` | `15.0` | Distancia del waypoint de esquina (m); el default en código es 12.0. |
+| `CORNER_OFFSET_M` | `30.0` | Distancia del waypoint de esquina (m); el default en código es 12.0. |
 | `MANEUVER_DURATION_S` | `2.0` | Duración base de las maniobras de evasión (s), multiplicada de forma adaptativa según el stall (cap. 5, §5.12.3). |
 | `EVASION_BACK_SPEED` | `1.2` | Velocidad de `RETROCEDER` (m/s). |
 | `DEPTH_EMERGENCY_DIST_M` / `DEPTH_EMERGENCY_MAX_SPEED_MPS` | `0.05` / `0.1` | Aborto de corrida por dron embebido en la malla (solo en el runner; cap. 5, §5.19). `0.0` deshabilita. |
@@ -189,6 +196,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 ### 6. Grabación de Video y Viewport
 | Variable | Valor nominal | Default si ausente | Justificación y efecto |
 |---|---|---|---|
+| `FLIGHT_VIDEO_SCALE` / `FLIGHT_VIDEO_QUEUE_MAX` | `0.6` / `300` | `0.6` / `300` | Escala del video respecto del cuadro de la cámara y tamaño de la cola del hilo codificador (la codificación corre fuera del lazo de control, cap. 5, §5.18). |
 | `FLIGHT_RECORD_VIDEO` | `true` | `false` | Habilita la grabación del video de auditoría `.webm` (VP8) por corrida. Desactivar en lotes *headless* elimina la escritura de un frame por ciclo a disco, reduciendo la carga de CPU en ≈ 30 %. |
 | `FLIGHT_RECORD_VIEWPORT` | `false` | `false` | Activa el modo *split-screen*: el video resultante tiene doble ancho horizontal, con la cámara del drone a la izquierda y el viewport de Unreal Engine Editor a la derecha. Requiere las dependencias adicionales `mss` y `pywin32`. Si alguna de las dos no está instalada, o la ventana de UE no es visible en pantalla, el panel derecho se rellena con negro y la grabación continúa sin interrupción (degradación silenciosa). Debe desactivarse en corridas *batch* o *headless* donde el editor no está en pantalla. |
 | `VIEWPORT_WINDOW_TITLE` | `"UnrealEditor"` | `"UnrealEditor"` | Subcadena del título de la ventana de Unreal Engine que utiliza `ViewportCapture` para localizar la ventana. La comparación ignora mayúsculas y minúsculas. Se selecciona la primera ventana visible que contenga la subcadena y tenga dimensiones superiores a $100 \times 100\text{ px}$. En UE5 el título suele seguir el patrón `"UnrealEditor – <NombreProyecto>"`. |
@@ -310,9 +318,9 @@ El mapa `CitySim` presenta rascacielos masivos. Para evitar atravesar estructura
 }
 ```
 
-### A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (`townsim_ini.json`, versión V2)
+### A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (`townsim_ini.json`)
 
-Versión vigente desde 2026-09-22 (8 waypoints, ~340 m). Respecto de la versión con la que se ejecutó el lote base, agrega `WP_0b_SOBRE_PLAZA` (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y `WP_1b_PASO_MOLDURA` (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.
+Ocho waypoints, ~340 m. Incluye `WP_0b_SOBRE_PLAZA` (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y `WP_1b_PASO_MOLDURA` (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.
 
 ```json
 {

@@ -11,9 +11,11 @@ from .graph import (
     policy_router,
 )
 from .reactive import reactive_node
+from .stall_detector import StallDetector
 
 __all__ = [
     "DroneState",
+    "StallDetector",
     "action_to_command",
     "build_workflow",
     "compile_workflow",

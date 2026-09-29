@@ -14,7 +14,7 @@ Este anexo desarrolla los fundamentos matemáticos y metodológicos de **Adaptac
 
 El ajuste fino completo (*Full Fine-Tuning*, FFT) de una red neuronal profunda requiere actualizar y almacenar en memoria los gradientes y momentos del optimizador (e.g., AdamW en precisión simple FP32) para la totalidad de los parámetros entrenables $\Phi_0$. Para un modelo de 3B parámetros, esto demanda más de 24 GB de VRAM únicamente para el estado del optimizador, tornando inviable el entrenamiento en GPUs de escritorio (tales como la NVIDIA RTX 5060 de 8 GB utilizada en este proyecto).
 
-Las técnicas de Ajuste Fino Eficiente en Parámetros (*Parameter-Efficient Fine-Tuning*, PEFT; Mangrulkar et al., 2022) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.
+Las técnicas de Ajuste Fino Eficiente en Parámetros (*Parameter-Efficient Fine-Tuning*, PEFT; [Mangrulkar et al., 2022](../13-REFERENCIAS.md#ref-mangrulkar-2022)) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.
 
 <img src="a3-fundamentos-de-peft.jpg"/>
 
@@ -72,7 +72,7 @@ donde $\| \cdot \|_c$ denota la norma $L_2$ a lo largo de las columnas y $\Delta
 
 ## A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM
 
-La integración de un adaptador LoRA en el nodo deliberativo transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:
+La integración de un adaptador LoRA en la consulta al VLM transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:
 
 <img src="a3-impacto-lora.jpg"/>
 
@@ -118,14 +118,14 @@ donde:
 ### A3.3.2 Mitigación de la deriva cinemática mediante DAgger
 El entrenamiento mediante simple Clonación de Comportamiento (*Behavioral Cloning*, BC) a partir de vuelos nominales perfectos sufre del problema de **deriva covariada (*Covariate Shift*)** ([Codevilla et al., 2019](../13-REFERENCIAS.md#ref-codevilla-2019)): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.
 
-Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo **DAgger (*Dataset Aggregation*; Ross et al., 2011)** adaptado a simulación en AirSim / Unreal Engine 5:
+Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo **DAgger (*Dataset Aggregation*; [Ross et al., 2011](../13-REFERENCIAS.md#ref-ross-2011))** adaptado a simulación en AirSim / Unreal Engine 5:
 1. **Vuelo con política actual** $\pi_{\text{LoRA}}$ en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
 2. **Consulta al oráculo experto** (FSM determinista o supervisor experto) ante desvíos: determinación de la acción correctiva óptima $a^*$.
 3. **Agregación de tuplas críticas** $\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, a^*_{\text{experto}})\}$.
 4. **Reentrenamiento iterativo** de los adaptadores LoRA sobre el conjunto enriquecido.
 
 ### A3.3.3 Aumentación sintética y métricas objetivo de evaluación
-Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; Marazzato & Sparavigna, 2015) y desenfoque por movimiento angular (*motion blur*).
+Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; [Marazzato & Sparavigna, 2015](../13-REFERENCIAS.md#ref-marazzato-2015)) y desenfoque por movimiento angular (*motion blur*).
 
 | Métrica de Validación | Meta Operativa (Zero-Shot Actual) | Meta Objetivo (LoRA / QLoRA) |
 |---|---|---|
@@ -160,4 +160,4 @@ Un principio fundacional de DroneLM es que los modelos de lenguaje son aproximad
 2. **Parser Tolerante de Tres Etapas:** permanece activo en `_parse_decision()` como red de contención frente a anomalías de serialización.
 3. **Perro Guardián Temporal (`SLM_WATCHDOG_MS` (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)):** cualquier sobrepaso temporal fuerza el retorno inmediato al régimen conservador de sustentación.
 
-Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia del nodo deliberativo a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.
+Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia de la capa deliberativa a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.

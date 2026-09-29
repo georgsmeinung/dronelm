@@ -32,7 +32,22 @@ def _load_csv_rows(csv_path: Path) -> List[Dict[str, Any]]:
         return list(csv.DictReader(f))
 
 
-def write_viewer_html(html_path: str, video_filename: str, csv_path: str) -> None:
+def _load_states(jsonl_path: Path) -> Dict[str, Any]:
+    """{ciclo(str): state anidado} desde el JSONL (clave `state` de cada registro)."""
+    out: Dict[str, Any] = {}
+    with open(jsonl_path, encoding="utf-8") as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if "state" in rec:
+                out[str(rec.get("cycle"))] = rec["state"]
+    return out
+
+
+def write_viewer_html(html_path: str, video_filename: str, csv_path: str,
+                      jsonl_path: "str | None" = None) -> None:
     """Genera `<html_path>` con el video + CSV de una corrida ya cerrada.
 
     `video_filename` es solo el nombre de archivo (no la ruta completa) --
@@ -40,6 +55,14 @@ def write_viewer_html(html_path: str, video_filename: str, csv_path: str) -> Non
     cierto para una corrida de FlightLogger, ver src/logging/flight_logger.py).
     """
     rows = _load_csv_rows(Path(csv_path))
+    if jsonl_path and Path(jsonl_path).exists():
+        # 2026-0929: el CSV lleva el DroneState aplanado (state.*); el arbol
+        # anidado del visor se toma del JSONL, que conserva la estructura.
+        states = _load_states(Path(jsonl_path))
+        for r in rows:
+            st = states.get(str(r.get("cycle")))
+            if st is not None:
+                r["_state"] = st
     # JSON-escapar cualquier "</script" que pudiera venir dentro de un
     # prompt/respuesta del VLM -- de otro modo cerraria el <script> a mitad
     # de los datos embebidos.
@@ -95,6 +118,11 @@ _HTML_TEMPLATE = """<!doctype html>
   tbody tr:hover { background: #22262f; cursor: pointer; }
   .table-wrap { flex: 1 1 0; min-height: 0; overflow: auto; border: 1px solid #2a2e37; border-radius: 8px; }
   .hint { color: #8b93a3; font-size: 11px; margin-top: 6px; flex: 0 0 auto; }
+  /* Arbol del DroneState completo (columna state_json). */
+  details.st { margin: 2px 0 2px 12px; font-size: 11px; }
+  details.st > summary { cursor: pointer; color: #9fd6ff; }
+  .st-leaf { margin-left: 24px; font-size: 11px; }
+  .st-leaf .k { color: #8b93a3; } .st-leaf .v { color: #e6e6e6; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -106,9 +134,9 @@ _HTML_TEMPLATE = """<!doctype html>
       <span id="idxLabel" style="min-width: 90px;">ciclo 0</span>
       <input id="slider" type="range" min="0" value="0" step="1">
     </div>
-    <div class="hint">El slider y el video se sincronizan en ambos sentidos (reproducir mueve el
-      slider; arrastrar el slider mueve el video). La correspondencia es por tiempo de misión
-      (columna <code>t</code>), no cuadro-a-cuadro exacto -- ver src/logging/flight_video.py.</div>
+    <div class="hint">El slider y el video se sincronizan en ambos sentidos. Un frame de video por
+      ciclo: la correspondencia es por indice de fila (ciclo), no por la columna <code>t</code>.
+      El panel derecho incluye el DroneState completo del ciclo (arbol colapsable).</div>
   </div>
   <div class="panel" id="detailPanel"></div>
 </div>
@@ -137,9 +165,10 @@ const tableBody = document.getElementById('tableBody');
 // que coincida visualmente con el slider nativo del video.
 const T_MIN = parseFloat(ROWS[0].t) || 0;
 const T_MAX = parseFloat(ROWS[ROWS.length - 1].t) || (ROWS.length - 1);
-slider.min = String(T_MIN);
+slider.min = "0";
 slider.max = String(T_MAX);
-slider.step = "0.05";
+slider.step = "0.01";
+vid.addEventListener('loadedmetadata', () => { if (videoDur()) slider.max = String(videoDur()); render(nearestIndexForTime(vid.currentTime)); });
 
 // Header de la tabla compacta.
 tableHead.innerHTML = TABLE_COLUMNS.map(c => `<th>${c}</th>`).join('');
@@ -164,8 +193,8 @@ function fmt(v) {
 }
 
 function renderDetail(row) {
-  const skip = new Set(['slm_prompt', 'slm_raw_response', 'slm_frame_paths']);
-  const fieldSkip = /^field_/;
+  const skip = new Set(['slm_prompt', 'slm_raw_response', 'slm_frame_paths', 'state_json', '_state']);
+  const fieldSkip = /^(field_|state[.])/;
   const kv = Object.keys(row)
     .filter(k => !skip.has(k) && !fieldSkip.test(k))
     .map(k => `<div class="k">${k}</div><div class="v">${fmt(row[k])}</div>`).join('');
@@ -188,7 +217,33 @@ function renderDetail(row) {
     : '';
 
   detailPanel.innerHTML = `<div class="grid2">${kv}</div>
-    <div class="sectors">${sectors}</div>${prompt}${resp}${frames}`;
+    <div class="sectors">${sectors}</div>${prompt}${resp}${frames}${stateTree(row)}`;
+}
+
+function esc(x) {
+  return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Arbol colapsable del DroneState completo de este ciclo (columna state_json).
+function treeHtml(key, val, open) {
+  if (val !== null && typeof val === 'object') {
+    const entries = Array.isArray(val) ? val.map((v, i) => [i, v]) : Object.entries(val);
+    const inner = entries.map(([k, v]) => treeHtml(k, v, false)).join('');
+    const label = Array.isArray(val) ? `[${entries.length}]` : `{${entries.length}}`;
+    return `<details class="st"${open ? ' open' : ''}><summary>${esc(key)} ${label}</summary>${inner}</details>`;
+  }
+  return `<div class="st-leaf"><span class="k">${esc(key)}</span>: <span class="v">${esc(val)}</span></div>`;
+}
+
+function stateTree(row) {
+  let st = row['_state'];
+  if (!st && row['state_json']) {
+    try { st = JSON.parse(row['state_json']); } catch (e) { return ''; }
+  }
+  if (!st) return '';
+  const keys = Object.keys(st).sort();
+  return `<div class="k" style="margin-top:10px;">DroneState completo (${keys.length} campos)</div>` +
+    keys.map(k => treeHtml(k, st[k], false)).join('');
 }
 
 let lastActive = null;
@@ -206,14 +261,25 @@ function render(idx) {
   idx = Math.max(0, Math.min(ROWS.length - 1, idx));
   const row = ROWS[idx];
   idxLabel.textContent = `ciclo ${row.cycle ?? idx} (t=${row.t ?? '?'}s)`;
-  slider.value = String(parseFloat(row.t) || T_MIN);
+  slider.value = String(timeForIndex(idx));
   renderDetail(row);
   highlightRow(idx);
 }
 
 // Busqueda binaria de la fila cuyo `t` esta mas cerca de `currentTime`
 // (ROWS ya viene ordenado por t, un ciclo por fila).
+// 2026-0929: el video tiene UN frame por ciclo, asi que el tiempo de video
+// se mapea por indice de fila (i / N * duracion) en vez de por `t` -- `t` es
+// reloj real (~4 Hz) y el video corre a LOOP_HZ nominal, con lo que t
+// deriva. Si la duracion aun no se conoce, se cae al mapeo por `t`.
+function videoDur() { return (isFinite(vid.duration) && vid.duration > 0) ? vid.duration : 0; }
+function timeForIndex(i) {
+  const d = videoDur();
+  return d ? (i / ROWS.length) * d : (parseFloat(ROWS[i].t) || 0);
+}
 function nearestIndexForTime(t) {
+  const d = videoDur();
+  if (d) return Math.max(0, Math.min(ROWS.length - 1, Math.floor((t / d) * ROWS.length)));
   let lo = 0, hi = ROWS.length - 1;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
@@ -228,16 +294,13 @@ vid.addEventListener('timeupdate', () => {
 
 slider.addEventListener('input', () => {
   const t = parseFloat(slider.value);
-  const idx = nearestIndexForTime(t);
   vid.currentTime = t;
-  render(idx);
+  render(nearestIndexForTime(t));
 });
 
 function seekToIndex(idx) {
   const row = ROWS[idx];
-  if (row && row.t !== undefined && row.t !== '') {
-    vid.currentTime = parseFloat(row.t);
-  }
+  if (row) vid.currentTime = timeForIndex(idx);
   render(idx);
 }
 

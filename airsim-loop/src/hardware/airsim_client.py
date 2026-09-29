@@ -750,6 +750,11 @@ def _state_to_telemetry(state: Any, timestamp_s: Optional[float] = None) -> Dict
             "has_collided": bool(has_collided),
             "object_name": str(collision_object),
         },
+        # 2026-0929: estado de aterrizaje de AirSim (0=Landed, 1=Flying, None si
+        # no disponible). Diagnostico pasivo: un dron "posado" sobre una
+        # moldura de fachada queda con pitch/roll=0 exactos y no ejecuta
+        # comandos de velocidad (corrida seed_99 00:19, ciclos 1349-2224).
+        "landed_state": (int(getattr(state, "landed_state")) if getattr(state, "landed_state", None) is not None else None),
         "timestamp": timestamp_s if timestamp_s is not None else time.time(),
         "source": "airsim",
     }

@@ -146,6 +146,38 @@ def _encode_frame_base64(frame: Any, max_size: int = VLM_IMAGE_MAX_SIZE) -> Opti
         return None
 
 
+def _record_failed_scan(state: Dict[str, Any], raw_response: str, reason: str, latency_ms: float = 0.0) -> None:
+    """Deja rastro auditable de un escaneo que no resolvio (2026-0928).
+
+    Antes, un escaneo fallido (respuesta sin accion viable, watchdog) no
+    escribia ninguna entrada en deliberations[] ni exponia los frames, y el
+    log quedaba sin raw_response/frame_paths justo en los casos a auditar.
+    """
+    deliberations_list = state.setdefault("deliberations", [])
+    deliberations_list.append(
+        {
+            "id": len(deliberations_list) + 1,
+            "timestamp": time.time(),
+            "arm": "deep_scan_failed",
+            "model": LOCAL_LLM_MODEL_NAME,
+            "vision_enabled": VLM_VISION_ENABLED,
+            "system_prompt": SYSTEM_PROMPT_DEEP_SCAN,
+            "prompt": state.get("_pending_delib_prompt", "") or "",
+            "raw_response": raw_response or "",
+            "macro_action": None,
+            "rationale": reason,
+            "is_fallback": True,
+            "timeout": reason == "watchdog",
+            "adherent": False,
+            "used_json_schema": False,
+            "latency_ms": round(latency_ms, 1),
+        }
+    )
+    state["_last_delib_frames"] = state.get("_pending_delib_frames") or []
+    state["_pending_delib_prompt"] = None
+    state["_pending_delib_frames"] = None
+
+
 def clear_scan_state(state: Dict[str, Any]) -> None:
     state["_scan_phase"] = None
     state["_scan_heading_index"] = 0
@@ -590,6 +622,7 @@ def _slam_assess_cycle(
 
             return True
         print(f"[slam_assess] ({arm}) respuesta sin acción viable. Cae al escape sincrónico.")
+        _record_failed_scan(state, result.raw_response, "sin_accion_viable", result.latency_ms)
         state["_deadlock_event"] = {
             "strategy": "slam_assess", "arm": arm,
             "resolved_by_scan": False, "cycles_to_resolve": None,
@@ -600,6 +633,7 @@ def _slam_assess_cycle(
     if age_ms > SLM_DEEP_WATCHDOG_MS:
         print(f"[slam_assess] WATCHDOG ({arm}): sin respuesta en {age_ms:.0f}ms. Cae al escape sincrónico.")
         clear_scan_state(state)
+        _record_failed_scan(state, "", "watchdog", age_ms)
         state["_deadlock_event"] = {
             "strategy": "slam_assess", "arm": arm,
             "resolved_by_scan": False, "cycles_to_resolve": None,
@@ -652,6 +686,40 @@ def deep_scan_cycle(
 
     phase = state.get("_scan_phase")
     if phase is None:
+        # Fix M (retroceder-first): antes de iniciar el barrido panoramico de
+        # 40+ ciclos, el drone retrocede para alejarse del obstaculo. Si el
+        # barrido empieza EN la fachada, el drone hace hover durante ~8s contra
+        # el muro -> deriva fisicamente y choca (min_obstacle_dist < 0.30m).
+        # El retroceso da: distancia segura + vista despejada para el VLM.
+        # Solo aplica al primer scan (no post-retroceder, no slam_assess).
+        # El post-retroceso scan ya ve la cara del edificio desde atras ->
+        # VLM elige un corredor lateral -> inject_corner lo convierte en WP.
+        if not state.get("_post_retroceder_corner_pending"):
+            loop_hz_m = float(os.getenv("LOOP_HZ", "5.0"))
+            _retro_factor_m = float(os.getenv("RETROCEDER_DURATION_FACTOR", "2.5"))
+            duration_s_m = DEEP_SCAN_MANEUVER_DURATION_S * _retro_factor_m
+            cmd_m = action_to_command("RETROCEDER", guidance=guidance, telemetry=telemetry)
+            cmd_m["rationale"] = (
+                "Fix M: retrocediendo antes del escaneo panoramico "
+                "para evitar deriva contra la fachada durante el barrido."
+            )
+            state["next_action"] = "RETROCEDER"
+            state["velocity_command"] = cmd_m
+            state["active_maneuver"] = "RETROCEDER"
+            state["maneuver_cycles_left"] = max(1, round(duration_s_m * loop_hz_m))
+            state["maneuver_command"] = cmd_m
+            state["_post_retroceder_corner_pending"] = True
+            state["_escape_reset"] = True
+            state["evasion_stuck_cycles"] = 0
+            state["_deliberation_pending"] = False
+            state["flight_status"] = "retroceder_pre_scan"
+            print(
+                f"[deep_vlm] Fix M: RETROCEDER pre-scan "
+                f"({duration_s_m:.0f}s) antes de iniciar barrido panoramico."
+            )
+            return True
+
+        # Post-retroceder: iniciar el barrido
         state["_scan_phase"] = "rotando"
         state["_scan_heading_index"] = 0
         state["_scan_frames"] = []
@@ -820,12 +888,18 @@ def deep_scan_cycle(
                     state.pop("_post_retroceder_corner_pending", None)
 
                 original_macro = decision.get("macro_action")
-                decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
-                if decision.get("macro_action") != original_macro:
-                    print(
-                        f"[deep_vlm] override: VLM recomendo {original_macro}"
-                        f" -> {decision.get('macro_action')} (trajectory stats)."
-                    )
+                # Fix N: en scan post-retroceder las stats de trayectoria acumuladas
+                # (muchos EVADIR fallidos) disparan Override 1a (RETROCEDER) aunque
+                # el drone ya se alejo del muro. Confiar en la vista fresca del VLM
+                # para elegir la direccion del corner sin filtros de trayectoria.
+                _is_post_retro = state.get("_post_retroceder_corner_pending", False)
+                if not _is_post_retro:
+                    decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
+                    if decision.get("macro_action") != original_macro:
+                        print(
+                            f"[deep_vlm] override: VLM recomendo {original_macro}"
+                            f" -> {decision.get('macro_action')} (trajectory stats)."
+                        )
                 _apply_scan_resolution(
                     state, decision, result.raw_response, result.latency_ms,
                     guidance, telemetry, arm, deadlock_cycles, trajectory,
@@ -859,6 +933,7 @@ def deep_scan_cycle(
 
                 return True
             print(f"[deep_scan] ({arm}) respuesta sin accion viable. Cae al escape sincronico.")
+            _record_failed_scan(state, result.raw_response, "sin_accion_viable", result.latency_ms)
             state["_deadlock_event"] = {
                 "strategy": "deep_vlm",
                 "arm": arm,
@@ -871,6 +946,7 @@ def deep_scan_cycle(
         if age_ms > SLM_DEEP_WATCHDOG_MS:
             print(f"[deep_scan] WATCHDOG ({arm}): sin respuesta del VLM en {age_ms:.0f}ms. Cae al escape sincronico.")
             clear_scan_state(state)
+            _record_failed_scan(state, "", "watchdog", age_ms)
             state["_deadlock_event"] = {
                 "strategy": "deep_vlm",
                 "arm": arm,
@@ -939,6 +1015,9 @@ def _apply_scan_resolution(
         "resolved_by_scan": True,
         "cycles_to_resolve": deadlock_cycles,
         "fell_back_to_blind": False,
+        "vlm_macro": macro,
+        "vlm_rationale": str(decision.get("rationale", ""))[:300],
+        "vlm_raw_response": (raw_response or "")[:2000],
     }
     state["_deadlock_cycles"] = 0
     # Igual que el escape sincronico existente: pedir el reseteo del contador
@@ -949,25 +1028,76 @@ def _apply_scan_resolution(
     state["_deliberation_pending"] = False
 
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
+
+    # Fix L/L2: deteccion de loops EVADIR sin progreso en deep_vlm mode.
+    #
+    # Fix L  — oscilacion: VLM alterna DER->IZQ->DER (o viceversa) sin
+    #   producir avance neto. Cuando el lado recomendado es OPUESTO al ultimo
+    #   despachado, escalamos a RETROCEDER.
+    # Fix L2 — mismo lado repetido: VLM recomienda IZQ->IZQ->IZQ (o DER x3)
+    #   sin producir avance al WP. Cuando el mismo lado se repite >=LIMIT veces
+    #   consecutivas, tambien escalamos a RETROCEDER.
+    #
+    # Ambos caminos caen en RETROCEDER -> _post_retroceder_corner_pending=True
+    # -> scan post-retroceso ve vista despejada -> produce inject_corner.
+    _EVADIR_REPEAT_LIMIT = int(os.getenv("SCAN_EVADIR_REPEAT_LIMIT", "2"))
+
+    def _escalate_retroceder(reason: str) -> None:
+        nonlocal macro, decision, cmd
+        print(f"[deep_vlm] Fix L/L2: {reason}; escalando a RETROCEDER.")
+        macro = "RETROCEDER"
+        decision = {
+            "macro_action": "RETROCEDER",
+            "rationale": reason + ". Retrocediendo para salir del canton.",
+        }
+        cmd = action_to_command(macro, guidance=guidance, telemetry=telemetry)
+        cmd["rationale"] = decision["rationale"]
+        state["velocity_command"] = cmd
+        state["next_action"] = macro
+        state.pop("_scan_last_evadir_dir", None)
+        state.pop("_scan_evadir_count", None)
+
+    if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA"):
+        last_dir = state.get("_scan_last_evadir_dir")
+        opposite = "EVADIR_IZQUIERDA" if macro == "EVADIR_DERECHA" else "EVADIR_DERECHA"
+        if last_dir == opposite:
+            # Fix L: oscilacion lateral
+            _escalate_retroceder(
+                "oscilacion " + last_dir + " -> " + macro + " (deep_vlm)"
+            )
+        elif last_dir == macro:
+            # Fix L2: mismo lado repetido
+            count = int(state.get("_scan_evadir_count", 0)) + 1
+            if count >= _EVADIR_REPEAT_LIMIT:
+                _escalate_retroceder(
+                    macro + " repetido " + str(count + 1) + "x sin progreso"
+                )
+            else:
+                state["_scan_evadir_count"] = count
+        else:
+            # Primera vez o cambio de lado sin oscilacion (caso nuevo)
+            state["_scan_last_evadir_dir"] = macro
+            state["_scan_evadir_count"] = 0
+    else:
+        state.pop("_scan_last_evadir_dir", None)
+        state.pop("_scan_evadir_count", None)
+
     if macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA", "GANAR_ALTURA", "PERDER_ALTURA"):
-        # Duración adaptativa: ≥70% stall FRENTE → 3× (aggressive); ≥50% → 2×; <50% → 1×.
-        # RETROCEDER maneja el caso extremo (ambas laterales bloqueadas), por lo que
-        # el tope aqui baja a 3× — suficiente con vx agresivo (1.2 m/s, radio 4.58m).
+        # Duracion adaptativa: >=70% stall FRENTE -> 2x; >=50% -> 1.5x; <50% -> 1x.
+        # Fix O: se elimino aggressive=True (vx=1.2m/s) para evitar que el drone
+        # estrafe a alta velocidad junto a fachadas con molduras/escaleras de incendio
+        # en pasillos urbanos estrechos. La velocidad estandar (0.8m/s) es suficiente
+        # para el EVADIR post-scan dado que inject_corner guia la salida real.
+        # El tope baja a 2x (antes 3x) por el mismo motivo de seguridad en corridors.
         duration_multiplier = 1.0
-        aggressive_evasion = False
         if trajectory is not None:
             orient = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
             current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
             stall_rate = trajectory.frente_stall_rate(current_hdg)
             if stall_rate >= 0.70:
-                aggressive_evasion = True
-                duration_multiplier = 3.0
-            elif stall_rate >= 0.50:
                 duration_multiplier = 2.0
-        if aggressive_evasion and macro in ("EVADIR_DERECHA", "EVADIR_IZQUIERDA"):
-            cmd = action_to_command(macro, guidance=guidance, telemetry=telemetry, aggressive=True)
-            cmd["rationale"] = decision.get("rationale", "")
-            state["velocity_command"] = cmd
+            elif stall_rate >= 0.50:
+                duration_multiplier = 1.5
         duration_s = DEEP_SCAN_MANEUVER_DURATION_S * duration_multiplier
         state["active_maneuver"] = macro
         state["maneuver_cycles_left"] = max(1, round(duration_s * loop_hz))

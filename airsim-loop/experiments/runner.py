@@ -55,6 +55,8 @@ def run_one(
     max_seconds: float,
     seed_jitter: bool = False,
     deadlock_strategy: str = "slam_assess",  # S4 (PLAN-SLAM): slam_assess es el default desde 2026-0910
+    record_video: bool = True,
+    record_viewport: bool = False,
 ) -> dict:
     os.environ["AGENT_ARM"] = arm
     os.environ["AIRSIM_SEED"] = str(seed)
@@ -77,7 +79,13 @@ def run_one(
         manifest = json.load(f)
 
     scenario_name = Path(scenario_path).stem
-    out_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / f"seed_{seed}.jsonl"
+    iso_ts = datetime.now().strftime("%Y%m%dT%H%M%SZ")
+    # 2026-0929: un directorio por corrida (igual que main.py/WebDCS): el
+    # .jsonl, .csv, .summary.json, .webm, .viewer.html y los photo-*.png de
+    # auditoria quedan juntos y autocontenidos. Antes los PNG de todas las
+    # corridas de una celda se mezclaban en el mismo directorio.
+    run_name = f"seed_{seed}_{iso_ts}"
+    out_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / run_name / f"{run_name}.jsonl"
 
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
     depth_metric_every_n = int(os.getenv("DEPTH_METRIC_EVERY_N", "5"))  # G3.1: capturar depth cada N ciclos
@@ -125,6 +133,27 @@ def run_one(
     waypoints_list = manifest.get("waypoints", [])
     tracker = WaypointTracker(waypoints_list)
     logger = FlightLogger(str(out_path), scenario=scenario_name, seed=seed, arm=arm)
+
+    # Video WebM + visor HTML de auditoria (mismos modulos que main.py). Cualquier
+    # falla de grabacion se degrada a "sin video": nunca tumba la corrida.
+    video_recorder = None
+    viewport_capture = None
+    if record_video:
+        try:
+            from src.logging import FlightVideoRecorder, ViewportCapture
+            from src.logging.flight_overlay import annotate_frame
+
+            video_recorder = FlightVideoRecorder(
+                str(out_path.with_suffix(".webm")),
+                frame_size=(client.frame_width, client.frame_height),
+                fps=loop_hz,
+                with_viewport=record_viewport,
+            )
+            if record_viewport:
+                viewport_capture = ViewportCapture()
+        except Exception as exc:
+            print(f"[runner] video deshabilitado: {exc}")
+            video_recorder = None
 
     # Healthcheck del SLM antes de empezar (G1.2).
     if arm == "slm":
@@ -194,6 +223,9 @@ def run_one(
             # consumido por FlightLogger para el ablation (mismo patron que
             # main.py: se saca del estado con pop(), nunca queda pisandolo).
             deadlock_event = state.pop("_deadlock_event", None)
+            if deadlock_event:
+                # Punto de contacto para la cadena de esquinas (waypoint_tracker.py).
+                tracker.record_contact(pos.get("x", 0.0), pos.get("y", 0.0))
             # Instrumentacion de auditoria VLM (2026-0901, mismo patron que
             # main.py): frames RAW del ciclo exacto en que una deliberacion
             # se resolvio, si los hay.
@@ -256,6 +288,17 @@ def run_one(
                 delib_frames=delib_frames,
             )
 
+            if video_recorder is not None:
+                try:
+                    annotated = annotate_frame(
+                        state, guidance, wp_index=tracker.current_index, wp_total=len(waypoints_list),
+                        elapsed_s=time.time() - t_start, cycle=cycles,
+                    )
+                    vp = viewport_capture.capture() if viewport_capture is not None else None
+                    video_recorder.write_frame(annotated, viewport_frame=vp)
+                except Exception as exc:
+                    print(f"[runner] error grabando frame de video (c{cycles}): {exc}")
+
             if telem.get("collision", {}).get("has_collided"):
                 break
 
@@ -267,6 +310,23 @@ def run_one(
     finally:
         logger.mark_success(success)
         summary = logger.close()
+        if viewport_capture is not None:
+            viewport_capture.close()
+        if video_recorder is not None:
+            try:
+                n_frames = video_recorder.close()
+                if n_frames > 0:
+                    from src.logging import write_viewer_html
+
+                    viewer_path = out_path.with_name(out_path.stem + ".viewer.html")
+                    write_viewer_html(
+                        str(viewer_path), video_filename=video_recorder.out_path.name,
+                        csv_path=str(logger.csv_path),
+                        jsonl_path=str(logger.out_path),
+                    )
+                    print(f"[runner] video ({n_frames} frames) y visor en {viewer_path}")
+            except Exception as exc:
+                print(f"[runner] error cerrando video/visor: {exc}")
         service.stop()
         client.land_smooth()
         client.disconnect()
@@ -288,6 +348,10 @@ def main():
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-runs"))
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
+    parser.add_argument("--no-video", action="store_true",
+                         help="No grabar el .webm ni generar el .viewer.html de cada corrida (por defecto se graban).")
+    parser.add_argument("--viewport", action="store_true",
+                         help="Video split-screen con la captura del viewport de Unreal (requiere mss/pywin32).")
     parser.add_argument("--seed-jitter", action="store_true",
                          help="Teletransportar (ignore_collision=True) a una pose con jitter aleatorio "
                               "por semilla, en vez de arrancar del spawn limpio de AirSim. Desactivado "
@@ -316,6 +380,10 @@ def main():
                     ]
                     if args.seed_jitter:
                         cmd.append("--seed-jitter")
+                    if args.no_video:
+                        cmd.append("--no-video")
+                    if args.viewport:
+                        cmd.append("--viewport")
                     proc = subprocess.run(cmd, capture_output=True, text=True)
                     if proc.returncode != 0:
                         print(f"[{_ts()}][runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
@@ -340,11 +408,14 @@ def _single_main():
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--seed-jitter", action="store_true")
+    parser.add_argument("--no-video", action="store_true")
+    parser.add_argument("--viewport", action="store_true")
     parser.add_argument("--deadlock-strategy", default="slam_assess", choices=["blind", "deep_vlm", "slam_assess"])
     args = parser.parse_args()
     summary = run_one(
         args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,
         seed_jitter=args.seed_jitter, deadlock_strategy=args.deadlock_strategy,
+        record_video=not args.no_video, record_viewport=args.viewport,
     )
     print(f"[{_ts()}][runner] summary: {json.dumps(summary)}")
 

@@ -2,7 +2,7 @@
 
 ## 6.1 Fundamentos de diseño: percepción geométrica sin redes neuronales
 
-La arquitectura de percepción a bordo implementada en este trabajo prescinde deliberadamente de redes neuronales profundas de detección (detectores de cajas delimitadoras tipo YOLO — Redmon et al., 2015 — o segmentadores semánticos densos) y fundamenta la estimación de obstáculos en visión por computadora clásica: **flujo óptico denso derotado y divergencia del campo traslacional**. Esta decisión no es de conveniencia sino de principio, y se sustenta en tres argumentos de ingeniería robótica:
+La arquitectura de percepción a bordo implementada en este trabajo prescinde deliberadamente de redes neuronales profundas de detección (detectores de cajas delimitadoras tipo YOLO — [Redmon et al., 2015](13-REFERENCIAS.md#ref-redmon-2015) — o segmentadores semánticos densos) y fundamenta la estimación de obstáculos en visión por computadora clásica: **flujo óptico denso derotado y divergencia del campo traslacional**. Esta decisión no es de conveniencia sino de principio, y se sustenta en tres argumentos de ingeniería robótica:
 
 **1. Determinismo y presupuesto de cómputo compartido.** En una plataforma donde los recursos de CPU deben compartirse con la inferencia de un modelo de lenguaje local (SLM/VLM), un estimador de flujo clásico (DIS en OpenCV) garantiza una latencia determinista y acotada por ciclo (5–10 Hz), sin los picos de inferencia asociados a redes convolucionales o transformadores visuales densos. [Shi et al. (2024)](13-REFERENCIAS.md#ref-shi-s-2024) y [Goel et al. (2021)](13-REFERENCIAS.md#ref-goel-2021) documentan este problema de presupuesto en sistemas embebidos de visión con requisitos de tiempo real; en este sistema el presupuesto disponible para percepción es del orden de 20–50 ms por ciclo.
 
@@ -138,13 +138,13 @@ def is_blocked(self) -> bool:
 
 La lógica es: una celda está bloqueada si tiene evidencia mínima de percepción **y** (la ocupación es alta, **o** el TTC es bajo con suficiente confianza).
 
-**Calibración del umbral de ocupación (D2, 2026-09-10).** El valor original `OCCUPANCY_BLOCKED_THRESHOLD = 0.35` se había fijado a ojo, bajo la suposición —falsa— de que la ocupación tomaría valores comparables a los del canal de TTC. Un dataset de calibración (196 frames capturados en TownSim frente a una pared sólida, a cuatro velocidades de aproximación de 0.5 a 3 m/s; verdad de terreno binaria `gt_depth_centro < 5 m`) mostró que la ocupación central nunca superó 0.082 en ese conjunto, de modo que con 0.35 la tasa de verdaderos positivos era 0: el canal de ocupación estaba, en la práctica, **desactivado** y el TTC cargaba solo con la detección. La curva ROC sobre `occ_centro` dio AUC = 0.87 y un umbral óptimo por índice de Youden de **0.011** (TPR = 0.93, FPR = 0.22), valor que adoptan `config/.env` y el default del código. Los números se reprodujeron al redactar este informe a partir del archivo del dataset; el detalle metodológico y sus límites se discuten en §7.5. Para atenuar la dependencia de la escena, `main.py` incorpora un `OccupancyCalibrator` que mide el ruido de ocupación del entorno actual en los primeros 25 ciclos válidos (`mean + 3σ`, acotado a [0.005, 0.05]) y reemplaza el umbral global; **el runner de experimentos no lo usa**, de modo que las corridas en lote operan con el valor fijo de `config/.env`.
+**Calibración del umbral de ocupación (D2).** Un valor de umbral fijado a ojo (0.35) supone que la ocupación toma valores comparables a los del canal de TTC, y no es así. Un dataset de calibración (196 frames capturados en TownSim frente a una pared sólida, a cuatro velocidades de aproximación de 0.5 a 3 m/s; verdad de terreno binaria `gt_depth_centro < 5 m`) muestra que la ocupación central nunca supera 0.082 en ese conjunto, de modo que con 0.35 la tasa de verdaderos positivos sería 0: el canal de ocupación quedaría, en la práctica, **desactivado** y el TTC cargaría solo con la detección. La curva ROC sobre `occ_centro` dio AUC = 0.87 y un umbral óptimo por [índice de Youden](13-REFERENCIAS.md#ref-youden-1950) de **0.011** (TPR = 0.93, FPR = 0.22), valor que adoptan `config/.env` y el default del código. Los números se recalcularon a partir del archivo del dataset; el detalle metodológico y sus límites se discuten en §7.5. Para atenuar la dependencia de la escena, `main.py` incorpora un `OccupancyCalibrator` que mide el ruido de ocupación del entorno actual en los primeros 25 ciclos válidos (`mean + 3σ`, acotado a [0.005, 0.05]) y reemplaza el umbral global; **el ejecutor de experimentos no lo usa**, de modo que las corridas en lote operan con el valor fijo de `config/.env`.
 
 **Umbrales diferenciados de confianza.** La confianza mínima para que la ocupación vote bloqueo es `MIN_CONFIDENCE_FOR_BLOCKED = 0.15`, pero para que el TTC vote bloqueo por sí solo (sin apoyo de ocupación) se requiere `MIN_CONFIDENCE_FOR_TTC_BLOCKED = 0.35`. La razón es que el camino de "pocos inliers" en la estimación del FOE (§6.6) produce `foe_confidence = 0.3` como señal de evidencia degradada. Sin el umbral diferenciado, ese 0.3 superaba el piso general (0.15) y el TTC degradado votaba bloqueo con la misma autoridad que un FOE robusto. La separación entre ambos umbrales fue el fix directo de una fuente documentada de falsos positivos (CHANGELOG.md 2026-0826).
 
 ## 6.10 La API pública de `ObstacleField`
 
-Todos los consumidores del sistema de percepción — `policy_router`, `evasive_node`, `deliberative_node`, `fsm_node`, `FlightLogger` — acceden al campo de obstáculos **únicamente** a través de esta interfaz. Ningún módulo de control lee campos crudos de flujo ni coordenadas del FOE.
+Todos los consumidores del sistema de percepción — `navigate_node` (capas reactiva y táctica), `evasive_node`, el constructor del prompt del VLM, `fsm_node`, `FlightLogger` — acceden al campo de obstáculos **únicamente** a través de esta interfaz. Ningún módulo de control lee campos crudos de flujo ni coordenadas del FOE.
 
 | Método | Descripción |
 |---|---|
@@ -164,6 +164,8 @@ El campo `source` del `ObstacleField` indica el origen de la evidencia: `"flow"`
 El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. La excepción es `merge_depth_estimate()`, que retorna un **nuevo** `ObstacleField` con el sector centro modificado — el campo original no se altera.
 
 ## 6.10b Segundo canal perceptual: Depth Anything V2 Metric (V4)
+
+El canal usa Depth Anything V2 ([Yang et al., 2024](13-REFERENCIAS.md#ref-yang-2024)), un modelo de estimación de profundidad monocular entrenado con imágenes sintéticas de alta precisión y destilado a partir de un modelo maestro, en su variante de profundidad métrica.
 
 El estimador de flujo óptico tiene un punto ciego estructural ante obstáculos centrados en la trayectoria (cerca del FOE): la divergencia traslacional de esos píxeles es mínima precisamente porque están en el eje de aproximación. Para cubrir ese punto ciego, el sistema incorpora un segundo canal de profundidad **completamente independiente del sensor de profundidad del simulador**: un estimador de profundidad monocular basado en el modelo **Depth Anything V2 Metric** (`src/perception/depth_estimator.py`).
 
@@ -185,7 +187,7 @@ Esta clasificación se añade al `scene_summary` como pista táctica para el SLM
 
 ## 6.11 Consultas de nivel superior: `has_open_corridor` y `sector_towards_waypoint`
 
-Dos funciones de módulo sirven como interfaz de alto nivel compartida entre el router de política, el nodo deliberativo y la FSM:
+Dos funciones de módulo sirven como interfaz de alto nivel compartida entre la capa de decisión (`navigate`), el constructor del prompt del VLM y la FSM:
 
 **`sector_towards_waypoint(bearing_err_deg)`** mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
 - Si `bearing_err_deg < -BEARING_SECTOR_DEG` (default 15°) → `"izquierda"`
@@ -211,7 +213,7 @@ La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleFi
 
 **Hover / velocidad < 0.25 m/s.** Sin traslación entre frames, el flujo traslacional es indistinguible del ruido del estimador. La fracción de píxeles válidos cae por debajo de `MIN_VALID_FRACTION_FOR_FOE = 1%` y el campo retorna vacío (`foe_confidence = 0`). `has_evidence()` devuelve `False`, marcando la situación como "sin información" — no como "despejado". El nodo deliberativo lo detecta vía `_query_reason_note()` y comunica explícitamente al VLM que la consulta se debe a falta de evidencia, no a un bloqueo real (§4.3, §5.10).
 
-**Giro puro (yaw_rate alto).** La rotación excede `FLOW_MAX_ROTATION_DEG = 2°` y el ciclo retorna `empty_field(source="degraded")`. El lazo continúa con la maniobra comprometida (persistencia en `evasive_node`) sin recurrir a nueva evidencia perceptual. La inhibición se verificó empíricamente (D3, §7.6): con guiñadas comandadas de 0.3 a 1.0 rad/s (18.7–63.9 °/s reales) el 100 % de los 200 frames ensayados quedó en `source = "degraded"` con `foe_confidence = 0`.
+**Giro puro (yaw_rate alto).** La rotación excede `FLOW_MAX_ROTATION_DEG = 2°` y el ciclo retorna `empty_field(source="degraded")`. El lazo continúa con la maniobra comprometida (continuación de la maniobra comprometida en `navigate`) sin recurrir a nueva evidencia perceptual. La inhibición se verificó empíricamente (D3, §7.6): con guiñadas comandadas de 0.3 a 1.0 rad/s (18.7–63.9 °/s reales) el 100 % de los 200 frames ensayados quedó en `source = "degraded"` con `foe_confidence = 0`.
 
 **Holdover temporal del TTC (P2).** Cuando un frame aislado devuelve `foe_confidence = 0` (guiñada, textura baja), `FlowTTCEstimator` no vacía el campo de inmediato: devuelve el último campo válido con el TTC decrementado en el tiempo transcurrido (`ObstacleField.decay_ttc()`, copia inmutable con `source = "holdover"`) durante hasta `FLOW_HOLDOVER_MAX_FRAMES = 3` frames (0.6 s a 5 Hz). Superado ese límite el estimador vuelve al campo vacío, de modo que la memoria del obstáculo nunca se prolonga indefinidamente y el origen queda auditable en los logs.
 
