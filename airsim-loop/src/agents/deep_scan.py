@@ -118,6 +118,18 @@ _SINGLE_SECTOR_SCHEMA = {
     "required": ["tipo", "ok"],
     "additionalProperties": False,
 }
+# Schema extendido para el sector frontal: incluye ancho_deg para geometria de evasion.
+_FRENTE_SECTOR_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "tipo":      {"type": "string", "enum": OBSTACLE_TIPOS},
+        "ok":        {"type": "boolean"},
+        "conf":      {"type": "number"},
+        "ancho_deg": {"type": "integer", "minimum": 0, "maximum": 180},
+    },
+    "required": ["tipo", "ok"],
+    "additionalProperties": False,
+}
 RESPONSE_JSON_SCHEMA_SCENE = {
     "type": "json_schema",
     "json_schema": {
@@ -128,7 +140,7 @@ RESPONSE_JSON_SCHEMA_SCENE = {
                 "sectores": {
                     "type": "object",
                     "properties": {
-                        "frente":    _SINGLE_SECTOR_SCHEMA,
+                        "frente":    _FRENTE_SECTOR_SCHEMA,
                         "izquierda": _SINGLE_SECTOR_SCHEMA,
                         "derecha":   _SINGLE_SECTOR_SCHEMA,
                     },
@@ -155,7 +167,11 @@ SYSTEM_PROMPT_SLAM_ASSESS = (
     "Para cada sector (frente, izquierda, derecha) indica:\n"
     "- tipo: la superficie u obstaculo predominante que ves\n"
     "- ok: si el dron puede avanzar en esa direccion sin colisionar\n"
-    "- conf: certeza en la descripcion (0.0-1.0)\n\n"
+    "- conf: certeza en la descripcion (0.0-1.0)\n"
+    "Solo para el sector frente, si hay un obstaculo (ok=false), agrega:\n"
+    "- ancho_deg: ancho angular estimado del obstaculo en grados (0-180). "
+    "Ejemplo: un edificio que ocupa casi todo el campo visual -> 120, "
+    "un poste fino -> 10, una pared continua -> 180.\n\n"
     "Tipos validos:\n"
     "- 'libre': espacio abierto, calle, cielo, sin obstaculos visibles en los proximos 10m\n"
     "- 'fachada': superficie plana (vidrio, metal, hormigon liso, reflectante)\n"
@@ -165,7 +181,7 @@ SYSTEM_PROMPT_SLAM_ASSESS = (
     "- 'indeterminado': no se puede determinar con la imagen disponible\n\n"
     "degradada: true si la imagen en general es muy oscura, uniforme o carece de informacion visual.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
-    '{"sectores": {"frente": {"tipo": "...", "ok": true, "conf": 0.9}, '
+    '{"sectores": {"frente": {"tipo": "...", "ok": false, "conf": 0.9, "ancho_deg": 90}, '
     '"izquierda": {...}, "derecha": {...}}, "degradada": false}'
 )
 
@@ -430,13 +446,27 @@ def scene_to_action(
             return "PERDER_ALTURA", None
         return "GANAR_ALTURA", None
 
-    # Generar corner en la direccion de evasion
+    # Generar corner en la direccion de evasion.
+    # Si el VLM reporto ancho_deg en el sector frontal, usar geometria del obstaculo:
+    #   offset = D_EST * tan(ancho_deg/2), donde D_EST es distancia estimada al obstaculo.
+    # Clamped a [CORNER_OFFSET_M, 60.0] para evitar extremos.
+    default_offset = float(os.getenv("CORNER_OFFSET_M", "12.0"))
+    ancho_deg = frente.get("ancho_deg")
+    if ancho_deg is not None:
+        try:
+            d_est = float(os.getenv("OBSTACLE_DIST_EST_M", "20.0"))
+            geo_offset = d_est * math.tan(math.radians(float(ancho_deg) / 2.0))
+            offset_m = max(default_offset, min(geo_offset, 60.0))
+        except Exception:
+            offset_m = default_offset
+    else:
+        offset_m = default_offset
     try:
         orient_t = telem.get("orientation", {}) if isinstance(telem, dict) else {}
         hdg = math.degrees(float(orient_t.get("yaw", 0.0)))
         corner = compute_corner_waypoint(
             telem, hdg + side_sign * 90.0, guidance=guidance,
-            offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
+            offset_m=offset_m,
         )
     except Exception:
         corner = None

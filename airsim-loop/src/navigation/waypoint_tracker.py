@@ -120,6 +120,10 @@ CHAIN_MIN_CORNER_GAP_M = float(os.getenv("CORNER_CHAIN_MIN_GAP_M", "6.0"))
 CORNER_COMMIT_CYCLES = int(os.getenv("CORNER_COMMIT_CYCLES", "120"))
 # Esquina nueva o trayecto a menos de esto de un contacto conocido: se refleja al lado opuesto.
 CORNER_CONTACT_CLEARANCE_M = float(os.getenv("CORNER_CONTACT_CLEARANCE_M", "8.0"))
+# Filtro de avance (2026-0929, seed_99): solo inyectar una esquina si dist(esquina, WP_real)
+# < dist(dron, WP_real) * TOLERANCE. Valor 1.0 estricto (la esquina debe acercar al dron).
+# Confirmado en seed_99: 12/14 esquinas regresivas hubieran sido rechazadas con este filtro.
+CORNER_PROGRESS_TOLERANCE = float(os.getenv("CORNER_PROGRESS_TOLERANCE", "1.0"))
 
 
 def effective_stall_threshold() -> int:
@@ -414,6 +418,31 @@ class WaypointTracker:
                     print(f"[Manhattan] esquina ({float(x):.1f},{float(y):.1f}) cruza un contacto: "
                           f"reflejada a ({mx:.1f},{my:.1f}).")
                     x, y = mx, my
+
+        # Filtro de avance: rechazar si la esquina aleja al dron del WP real.
+        # Busca el primer WP no-temporal como referencia de distancia.
+        if self._last_pos is not None:
+            _real_wp = next(
+                (w for j, w in enumerate(self.waypoints)
+                 if j >= self.current_index and not w.get("is_temporary")),
+                None,
+            )
+            if _real_wp is not None:
+                _d_drone = math.hypot(
+                    self._last_pos[0] - float(_real_wp["x"]),
+                    self._last_pos[1] - float(_real_wp["y"]),
+                )
+                _d_corner = math.hypot(
+                    float(x) - float(_real_wp["x"]),
+                    float(y) - float(_real_wp["y"]),
+                )
+                if _d_corner >= _d_drone * CORNER_PROGRESS_TOLERANCE:
+                    print(
+                        f"[Manhattan] {label} ({float(x):.1f},{float(y):.1f}) rechazada "
+                        f"(no avanza): dist_WP={_d_corner:.1f}m >= dron_WP={_d_drone:.1f}m "
+                        f"x{CORNER_PROGRESS_TOLERANCE:.2f}."
+                    )
+                    return False
 
         corner_wp = {
             "x": round(float(x), 2),

@@ -219,6 +219,134 @@ def test_fsm_arm_shares_the_deep_scan_capability(monkeypatch):
         service.stop()
 
 
+def _scene(frente_ok=False, frente_tipo="fachada", ancho_deg=None,
+            izq_ok=True, der_ok=False):
+    """Construye y normaliza una escena minima para scene_to_action."""
+    frente = {"tipo": frente_tipo, "ok": frente_ok}
+    if ancho_deg is not None:
+        frente["ancho_deg"] = ancho_deg
+    raw = {
+        "sectores": {
+            "frente":    frente,
+            "izquierda": {"tipo": "libre", "ok": izq_ok},
+            "derecha":   {"tipo": "libre", "ok": der_ok},
+        },
+        "degradada": False,
+    }
+    return deep_scan_mod.parse_scene_description(raw)
+
+
+def _corner_dist(corner, telem):
+    """Distancia 2D del corner a la posicion del dron."""
+    pos = telem.get("position", {})
+    return math.hypot(corner["x"] - pos["x"], corner["y"] - pos["y"])
+
+
+def _telem(x=0.0, y=0.0, yaw=0.0):
+    return {
+        "position": {"x": x, "y": y, "z": -10.0},
+        "orientation": {"pitch": 0.0, "roll": 0.0, "yaw": yaw},
+    }
+
+
+# ---------------------------------------------------------------- ancho_deg schema
+def test_frente_sector_schema_accepts_ancho_deg():
+    """El schema JSON del sector frente acepta ancho_deg como campo opcional."""
+    import jsonschema
+    schema = deep_scan_mod.RESPONSE_JSON_SCHEMA_SCENE["json_schema"]["schema"]
+    valid = {
+        "sectores": {
+            "frente":    {"tipo": "fachada", "ok": False, "ancho_deg": 90},
+            "izquierda": {"tipo": "libre",   "ok": True},
+            "derecha":   {"tipo": "libre",   "ok": True},
+        },
+        "degradada": False,
+    }
+    jsonschema.validate(valid, schema)
+
+
+def test_frente_sector_schema_accepts_missing_ancho_deg():
+    """ancho_deg es opcional: schema valido sin el campo."""
+    import jsonschema
+    schema = deep_scan_mod.RESPONSE_JSON_SCHEMA_SCENE["json_schema"]["schema"]
+    valid = {
+        "sectores": {
+            "frente":    {"tipo": "muro", "ok": False},
+            "izquierda": {"tipo": "libre", "ok": True},
+            "derecha":   {"tipo": "libre", "ok": True},
+        },
+        "degradada": False,
+    }
+    jsonschema.validate(valid, schema)
+
+
+def test_lateral_sectors_reject_ancho_deg():
+    """Los sectores laterales NO aceptan ancho_deg (additionalProperties=False)."""
+    import jsonschema
+    schema = deep_scan_mod.RESPONSE_JSON_SCHEMA_SCENE["json_schema"]["schema"]
+    invalid = {
+        "sectores": {
+            "frente":    {"tipo": "muro", "ok": False},
+            "izquierda": {"tipo": "libre", "ok": True, "ancho_deg": 30},
+            "derecha":   {"tipo": "libre", "ok": True},
+        },
+        "degradada": False,
+    }
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(invalid, schema)
+
+
+# ---------------------------------------------------------------- ancho_deg en scene_to_action
+def test_scene_to_action_uses_ancho_deg_for_wider_offset(monkeypatch):
+    """Con ancho_deg=90 el offset geometrico (20*tan(45)=20m) supera el default (12m)."""
+    monkeypatch.setenv("CORNER_OFFSET_M", "12.0")
+    monkeypatch.setenv("OBSTACLE_DIST_EST_M", "20.0")
+    scene = _scene(frente_ok=False, ancho_deg=90, izq_ok=True, der_ok=False)
+    telem = _telem()
+    action, corner = deep_scan_mod.scene_to_action(scene, {}, telem)
+    assert action == "EVADIR_IZQUIERDA"
+    assert corner is not None
+    dist = _corner_dist(corner, telem)
+    assert dist > 12.0, f"Esperaba offset > 12m con ancho_deg=90, got {dist:.2f}m"
+    assert dist <= 60.0
+
+
+def test_scene_to_action_fallback_to_default_without_ancho_deg(monkeypatch):
+    """Sin ancho_deg el offset es el default CORNER_OFFSET_M=12m."""
+    monkeypatch.setenv("CORNER_OFFSET_M", "12.0")
+    scene = _scene(frente_ok=False, ancho_deg=None, izq_ok=True, der_ok=False)
+    telem = _telem()
+    action, corner = deep_scan_mod.scene_to_action(scene, {}, telem)
+    assert corner is not None
+    dist = _corner_dist(corner, telem)
+    assert abs(dist - 12.0) < 0.1, f"Esperaba offset=12m, got {dist:.2f}m"
+
+
+def test_scene_to_action_clamps_narrow_obstacle_to_default(monkeypatch):
+    """ancho_deg pequeño (10 grados) da offset menor al default; se usa el default como piso."""
+    monkeypatch.setenv("CORNER_OFFSET_M", "12.0")
+    monkeypatch.setenv("OBSTACLE_DIST_EST_M", "20.0")
+    # 20 * tan(5deg) = 1.75m < 12m -> debe clampearse a 12m
+    scene = _scene(frente_ok=False, ancho_deg=10, izq_ok=True, der_ok=False)
+    telem = _telem()
+    _, corner = deep_scan_mod.scene_to_action(scene, {}, telem)
+    assert corner is not None
+    dist = _corner_dist(corner, telem)
+    assert abs(dist - 12.0) < 0.1, f"Esperaba piso=12m para ancho pequeno, got {dist:.2f}m"
+
+
+def test_scene_to_action_caps_very_wide_obstacle(monkeypatch):
+    """ancho_deg=170 no puede producir offset > 60m."""
+    monkeypatch.setenv("CORNER_OFFSET_M", "12.0")
+    monkeypatch.setenv("OBSTACLE_DIST_EST_M", "20.0")
+    scene = _scene(frente_ok=False, ancho_deg=170, izq_ok=True, der_ok=False)
+    telem = _telem()
+    _, corner = deep_scan_mod.scene_to_action(scene, {}, telem)
+    assert corner is not None
+    dist = _corner_dist(corner, telem)
+    assert dist <= 60.0, f"El offset no debe superar 60m, got {dist:.2f}m"
+
+
 def test_deep_scan_state_survives_compiled_graph_invoke(monkeypatch):
     """H2.4.5: _scan_phase/_scan_heading_index/_scan_frames deben sobrevivir
     varias invocaciones sucesivas a graph.invoke() sobre el GRAFO COMPILADO

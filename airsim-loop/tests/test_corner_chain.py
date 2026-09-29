@@ -63,9 +63,9 @@ def test_new_corner_replaces_pending_corners_instead_of_stacking():
     tr = _tracker()
     tr.inject_corner_waypoint(10.0, 20.0, -10.0)      # esquina 1 (aun no alcanzada)
     tr._corner_age = 10**6                             # superado el compromiso
-    tr.inject_corner_waypoint(-30.0, 40.0, -10.0)     # esquina 2: debe reemplazar a la 1
+    tr.inject_corner_waypoint(70.0, -10.0, -10.0)     # esquina 2: pasa filtro, debe reemplazar a la 1
     temps = [w for w in tr.waypoints if w.get("is_temporary")]
-    assert len(temps) == 1 and (temps[0]["x"], temps[0]["y"]) == (-30.0, 40.0)
+    assert len(temps) == 1 and (temps[0]["x"], temps[0]["y"]) == (70.0, -10.0)
     assert tr.current_waypoint is temps[0]
     assert [w["label"] for w in tr.waypoints if not w.get("is_temporary")] == ["A", "B"]
 

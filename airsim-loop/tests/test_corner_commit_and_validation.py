@@ -31,15 +31,16 @@ def test_pending_corner_is_replaceable_after_commit_window():
     tr.inject_corner_waypoint(10.0, 20.0, -10.0)
     for _ in range(wt.CORNER_COMMIT_CYCLES):
         tr.update({"x": 0.0, "y": 0.0, "z": -10.0})
-    assert tr.inject_corner_waypoint(-30.0, 40.0, -10.0)
-    assert _temps(tr) == [(-30.0, 40.0)]
+    assert tr.inject_corner_waypoint(80.0, 5.0, -10.0)                # mas cerca de B=(100,0): pasa el filtro
+    assert _temps(tr) == [(80.0, 5.0)]
 
 
-def test_corner_through_a_contact_is_mirrored():
+def test_corner_mirrored_into_regressive_zone_is_rejected():
     tr = _tracker()
     tr.record_contact(8.0, 8.0)                                        # sobre el trayecto a (15,15)
-    assert tr.inject_corner_waypoint(15.0, 15.0, -10.0)
-    assert _temps(tr) == [(-15.0, -15.0)]                              # reflejo respecto del dron
+    # (15,15) cruza el contacto -> reflejo a (-15,-15), pero dist(-15,-15, B=100,0)=116m > 100m
+    assert not tr.inject_corner_waypoint(15.0, 15.0, -10.0)           # rechazada por filtro de avance
+    assert _temps(tr) == []
 
 
 def test_corner_far_from_contacts_is_kept():
@@ -62,6 +63,27 @@ def test_mirror_is_skipped_when_it_is_also_blocked():
     tr.record_contact(-8.0, -8.0)
     tr.inject_corner_waypoint(15.0, 15.0, -10.0)
     assert _temps(tr) == [(15.0, 15.0)]                                # sin alternativa: se conserva
+
+
+# ---------------------------------------------------------------- filtro de avance
+def test_progress_filter_accepts_corner_closer_to_wp():
+    tr = _tracker()                                                    # dron en (0,0), WP B en (100,0)
+    assert tr.inject_corner_waypoint(50.0, 0.0, -10.0)                # dist(50,0 -> B)=50m < 100m
+    assert _temps(tr) == [(50.0, 0.0)]
+
+
+def test_progress_filter_rejects_corner_farther_than_drone():
+    tr = _tracker()                                                    # dron en (0,0), WP B en (100,0)
+    assert not tr.inject_corner_waypoint(-50.0, 0.0, -10.0)           # dist(-50,0 -> B)=150m > 100m
+    assert _temps(tr) == []
+
+
+def test_progress_filter_skipped_when_no_last_pos():
+    # Sin llamar a update(): _last_pos=None -> filtro omitido
+    tr = WaypointTracker([{"x": 0.0, "y": 0.0, "z": -10.0, "label": "A"},
+                          {"x": 100.0, "y": 0.0, "z": -10.0, "label": "B"}])
+    assert tr.inject_corner_waypoint(-50.0, 0.0, -10.0)               # regresiva pero sin pos de referencia
+    assert _temps(tr) == [(-50.0, 0.0)]
 
 
 # ---------------------------------------------------------------- vz con yaw_rate
