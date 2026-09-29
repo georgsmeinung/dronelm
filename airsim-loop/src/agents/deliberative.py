@@ -83,12 +83,6 @@ PROMPT_ACTIONS = {
 
 SAFE_MARGIN_TTC_S = float(os.getenv("SAFE_MARGIN_TTC_S", "2.0"))
 
-# Redesign VLM 2026-0929: el schema de escena (RESPONSE_JSON_SCHEMA_SCENE) y el
-# schema panoramico (RESPONSE_JSON_SCHEMA_PANORAMA) se importan de deep_scan.py.
-# Los esquemas viejos (macro_action enum) se mantienen solo como fallback de
-# parse para modelos que aun retornen el formato anterior.
-RESPONSE_JSON_SCHEMA = RESPONSE_JSON_SCHEMA_SCENE  # alias para backward compat
-
 # --------------------------------------------------------------------------- #
 # System Prompts: Texto Puro (SLM) y Vision Directa (VLM)                    #
 # Redesign 2026-0929: el VLM describe la escena, NO elige acciones.           #

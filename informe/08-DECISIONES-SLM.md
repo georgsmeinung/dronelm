@@ -1,6 +1,6 @@
-# 8. Ingeniería de decisiones del SLM
+# 8. Ingeniería del VLM: percepción semántica y decisiones de implementación
 
-El capítulo 5 documenta la *arquitectura interna* de la consulta asíncrona al VLM (cuándo se solicita, cómo se integra en el grafo LangGraph, qué hace el sistema con la respuesta del modelo). El capítulo 6 documenta *por qué* hace falta un VLM (los puntos ciegos estructurales del estimador de flujo). Este capítulo documenta las decisiones de ingeniería que hacen que ese VLM *funcione de forma confiable en la práctica*: selección del modelo bajo restricciones de hardware, mecanismos de salida estructurada, diseño del espacio de acción, ingeniería del prompt y trazabilidad de las decisiones.
+El capítulo 5 documenta la *arquitectura interna* de la consulta asíncrona al VLM (cuándo se solicita, cómo se integra en el grafo LangGraph, qué hace el sistema con la respuesta del modelo). El capítulo 6 documenta *por qué* hace falta un VLM (los puntos ciegos estructurales del estimador de flujo). Este capítulo documenta las decisiones de ingeniería que hacen que ese VLM *funcione de forma confiable en la práctica*: selección del modelo bajo restricciones de hardware, mecanismos de salida estructurada, rol del modelo como perceptor semántico (no como oráculo de acciones), ingeniería del prompt y optimización de la latencia.
 
 ## 8.1 Selección del modelo: restricciones de hardware como parámetro de diseño
 
@@ -44,25 +44,37 @@ La respuesta del modelo se solicita con el parámetro `response_format={"type": 
 
 El efecto práctico es que, cuando la decodificación restringida está activa, es estructuralmente imposible producir una respuesta que no sea JSON conforme al esquema. El `adherence_rate` (fracción de respuestas parseables al primer intento) medido en los escenarios de validación sube de ~73% (solo prompt) a ~98% (con `json_schema`).
 
-El esquema declarado (`RESPONSE_JSON_SCHEMA`, `deliberative.py`) tiene la forma mínima necesaria para la toma de decisión, más un grupo de campos opcionales de sub-meta (§8.3):
+La restricción gramatical se aplica al vocabulario de tipos de obstáculo (`"libre"`, `"fachada"`, etc., enum en `_SECTOR_SCHEMA_ITEM`) y a la estructura del objeto `sectores` —no sobre un campo de acción, que desaparece del schema del VLM. La conversión de la descripción semántica a macro-acción ocurre en la capa determinista de navegación (`scene_to_action`, §8.3.2), fuera del alcance del modelo.
+
+Los esquemas declarados (`RESPONSE_JSON_SCHEMA_SCENE` y `RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`) tienen la forma mínima necesaria para la descripción semántica de la escena (§8.3). El esquema de escena táctica (`slam_assess`, consulta proactiva) es:
 
 ```json
 {
   "type": "object",
   "properties": {
-    "macro_action": { "type": "string", "enum": ["EVADIR_DERECHA", "EVADIR_IZQUIERDA", "FRENAR",
-                                                "GANAR_ALTURA", "MANTENER_RUMBO", "PERDER_ALTURA"] },
-    "rationale":    { "type": "string" },
-    "dx_m": { "type": "number" }, "dy_m": { "type": "number" }, "dz_m": { "type": "number" },
-    "confidence": { "type": "number" }, "semantic_label": { "type": "string" },
-    "mode": { "type": "string", "enum": ["navegar", "inspeccionar", "buscar", "esperar"] }
+    "sectores": {
+      "type": "object",
+      "properties": {
+        "frente":    { "tipo": "string", "ok": "boolean", "conf": "number" },
+        "izquierda": { "tipo": "string", "ok": "boolean", "conf": "number" },
+        "derecha":   { "tipo": "string", "ok": "boolean", "conf": "number" }
+      },
+      "required": ["frente", "izquierda", "derecha"],
+      "additionalProperties": false
+    },
+    "degradada": { "type": "boolean" },
+    "r":         { "type": "string" }
   },
-  "required": ["macro_action", "rationale"],
+  "required": ["sectores", "degradada"],
   "additionalProperties": false
 }
 ```
 
-La enumeración explícita de los valores posibles de `macro_action` (§8.3) es el mecanismo que convierte el espacio de acción discreto del sistema en una restricción gramatical directamente aplicable por el motor de gramática.
+Donde `tipo` toma valores de un enum cerrado de seis superficies (`libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`), `ok` indica si el sector es transitable (el dron puede avanzar sin colisionar), `conf` es la certeza de la descripción y `r` es un razonamiento opcional no requerido. El campo `degradada` señala imagen poco fiable (muy oscura, uniforme, sin información visual útil —la firma de una fachada de vidrio que embebe al dron).
+
+Para el barrido panorámico (`deep_vlm`), el esquema es `RESPONSE_JSON_SCHEMA_PANORAMA`: un array de objetos `{deg, tipo, ok, conf}` (un objeto por rumbo barrido) más `degradada` y `r` opcionales.
+
+La restricción gramatical no recae ya sobre el campo de acción (que desaparece del schema), sino sobre el vocabulario de tipos de obstáculo y la estructura del objeto `sectores`.
 
 ### 8.2.2 Parser tolerante como red de seguridad
 
@@ -76,9 +88,56 @@ Si las estrategias fallan, `_fallback_decision()` entra en vigor: un árbol de d
 
 La métrica `adherence_rate` es una fila explícita de la tabla de resultados (cap. 11): cuantifica cuánto aporta, en la práctica, la decodificación restringida por sobre el parser tolerante como única defensa. Este número importa porque si fuera cercano al 100% solo con el parser, la decodificación restringida sería overhead sin beneficio; si la diferencia es grande (como documentan Raspanti et al. [2025] y Geng et al. [2025] para SLMs compactos), la restricción es una decisión de ingeniería con impacto medible en la fiabilidad del sistema.
 
-## 8.3 Espacio de acción discreto: lista blanca de macro-acciones
+## 8.3 Rol del VLM: percepción semántica, no oráculo de acciones
 
-El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones definido en `PROMPT_ACTIONS` (`deliberative.py`):
+Una decisión de diseño central del sistema es **la separación entre percepción semántica y decisión de navegación**. El VLM no elige una macro-acción directamente: describe la escena por sectores y la capa de navegación decide la acción a partir de esa descripción combinada con el contexto de trayectoria.
+
+### 8.3.1 Descripción de escena por sectores
+
+Para cada consulta, el VLM devuelve un objeto JSON `sectores` con tres entradas (`frente`, `izquierda`, `derecha`), cada una con:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `tipo` | string (enum) | Superficie u obstáculo predominante visible en ese sector |
+| `ok` | boolean | Si el dron puede avanzar en esa dirección sin colisionar |
+| `conf` | número | Certeza de la descripción (0.0–1.0) |
+
+Los seis tipos de obstáculo del enum son:
+
+| `tipo` | Interpretación |
+|---|---|
+| `libre` | Espacio abierto (calle, cielo); sin obstáculos en los próximos ~10 m |
+| `fachada` | Superficie plana y reflectante (vidrio, metal, hormigón liso) |
+| `muro` | Superficie con textura rugosa (ladrillo, roca, hormigón rugoso) |
+| `vegetacion` | Árboles, ramas, follaje, setos |
+| `interior` | Imagen oscura o uniforme sin información útil (firma de embebido en vidrio) |
+| `indeterminado` | No se puede determinar con la imagen disponible |
+
+El campo `degradada` indica imagen globalmente poco fiable (muy oscura, uniforme o sin información visual útil). El campo `r` (razón) es un razonamiento opcional, no requerido por el schema.
+
+La distinción `fachada` + `degradada = true` permite detectar embebidos en fachadas de vidrio que no producen malla de colisión: el dron penetra el cristal sin rebote físico, el flujo óptico es nulo y la imagen se vuelve oscura y uniforme. Un sistema que solo decide por TTC no detecta este caso.
+
+### 8.3.2 De descripción de escena a macro-acción: `scene_to_action`
+
+La conversión de la descripción de escena a una macro-acción la realiza `scene_to_action(scene, guidance, telem, trajectory)` (`deep_scan.py`). Esta función:
+
+1. Lee la transitabilidad de cada sector y la contrasta con el rumbo al waypoint activo.
+2. Aplica los overrides deterministas de trayectoria (§5.12.2) internamente, para que la historia de stalls de zona corrija la decisión perceptual cuando el VLM no ve los obstáculos que el flujo sí ha documentado.
+3. Emite la macro-acción resultante y, si corresponde, un `inject_corner`.
+
+El equivalente para el barrido panorámico es `panorama_to_action(rumbos, trajectory, guidance, telem, post_retroceder)`, que trabaja sobre el array de rumbos del esquema panorámico.
+
+Esta separación tiene tres consecuencias de diseño:
+
+**1. El VLM describe, no decide.** El modelo razona sobre lo que ve (superficie, transitabilidad, certeza) sin necesidad de saber qué macro-acción corresponde a cada situación ni qué restricciones de trayectoria acumulada hay. Esas reglas viven en la capa determinista de navegación, que las aplica con certeza sobre evidencia acumulada, no sobre una única imagen.
+
+**2. Comparación limpia entre brazos.** El VLM, la FSM y el brazo reactivo comparten el mismo vocabulario de macro-acciones y el mismo traductor `action_to_command()`. La única variable que difiere entre ellos es quién elige la etiqueta: la descripción semántica del VLM convertida por `scene_to_action`, los umbrales deterministas de la FSM, o la guía al waypoint del brazo reactivo.
+
+**3. Auditabilidad.** El campo `scene_description` del `DroneState` guarda la descripción de escena del ciclo, y `deliberations[]` registra el JSON completo de cada consulta. La secuencia de descripciones `(tipo, ok, conf)` es legible por humanos y graféable por el visor HTML.
+
+### 8.3.3 Vocabulario de macro-acciones del sistema
+
+El VLM no elige directamente ninguna macro-acción, pero el sistema mantiene un vocabulario fijo de ocho acciones (`VALID_ACTIONS` en `action_map.py`) del que `scene_to_action` y `panorama_to_action` son los únicos convertidores desde la percepción semántica:
 
 | Macro-acción | Significado navegacional |
 |---|---|
@@ -89,56 +148,13 @@ El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas 
 | `PERDER_ALTURA` | Descender con avance lento (vz = +0.8 m/s, vx = 1.0 m/s) |
 | `FRENAR` | Detener el drone en el lugar (hover) con corrección de altitud por controlador P |
 | `RETROCEDER` | Marcha atrás con rumbo congelado (vx = −1.2 m/s) durante ~5 s (≈ 6 m) para salir de la malla de colisión de un obstáculo (§5.12.3) |
+| `GIRAR_90` | Giro de 90° sin traslación; bypass determinista, nunca accesible desde la descripción del VLM |
 
-El vocabulario completo del sistema tiene **ocho** acciones (`VALID_ACTIONS` en `action_map.py`), pero no todas son elegibles por el VLM en todos los caminos:
+`GIRAR_90` es un bypass determinista de la capa reactiva (§5.9) que se activa cuando `blocked_fraction > 0.6`, sin pasar por `scene_to_action`.
 
-- `GIRAR_90` **no está en ningún `PROMPT_ACTIONS`**: es un bypass determinista que la capa reactiva de `navigate` activa directamente cuando `blocked_fraction > 0.6`, sin consultar al VLM. Si el modelo lo intentara, el parser lo descartaría.
-- `RETROCEDER` está en el `PROMPT_ACTIONS` del escaneo de resolución de atasco (`slam_assess` / `deep_vlm`) y en los overrides deterministas (§5.12.2), pero **no** en el de la consulta táctica ordinaria (seis acciones): su enum de decodificación restringida no la admite y `_parse_decision()` la descartaría. Los archivos de system prompt (§8.5) sí la listan entre los valores permitidos; es una inconsistencia conocida entre prompt y esquema, sin efecto observado porque la consulta táctica nunca puede producirla, y que debe resolverse alineando ambos.
+**Sub-meta semántica (`VlmGoal`).** Los campos opcionales `dx_m`, `dy_m`, `dz_m`, `confidence`, `semantic_label` y `mode` de la respuesta táctica permiten que el VLM, además de la descripción de escena, proponga un punto de destino próximo en el marco del cuerpo. El sistema solo lo adopta si `confidence >= 0.7` y lo convierte en un waypoint de desvío en coordenadas de mundo (`inject_corner`, §5.10). La descripción de escena sigue siendo la fuente primaria de percepción; la sub-meta solo orienta *hacia dónde*.
 
-El schema JSON declarado para la decodificación restringida tiene la forma:
-
-```json
-{
-  "type": "json_schema",
-  "json_schema": {
-    "name": "macro_decision",
-    "schema": {
-      "type": "object",
-      "properties": {
-        "macro_action": {
-          "type": "string",
-          "enum": ["EVADIR_DERECHA", "EVADIR_IZQUIERDA", "FRENAR",
-                   "GANAR_ALTURA", "MANTENER_RUMBO", "PERDER_ALTURA"]
-        },
-        "rationale": {"type": "string"},
-        "dx_m": {"type": "number"}, "dy_m": {"type": "number"}, "dz_m": {"type": "number"},
-        "confidence": {"type": "number"}, "semantic_label": {"type": "string"},
-        "mode": {"type": "string", "enum": ["navegar", "inspeccionar", "buscar", "esperar"]}
-      },
-      "required": ["macro_action", "rationale"],
-      "additionalProperties": false
-    }
-  }
-}
-```
-
-**Poda del enum por motivo de consulta.** En lugar de enviar siempre el enum completo, `_schema_for_reason(reason_key)` genera un schema podado según el contexto:
-- `"TTC_CRITICO"`: excluye `MANTENER_RUMBO` (hay colisión inminente confirmada).
-- `"DEADLOCK_ESCAPE"`: excluye `MANTENER_RUMBO` y `FRENAR` (el drone ya está atascado; detenerse o insistir al frente es contraproducente).
-
-Esta poda semántica concentra la distribución de muestreo del modelo en las acciones físicamente coherentes con la causa de la consulta, sin requerir fine-tuning. Su efecto sobre la tasa de respuestas subóptimas no se ha medido de forma aislada.
-
-**Sub-meta semántica (`VlmGoal`).** Los campos opcionales `dx_m`, `dy_m`, `dz_m`, `confidence`, `semantic_label` y `mode` permiten que el VLM, además de la etiqueta de macro-acción, proponga un punto de destino próximo en el marco del cuerpo (adelante, derecha, abajo NED). El sistema solo lo adopta si `confidence >= 0.7` y lo convierte en un waypoint de desvío en coordenadas de mundo (`inject_corner`, §5.10). La macro-acción sigue siendo la decisión de seguridad; la sub-meta solo orienta *hacia dónde*.
-
-Esta arquitectura de lista blanca tiene tres propiedades de diseño que se derivan mutuamente:
-
-**1. Compatibilidad directa con la decodificación restringida.** Un espacio de acción finito y conocido a priori puede representarse como una enumeración JSON (`enum`), lo que hace posible convertir la restricción de salida en una gramática aplicable en tiempo de inferencia. Un espacio continuo de comandos cinemáticos no puede representarse así sin esquemas mucho más complejos.
-
-**2. Comparación limpia entre brazos.** El VLM, la FSM y el brazo reactivo comparten el mismo espacio de macro-acciones y el mismo traductor a comandos `action_to_command()`. La única variable que difiere entre ellos es *quién elige la etiqueta*, no *qué puede elegir ni cómo se ejecuta*. Esto hace posible la comparación experimental de los tres brazos (cap. 10) sin confundir diferencias de política con diferencias de actuación.
-
-**3. Auditabilidad.** Una secuencia de etiquetas de macro-acción es legible por humanos y directamente graféable (cap. 4, viewer). Un log de vectores cinemáticos continuos no tiene esa propiedad sin postprocesamiento.
-
-La lista de macro-acciones es fija en el diseño actual y no extensible dinámicamente: agregar una nueva macro-acción requiere modificar el esquema JSON, el `action_to_command()`, los prompts y la FSM. Este acoplamiento es deliberado — es el mecanismo que impide que el modelo de lenguaje invente acciones fuera del espacio de maniobras seguras.
+La lista de macro-acciones es fija en el diseño actual y no extensible dinámicamente: agregar una nueva macro-acción requiere modificar `action_to_command()`, los schema JSON, los prompts y la FSM. Este acoplamiento es deliberado — impide que el VLM o `scene_to_action` generen maniobras fuera del espacio de acciones seguras del sistema.
 
 ## 8.4 `action_to_command`: la frontera entre lenguaje y cinemática
 
@@ -179,9 +195,16 @@ Estos avisos llegan al VLM en todos los pedidos (táctico, `slam_assess`, `deep_
 
 El constructor admite además, como componentes opcionales, un historial de las últimas decisiones con su resultado medido (variación de distancia al waypoint y de TTC mínimo) y las sub-metas semánticas previas; el pedido táctico del lazo no los incluye, de modo que el modelo razona sobre la escena y el estado actuales sin arrastrar decisiones anteriores.
 
-**Componente 5 — Instrucción de formato de salida.** Reiteración explícita del esquema JSON esperado y de los valores posibles del campo `action`, coherente con el `json_schema` declarado en el parámetro de formato. Esta redundancia entre prompt y schema es intencional: para modelos pequeños, la instrucción textual explícita mejora el `adherence_rate` incluso cuando la decodificación restringida está activa, especialmente en la elección del campo `action` dentro del dominio de la enumeración ([Geng et al., 2025](13-REFERENCIAS.md#ref-geng-2025)).
+**Componente 5 — Instrucción de formato de salida.** Reiteración explícita del esquema JSON esperado (`sectores` + `degradada`), coherente con el `json_schema` declarado en el parámetro de formato. Para modelos pequeños, la instrucción textual explícita mejora el `adherence_rate` incluso cuando la decodificación restringida está activa ([Geng et al., 2025](13-REFERENCIAS.md#ref-geng-2025)).
 
-**Prompts de sistema externalizados.** Los system prompts no están fijos en el código: `SYSTEM_PROMPT_VISION_FILE` y `SYSTEM_PROMPT_TEXT_FILE` (`config/prompts/system_vision.txt`, `system_text.txt`) permiten editarlos sin tocar Python; el archivo admite el placeholder `{safe_margin_ttc_s}`, sustituido al cargar, y si no existe se usa el prompt interno como fallback. Ambos comparten la misma jerarquía de reglas, en orden de prioridad: (1) `MANTENER_RUMBO` solo con trayectoria libre hacia el waypoint; (2) evasión lateral si el sector lateral está despejado; (3) `GANAR_ALTURA` solo con bloqueo total por estructuras sólidas, `PERDER_ALTURA` si el obstáculo es vegetación con espacio debajo, `RETROCEDER` si el dron está pegado al obstáculo o las maniobras previas no avanzaron; (4) `FRENAR` ante peligro crítico en todas las direcciones. La variante con visión añade la regla «imagen frente a sensores» —la imagen es la fuente primaria cuando el prompt indica baja confianza— y la solicitud de sub-meta opcional con offsets de escala real (6–20 m). La regla estricta común prohíbe `MANTENER_RUMBO` si el sector central está bloqueado con TTC menor que `SAFE_MARGIN_TTC_S`, y declara `GANAR_ALTURA` como último recurso: un corredor lateral, aunque estrecho, es preferible a subir.
+**Prompts de sistema externalizados.** Los system prompts no están fijos en el código: `SYSTEM_PROMPT_VISION_FILE` y `SYSTEM_PROMPT_TEXT_FILE` (`config/prompts/system_vision.txt`, `system_text.txt`) permiten editarlos sin tocar Python; si el archivo no existe, se usa el prompt interno como fallback. Ambos instruyen al VLM a **describir la escena**, no a elegir acciones. Las reglas del prompt son reglas de observación, no de política: describir qué superficie predomina en cada sector, si es transitable, con qué certeza. La regla explícita «imagen frente a sensores» —la imagen es la fuente primaria cuando el prompt indica baja confianza— se aplica en la variante con visión. El ejemplo del esquema compacto que cierra el prompt refuerza el formato de salida esperado:
+
+```
+{"sectores": {"frente": {"tipo": "...", "ok": true, "conf": 0.9},
+              "izquierda": {...}, "derecha": {...}}, "degradada": false}
+```
+
+Los prompts de los modos de escaneo profundo tienen su propio system prompt (`SYSTEM_PROMPT_SLAM_ASSESS` para `slam_assess`, `SYSTEM_PROMPT_DEEP_SCAN` para `deep_vlm`); ambos instruyen a describir los sectores con el mismo esquema, y el de `deep_vlm` añade la instrucción de asociar cada descripción a su rumbo de barrido.
 
 **Imagen adjunta.** Los pedidos tácticos y los del escaneo de resolución de atasco adjuntan fotogramas: los tácticos, los del `frame_history` (por defecto los instantes `t` y `t−1`); el escaneo `slam_assess`, el fotograma frontal del ciclo; el barrido `deep_vlm`, un fotograma por rumbo etiquetado con su orientación. Las imágenes se codifican como JPEG base64 redimensionado a 384 px de lado mayor. El registro de auditoría de cada deliberación indica en `vision_enabled` si la consulta usó imagen.
 
@@ -209,6 +232,22 @@ La discrepancia entre las dos últimas filas y el piloto no se ha resuelto con l
 - **Escaneo de resolución de atasco (`slam_assess` / `deep_vlm`).** El dron permanece en hover mientras espera, con un watchdog de `SLM_DEEP_WATCHDOG_MS = 12 000 ms` que garantiza que la falta de respuesta nunca lo deje inmóvil más allá de ese plazo. Al expirar, o si la respuesta no es una acción válida, la capa táctica resuelve con la historia de zonas.
 
 **Caducidad de las respuestas.** El compromiso de una latencia larga es la **frescura**: una respuesta de 10 s se refiere a una escena que, a la velocidad de crucero, quedó varios metros atrás. Por eso `_vlm_intention` caduca (5 s en la reacción por TTC, 10 s en la resolución de atasco) y toda decisión guardada se contrasta con los overrides de trayectoria antes de despacharse (§5.12.2). Para las consultas que llevan imagen y pueden tardar ~10 s, el watchdog del escaneo se fija por encima de esa latencia y por debajo del corte HTTP del cliente (`SLM_HTTP_TIMEOUT_S = 15 s`; `SLM_DEEP_HTTP_TIMEOUT_S = 20 s`), de modo que gane siempre el watchdog. Esto refuerza la elección del modelo de 3B: una respuesta de calidad media entregada rápido vale más en este sistema que una respuesta de calidad alta entregada tarde.
+
+## 8.8 Optimización del schema de salida: nombres de campo compactos
+
+El schema JSON que el VLM genera en cada ciclo se transmite a través de la red HTTP local y es procesado por el parser tolerante antes de que la navegación pueda actuar. A 15 tokens/s de velocidad de generación, cada token adicional en la respuesta cuesta ~67 ms. El schema original usaba nombres de campo verbosos (`relativo_deg`, `transitable`, `confianza`, `imagen_degradada`, `rationale`) que producían respuestas de ~80–95 tokens; el schema compacto (`deg`, `ok`, `conf`, `degradada`, `r`) reduce eso a ~40–55 tokens, una diferencia de ~2.5–3.7 s por respuesta.
+
+| Campo largo | Campo compacto | Ahorro típico |
+|---|---|---|
+| `relativo_deg` | `deg` | 2 tokens |
+| `transitable` | `ok` | 2 tokens |
+| `confianza` | `conf` | 2 tokens |
+| `imagen_degradada` / `imagen_degradada_global` | `degradada` | 3–4 tokens |
+| `rationale` | `r` (opcional, no en `required`) | 1 token + el campo solo se genera si el modelo lo incluye |
+
+El ahorro de no requerir `r` es no lineal: si el modelo lo omite por completo, se ahorran el nombre del campo más la cadena del razonamiento (típicamente 10–30 tokens adicionales). En corridas con imagen, el campo de razonamiento largo es el principal contribuyente a la latencia.
+
+Los parsers (`parse_scene_description`, `parse_panorama_description`) aceptan ambos vocabularios: primero buscan el nombre compacto y, si no lo encuentran, caen al nombre largo. La representación interna normalizada usa siempre nombres largos, de modo que ningún consumidor downstream (`scene_to_action`, `navigate_node`, logging) requirió cambios.
 
 ## 8.7 Nota: LoRA como alternativa explorada y no adoptada
 

@@ -807,6 +807,18 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         stuck = int(state.get("evasion_stuck_cycles", 0))
         field: ObstacleField = state.get("obstacle_field") or empty_field()
 
+        # --- z path blocked by ceiling: descend to navigable altitude ---
+        # El WP esta en zona de techo detectado: PERDER_ALTURA como accion de
+        # politica (z dimension conjunta, no solo setpoint independiente).
+        # Condicion simetrica a center_blocked -> evasive: obstaculovertical
+        # detectado -> desplazarse en eje z igual que obstaculo horizontal
+        # -> desplazarse en eje xy.
+        if guidance.get("z_path_blocked") and float(guidance.get("dz", 0.0)) > 1.0:
+            return _dispatch_action(
+                state, "PERDER_ALTURA", guidance, telem,
+                "Camino vertical bloqueado por techo: descender a altitud libre.", "reactive",
+            )
+
         # --- Forced vertical escape (futile scans / frozen position) ---
         if _vertical_escape_due(state):
             return _vertical_escape(state, guidance, telem, alt_m)

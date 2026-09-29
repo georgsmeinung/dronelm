@@ -1,3 +1,44 @@
+# 2026-09-29 (r) - Informe: actualizar cap. 5 y cap. 8 por redesign VLM y nav 3D
+
+- Cap. 5 §5.3.2: nueva fila 4b (z_path_blocked + dz>1m → PERDER_ALTURA reactivo)
+- Cap. 5 §5.2: campo scene_description en DroneState
+- Cap. 5 §5.10.2: VLM retorna descripcion de escena; scene_to_action convierte a macro-accion
+- Cap. 5 §5.12 slam_assess: aclarar que el VLM describe escena y scene_to_action/panorama_to_action decide
+- Cap. 5 §5.15.3: CEILING_SAFE_GAP_M=3m, z_path_blocked, despacho reactivo de PERDER_ALTURA
+- Cap. 8: titulo → "percepcion semantica y decisiones de implementacion"
+- Cap. 8 §8.2.1: nuevo schema de escena (sectores/frente/izquierda/derecha) en lugar de macro_action
+- Cap. 8 §8.3: restructurado como "percepcion semantica, no oraculo de acciones"; enum de tipos;
+  scene_to_action como capa de decision; macro-acciones del sistema
+- Cap. 8 §8.5: prompts actualiados a pedir descripcion de escena
+- Cap. 8 §8.8 (nuevo): schema compacto (deg/ok/conf/degradada), ahorro ~40-55 tokens/respuesta
+
+# 2026-09-29 (q) - Quitar codigo muerto
+
+- `tests/test_dynamic_schema.py` eliminado (testaba _schema_for_reason/_get_reason_key, removidos en n)
+- `deliberative.py`: alias RESPONSE_JSON_SCHEMA = RESPONSE_JSON_SCHEMA_SCENE eliminado
+  (unica referencia era el test eliminado)
+- PROMPT_ACTIONS conservado (aun usado en path de fallback backward compat en deliberative.py y deep_scan.py)
+- 249 tests pasan.
+
+# 2026-09-29 (p) - Navegacion 3D conjunta: z como dimension de politica
+
+El brazo reactivo trataba z como setpoint independiente (vz del tracker inyectado
+en MANTENER_RUMBO) sin que la decision de macro-accion considerara obstaculos
+verticales. Consecuencia: con WP a z=-10m y techo de autopista a z=-10.88m,
+el drone subia contra la losa sin nunca elegir PERDER_ALTURA.
+
+**`waypoint_tracker.py`**:
+- CEILING_SAFE_GAP_M (default 3m): cuando ceiling_z detectado y el WP cae
+  dentro de esa banda del techo, la altitud objetivo baja a
+  ceiling_z + CEILING_SAFE_GAP_M en lugar de ceiling_z + CEILING_MARGIN_M (0.8m).
+- Exporta z_path_blocked y dz en el guidance dict.
+
+**`graph.py` (navigate_node)**:
+- Nuevo check: si z_path_blocked y dz > 1m, despacha PERDER_ALTURA como
+  accion de politica reactiva. Simetrico a center_blocked -> evasive_node:
+  obstaculo vertical detectado -> desplazarse en eje z igual que obstaculo
+  horizontal -> desplazarse en eje xy.
+
 # 2026-09-29 (o) - Schema VLM compacto: deg/ok/conf/degradada
 
 Nombres de campos cortos en los schemas JSON de salida del VLM para reducir tokens

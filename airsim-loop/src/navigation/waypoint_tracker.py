@@ -93,6 +93,13 @@ CEILING_MIN_ALT_M = float(os.getenv("CEILING_MIN_ALT_M", "3.0"))
 # (con 1.0 quedaba a 4.83 m y el dron oscilaba por debajo, perdiendo el manejo de atasco).
 CEILING_MARGIN_M = float(os.getenv("CEILING_MARGIN_M", "0.8"))
 CEILING_RELEASE_M = float(os.getenv("CEILING_RELEASE_M", "15.0"))
+# Margen de navegacion bajo techo (2026-0929): cuando el WP cae dentro de
+# CEILING_SAFE_GAP_M del techo detectado, la altitud objetivo se baja a
+# ceiling_z + CEILING_SAFE_GAP_M en lugar de ceiling_z + CEILING_MARGIN_M.
+# Ademas se exporta z_path_blocked=True en el guidance para que navigate_node
+# pueda despachar PERDER_ALTURA como accion de politica (z como dimension
+# conjunta de navegacion, no solo correccion de setpoint independiente).
+CEILING_SAFE_GAP_M = float(os.getenv("CEILING_SAFE_GAP_M", "3.0"))
 # Cadena de esquinas (2026-0929): un CORNER_WP saca al dron del punto de
 # contacto, pero el WP siguiente suele seguir apuntando contra el mismo
 # edificio (seed_99 00:19: esquina en (102,-126) y de ahi recta a WP_3, que
@@ -529,9 +536,16 @@ class WaypointTracker:
         wz = float(wp.get("z", 0.0))
 
         self._update_ceiling(x, y, z)
+        wz_original = wz
+        z_path_blocked = False
         if self.ceiling_z is not None:
             # NED: mas negativo = mas alto. Nunca pedir subir hasta el techo.
-            wz = max(wz, self.ceiling_z + CEILING_MARGIN_M)
+            # CEILING_SAFE_GAP_M: si el WP cae dentro de esta banda del techo,
+            # bajar la altitud objetivo a ceiling_z + CEILING_SAFE_GAP_M para
+            # navegar con margen libre en lugar de rozar la losa.
+            wz = max(wz, self.ceiling_z + CEILING_SAFE_GAP_M)
+            # z_path_blocked: el WP requeria volar dentro de la zona del techo.
+            z_path_blocked = wz_original < self.ceiling_z + CEILING_SAFE_GAP_M
 
         dx = wx - x
         dy = wy - y
@@ -731,4 +745,6 @@ class WaypointTracker:
             "ceiling_z": self.ceiling_z,
             "bearing_err_deg": float(delta_yaw_deg),
             "is_completed": False,
+            "z_path_blocked": z_path_blocked,
+            "dz": float(dz),
         }
