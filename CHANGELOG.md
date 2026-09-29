@@ -1,3 +1,61 @@
+# 2026-09-29 (t) - VLM: ancho_deg en sector frontal para offset de esquina geometrico
+
+El offset de la esquina inyectada era fijo (CORNER_OFFSET_M=12m por defecto, 30m en
+produccion). Si el obstaculo frontal es un edificio ancho, el offset puede ser
+insuficiente y el drone da un giro corto que termina de frente al mismo muro.
+
+**`src/agents/deep_scan.py`**:
+- Nuevo schema `_FRENTE_SECTOR_SCHEMA`: igual que `_SINGLE_SECTOR_SCHEMA` pero con campo
+  opcional `ancho_deg` (integer, 0-180). Solo aplica al sector `frente`; laterales conservan
+  el schema original (sin ancho_deg).
+- `RESPONSE_JSON_SCHEMA_SCENE`: usa `_FRENTE_SECTOR_SCHEMA` para `frente`.
+- `SYSTEM_PROMPT_SLAM_ASSESS`: instruccion agregada para estimar `ancho_deg` cuando el frente
+  esta bloqueado (ok=false). Ejemplos en el prompt: edificio ancho ~120, poste ~10, pared
+  continua ~180.
+- `scene_to_action`: cuando `frente.ancho_deg` esta presente, calcula
+  `offset_m = OBSTACLE_DIST_EST_M * tan(ancho_deg/2)` (OBSTACLE_DIST_EST_M=20m via env,
+  configurable). Clampeado a `[CORNER_OFFSET_M, 60m]`. Sin `ancho_deg` -> fallback a
+  CORNER_OFFSET_M. Geometria: obstaculo 90deg a 20m -> 20m; 120deg -> 34.6m; 10deg -> piso 12m.
+
+**`tests/test_deep_scan.py`**: 7 tests nuevos.
+- 3 tests de schema JSON: acepta ancho_deg en frente, acepta ausencia de ancho_deg,
+  rechaza ancho_deg en sectores laterales (additionalProperties=False).
+- 4 tests de scene_to_action: offset geometrico mayor al default con ancho_deg=90,
+  fallback correcto sin ancho_deg, piso para obstaculo estrecho (10deg), techo para
+  obstaculo muy ancho (170deg).
+- 259 tests pasan.
+
+# 2026-09-29 (s) - Filtro de avance en inyeccion de esquinas (progreso hacia WP real)
+
+Las esquinas inyectadas carecian de criterio de avance: cualquier posicion en el radio
+de desvio era valida, incluso si alejaba al drone del WP real. En seed_99 (WP_3), 12/14
+esquinas fueron regresivas (86%): la peor, a 63m del WP mientras el drone estaba a 12m,
+genero un desvio de 64m antes de retomar el rumbo. Consecuencia: ~1770 ciclos desperdiciados
+(~39% de la corrida).
+
+**`src/navigation/waypoint_tracker.py`**:
+- `CORNER_PROGRESS_TOLERANCE` (env, default 1.0): relacion maxima permitida entre
+  dist(esquina, WP_real) y dist(drone, WP_real). Valor 1.0 = la esquina debe estar
+  estrictamente mas cerca del WP real que el drone.
+- `inject_corner_waypoint`: bloque nuevo despues de la validacion de contacto: busca el
+  primer WP no-temporal en `waypoints[current_index:]`, compara distancias y rechaza si
+  `d_corner >= d_drone * CORNER_PROGRESS_TOLERANCE`. Saltea el filtro si `_last_pos` es None.
+- Con CORNER_PROGRESS_TOLERANCE=1.0, seed_99 hubiera rechazado 12/14 esquinas regresivas.
+
+**`tests/test_corner_commit_and_validation.py`**:
+- `test_corner_through_a_contact_is_mirrored` renombrado a
+  `test_corner_mirrored_into_regressive_zone_is_rejected`: el reflejo del test original
+  cae a 116m del WP (> 100m de drone); con el filtro es rechazado correctamente.
+- `test_pending_corner_is_replaceable_after_commit_window`: segunda inyeccion cambiada a
+  (80,5) (dist 20.6m < 100m del drone).
+- 3 tests nuevos: acepta esquina mas cercana al WP, rechaza esquina mas lejana, omite filtro
+  sin _last_pos.
+
+**`tests/test_corner_chain.py`**:
+- `test_new_corner_replaces_pending_corners_instead_of_stacking`: segunda inyeccion cambiada
+  a (70,-10) (dist 31.6m < 100m) para pasar el filtro.
+- 252 tests pasan.
+
 # 2026-09-29 (r) - Informe: actualizar cap. 5 y cap. 8 por redesign VLM y nav 3D
 
 - Cap. 5 §5.3.2: nueva fila 4b (z_path_blocked + dz>1m → PERDER_ALTURA reactivo)
