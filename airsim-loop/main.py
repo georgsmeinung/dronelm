@@ -276,6 +276,24 @@ def main() -> None:
         else:
             print(f"[FlightVideoRecorder] Grabando video de esta corrida en {video_path}.")
 
+    # FollowCam (camara externa definida en airsim-settings/settings.json): un
+    # .follow.webm sincronizado con el frontal. Solo auditoria (ver src/logging/follow_cam.py).
+    follow_recorder = None
+    if video_recorder is not None and os.getenv("FLIGHT_RECORD_FOLLOW_CAM", "true").lower() == "true":
+        try:
+            from src.logging import FollowCamRecorder
+            from src.logging.follow_cam import annotate_follow_frame, follow_cam_config
+
+            _follow_name = follow_cam_config()
+            if _follow_name and airsim_client.enable_follow_cam(_follow_name):
+                follow_recorder = FollowCamRecorder(str(video_path), fps=DEFAULT_LOOP_HZ)
+        except Exception as exc:
+            print(f"[FollowCam] deshabilitada: {exc}")
+            follow_recorder = None
+
+    from src.navigation.freeze_watchdog import FreezeWatchdog
+
+    freeze_wd = FreezeWatchdog()
     cycle_count = 0
     mission_start_time = time.time()
     mission_termination_reason = None
@@ -329,6 +347,12 @@ def main() -> None:
             yaw_now = float(orient_now.get("yaw", 0.0)) if isinstance(orient_now, dict) else 0.0
             latency_telem_ms = (time.time() - t_telem) * 1000.0
 
+            # Vigilante de congelamiento fisico (dron incrustado en la malla): abortar con motivo claro.
+            drone_state["_freeze_cycles"] = freeze_wd.update(telem_now or {})
+            if freeze_wd.frozen:
+                print(f"\n[Mision] Estado fisico CONGELADO {freeze_wd.count} ciclos: dron incrustado en la malla. Abortando.")
+                mission_termination_reason = "physics_locked"
+                break
             target_wp = waypoint_tracker.update(pos_now)
             guidance = waypoint_tracker.compute_guidance(pos_now, yaw_now)
             # F2.5: progreso real (no ciclos-en-ruta-evasiva) para decidir el escape de deadlock.
@@ -429,6 +453,16 @@ def main() -> None:
                     vp_frame = viewport_capture.capture() if viewport_capture is not None else None
                     video_recorder.write_frame(annotated_frame, viewport_frame=vp_frame)
 
+            if follow_recorder is not None:
+                try:
+                    _ff = airsim_client.last_follow_frame
+                    follow_recorder.write(
+                        annotate_follow_frame(_ff, final_state, cycle_count, time.time() - mission_start_time)
+                        if _ff is not None else None
+                    )
+                except Exception as exc:
+                    print(f"[FollowCam] error grabando frame (c{cycle_count}): {exc}")
+
             if waypoint_tracker.is_completed and waypoints_list:
                 print("\n[Misión] ¡Misión completada exitosamente! Iniciando secuencia de aterrizaje autónomo...")
                 mission_termination_reason = "completed"
@@ -466,6 +500,7 @@ def main() -> None:
             viewport_capture.close()
         if video_recorder is not None:
             n_frames = video_recorder.close()
+            n_follow = follow_recorder.close() if follow_recorder is not None else 0
             print(f"[FlightVideoRecorder] Video cerrado ({n_frames} frames a {DEFAULT_LOOP_HZ:.1f} fps).")
 
             if flight_logger is not None:
@@ -484,6 +519,7 @@ def main() -> None:
                         video_filename=video_recorder.out_path.name,
                         csv_path=str(flight_logger.csv_path),
                         jsonl_path=str(flight_logger.out_path),
+                        follow_video_filename=(follow_recorder.out_path.name if n_follow > 0 else None),
                     )
                     print(f"[FlightViewer] Herramienta de auditoria en {viewer_path} (abrir con doble clic).")
                 except Exception as exc:

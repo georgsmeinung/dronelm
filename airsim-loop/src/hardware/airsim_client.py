@@ -33,7 +33,19 @@ import numpy as np
 
 DEFAULT_IP = os.getenv("AIRSIM_IP", "127.0.0.1")
 DEFAULT_PORT = int(os.getenv("AIRSIM_PORT", "41451"))
-DEFAULT_VEHICLE = os.getenv("AIRSIM_VEHICLE_NAME", "Drone1")
+def _required_env(name: str) -> str:
+    """Config obligatoria de config/.env (unica fuente): sin valor por defecto en el codigo.
+
+    Un nombre de vehiculo distinto al de settings.json tumba Unreal (el plugin desreferencia
+    nullptr), asi que no se admite ninguno "de reserva" que pueda divergir en silencio.
+    """
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"{name} no esta definido: debe venir de config/.env (unica fuente de configuracion).")
+    return value
+
+
+DEFAULT_VEHICLE = _required_env("AIRSIM_VEHICLE_NAME")
 DEFAULT_CAMERA = os.getenv("AIRSIM_CAMERA_NAME", "0")
 DEFAULT_FRAME_WIDTH = int(os.getenv("DEFAULT_FRAME_WIDTH", "1080"))
 DEFAULT_FRAME_HEIGHT = int(os.getenv("DEFAULT_FRAME_HEIGHT", "720"))
@@ -73,6 +85,10 @@ CMD_YAW_RATE_TOLERANCE_DPS = float(os.getenv("CMD_YAW_RATE_TOLERANCE_DPS", "1.0"
 CMD_REISSUE_MARGIN_FRACTION = float(os.getenv("CMD_REISSUE_MARGIN_FRACTION", "0.3"))
 
 
+class VehicleNotFoundError(RuntimeError):
+    """AIRSIM_VEHICLE_NAME no existe en la simulacion (config invalida)."""
+
+
 @dataclass
 class AirSimClient:
     """Cliente ligero para AirSim (modo Drone por defecto).
@@ -109,10 +125,40 @@ class AirSimClient:
         default=None, init=False, repr=False
     )
     _last_cmd_sent_at: float = field(default=0.0, init=False, repr=False)
+    # Camara externa "que sigue al dron" (2026-0929), SOLO para auditoria/video:
+    # se pide en la misma llamada simGetImages del ciclo, se guarda aca y nunca entra al
+    # DroneState ni al pipeline de percepcion/VLM. None = desactivada (no cuesta nada).
+    _follow_cam: Optional[str] = field(default=None, init=False, repr=False)
+    _follow_fail_streak: int = field(default=0, init=False, repr=False)
+    last_follow_frame: Optional[np.ndarray] = field(default=None, init=False, repr=False)
 
     # ------------------------------------------------------------------ #
     # Conexión                                                           #
     # ------------------------------------------------------------------ #
+    def _verify_vehicle(self) -> None:
+        """Falla con un mensaje claro si `vehicle_name` no existe en la simulacion.
+
+        El plugin AirSim de CitySim NO valida el nombre: con un vehiculo inexistente
+        `getVehicleSimApi()` devuelve nullptr, lo desreferencia y Unreal Engine muere con
+        EXCEPTION_ACCESS_VIOLATION (crashes del 2026-0929: config/.env decia "SimpleFlight"
+        y settings.json definia "Drone1"). listVehicles() es una consulta segura.
+        """
+        lister = getattr(self._client, "listVehicles", None)
+        if not callable(lister):
+            return
+        try:
+            names = list(lister())
+        except Exception as exc:  # pragma: no cover - depende del servidor
+            print(f"[AirSimClient] No se pudo listar vehiculos ({exc}); no se verifica el nombre.")
+            return
+        if names and self.vehicle_name not in names:
+            raise VehicleNotFoundError(
+                f"AIRSIM_VEHICLE_NAME='{self.vehicle_name}' no existe en la simulacion. "
+                f"Vehiculos disponibles: {names}. Alinea config/.env con airsim-settings/settings.json "
+                f"(Vehicles.<nombre>) y vuelve a intentar; pedir imagenes a un vehiculo inexistente "
+                f"tumba Unreal Engine."
+            )
+
     def connect(self) -> bool:
         """Inicializa el cliente nativo de AirSim. Devuelve True si conecta."""
         if airsim is None:
@@ -126,6 +172,7 @@ class AirSimClient:
                 ip=self.ip, port=self.port, timeout_value=int(self.timeout_seconds)
             )
             self._client.confirmConnection()
+            self._verify_vehicle()
             try:
                 self._client.enableApiControl(True, vehicle_name=self.vehicle_name)
                 self._client.armDisarm(True, vehicle_name=self.vehicle_name)
@@ -133,12 +180,93 @@ class AirSimClient:
             except Exception as exc:  # pragma: no cover - depende del entorno
                 print(f"[AirSimClient] No se pudo armar/despegar ({exc}).")
             self._connected = True
+            self.ensure_airborne()
             return True
+        except VehicleNotFoundError:
+            self._client = None
+            self._connected = False
+            raise  # configuracion invalida: no degradar a datos simulados
         except Exception as exc:
             print(f"[AirSimClient] No se pudo conectar a {self.ip}:{self.port} ({exc}).")
             self._client = None
             self._connected = False
             return False
+
+    def is_airborne(self) -> bool:
+        """True si AirSim reporta al dron volando (landed_state == Flying) o si no lo informa.
+
+        LandedState de AirSim: 0 = Landed, 1 = Flying. Si el servidor no expone el campo se
+        devuelve True (no bloquear por un dato desconocido).
+        """
+        state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
+        ls = getattr(state, "landed_state", None)
+        return True if ls is None else int(ls) == 1
+
+    def ensure_airborne(self, attempts: int = 3, settle_s: float = 1.0) -> bool:
+        """Comprueba que el dron esta volando y, si no, rearma y vuelve a despegar.
+
+        Motivo (citysim_pilot seed 99 02:23, 2026-0929): tras `reset()` el dron quedo desarmado y
+        cayo desde el punto de partida al asfalto; el runner corrio 27 s en `Landed` con los comandos
+        ignorados (probable `reset` diferido de Unreal bajo carga, primera sesion tras reiniciar).
+        `reset()` desarma y devuelve al punto de partida, y ese efecto puede llegar despues del
+        armado/despegue. Devuelve True si al final esta volando.
+        """
+        if not self._connected or self._client is None:
+            return True
+        for i in range(attempts + 1):
+            try:
+                if self.is_airborne():
+                    return True
+            except Exception as exc:
+                print(f"[AirSimClient] No se pudo leer el estado de vuelo ({exc}).")
+            if i == attempts:
+                break
+            print(f"[AirSimClient] El dron NO esta volando; rearmando y despegando "
+                  f"(intento {i + 1}/{attempts})...")
+            try:
+                self._client.enableApiControl(True, vehicle_name=self.vehicle_name)
+                self._client.armDisarm(True, vehicle_name=self.vehicle_name)
+                self._client.takeoffAsync(vehicle_name=self.vehicle_name).join()
+            except Exception as exc:
+                print(f"[AirSimClient] Fallo el rearmado ({exc}).")
+            time.sleep(settle_s)
+            self._last_cmd = None  # forzar reemision del comando de velocidad
+        return False
+
+    def enable_follow_cam(self, camera_name: str) -> bool:
+        """Activa la captura de la camara externa `camera_name` (ej. "FollowCam").
+
+        Valida con un simGetImages de prueba de esa sola camara. NUNCA usar
+        simGetCameraInfo para esto: en el plugin AirSim de CitySim,
+        WorldSimApi::getCameraInfo desreferencia sin comprobar el nullptr que
+        PawnSimApi::getCamera devuelve para un nombre inexistente y UE se cae con
+        EXCEPTION_ACCESS_VIOLATION (crash del 2026-0929). En cambio simGetImages usa
+        `cameras_->at(nombre)` (std::map::at), que lanza y llega como error RPC.
+        Devuelve True si quedo activa.
+        """
+        if not camera_name or not self._connected or self._client is None:
+            return False
+        try:
+            probe = self._client.simGetImages(
+                [airsim.ImageRequest(camera_name, airsim.ImageType.Scene, False, False)],
+                vehicle_name=self.vehicle_name,
+            )
+        except Exception as exc:
+            print(f"[AirSimClient] FollowCam '{camera_name}' no disponible ({exc}); video externo desactivado. "
+                  f"(Si la agregaste a settings.json, reinicia UE: se lee al iniciar el Play.)")
+            return False
+        r0 = probe[0] if probe else None
+        if r0 is None or r0.width <= 0 or r0.height <= 0:
+            print(f"[AirSimClient] FollowCam '{camera_name}' no devuelve imagen; video externo desactivado.")
+            return False
+        self._follow_cam = camera_name
+        self._follow_fail_streak = 0
+        print(f"[AirSimClient] FollowCam '{camera_name}' activa (solo para auditoria).")
+        return True
+
+    def disable_follow_cam(self) -> None:
+        self._follow_cam = None
+        self.last_follow_frame = None
 
     def reset(self) -> bool:
         """Reinicia el vehiculo a su pose original y limpia estado fisico
@@ -165,6 +293,7 @@ class AirSimClient:
             # El estado fisico se reinicio; el ultimo comando "recordado" ya
             # no describe nada vigente, forzar reemision inmediata.
             self._last_cmd = None
+            self.ensure_airborne()  # el reset puede completarse tarde y desarmar (ver ensure_airborne)
             return True
         except Exception as exc:
             print(f"[AirSimClient] Error al reiniciar el vehículo: {exc}")
@@ -318,6 +447,13 @@ class AirSimClient:
                     )
                 )
 
+            # FollowCam: mismo simGetImages (un solo round-trip). Solo en la captura
+            # normal del ciclo, no en la de profundidad de metricas.
+            follow_idx = None
+            if self._follow_cam and not return_depth:
+                follow_idx = len(requests)
+                requests.append(airsim.ImageRequest(self._follow_cam, airsim.ImageType.Scene, False, False))
+
             t_before_images = time.time()
             # Log previo: si el proceso muere aquí sin imprimir el timing posterior,
             # es señal inequívoca de que simGetImages bloqueó el hilo.
@@ -382,6 +518,19 @@ class AirSimClient:
                         except Exception:
                             depth = _resize_depth(depth, self.frame_width, self.frame_height)
 
+            if follow_idx is not None:
+                fr = responses[follow_idx] if len(responses) > follow_idx else None
+                if fr is not None and fr.width > 0 and fr.height > 0:
+                    fimg = np.frombuffer(fr.image_data_uint8, dtype=np.uint8).reshape(fr.height, fr.width, 3)
+                    self.last_follow_frame = np.ascontiguousarray(fimg[:, :, ::-1])  # RGB -> BGR
+                    self._follow_fail_streak = 0
+                else:
+                    self.last_follow_frame = None
+                    self._follow_fail_streak += 1
+                    if self._follow_fail_streak >= 5:
+                        print("[AirSimClient] FollowCam sin imagen 5 ciclos seguidos; se desactiva.")
+                        self.disable_follow_cam()
+
             t_before_state = time.time()
             state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
             t_after_state = time.time()
@@ -404,6 +553,11 @@ class AirSimClient:
                 return image, depth, telemetry
             return image, telemetry
         except Exception as exc:
+            if self._follow_cam:
+                # Puede haber sido la camara externa: reintentar sin ella antes de degradar el ciclo.
+                print(f"[AirSimClient] Error capturando con FollowCam ({exc}); reintento sin ella.")
+                self.disable_follow_cam()
+                return self.capture(return_depth)
             print(f"[AirSimClient] Error capturando datos: {exc}")
             return self._unavailable_capture(return_depth)
 

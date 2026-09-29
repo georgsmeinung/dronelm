@@ -47,6 +47,11 @@ class DeliberationService:
         self._in_queue: "queue.Queue[DeliberationRequest]" = queue.Queue(maxsize=1)
         self._result_lock = threading.Lock()
         self._latest_result: Optional[DeliberationResult] = None
+        # Resultados recientes por id (2026-0929): un resultado no debe perderse
+        # porque otro consumidor mando un pedido despues (citysim_pilot seed 99
+        # 01:21: el resultado del escaneo profundo se piso con el de un pedido
+        # tactico y el escaneo espero para siempre).
+        self._results: "Dict[int, DeliberationResult]" = {}
         self._pending_request: Optional[DeliberationRequest] = None
         self._next_id = 0
         self._stop_event = threading.Event()
@@ -70,6 +75,9 @@ class DeliberationService:
             )
             with self._result_lock:
                 self._latest_result = result
+                self._results[result.request_id] = result
+                while len(self._results) > 16:
+                    self._results.pop(next(iter(self._results)))
                 if self._pending_request is not None and self._pending_request.request_id == req.request_id:
                     self._pending_request = None
 
@@ -99,6 +107,11 @@ class DeliberationService:
             pending = self._pending_request
         age_ms = (time.time() - pending.submitted_at) * 1000.0 if pending else 0.0
         return result, age_ms, pending is not None
+
+    def get_result(self, request_id: int) -> Optional[DeliberationResult]:
+        """Resultado de un pedido concreto (o None si no termino o ya se descarto)."""
+        with self._result_lock:
+            return self._results.get(request_id)
 
     def is_watchdog_expired(self) -> bool:
         _, age_ms, pending = self.poll()

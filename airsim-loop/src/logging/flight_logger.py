@@ -86,6 +86,9 @@ class FlightLogger:
     def __init__(self, out_path: str, scenario: str = "default", seed: int = 0, arm: str = "slm",
                  record_state: bool = True) -> None:
         self.record_state = record_state
+        # Campos extra del summary.json que fija quien conoce el motivo de termino (runner/main):
+        # termination_reason, freeze_recoveries, ... Se mezclan en close() ANTES de escribir el archivo.
+        self.extra_summary: Dict[str, Any] = {}
         self.out_path = Path(out_path)
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         self.scenario = scenario
@@ -499,6 +502,7 @@ class FlightLogger:
                 if deep_vlm_events else None
             ),
         }
+        summary.update(self.extra_summary)
         summary_path = self.out_path.with_name(self.out_path.stem + ".summary.json")
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, default=str)

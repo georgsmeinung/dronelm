@@ -19,7 +19,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / "config" / ".env")
 
 import cosysairsim as airsim  # type: ignore
 
-VEHICLE = os.getenv("AIRSIM_VEHICLE_NAME", "SimpleFlight")
+VEHICLE = os.environ["AIRSIM_VEHICLE_NAME"]
 IP      = os.getenv("AIRSIM_IP", "127.0.0.1")
 PORT    = int(os.getenv("AIRSIM_PORT", "41451"))
 

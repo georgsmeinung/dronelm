@@ -46,7 +46,7 @@ LOOP_HZ    = float(os.getenv("LOOP_HZ", "5.0"))
 FRAME_W    = int(os.getenv("DEFAULT_FRAME_WIDTH", "1080"))
 FRAME_H    = int(os.getenv("DEFAULT_FRAME_HEIGHT", "720"))
 CAMERA_ID  = int(os.getenv("AIRSIM_CAMERA_NAME", "0"))
-VEHICLE    = os.getenv("AIRSIM_VEHICLE_NAME", "SimpleFlight")
+VEHICLE    = os.environ["AIRSIM_VEHICLE_NAME"]
 AIRSIM_IP  = os.getenv("AIRSIM_IP", "127.0.0.1")
 AIRSIM_PORT = int(os.getenv("AIRSIM_PORT", "41451"))
 

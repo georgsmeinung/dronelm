@@ -95,7 +95,8 @@ CEILING_RELEASE_M = float(os.getenv("CEILING_RELEASE_M", "15.0"))
 # CORNER_CHAIN_MAX esquinas encadenadas por WP objetivo.
 CORNER_CHAIN_ENABLED = os.getenv("CORNER_CHAIN_ENABLED", "true").lower() == "true"
 CORNER_CHAIN_CLEARANCE_M = float(os.getenv("CORNER_CHAIN_CLEARANCE_M", "10.0"))
-CORNER_CHAIN_STEP_M = float(os.getenv("CORNER_CHAIN_STEP_M", os.getenv("CORNER_OFFSET_M", "12.0")))
+# Paso propio (NO hereda CORNER_OFFSET_M: con 30 m cada eslabon lanzaba al dron a otro cuadrante).
+CORNER_CHAIN_STEP_M = float(os.getenv("CORNER_CHAIN_STEP_M", "12.0"))
 CORNER_CHAIN_MAX = int(os.getenv("CORNER_CHAIN_MAX", "4"))
 CONTACT_MERGE_M = float(os.getenv("CONTACT_MERGE_M", "3.0"))
 CHAIN_MIN_CORNER_GAP_M = float(os.getenv("CORNER_CHAIN_MIN_GAP_M", "6.0"))
@@ -372,6 +373,17 @@ class WaypointTracker:
         }
         if self._last_pos is not None:
             corner_wp["origin_x"], corner_wp["origin_y"] = self._last_pos
+        # Reemplazar, no apilar (2026-0929): una esquina nueva anula las
+        # esquinas temporales AUN NO alcanzadas (indice >= current_index). Antes
+        # se acumulaban delante del WP real (hasta 15 en citysim_pilot seed 99)
+        # y, al alcanzar la ultima, el dron desandaba todos los desvios viejos.
+        # Las esquinas ya alcanzadas (indice < current_index) no se tocan.
+        stale = [i for i in range(self.current_index, len(self.waypoints))
+                 if self.waypoints[i].get("is_temporary")]
+        for i in reversed(stale):
+            del self.waypoints[i]
+        if stale:
+            print(f"[Manhattan] {len(stale)} esquina(s) pendiente(s) reemplazada(s) por {label}.")
         self.waypoints.insert(self.current_index, corner_wp)
         print(f"[Manhattan] Sub-waypoint de esquina inyectado: {label} (X: {corner_wp['x']}, Y: {corner_wp['y']}, Z: {corner_wp['z']})")
         return True

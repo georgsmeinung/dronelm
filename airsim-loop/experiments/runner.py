@@ -15,7 +15,9 @@ esta declarado, se usa el primer waypoint como pose de partida.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import json
+import math
 import os
 import random
 import sys
@@ -29,6 +31,50 @@ from pathlib import Path
 # deterministas (fsm/reactive) producian trayectorias practicamente
 # identicas, y Mann-Whitney U no tenia con que comparar entre semillas.
 SEED_JITTER_XY_M = 1.5
+# Espera maxima (s) al cierre ordenado de una corrida tras Ctrl+C.
+CLOSE_WAIT_S = float(os.getenv("RUNNER_CLOSE_WAIT_S", "180"))
+# Congelamiento fisico (dron incrustado en la malla): "abort" (default, integridad del experimento) o
+# "teleport" (vuelve a la ultima pose libre anterior al bloqueo, registra el contacto y sigue; queda
+# marcado en el log como evento freeze_recovery y en el summary como freeze_recoveries).
+FREEZE_RECOVERY = os.getenv("FREEZE_RECOVERY", "abort").lower()
+FREEZE_MAX_RECOVERIES = int(os.getenv("FREEZE_MAX_RECOVERIES", "2"))
+FREEZE_BACKOFF_CYCLES = int(os.getenv("FREEZE_BACKOFF_CYCLES", "30"))
+# Ciclos seguidos en `Landed` que disparan el rearmado (5 Hz -> ~3 s).
+LANDED_STREAK_MAX = int(os.getenv("LANDED_STREAK_MAX", "15"))
+
+
+class _Tee:
+    """Escribe en el stream original y en un archivo (consola de la corrida)."""
+
+    def __init__(self, stream, fh):
+        self._stream, self._fh = stream, fh
+
+    def write(self, data):
+        self._stream.write(data)
+        try:
+            self._fh.write(data)
+            self._fh.flush()
+        except Exception:
+            pass
+        return len(data)
+
+    def flush(self):
+        self._stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def _tee_console(path):
+    """Duplica stdout/stderr a `path`; devuelve la funcion que restaura los streams."""
+    fh = open(path, "w", encoding="utf-8", errors="replace")
+    old_out, old_err = sys.stdout, sys.stderr
+    sys.stdout, sys.stderr = _Tee(old_out, fh), _Tee(old_err, fh)
+
+    def _restore():
+        sys.stdout, sys.stderr = old_out, old_err
+        fh.close()
+    return _restore
 SEED_JITTER_YAW_DEG = 10.0
 
 
@@ -57,6 +103,7 @@ def run_one(
     deadlock_strategy: str = "slam_assess",  # S4 (PLAN-SLAM): slam_assess es el default desde 2026-0910
     record_video: bool = True,
     record_viewport: bool = False,
+    record_follow: bool = True,
 ) -> dict:
     os.environ["AGENT_ARM"] = arm
     os.environ["AIRSIM_SEED"] = str(seed)
@@ -71,6 +118,7 @@ def run_one(
     # combinacion (arm, seed, escenario) por proceso; ver el bucle en main()
     # mas abajo, que lanza un subproceso por corrida.
     from src.agents.graph import compile_workflow
+    from src.navigation.freeze_watchdog import FreezeWatchdog, pick_recovery_pose
     from src.hardware import AirSimClient
     from src.logging import FlightLogger
     from src.navigation import WaypointTracker
@@ -86,6 +134,10 @@ def run_one(
     # corridas de una celda se mezclaban en el mismo directorio.
     run_name = f"seed_{seed}_{iso_ts}"
     out_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / run_name / f"{run_name}.jsonl"
+    # Copia de la consola de esta corrida junto al resto de los archivos (antes solo se veia la
+    # ultima linea y los avisos del arranque -- fallo al armar/despegar, camara, etc. -- se perdian).
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    _restore_console = _tee_console(out_path.with_name(out_path.stem + ".console.log"))
 
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
     depth_metric_every_n = int(os.getenv("DEPTH_METRIC_EVERY_N", "5"))  # G3.1: capturar depth cada N ciclos
@@ -155,6 +207,20 @@ def run_one(
             print(f"[runner] video deshabilitado: {exc}")
             video_recorder = None
 
+    # FollowCam (camara externa, solo auditoria): un .follow.webm sincronizado con el frontal.
+    follow_recorder = None
+    if video_recorder is not None and record_follow:
+        try:
+            from src.logging import FollowCamRecorder
+            from src.logging.follow_cam import annotate_follow_frame, follow_cam_config
+
+            _follow_name = follow_cam_config()
+            if _follow_name and client.enable_follow_cam(_follow_name):
+                follow_recorder = FollowCamRecorder(str(out_path.with_suffix(".webm")), fps=loop_hz)
+        except Exception as exc:
+            print(f"[runner] FollowCam deshabilitada: {exc}")
+            follow_recorder = None
+
     # Healthcheck del SLM antes de empezar (G1.2).
     if arm == "slm":
         local_llm_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
@@ -177,16 +243,80 @@ def run_one(
     }
 
     sleep_s = 1.0 / loop_hz
+    # Antes de empezar (pasaron varios segundos desde el despegue: grafo, video, healthcheck):
+    # comprobar que el dron sigue volando; si no, rearmar. Sin esto una corrida puede pasar
+    # entera posada en el suelo con todos los comandos ignorados.
+    airborne_ok = client.ensure_airborne()
+    if not airborne_ok:
+        print(f"[{_ts()}][runner] ABORTADA: el dron no logra despegar (ver .console.log).")
     t_start = time.time()
     cycles = 0
     success = False
+    interrupted = False
+    landed_streak = 0
+    freeze_wd = FreezeWatchdog()
+    pose_hist: "deque" = deque(maxlen=600)
+    freeze_recoveries = 0
+    freeze_aborted = False
+    pending_freeze_event = None
     try:
-        while cycles < max_cycles and (time.time() - t_start) < max_seconds:
+        while airborne_ok and cycles < max_cycles and (time.time() - t_start) < max_seconds:
             cycles += 1
             t0 = time.time()
             telem = client.get_telemetry()
             pos = telem.get("position", {})
             yaw = telem.get("orientation", {}).get("yaw", 0.0)
+            # Guarda de despegue: en `Landed` (landed_state == 0) durante ~3 s seguidos el dron
+            # no esta ejecutando la mision (desarmado / sin control API): rearmar o abortar.
+            if telem.get("landed_state") == 0:
+                landed_streak += 1
+            else:
+                landed_streak = 0
+            if landed_streak >= LANDED_STREAK_MAX:
+                print(f"[{_ts()}][runner] c{cycles}: {landed_streak} ciclos en Landed; rearmando...")
+                landed_streak = 0
+                if not client.ensure_airborne():
+                    print(f"[{_ts()}][runner] ABORTADA: el dron no vuelve a despegar.")
+                    airborne_ok = False
+                    break
+            # Vigilante de congelamiento fisico (incrustado en la malla): estado identico N ciclos.
+            frozen_n = freeze_wd.update(telem)
+            state["_freeze_cycles"] = frozen_n
+            _vel = telem.get("velocity", {}) or {}
+            pose_hist.append((cycles, pos.get("x", 0.0), pos.get("y", 0.0), pos.get("z", 0.0),
+                              math.degrees(yaw), math.hypot(_vel.get("vx", 0.0), _vel.get("vy", 0.0))))
+            if freeze_wd.frozen:
+                frozen_since = cycles - freeze_wd.count
+                print(f"[{_ts()}][runner] c{cycles}: estado fisico CONGELADO {freeze_wd.count} ciclos "
+                      f"(desde c{frozen_since}): dron incrustado en la malla.")
+                rec_pose = None
+                if FREEZE_RECOVERY == "teleport" and freeze_recoveries < FREEZE_MAX_RECOVERIES:
+                    rec_pose = pick_recovery_pose(pose_hist, frozen_since, backoff=FREEZE_BACKOFF_CYCLES)
+                if rec_pose is None:
+                    print(f"[{_ts()}][runner] ABORTADA: physics_locked (FREEZE_RECOVERY={FREEZE_RECOVERY}).")
+                    freeze_aborted = True
+                    break
+                from src.agents.deep_scan import clear_scan_state
+
+                tracker.record_contact(pos.get("x", 0.0), pos.get("y", 0.0))
+                print(f"[{_ts()}][runner] recuperacion {freeze_recoveries + 1}/{FREEZE_MAX_RECOVERIES}: teletransporte a "
+                      f"({rec_pose[0]:.1f},{rec_pose[1]:.1f},{rec_pose[2]:.1f}) yaw={rec_pose[3]:.0f}.")
+                client.set_vehicle_pose(rec_pose[0], rec_pose[1], rec_pose[2], yaw_deg=rec_pose[3])
+                client.ensure_airborne()
+                clear_scan_state(state)
+                state["active_maneuver"], state["maneuver_command"], state["maneuver_cycles_left"] = None, None, 0
+                state["_deliberation_pending"] = False
+                state["_post_retroceder_corner_pending"] = False
+                tracker.reset_progress()
+                pending_freeze_event = {
+                    "strategy": "freeze_recovery", "arm": arm, "resolved_by_scan": False, "cycles_to_resolve": None,
+                    "fell_back_to_blind": False, "frozen_cycles": freeze_wd.count,
+                    "from": [round(pos.get("x", 0.0), 2), round(pos.get("y", 0.0), 2)],
+                    "to": [round(rec_pose[0], 2), round(rec_pose[1], 2)],
+                }
+                freeze_wd.reset()
+                freeze_recoveries += 1
+                continue
             target_wp = tracker.update(pos)
             guidance = tracker.compute_guidance(pos, yaw)
             state["current_wp_index"] = tracker.current_index
@@ -226,6 +356,8 @@ def run_one(
             if deadlock_event:
                 # Punto de contacto para la cadena de esquinas (waypoint_tracker.py).
                 tracker.record_contact(pos.get("x", 0.0), pos.get("y", 0.0))
+            if pending_freeze_event is not None and not deadlock_event:
+                deadlock_event, pending_freeze_event = pending_freeze_event, None
             # Instrumentacion de auditoria VLM (2026-0901, mismo patron que
             # main.py): frames RAW del ciclo exacto en que una deliberacion
             # se resolvio, si los hay.
@@ -298,6 +430,14 @@ def run_one(
                     video_recorder.write_frame(annotated, viewport_frame=vp)
                 except Exception as exc:
                     print(f"[runner] error grabando frame de video (c{cycles}): {exc}")
+                if follow_recorder is not None:
+                    try:
+                        _ff = client.last_follow_frame
+                        follow_recorder.write(
+                            annotate_follow_frame(_ff, state, cycles, time.time() - t_start) if _ff is not None else None
+                        )
+                    except Exception as exc:
+                        print(f"[runner] error grabando FollowCam (c{cycles}): {exc}")
 
             if telem.get("collision", {}).get("has_collided"):
                 break
@@ -307,14 +447,27 @@ def run_one(
                 break
 
             time.sleep(max(0.0, sleep_s - (time.time() - t0)))
+    except KeyboardInterrupt:
+        # Ctrl+C: salir del lazo y dejar que el finally cierre CSV/video/visor.
+        print(f"[{_ts()}][runner] interrumpido por el usuario en c{cycles}; cerrando la corrida...")
+        interrupted = True
     finally:
         logger.mark_success(success)
+        # El motivo de termino va al summary.json (antes solo se agregaba al dict devuelto, no al archivo).
+        if interrupted:
+            logger.extra_summary["termination_reason"] = "interrupted"
+        if not airborne_ok:
+            logger.extra_summary["termination_reason"] = "not_airborne"
+        if freeze_aborted:
+            logger.extra_summary["termination_reason"] = "physics_locked"
+        logger.extra_summary["freeze_recoveries"] = freeze_recoveries
         summary = logger.close()
         if viewport_capture is not None:
             viewport_capture.close()
         if video_recorder is not None:
             try:
                 n_frames = video_recorder.close()
+                n_follow = follow_recorder.close() if follow_recorder is not None else 0
                 if n_frames > 0:
                     from src.logging import write_viewer_html
 
@@ -323,6 +476,7 @@ def run_one(
                         str(viewer_path), video_filename=video_recorder.out_path.name,
                         csv_path=str(logger.csv_path),
                         jsonl_path=str(logger.out_path),
+                        follow_video_filename=(follow_recorder.out_path.name if n_follow > 0 else None),
                     )
                     print(f"[runner] video ({n_frames} frames) y visor en {viewer_path}")
             except Exception as exc:
@@ -330,6 +484,7 @@ def run_one(
         service.stop()
         client.land_smooth()
         client.disconnect()
+        _restore_console()
 
     return summary
 
@@ -350,6 +505,8 @@ def main():
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--no-video", action="store_true",
                          help="No grabar el .webm ni generar el .viewer.html de cada corrida (por defecto se graban).")
+    parser.add_argument("--no-follow-cam", action="store_true",
+                         help="No grabar el video de la camara externa FollowCam (por defecto se graba si existe en settings.json).")
     parser.add_argument("--viewport", action="store_true",
                          help="Video split-screen con la captura del viewport de Unreal (requiere mss/pywin32).")
     parser.add_argument("--seed-jitter", action="store_true",
@@ -384,7 +541,29 @@ def main():
                         cmd.append("--no-video")
                     if args.viewport:
                         cmd.append("--viewport")
-                    proc = subprocess.run(cmd, capture_output=True, text=True)
+                    if args.no_follow_cam:
+                        cmd.append("--no-follow-cam")
+                    # Popen en vez de subprocess.run: ante Ctrl+C, run() hace kill() al
+                    # hijo a los 0.25 s y lo corta a mitad de close() (cola de video,
+                    # CSV aplanado, visor). Aca se espera su cierre ordenado.
+                    run_started = time.time()
+                    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    interrupted = False
+                    try:
+                        out_txt, err_txt = popen.communicate()
+                    except KeyboardInterrupt:
+                        interrupted = True
+                        print(f"[{_ts()}][runner] Ctrl+C: esperando el cierre de la corrida "
+                              f"(video/CSV/visor, hasta {CLOSE_WAIT_S:.0f} s)...")
+                        try:
+                            out_txt, err_txt = popen.communicate(timeout=CLOSE_WAIT_S)
+                        except (KeyboardInterrupt, subprocess.TimeoutExpired):
+                            popen.kill()
+                            out_txt, err_txt = popen.communicate()
+                    proc = subprocess.CompletedProcess(cmd, popen.returncode, out_txt, err_txt)
+                    # Red de seguridad: si el hijo murio antes de cerrar (kill, 2do Ctrl+C,
+                    # crash), reconstruir CSV aplanado / video / visor desde el JSONL.
+                    _finalize_if_incomplete(args.out_dir, scenario, arm, deadlock_strategy, run_started)
                     if proc.returncode != 0:
                         print(f"[{_ts()}][runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
                     else:
@@ -394,8 +573,26 @@ def main():
                         "scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
                         "seed": seed, "returncode": proc.returncode,
                     })
+                    if interrupted:
+                        print(f"[{_ts()}][runner] Interrumpido: no se lanzan las corridas restantes.")
+                        print(f"\n[{_ts()}][runner] {len(results)} corrida(s) (interrumpido). Ver {args.out_dir}/.")
+                        return
 
     print(f"\n[{_ts()}][runner] {len(results)} corridas completadas. Ver {args.out_dir}/ para los JSONL y usar experiments/analyze.py.")
+
+
+def _finalize_if_incomplete(out_dir: str, scenario: str, arm: str, strategy: str, since: float) -> None:
+    try:
+        from src.logging.finalize_run import finalize_run, needs_finalize
+
+        cell = Path(out_dir) / Path(scenario).stem / arm / strategy
+        runs = [p for p in cell.glob("seed_*") if p.is_dir() and p.stat().st_mtime >= since - 1.0] if cell.exists() else []
+        for run in sorted(runs, key=lambda p: p.stat().st_mtime)[-1:]:
+            if needs_finalize(str(run)):
+                print(f"[{_ts()}][runner] corrida incompleta en {run.name}: reconstruyendo CSV/video/visor...")
+                finalize_run(str(run))
+    except Exception as exc:  # nunca tumbar el batch por el cierre
+        print(f"[{_ts()}][runner] no se pudo cerrar la corrida: {exc}")
 
 
 def _single_main():
@@ -410,12 +607,14 @@ def _single_main():
     parser.add_argument("--seed-jitter", action="store_true")
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--viewport", action="store_true")
+    parser.add_argument("--no-follow-cam", action="store_true")
     parser.add_argument("--deadlock-strategy", default="slam_assess", choices=["blind", "deep_vlm", "slam_assess"])
     args = parser.parse_args()
     summary = run_one(
         args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,
         seed_jitter=args.seed_jitter, deadlock_strategy=args.deadlock_strategy,
         record_video=not args.no_video, record_viewport=args.viewport,
+        record_follow=not args.no_follow_cam,
     )
     print(f"[{_ts()}][runner] summary: {json.dumps(summary)}")
 

@@ -47,7 +47,8 @@ def _load_states(jsonl_path: Path) -> Dict[str, Any]:
 
 
 def write_viewer_html(html_path: str, video_filename: str, csv_path: str,
-                      jsonl_path: "str | None" = None) -> None:
+                      jsonl_path: "str | None" = None,
+                      follow_video_filename: "str | None" = None) -> None:
     """Genera `<html_path>` con el video + CSV de una corrida ya cerrada.
 
     `video_filename` es solo el nombre de archivo (no la ruta completa) --
@@ -69,6 +70,8 @@ def write_viewer_html(html_path: str, video_filename: str, csv_path: str,
     rows_json = json.dumps(rows, ensure_ascii=False).replace("</script", "<\\/script")
 
     html = _HTML_TEMPLATE.replace("__VIDEO_FILENAME__", json.dumps(video_filename))
+    # 2026-0929: segundo video (camara externa FollowCam), sincronizado con el frontal.
+    html = html.replace("__FOLLOW_JSON__", json.dumps(follow_video_filename))
     html = html.replace("__ROWS_JSON__", rows_json)
     html = html.replace("__TABLE_COLUMNS_JSON__", json.dumps(_TABLE_COLUMNS))
 
@@ -91,6 +94,10 @@ _HTML_TEMPLATE = """<!doctype html>
   .top-section { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; flex: 2 1 0; min-height: 0; }
   .video-col { display: flex; flex-direction: column; min-height: 0; }
   video { flex: 1 1 auto; min-height: 0; width: 100%; background: #000; border-radius: 6px; object-fit: contain; }
+  .vids { display: grid; gap: 8px; flex: 1 1 auto; min-height: 0; grid-template-columns: 1fr; }
+  .vids.two { grid-template-columns: 1fr 1fr; }
+  .vwrap { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .vwrap .cap { font-size: 11px; color: #8b93a3; margin: 0 0 3px; }
   .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex: 0 0 auto; }
   .slider-row input[type=range] { flex: 1; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 600;
@@ -129,7 +136,10 @@ _HTML_TEMPLATE = """<!doctype html>
 <div class="top-section">
   <div class="video-col">
     <h1>Auditoria de vuelo — video sincronizado con el CSV por ciclo</h1>
-    <video id="vid" src=__VIDEO_FILENAME__ controls preload="metadata"></video>
+    <div class="vids" id="vids">
+      <div class="vwrap"><div class="cap">Camara frontal (la que ve el grafo)</div>
+        <video id="vid" src=__VIDEO_FILENAME__ controls preload="metadata"></video></div>
+    </div>
     <div class="slider-row">
       <span id="idxLabel" style="min-width: 90px;">ciclo 0</span>
       <input id="slider" type="range" min="0" value="0" step="1">
@@ -155,6 +165,36 @@ _HTML_TEMPLATE = """<!doctype html>
 const ROWS = __ROWS_JSON__;
 const TABLE_COLUMNS = __TABLE_COLUMNS_JSON__;
 const vid = document.getElementById('vid');
+// Video de la camara externa (FollowCam), si existe: sigue al frontal (reproduccion, pausa,
+// velocidad y saltos). Ambos tienen un frame por ciclo, asi que se mapean por proporcion.
+const FOLLOW = __FOLLOW_JSON__;
+let vid2 = null;
+if (FOLLOW) {
+  const vids = document.getElementById('vids');
+  vids.classList.add('two');
+  const wrap = document.createElement('div');
+  wrap.className = 'vwrap';
+  wrap.innerHTML = '<div class="cap">FollowCam (vista externa, solo auditoria)</div>';
+  vid2 = document.createElement('video');
+  vid2.src = FOLLOW; vid2.muted = true; vid2.preload = 'metadata'; vid2.controls = false;
+  wrap.appendChild(vid2);
+  vids.appendChild(wrap);
+}
+function dur2() { return (vid2 && isFinite(vid2.duration) && vid2.duration > 0) ? vid2.duration : 0; }
+function syncFollow(force) {
+  if (!vid2) return;
+  const d1 = (isFinite(vid.duration) && vid.duration > 0) ? vid.duration : 0, d2 = dur2();
+  if (!d1 || !d2) return;
+  const target = (vid.currentTime / d1) * d2;
+  if (force || Math.abs(vid2.currentTime - target) > 0.25) vid2.currentTime = target;
+}
+if (vid2) {
+  vid.addEventListener('play', () => { syncFollow(true); vid2.play().catch(() => {}); });
+  vid.addEventListener('pause', () => { vid2.pause(); syncFollow(true); });
+  vid.addEventListener('seeked', () => syncFollow(true));
+  vid.addEventListener('ratechange', () => { vid2.playbackRate = vid.playbackRate; });
+  vid2.addEventListener('loadedmetadata', () => syncFollow(true));
+}
 const slider = document.getElementById('slider');
 const idxLabel = document.getElementById('idxLabel');
 const detailPanel = document.getElementById('detailPanel');
@@ -290,6 +330,7 @@ function nearestIndexForTime(t) {
 
 vid.addEventListener('timeupdate', () => {
   render(nearestIndexForTime(vid.currentTime));
+  syncFollow(false);
 });
 
 slider.addEventListener('input', () => {

@@ -43,7 +43,7 @@ except Exception:  # pragma: no cover
 
 DEFAULT_IP = os.getenv("AIRSIM_IP", "127.0.0.1")
 DEFAULT_PORT = int(os.getenv("AIRSIM_PORT", "41451"))
-DEFAULT_VEHICLE = os.getenv("AIRSIM_VEHICLE_NAME", "SimpleFlight")
+DEFAULT_VEHICLE = os.environ["AIRSIM_VEHICLE_NAME"]
 
 
 def load_waypoints(mission_path: str) -> List[Dict[str, Any]]:

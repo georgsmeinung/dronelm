@@ -1,3 +1,139 @@
+# 2026-09-29 (j) - Frente bloqueado: gobernador de velocidad, desvio comprometido, deadlock por eventos y congelamiento
+
+Diagnostico (citysim_pilot seed 99 02:32, primera captura en vivo con FollowCam): el dron vuela DE FRENTE 30 m contra una
+fachada con balcones (profundidad del centro 29 -> 0.41 m, c489-565) porque (1) la distancia al WP -que esta detras del
+edificio- baja mientras se acerca al muro, asi que los detectores de atasco basados en progreso no disparan; (2) 6
+GIRAR_90 (c494..c564) giran en el sitio y reanudan MANTENER_RUMBO recto al mismo muro; (3) con la pared a 4 m el campo
+estaba degraded/sin TTC y se comandaba crucero (~3 m/s): 0.5 -> 2.7 m/s en 8 ciclos; (4) GIRAR_90 (vx=0) no frena a
+tiempo (2.7 -> 0.9 m/s en 5 ciclos, ~1.6 m de deslizamiento); (5) la malla no genera colision en balaustras/balcones
+(`has_collided` False; camara dentro de la geometria c568-596) y desde c604 el estado queda congelado (135 ciclos).
+
+- `src/navigation/speed_governor.py` (motor_node): topa el avance de MANTENER_RUMBO: sin flujo valido 3 ciclos -> 1.5 m/s,
+  8 -> 1.0 m/s; tras GIRAR_90 o blocked_fraction~1 -> 1.0 m/s 40 ciclos; al terminar una maniobra rampa 15 ciclos. Replay sobre la
+  aproximacion real: tope 1.0 m/s en 75 de 77 ciclos (real 2.2-2.7 m/s). Costo en otras 6 corridas: velocidad media de
+  MANTENER_RUMBO -5..-30 % (~ -10 %). `GOV_ENABLED=false` lo desactiva. `_speed_cap` queda en el CSV.
+- `GIRAR_90` inyecta una esquina a `GIRAR90_CORNER_OFFSET_M` (15) en el rumbo del giro: desvio comprometido.
+- Deadlock independiente del progreso: `BLOCKED_EVENTS_TRIGGER`=3 frentes bloqueados (GIRAR_90) en `BLOCKED_EVENTS_WINDOW`=60 ciclos
+  -> `_deadlock_resolve`. Replay: habria disparado en c526 (pared a ~14 m), no en c602. `_blocked_events` en el CSV.
+- `src/navigation/freeze_watchdog.py`: estado (pos/yaw/pitch/roll/vel) identico `FREEZE_CYCLES`=25 ciclos con landed_state != 0
+  = dron incrustado. Runner: `FREEZE_RECOVERY=abort` (default, `termination_reason=physics_locked`) o `teleport` (ultima pose
+  libre >=30 ciclos antes y en movimiento, registra el contacto para la cadena de esquinas, max 2; evento `freeze_recovery`
+  y `freeze_recoveries` en el summary). `main.py` solo aborta. `_freeze_cycles` en el CSV.
+- `summary.json` ahora incluye `termination_reason` (interrupted / not_airborne / physics_locked) y `freeze_recoveries`
+  (antes se agregaba solo al dict devuelto, no al archivo). Nuevas variables documentadas en `config/.env`.
+
+# 2026-09-29 (i) - El dron debe estar volando al empezar (reset diferido lo desarmaba)
+
+Incidente (citysim_pilot seed 99, 02:23, primera corrida tras reiniciar Unreal): "despego y cayo como un ladrillo al
+punto de partida". Telemetria: desde el ciclo 1 `landed_state=0` (Landed), z=+2.17 (suelo, 2.2 m bajo el origen),
+vz=+5.3 m/s en el primer ciclo, comandos de ascenso (vz=-0.8) sin efecto los 90 ciclos, ruta reactive, 0.1 m recorridos. La
+FollowCam lo muestra en el aire en el ciclo 1 y posado sobre el asfalto desde el 20. Hipotesis (no probada; el arranque no
+dejaba registro): `reset()` = simReset desarma el vehiculo y lo devuelve al punto de partida (2.2 m sobre el asfalto); ese
+efecto llego DESPUES del armado/despegue (Unreal recien iniciado, aun compilando shaders) y el dron cayo desarmado y sin
+control API. La corrida anterior (01:47) volo normal.
+
+- `AirSimClient.is_airborne()` / `ensure_airborne(attempts=3)`: comprueba `landed_state==Flying` y, si no, rearma y despega de
+  nuevo. Se llama al final de `connect()` y `reset()`, y el runner lo repite justo antes del lazo (pasan segundos de grafo,
+  video y healthcheck tras el despegue); si no logra volar aborta con `termination_reason=not_airborne`.
+- Guarda en el lazo del runner: `LANDED_STREAK_MAX` (15 ciclos ~3 s) seguidos en Landed -> rearmar o abortar.
+- El runner copia la consola de cada corrida a `<stem>.console.log` (antes el padre solo mostraba la ultima linea y los avisos
+  del arranque -- "no se pudo armar/despegar", camara, etc. -- se perdian); la proxima falla de arranque quedara documentada.
+
+# 2026-09-29 (h) - Video de la camara externa FollowCam, sincronizado, en el viewer
+
+- `AirSimClient.enable_follow_cam(nombre)`: valida la camara con `simGetCameraInfo` y la pide en la MISMA llamada
+  `simGetImages` del ciclo (un round-trip), solo en la captura normal (no en la de profundidad). Frame nativo en
+  `client.last_follow_frame` (BGR); se desactiva sola tras 5 ciclos sin imagen o si la captura falla (reintenta sin ella
+  para no degradar el ciclo). Desactivada por defecto: no cuesta nada si nadie la habilita.
+- `src/logging/follow_cam.py`: `FollowCamRecorder` -> `<stem>.follow.webm`, un frame por ciclo (repite el ultimo o negro si
+  falta imagen, para no desalinear el indice de ciclo), mismo hilo/escala que el video frontal; banner con ciclo, tiempo,
+  ruta/accion y z.
+- Runner y `main.py` lo graban si `FLIGHT_RECORD_VIDEO=true` y la camara existe (`AIRSIM_FOLLOW_CAMERA=FollowCam` en
+  `config/.env`, vacio/"none" la desactiva; `--no-follow-cam` en el runner; `FLIGHT_RECORD_FOLLOW_CAM` en main).
+- `viewer.html`: segundo video al lado del frontal; sigue al frontal (play, pausa, velocidad, saltos y slider), mapeo
+  proporcional por ciclo. `finalize_run` tambien repara el `.follow.webm` y lo enlaza en el visor.
+- Aislamiento: ningun modulo de agents/perception/navigation referencia la FollowCam (test de invariante).
+- INCIDENTE (UE cayo con EXCEPTION_ACCESS_VIOLATION en `APIPCamera::getCameraInfo`, PIPCamera.cpp:507): la primera version de
+  `enable_follow_cam` validaba la camara con `simGetCameraInfo`. En el plugin de CitySim `PawnSimApi::getCamera` devuelve
+  `nullptr` para un nombre inexistente (`findOrDefault(..., nullptr)`) y `WorldSimApi::getCameraInfo` (linea 923) lo
+  desreferencia sin comprobar -> caida nativa, no atrapable desde Python.
+  CORRECCION DE DIAGNOSTICO (2do crash, `WorldSimApi::getImages` -> `getImageCapture`, lectura en 0x0): la causa real de
+  AMBOS crashes fue el NOMBRE DEL VEHICULO, no la camara. `config/.env` tenia `AIRSIM_VEHICLE_NAME="SimpleFlight"` (el
+  nombre por defecto de AirSim cuando settings.json no define `Vehicles`), pero al agregar la FollowCam settings.json paso a
+  definir `Vehicles.Drone1`. El cliente pedia imagenes/info a "SimpleFlight", `ASimModeBase::getVehicleSimApi()` devolvia
+  nullptr y el plugin lo desreferencia sin validar (lectura en 0x1f0 = miembro de PawnSimApi nulo en el 1er crash; en 0x0
+  = llamada virtual sobre this nulo en el 2do). Mi explicacion inicial ("la sesion no tenia cargada la FollowCam") era
+  incorrecta.
+  Correcciones: `config/.env` -> `AIRSIM_VEHICLE_NAME="Drone1"` (y los defaults de `plot_mission_route.py` y
+  `callibration-flight/*.py`); `AirSimClient.connect()` verifica el nombre con `listVehicles()` y lanza
+  `VehicleNotFoundError` con la lista de vehiculos (no degrada a datos simulados ni envia comandos); la sonda
+  `probe_follow_cam.py` hace la misma verificacion antes de pedir imagenes; test que compara `.env` con `settings.json`.
+  `enable_follow_cam` valida con un `simGetImages` de esa sola camara (`cameras_->at()` = `std::map::at` lanza y llega
+  como error RPC) y hay un test que falla si alguien vuelve a llamar `simGetCameraInfo`.
+  Auditoria posterior: TODOS los scripts que usan el nombre (airsim_client, plot_mission_route, callibration-flight/*,
+  airsim-plan/config, probe_follow_cam) leen `AIRSIM_VEHICLE_NAME` y cargan `config/.env` (ruta correcta); no habia ningun
+  otro nombre en uso. Lo unico divergente eran valores de reserva escritos en el codigo (`Drone0` en airsim-plan,
+  `SimpleFlight`/`Drone1` en el resto). Se eliminaron: `airsim_client` exige la variable (RuntimeError si falta), los
+  scripts usan `os.environ[...]`, y un test impide reintroducir un literal. Pruebas de `airsim-plan` con fallos previos
+  ajenos a esto: mision `perimeter_north_01.json` inexistente y `LMSTUDIO_MODEL` que no se propaga.
+  Definir `Cameras.FollowCam` NO pisa "0"/front_center ni su DepthPlanar: el plugin conserva las camaras del pawn y solo
+  agrega/reemplaza las de igual nombre; las no listadas usan `CameraDefaults`.
+- `experiments/probe_follow_cam.py`: sonda sin armar ni mover el dron; comprueba que la camara responda y mide el
+  sobrecosto de pedirla junto a la frontal (media/p50/p90 y % del periodo del lazo).
+
+# 2026-09-29 (g) - Analisis offline: ¿la IMU separa los bloqueos del vuelo normal?
+
+- `experiments/analyze_imu_contact.py <raiz>`: eventos de bloqueo definidos SIN los detectores actuales (vx comandada >= 0.8
+  y velocidad medida < 0.3 durante 3 ciclos) vs. crucero; AUC por caracteristica y deteccion con umbral p99 del crucero.
+- Resultado (4 corridas citysim_pilot con IMU en el log, 6244 ciclos, 13 eventos), fase de aproximacion/frenado:
+  AUC rms(ax,ay)=0.16 (invertido: mas quieto, no un pico), |az+g|=0.57, |omega|=0.58, salto de |omega|=0.50, caida de
+  velocidad=0.64. Deteccion a ~10 FP/1000 ciclos: IMU 0-2 de 13, velocidad 4 de 13. Ninguna caracteristica de la IMU
+  discrimina; no se toca el grafo. Muestra chica y de un solo escenario: repetir cuando haya mas corridas con `state`.
+
+# 2026-09-29 (f) - Reparacion de corridas interrumpidas (`finalize_run`)
+
+- `src/logging/finalize_run.py` + CLI `experiments/finalize_run.py <dir>` (`--all <raiz>` cierra solo las incompletas,
+  `--force` rehace todo). Reconstruye desde el JSONL (se vacia ciclo a ciclo): CSV aplanado (columnas fijas del CSV de
+  streaming + `state.*`), `.webm` sin indice recodificado a uno valido (original -> `<stem>.partial.webm`) y `viewer.html`.
+  Idempotente; tolera ultima linea de JSONL truncada.
+- El runner lo invoca solo tras cada corrida si detecta artefactos incompletos (`.csv.tmp`, video sin visor, CSV sin
+  `state.*`): cubre kill, segundo Ctrl+C y crashes. Ctrl+C simple ya cerraba bien desde (e).
+- Aplicado a `seed_99_20260929T012147Z`: 989 filas x 277 columnas (217 `state.*`), video reparado 983/989 frames.
+
+# 2026-09-29 (e) - Escaneo profundo: pedido perdido (hover eterno) y Ctrl+C del runner
+
+Diagnostico (citysim_pilot seed 99, 01:21): junto a un poste de la mediana de la autopista (a 13 m de WP_2) el dron
+quedo 554 ciclos (118 s) en `ESCANEO`. El escaneo envio su pedido (id 6, ciclo 358); dos ciclos despues el grafo, ya en
+ruta reactive, envio un pedido tactico (id 7) al MISMO servicio de un solo slot, que pisa al pendiente. Nadie sondeo el
+escaneo (fuera de la rama de deadlock) y su resultado se sobrescribio; despues el escaneo esperaba un id inexistente y su
+watchdog media la edad del pedido PENDIENTE del servicio (0 ms) -> nunca vencia. `_deliberation_pending=True` ademas
+silenciaba el conteo de progreso. (No fue congelamiento fisico: landed_state=1, hover con v~1e-7.)
+
+- `DeliberationService.get_result(id)`: resultados recientes por id (16); el escaneo ya no depende del "ultimo".
+- `deep_scan`: la edad se mide desde `_deep_scan_request_ts` (envio real); pedido ni pendiente ni con resultado tras
+  `SCAN_LOST_GRACE_MS` (3000) = perdido -> mismo fallback que el watchdog (`reason=perdido`, cuenta como timeout).
+- `graph._send_vlm_request`: no envia pedidos tacticos mientras haya escaneo o pedido de escaneo en curso.
+- `graph.navigate_node`: descarta escaneos huerfanos (>1.5x watchdog con pedido; >60 s en rotacion) y limpia
+  `_deliberation_pending`.
+- Runner: Ctrl+C ya no mata al hijo a los 0.25 s (`subprocess.run` hacia `kill()` a mitad de `close()`: webm sin indice,
+  `.csv.tmp` sin renombrar y sin `.viewer.html`). Ahora `Popen` espera el cierre ordenado (`RUNNER_CLOSE_WAIT_S`, 180) y el
+  hijo trata KeyboardInterrupt como fin normal (`termination_reason=interrupted`); no se lanzan las corridas restantes.
+
+# 2026-09-29 (d) - Esquinas: reemplazo en vez de pila, offset 15 m, paso propio de la cadena
+
+Diagnostico (citysim_pilot seed 99, 00:42): `CORNER_OFFSET_M=30` + esquinas apiladas. La primera esquina (ciclo 104)
+quedo a 30 m en sentido contrario a WP_1 (fix17 invierte el lado del VLM); cada bloqueo posterior agrego otra esquina
+delante del WP real (15 en cola) y el dron desandaba los desvios viejos. Termino a 104 m de WP_1 (partio a 82; max 138).
+La cadena nunca se activo: exigia siguiente WP real y con la pila casi siempre era otra esquina.
+
+- `inject_corner_waypoint`: una esquina nueva descarta las esquinas temporales pendientes (indice >= current_index);
+  las ya alcanzadas no se tocan. La regla de no duplicar (<10 m de la esquina activa) se mantiene.
+- `config/.env`: `CORNER_OFFSET_M` 30 -> 15. OJO reproducibilidad: el Anexo A6 documenta 30.0 para las corridas de
+  produccion ya hechas (tier1); esas usaron 30.
+- `CORNER_CHAIN_STEP_M` ya no hereda `CORNER_OFFSET_M` (default propio 12 m).
+- No implementado (propuestos): descartar esquinas obsoletas por cercania al WP real, y suprimir la evasion por flujo
+  mientras `ceiling_z` este activo (evasiones sin obstaculo bajo la autopista: 91 ciclos EVADIR_DERECHA con occ 0.00).
+
 # 2026-09-29 (c) - CSV aplanado y cadena de esquinas
 
 - CSV: sin campos JSON. `latency_ms_json` -> `latency_graph_ms`/`latency_telemetry_ms`; el DroneState completo va como

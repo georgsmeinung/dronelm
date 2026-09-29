@@ -31,7 +31,7 @@ from src.hardware.airsim_client import _state_to_telemetry, _quaternion_to_euler
 from src.perception.flow_ttc import FlowTTCEstimator
 from src.perception.obstacle_field import SECTORS, BANDS
 
-VEHICLE = os.getenv("AIRSIM_VEHICLE_NAME", "SimpleFlight")
+VEHICLE = os.environ["AIRSIM_VEHICLE_NAME"]
 IP      = os.getenv("AIRSIM_IP", "127.0.0.1")
 PORT    = int(os.getenv("AIRSIM_PORT", "41451"))
 

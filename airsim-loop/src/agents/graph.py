@@ -9,6 +9,7 @@
 #   - FlightTrajectory como senal primaria de routing en deadlock
 from __future__ import annotations
 
+from collections import deque
 import math
 import os
 import time
@@ -25,6 +26,7 @@ except Exception:  # pragma: no cover
 # pyrefly: ignore [missing-import]
 from langgraph.graph import END, StateGraph
 
+from src.navigation.speed_governor import SpeedGovernor
 from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception.obstacle_field import ObstacleField, empty_field, has_open_corridor
 
@@ -45,6 +47,17 @@ _GIRAR90_MIN_ATTEMPTS = int(os.getenv("GIRAR90_MIN_ATTEMPTS", "3"))
 _TRAJ_STALL_TRIGGER = float(os.getenv("TRAJ_STALL_TRIGGER_RATE", "0.70"))
 _TRAJ_ATT_TRIGGER = int(os.getenv("TRAJ_STALL_TRIGGER_MIN_ATT", "10"))
 _STUCK_RETROCEDER_LIMIT = int(os.getenv("STUCK_RETROCEDER_LIMIT", "30"))
+_DEEP_WATCHDOG_MS = float(os.getenv("SLM_DEEP_WATCHDOG_MS", "12000"))
+# Frente bloqueado repetido (2026-0929): N giros GIRAR_90 en una ventana de ciclos = deadlock, AUNQUE
+# la distancia al WP siga bajando. En citysim_pilot seed 99 (02:32) el dron avanzo 30 m de frente contra
+# una fachada con 6 GIRAR_90 y el detector de atasco (basado en progreso al WP) nunca disparo, porque
+# acercarse a la pared TAMBIEN acerca al WP que esta detras.
+_BLOCKED_EVENTS_TRIGGER = int(os.getenv("BLOCKED_EVENTS_TRIGGER", "3"))
+_BLOCKED_EVENTS_WINDOW = int(os.getenv("BLOCKED_EVENTS_WINDOW", "60"))
+# GIRAR_90 compromete un desvio: ademas de girar, inyecta una esquina en el rumbo del giro (antes el
+# dron reanudaba MANTENER_RUMBO recto hacia el mismo muro al terminar el giro).
+_GIRAR90_COMMIT_CORNER = os.getenv("GIRAR90_COMMIT_CORNER", "true").lower() == "true"
+_GIRAR90_CORNER_OFFSET_M = float(os.getenv("GIRAR90_CORNER_OFFSET_M", os.getenv("CORNER_OFFSET_M", "15.0")))
 # Escape vertical forzado (2026-0928): un escaneo cuenta como "futil" si entre
 # dos resoluciones consecutivas el dron se desplazo menos de ESCAPE_MIN_DISP_M.
 # Tras VERTICAL_ESCAPE_FUTILE_SCANS escaneos futiles seguidos, o con
@@ -118,6 +131,8 @@ class DroneState(TypedDict, total=False):
     _post_retroceder_corner_pending: bool
     _scan_last_evadir_dir: Optional[str]
     _scan_evadir_count: int
+    _deep_scan_request_ts: Optional[float]
+    _scan_started_ts: Optional[float]
     # VLM audit trail
     _pending_delib_prompt: Optional[str]
     _pending_delib_frames: Optional[List[Any]]
@@ -148,6 +163,9 @@ class DroneState(TypedDict, total=False):
     _delib_baseline: Optional[Dict[str, Any]]
     # Auditoria (2026-0929): contadores internos publicados para el log.
     _scan_track: Dict[str, Any]
+    _speed_cap: Optional[float]
+    _blocked_events: int
+    _freeze_cycles: int
     _pos_freeze_cycles: int
     _wp_no_progress_cycles: int
 
@@ -181,6 +199,9 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     stall = StallDetector()
     # Seguimiento de escaneos futiles / escapes verticales (ver constantes).
     scan_track: Dict[str, Any] = {"pos": None, "futile": 0, "vert_n": 0}
+    governor = SpeedGovernor()
+    nav_cycle = {"n": 0}
+    blocked_events: "deque[int]" = deque()
     deliberation_service = make_deliberation_service()
 
     frame_history_size = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "2"))
@@ -395,6 +416,11 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     def _send_vlm_request(state: DroneState, field: ObstacleField,
                           guidance: Dict, telem: Dict) -> None:
         """Build and send a VLM request. Non-blocking."""
+        # El servicio tiene UN solo slot y el pedido nuevo reemplaza al pendiente:
+        # durante un escaneo profundo un pedido tactico le pisaba el resultado
+        # (citysim_pilot seed 99 01:21, ciclos 358-989). No competir con el escaneo.
+        if state.get("_scan_phase") is not None or state.get("_deep_scan_request_id") is not None:
+            return
         prompt = _build_user_prompt(
             field, telem, guidance,
             stuck_cycles=int(state.get("evasion_stuck_cycles", 0)),
@@ -487,6 +513,10 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         state["active_maneuver"] = "GIRAR_90"
         state["maneuver_cycles_left"] = max(1, round(girar90_duration_s * loop_hz))
         state["maneuver_command"] = cmd
+        if _GIRAR90_COMMIT_CORNER and cmd.get("target_yaw") is not None:
+            state["inject_corner"] = compute_corner_waypoint(
+                telem, float(cmd["target_yaw"]), guidance=guidance, offset_m=_GIRAR90_CORNER_OFFSET_M,
+            )
         return state
 
     def _register_scan_resolution(state: DroneState, telem: Dict) -> None:
@@ -687,6 +717,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
 
     def navigate_node(state: DroneState) -> DroneState:
         """Layered navigation: always-reactive baseline + tactical overlay."""
+        nav_cycle["n"] += 1
         stall.update(state)
         stall.publish(state)
         state["_scan_track"] = {
@@ -701,6 +732,25 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
 
         # --- VLM poll (non-blocking) ---
         _poll_vlm(state)
+
+        # --- Escaneo huerfano: la navegacion salio de la rama de deadlock sin
+        # cerrarlo (nadie lo vuelve a sondear) y deja `_deliberation_pending`
+        # activo, lo que silencia el conteo de progreso. Se descarta al vencer
+        # 1.5x el watchdog del pedido (o 60 s en fase de rotacion).
+        if state.get("_scan_phase") is not None or state.get("_deep_scan_request_id") is not None:
+            _now = time.time()
+            _req_ts = state.get("_deep_scan_request_ts")
+            _start_ts = state.get("_scan_started_ts")
+            _orphan = (
+                (_req_ts is not None and (_now - float(_req_ts)) * 1000.0 > 1.5 * _DEEP_WATCHDOG_MS)
+                or (_req_ts is None and _start_ts is not None and _now - float(_start_ts) > 60.0)
+            )
+            if _orphan:
+                from .deep_scan import clear_scan_state as _clear_scan_state
+
+                print("[graph] Escaneo profundo huerfano descartado.")
+                _clear_scan_state(state)
+                state["_deliberation_pending"] = False
 
         # --- Escape resolution tracking ---
         if int(state.get("_consecutive_escapes", 0)) > 0:
@@ -786,6 +836,16 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             if field.blocked_fraction() > FOV_BLOCKED_THRESHOLD:
                 if alt_m < SLM_MIN_ALT_M:
                     return evasive_node(state)
+                n_now = nav_cycle["n"]
+                blocked_events.append(n_now)
+                while blocked_events and n_now - blocked_events[0] > _BLOCKED_EVENTS_WINDOW:
+                    blocked_events.popleft()
+                state["_blocked_events"] = len(blocked_events)
+                if len(blocked_events) >= _BLOCKED_EVENTS_TRIGGER:
+                    print(f"[graph] {len(blocked_events)} frentes bloqueados en {_BLOCKED_EVENTS_WINDOW} ciclos "
+                          f"-> deadlock (independiente del progreso al WP).")
+                    blocked_events.clear()
+                    return _deadlock_resolve(state, stuck, field, guidance, telem)
                 return _dispatch_girar_90(state, guidance, telem, field)
             if alt_m < SLM_MIN_ALT_M:
                 return evasive_node(state)
@@ -829,6 +889,21 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             state["_hover_alt_anchor"] = anchor
         else:
             state["_hover_alt_anchor"] = None
+
+        # Gobernador de velocidad: limita el avance de MANTENER_RUMBO sin evidencia de flujo, tras un
+        # frente bloqueado o al terminar una maniobra (ver src/navigation/speed_governor.py).
+        _fld = state.get("obstacle_field")
+        cap = governor.update(
+            getattr(_fld, "source", "none") if _fld is not None else "none",
+            _fld.blocked_fraction() if _fld is not None else 0.0,
+            bool(state.get("active_maneuver")),
+            str(state.get("next_action", "")),
+        )
+        state["_speed_cap"] = cap
+        if cap is not None and cmd.get("macro_action") == "MANTENER_RUMBO" and float(cmd.get("vx", 0.0)) > cap:
+            cmd = dict(cmd)
+            cmd["vx"] = cap
+            cmd["rationale"] = f"{cmd.get('rationale', '')} [tope {cap:.1f} m/s]".strip()
 
         target_yaw = cmd.get("target_yaw")
         airsim_client.execute_velocity(

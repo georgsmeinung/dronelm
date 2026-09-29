@@ -12,6 +12,32 @@
     "Longitude": -122.140165,
     "Altitude": 122
   },
+  "Vehicles": {
+    "Drone1": {
+      "VehicleType": "SimpleFlight",
+      "Cameras": {
+        "FollowCam": {
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 1080,
+              "Height": 720,
+              "FOV_Degrees": 90
+            }
+          ],
+          "X": -4.0,
+          "Y": -2.5,
+          "Z": -1.5,
+          "Pitch": -15.0,
+          "Roll": 0.0,
+          "Yaw": 28.0,
+          "Gimbal": {
+            "Stabilization": 0.0
+          }
+        }
+      }
+    }
+  },
   "CameraDefaults": {
     "CaptureSettings": [
       {
@@ -38,8 +64,16 @@
   },
   "SubWindows": [
     {
+      "WindowID": 1,
+      "CameraName": "FollowCam",
+      "VehicleName": "Drone1",
+      "ImageType": 0,
+      "Visible": true
+    },
+    {
       "WindowID": 2,
-      "CameraName": "Front Camera",
+      "CameraName": "front_center",
+      "VehicleName": "Drone1",
       "ImageType": 0,
       "Visible": true
     }

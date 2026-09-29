@@ -167,7 +167,7 @@ def _record_failed_scan(state: Dict[str, Any], raw_response: str, reason: str, l
             "macro_action": None,
             "rationale": reason,
             "is_fallback": True,
-            "timeout": reason == "watchdog",
+            "timeout": reason in ("watchdog", "perdido"),
             "adherent": False,
             "used_json_schema": False,
             "latency_ms": round(latency_ms, 1),
@@ -186,6 +186,31 @@ def clear_scan_state(state: Dict[str, Any]) -> None:
     state["_scan_settle_left"] = 0
     state["_scan_rot_stall"] = 0
     state["_deep_scan_request_id"] = None
+    state["_deep_scan_request_ts"] = None
+    state["_scan_started_ts"] = None
+
+
+# Un pedido de escaneo que ya no esta pendiente en el servicio ni tiene
+# resultado (lo piso otro pedido) se da por perdido tras esta gracia.
+SCAN_LOST_GRACE_MS = float(os.getenv("SCAN_LOST_GRACE_MS", "3000"))
+
+
+def _scan_poll(state: Dict[str, Any], service: Any, pending_id: Any):
+    """(result_del_pedido | None, edad_ms_real, perdido).
+
+    La edad se mide desde que se envio el pedido (`_deep_scan_request_ts`), no
+    desde el pedido pendiente del servicio: si otro pedido lo reemplazo, la edad
+    del servicio es 0 y el watchdog nunca vencia.
+    """
+    latest, svc_age_ms, has_pending = service.poll()
+    getter = getattr(service, "get_result", None)
+    result = getter(pending_id) if callable(getter) else latest
+    if result is not None and result.request_id != pending_id:
+        result = None
+    ts = state.get("_deep_scan_request_ts")
+    age_ms = (time.time() - float(ts)) * 1000.0 if ts else svc_age_ms
+    lost = result is None and not has_pending and age_ms > SCAN_LOST_GRACE_MS
+    return result, age_ms, lost
 
 
 def _build_deep_scan_prompt(
@@ -548,6 +573,7 @@ def _slam_assess_cycle(
             }
         )
         state["_deep_scan_request_id"] = request_id
+        state["_deep_scan_request_ts"] = time.time()
         state["_pending_delib_prompt"] = full_prompt
         state["_pending_delib_frames"] = [(frame, capture_ts)] if frame is not None else []
         state["next_action"] = "ESCANEO"
@@ -557,7 +583,7 @@ def _slam_assess_cycle(
         state["flight_status"] = "escaneo_profundo_vlm"
         return True
 
-    result, age_ms, _has_pending = service.poll()
+    result, age_ms, lost = _scan_poll(state, service, pending_id)
     if result is not None and result.request_id == pending_id:
         decision = result.parsed_decision
         clear_scan_state(state)
@@ -630,10 +656,10 @@ def _slam_assess_cycle(
         }
         return False
 
-    if age_ms > SLM_DEEP_WATCHDOG_MS:
-        print(f"[slam_assess] WATCHDOG ({arm}): sin respuesta en {age_ms:.0f}ms. Cae al escape sincrónico.")
+    if lost or age_ms > SLM_DEEP_WATCHDOG_MS:
+        print(f"[slam_assess] WATCHDOG ({arm}): {'pedido perdido' if lost else 'sin respuesta'} en {age_ms:.0f}ms. Cae al escape sincrónico.")
         clear_scan_state(state)
-        _record_failed_scan(state, "", "watchdog", age_ms)
+        _record_failed_scan(state, "", "perdido" if lost else "watchdog", age_ms)
         state["_deadlock_event"] = {
             "strategy": "slam_assess", "arm": arm,
             "resolved_by_scan": False, "cycles_to_resolve": None,
@@ -721,6 +747,7 @@ def deep_scan_cycle(
 
         # Post-retroceder: iniciar el barrido
         state["_scan_phase"] = "rotando"
+        state["_scan_started_ts"] = time.time()
         state["_scan_heading_index"] = 0
         state["_scan_frames"] = []
         state["_scan_start_yaw_deg"] = current_yaw_deg
@@ -852,6 +879,7 @@ def deep_scan_cycle(
                 }
             )
             state["_deep_scan_request_id"] = request_id
+            state["_deep_scan_request_ts"] = time.time()
             # Instrumentacion de auditoria (2026-0901): mismo mecanismo que
             # deliberative.py -- recordar prompt + frames RAW para adjuntarlos
             # cuando _apply_scan_resolution() resuelva el pedido.
@@ -864,7 +892,7 @@ def deep_scan_cycle(
             state["flight_status"] = "escaneo_profundo_vlm"
             return True
 
-        result, age_ms, _has_pending = service.poll()
+        result, age_ms, lost = _scan_poll(state, service, pending_id)
         if result is not None and result.request_id == pending_id:
             decision = result.parsed_decision
             clear_scan_state(state)
@@ -943,10 +971,10 @@ def deep_scan_cycle(
             }
             return False
 
-        if age_ms > SLM_DEEP_WATCHDOG_MS:
-            print(f"[deep_scan] WATCHDOG ({arm}): sin respuesta del VLM en {age_ms:.0f}ms. Cae al escape sincronico.")
+        if lost or age_ms > SLM_DEEP_WATCHDOG_MS:
+            print(f"[deep_scan] WATCHDOG ({arm}): {'pedido perdido' if lost else 'sin respuesta del VLM'} en {age_ms:.0f}ms. Cae al escape sincronico.")
             clear_scan_state(state)
-            _record_failed_scan(state, "", "watchdog", age_ms)
+            _record_failed_scan(state, "", "perdido" if lost else "watchdog", age_ms)
             state["_deadlock_event"] = {
                 "strategy": "deep_vlm",
                 "arm": arm,

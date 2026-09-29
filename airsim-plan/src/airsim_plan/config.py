@@ -59,7 +59,7 @@ class Settings:
     # AirSim (solo se usa para el hand-off del despegue)
     airsim_host: str = field(default_factory=lambda: os.getenv("AIRSIM_HOST", "127.0.0.1"))
     airsim_vehicle_name: str = field(
-        default_factory=lambda: os.getenv("AIRSIM_VEHICLE_NAME", "Drone0")
+        default_factory=lambda: os.environ["AIRSIM_VEHICLE_NAME"]
     )
     airsim_port: int = field(
         default_factory=lambda: int(os.getenv("AIRSIM_PORT", "41451"))
