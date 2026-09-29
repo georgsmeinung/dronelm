@@ -1,3 +1,72 @@
+# 2026-09-29 (o) - Schema VLM compacto: deg/ok/conf/degradada
+
+Nombres de campos cortos en los schemas JSON de salida del VLM para reducir tokens
+de salida (~40-55 tokens menos por respuesta, ~3-4 s a 15 tok/s):
+- `relativo_deg` -> `deg`, `transitable` -> `ok`, `confianza` -> `conf`
+- `imagen_degradada`/`imagen_degradada_global` -> `degradada`
+- `rationale` -> `r` (opcional, no en `required`)
+
+Parsers (`parse_scene_description`, `parse_panorama_description`) aceptan tanto los
+nombres cortos (nuevo) como los largos (backward compat con respuestas antiguas).
+La representacion interna normalizada sigue usando nombres largos (no hay cambios
+en `scene_to_action` ni `panorama_to_action`).
+Archivos actualizados: `deep_scan.py`, `deliberative.py`,
+`config/prompts/system_vision.txt`, `config/prompts/system_text.txt`.
+
+# 2026-09-29 (n) - Rediseno VLM: percepcion semantica en vez de oraculo de acciones
+
+El VLM ya no elige macro-acciones (EVADIR_DERECHA, GANAR_ALTURA, etc.). Ahora describe
+la escena por sectores (frente/izquierda/derecha) con tipo de obstaculo, transitable y
+confianza. La capa de navegacion (`scene_to_action`, `panorama_to_action`) decide la
+accion combinando vision + historia de trayectoria. Elimina la necesidad de
+`_apply_trajectory_overrides` como parche post-VLM.
+
+### Cambios
+
+**`deep_scan.py`**
+- Nuevos tipos de obstaculo: `OBSTACLE_TIPOS` = ["libre","fachada","muro","vegetacion","interior","indeterminado"].
+  "fachada" + "imagen_degradada" permite detectar cristal sin malla de colision.
+- Nuevos schemas JSON: `RESPONSE_JSON_SCHEMA_SCENE` (sectores) y `RESPONSE_JSON_SCHEMA_PANORAMA` (rumbos).
+- Nuevos parsers: `parse_scene_description`, `parse_panorama_description` (tolerantes, normalizan tipos).
+- `scene_to_action(scene, guidance, telem, trajectory)`: decide macro-accion + inject_corner;
+  incluye overrides de trayectoria 1a/1b/1c internamente.
+- `panorama_to_action(rumbos, trajectory, guidance, telem, post_retroceder)`: idem para escaneo panoramico.
+  `post_retroceder=True` omite los overrides (Fix N: evita RETROCEDER despues de retroceder).
+- Prompts `SYSTEM_PROMPT_SLAM_ASSESS` y `SYSTEM_PROMPT_DEEP_SCAN` reescritos: piden descripcion, no accion.
+- `_slam_assess_cycle` y `deep_scan_cycle`: consumen el nuevo schema; path viejo (macro_action) como fallback.
+
+**`deliberative.py`**
+- `SYSTEM_PROMPT_VISION` y `SYSTEM_PROMPT_TEXT`: reescritos para pedir descripcion de escena (sectores).
+- `_build_user_prompt`: instruccion actualizada a "describe la escena".
+- Schemas importados de `deep_scan`: `RESPONSE_JSON_SCHEMA_SCENE`, `RESPONSE_JSON_SCHEMA_PANORAMA`.
+- `_parse_scene_response(raw)`: nuevo parser tolerante de respuesta raw a schema de escena.
+- `_query_slm_impl`: usa `RESPONSE_JSON_SCHEMA_PANORAMA`/`SCENE` segun modo; parsea con nuevo schema
+  primero, cae a `_parse_decision` (formato viejo) si falla.
+- `_finalize`: rama nueva para `sectores in decision` — llama `scene_to_action` que incluye overrides de
+  trayectoria; path viejo (macro_action + `_apply_trajectory_overrides` explícito) conservado como fallback.
+- `_get_reason_key`/`_schema_for_reason` eliminados (schema ahora determinado por modo, no por estado).
+
+**`graph.py`**
+- `DroneState`: agrega campo `scene_description: Optional[Dict[str, Any]]`.
+
+# 2026-09-29 (m) - "Colisiones raras" (seed 99 03:12): 4 correcciones
+
+Corrida `seed_99_20260929T031232Z`: AirSim no registro colisiones; el dron penetro vanos de cristal y
+parapets (sin malla de colision ni flujo util) y dio un paseo aleatorio de esquinas (12 inyectadas, 2
+alcanzadas, 10 reemplazadas).
+
+1. `execute_velocity` (`airsim_client.py`): la rama "solo girar" (`rotateByYawRateAsync`) descartaba `vz`;
+   ahora exige `|vz| < 0.05`. Antes GANAR_ALTURA con giro nunca subia (213 ciclos en 5 corridas).
+2. Compromiso con la esquina (`waypoint_tracker.py`): una esquina pendiente no se reemplaza hasta pasados
+   `CORNER_COMMIT_CYCLES` (120) ciclos.
+3. Validacion contra contactos: esquina o trayecto a menos de `CORNER_CONTACT_CLEARANCE_M` (8 m) de un
+   contacto conocido se refleja al lado opuesto (si tambien esta bloqueado, se conserva).
+4. Freno por profundidad (`runner.py`, capa externa; el grafo sigue sin leer profundidad): si el percentil 5
+   del centro < `DEPTH_BRAKE_DIST_M` (2.0 m) arma `_depth_brake_left` (`DEPTH_BRAKE_HOLD_CYCLES`=6) y el
+   motor limita vx a `DEPTH_BRAKE_SPEED_MPS` (0.0); ademas registra un contacto. Summary:
+   `depth_brake_events`. Limitacion: la profundidad se muestrea cada `DEPTH_METRIC_EVERY_N`=5 ciclos.
+   Tests: `test_corner_commit_and_validation.py`.
+
 # 2026-09-29 (l) - Bloqueo bajo el techo de la autopista: 4 fallos encadenados
 
 Diagnostico (citysim_pilot seed 99 02:57): tras zafar del techo (detector OK: z=-5.83, objetivo -4.83; escaneo resuelto c107,

@@ -108,6 +108,11 @@ CORNER_CHAIN_STEP_M = float(os.getenv("CORNER_CHAIN_STEP_M", "12.0"))
 CORNER_CHAIN_MAX = int(os.getenv("CORNER_CHAIN_MAX", "4"))
 CONTACT_MERGE_M = float(os.getenv("CONTACT_MERGE_M", "3.0"))
 CHAIN_MIN_CORNER_GAP_M = float(os.getenv("CORNER_CHAIN_MIN_GAP_M", "6.0"))
+# Compromiso con la esquina pendiente (seed_99 03:12: 12 esquinas inyectadas, 10 reemplazadas antes de
+# alcanzarse, paseo aleatorio): no se reemplaza hasta pasados CORNER_COMMIT_CYCLES ciclos.
+CORNER_COMMIT_CYCLES = int(os.getenv("CORNER_COMMIT_CYCLES", "120"))
+# Esquina nueva o trayecto a menos de esto de un contacto conocido: se refleja al lado opuesto.
+CORNER_CONTACT_CLEARANCE_M = float(os.getenv("CORNER_CONTACT_CLEARANCE_M", "8.0"))
 
 
 def effective_stall_threshold() -> int:
@@ -203,6 +208,7 @@ class WaypointTracker:
         self._contacts: List[tuple] = []
         self._last_pos: Optional[tuple] = None
         self._chain_count: int = 0
+        self._corner_age: int = 0  # ciclos desde la ultima esquina inyectada
 
     def record_contact(self, x: float, y: float) -> None:
         """Registra un punto donde el dron quedo bloqueado (deadlock/escape)."""
@@ -372,6 +378,36 @@ class WaypointTracker:
             if math.hypot(dx, dy) < 10.0:
                 return False
 
+        # Compromiso: una esquina pendiente joven no se reemplaza (evita el vaiven entre lados).
+        if (current_wp and current_wp.get("is_temporary")
+                and self._corner_age < CORNER_COMMIT_CYCLES):
+            print(f"[Manhattan] esquina pendiente {current_wp.get('label')} mantenida "
+                  f"({self._corner_age}/{CORNER_COMMIT_CYCLES} ciclos): {label} descartada.")
+            return False
+
+        # Validar contra contactos: si la esquina o el trayecto hacia ella pasan junto a un punto de
+        # contacto, se prueba el lado opuesto (reflejo respecto de la posicion actual).
+        if self._last_pos is not None and self._contacts:
+            ox, oy = self._last_pos
+
+            def _near_contact(cx: float, cy: float) -> bool:
+                sx, sy = cx - ox, cy - oy
+                seg2 = sx * sx + sy * sy
+                for px, py in self._contacts:
+                    t = 0.0 if seg2 < 1e-9 else max(0.0, min(1.0, ((px - ox) * sx + (py - oy) * sy) / seg2))
+                    if math.hypot(px - (ox + t * sx), py - (oy + t * sy)) < CORNER_CONTACT_CLEARANCE_M:
+                        # el contacto al pie del dron (t~0) no cuenta: es de donde se sale
+                        if math.hypot(px - ox, py - oy) >= CORNER_CONTACT_CLEARANCE_M or t > 0.05:
+                            return True
+                return False
+
+            if _near_contact(float(x), float(y)):
+                mx, my = 2.0 * ox - float(x), 2.0 * oy - float(y)
+                if not _near_contact(mx, my):
+                    print(f"[Manhattan] esquina ({float(x):.1f},{float(y):.1f}) cruza un contacto: "
+                          f"reflejada a ({mx:.1f},{my:.1f}).")
+                    x, y = mx, my
+
         corner_wp = {
             "x": round(float(x), 2),
             "y": round(float(y), 2),
@@ -393,6 +429,7 @@ class WaypointTracker:
         if stale:
             print(f"[Manhattan] {len(stale)} esquina(s) pendiente(s) reemplazada(s) por {label}.")
         self.waypoints.insert(self.current_index, corner_wp)
+        self._corner_age = 0
         print(f"[Manhattan] Sub-waypoint de esquina inyectado: {label} (X: {corner_wp['x']}, Y: {corner_wp['y']}, Z: {corner_wp['z']})")
         return True
 
@@ -414,6 +451,7 @@ class WaypointTracker:
         wy = float(wp.get("y", 0.0))
         wz = float(wp.get("z", 0.0))
         self._last_pos = (x, y)
+        self._corner_age += 1
 
         dist_3d = math.sqrt((wx - x) ** 2 + (wy - y) ** 2 + (wz - z) ** 2)
         if self.ceiling_z is not None:

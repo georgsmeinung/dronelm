@@ -25,7 +25,7 @@ import base64
 import math
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .action_map import action_to_command, compute_corner_waypoint
 from .deliberation_service import DeliberationService
@@ -46,6 +46,10 @@ SLM_DEEP_WATCHDOG_MS = float(os.getenv("SLM_DEEP_WATCHDOG_MS", "12000"))
 MAX_DEEP_SCAN_IMAGES = int(os.getenv("MAX_DEEP_SCAN_IMAGES", "5"))
 DEEP_SCAN_MANEUVER_DURATION_S = float(os.getenv("MANEUVER_DURATION_S", "1.0"))
 VLM_IMAGE_MAX_SIZE = int(os.getenv("VLM_IMAGE_MAX_SIZE", "384"))
+# Tamaño máximo de imagen para el scan panorámico (independiente del tactico).
+# Menor que VLM_IMAGE_MAX_SIZE: en el scan se usan 4 imagenes simultaneas;
+# reducir de 384 a 256 px ahorra ~500 vision tokens (~1s prefill en qwen2.5-vl-3b).
+DEEP_SCAN_IMAGE_MAX_SIZE = int(os.getenv("DEEP_SCAN_IMAGE_MAX_SIZE", "256"))
 # Espejo deliberado de deliberative.LOCAL_LLM_MODEL_NAME/VLM_VISION_ENABLED
 # (mismo motivo que _encode_frame_base64 arriba: evita el import circular).
 # Antes faltaban en la entrada de deliberations[] de este modulo, asi que la
@@ -54,8 +58,9 @@ VLM_IMAGE_MAX_SIZE = int(os.getenv("VLM_IMAGE_MAX_SIZE", "384"))
 LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi3")
 VLM_VISION_ENABLED = os.getenv("VLM_VISION_ENABLED", "true").lower() == "true"
 
-# Mismo vocabulario que deliberative.PROMPT_ACTIONS (H2.3): el escaneo
-# profundo no introduce una macro-accion nueva, elige entre las existentes.
+# Vocabulario de acciones (solo para backward compat y el escape sincronico).
+# El redesign VLM (2026-0929) ya no usa este enum como salida del modelo;
+# se mantiene para el path de fallback cuando el VLM retorna el formato viejo.
 PROMPT_ACTIONS = {
     "MANTENER_RUMBO",
     "EVADIR_IZQUIERDA",
@@ -66,54 +71,126 @@ PROMPT_ACTIONS = {
     "RETROCEDER",
 }
 
-# S3 (PLAN-SLAM): prompt de slam_assess. Diferencia arquitectónica clave con
-# deep_vlm: no hay rotación panorámica — se envía solo el frame frontal del
-# ciclo actual MÁS el historial de trayectoria acumulado (texto de S2).
-# El VLM razona sobre historia de intentos + vista actual, sin maniobra extra.
+# Tipos de obstaculo reconocidos por el VLM (rediseno 2026-0929).
+# El VLM ahora describe la escena en lugar de elegir acciones.
+OBSTACLE_TIPOS = ["libre", "fachada", "muro", "vegetacion", "interior", "indeterminado"]
+
+# Schema JSON para descripcion panoramica (deep_vlm: N rumbos con imagen por rumbo).
+# Campos compactos (2026-0929): deg/ok/conf en lugar de relativo_deg/transitable/confianza.
+# Ahorra ~40 tokens de salida vs nombres largos (×4 entradas); rationale opcional
+# para no forzar al modelo a generar texto libre innecesario (~20 tokens adicionales).
+_SECTOR_SCHEMA_ITEM = {
+    "type": "object",
+    "properties": {
+        "deg":  {"type": "number"},
+        "tipo": {"type": "string", "enum": OBSTACLE_TIPOS},
+        "ok":   {"type": "boolean"},
+        "conf": {"type": "number"},
+    },
+    "required": ["deg", "tipo", "ok"],
+    "additionalProperties": False,
+}
+RESPONSE_JSON_SCHEMA_PANORAMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "panorama_description",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "rumbos":    {"type": "array", "items": _SECTOR_SCHEMA_ITEM},
+                "degradada": {"type": "boolean"},
+                "r":         {"type": "string"},
+            },
+            "required": ["rumbos", "degradada"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+# Schema JSON para descripcion de escena de un solo frame (slam_assess / tactico).
+_SINGLE_SECTOR_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "tipo": {"type": "string", "enum": OBSTACLE_TIPOS},
+        "ok":   {"type": "boolean"},
+        "conf": {"type": "number"},
+    },
+    "required": ["tipo", "ok"],
+    "additionalProperties": False,
+}
+RESPONSE_JSON_SCHEMA_SCENE = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "scene_description",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "sectores": {
+                    "type": "object",
+                    "properties": {
+                        "frente":    _SINGLE_SECTOR_SCHEMA,
+                        "izquierda": _SINGLE_SECTOR_SCHEMA,
+                        "derecha":   _SINGLE_SECTOR_SCHEMA,
+                    },
+                    "required": ["frente", "izquierda", "derecha"],
+                    "additionalProperties": False,
+                },
+                "degradada": {"type": "boolean"},
+                "r":         {"type": "string"},
+            },
+            "required": ["sectores", "degradada"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+# S3 (PLAN-SLAM): prompt de slam_assess — frame frontal + historial de
+# trayectoria como contexto. Rediseno 2026-0929: el VLM ya no elige acciones
+# sino que describe la escena; la capa de navegacion decide a partir de la
+# descripcion + las estadisticas de trayectoria.
 SYSTEM_PROMPT_SLAM_ASSESS = (
-    "Sos el cerebro deliberativo de un dron autónomo en un atasco genuino.\n"
-    "Se te provee el HISTORIAL DE TRAYECTORIA (qué acciones se intentaron, cuáles "
-    "produjeron avance y cuáles terminaron en stall) más el frame frontal del ciclo actual.\n"
-    "Usá el historial para identificar qué direcciones están cronicamente bloqueadas y "
-    "cuáles no se han explorado. Elegí UNA macro-acción que resuelva el atasco.\n\n"
-    "PRIORIDAD DE EXPLORACIÓN:\n"
-    "1. Si el historial marca FRENTE como 'Zona probable de bloqueo' y hay zonas con "
-    "'No explorado', DEBES elegir EVADIR hacia la zona no explorada — incluso si la imagen "
-    "muestra vegetación, las laterales podrían estar despejadas y no se han intentado.\n"
-    "2. Los escapes verticales (GANAR/PERDER_ALTURA) solo aplican cuando las zonas laterales "
-    "también fueron intentadas y fallaron.\n"
-    "3. RETROCEDER aplica cuando FRENTE y ambas laterales están bloqueadas — alejarse del "
-    "obstáculo crea margen para que el siguiente EVADIR tenga espacio de maniobra.\n\n"
-    "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: el frente está despejado según lo que ves ahora (falso atasco).\n"
-    "- EVADIR_IZQUIERDA / EVADIR_DERECHA: esa dirección no fue intentada o tuvo menor tasa de stall.\n"
-    "- RETROCEDER: el dron está pegado al obstáculo; retroceder 3-4m para ganar margen antes de evadir.\n"
-    "- GANAR_ALTURA: el historial muestra bloqueo en todos los rumbos laterales; el obstáculo es sólido.\n"
-    "- PERDER_ALTURA: el historial indica vegetación arriba y hay espacio libre abajo.\n"
-    "- FRENAR: ninguna dirección del historial ni la vista actual ofrecen salida; esperar.\n\n"
-    "Responde ÚNICAMENTE con un objeto JSON válido:\n"
-    '{"macro_action": "<ACCION>", "rationale": "<explicación breve citando el historial>"}'
+    "Sos el sistema de percepcion semantica de un dron autonomo en un atasco.\n"
+    "Recibes el frame frontal del ciclo actual (y el historial de trayectoria como contexto).\n"
+    "Describe lo que ves en cada sector de la imagen. NO decides acciones.\n\n"
+    "Para cada sector (frente, izquierda, derecha) indica:\n"
+    "- tipo: la superficie u obstaculo predominante que ves\n"
+    "- ok: si el dron puede avanzar en esa direccion sin colisionar\n"
+    "- conf: certeza en la descripcion (0.0-1.0)\n\n"
+    "Tipos validos:\n"
+    "- 'libre': espacio abierto, calle, cielo, sin obstaculos visibles en los proximos 10m\n"
+    "- 'fachada': superficie plana (vidrio, metal, hormigon liso, reflectante)\n"
+    "- 'muro': superficie con textura (ladrillo, roca, hormigon rugoso)\n"
+    "- 'vegetacion': arboles, ramas, follaje, setos\n"
+    "- 'interior': imagen oscura o uniforme sin informacion util\n"
+    "- 'indeterminado': no se puede determinar con la imagen disponible\n\n"
+    "degradada: true si la imagen en general es muy oscura, uniforme o carece de informacion visual.\n\n"
+    "Responde UNICAMENTE con un objeto JSON valido:\n"
+    '{"sectores": {"frente": {"tipo": "...", "ok": true, "conf": 0.9}, '
+    '"izquierda": {...}, "derecha": {...}}, "degradada": false}'
 )
 
+# Prompt panoramico para deep_vlm — N rumbos, una imagen por rumbo.
+# Rediseno 2026-0929: descripcion por rumbo en lugar de eleccion de accion.
 SYSTEM_PROMPT_DEEP_SCAN = (
-    "Sos el cerebro deliberativo de un dron autonomo en un atasco genuino: los intentos previos de "
-    "avanzar no progresaron y no hay corredor visible desde el rumbo actual.\n"
-    "Se te muestran varias imagenes tomadas girando en el lugar, cada una hacia un rumbo distinto "
-    "(NO son fotogramas consecutivos en el tiempo -- son direcciones distintas vistas desde el mismo "
-    "punto). La primera imagen corresponde al rumbo que viene fallando.\n"
-    "Evalua el panorama completo (los rumbos mostrados, no solo el frente) y elegi UNA macro-accion "
-    "para resolver el atasco.\n\n"
-    "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: el rumbo que viene fallando en realidad esta despejado (falso atasco).\n"
-    "- EVADIR_IZQUIERDA / EVADIR_DERECHA: hay una calle o pasaje despejado en alguno de los rumbos "
-    "mostrados a la izquierda o derecha del rumbo actual.\n"
-    "- RETROCEDER: todos los rumbos muestran obstaculos y el dron esta embebido en la malla de "
-    "colision -- retroceder 5-6m para ganar margen antes de intentar una nueva evasion.\n"
-    "- GANAR_ALTURA: todos los rumbos muestran estructuras (edificios/paredes) -- sobrevolar.\n"
-    "- PERDER_ALTURA: el bloqueo es vegetacion (arboles/ramas) y se ve espacio despejado mas abajo.\n"
-    "- FRENAR: ningun rumbo del panorama ofrece una salida clara; mejor esperar a la proxima deliberacion.\n\n"
+    "Sos el sistema de percepcion semantica de un dron autonomo en un atasco.\n"
+    "Se te muestran varias imagenes tomadas girando en el lugar, cada una hacia un rumbo distinto\n"
+    "(NO son fotogramas consecutivos en el tiempo -- son direcciones distintas vistas desde el mismo punto).\n"
+    "Describe lo que ves en cada rumbo. NO decides acciones.\n\n"
+    "Para cada imagen (identificada por su etiqueta de rumbo), genera una entrada en 'rumbos' con:\n"
+    "- deg: el angulo relativo al rumbo original (0=frente actual, positivo=derecha, negativo=izquierda)\n"
+    "- tipo: la superficie u obstaculo predominante que ves en ese rumbo\n"
+    "- ok: si el dron puede avanzar en ese rumbo sin colisionar\n"
+    "- conf: certeza en la descripcion (0.0-1.0)\n\n"
+    "Tipos validos:\n"
+    "- 'libre': espacio abierto, calle, cielo, sin obstaculos visibles en los proximos 10m\n"
+    "- 'fachada': superficie plana (vidrio, metal, hormigon liso, reflectante)\n"
+    "- 'muro': superficie con textura (ladrillo, roca, hormigon rugoso)\n"
+    "- 'vegetacion': arboles, ramas, follaje, setos\n"
+    "- 'interior': imagen oscura o uniforme sin informacion util\n"
+    "- 'indeterminado': no se puede determinar con la imagen disponible\n\n"
+    "degradada: true si la mayoria de las imagenes son oscuras o uniformes.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
-    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve citando el rumbo elegido>"}'
+    '{"rumbos": [{"deg": 0, "tipo": "...", "ok": true, "conf": 0.9}, ...], "degradada": false}'
 )
 
 
@@ -176,6 +253,273 @@ def _record_failed_scan(state: Dict[str, Any], raw_response: str, reason: str, l
     state["_last_delib_frames"] = state.get("_pending_delib_frames") or []
     state["_pending_delib_prompt"] = None
     state["_pending_delib_frames"] = None
+
+
+# --------------------------------------------------------------------------- #
+# Redesign VLM 2026-0929: VLM como interprete de escena, no oraculo de accion #
+# --------------------------------------------------------------------------- #
+
+def parse_scene_description(decision: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Extrae y normaliza la descripcion de escena (schema sectores) del VLM.
+
+    Acepta nombres de campos largos (transitable/confianza/imagen_degradada) y
+    compactos (ok/conf/degradada) — ambos producen el mismo dict normalizado.
+    Retorna None si la respuesta no tiene el formato esperado.
+    """
+    if not isinstance(decision, dict):
+        return None
+    sectores = decision.get("sectores")
+    if not isinstance(sectores, dict):
+        return None
+    if not all(k in sectores for k in ("frente", "izquierda", "derecha")):
+        return None
+    for key in ("frente", "izquierda", "derecha"):
+        s = sectores.get(key)
+        if not isinstance(s, dict):
+            sectores[key] = {"tipo": "indeterminado", "transitable": False, "confianza": 0.5}
+        else:
+            if s.get("tipo") not in OBSTACLE_TIPOS:
+                s["tipo"] = "indeterminado"
+            # compact: ok → transitable
+            transitable = s.get("transitable", s.get("ok", False))
+            s["transitable"] = bool(transitable)
+            # compact: conf → confianza
+            confianza = s.get("confianza", s.get("conf", 0.5))
+            s["confianza"] = float(confianza)
+    # compact: degradada → imagen_degradada
+    degradada = decision.get("imagen_degradada", decision.get("degradada", False))
+    return {
+        "sectores": sectores,
+        "imagen_degradada": bool(degradada),
+        "rationale": str(decision.get("rationale", decision.get("r", ""))),
+    }
+
+
+def parse_panorama_description(decision: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Extrae y normaliza la descripcion panoramica (schema rumbos) del VLM.
+
+    Acepta nombres de campos largos (relativo_deg/transitable/confianza/
+    imagen_degradada_global) y compactos (deg/ok/conf/degradada).
+    """
+    if not isinstance(decision, dict):
+        return None
+    rumbos_raw = decision.get("rumbos")
+    if not isinstance(rumbos_raw, list) or len(rumbos_raw) == 0:
+        return None
+    normalized = []
+    for r in rumbos_raw:
+        if not isinstance(r, dict):
+            continue
+        tipo = r.get("tipo", "indeterminado")
+        if tipo not in OBSTACLE_TIPOS:
+            tipo = "indeterminado"
+        # compact: deg → relativo_deg
+        deg = r.get("relativo_deg", r.get("deg", 0.0))
+        # compact: ok → transitable
+        transitable = r.get("transitable", r.get("ok", False))
+        # compact: conf → confianza
+        confianza = r.get("confianza", r.get("conf", 0.5))
+        normalized.append({
+            "relativo_deg": float(deg),
+            "tipo": tipo,
+            "transitable": bool(transitable),
+            "confianza": float(confianza),
+        })
+    if not normalized:
+        return None
+    # compact: degradada → imagen_degradada_global
+    degradada = decision.get("imagen_degradada_global", decision.get("degradada", False))
+    return {
+        "rumbos": normalized,
+        "imagen_degradada_global": bool(degradada),
+        "rationale": str(decision.get("rationale", decision.get("r", ""))),
+    }
+
+
+def scene_to_action(
+    scene: Dict[str, Any],
+    guidance: Dict[str, Any],
+    telem: Dict[str, Any],
+    trajectory: "Any | None" = None,
+) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """Decide macro-accion e inject_corner a partir de descripcion de escena.
+
+    Usada por slam_assess (via _slam_assess_cycle) y por el tactico deliberativo
+    (via deliberative._finalize). Incluye los overrides de trayectoria 1a/1b/1c
+    que antes estaban en _apply_trajectory_overrides.
+
+    Returns (macro_action, corner_o_None).
+    """
+
+    sectores = scene.get("sectores", {})
+    frente = sectores.get("frente", {})
+    izq_s = sectores.get("izquierda", {})
+    der_s = sectores.get("derecha", {})
+    degradada = scene.get("imagen_degradada", False)
+
+    frente_trans = bool(frente.get("transitable", True))
+    izq_trans = bool(izq_s.get("transitable", False))
+    der_trans = bool(der_s.get("transitable", False))
+    frente_tipo = frente.get("tipo", "indeterminado")
+
+    bearing_err = float((guidance or {}).get("bearing_err_deg", 0.0)) if isinstance(guidance, dict) else 0.0
+
+    # Trajectory overrides (1a/1b/1c): antes de usar la vision, verificar si
+    # la historia de intentos ya demuestra bloqueo en todas las direcciones.
+    if trajectory is not None:
+        orient = telem.get("orientation", {}) if isinstance(telem, dict) else {}
+        current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
+        stats = trajectory.zone_stats(current_hdg)
+        f_rate = stats["FRENTE"]["stall_rate"]
+        f_att = stats["FRENTE"]["attempts"]
+        izq_t = stats["IZQUIERDA"]
+        der_t = stats["DERECHA"]
+
+        if (f_rate >= 0.70 and izq_t["attempts"] >= 3 and izq_t["stall_rate"] >= 0.70
+                and der_t["attempts"] >= 3 and der_t["stall_rate"] >= 0.70):
+            print(
+                f"[scene_to_action] override-1a -> RETROCEDER "
+                f"(f={f_rate:.0%} izq={izq_t['stall_rate']:.0%}[{izq_t['attempts']}] "
+                f"der={der_t['stall_rate']:.0%}[{der_t['attempts']}])"
+            )
+            return "RETROCEDER", None
+
+        if (f_rate >= 0.90 and f_att >= 20
+                and izq_t["attempts"] == 0 and der_t["attempts"] == 0):
+            print(f"[scene_to_action] override-1b -> RETROCEDER (inmovilizado)")
+            return "RETROCEDER", None
+
+        if (f_rate >= 0.90 and f_att >= 20
+                and (izq_t["attempts"] == 0 or izq_t["stall_rate"] >= 0.70)
+                and (der_t["attempts"] == 0 or der_t["stall_rate"] >= 0.70)):
+            print(f"[scene_to_action] override-1c -> RETROCEDER (laterales fallidas)")
+            return "RETROCEDER", None
+
+    # Imagen degradada sin datos visuales utiles
+    if degradada:
+        # Confiar en trayectoria para elegir lateral no explorado
+        if trajectory is not None:
+            orient = telem.get("orientation", {}) if isinstance(telem, dict) else {}
+            current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
+            stats = trajectory.zone_stats(current_hdg)
+            if stats["IZQUIERDA"]["attempts"] == 0:
+                return "EVADIR_IZQUIERDA", None
+            if stats["DERECHA"]["attempts"] == 0:
+                return "EVADIR_DERECHA", None
+        return "GANAR_ALTURA", None
+
+    # Frente transitable -> mantener rumbo
+    if frente_trans:
+        return "MANTENER_RUMBO", None
+
+    # Frente bloqueado: elegir lateral abierto
+    prefer_right = bearing_err > 0
+    if izq_trans and der_trans:
+        side = "EVADIR_DERECHA" if prefer_right else "EVADIR_IZQUIERDA"
+        side_sign = 1.0 if side == "EVADIR_DERECHA" else -1.0
+    elif der_trans:
+        side = "EVADIR_DERECHA"
+        side_sign = 1.0
+    elif izq_trans:
+        side = "EVADIR_IZQUIERDA"
+        side_sign = -1.0
+    else:
+        # Todos bloqueados visualmente: decidir por tipo de obstaculo
+        tipos = {frente_tipo, izq_s.get("tipo", "indeterminado"), der_s.get("tipo", "indeterminado")}
+        if "vegetacion" in tipos and tipos <= {"vegetacion", "indeterminado", "libre"}:
+            return "PERDER_ALTURA", None
+        return "GANAR_ALTURA", None
+
+    # Generar corner en la direccion de evasion
+    try:
+        orient_t = telem.get("orientation", {}) if isinstance(telem, dict) else {}
+        hdg = math.degrees(float(orient_t.get("yaw", 0.0)))
+        corner = compute_corner_waypoint(
+            telem, hdg + side_sign * 90.0, guidance=guidance,
+            offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
+        )
+    except Exception:
+        corner = None
+    return side, corner
+
+
+def panorama_to_action(
+    rumbos: List[Dict[str, Any]],
+    trajectory: "Any | None",
+    guidance: Dict[str, Any],
+    telem: Dict[str, Any],
+    post_retroceder: bool = False,
+) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """Decide macro-accion e inject_corner a partir de descripcion panoramica.
+
+    post_retroceder=True omite los overrides de trayectoria (Fix N): el scan
+    post-retroceso ve una vista fresca y sus stats acumuladas no deben forzar
+    de nuevo RETROCEDER.
+
+    Returns (macro_action, corner_o_None).
+    """
+    # Trajectory overrides (1a/1b/1c): si todas las zonas estan bloqueadas
+    if trajectory is not None and not post_retroceder:
+        orient = telem.get("orientation", {}) if isinstance(telem, dict) else {}
+        current_hdg = math.degrees(float(orient.get("yaw", 0.0)))
+        stats = trajectory.zone_stats(current_hdg)
+        f_rate = stats["FRENTE"]["stall_rate"]
+        f_att = stats["FRENTE"]["attempts"]
+        izq_t = stats["IZQUIERDA"]
+        der_t = stats["DERECHA"]
+
+        if (f_rate >= 0.70 and izq_t["attempts"] >= 3 and izq_t["stall_rate"] >= 0.70
+                and der_t["attempts"] >= 3 and der_t["stall_rate"] >= 0.70):
+            print(
+                f"[panorama_to_action] override-1a -> RETROCEDER "
+                f"(f={f_rate:.0%} izq={izq_t['stall_rate']:.0%}[{izq_t['attempts']}] "
+                f"der={der_t['stall_rate']:.0%}[{der_t['attempts']}])"
+            )
+            return "RETROCEDER", None
+        if (f_rate >= 0.90 and f_att >= 20
+                and izq_t["attempts"] == 0 and der_t["attempts"] == 0):
+            print(f"[panorama_to_action] override-1b -> RETROCEDER (inmovilizado)")
+            return "RETROCEDER", None
+        if (f_rate >= 0.90 and f_att >= 20
+                and (izq_t["attempts"] == 0 or izq_t["stall_rate"] >= 0.70)
+                and (der_t["attempts"] == 0 or der_t["stall_rate"] >= 0.70)):
+            print(f"[panorama_to_action] override-1c -> RETROCEDER (laterales fallidas)")
+            return "RETROCEDER", None
+
+    if not rumbos:
+        return "FRENAR", None
+
+    bearing_err = float((guidance or {}).get("bearing_err_deg", 0.0)) if isinstance(guidance, dict) else 0.0
+    transitable = [r for r in rumbos if r.get("transitable", False)]
+
+    if not transitable:
+        tipos = {r.get("tipo", "indeterminado") for r in rumbos}
+        if "vegetacion" in tipos and tipos <= {"vegetacion", "indeterminado"}:
+            return "PERDER_ALTURA", None
+        return "GANAR_ALTURA", None
+
+    def _angular_dist(r: Dict[str, Any]) -> float:
+        rel = float(r.get("relativo_deg", 0.0))
+        return abs((rel - bearing_err + 180.0) % 360.0 - 180.0)
+
+    best = min(transitable, key=_angular_dist)
+    rel_deg = float(best.get("relativo_deg", 0.0))
+
+    if abs(rel_deg) <= 30.0:
+        return "MANTENER_RUMBO", None
+
+    orient_t = telem.get("orientation", {}) if isinstance(telem, dict) else {}
+    hdg = math.degrees(float(orient_t.get("yaw", 0.0)))
+    side_sign = 1.0 if rel_deg > 0 else -1.0
+    macro = "EVADIR_DERECHA" if rel_deg > 0 else "EVADIR_IZQUIERDA"
+    try:
+        corner = compute_corner_waypoint(
+            telem, hdg + side_sign * 90.0, guidance=guidance,
+            offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
+        )
+    except Exception:
+        corner = None
+    return macro, corner
 
 
 def clear_scan_state(state: Dict[str, Any]) -> None:
@@ -271,15 +615,10 @@ def _build_deep_scan_prompt(
     instruccion = (
         "INSTRUCCION:\n"
         f"Hay {deadlock_cycles} ciclos de atasco confirmado. "
-        + (
-            "NO elijas MANTENER_RUMBO si FRENTE ya fue intentado múltiples veces "
-            "con progreso marginal.\n"
-            if deadlock_cycles >= 3
-            else "\n"
-        )
-        + "Elegi la macro_action que mejor resuelva el atasco a partir del panorama mostrado.\n"
-        "Responde SOLO con este JSON:\n"
-        '{"macro_action": "<ACCION>", "rationale": "<motivo corto citando el rumbo>"}'
+        "Describe cada sector/rumbo con su tipo de obstaculo y si el dron puede avanzar.\n"
+        "La capa de navegacion decidira la accion a partir de tu descripcion.\n"
+        "Responde SOLO con este JSON (sin texto adicional):\n"
+        '{"rumbos": [{"deg": 0, "tipo": "...", "ok": true, "conf": 0.9}, ...], "degradada": false}'
     )
 
     return (
@@ -587,74 +926,73 @@ def _slam_assess_cycle(
     if result is not None and result.request_id == pending_id:
         decision = result.parsed_decision
         clear_scan_state(state)
-        if decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
+
+        # Rediseno 2026-0929: intentar parsear como descripcion de escena primero.
+        # Backward compat: si falla, intentar macro_action del formato viejo.
+        scene = parse_scene_description(decision)
+        if scene is not None:
+            macro, corner = scene_to_action(scene, guidance, telemetry, trajectory)
+            nav_decision = {
+                "macro_action": macro,
+                "rationale": scene.get("rationale", ""),
+                "used_json_schema": (decision or {}).get("used_json_schema", False),
+            }
+            print(f"[slam_assess] escena VLM -> nav decide: {macro} ({scene.get('rationale','')[:60]})")
+        elif decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
             original_macro = decision.get("macro_action")
-            decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
-            if decision.get("macro_action") != original_macro:
-                print(f"[slam_assess] override: VLM recomendo {original_macro} -> {decision.get('macro_action')} (trajectory stats).")
-            _apply_scan_resolution(
-                state, decision, result.raw_response, result.latency_ms,
-                guidance, telemetry, arm, deadlock_cycles, trajectory,
+            nav_decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
+            if nav_decision.get("macro_action") != original_macro:
+                print(f"[slam_assess] compat-override: {original_macro} -> {nav_decision.get('macro_action')}")
+            macro = nav_decision.get("macro_action", "FRENAR")
+            corner = None
+        else:
+            print(f"[slam_assess] ({arm}) respuesta sin accion viable. Cae al escape sincronico.")
+            _record_failed_scan(state, result.raw_response, "sin_accion_viable", result.latency_ms)
+            state["_deadlock_event"] = {
+                "strategy": "slam_assess", "arm": arm,
+                "resolved_by_scan": False, "cycles_to_resolve": None,
+                "fell_back_to_blind": True,
+            }
+            return False
+
+        _apply_scan_resolution(
+            state, nav_decision, result.raw_response, result.latency_ms,
+            guidance, telemetry, arm, deadlock_cycles, trajectory,
+        )
+        if state.get("_deadlock_event"):
+            state["_deadlock_event"]["strategy"] = "slam_assess"
+
+        # Aplicar corner de navegacion (antes de Fix 17 para que Fix 17 lo pueda sobrescribir)
+        if corner and not state.get("inject_corner"):
+            state["inject_corner"] = corner
+
+        # Fix 17: corner post-RETROCEDER usando bearing al WP como referencia,
+        # perpendicular al path, en el lado OPUESTO a la recomendacion de navegacion.
+        # (Invariante confirmado seed_1: bearing_to_wp estable geometricamente.)
+        _had_retro = bool(state.pop("_post_retroceder_corner_pending", False))
+        macro_post = state.get("next_action", "")
+        if _had_retro and macro_post not in ("RETROCEDER", "GANAR_ALTURA", "PERDER_ALTURA"):
+            orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+            hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
+            bearing_err_pc = float(
+                (guidance or {}).get("bearing_err_deg", 0.0)
+            ) if isinstance(guidance, dict) else 0.0
+            bearing_to_wp = hdg_pc + bearing_err_pc
+            _sign = 1.0 if macro_post == "EVADIR_IZQUIERDA" else -1.0
+            corner_yaw = bearing_to_wp + _sign * 90.0
+            state["inject_corner"] = compute_corner_waypoint(
+                telemetry, corner_yaw, guidance=guidance,
+                offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
             )
-            # Sobrescribir strategy en _deadlock_event para el log
-            if state.get("_deadlock_event"):
-                state["_deadlock_event"]["strategy"] = "slam_assess"
+            side = "DER(opp-IZQ)" if _sign > 0 else "IZQ(opp-DER)"
+            print(
+                f"[slam_assess] retroceder-corner fix17: "
+                f"hdg={hdg_pc:.0f} bear_err={bearing_err_pc:.0f} "
+                f"bearing_to_wp={bearing_to_wp:.0f}{_sign:+.0f}x90"
+                f"={corner_yaw:.0f} ({side}) nav={macro_post}."
+            )
 
-            # Fix 17: corner post-RETROCEDER usando bearing al WP como referencia,
-            # perpendicular al path, en el lado OPUESTO al que sugiere el VLM.
-            #
-            # Fix 16 (hdg + 45°) fallaba porque el heading puede distar ~90° del
-            # bearing real al WP (diagnosticado seed_1 new run: drone facing N=-9°,
-            # WP al W=-88°, VLM dice EVADIR_IZQUIERDA → corner_yaw=-54° → corner
-            # va hacia el NO, cruza la fachada del edificio a los 0.3m y queda
-            # dentro del bloque → drone oscila a 12.8m del corner para siempre).
-            #
-            # Fix 11-15 usaban bearing_err directamente como ángulo, lo que variaba
-            # con cada rotación del heading causando corners inconsistentes.
-            #
-            # Fix 17: bearing_to_wp = hdg + bearing_err es el ángulo ABSOLUTO al WP
-            # (estable geometricamente: solo cambia cuando el drone se mueve, no
-            # cuando rota). El corner va a 90° perpendicular de ese bearing, en el
-            # lado OPUESTO al VLM: el VLM recomienda la dirección donde VE espacio
-            # (cámara) pero eso suele ser HACIA la fachada bloqueante cuando el
-            # heading está desfasado → invertir pone el corner en el lado libre.
-            # Ejemplo confirmado: bearing_to_wp=-88° (W), VLM=EVADIR_IZQ (→N dentro
-            # del edificio), invert → DERECHA (+90°) → corner a 2° (N) = libre ✓.
-            macro_post = decision.get("macro_action", "")
-            if state.pop("_post_retroceder_corner_pending", False) and macro_post != "RETROCEDER":
-                from .action_map import compute_corner_waypoint
-                orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
-                hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
-                bearing_err_pc = float(
-                    (guidance or {}).get("bearing_err_deg", 0.0)
-                ) if isinstance(guidance, dict) else 0.0
-                bearing_to_wp = hdg_pc + bearing_err_pc  # bearing absoluto al WP, estable
-                # Invertir dirección del VLM: VLM recomienda el lado donde percibe
-                # apertura visual, que cuando el heading está desfasado suele ser la
-                # fachada → el lado opuesto es el libre.
-                _sign = 1.0 if macro_post == "EVADIR_IZQUIERDA" else -1.0
-                corner_yaw = bearing_to_wp + _sign * 90.0  # perpendicular al path WP
-                state["inject_corner"] = compute_corner_waypoint(
-                    telemetry, corner_yaw, guidance=guidance,
-                    offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
-                )
-                side = "DER(opp-IZQ)" if _sign > 0 else "IZQ(opp-DER)"
-                print(
-                    f"[slam_assess] retroceder-corner fix17: "
-                    f"hdg={hdg_pc:.0f}° bear_err={bearing_err_pc:.0f}° "
-                    f"bearing_to_wp={bearing_to_wp:.0f}°{_sign:+.0f}×90°"
-                    f"={corner_yaw:.0f}° ({side}) VLM={macro_post}."
-                )
-
-            return True
-        print(f"[slam_assess] ({arm}) respuesta sin acción viable. Cae al escape sincrónico.")
-        _record_failed_scan(state, result.raw_response, "sin_accion_viable", result.latency_ms)
-        state["_deadlock_event"] = {
-            "strategy": "slam_assess", "arm": arm,
-            "resolved_by_scan": False, "cycles_to_resolve": None,
-            "fell_back_to_blind": True,
-        }
-        return False
+        return True
 
     if lost or age_ms > SLM_DEEP_WATCHDOG_MS:
         print(f"[slam_assess] WATCHDOG ({arm}): {'pedido perdido' if lost else 'sin respuesta'} en {age_ms:.0f}ms. Cae al escape sincrónico.")
@@ -862,7 +1200,7 @@ def deep_scan_cycle(
             images_b64: List[str] = []
             labels: List[str] = []
             for i, (heading, frame, _capture_ts) in enumerate(frames):
-                encoded = _encode_frame_base64(frame)
+                encoded = _encode_frame_base64(frame, max_size=DEEP_SCAN_IMAGE_MAX_SIZE)
                 if encoded is None:
                     continue
                 images_b64.append(encoded)
@@ -896,80 +1234,83 @@ def deep_scan_cycle(
         if result is not None and result.request_id == pending_id:
             decision = result.parsed_decision
             clear_scan_state(state)
-            if decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
-                # Romper loop infinito RETROCEDER: si el scan post-RETROCEDER vuelve
-                # a pedir RETROCEDER, el drone esta en una esquina fisicamente cerrada.
-                # Escalar a GANAR_ALTURA para salir verticalmente.
-                _had_retroceder_pending = state.get("_post_retroceder_corner_pending", False)
-                if _had_retroceder_pending and decision.get("macro_action") == "RETROCEDER":
-                    print(
-                        "[deep_vlm] post-RETROCEDER VLM insiste en RETROCEDER "
-                        "- esquina cerrada, forzando GANAR_ALTURA."
-                    )
-                    decision = {
-                        "macro_action": "GANAR_ALTURA",
-                        "rationale": (
-                            "Esquina sin salida lateral confirmada por barrido panoramico; "
-                            "subir para superar obstaculos."
-                        ),
-                    }
-                    state.pop("_post_retroceder_corner_pending", None)
+            _had_retro_pending = bool(state.get("_post_retroceder_corner_pending", False))
 
-                original_macro = decision.get("macro_action")
-                # Fix N: en scan post-retroceder las stats de trayectoria acumuladas
-                # (muchos EVADIR fallidos) disparan Override 1a (RETROCEDER) aunque
-                # el drone ya se alejo del muro. Confiar en la vista fresca del VLM
-                # para elegir la direccion del corner sin filtros de trayectoria.
-                _is_post_retro = state.get("_post_retroceder_corner_pending", False)
-                if not _is_post_retro:
+            # Rediseno 2026-0929: intentar parsear como descripcion panoramica primero.
+            pano = parse_panorama_description(decision)
+            if pano is not None:
+                macro, corner = panorama_to_action(
+                    pano["rumbos"], trajectory, guidance, telemetry,
+                    post_retroceder=_had_retro_pending,  # Fix N
+                )
+                # Romper loop RETROCEDER: si panorama tambien da RETROCEDER, forzar GANAR_ALTURA.
+                if _had_retro_pending and macro == "RETROCEDER":
+                    print("[deep_vlm] post-RETROCEDER nav insiste en RETROCEDER - forzando GANAR_ALTURA.")
+                    macro = "GANAR_ALTURA"
+                    corner = None
+                nav_decision = {
+                    "macro_action": macro,
+                    "rationale": pano.get("rationale", ""),
+                    "used_json_schema": (decision or {}).get("used_json_schema", False),
+                }
+                print(f"[deep_vlm] panorama VLM -> nav decide: {macro} ({pano.get('rationale','')[:60]})")
+            elif decision is not None and decision.get("macro_action") in PROMPT_ACTIONS:
+                # Backward compat: VLM retorno formato viejo con macro_action.
+                if _had_retro_pending and decision.get("macro_action") == "RETROCEDER":
+                    print("[deep_vlm] compat: post-RETROCEDER insiste en RETROCEDER - forzando GANAR_ALTURA.")
+                    decision = {"macro_action": "GANAR_ALTURA",
+                                "rationale": "Esquina cerrada; subir para superar obstaculos."}
+                if not _had_retro_pending:
+                    original_macro = decision.get("macro_action")
                     decision = _apply_trajectory_overrides(decision, trajectory, telemetry)
                     if decision.get("macro_action") != original_macro:
-                        print(
-                            f"[deep_vlm] override: VLM recomendo {original_macro}"
-                            f" -> {decision.get('macro_action')} (trajectory stats)."
-                        )
-                _apply_scan_resolution(
-                    state, decision, result.raw_response, result.latency_ms,
-                    guidance, telemetry, arm, deadlock_cycles, trajectory,
+                        print(f"[deep_vlm] compat-override: {original_macro} -> {decision.get('macro_action')}")
+                nav_decision = decision
+                macro = nav_decision.get("macro_action", "FRENAR")
+                corner = None
+            else:
+                print(f"[deep_scan] ({arm}) respuesta sin accion viable. Cae al escape sincronico.")
+                _record_failed_scan(state, result.raw_response, "sin_accion_viable", result.latency_ms)
+                state["_deadlock_event"] = {
+                    "strategy": "deep_vlm",
+                    "arm": arm,
+                    "resolved_by_scan": False,
+                    "cycles_to_resolve": None,
+                    "fell_back_to_blind": True,
+                }
+                return False
+
+            _apply_scan_resolution(
+                state, nav_decision, result.raw_response, result.latency_ms,
+                guidance, telemetry, arm, deadlock_cycles, trajectory,
+            )
+            if corner and not state.get("inject_corner"):
+                state["inject_corner"] = corner
+
+            # Fix 17: corner post-RETROCEDER usando bearing al WP como referencia,
+            # perpendicular al path, en el lado OPUESTO a la recomendacion de navegacion.
+            macro_post = state.get("next_action", "")
+            state.pop("_post_retroceder_corner_pending", None)
+            if _had_retro_pending and macro_post not in ("RETROCEDER", "GANAR_ALTURA", "PERDER_ALTURA"):
+                orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
+                hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
+                bearing_err_pc = float(
+                    (guidance or {}).get("bearing_err_deg", 0.0)
+                ) if isinstance(guidance, dict) else 0.0
+                bearing_to_wp = hdg_pc + bearing_err_pc
+                _sign = 1.0 if macro_post == "EVADIR_IZQUIERDA" else -1.0
+                corner_yaw = bearing_to_wp + _sign * 90.0
+                state["inject_corner"] = compute_corner_waypoint(
+                    telemetry, corner_yaw, guidance=guidance,
+                    offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
                 )
-
-                # Fix 17-equivalente para deep_vlm: corner post-RETROCEDER.
-                # Mismo algoritmo que _slam_assess_cycle: angulo perpendicular al
-                # bearing al WP, lado opuesto al VLM, para que el drone no se dirija
-                # de frente a la fachada bloqueante al salir del retroceso.
-                macro_post = decision.get("macro_action", "")
-                _had_pending = state.pop("_post_retroceder_corner_pending", False)
-                if _had_pending and macro_post not in ("RETROCEDER", "GANAR_ALTURA", "PERDER_ALTURA"):
-                    orient_pc = telemetry.get("orientation", {}) if isinstance(telemetry, dict) else {}
-                    hdg_pc = math.degrees(float(orient_pc.get("yaw", 0.0)))
-                    bearing_err_pc = float(
-                        (guidance or {}).get("bearing_err_deg", 0.0)
-                    ) if isinstance(guidance, dict) else 0.0
-                    bearing_to_wp = hdg_pc + bearing_err_pc
-                    _sign = 1.0 if macro_post == "EVADIR_IZQUIERDA" else -1.0
-                    corner_yaw = bearing_to_wp + _sign * 90.0
-                    state["inject_corner"] = compute_corner_waypoint(
-                        telemetry, corner_yaw, guidance=guidance,
-                        offset_m=float(os.getenv("CORNER_OFFSET_M", "12.0")),
-                    )
-                    print(
-                        f"[deep_vlm] retroceder-corner fix17: "
-                        f"hdg={hdg_pc:.0f} bear_err={bearing_err_pc:.0f} "
-                        f"bearing_to_wp={bearing_to_wp:.0f}{_sign:+.0f}x90"
-                        f"={corner_yaw:.0f} VLM={macro_post}."
-                    )
-
-                return True
-            print(f"[deep_scan] ({arm}) respuesta sin accion viable. Cae al escape sincronico.")
-            _record_failed_scan(state, result.raw_response, "sin_accion_viable", result.latency_ms)
-            state["_deadlock_event"] = {
-                "strategy": "deep_vlm",
-                "arm": arm,
-                "resolved_by_scan": False,
-                "cycles_to_resolve": None,
-                "fell_back_to_blind": True,
-            }
-            return False
+                print(
+                    f"[deep_vlm] retroceder-corner fix17: "
+                    f"hdg={hdg_pc:.0f} bear_err={bearing_err_pc:.0f} "
+                    f"bearing_to_wp={bearing_to_wp:.0f}{_sign:+.0f}x90"
+                    f"={corner_yaw:.0f} nav={macro_post}."
+                )
+            return True
 
         if lost or age_ms > SLM_DEEP_WATCHDOG_MS:
             print(f"[deep_scan] WATCHDOG ({arm}): {'pedido perdido' if lost else 'sin respuesta del VLM'} en {age_ms:.0f}ms. Cae al escape sincronico.")

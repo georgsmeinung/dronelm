@@ -58,7 +58,8 @@ _BLOCKED_EVENTS_TRIGGER = int(os.getenv("BLOCKED_EVENTS_TRIGGER", "3"))
 _BLOCKED_EVENTS_WINDOW = int(os.getenv("BLOCKED_EVENTS_WINDOW", "60"))
 # GIRAR_90 compromete un desvio: ademas de girar, inyecta una esquina en el rumbo del giro (antes el
 # dron reanudaba MANTENER_RUMBO recto hacia el mismo muro al terminar el giro).
-_GIRAR90_COMMIT_CORNER = os.getenv("GIRAR90_COMMIT_CORNER", "true").lower() == "true"
+_DEPTH_BRAKE_SPEED_MPS = float(os.getenv("DEPTH_BRAKE_SPEED_MPS", "0.0"))
+_GIRAR90_COMMIT_CORNER =os.getenv("GIRAR90_COMMIT_CORNER", "true").lower() == "true"
 _GIRAR90_CORNER_OFFSET_M = float(os.getenv("GIRAR90_CORNER_OFFSET_M", os.getenv("CORNER_OFFSET_M", "15.0")))
 # Escape vertical forzado (2026-0928): un escaneo cuenta como "futil" si entre
 # dos resoluciones consecutivas el dron se desplazo menos de ESCAPE_MIN_DISP_M.
@@ -120,6 +121,7 @@ class DroneState(TypedDict, total=False):
     _escape_locked: bool
     _escape_baseline_dist: Optional[float]
     inject_corner: Optional[Dict[str, Any]]
+    scene_description: Optional[Dict[str, Any]]
     _deadlock_cycles: int
     _deadlock_event: Optional[Dict[str, Any]]
     # Deep scan state (multi-cycle rotation, used by deep_scan.py)
@@ -166,6 +168,7 @@ class DroneState(TypedDict, total=False):
     # Auditoria (2026-0929): contadores internos publicados para el log.
     _scan_track: Dict[str, Any]
     _speed_cap: Optional[float]
+    _depth_brake_left: int
     _blocked_events: int
     _freeze_cycles: int
     _pos_freeze_cycles: int
@@ -914,6 +917,12 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             bool(state.get("active_maneuver")),
             str(state.get("next_action", "")),
         )
+        # Freno de proximidad por profundidad (cristal/parapets sin colision ni flujo): la capa externa
+        # (runner) arma `_depth_brake_left`; el grafo solo recibe un tope, nunca lee profundidad.
+        _brake_left = int(state.get("_depth_brake_left", 0) or 0)
+        if _brake_left > 0:
+            state["_depth_brake_left"] = _brake_left - 1
+            cap = _DEPTH_BRAKE_SPEED_MPS if cap is None else min(cap, _DEPTH_BRAKE_SPEED_MPS)
         state["_speed_cap"] = cap
         if cap is not None and cmd.get("macro_action") == "MANTENER_RUMBO" and float(cmd.get("vx", 0.0)) > cap:
             cmd = dict(cmd)

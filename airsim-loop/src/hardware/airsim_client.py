@@ -727,7 +727,9 @@ class AirSimClient:
             # combinando ejes de traslacion en cero con yaw_rate. Coincide
             # exactamente con la fase de pivot-en-el-lugar de
             # waypoint_tracker.py (_sharp_turn_active/settle).
-            if abs(vx) < 0.05 and abs(vy) < 0.05 and abs(yaw_rate) > 0.01 and target_yaw is None:
+            # rotateByYawRateAsync descarta vz: solo vale si tampoco hay
+            # comando vertical (si no, GANAR_ALTURA con giro nunca subia).
+            if abs(vx) < 0.05 and abs(vy) < 0.05 and abs(vz) < 0.05 and abs(yaw_rate) > 0.01 and target_yaw is None:
                 self._last_move_future = self._client.rotateByYawRateAsync(
                     float(yaw_rate), duration, vehicle_name=self.vehicle_name,
                 )

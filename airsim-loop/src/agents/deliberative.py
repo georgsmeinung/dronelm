@@ -33,7 +33,13 @@ import json as _json
 
 from . import deep_scan
 from .action_map import action_to_command, compute_corner_waypoint
-from .deep_scan import SYSTEM_PROMPT_DEEP_SCAN  # usado en _query_slm_impl (mode="deep_scan")
+from .deep_scan import (  # usado en _query_slm_impl y _finalize
+    SYSTEM_PROMPT_DEEP_SCAN,
+    RESPONSE_JSON_SCHEMA_SCENE,
+    RESPONSE_JSON_SCHEMA_PANORAMA,
+    parse_scene_description,
+    scene_to_action,
+)
 from .deliberation_service import DeliberationService
 from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception import ObstacleField, empty_field, has_open_corridor
@@ -77,127 +83,59 @@ PROMPT_ACTIONS = {
 
 SAFE_MARGIN_TTC_S = float(os.getenv("SAFE_MARGIN_TTC_S", "2.0"))
 
-RESPONSE_JSON_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "macro_decision",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "macro_action": {"type": "string", "enum": sorted(PROMPT_ACTIONS)},
-                "rationale": {"type": "string"},
-                # VlmGoal (V1-VLM-REFINEMENT): campos opcionales de sub-meta semántica.
-                # dx_m/dy_m: offset body frame (adelante/derecha en metros).
-                # dz_m: NED vertical (negativo=subir). confidence: [0,1].
-                "dx_m": {"type": "number"},
-                "dy_m": {"type": "number"},
-                "dz_m": {"type": "number"},
-                "confidence": {"type": "number"},
-                "semantic_label": {"type": "string"},
-                "mode": {"type": "string", "enum": ["navegar", "inspeccionar", "buscar", "esperar"]},
-            },
-            "required": ["macro_action", "rationale"],
-            "additionalProperties": False,
-        },
-    },
-}
-
-# Poda sintáctica del enum por motivo de consulta (D1, PLAN-DEUDA-TECNICA.md):
-# concentra la distribución de sampling en acciones físicamente coherentes con
-# la causa de la consulta. El fallback es el enum completo (clave no listada).
-_ACTIONS_BY_REASON: Dict[str, set] = {
-    "TTC_CRITICO": {
-        "EVADIR_IZQUIERDA", "EVADIR_DERECHA",
-        "GANAR_ALTURA", "PERDER_ALTURA", "FRENAR",
-        # MANTENER_RUMBO excluido: hay colisión inminente confirmada
-    },
-    "DEADLOCK_ESCAPE": {
-        "EVADIR_IZQUIERDA", "EVADIR_DERECHA",
-        "GANAR_ALTURA", "PERDER_ALTURA",
-        # MANTENER_RUMBO excluido: ya falló. FRENAR excluido: no avanza.
-    },
-}
-
-
-def _schema_for_reason(reason_key: str) -> dict:
-    """Schema JSON con enum podado según el motivo de consulta al VLM."""
-    allowed = _ACTIONS_BY_REASON.get(reason_key, PROMPT_ACTIONS)
-    schema = copy.deepcopy(RESPONSE_JSON_SCHEMA)
-    schema["json_schema"]["schema"]["properties"]["macro_action"]["enum"] = sorted(allowed)
-    return schema
-
-
-def _get_reason_key(field: ObstacleField) -> str:
-    """Clave corta para `_schema_for_reason`; vacía = enum completo."""
-    if field.is_blocked("centro"):
-        return "TTC_CRITICO"
-    return ""
+# Redesign VLM 2026-0929: el schema de escena (RESPONSE_JSON_SCHEMA_SCENE) y el
+# schema panoramico (RESPONSE_JSON_SCHEMA_PANORAMA) se importan de deep_scan.py.
+# Los esquemas viejos (macro_action enum) se mantienen solo como fallback de
+# parse para modelos que aun retornen el formato anterior.
+RESPONSE_JSON_SCHEMA = RESPONSE_JSON_SCHEMA_SCENE  # alias para backward compat
 
 # --------------------------------------------------------------------------- #
 # System Prompts: Texto Puro (SLM) y Vision Directa (VLM)                    #
+# Redesign 2026-0929: el VLM describe la escena, NO elige acciones.           #
+# La capa de navegacion (scene_to_action) decide a partir de la descripcion.  #
 # --------------------------------------------------------------------------- #
 SYSTEM_PROMPT_TEXT = (
-    "Sos el cerebro deliberativo táctico de un dron autónomo en una cuadrícula urbana (Manhattan Grid).\n"
-    "Tu objetivo principal es lograr un vuelo suave, fluido y seguro hacia el waypoint general.\n\n"
-    "Reglas de navegación:\n"
-    "1. Trayectoria Libre y Dirección al Waypoint: Elige MANTENER_RUMBO únicamente si la trayectoria hacia el frente en la dirección general del waypoint deseado está libre de estructuras.\n"
-    "2. Evasión Proactiva por Calles Libres: Si el frente está bloqueado por una estructura, evalúa los laterales. "
-    "Elige EVADIR_IZQUIERDA o EVADIR_DERECHA únicamente si hay una calle transversal o pasaje despejado en esa dirección.\n"
-    "3. Bloqueo Total (Callejón sin salida): Si el frente está bloqueado y ambos laterales también están cerrados por estructuras (edificios/paredes), "
-    "elegí GANAR_ALTURA para sobrevolar el obstáculo, o PERDER_ALTURA si el obstáculo es orgánico (copa de un árbol, ramas) y hay espacio despejado "
-    "más abajo (suelo, sendero) en lugar de intentar girar lateralmente contra el bloqueo.\n"
-    "4. Peligro Inminente: Si estás en peligro crítico inminente en todas las direcciones, elige FRENAR.\n\n"
+    "Sos el sistema de percepcion semantica de un dron autonomo en entorno urbano.\n"
+    "Recibes una descripcion de los sensores del dron y debes describir la escena.\n"
+    "NO decides acciones. Describes lo que ven los sensores con la mayor precision posible.\n\n"
+    "Para cada sector (frente, izquierda, derecha) indica:\n"
+    "- tipo: la superficie u obstaculo predominante que ves\n"
+    "- ok: si el dron puede avanzar en esa direccion sin colisionar\n"
+    "- conf: certeza en la descripcion (0.0-1.0)\n\n"
+    "Tipos validos:\n"
+    "- 'libre': espacio abierto, calle, cielo, sin obstaculos visibles en los proximos 10m\n"
+    "- 'fachada': superficie plana (vidrio, metal, hormigon liso, reflectante)\n"
+    "- 'muro': superficie con textura (ladrillo, roca, hormigon rugoso)\n"
+    "- 'vegetacion': arboles, ramas, follaje, setos\n"
+    "- 'interior': imagen oscura o uniforme sin informacion util\n"
+    "- 'indeterminado': no se puede determinar con los datos disponibles\n\n"
+    "degradada: true si los datos de vision son poco fiables.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
-    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en la trayectoria y suavidad>"}\n\n'
-    "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: Frente y rumbo al waypoint despejados.\n"
-    "- EVADIR_IZQUIERDA: Calle transversal libre a la izquierda.\n"
-    "- EVADIR_DERECHA: Calle transversal libre a la derecha.\n"
-    "- GANAR_ALTURA: Frente y laterales bloqueados por estructuras (subir).\n"
-    "- PERDER_ALTURA: Frente y laterales bloqueados por un obstáculo orgánico (árbol/ramas) con espacio despejado abajo (bajar).\n"
-    "- FRENAR: Peligro crítico en todas direcciones.\n\n"
-    "Reglas estrictas:\n"
-    f"1. No elijas MANTENER_RUMBO si el sector central está BLOQUEADO con TTC menor a {SAFE_MARGIN_TTC_S:.1f} segundos.\n"
-    "2. Si estás rodeado de estructuras de cerca, prioriza GANAR_ALTURA (edificios/paredes) o PERDER_ALTURA (vegetación con salida abajo) para superarlas.\n"
-    "3. Salida estrictamente JSON sin texto adicional."
+    '{"sectores": {"frente": {"tipo": "...", "ok": true, "conf": 0.9}, '
+    '"izquierda": {...}, "derecha": {...}}, "degradada": false}'
 )
 
 SYSTEM_PROMPT_VISION = (
-    "Sos el cerebro deliberativo táctico de un dron autónomo en una cuadrícula urbana (Manhattan Grid).\n"
-    "Tu objetivo principal es lograr un vuelo suave, fluido y seguro hacia el waypoint general.\n\n"
-    "Reglas de navegación y suavidad:\n"
-    "1. Trayectoria Libre y Dirección al Waypoint: Prioriza trazar un rumbo (MANTENER_RUMBO) "
-    "únicamente si ves una trayectoria libre hacia el frente y en la dirección general del waypoint deseado.\n"
-    "2. Evasión Proactiva por Calles Libres: Si el frente está obstruido por una estructura, evalúa los laterales. "
-    "Solo elige EVADIR_IZQUIERDA o EVADIR_DERECHA si ves claramente una calle transversal o pasillo libre y abierto en esa dirección.\n"
-    "3. Bloqueo Total (Callejón sin salida): Si el frente está bloqueado y no hay una calle transversal visiblemente despejada a los lados "
-    "(ambos laterales cerrados por paredes/edificios), elegí GANAR_ALTURA de inmediato para sobrevolar la estructura. Si en cambio lo que bloquea "
-    "es vegetación (ramas, copa de un árbol) y ves claramente espacio despejado más abajo en la imagen (suelo, sendero, calle), elegí PERDER_ALTURA "
-    "para pasar por debajo en lugar de subir más adentro del follaje. No sigas girando en círculos contra el bloqueo.\n"
-    "4. Peligro Inminente: Si estás en una situación de peligro inminente y necesitas detenerte a evaluar, elige FRENAR.\n\n"
+    "Sos el sistema de percepcion semantica de un dron autonomo en entorno urbano.\n"
+    "Recibes imagenes de la camara frontal y describes lo que ves en cada sector.\n"
+    "NO decides acciones. Tu trabajo es describir la escena con precision.\n\n"
+    "Para cada sector (frente, izquierda, derecha) indica:\n"
+    "- tipo: la superficie u obstaculo predominante que ves\n"
+    "- ok: si el dron puede avanzar en esa direccion sin colisionar\n"
+    "- conf: certeza en la descripcion (0.0-1.0)\n\n"
+    "Tipos validos:\n"
+    "- 'libre': espacio abierto, calle, cielo, sin obstaculos visibles en los proximos 10m\n"
+    "- 'fachada': superficie plana (vidrio, metal, hormigon liso, reflectante)\n"
+    "- 'muro': superficie con textura (ladrillo, roca, hormigon rugoso)\n"
+    "- 'vegetacion': arboles, ramas, follaje, setos\n"
+    "- 'interior': imagen oscura o uniforme sin informacion util (posible interior de edificio)\n"
+    "- 'indeterminado': no se puede determinar con la imagen disponible\n\n"
+    "degradada: true si la imagen en general es muy oscura, uniforme o carece de informacion visual util.\n"
+    "Este campo es clave para detectar fachadas de vidrio: cuando el dron esta embebido en vidrio,\n"
+    "la imagen aparece oscura y uniforme (interior). Indica degradada=true en ese caso.\n\n"
     "Responde UNICAMENTE con un objeto JSON valido:\n"
-    '{"macro_action": "<ACCION>", "rationale": "<explicacion breve basada en la trayectoria y suavidad>"}\n\n'
-    "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: Frente y rumbo al waypoint despejados.\n"
-    "- EVADIR_IZQUIERDA: Calle transversal libre visible a la izquierda.\n"
-    "- EVADIR_DERECHA: Calle transversal libre visible a la derecha.\n"
-    "- GANAR_ALTURA: Frente y ambos lados bloqueados por estructuras (callejón sin salida).\n"
-    "- PERDER_ALTURA: Frente y ambos lados bloqueados por vegetación (árbol/ramas), con espacio despejado visible más abajo.\n"
-    "- FRENAR: Peligro crítico inmediato en todas las direcciones.\n\n"
-    "Reglas estrictas:\n"
-    f"1. No elijas MANTENER_RUMBO si el sector central está BLOQUEADO con TTC menor a {SAFE_MARGIN_TTC_S:.1f} segundos.\n"
-    "2. Evita giros innecesarios o alternantes si no hay una vía de escape abierta. Si estás rodeado por estructuras, gana altura; "
-    "si estás rodeado por vegetación con salida visible abajo, perdé altura.\n"
-    "3. Salida estrictamente JSON sin texto adicional.\n\n"
-    "SUB-META OPCIONAL (V1-VLM-REFINEMENT): Si podés estimar con confianza a dónde debería ir el dron en los próximos 5-15 segundos, "
-    "agregá estos campos al JSON (omitirlos es válido si no estás seguro):\n"
-    '  "dx_m": metros hacia adelante en la dirección actual (negativo=atrás),\n'
-    '  "dy_m": metros lateral (negativo=izquierda, positivo=derecha),\n'
-    '  "dz_m": metros vertical NED (negativo=subir, positivo=bajar),\n'
-    '  "confidence": tu confianza en esta estimación (0.0-1.0),\n'
-    '  "semantic_label": etiqueta corta (ej: "calle_libre_derecha", "rodear_edificio"),\n'
-    '  "mode": "navegar"\n'
-    "El offset debe ser de escala de bloque urbano (6-20m), no micro-correcciones."
+    '{"sectores": {"frente": {"tipo": "...", "ok": true, "conf": 0.9}, '
+    '"izquierda": {...}, "derecha": {...}}, "degradada": false}'
 )
 
 def _load_prompt_file(env_var: str, fallback: str, **fmt_kwargs: Any) -> str:
@@ -351,9 +289,9 @@ def _build_user_prompt(
         f"{history_note}"
         f"{goal_history_note}\n\n"
         "INSTRUCCION:\n"
-        "Elige la macro_action ('EVADIR_IZQUIERDA', 'EVADIR_DERECHA', 'GANAR_ALTURA' o 'MANTENER_RUMBO').\n"
-        "Si ves una sub-meta clara, agrega dx_m/dy_m/dz_m/confidence/semantic_label/mode.\n"
-        "Responde SOLO con el JSON válido."
+        "Describe lo que detectan los sensores del dron en cada sector (frente, izquierda, derecha).\n"
+        "No elijas una accion. La capa de navegacion decidira a partir de tu descripcion.\n"
+        "Responde SOLO con el JSON valido."
     )
 
 
@@ -437,9 +375,35 @@ def _parse_decision(raw: str) -> Optional[Dict[str, Any]]:
 
     if not rationale:
         m_rat = re.search(r'["\']?rationale["\']?\s*:\s*["\']([^"\'\n\r]+)["\']', raw, re.IGNORECASE)
-        rationale = m_rat.group(1).strip() if m_rat else f"Decisión SLM: {macro}."
+        rationale = m_rat.group(1).strip() if m_rat else f"Decision SLM: {macro}."
 
     return {"macro_action": macro, "rationale": rationale}
+
+
+def _parse_scene_response(raw: str) -> Optional[Dict[str, Any]]:
+    """Parsea respuesta raw del VLM buscando el schema de escena (sectores).
+
+    Wrapper tolerante: extrae JSON, luego normaliza con parse_scene_description.
+    Devuelve None si el JSON no tiene el formato de escena esperado.
+    """
+    if not raw:
+        return None
+    cleaned = raw.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+    cleaned = cleaned.strip()
+    match = re.search(r"\{[\s\S]*\}", cleaned)
+    if not match:
+        return None
+    data = None
+    try:
+        data = _json.loads(match.group(0))
+    except Exception:
+        try:
+            data = _json.loads(match.group(0).replace("'", '"'))
+        except Exception:
+            return None
+    return parse_scene_description(data)
 
 
 def parse_vlm_goal(decision: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -575,7 +539,10 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
                 {"role": "user", "content": user_content},
             ],
             temperature=0.2,
-            max_tokens=200,
+            # Panoramica: 4 rumbos JSON caben en ~150 tokens; limitar a 160 para
+            # forzar brevedad y reducir latencia (~2s con qwen2.5-vl-3b).
+            # Tactico/slam_assess: 3 sectores + rationale caben en ~180 tokens.
+            max_tokens=160 if is_deep_scan else 200,
             timeout=SLM_DEEP_HTTP_TIMEOUT_S if is_deep_scan else SLM_HTTP_TIMEOUT_S,
         )
 
@@ -583,8 +550,7 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
         used_schema = False
         if VLM_USE_JSON_SCHEMA:
             try:
-                reason_key = payload.get("reason_note", "")
-                schema = _schema_for_reason(reason_key)
+                schema = RESPONSE_JSON_SCHEMA_PANORAMA if is_deep_scan else RESPONSE_JSON_SCHEMA_SCENE
                 completion = client.chat.completions.create(response_format=schema, **kwargs)
                 raw = completion.choices[0].message.content or ""
                 used_schema = True
@@ -595,7 +561,20 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
             raw = completion.choices[0].message.content or ""
 
         latency_ms = (time.time() - t0) * 1000.0
-        parsed = _parse_decision(raw)
+        # Redesign 2026-0929: intentar schema de escena/panorama primero;
+        # si el modelo devuelve el formato viejo (macro_action), usar fallback.
+        if is_deep_scan:
+            from .deep_scan import parse_panorama_description as _parse_pano_raw
+            _raw_dict: Optional[Dict[str, Any]] = None
+            try:
+                _raw_dict = _json.loads(raw)
+            except Exception:
+                pass
+            parsed = _parse_pano_raw(_raw_dict) if _raw_dict is not None else None
+        else:
+            parsed = _parse_scene_response(raw)
+        if parsed is None:
+            parsed = _parse_decision(raw)  # fallback: formato antiguo macro_action
         if parsed is not None:
             parsed["used_json_schema"] = used_schema
         return parsed, raw, latency_ms, None
@@ -887,20 +866,34 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
         result, age_ms, has_pending = service.poll()
 
         def _finalize(decision: Dict[str, Any], raw_response: str, latency_ms: float, is_fallback: bool, err: Optional[str], timed_out: bool) -> Dict[str, Any]:
-            macro = decision.get("macro_action", "FRENAR")
-            # Override de trayectoria: aplica los mismos overrides que slam_assess (Override 1-3)
-            # tambien en el path regular para cubrir _escape_locked=True, donde slam_assess
-            # deja de ejecutarse y el SLM regular retorna MANTENER_RUMBO sin restriction.
-            if trajectory is not None and not is_fallback:
-                overridden = deep_scan._apply_trajectory_overrides(decision, trajectory, telemetry)
-                if overridden.get("macro_action") != macro:
-                    print(
-                        f"[Deliberativo] _finalize traj-override: "
-                        f"{macro} -> {overridden.get('macro_action')} "
-                        f"(rationale: {overridden.get('rationale', '')[:80]})"
-                    )
-                    decision = overridden
-                    macro = decision.get("macro_action", macro)
+            corner: Optional[Dict[str, float]] = None
+            # Redesign 2026-0929: el VLM devuelve descripcion de escena (sectores),
+            # no macro_action. scene_to_action decide la accion (incluye overrides de
+            # trayectoria internamente). El path viejo (macro_action) sigue activo
+            # como fallback para modelos que aun devuelvan el formato anterior.
+            if "sectores" in decision and not is_fallback:
+                scene = parse_scene_description(decision)
+                if scene is not None:
+                    state["scene_description"] = scene
+                    macro, corner = scene_to_action(scene, guidance, telemetry, trajectory)
+                    decision = {"macro_action": macro, "rationale": scene.get("rationale", ""), "used_json_schema": decision.get("used_json_schema", False)}
+                else:
+                    decision = _fallback_decision(field, guidance)
+                    is_fallback = True
+                    macro = decision.get("macro_action", "FRENAR")
+            else:
+                macro = decision.get("macro_action", "FRENAR")
+                # Path viejo: override de trayectoria explícito (solo para formato macro_action).
+                if trajectory is not None and not is_fallback:
+                    overridden = deep_scan._apply_trajectory_overrides(decision, trajectory, telemetry)
+                    if overridden.get("macro_action") != macro:
+                        print(
+                            f"[Deliberativo] _finalize traj-override: "
+                            f"{macro} -> {overridden.get('macro_action')} "
+                            f"(rationale: {overridden.get('rationale', '')[:80]})"
+                        )
+                        decision = overridden
+                        macro = decision.get("macro_action", macro)
             # Override de seguridad: nunca MANTENER_RUMBO con estructura bloqueada a corto TTC.
             if macro == "MANTENER_RUMBO" and close_structural:
                 print("[Deliberativo] -> OVERRIDE DE SEGURIDAD: centro bloqueado con TTC bajo. Forzando evasión.")
@@ -942,20 +935,17 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             state["_pending_delib_prompt"] = None
             state["_pending_delib_frames"] = None
 
-            # VlmGoal (V1-VLM-REFINEMENT): extraer sub-meta semántica si el modelo la emitió.
-            goal = parse_vlm_goal(decision)
-            if goal and float(goal.get("confidence", 0)) >= VLM_GOAL_MIN_CONFIDENCE:
-                state["vlm_goal"] = goal
-                corner = vlm_goal_to_inject_corner(goal, telemetry, guidance)
-                if not state.get("inject_corner"):  # no sobreescribir escape ya comprometido
-                    state["inject_corner"] = corner
-                history = list(state.get("_vlm_goal_history") or [])
-                history.append({
-                    "timestamp": time.time(),
-                    "trigger_type": "reactive",
-                    "vlm_goal": goal,
-                })
-                state["_vlm_goal_history"] = history[-3:]
+            # Inyectar corner de scene_to_action (nuevo path) o VlmGoal (path viejo).
+            if corner and not state.get("inject_corner"):
+                state["inject_corner"] = corner
+            else:
+                # Backward compat: VlmGoal solo para respuestas en formato antiguo.
+                goal = parse_vlm_goal(decision)
+                if goal and float(goal.get("confidence", 0)) >= VLM_GOAL_MIN_CONFIDENCE:
+                    state["vlm_goal"] = goal
+                    vlm_corner = vlm_goal_to_inject_corner(goal, telemetry, guidance)
+                    if not state.get("inject_corner"):
+                        state["inject_corner"] = vlm_corner
 
             state["next_action"] = macro
             state["velocity_command"] = cmd
@@ -1085,8 +1075,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
             imu_jitter_level=str(state.get("imu_jitter_level") or "normal"),
             use_vision=_use_vision,
         )
-        reason_key = _get_reason_key(field)
-        request_id = service.request({"prompt": prompt, "images_b64": images_b64, "reason_note": reason_key})
+        request_id = service.request({"prompt": prompt, "images_b64": images_b64})
         state["slm_request_id"] = request_id
         # Instrumentacion de auditoria (2026-0901): recordar que se mando
         # (texto + frames RAW, cada uno con su timestamp REAL de captura,

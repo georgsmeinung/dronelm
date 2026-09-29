@@ -257,6 +257,7 @@ def run_one(
     freeze_wd = FreezeWatchdog()
     pose_hist: "deque" = deque(maxlen=600)
     freeze_recoveries = 0
+    depth_brake_events = 0
     freeze_aborted = False
     pending_freeze_event = None
     try:
@@ -395,6 +396,16 @@ def run_one(
                 except Exception:
                     pass  # Si falla la captura de depth, solo no registramos la métrica
 
+            # Freno de proximidad (2026-0929): cristal/parapets no tienen colision ni flujo util, asi que
+            # la profundidad (solo aqui, capa externa; el grafo no la lee) arma un tope de velocidad
+            # para los proximos ciclos y registra el punto como contacto (valida esquinas futuras).
+            _brake_dist = float(os.getenv("DEPTH_BRAKE_DIST_M", "2.0"))
+            if _brake_dist > 0 and min_obstacle_dist_m is not None and min_obstacle_dist_m < _brake_dist:
+                state["_depth_brake_left"] = int(os.getenv("DEPTH_BRAKE_HOLD_CYCLES", "6"))
+                tracker.record_contact(pos.get("x", 0.0), pos.get("y", 0.0))
+                depth_brake_events += 1
+                print(f"[runner] FRENO PROFUNDIDAD c{cycles}: min_dist={min_obstacle_dist_m:.2f} m < {_brake_dist:.1f} m")
+
             # Seguridad de proximidad: aborta solo si el drone esta fisicamente
             # embebido en la malla (depth < umbral Y velocidad casi cero).
             # Sin la condicion de velocidad, 0.30 m dispara durante navegacion
@@ -461,6 +472,7 @@ def run_one(
         if freeze_aborted:
             logger.extra_summary["termination_reason"] = "physics_locked"
         logger.extra_summary["freeze_recoveries"] = freeze_recoveries
+        logger.extra_summary["depth_brake_events"] = depth_brake_events
         summary = logger.close()
         if viewport_capture is not None:
             viewport_capture.close()
