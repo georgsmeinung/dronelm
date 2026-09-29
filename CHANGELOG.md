@@ -1,3 +1,33 @@
+# 2026-09-29 (l) - Bloqueo bajo el techo de la autopista: 4 fallos encadenados
+
+Diagnostico (citysim_pilot seed 99 02:57): tras zafar del techo (detector OK: z=-5.83, objetivo -4.83; escaneo resuelto c107,
+esquina inyectada en (-11.46,-11.26)) el dron quedo PARADO 178 ciclos (c242-419, 39 s) a 3.86 m de la esquina, con la calle
+despejada (video). Causas encadenadas: (1) `near_vertical` (BEARING_UNSTABLE_DIST_XY_M=4.0 en .env + |dz|>0.3) ponia vx=0; con la
+altura objetivo limitada por el techo dz=0.41 m y el ascenso comandado (vz=-0.15) no se ejecutaba (real 0.000 m/s); (2)
+`update()` aceptaba WPs con la z SIN limitar (dist_3d ~6.8 m > 3.5 m): la esquina era inalcanzable bajo el techo (bug de la
+implementacion del detector de techo); (3) piso optico: a alt<4.5 m `navigate_node` iba a reactivo puro, sin deadlock ni escaneo
+(_stopped_cycles llego a 158 sin efecto) y el margen de techo dejaba el objetivo solo 0.33 m sobre ese piso; (4) un escaneo
+profundo quedo huerfano en fase `rotando` (c134) con `_deliberation_pending=True` hasta que la limpieza por tiempo (60 s) lo quito.
+
+- `WaypointTracker.update()`: con techo activo la aceptacion usa la distancia HORIZONTAL.
+- `near_vertical` solo si `|dz| > max(0.3, NEAR_VERTICAL_RATIO * dist_xy)` (cono, ratio 1.0): un WP realmente sobre el dron
+  (despegue) sigue siendo vertical puro; 0.4 m de error a 3.9 m horizontales ya no anula vx.
+- `navigate_node`: bajo el piso optico solo va a reactivo puro si NO hay techo (despegue/aterrizaje); con techo (`ceiling_z`) se
+  mantiene el manejo de atasco/deadlock y solo se omite la evasion por flujo. `StallDetector` ya no suprime `wp_no_progress`
+  por altura baja cuando hay techo.
+- `CEILING_MARGIN_M` 1.0 -> 0.8 (objetivo ~5.0 m con techo a 5.8 m; holgado sobre el piso optico).
+- Escaneo huerfano: se descarta tras `ORPHAN_SCAN_IDLE_CYCLES`=25 ciclos de navegacion sin que la rama de deadlock lo sondee
+  (ademas de las reglas por tiempo).
+- No cambiado (evidencia insuficiente): la ley de vz pequeno. Solo 2 tramos sostenidos en los datos (cmd 0.17 -> real 0.053;
+  cmd -0.15 -> real 0.000); un piso de |vz| podria perturbar la altitud y no se toco.
+
+# 2026-09-29 (k) - Aterrizaje suave cancelado por una flecha en un print (cp1252)
+
+`AirSimClient.land_smooth` imprimia `z=... -> ...` con `→`; la salida por tuberia del runner (subproceso, cp1252 en Windows) no
+puede codificarla y el `UnicodeEncodeError` caia en el `except` ("Error en aterrizaje suave: 'charmap' codec can't encode
+character '→'"): el aterrizaje suave del final de las corridas lanzadas por el runner se cancelaba. Corregido (`->`) y test
+`tests/test_console_encoding.py` que recorre con `ast` todos los `print` de `src/`, `main.py` y el runner (era el unico caso).
+
 # 2026-09-29 (j) - Frente bloqueado: gobernador de velocidad, desvio comprometido, deadlock por eventos y congelamiento
 
 Diagnostico (citysim_pilot seed 99 02:32, primera captura en vivo con FollowCam): el dron vuela DE FRENTE 30 m contra una

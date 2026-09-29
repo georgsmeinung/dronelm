@@ -48,6 +48,8 @@ _TRAJ_STALL_TRIGGER = float(os.getenv("TRAJ_STALL_TRIGGER_RATE", "0.70"))
 _TRAJ_ATT_TRIGGER = int(os.getenv("TRAJ_STALL_TRIGGER_MIN_ATT", "10"))
 _STUCK_RETROCEDER_LIMIT = int(os.getenv("STUCK_RETROCEDER_LIMIT", "30"))
 _DEEP_WATCHDOG_MS = float(os.getenv("SLM_DEEP_WATCHDOG_MS", "12000"))
+# Escaneo huerfano: ciclos de navegacion sin que nadie lo sondee (la rama de deadlock dejo de llamarlo).
+_ORPHAN_SCAN_IDLE_CYCLES = int(os.getenv("ORPHAN_SCAN_IDLE_CYCLES", "25"))
 # Frente bloqueado repetido (2026-0929): N giros GIRAR_90 en una ventana de ciclos = deadlock, AUNQUE
 # la distancia al WP siga bajando. En citysim_pilot seed 99 (02:32) el dron avanzo 30 m de frente contra
 # una fachada con 6 GIRAR_90 y el detector de atasco (basado en progreso al WP) nunca disparo, porque
@@ -201,6 +203,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     scan_track: Dict[str, Any] = {"pos": None, "futile": 0, "vert_n": 0}
     governor = SpeedGovernor()
     nav_cycle = {"n": 0}
+    last_scan_call = {"n": 0}
     blocked_events: "deque[int]" = deque()
     deliberation_service = make_deliberation_service()
 
@@ -574,6 +577,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             deep_scan_cycle, DEADLOCK_STRATEGY,
         )
 
+        last_scan_call["n"] = nav_cycle["n"]
         cons_esc = int(state.get("_consecutive_escapes", 0))
         dc = int(state.get("_deadlock_cycles", 0)) + 1
         state["_deadlock_cycles"] = dc
@@ -741,8 +745,10 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             _now = time.time()
             _req_ts = state.get("_deep_scan_request_ts")
             _start_ts = state.get("_scan_started_ts")
+            _idle = nav_cycle["n"] - last_scan_call["n"]
             _orphan = (
-                (_req_ts is not None and (_now - float(_req_ts)) * 1000.0 > 1.5 * _DEEP_WATCHDOG_MS)
+                _idle > _ORPHAN_SCAN_IDLE_CYCLES
+                or (_req_ts is not None and (_now - float(_req_ts)) * 1000.0 > 1.5 * _DEEP_WATCHDOG_MS)
                 or (_req_ts is None and _start_ts is not None and _now - float(_start_ts) > 60.0)
             )
             if _orphan:
@@ -782,16 +788,21 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         if stall.imu_contact or stall.blind_wall:
             return evasive_node(state)
 
-        # --- Below optical floor: pure reactive ---
+        # --- Below optical floor ---
+        # Despegue/aterrizaje: reactivo puro (el flujo no es valido cerca del suelo). PERO si la altura baja
+        # es deliberada por un techo detectado (ceiling_z), el dron vuela de verdad: se mantiene la deteccion
+        # de atasco/deadlock y solo se omite la evasion por flujo (mas abajo). Antes TODO se saltaba y el
+        # dron quedo 178 ciclos parado a 4.4 m sin que ningun detector actuara (seed 99 02:57).
         telem = state.get("telemetry") or {}
         pos = telem.get("position") or {}
         alt_m = abs(float(pos.get("z", 0.0)))
-        if alt_m < _OPTICAL_MIN_ALT_M:
+        guidance = state.get("waypoint_guidance") or {}
+        below_floor = alt_m < _OPTICAL_MIN_ALT_M
+        if below_floor and guidance.get("ceiling_z") is None:
             return reactive_node(state)
 
         stuck = int(state.get("evasion_stuck_cycles", 0))
         field: ObstacleField = state.get("obstacle_field") or empty_field()
-        guidance = state.get("waypoint_guidance") or {}
 
         # --- Forced vertical escape (futile scans / frozen position) ---
         if _vertical_escape_due(state):
@@ -822,6 +833,10 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         if stuck >= effective_stall_threshold():
             if stuck >= hard_stall_threshold() or not has_open_corridor(field, guidance):
                 return _deadlock_resolve(state, stuck, field, guidance, telem)
+
+        # Bajo el piso optico (por un techo): sin evasion basada en flujo.
+        if below_floor:
+            return reactive_node(state)
 
         # --- Proactive VLM request (before deadlock) ---
         _maybe_request_vlm(state, stuck, field, guidance, telem)

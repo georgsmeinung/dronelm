@@ -341,7 +341,7 @@ class AirSimClient:
             if z_current < z_target - 0.1:
                 timeout_s = abs(z_target - z_current) / speed + 6.0
                 print(
-                    f"[AirSimClient] Descendiendo: z={z_current:.1f} → {z_target:.1f} m "
+                    f"[AirSimClient] Descendiendo: z={z_current:.1f} -> {z_target:.1f} m "
                     f"(timeout={timeout_s:.0f} s)..."
                 )
                 self._client.moveToZAsync(

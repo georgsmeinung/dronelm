@@ -22,6 +22,12 @@ PROGRESS_EPS_M = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
 # deliberacion/evasion excesiva (la camara barria obstaculos distintos en
 # cada giro espurio).
 BEARING_UNSTABLE_DIST_XY_M = float(os.getenv("BEARING_UNSTABLE_DIST_XY_M", "1.0"))
+# Un WP es "casi vertical" (vx=0, movimiento vertical puro) solo si el error de altura supera este
+# multiplo de la distancia horizontal (cono). Antes bastaba |dz| > 0.3 m dentro de
+# BEARING_UNSTABLE_DIST_XY_M (4 m en config/.env): con el objetivo de altura limitado por un techo
+# (dz=0.41 m a 3.86 m horizontales) el dron quedo parado 178 ciclos "subiendo" 0.4 m que no subia
+# (citysim_pilot seed 99 02:57, 2026-0929).
+NEAR_VERTICAL_RATIO = float(os.getenv("NEAR_VERTICAL_RATIO", "1.0"))
 # Suavizado exponencial (EMA) de vx/yaw_rate entre ciclos: alpha=1.0 desactiva
 # el filtro (usa el valor crudo cada vez); valores mas bajos = mas suave pero
 # mas lento en reaccionar a un cambio real de rumbo/velocidad. Con alpha=0.5
@@ -83,7 +89,9 @@ ORIENT_SETTLE_CYCLES = int(os.getenv("ORIENT_SETTLE_CYCLES", "2"))
 CEILING_DETECT_CYCLES = int(os.getenv("CEILING_DETECT_CYCLES", "10"))
 CEILING_DETECT_DZ_M = float(os.getenv("CEILING_DETECT_DZ_M", "0.15"))
 CEILING_MIN_ALT_M = float(os.getenv("CEILING_MIN_ALT_M", "3.0"))
-CEILING_MARGIN_M = float(os.getenv("CEILING_MARGIN_M", "1.0"))
+# 0.8 (antes 1.0): con techo a 5.8 m el objetivo queda a ~5.0 m, holgado sobre el piso optico de 4.5 m
+# (con 1.0 quedaba a 4.83 m y el dron oscilaba por debajo, perdiendo el manejo de atasco).
+CEILING_MARGIN_M = float(os.getenv("CEILING_MARGIN_M", "0.8"))
 CEILING_RELEASE_M = float(os.getenv("CEILING_RELEASE_M", "15.0"))
 # Cadena de esquinas (2026-0929): un CORNER_WP saca al dron del punto de
 # contacto, pero el WP siguiente suele seguir apuntando contra el mismo
@@ -408,6 +416,11 @@ class WaypointTracker:
         self._last_pos = (x, y)
 
         dist_3d = math.sqrt((wx - x) ** 2 + (wy - y) ** 2 + (wz - z) ** 2)
+        if self.ceiling_z is not None:
+            # Bajo un techo la altura del WP puede ser inalcanzable (compute_guidance ya la limita a
+            # ceiling_z + margen): aceptar por distancia HORIZONTAL. Con la z sin limitar, un WP a
+            # z=-10 bajo un techo a -5.8 tenia dist_3d >= 4 m y nunca se aceptaba.
+            dist_3d = math.hypot(wx - x, wy - y)
 
         if dist_3d <= self.acceptance_radius:
             label = wp.get("label", f"WP_{self.current_index + 1}")
@@ -492,7 +505,7 @@ class WaypointTracker:
         # movimiento sea vertical puro en vez de una rampa diagonal. dist_3d
         # sigue decrementando durante el descenso/ascenso, por lo que el
         # contador de progreso no se dispara.
-        near_vertical = dist_xy < BEARING_UNSTABLE_DIST_XY_M and abs(dz) > 0.3
+        near_vertical = dist_xy < BEARING_UNSTABLE_DIST_XY_M and abs(dz) > max(0.3, NEAR_VERTICAL_RATIO * dist_xy)
 
         # Identificar el waypoint de partida del segmento actual
         prev_idx = max(0, self.current_index - 1)

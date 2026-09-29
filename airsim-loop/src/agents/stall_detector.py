@@ -200,7 +200,10 @@ class StallDetector:
         scan_active = state.get("_scan_phase") is not None
         telemetry = state.get("telemetry") or {}
         alt_m = abs(float((telemetry.get("position") or {}).get("z", 0.0)))
-        suppress = slm_active or scan_active or (alt_m < _OPTICAL_MIN_ALT_M)
+        # Bajo el piso optico se suprime el conteo (despegue/aterrizaje) salvo que la altitud baja sea
+        # deliberada por un techo detectado: ahi el dron vuela de verdad y debe poder marcar "sin progreso".
+        under_ceiling = (state.get("waypoint_guidance") or {}).get("ceiling_z") is not None
+        suppress = slm_active or scan_active or (alt_m < _OPTICAL_MIN_ALT_M and not under_ceiling)
         wp_changed = wp_idx != self._wp_np_wp_idx
         escape_reset = bool(state.get("_escape_reset"))
 
