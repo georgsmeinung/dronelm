@@ -1,3 +1,22 @@
+# 2026-09-29 (u) - Fix: cancelar maniobra activa cuando freno de profundidad actua
+
+Durante una maniobra evasiva lateral (EVADIR_IZQUIERDA / EVADIR_DERECHA), navigate_node
+retorna temprano sin re-evaluar TTC ni el campo de obstaculos. Si el depth_brake detecta un
+obstaculo a <DEPTH_BRAKE_DIST_M (2m) durante esa maniobra, el drone seguia empujandose contra
+el muro hasta que terminara la maniobra. En seed_99_163921Z se confirmo: c285, obstaculo a
+0.68m con EVADIR_DERECHA activa -> physics_locked.
+
+**`src/agents/graph.py`** (`navigate_node`):
+- Nuevo bloque ANTES del retorno temprano por active_maneuver: si
+  `_depth_brake_left > 0` y `active_maneuver != None/RETROCEDER`,
+  cancela la maniobra e inyecta RETROCEDER (escape_duration_s ciclos)
+  para alejar el dron de la malla antes de la siguiente evaluacion.
+- RETROCEDER es inmune al cancelo porque se mueve en sentido contrario al obstaculo.
+- Sin el RETROCEDER posterior, el dron quedaba detenido a <0.5m de la malla y
+  SimpleFlight terminaba incrustando el fuselaje (seed_99_170211Z, c675 freeze).
+- El cap de velocidad de motor_node (lineas ~934) queda como segunda barrera para
+  MANTENER_RUMBO (no cubre maniobras laterales, por eso este fix es necesario).
+
 # 2026-09-29 (t) - VLM: ancho_deg en sector frontal para offset de esquina geometrico
 
 El offset de la esquina inyectada era fijo (CORNER_OFFSET_M=12m por defecto, 30m en

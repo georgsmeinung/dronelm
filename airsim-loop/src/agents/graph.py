@@ -772,6 +772,27 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
                     state["_escape_locked"] = False
                     state["_escape_baseline_dist"] = None
 
+        # Depth-brake safety: si hay obstaculo cercano (<DEPTH_BRAKE_DIST_M), cancelar la maniobra
+        # activa e inyectar RETROCEDER para crear distancia antes de la siguiente evaluacion.
+        # Sin RETROCEDER el dron queda detenido a <0.5m de la malla y SimpleFlight lo incrusta.
+        # RETROCEDER es inmune al cancelo: se mueve en sentido contrario al obstaculo.
+        if int(state.get("_depth_brake_left", 0)) > 0 and state.get("active_maneuver") not in (None, "RETROCEDER"):
+            _prev_man = state["active_maneuver"]
+            _ret_telem = (state.get("telemetry") or {})
+            _ret_guidance = (state.get("waypoint_guidance") or {})
+            _ret_cmd = action_to_command("RETROCEDER", guidance=_ret_guidance, telemetry=_ret_telem)
+            _ret_cmd["rationale"] = f"depth_brake: cancela {_prev_man}, retrocede para ganar distancia"
+            _ret_cycles = max(1, round(escape_duration_s * loop_hz))
+            print(f"[navigate] depth_brake: cancela {_prev_man} -> RETROCEDER x{_ret_cycles} ciclos (obstaculo cercano)")
+            state["active_maneuver"] = "RETROCEDER"
+            state["maneuver_cycles_left"] = _ret_cycles
+            state["maneuver_command"] = _ret_cmd
+            state["velocity_command"] = _ret_cmd
+            state["next_action"] = "RETROCEDER"
+            state["route"] = "evasive"
+            state["flight_status"] = "maniobra_retroceder"
+            return state
+
         # --- Active maneuver continuation ---
         active_man = state.get("active_maneuver")
         cycles_left = int(state.get("maneuver_cycles_left", 0))

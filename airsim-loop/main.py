@@ -7,6 +7,7 @@
 import math
 import os
 import time
+
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,6 +42,7 @@ _runs_dir_raw = os.getenv("AIRSIM_RUNS_DIR", "airsim-runs")
 AIRSIM_RUNS_DIR = _runs_dir_raw if Path(_runs_dir_raw).is_absolute() else str(_REPO_ROOT / _runs_dir_raw)
 MISSION_MAX_SECONDS = float(os.getenv("MISSION_MAX_SECONDS", "0.0"))  # 0 = sin límite de tiempo
 MISSION_MAX_CYCLES = int(os.getenv("MISSION_MAX_CYCLES", "0"))  # 0 = sin límite de ciclos
+
 # 2026-0903, pedido explicito: grabar un .webm (VP8, ver flight_video.py
 # sobre por que no .mp4) de la corrida, un frame ANOTADO (el mismo overlay
 # de accion/TTC que se arma mas abajo para cada ciclo) por ciclo del lazo,
