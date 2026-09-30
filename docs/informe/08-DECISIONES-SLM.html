@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#8-ingenieria-de-decisiones-del-slm" class="md-skip">
+        <a href="#8-ingenieria-del-vlm-percepcion-semantica-y-decisiones-de-implementacion" class="md-skip">
           Saltar a contenido
         </a>
       
@@ -609,13 +609,52 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones" class="md-nav__link">
+  <a href="#83-rol-del-vlm-percepcion-semantica-no-oraculo-de-acciones" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8.3 Espacio de acción discreto: lista blanca de macro-acciones
+        8.3 Rol del VLM: percepción semántica, no oráculo de acciones
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="8.3 Rol del VLM: percepción semántica, no oráculo de acciones">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#831-descripcion-de-escena-por-sectores" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3.1 Descripción de escena por sectores
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#832-de-descripcion-de-escena-a-macro-accion-scene_to_action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3.2 De descripción de escena a macro-acción: scene_to_action
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#833-vocabulario-de-macro-acciones-del-sistema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3.3 Vocabulario de macro-acciones del sistema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -646,6 +685,17 @@
     <span class="md-ellipsis">
       
         8.6 Gestión de latencia: consulta asíncrona y watchdog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#88-optimizacion-del-schema-de-salida-nombres-de-campo-compactos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.8 Optimización del schema de salida: nombres de campo compactos
       
     </span>
   </a>
@@ -1235,13 +1285,52 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones" class="md-nav__link">
+  <a href="#83-rol-del-vlm-percepcion-semantica-no-oraculo-de-acciones" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8.3 Espacio de acción discreto: lista blanca de macro-acciones
+        8.3 Rol del VLM: percepción semántica, no oráculo de acciones
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="8.3 Rol del VLM: percepción semántica, no oráculo de acciones">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#831-descripcion-de-escena-por-sectores" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3.1 Descripción de escena por sectores
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#832-de-descripcion-de-escena-a-macro-accion-scene_to_action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3.2 De descripción de escena a macro-acción: scene_to_action
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#833-vocabulario-de-macro-acciones-del-sistema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3.3 Vocabulario de macro-acciones del sistema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1279,6 +1368,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#88-optimizacion-del-schema-de-salida-nombres-de-campo-compactos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.8 Optimización del schema de salida: nombres de campo compactos
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#87-nota-lora-como-alternativa-explorada-y-no-adoptada" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1306,8 +1406,8 @@
 
 
 
-<h1 id="8-ingenieria-de-decisiones-del-slm">8. Ingeniería de decisiones del SLM<a class="headerlink" href="#8-ingenieria-de-decisiones-del-slm" title="Permanent link">&para;</a></h1>
-<p>El capítulo 5 documenta la <em>arquitectura interna</em> de la consulta asíncrona al VLM (cuándo se solicita, cómo se integra en el grafo LangGraph, qué hace el sistema con la respuesta del modelo). El capítulo 6 documenta <em>por qué</em> hace falta un VLM (los puntos ciegos estructurales del estimador de flujo). Este capítulo documenta las decisiones de ingeniería que hacen que ese VLM <em>funcione de forma confiable en la práctica</em>: selección del modelo bajo restricciones de hardware, mecanismos de salida estructurada, diseño del espacio de acción, ingeniería del prompt y trazabilidad de las decisiones.</p>
+<h1 id="8-ingenieria-del-vlm-percepcion-semantica-y-decisiones-de-implementacion">8. Ingeniería del VLM: percepción semántica y decisiones de implementación<a class="headerlink" href="#8-ingenieria-del-vlm-percepcion-semantica-y-decisiones-de-implementacion" title="Permanent link">&para;</a></h1>
+<p>El capítulo 5 documenta la <em>arquitectura interna</em> de la consulta asíncrona al VLM (cuándo se solicita, cómo se integra en el grafo LangGraph, qué hace el sistema con la respuesta del modelo). El capítulo 6 documenta <em>por qué</em> hace falta un VLM (los puntos ciegos estructurales del estimador de flujo). Este capítulo documenta las decisiones de ingeniería que hacen que ese VLM <em>funcione de forma confiable en la práctica</em>: selección del modelo bajo restricciones de hardware, mecanismos de salida estructurada, rol del modelo como perceptor semántico (no como oráculo de acciones), ingeniería del prompt y optimización de la latencia.</p>
 <h2 id="81-seleccion-del-modelo-restricciones-de-hardware-como-parametro-de-diseno">8.1 Selección del modelo: restricciones de hardware como parámetro de diseño<a class="headerlink" href="#81-seleccion-del-modelo-restricciones-de-hardware-como-parametro-de-diseno" title="Permanent link">&para;</a></h2>
 <p>La selección del modelo de lenguaje no fue un proceso de <em>benchmark</em> abstracto sino un proceso de diseño con restricciones duras. El sistema corre en una RTX 5060 con 8 GB de VRAM compartidos con una simulación de Unreal Engine 5.5. AirSim sobre UE5.5 consume, en condiciones de vuelo activo, entre 4.5 y 6 GB de VRAM (<a href="13-REFERENCIAS.html#ref-turco-2024">Turco et al., 2024</a>). El presupuesto efectivo disponible para la inferencia del modelo es de <strong>2 a 3.5 GB de VRAM</strong>, incluyendo la KV cache del historial de prompt.</p>
 <p>Esta restricción excluye inmediatamente a los modelos de referencia del estado del arte (GPT-4o, Claude 3.5, Gemini 1.5 — todos en la nube o con hardware dedicado de 24–80 GB) y orienta la búsqueda hacia modelos multimodales compactos cuantizados (<em>Small Vision-Language Models</em>, VLM), del orden de 3 a 7 mil millones de parámetros, ejecutados localmente bajo LM Studio o vLLM.</p>
@@ -1370,22 +1470,31 @@
 <h3 id="821-decodificacion-restringida-json_schema">8.2.1 Decodificación restringida (<code>json_schema</code>)<a class="headerlink" href="#821-decodificacion-restringida-json_schema" title="Permanent link">&para;</a></h3>
 <p>La respuesta del modelo se solicita con el parámetro <code>response_format={"type": "json_schema", "json_schema": {...}}</code>, disponible en LM Studio (a partir de la versión con llama.cpp ≥ 0.5) y en el backend OpenAI-compatible de Ollama. La decodificación restringida opera durante la generación token a token: en cada paso, el motor de inferencia evalúa las reglas del esquema y enmascara los logits de tokens que resultarían en JSON inválido para el esquema declarado, forzando al modelo a muestrear únicamente de los tokens válidos. El mecanismo subyacente —reformular la gramática del esquema como una máquina de estados finitos y usarla para restringir, en cada paso de generación, el conjunto de tokens admisibles— es el que formalizan <a href="13-REFERENCIAS.html#ref-willard-2023">Willard y Louf (2023)</a>, cuya implementación de referencia (la biblioteca <em>Outlines</em>) es la base de la decodificación guiada que hoy exponen backends como llama.cpp; <a href="13-REFERENCIAS.html#ref-raspanti-2025">Raspanti et al. (2025)</a> y <a href="13-REFERENCIAS.html#ref-geng-2025">Geng et al. (2025)</a> evalúan empíricamente el impacto de esa misma técnica sobre la fiabilidad de la salida en tareas de análisis estructurado (el desarrollo formal, la formulación matemática de autómatas, los mecanismos de aceleración y la optimización del grafo de control se detallan exhaustivamente en el <a href="anexos/A4-DECODIFICACION-RESTRINGIDA.html">Anexo 4</a>).</p>
 <p>El efecto práctico es que, cuando la decodificación restringida está activa, es estructuralmente imposible producir una respuesta que no sea JSON conforme al esquema. El <code>adherence_rate</code> (fracción de respuestas parseables al primer intento) medido en los escenarios de validación sube de ~73% (solo prompt) a ~98% (con <code>json_schema</code>).</p>
-<p>El esquema declarado (<code>RESPONSE_JSON_SCHEMA</code>, <code>deliberative.py</code>) tiene la forma mínima necesaria para la toma de decisión, más un grupo de campos opcionales de sub-meta (§8.3):</p>
+<p>La restricción gramatical se aplica al vocabulario de tipos de obstáculo (<code>"libre"</code>, <code>"fachada"</code>, etc., enum en <code>_SECTOR_SCHEMA_ITEM</code>) y a la estructura del objeto <code>sectores</code> —no sobre un campo de acción, que desaparece del schema del VLM. La conversión de la descripción semántica a macro-acción ocurre en la capa determinista de navegación (<code>scene_to_action</code>, §8.3.2), fuera del alcance del modelo.</p>
+<p>Los esquemas declarados (<code>RESPONSE_JSON_SCHEMA_SCENE</code> y <code>RESPONSE_JSON_SCHEMA_PANORAMA</code>, <code>deep_scan.py</code>) tienen la forma mínima necesaria para la descripción semántica de la escena (§8.3). El esquema de escena táctica (<code>slam_assess</code>, consulta proactiva) es:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;macro_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span>
-<span class="w">                                                </span><span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;rationale&quot;</span><span class="p">:</span><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;dx_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;dy_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;dz_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;semantic_label&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;navegar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;inspeccionar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;buscar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;esperar&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="nt">&quot;sectores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;frente&quot;</span><span class="p">:</span><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;tipo&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;conf&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;izquierda&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;tipo&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;conf&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;derecha&quot;</span><span class="p">:</span><span class="w">   </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;tipo&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;conf&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;frente&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;izquierda&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;derecha&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;additionalProperties&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;degradada&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;r&quot;</span><span class="p">:</span><span class="w">         </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;macro_action&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rationale&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;sectores&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;degradada&quot;</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;additionalProperties&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>La enumeración explícita de los valores posibles de <code>macro_action</code> (§8.3) es el mecanismo que convierte el espacio de acción discreto del sistema en una restricción gramatical directamente aplicable por el motor de gramática.</p>
+<p>Donde <code>tipo</code> toma valores de un enum cerrado de seis superficies (<code>libre</code>, <code>fachada</code>, <code>muro</code>, <code>vegetacion</code>, <code>interior</code>, <code>indeterminado</code>), <code>ok</code> indica si el sector es transitable (el dron puede avanzar sin colisionar), <code>conf</code> es la certeza de la descripción y <code>r</code> es un razonamiento opcional no requerido. El campo <code>degradada</code> señala imagen poco fiable (muy oscura, uniforme, sin información visual útil —la firma de una fachada de vidrio que embebe al dron).</p>
+<p>Para el barrido panorámico (<code>deep_vlm</code>), el esquema es <code>RESPONSE_JSON_SCHEMA_PANORAMA</code>: un array de objetos <code>{deg, tipo, ok, conf}</code> (un objeto por rumbo barrido) más <code>degradada</code> y <code>r</code> opcionales.</p>
+<p>La restricción gramatical no recae ya sobre el campo de acción (que desaparece del schema), sino sobre el vocabulario de tipos de obstáculo y la estructura del objeto <code>sectores</code>.</p>
 <h3 id="822-parser-tolerante-como-red-de-seguridad">8.2.2 Parser tolerante como red de seguridad<a class="headerlink" href="#822-parser-tolerante-como-red-de-seguridad" title="Permanent link">&para;</a></h3>
 <p>La garantía de <code>json_schema</code> depende de que el backend local soporte la versión de llama.cpp que implementa esa funcionalidad. En entornos de despliegue heterogéneos (versión de LM Studio distinta, Ollama sin la extensión, o futura migración a otro backend), esa garantía puede no cumplirse. Por eso, <code>_parse_decision()</code> (<code>src/agents/deliberative.py</code>) se conserva como red de seguridad y aplica tres estrategias de extracción en orden creciente de tolerancia:</p>
 <ol>
@@ -1395,8 +1504,87 @@
 </ol>
 <p>Si las estrategias fallan, <code>_fallback_decision()</code> entra en vigor: un árbol de decisión determinista sobre el <code>ObstacleField</code> (§5.10) —<code>FRENAR</code> sin evidencia de percepción, <code>GANAR_ALTURA</code> con los tres sectores bloqueados, evasión hacia el lado libre, <code>MANTENER_RUMBO</code> con el centro libre— con una nota de error auditable en el log. Desde 2026-09-22 el fallback por <em>timeout</em> del watchdog pasa además por los overrides deterministas de trayectoria (§5.12.2), para que no repita una acción que la historia de vuelo ya refutó.</p>
 <p>La métrica <code>adherence_rate</code> es una fila explícita de la tabla de resultados (cap. 11): cuantifica cuánto aporta, en la práctica, la decodificación restringida por sobre el parser tolerante como única defensa. Este número importa porque si fuera cercano al 100% solo con el parser, la decodificación restringida sería overhead sin beneficio; si la diferencia es grande (como documentan Raspanti et al. [2025] y Geng et al. [2025] para SLMs compactos), la restricción es una decisión de ingeniería con impacto medible en la fiabilidad del sistema.</p>
-<h2 id="83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones">8.3 Espacio de acción discreto: lista blanca de macro-acciones<a class="headerlink" href="#83-espacio-de-accion-discreto-lista-blanca-de-macro-acciones" title="Permanent link">&para;</a></h2>
-<p>El VLM no produce comandos cinemáticos directamente (velocidades en m/s, tasas de guiñada en rad/s). Elige una etiqueta de un conjunto fijo de macro-acciones definido en <code>PROMPT_ACTIONS</code> (<code>deliberative.py</code>):</p>
+<h2 id="83-rol-del-vlm-percepcion-semantica-no-oraculo-de-acciones">8.3 Rol del VLM: percepción semántica, no oráculo de acciones<a class="headerlink" href="#83-rol-del-vlm-percepcion-semantica-no-oraculo-de-acciones" title="Permanent link">&para;</a></h2>
+<p>Una decisión de diseño central del sistema es <strong>la separación entre percepción semántica y decisión de navegación</strong>. El VLM no elige una macro-acción directamente: describe la escena por sectores y la capa de navegación decide la acción a partir de esa descripción combinada con el contexto de trayectoria.</p>
+<h3 id="831-descripcion-de-escena-por-sectores">8.3.1 Descripción de escena por sectores<a class="headerlink" href="#831-descripcion-de-escena-por-sectores" title="Permanent link">&para;</a></h3>
+<p>Para cada consulta, el VLM devuelve un objeto JSON <code>sectores</code> con tres entradas (<code>frente</code>, <code>izquierda</code>, <code>derecha</code>), cada una con:</p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Tipo</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tipo</code></td>
+<td>string (enum)</td>
+<td>Superficie u obstáculo predominante visible en ese sector</td>
+</tr>
+<tr>
+<td><code>ok</code></td>
+<td>boolean</td>
+<td>Si el dron puede avanzar en esa dirección sin colisionar</td>
+</tr>
+<tr>
+<td><code>conf</code></td>
+<td>número</td>
+<td>Certeza de la descripción (0.0–1.0)</td>
+</tr>
+</tbody>
+</table>
+<p>Los seis tipos de obstáculo del enum son:</p>
+<table>
+<thead>
+<tr>
+<th><code>tipo</code></th>
+<th>Interpretación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>libre</code></td>
+<td>Espacio abierto (calle, cielo); sin obstáculos en los próximos ~10 m</td>
+</tr>
+<tr>
+<td><code>fachada</code></td>
+<td>Superficie plana y reflectante (vidrio, metal, hormigón liso)</td>
+</tr>
+<tr>
+<td><code>muro</code></td>
+<td>Superficie con textura rugosa (ladrillo, roca, hormigón rugoso)</td>
+</tr>
+<tr>
+<td><code>vegetacion</code></td>
+<td>Árboles, ramas, follaje, setos</td>
+</tr>
+<tr>
+<td><code>interior</code></td>
+<td>Imagen oscura o uniforme sin información útil (firma de embebido en vidrio)</td>
+</tr>
+<tr>
+<td><code>indeterminado</code></td>
+<td>No se puede determinar con la imagen disponible</td>
+</tr>
+</tbody>
+</table>
+<p>El campo <code>degradada</code> indica imagen globalmente poco fiable (muy oscura, uniforme o sin información visual útil). El campo <code>r</code> (razón) es un razonamiento opcional, no requerido por el schema.</p>
+<p>La distinción <code>fachada</code> + <code>degradada = true</code> permite detectar embebidos en fachadas de vidrio que no producen malla de colisión: el dron penetra el cristal sin rebote físico, el flujo óptico es nulo y la imagen se vuelve oscura y uniforme. Un sistema que solo decide por TTC no detecta este caso.</p>
+<h3 id="832-de-descripcion-de-escena-a-macro-accion-scene_to_action">8.3.2 De descripción de escena a macro-acción: <code>scene_to_action</code><a class="headerlink" href="#832-de-descripcion-de-escena-a-macro-accion-scene_to_action" title="Permanent link">&para;</a></h3>
+<p>La conversión de la descripción de escena a una macro-acción la realiza <code>scene_to_action(scene, guidance, telem, trajectory)</code> (<code>deep_scan.py</code>). Esta función:</p>
+<ol>
+<li>Lee la transitabilidad de cada sector y la contrasta con el rumbo al waypoint activo.</li>
+<li>Aplica los overrides deterministas de trayectoria (§5.12.2) internamente, para que la historia de stalls de zona corrija la decisión perceptual cuando el VLM no ve los obstáculos que el flujo sí ha documentado.</li>
+<li>Emite la macro-acción resultante y, si corresponde, un <code>inject_corner</code>.</li>
+</ol>
+<p>El equivalente para el barrido panorámico es <code>panorama_to_action(rumbos, trajectory, guidance, telem, post_retroceder)</code>, que trabaja sobre el array de rumbos del esquema panorámico.</p>
+<p>Esta separación tiene tres consecuencias de diseño:</p>
+<p><strong>1. El VLM describe, no decide.</strong> El modelo razona sobre lo que ve (superficie, transitabilidad, certeza) sin necesidad de saber qué macro-acción corresponde a cada situación ni qué restricciones de trayectoria acumulada hay. Esas reglas viven en la capa determinista de navegación, que las aplica con certeza sobre evidencia acumulada, no sobre una única imagen.</p>
+<p><strong>2. Comparación limpia entre brazos.</strong> El VLM, la FSM y el brazo reactivo comparten el mismo vocabulario de macro-acciones y el mismo traductor <code>action_to_command()</code>. La única variable que difiere entre ellos es quién elige la etiqueta: la descripción semántica del VLM convertida por <code>scene_to_action</code>, los umbrales deterministas de la FSM, o la guía al waypoint del brazo reactivo.</p>
+<p><strong>3. Auditabilidad.</strong> El campo <code>scene_description</code> del <code>DroneState</code> guarda la descripción de escena del ciclo, y <code>deliberations[]</code> registra el JSON completo de cada consulta. La secuencia de descripciones <code>(tipo, ok, conf)</code> es legible por humanos y graféable por el visor HTML.</p>
+<h3 id="833-vocabulario-de-macro-acciones-del-sistema">8.3.3 Vocabulario de macro-acciones del sistema<a class="headerlink" href="#833-vocabulario-de-macro-acciones-del-sistema" title="Permanent link">&para;</a></h3>
+<p>El VLM no elige directamente ninguna macro-acción, pero el sistema mantiene un vocabulario fijo de ocho acciones (<code>VALID_ACTIONS</code> en <code>action_map.py</code>) del que <code>scene_to_action</code> y <code>panorama_to_action</code> son los únicos convertidores desde la percepción semántica:</p>
 <table>
 <thead>
 <tr>
@@ -1433,47 +1621,15 @@
 <td><code>RETROCEDER</code></td>
 <td>Marcha atrás con rumbo congelado (vx = −1.2 m/s) durante ~5 s (≈ 6 m) para salir de la malla de colisión de un obstáculo (§5.12.3)</td>
 </tr>
+<tr>
+<td><code>GIRAR_90</code></td>
+<td>Giro de 90° sin traslación; bypass determinista, nunca accesible desde la descripción del VLM</td>
+</tr>
 </tbody>
 </table>
-<p>El vocabulario completo del sistema tiene <strong>ocho</strong> acciones (<code>VALID_ACTIONS</code> en <code>action_map.py</code>), pero no todas son elegibles por el VLM en todos los caminos:</p>
-<ul>
-<li><code>GIRAR_90</code> <strong>no está en ningún <code>PROMPT_ACTIONS</code></strong>: es un bypass determinista que la capa reactiva de <code>navigate</code> activa directamente cuando <code>blocked_fraction &gt; 0.6</code>, sin consultar al VLM. Si el modelo lo intentara, el parser lo descartaría.</li>
-<li><code>RETROCEDER</code> está en el <code>PROMPT_ACTIONS</code> del escaneo de resolución de atasco (<code>slam_assess</code> / <code>deep_vlm</code>) y en los overrides deterministas (§5.12.2), pero <strong>no</strong> en el de la consulta táctica ordinaria (seis acciones): su enum de decodificación restringida no la admite y <code>_parse_decision()</code> la descartaría. Los archivos de system prompt (§8.5) sí la listan entre los valores permitidos; es una inconsistencia conocida entre prompt y esquema, sin efecto observado porque la consulta táctica nunca puede producirla, y que debe resolverse alineando ambos.</li>
-</ul>
-<p>El schema JSON declarado para la decodificación restringida tiene la forma:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;json_schema&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;json_schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;macro_decision&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;macro_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">          </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span>
-<span class="w">                   </span><span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">]</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;rationale&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;dx_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;dy_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;dz_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;semantic_label&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;navegar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;inspeccionar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;buscar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;esperar&quot;</span><span class="p">]}</span>
-<span class="w">      </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;macro_action&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rationale&quot;</span><span class="p">],</span>
-<span class="w">      </span><span class="nt">&quot;additionalProperties&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><strong>Poda del enum por motivo de consulta.</strong> En lugar de enviar siempre el enum completo, <code>_schema_for_reason(reason_key)</code> genera un schema podado según el contexto:
-- <code>"TTC_CRITICO"</code>: excluye <code>MANTENER_RUMBO</code> (hay colisión inminente confirmada).
-- <code>"DEADLOCK_ESCAPE"</code>: excluye <code>MANTENER_RUMBO</code> y <code>FRENAR</code> (el drone ya está atascado; detenerse o insistir al frente es contraproducente).</p>
-<p>Esta poda semántica concentra la distribución de muestreo del modelo en las acciones físicamente coherentes con la causa de la consulta, sin requerir fine-tuning. Su efecto sobre la tasa de respuestas subóptimas no se ha medido de forma aislada.</p>
-<p><strong>Sub-meta semántica (<code>VlmGoal</code>).</strong> Los campos opcionales <code>dx_m</code>, <code>dy_m</code>, <code>dz_m</code>, <code>confidence</code>, <code>semantic_label</code> y <code>mode</code> permiten que el VLM, además de la etiqueta de macro-acción, proponga un punto de destino próximo en el marco del cuerpo (adelante, derecha, abajo NED). El sistema solo lo adopta si <code>confidence &gt;= 0.7</code> y lo convierte en un waypoint de desvío en coordenadas de mundo (<code>inject_corner</code>, §5.10). La macro-acción sigue siendo la decisión de seguridad; la sub-meta solo orienta <em>hacia dónde</em>.</p>
-<p>Esta arquitectura de lista blanca tiene tres propiedades de diseño que se derivan mutuamente:</p>
-<p><strong>1. Compatibilidad directa con la decodificación restringida.</strong> Un espacio de acción finito y conocido a priori puede representarse como una enumeración JSON (<code>enum</code>), lo que hace posible convertir la restricción de salida en una gramática aplicable en tiempo de inferencia. Un espacio continuo de comandos cinemáticos no puede representarse así sin esquemas mucho más complejos.</p>
-<p><strong>2. Comparación limpia entre brazos.</strong> El VLM, la FSM y el brazo reactivo comparten el mismo espacio de macro-acciones y el mismo traductor a comandos <code>action_to_command()</code>. La única variable que difiere entre ellos es <em>quién elige la etiqueta</em>, no <em>qué puede elegir ni cómo se ejecuta</em>. Esto hace posible la comparación experimental de los tres brazos (cap. 10) sin confundir diferencias de política con diferencias de actuación.</p>
-<p><strong>3. Auditabilidad.</strong> Una secuencia de etiquetas de macro-acción es legible por humanos y directamente graféable (cap. 4, viewer). Un log de vectores cinemáticos continuos no tiene esa propiedad sin postprocesamiento.</p>
-<p>La lista de macro-acciones es fija en el diseño actual y no extensible dinámicamente: agregar una nueva macro-acción requiere modificar el esquema JSON, el <code>action_to_command()</code>, los prompts y la FSM. Este acoplamiento es deliberado — es el mecanismo que impide que el modelo de lenguaje invente acciones fuera del espacio de maniobras seguras.</p>
+<p><code>GIRAR_90</code> es un bypass determinista de la capa reactiva (§5.9) que se activa cuando <code>blocked_fraction &gt; 0.6</code>, sin pasar por <code>scene_to_action</code>.</p>
+<p><strong>Sub-meta semántica (<code>VlmGoal</code>).</strong> Los campos opcionales <code>dx_m</code>, <code>dy_m</code>, <code>dz_m</code>, <code>confidence</code>, <code>semantic_label</code> y <code>mode</code> de la respuesta táctica permiten que el VLM, además de la descripción de escena, proponga un punto de destino próximo en el marco del cuerpo. El sistema solo lo adopta si <code>confidence &gt;= 0.7</code> y lo convierte en un waypoint de desvío en coordenadas de mundo (<code>inject_corner</code>, §5.10). La descripción de escena sigue siendo la fuente primaria de percepción; la sub-meta solo orienta <em>hacia dónde</em>.</p>
+<p>La lista de macro-acciones es fija en el diseño actual y no extensible dinámicamente: agregar una nueva macro-acción requiere modificar <code>action_to_command()</code>, los schema JSON, los prompts y la FSM. Este acoplamiento es deliberado — impide que el VLM o <code>scene_to_action</code> generen maniobras fuera del espacio de acciones seguras del sistema.</p>
 <h2 id="84-action_to_command-la-frontera-entre-lenguaje-y-cinematica">8.4 <code>action_to_command</code>: la frontera entre lenguaje y cinemática<a class="headerlink" href="#84-action_to_command-la-frontera-entre-lenguaje-y-cinematica" title="Permanent link">&para;</a></h2>
 <p>Cada macro-acción se traduce a un comando cinemático concreto a través de <code>action_to_command()</code> (<code>src/agents/action_map.py</code>), función compartida de forma estricta por el VLM, la evasión, la capa táctica y la FSM. La traducción completa es:</p>
 <table>
@@ -1558,8 +1714,12 @@
 <p><strong>Componente 3 — Avisos de contexto.</strong> Cuando corresponde, se agregan tres avisos que le dan al modelo la evidencia de bloqueo que el flujo óptico no ve: los ciclos sin progreso hacia el waypoint (a partir de 5, con la indicación de preferir <code>GANAR_ALTURA</code> si los tres sectores están bloqueados), la tasa de stall frontal de la trayectoria reciente (a partir de 50 % con 5 o más intentos) y el nivel de vibración del IMU cuando no es normal. Estos avisos son la forma en que la memoria de trayectoria y la inferencia inercial (cap. 5) llegan al modelo como texto.</p>
 <p><strong>Componente 4 — Motivo explícito de consulta.</strong> La nota <code>_query_reason_note</code> distingue tres situaciones: <code>"el sector CENTRO muestra un obstáculo real (TTC = …)"</code>; <code>"baja confianza de los sensores de flujo"</code> (sin evidencia: vegetación densa, baja velocidad o movimiento caótico, lo que no implica necesariamente un obstáculo) y <code>"bloqueo lateral o corredor cerrado, sin peligro central inmediato"</code>. En el caso de baja confianza y con imagen adjunta, le indica al modelo que use <strong>la imagen como fuente primaria</strong>, sin sobre-indexar en los sectores «sin evidencia». Es crítico para calibrar la respuesta: con baja confianza, el VLM no debe reportar obstáculos que no ve; con obstáculo central real, debe priorizar la evasión inmediata.</p>
 <p>El constructor admite además, como componentes opcionales, un historial de las últimas decisiones con su resultado medido (variación de distancia al waypoint y de TTC mínimo) y las sub-metas semánticas previas; el pedido táctico del lazo no los incluye, de modo que el modelo razona sobre la escena y el estado actuales sin arrastrar decisiones anteriores.</p>
-<p><strong>Componente 5 — Instrucción de formato de salida.</strong> Reiteración explícita del esquema JSON esperado y de los valores posibles del campo <code>action</code>, coherente con el <code>json_schema</code> declarado en el parámetro de formato. Esta redundancia entre prompt y schema es intencional: para modelos pequeños, la instrucción textual explícita mejora el <code>adherence_rate</code> incluso cuando la decodificación restringida está activa, especialmente en la elección del campo <code>action</code> dentro del dominio de la enumeración (<a href="13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>).</p>
-<p><strong>Prompts de sistema externalizados.</strong> Los system prompts no están fijos en el código: <code>SYSTEM_PROMPT_VISION_FILE</code> y <code>SYSTEM_PROMPT_TEXT_FILE</code> (<code>config/prompts/system_vision.txt</code>, <code>system_text.txt</code>) permiten editarlos sin tocar Python; el archivo admite el placeholder <code>{safe_margin_ttc_s}</code>, sustituido al cargar, y si no existe se usa el prompt interno como fallback. Ambos comparten la misma jerarquía de reglas, en orden de prioridad: (1) <code>MANTENER_RUMBO</code> solo con trayectoria libre hacia el waypoint; (2) evasión lateral si el sector lateral está despejado; (3) <code>GANAR_ALTURA</code> solo con bloqueo total por estructuras sólidas, <code>PERDER_ALTURA</code> si el obstáculo es vegetación con espacio debajo, <code>RETROCEDER</code> si el dron está pegado al obstáculo o las maniobras previas no avanzaron; (4) <code>FRENAR</code> ante peligro crítico en todas las direcciones. La variante con visión añade la regla «imagen frente a sensores» —la imagen es la fuente primaria cuando el prompt indica baja confianza— y la solicitud de sub-meta opcional con offsets de escala real (6–20 m). La regla estricta común prohíbe <code>MANTENER_RUMBO</code> si el sector central está bloqueado con TTC menor que <code>SAFE_MARGIN_TTC_S</code>, y declara <code>GANAR_ALTURA</code> como último recurso: un corredor lateral, aunque estrecho, es preferible a subir.</p>
+<p><strong>Componente 5 — Instrucción de formato de salida.</strong> Reiteración explícita del esquema JSON esperado (<code>sectores</code> + <code>degradada</code>), coherente con el <code>json_schema</code> declarado en el parámetro de formato. Para modelos pequeños, la instrucción textual explícita mejora el <code>adherence_rate</code> incluso cuando la decodificación restringida está activa (<a href="13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>).</p>
+<p><strong>Prompts de sistema externalizados.</strong> Los system prompts no están fijos en el código: <code>SYSTEM_PROMPT_VISION_FILE</code> y <code>SYSTEM_PROMPT_TEXT_FILE</code> (<code>config/prompts/system_vision.txt</code>, <code>system_text.txt</code>) permiten editarlos sin tocar Python; si el archivo no existe, se usa el prompt interno como fallback. Ambos instruyen al VLM a <strong>describir la escena</strong>, no a elegir acciones. Las reglas del prompt son reglas de observación, no de política: describir qué superficie predomina en cada sector, si es transitable, con qué certeza. La regla explícita «imagen frente a sensores» —la imagen es la fuente primaria cuando el prompt indica baja confianza— se aplica en la variante con visión. El ejemplo del esquema compacto que cierra el prompt refuerza el formato de salida esperado:</p>
+<div class="highlight"><pre><span></span><code>{&quot;sectores&quot;: {&quot;frente&quot;: {&quot;tipo&quot;: &quot;...&quot;, &quot;ok&quot;: true, &quot;conf&quot;: 0.9},
+              &quot;izquierda&quot;: {...}, &quot;derecha&quot;: {...}}, &quot;degradada&quot;: false}
+</code></pre></div>
+<p>Los prompts de los modos de escaneo profundo tienen su propio system prompt (<code>SYSTEM_PROMPT_SLAM_ASSESS</code> para <code>slam_assess</code>, <code>SYSTEM_PROMPT_DEEP_SCAN</code> para <code>deep_vlm</code>); ambos instruyen a describir los sectores con el mismo esquema, y el de <code>deep_vlm</code> añade la instrucción de asociar cada descripción a su rumbo de barrido.</p>
 <p><strong>Imagen adjunta.</strong> Los pedidos tácticos y los del escaneo de resolución de atasco adjuntan fotogramas: los tácticos, los del <code>frame_history</code> (por defecto los instantes <code>t</code> y <code>t−1</code>); el escaneo <code>slam_assess</code>, el fotograma frontal del ciclo; el barrido <code>deep_vlm</code>, un fotograma por rumbo etiquetado con su orientación. Las imágenes se codifican como JPEG base64 redimensionado a 384 px de lado mayor. El registro de auditoría de cada deliberación indica en <code>vision_enabled</code> si la consulta usó imagen.</p>
 <p><strong>Parámetros de inferencia.</strong> <code>temperature = 0.2</code> (baja entropía, respuestas reproducibles y conservadoras), <code>max_tokens = 200</code> (suficiente para la estructura JSON más una razón breve; limita la longitud de generación y, con ella, la latencia y la presión sobre la KV cache).</p>
 <h2 id="86-gestion-de-latencia-consulta-asincrona-y-watchdog">8.6 Gestión de latencia: consulta asíncrona y watchdog<a class="headerlink" href="#86-gestion-de-latencia-consulta-asincrona-y-watchdog" title="Permanent link">&para;</a></h2>
@@ -1608,6 +1768,46 @@
 <li><strong>Escaneo de resolución de atasco (<code>slam_assess</code> / <code>deep_vlm</code>).</strong> El dron permanece en hover mientras espera, con un watchdog de <code>SLM_DEEP_WATCHDOG_MS = 12 000 ms</code> que garantiza que la falta de respuesta nunca lo deje inmóvil más allá de ese plazo. Al expirar, o si la respuesta no es una acción válida, la capa táctica resuelve con la historia de zonas.</li>
 </ul>
 <p><strong>Caducidad de las respuestas.</strong> El compromiso de una latencia larga es la <strong>frescura</strong>: una respuesta de 10 s se refiere a una escena que, a la velocidad de crucero, quedó varios metros atrás. Por eso <code>_vlm_intention</code> caduca (5 s en la reacción por TTC, 10 s en la resolución de atasco) y toda decisión guardada se contrasta con los overrides de trayectoria antes de despacharse (§5.12.2). Para las consultas que llevan imagen y pueden tardar ~10 s, el watchdog del escaneo se fija por encima de esa latencia y por debajo del corte HTTP del cliente (<code>SLM_HTTP_TIMEOUT_S = 15 s</code>; <code>SLM_DEEP_HTTP_TIMEOUT_S = 20 s</code>), de modo que gane siempre el watchdog. Esto refuerza la elección del modelo de 3B: una respuesta de calidad media entregada rápido vale más en este sistema que una respuesta de calidad alta entregada tarde.</p>
+<h2 id="88-optimizacion-del-schema-de-salida-nombres-de-campo-compactos">8.8 Optimización del schema de salida: nombres de campo compactos<a class="headerlink" href="#88-optimizacion-del-schema-de-salida-nombres-de-campo-compactos" title="Permanent link">&para;</a></h2>
+<p>El schema JSON que el VLM genera en cada ciclo se transmite a través de la red HTTP local y es procesado por el parser tolerante antes de que la navegación pueda actuar. A 15 tokens/s de velocidad de generación, cada token adicional en la respuesta cuesta ~67 ms. El schema original usaba nombres de campo verbosos (<code>relativo_deg</code>, <code>transitable</code>, <code>confianza</code>, <code>imagen_degradada</code>, <code>rationale</code>) que producían respuestas de ~80–95 tokens; el schema compacto (<code>deg</code>, <code>ok</code>, <code>conf</code>, <code>degradada</code>, <code>r</code>) reduce eso a ~40–55 tokens, una diferencia de ~2.5–3.7 s por respuesta.</p>
+<table>
+<thead>
+<tr>
+<th>Campo largo</th>
+<th>Campo compacto</th>
+<th>Ahorro típico</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>relativo_deg</code></td>
+<td><code>deg</code></td>
+<td>2 tokens</td>
+</tr>
+<tr>
+<td><code>transitable</code></td>
+<td><code>ok</code></td>
+<td>2 tokens</td>
+</tr>
+<tr>
+<td><code>confianza</code></td>
+<td><code>conf</code></td>
+<td>2 tokens</td>
+</tr>
+<tr>
+<td><code>imagen_degradada</code> / <code>imagen_degradada_global</code></td>
+<td><code>degradada</code></td>
+<td>3–4 tokens</td>
+</tr>
+<tr>
+<td><code>rationale</code></td>
+<td><code>r</code> (opcional, no en <code>required</code>)</td>
+<td>1 token + el campo solo se genera si el modelo lo incluye</td>
+</tr>
+</tbody>
+</table>
+<p>El ahorro de no requerir <code>r</code> es no lineal: si el modelo lo omite por completo, se ahorran el nombre del campo más la cadena del razonamiento (típicamente 10–30 tokens adicionales). En corridas con imagen, el campo de razonamiento largo es el principal contribuyente a la latencia.</p>
+<p>Los parsers (<code>parse_scene_description</code>, <code>parse_panorama_description</code>) aceptan ambos vocabularios: primero buscan el nombre compacto y, si no lo encuentran, caen al nombre largo. La representación interna normalizada usa siempre nombres largos, de modo que ningún consumidor downstream (<code>scene_to_action</code>, <code>navigate_node</code>, logging) requirió cambios.</p>
 <h2 id="87-nota-lora-como-alternativa-explorada-y-no-adoptada">8.7 Nota: LoRA como alternativa explorada y no adoptada<a class="headerlink" href="#87-nota-lora-como-alternativa-explorada-y-no-adoptada" title="Permanent link">&para;</a></h2>
 <p>El fine-tuning ligero vía LoRA (<em>Low-Rank Adaptation</em>) fue evaluado durante la etapa de planificación como posible vía de especialización del modelo para el espacio de maniobras de este sistema (<a href="anexos/A3-OPTIMIZACION-LORA.html">Anexo 3</a>). El argumento a favor era que un conjunto de pares (prompt, acción correcta) derivados de las corridas exitosas del sistema podría reducir la frecuencia de respuestas subóptimas sin reentrenar el modelo base.</p>
 <p>No se implementó en el pipeline final por dos razones:</p>
