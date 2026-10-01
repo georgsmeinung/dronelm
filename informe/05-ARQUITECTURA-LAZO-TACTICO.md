@@ -100,7 +100,7 @@ Tres principios de diseño acompañan esta separación:
 
 ## 5.3 Nodo `navigate`
 
-`navigate_node` (`graph.py`) recibe el estado enriquecido por `perception` y produce un `velocity_command`. Para los brazos de comparación delega de inmediato: `AGENT_ARM = reactive` → `reactive_node`; `AGENT_ARM = fsm` → `fsm_node` (§5.11). Para el brazo `slm`, ejecuta dos pasos previos en cada ciclo y luego una cascada de ocho reglas en orden estricto: **la primera que se cumple decide el ciclo**.
+`navigate_node` (`graph.py`) recibe el estado enriquecido por `perception` y produce un `velocity_command`. Durante el despegue vertical (§5.15), los tres brazos delegan en `reactive_node`: el guiado sube en el lugar y el flujo óptico de un ascenso puro no es válido para evadir. Fuera del despegue, para los brazos de comparación delega de inmediato: `AGENT_ARM = reactive` → `reactive_node`; `AGENT_ARM = fsm` → `fsm_node` (§5.11). Para el brazo `slm`, ejecuta dos pasos previos en cada ciclo y luego una cascada de ocho reglas en orden estricto: **la primera que se cumple decide el ciclo**.
 
 ### 5.3.1 `StallDetector`: señales de atasco
 
@@ -108,14 +108,15 @@ Los contadores de atasco viven en un objeto `StallDetector` (`src/agents/stall_d
 
 | Señal | Condición | Umbral | Uso en `navigate` |
 |---|---|---|---|
-| `imu_contact` | RMS de la aceleración lateral ≥ `IMU_CONTACT_THRESHOLD_MPS2` (5 m/s²) con velocidad comandada > 0.3 m/s | ≥ 2 ciclos | Regla 3: evasión inmediata |
-| `blind_wall` | Avance comandado (`vx ≥ 0.45 m/s`) con velocidad real < 0.30 m/s, campo óptico con corredor libre (`blocked_fraction < 0.25`) y el dron moviéndose en el ciclo previo | ≥ 2 ciclos | Regla 3: evasión inmediata |
-| `stopped_prolonged` | **Se ordenó avanzar** (velocidad horizontal comandada ≥ `STOPPED_MIN_CMD_MPS` = 0.30 m/s) y la velocidad real es < 0.10 m/s; no cuenta bajo el piso óptico | ≥ `STOPPED_DELIBERATIVE_CYCLES` = 10 ciclos | Regla 6: deadlock (trabado) |
-| `wp_no_progress` | La distancia al objetivo actual no mejora `WP_NO_PROGRESS_MIN_M` (2 m); se reinicia al cambiar el objetivo, durante un barrido, con `_escape_reset` y bajo el piso óptico | ≥ `WP_NO_PROGRESS_THRESHOLD` = 50 ciclos (10 s) | Regla 6: deadlock (sin progreso) |
+| `imu_contact` | RMS de la aceleración lateral ≥ `IMU_CONTACT_THRESHOLD_MPS2` (5 m/s²) con velocidad comandada > 0.3 m/s | ≥ 2 ciclos | Regla 4: evasión inmediata |
+| `blind_wall` | Avance comandado (`vx ≥ 0.45 m/s`) con velocidad medida < 0.30 m/s, campo óptico con corredor libre (`blocked_fraction < 0.25`) y el dron moviéndose en el ciclo previo | ≥ 2 ciclos | Regla 4: evasión inmediata |
+| `stopped_prolonged` | **Se ordenó avanzar** (velocidad horizontal comandada ≥ `STOPPED_MIN_CMD_MPS` = 0.30 m/s) y la velocidad medida es < 0.10 m/s; no cuenta bajo el piso óptico ni durante el despegue | ≥ `STOPPED_DELIBERATIVE_CYCLES` = 10 ciclos | Regla 2: deadlock (trabado) |
+| `wp_no_progress` | La distancia al objetivo actual no mejora `WP_NO_PROGRESS_MIN_M` (2 m); se reinicia al cambiar el objetivo, durante un barrido, con `_escape_reset`, bajo el piso óptico y durante el despegue | ≥ `WP_NO_PROGRESS_THRESHOLD` = 50 ciclos (10 s) | Regla 2: deadlock (sin progreso) |
 
-Dos decisiones de diseño:
+Tres decisiones de diseño:
 
 - **«Detenido» significa «se le ordenó moverse y no se movió».** Durante el despegue, el guiado ordena subir y girar en el lugar hacia el primer waypoint con `vx = 0` durante ~3 s; un contador que sumara cualquier ciclo sin velocidad horizontal declararía un deadlock al cruzar el piso óptico (cap. 9, §9.8.4). Girar, subir o mantener un hover a propósito no es estar trabado.
+- **La velocidad se mide por desplazamiento, no se lee de la telemetría.** Con el dron apoyado contra una estructura, AirSim reporta una velocidad cercana a la comandada aunque la posición no cambie (cap. 9, §9.8.8). `stopped_prolonged` y `blind_wall` usan la velocidad horizontal calculada con la diferencia de posición entre ciclos consecutivos.
 - **El objetivo se identifica por su etiqueta y posición, no por su índice.** Una sub-meta del VLM se inserta en el mismo índice que el waypoint al que precede (§5.15.4); identificar el objetivo por índice heredaría la «mejor distancia» del objetivo anterior y dispararía un deadlock falso 10 s después de cada sub-meta.
 
 ### 5.3.2 Pasos previos y orden de evaluación
@@ -125,21 +126,21 @@ Dos decisiones de diseño:
 | # | Condición | Acción | Por qué |
 |---|---|---|---|
 | 1 | Barrido panorámico en curso (`_scan_phase` o pedido de barrido pendiente) | Continuar el barrido (`_deadlock_resolve` → `deep_scan_cycle`) | Un barrido es dueño del dron hasta resolver o caer por sus watchdogs (§5.12); si otra regla tomara el ciclo a mitad del barrido, éste quedaría sin completar. |
-| 2 | Maniobra comprometida (`active_maneuver`, `maneuver_cycles_left > 0`) | Continuarla; ruta `evasive` | Anti flip-flop: una maniobra se completa antes de aceptar otra decisión. |
-| 3 | `imu_contact` o `blind_wall` | `evasive_node` | Contacto que el flujo óptico no ve. |
-| 4 | Altitud < `OPTICAL_MIN_ALT_M` (4.5 m) y sin techo detectado | `reactive_node` | Despegue/aterrizaje: el flujo ve el suelo en movimiento y produce TTC falsos. |
-| 5 | `z_path_blocked` y `dz > 1 m` (waypoint dentro de la banda de seguridad de un techo, §5.15.3) | `PERDER_ALTURA`; ruta `reactive` | Obstáculo vertical → desplazarse en z, simétrico a la evasión en xy. |
-| 6 | `stopped_prolonged` o `wp_no_progress` | `_deadlock_resolve` (§5.3.4) | Dron trabado o sin acercarse al objetivo. |
+| 2 | `stopped_prolonged` o `wp_no_progress` | `_deadlock_resolve` (§5.3.4) | Dron trabado o sin acercarse al objetivo. |
+| 3 | Maniobra comprometida (`active_maneuver`, `maneuver_cycles_left > 0`) | Continuarla; ruta `evasive` | Anti flip-flop: una maniobra se completa antes de aceptar otra decisión. |
+| 4 | `imu_contact` o `blind_wall` | `evasive_node` | Contacto que el flujo óptico no ve. |
+| 5 | Altitud < `OPTICAL_MIN_ALT_M` (4.5 m) y sin techo detectado | `reactive_node` | Aterrizaje y vuelo bajo: el flujo ve el suelo en movimiento y produce TTC falsos. |
+| 6 | `z_path_blocked` y `dz > 1 m` (waypoint dentro de la banda de seguridad de un techo, §5.15.3) | `PERDER_ALTURA`; ruta `reactive` | Obstáculo vertical → desplazarse en z, simétrico a la evasión en xy. |
 | — | Altitud < 4.5 m bajo un techo detectado | `reactive_node` | Vuelo bajo deliberado: sin evasión basada en flujo. |
 | 7 | TTC central ≤ `TTC_EVASION_THRESHOLD` (3.2 s), o centro bloqueado con TTC ≤ `TTC_SAFE_THRESHOLD` (4.6 s) | Si `blocked_fraction > FOV_BLOCKED_THRESHOLD` (0.6): `GIRAR_90` hacia el lado del waypoint **y** consulta inmediata a la capa estratégica (§5.9); si no: `evasive_node` | Peligro frontal: el lazo rápido esquiva; el rodeo lo decide el VLM. |
 | 7b | Centro bloqueado o TTC mínimo ≤ 4.6 s | `evasive_node` | Ventana de advertencia. |
 | 8 | — | `reactive_node` | Camino despejado: guiado nominal. |
 
-Los umbrales de TTC provienen de la calibración del capítulo 7. El orden tiene tres justificaciones: la continuación del barrido y de la maniobra (1–2) precede a todo porque una decisión ya tomada debe completarse; el contacto físico (3) precede al piso óptico y a los detectores porque no depende del sensado visual; y el deadlock (6) precede al TTC (7) porque, con el dron trabado contra una malla de colisión, el campo óptico puede reportar un corredor libre espurio.
+Los umbrales de TTC provienen de la calibración del capítulo 7. El orden tiene tres justificaciones: el barrido (1) precede a todo porque, una vez iniciado, es dueño del dron hasta resolver; el deadlock (2) precede a toda otra regla porque cualquier acción que se repita sin mover al dron —una maniobra comprometida, una evasión por contacto, un descenso hacia un techo— taparía al detector de atasco indefinidamente (cap. 9, §9.8.8), y una maniobra que no mueve al dron en 2 s no es una decisión en curso sino un atasco; y el contacto físico (4) precede al piso óptico y al TTC porque no depende del sensado visual.
 
 ### 5.3.3 Lazo rápido: reacción sin VLM
 
-Las reglas 2, 3, 4, 7 y 8 forman el lazo rápido: actúan en el mismo ciclo, sin depender del modelo. Son compartidas en espíritu con los otros brazos —misma percepción, mismo `action_to_command()` (§5.14)— de modo que la comparación entre brazos mide quién decide los rodeos y los deadlocks, no quién reacciona mejor a un muro inminente.
+Las reglas 3, 4, 5, 7 y 8 forman el lazo rápido: actúan en el mismo ciclo, sin depender del modelo. Son compartidas en espíritu con los otros brazos —misma percepción, mismo `action_to_command()` (§5.14)— de modo que la comparación entre brazos mide quién decide los rodeos y los deadlocks, no quién reacciona mejor a un muro inminente.
 
 ### 5.3.4 Resolución de deadlock (`_deadlock_resolve`)
 
@@ -255,7 +256,7 @@ Su detección de atasco usa el contador de progreso del tracker (`evasion_stuck_
 
 ## 5.12 Barrido panorámico en deadlock (`deep_scan`)
 
-**Archivo:** `src/agents/deep_scan.py`. **Activación:** regla 6 (o el atasco de la FSM) con `DEADLOCK_STRATEGY = deep_vlm`. La estrategia `blind` no ejecuta barrido (§5.3.4). Valores admitidos: `deep_vlm` (default en `config/.env` y en el runner) y `blind`; cualquier otro valor aborta el arranque.
+**Archivo:** `src/agents/deep_scan.py`. **Activación:** regla 2 (o el atasco de la FSM) con `DEADLOCK_STRATEGY = deep_vlm`. La estrategia `blind` no ejecuta barrido (§5.3.4). Valores admitidos: `deep_vlm` (default en `config/.env` y en el runner) y `blind`; cualquier otro valor aborta el arranque.
 
 Máquina de estados sostenida entre ciclos por los campos `_scan_*`:
 
@@ -310,6 +311,8 @@ Las duraciones de las maniobras comprometidas son: `MANEUVER_DURATION_S` (2.0 s 
 
 `WaypointTracker` (`src/navigation/waypoint_tracker.py`) corre en el bucle externo, **fuera del grafo**, una vez por ciclo antes de `graph.invoke()`. `update(pos)` avanza el waypoint activo al entrar en el radio de aceptación (3.5 m; bajo un techo detectado, por distancia horizontal) y `compute_guidance()` produce `vx`, `vy`, `vz`, `yaw_rate` en marco del cuerpo, con corrección de *cross-track*, zona muerta angular, tope de guiñada diferenciado (15°/s, 45°/s con desvío > 60°), histéresis entre regímenes, suavizado EMA y el modo `near_vertical` (`vx = 0` si `dist_xy < 1 m` y `|dz| > 0.3 m`, necesario para el patrón *climb-first* de Tier 2).
 
+**Despegue vertical.** Hasta que el dron llega a `TAKEOFF_ALT_TOL_M` (1 m) de la altitud del primer objetivo, `compute_guidance()` no avanza en horizontal (`vx = 0`): sube en el lugar mientras alinea el rumbo, y exporta `takeoff = True`. La fase ocurre una vez por misión y termina antes si se detecta un techo. Avanzar mientras se sube puede llevar al dron contra una estructura más baja que la altitud de crucero pero más alta que la altitud de ese momento (cap. 9, §9.8.8). Durante la fase, los tres brazos usan `reactive_node` y el `StallDetector` no cuenta atasco.
+
 ### 5.15.1 Contador de progreso
 
 `record_progress(dist_xy, bearing_err_deg)` mantiene `evasion_stuck_cycles`: se reinicia cuando la distancia mejora `WAYPOINT_PROGRESS_EPS_M` (0.5 m) sobre la mínima vista; se exime al dron que gira activamente (error de rumbo > 30°) hasta 15 ciclos consecutivos; en otro caso, se incrementa. Este contador lo consume el brazo `fsm`; el brazo `slm` usa las señales del `StallDetector` (§5.3.1).
@@ -320,7 +323,7 @@ Las duraciones de las maniobras comprometidas son: `MANEUVER_DURATION_S` (2.0 s 
 
 ### 5.15.3 Detección de techo
 
-Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja al dron contra la losa. El tracker lo detecta: si durante 10 ciclos se demanda ascenso (`vz < −0.3 m/s`, altitud ≥ 3 m) sin que la cota varíe más de 0.15 m, declara un techo (`ceiling_z`), liberado al alejarse 15 m o al cambiar de waypoint. Con techo, `compute_guidance()` limita la altitud objetivo a `ceiling_z + CEILING_MARGIN_M` (0.8 m) y, si el waypoint cae dentro de `CEILING_SAFE_GAP_M` (3 m) del techo, lo baja a esa banda y exporta `z_path_blocked = True`, que `navigate` resuelve con `PERDER_ALTURA` (regla 5).
+Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja al dron contra la losa. El tracker lo detecta: si durante 10 ciclos se **ordena** ascenso (`vz < −0.3 m/s` en el comando efectivamente ejecutado, que el bucle externo le informa con `note_executed_command()`; altitud ≥ 3 m) sin que la cota varíe más de 0.15 m, declara un techo (`ceiling_z`), liberado al alejarse 15 m o al cambiar de waypoint. Con techo, `compute_guidance()` limita la altitud objetivo a `ceiling_z + CEILING_MARGIN_M` (0.8 m) y, si el waypoint cae dentro de `CEILING_SAFE_GAP_M` (3 m) del techo, lo baja a esa banda y exporta `z_path_blocked = True`, que `navigate` resuelve con `PERDER_ALTURA` (regla 6). Usar el comando ejecutado y no la demanda del guiado importa: durante un `GIRAR_90` o un `FRENAR` el comando vertical es cero aunque el guiado pida subir, y esos ciclos no prueban que haya una losa encima.
 
 ### 5.15.4 Sub-metas del VLM
 
@@ -328,7 +331,7 @@ Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja
 
 ## 5.16 Salvaguardas y contratos de diseño
 
-**Exclusión total de profundidad.** Ningún componente del lazo de vuelo —nodos del grafo, `main.py`, `experiments/runner.py`, módulos de navegación— lee el canal de profundidad del simulador. El test estático `tests/test_no_depth_in_flight_path.py` lo verifica sobre todos los módulos de `src/agents`, `src/perception` y `src/navigation` y sobre ambos puntos de entrada, buscando también canales indirectos, como un tope de velocidad armado desde el runner con la cámara de profundidad (`_depth_brake_left`), que daría al brazo evaluado acceso a la verdad de terreno del simulador (cap. 9, §9.8.5). Solo los scripts de calibración offline (cap. 7) usan el canal de profundidad.
+**Exclusión total de profundidad.** Ningún componente del lazo de vuelo —nodos del grafo, `main.py`, `experiments/runner.py`, módulos de navegación— lee el canal de profundidad del simulador. El test estático `tests/test_no_depth_in_flight_path.py` lo verifica sobre todos los módulos de `src/agents`, `src/perception` y `src/navigation` y sobre ambos puntos de entrada, buscando también canales indirectos, como un tope de velocidad armado desde el runner con la cámara de profundidad (`_depth_brake_left`), que daría al brazo evaluado acceso a la verdad de terreno del simulador (cap. 9, §9.8.5). Solo los scripts de calibración offline (cap. 7) y la auditoría de la distancia mínima a obstáculo (`src/logging/distmin_audit.py`, cap. 10 §10.6.1) usan el canal de profundidad. La auditoría es un hilo aislado con su propia conexión al simulador, que solo escribe un archivo de muestras; la guardia verifica que no importe ningún módulo del grafo, que el runner se limite a arrancarlo y detenerlo, y que ningún otro módulo de vuelo lo referencie.
 
 **El VLM sin overrides.** La respuesta del modelo se traduce a geometría y se aplica; no pasa por reglas deterministas que la reemplacen. Las validaciones que sí existen (edad, cambio de waypoint, sub-meta superada, deduplicación) descartan respuestas **obsoletas**, no respuestas que una regla considere equivocadas.
 
@@ -358,4 +361,4 @@ Cada ejecución —de `main.py` o de cada celda del runner— genera una carpeta
 
 **Vigilante de congelamiento físico** (`src/navigation/freeze_watchdog.py`, en el bucle externo). Si el estado físico del dron (posición, actitud y velocidad) queda idéntico durante `FREEZE_CYCLES` (25) ciclos, el dron está incrustado en la malla: con `FREEZE_RECOVERY = abort` (producción) la corrida termina con `termination_reason = "physics_locked"`; con `teleport`, vuelve a la última pose libre hasta `FREEZE_MAX_RECOVERIES` veces y lo registra como evento.
 
-Ningún criterio de terminación usa la distancia al obstáculo: medirla requeriría el canal de profundidad del simulador (§5.16). La métrica `min_obstacle_dist_m` queda en `None` en los resúmenes.
+Ningún criterio de terminación usa la distancia al obstáculo: medirla en vuelo requeriría el canal de profundidad del simulador (§5.16). La métrica `min_obstacle_dist_m` la mide el hilo de auditoría y `finalize_run` la consolida en el `summary.json` al cerrar la corrida (cap. 10 §10.6.1).

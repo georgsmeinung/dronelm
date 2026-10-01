@@ -1,4 +1,4 @@
-"""Cierra / repara corridas interrumpidas: CSV aplanado, .webm valido y viewer.html.
+"""Cierra / repara corridas: CSV aplanado, .webm valido, viewer.html y DistMin (consolidado).
 
 Uso:
     python experiments/finalize_run.py <directorio_de_corrida> [...]
@@ -35,7 +35,7 @@ def main() -> int:
             continue
         rep = finalize_run(d, force=args.force)
         n_done += 1
-        print(f"{d}: csv={rep['csv']} video={rep['video']} viewer={rep['viewer']}")
+        print(f"{d}: csv={rep['csv']} video={rep['video']} viewer={rep['viewer']} distmin={rep['distmin']}")
     print(f"{n_done} corrida(s) procesada(s) de {len(dirs)}.")
     return 0
 

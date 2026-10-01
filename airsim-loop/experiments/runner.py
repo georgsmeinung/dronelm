@@ -253,6 +253,11 @@ def run_one(
     interrupted = False
     landed_streak = 0
     freeze_wd = FreezeWatchdog()
+    # Auditoria DistMin: hilo aislado con su propia conexion a AirSim; solo escribe
+    # <stem>.distmin.ndjson. Nada de lo que mide llega al grafo ni al estado (ver finalize_run).
+    from src.logging.distmin_audit import start_tracker
+
+    distmin_tracker = start_tracker(out_path, client) if airborne_ok else None
     pose_hist: "deque" = deque(maxlen=600)
     freeze_recoveries = 0
     freeze_aborted = False
@@ -343,6 +348,8 @@ def run_one(
             state["evasion_stuck_cycles"] = tracker.progress_stall_cycles
 
             state = graph.invoke(state)
+            # Deteccion de techo con el comando EJECUTADO, no con la demanda del guiado.
+            tracker.note_executed_command(state.get("velocity_command"))
             if state.pop("_escape_reset", False):
                 tracker.reset_progress()
             # H3.2: evento de resolucion de atasco (blind vs. deep_vlm),
@@ -416,6 +423,8 @@ def run_one(
         print(f"[{_ts()}][runner] interrumpido por el usuario en c{cycles}; cerrando la corrida...")
         interrupted = True
     finally:
+        if distmin_tracker is not None:
+            distmin_tracker.stop()
         logger.mark_success(success)
         # El motivo de termino va al summary.json (antes solo se agregaba al dict devuelto, no al archivo).
         if interrupted:
@@ -431,22 +440,22 @@ def run_one(
         if video_recorder is not None:
             try:
                 n_frames = video_recorder.close()
-                n_follow = follow_recorder.close() if follow_recorder is not None else 0
-                if n_frames > 0:
-                    from src.logging import write_viewer_html
-
-                    viewer_path = out_path.with_name(out_path.stem + ".viewer.html")
-                    write_viewer_html(
-                        str(viewer_path), video_filename=video_recorder.out_path.name,
-                        csv_path=str(logger.csv_path),
-                        jsonl_path=str(logger.out_path),
-                        follow_video_filename=(follow_recorder.out_path.name if n_follow > 0 else None),
-                    )
-                    print(f"[runner] video ({n_frames} frames) y visor en {viewer_path}")
+                if follow_recorder is not None:
+                    follow_recorder.close()
+                print(f"[runner] video cerrado ({n_frames} frames)")
             except Exception as exc:
-                print(f"[runner] error cerrando video/visor: {exc}")
+                print(f"[runner] error cerrando video: {exc}")
         service.stop()
         client.land_smooth()
+        # Cierre de la corrida (2026-0930): visor HTML y consolidacion de DistMin en el summary.json.
+        try:
+            from src.logging.finalize_run import finalize_run
+
+            rep = finalize_run(str(out_path.parent))
+            summary["min_obstacle_dist_m"] = _read_summary_field(out_path, "min_obstacle_dist_m")
+            print(f"[runner] cierre: viewer={rep.get('viewer')} distmin={rep.get('distmin')}")
+        except Exception as exc:
+            print(f"[runner] error en el cierre de la corrida: {exc}")
         client.disconnect()
         _restore_console()
 
@@ -543,6 +552,13 @@ def main():
                         return
 
     print(f"\n[{_ts()}][runner] {len(results)} corridas completadas. Ver {args.out_dir}/ para los JSONL y usar experiments/analyze.py.")
+
+
+def _read_summary_field(jsonl_path: Path, key: str):
+    try:
+        return json.loads(jsonl_path.with_name(jsonl_path.stem + ".summary.json").read_text(encoding="utf-8")).get(key)
+    except (OSError, ValueError):
+        return None
 
 
 def _finalize_if_incomplete(out_dir: str, scenario: str, arm: str, strategy: str, since: float) -> None:

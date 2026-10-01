@@ -113,7 +113,7 @@
           </div>
           <div class="card">
             <h4>Sin Canal de Profundidad en el Lazo</h4>
-            <p>Ni el grafo, ni <code>main.py</code>, ni <code>experiments/runner.py</code> leen la profundidad del simulador, ni para control ni como métrica. Un test estático lo verifica sobre todos los módulos de vuelo: el sistema es estrictamente monocular.</p>
+            <p>Ni el grafo, ni <code>main.py</code>, ni <code>experiments/runner.py</code> leen la profundidad del simulador. La distancia mínima a obstáculo la mide un hilo de auditoría aislado, con su propia conexión al simulador, que no comparte nada con el grafo. Un test estático verifica ambas cosas: el sistema de control es estrictamente monocular.</p>
           </div>
         </div>
       </section>
@@ -425,7 +425,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-09-30):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). Grafo de control con dos lazos desacoplados, capa estratégica del VLM anclada a la pose y <code>DEADLOCK_STRATEGY=deep_vlm</code> por defecto; 202 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad. Manifiesto <code>citysim_pilot</code> con <code>WP_0_SUR</code> para evitar la autopista elevada. Informe actualizado (caps. 00–13) con seis modos de falla documentados y nueve anexos (A1–A9). Pendiente: re-ejecución de las pruebas del capítulo 11 y lotes con obstrucción D, E y F (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citysim_pilot</code>; 4 celdas × 5 semillas cada uno).</p>
+          <p><strong>Estado actual (2026-09-30):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). Grafo de control con dos lazos desacoplados, capa estratégica del VLM anclada a la pose y <code>DEADLOCK_STRATEGY=deep_vlm</code> por defecto; 217 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad. Manifiesto <code>citysim_pilot</code> con <code>WP_0_SUR</code> para evitar la autopista elevada. Informe actualizado (caps. 00–13) con seis modos de falla documentados y nueve anexos (A1–A9). Pendiente: re-ejecución de las pruebas del capítulo 11 y lotes con obstrucción D, E y F (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citysim_pilot</code>; 4 celdas × 5 semillas cada uno).</p>
         </div>
       </section>
 

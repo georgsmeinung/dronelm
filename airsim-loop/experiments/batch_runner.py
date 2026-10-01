@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -69,11 +70,16 @@ def run_experiment(
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=max_seconds + 60.0)
+        # Margen para el cierre: video, aterrizaje suave y finalize_run.
+        close_budget_s = 120.0
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=max_seconds + close_budget_s)
         if result.returncode == 0:
             scenario_name = Path(scenario_path).stem
-            # runner.py escribe bajo out_dir/scenario/arm/deadlock_strategy/
-            summary_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / f"seed_{seed}.summary.json"
+            # runner.py escribe bajo out_dir/scenario/arm/deadlock_strategy/seed_<n>_<ts>/ (un directorio
+            # por corrida): se toma el summary mas reciente de esta semilla.
+            cell = Path(out_dir) / scenario_name / arm / deadlock_strategy
+            found = sorted(cell.glob(f"seed_{seed}_*/seed_{seed}_*.summary.json"), key=lambda p: p.stat().st_mtime)
+            summary_path = found[-1] if found else cell / f"seed_{seed}_*.summary.json"
             if summary_path.exists():
                 with open(summary_path, "r") as f:
                     summary = json.load(f)

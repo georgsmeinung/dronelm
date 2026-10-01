@@ -40,14 +40,38 @@ _WP_NO_PROGRESS_MIN_M = float(os.getenv("WP_NO_PROGRESS_MIN_M", "2.0"))
 _WP_NO_PROGRESS_THRESHOLD = int(os.getenv("WP_NO_PROGRESS_THRESHOLD", "50"))
 
 _OPTICAL_MIN_ALT_M = float(os.getenv("OPTICAL_MIN_ALT_M", "4.5"))
+_LOOP_HZ = max(0.1, float(os.getenv("LOOP_HZ", "5.0")))
 
 
 def _below_optical_floor(state: Dict[str, Any]) -> bool:
     """Despegue/aterrizaje: bajo el piso optico y sin techo detectado (con techo el dron vuela bajo
     a proposito y si debe poder marcar atasco)."""
     alt_m = abs(float(((state.get("telemetry") or {}).get("position") or {}).get("z", 0.0)))
-    under_ceiling = (state.get("waypoint_guidance") or {}).get("ceiling_z") is not None
+    guidance = state.get("waypoint_guidance") or {}
+    if guidance.get("takeoff"):
+        return True  # despegue vertical: subir en el lugar no es estar trabado
+    under_ceiling = guidance.get("ceiling_z") is not None
     return alt_m < _OPTICAL_MIN_ALT_M and not under_ceiling
+
+
+def measured_xy_speed(state: Dict[str, Any]) -> float:
+    """Velocidad horizontal MEDIDA por desplazamiento entre ciclos (m/s).
+
+    En contacto con una malla AirSim reporta la velocidad comandada aunque la posicion no cambie
+    (piloto citysim_pilot seed 99: 0.31 m/s reportados con la posicion fija 220 ciclos), asi que la
+    velocidad de la telemetria no sirve para decidir "detenido". Sin posicion previa, cae a la
+    velocidad reportada.
+    """
+    telem = state.get("telemetry") or {}
+    prev = state.get("prev_telemetry") or {}
+    pos, ppos = telem.get("position") or {}, prev.get("position") or {}
+    if pos and ppos and "x" in pos and "x" in ppos:
+        dt = float(telem.get("timestamp") or 0.0) - float(prev.get("timestamp") or 0.0)
+        if not (0.02 <= dt <= 2.0):
+            dt = 1.0 / _LOOP_HZ
+        return math.hypot(float(pos["x"]) - float(ppos["x"]), float(pos.get("y", 0.0)) - float(ppos.get("y", 0.0))) / dt
+    vel = telem.get("velocity") or {}
+    return math.hypot(float(vel.get("vx", 0.0)), float(vel.get("vy", 0.0)))
 
 
 def _target_key(state: Dict[str, Any]) -> Optional[Tuple[Any, float, float]]:
@@ -66,6 +90,7 @@ class StallDetector:
         self._wp_best_dist: Optional[float] = None
         self._wp_no_progress_cycles = 0
         self._target: Optional[Tuple[Any, float, float]] = None
+        self._last_measured_spd = 0.0
 
     # --- Senales publicas (las lee navigate_node) ---
     @property
@@ -126,10 +151,9 @@ class StallDetector:
         from src.perception.obstacle_field import empty_field
 
         cmd_vx = float((state.get("velocity_command") or {}).get("vx", 0.0))
-        vel = (state.get("telemetry") or {}).get("velocity") or {}
-        act_spd = math.hypot(float(vel.get("vx", 0.0)), float(vel.get("vy", 0.0)))
-        prev = (state.get("prev_telemetry") or {}).get("velocity") or {}
-        prev_spd = math.hypot(float(prev.get("vx", 0.0)), float(prev.get("vy", 0.0)))
+        act_spd = measured_xy_speed(state)
+        prev_spd = self._last_measured_spd
+        self._last_measured_spd = act_spd
         field = state.get("obstacle_field") or empty_field()
         blind = (
             cmd_vx >= _CMD_BLIND_FWD_MIN_MPS
@@ -146,8 +170,7 @@ class StallDetector:
         lugar, vx=0) llegaba a 15 y disparaba un deadlock falso en el 100 % de las corridas
         (citysim_pilot seed 99, c17-c20). Girar, subir o esperar en hover no es estar trabado.
         """
-        vel = (state.get("telemetry") or {}).get("velocity") or {}
-        act_spd = math.hypot(float(vel.get("vx", 0.0)), float(vel.get("vy", 0.0)))
+        act_spd = measured_xy_speed(state)
         cmd = state.get("velocity_command") or {}
         cmd_spd = math.hypot(float(cmd.get("vx", 0.0)), float(cmd.get("vy", 0.0)))
         if act_spd > 0.10 or cmd_spd < _STOPPED_MIN_CMD_MPS or _below_optical_floor(state):

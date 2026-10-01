@@ -1,3 +1,51 @@
+# 2026-09-30 (g) - Piloto v3 citysim_pilot seed 99: despegue vertical, techo falso y deadlock tapado
+
+Piloto `v3/pilot/citysim_pilot/slm/deep_vlm/seed_99_20260930T220813Z` (interrumpido en c277): el dron
+avanzo mientras subia y llego al parapeto de la autopista elevada (pegada al spawn) a 7.4 m. Un
+GIRAR_90 (vz=0) con el guiado pidiendo subir fabrico un techo en z=-7.44 -> `z_path_blocked` ->
+PERDER_ALTURA 220 ciclos apoyado en el parapeto. AirSim reportaba 0.31 m/s horizontales con la posicion
+fija (stopped nunca conto) y la regla de techo precedia a la de deadlock (wp_no_progress llego a 200).
+
+- **Despegue vertical** (`waypoint_tracker.py`, `TAKEOFF_VERTICAL`/`TAKEOFF_ALT_TOL_M`): vx=0 hasta
+  1 m de la altitud del primer objetivo (una vez por mision; termina si se detecta techo). Guidance
+  exporta `takeoff`; `navigate_node` usa `reactive_node` para los tres brazos y el `StallDetector`
+  no cuenta atasco durante la fase.
+- **Techo con el comando ejecutado**: `WaypointTracker.note_executed_command()` (llamado por runner y
+  main tras `graph.invoke`); un giro o un FRENAR ya no cuentan como "empujar contra una losa".
+- **Velocidad medida** (`stall_detector.measured_xy_speed`): `stopped_prolonged` y `blind_wall` usan el
+  desplazamiento entre ciclos, no la velocidad reportada.
+- **Orden de reglas** (`graph.py`): el deadlock pasa a la regla 2 (despues del barrido, antes de la
+  maniobra comprometida, el contacto, el piso optico y el techo). Con la velocidad medida, blind_wall
+  disparaba en c9 y las evasiones tapaban igual al deadlock.
+- Tests: `tests/test_pilot_seed99_regressions.py` (8, incluido el grafo compilado).
+- Informe: cap. 5 §5.3.1, §5.3.2, §5.15, §5.15.3; cap. 9 §9.8.8 nuevo. Docs: GRAFO-DE-CONTROL.md,
+  docs/grafo-de-control.html.
+
+# 2026-09-30 (f) - DistMin medido por un hilo de auditoria aislado
+
+Las corridas nuevas no median DistMin (el lazo no lee profundidad). Como el capitulo 11 se
+re-ejecuta completo, incluida la linea base, la metrica se recupera con un hilo de auditoria. (Se
+probo primero reproducir la trayectoria despues del vuelo teletransportando el dron: en el piloto
+se veia como una sacudida y se descarto sin pausar la simulacion.)
+
+**`src/logging/distmin_audit.py`** (nuevo): `DistMinTracker`, hilo con su PROPIA conexion RPC a
+AirSim (creada dentro del hilo). Cada `DISTMIN_TRACK_PERIOD_S` (1 s = 5 ciclos) captura `DepthPlanar`
+de la camara frontal, toma el p5 del tercio central (misma definicion que el lote base) y escribe
+`<stem>.distmin.ndjson` (extension distinta de .jsonl para que los glob de corridas no lo levanten).
+No comparte objetos con el grafo ni con DroneState.
+
+**`src/logging/finalize_run.py`**: consolida el `.distmin.ndjson` en `summary.json`
+(`min_obstacle_dist_m`, `_t`, `_source=in_flight_thread`, `_samples`); `needs_finalize` lo detecta en
+corridas interrumpidas. **`experiments/runner.py`**: arranca el hilo antes del lazo, lo detiene en el
+`finally` y cierra con `finalize_run` (que genera tambien el viewer.html). **`batch_runner.py`**:
+margen de cierre y fix de la ruta del summary (directorio por corrida).
+
+**Guardia** (`test_no_depth_in_flight_path.py`): `distmin_audit.py` en la lista de excepcion; el hilo
+no importa nada del grafo, el runner solo lo arranca y detiene, ningun otro modulo de vuelo lo
+referencia. Tests: `tests/test_distmin_audit.py`.
+
+**Informe**: cap. 10 §10.3.0 punto 3 y §10.6.1, cap. 5 §5.16 y §5.19, A6.
+
 # 2026-09-30 (e) - Informe: alineado con el grafo de control final (sin referencias a versiones)
 
 Antes de re-ejecutar el capitulo 11 completo, el informe describe solo el sistema final, sin

@@ -105,6 +105,12 @@ CEILING_SAFE_GAP_M = float(os.getenv("CEILING_SAFE_GAP_M", "3.0"))
 # 0.35 m de avance hacia el WP real en 20 s (16 retrocedieron > 2 m) y en 2 de 3 corridas llevaron
 # al dron sobre la autopista elevada. Las sub-metas ahora las decide solo el VLM.
 SUBGOAL_DEDUP_M = float(os.getenv("SUBGOAL_DEDUP_M", "10.0"))
+# Despegue vertical (2026-0930): hasta llegar a TAKEOFF_ALT_TOL_M de la altitud del primer objetivo,
+# el guiado no avanza en horizontal (vx=0). En el piloto citysim_pilot seed 99 el dron avanzaba
+# mientras subia y llego al parapeto de la autopista elevada, pegada al spawn, a 7.4 m: por debajo
+# de su borde. La fase termina una sola vez por mision (o si se detecta un techo: no se puede subir).
+TAKEOFF_VERTICAL = os.getenv("TAKEOFF_VERTICAL", "true").lower() == "true"
+TAKEOFF_ALT_TOL_M = float(os.getenv("TAKEOFF_ALT_TOL_M", "1.0"))
 
 
 def effective_stall_threshold() -> int:
@@ -194,7 +200,17 @@ class WaypointTracker:
         self._ceiling_anchor: Optional[tuple] = None
         self._ceiling_wp_index: int = 0
         self._ceiling_window: deque = deque(maxlen=max(2, CEILING_DETECT_CYCLES))
+        # vz que la deteccion de techo considera "pedido": el del guiado, reemplazado por el comando
+        # EJECUTADO cuando el lazo externo lo informa (note_executed_command). Con la demanda del
+        # guiado, un GIRAR_90 (vz=0) mientras el guiado pedia subir fabricaba un techo falso
+        # (piloto citysim_pilot seed 99, c43-c52).
         self._last_vz_demand: float = 0.0
+        self._takeoff_done: bool = not TAKEOFF_VERTICAL
+
+    def note_executed_command(self, cmd: Optional[Dict[str, Any]]) -> None:
+        """El lazo externo informa el comando de velocidad efectivamente enviado este ciclo."""
+        if isinstance(cmd, dict):
+            self._last_vz_demand = float(cmd.get("vz", 0.0) or 0.0)
 
     def _update_ceiling(self, x: float, y: float, z: float) -> None:
         """Actualiza la deteccion de techo con la altitud actual."""
@@ -418,6 +434,10 @@ class WaypointTracker:
         dy = wy - y
         dz = wz - z
 
+        if not self._takeoff_done and (abs(dz) <= TAKEOFF_ALT_TOL_M or self.ceiling_z is not None):
+            self._takeoff_done = True
+        takeoff = not self._takeoff_done
+
         dist_xy = math.hypot(dx, dy)
         dist_3d = math.sqrt(dx**2 + dy**2 + dz**2)
         # Waypoint casi directamente arriba/abajo: suprimir vx para que el
@@ -541,7 +561,9 @@ class WaypointTracker:
         # antes del primer ciclo de avance; policy_router ya frena ese avance
         # si esa evidencia muestra un corredor bloqueado (evasive/deliberative
         # en vez de keep_going), sin cambios necesarios ahi.
-        if self._sharp_turn_active:
+        if takeoff:
+            vx = 0.0  # Despegue: subir en el lugar (alineando el rumbo) hasta la altitud del objetivo
+        elif self._sharp_turn_active:
             vx = 0.0
         elif self._orient_settle_cycles_left > 0:
             vx = 0.0
@@ -614,4 +636,5 @@ class WaypointTracker:
             "is_completed": False,
             "z_path_blocked": z_path_blocked,
             "dz": float(dz),
+            "takeoff": takeoff,
         }

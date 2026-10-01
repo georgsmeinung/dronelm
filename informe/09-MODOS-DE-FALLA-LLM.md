@@ -300,6 +300,18 @@ En las tres corridas el dron no chocó de frente: quedó apoyado sobre una **sup
 
 **Mecanismo de contención.** El manifiesto evita la autopista (`WP_0_SUR`, cap. 10 §10.3.3), la capa estratégica pregunta explícitamente por `estructura_debajo` y sube la sub-meta, y el escape determinista ante falla del VLM es `GANAR_ALTURA` (cap. 5, §5.3.4, §5.10).
 
+### 9.8.8 Señales que se tapan entre sí: un techo inventado y una velocidad que no existe
+
+En la corrida piloto de validación sobre `citysim_pilot`, el dron quedó 220 ciclos apoyado sobre el parapeto de la autopista elevada, pegada al punto de partida, sin que se declarara un solo deadlock. Tres mecanismos, cada uno razonable por separado, se encadenaron:
+
+1. **Avance durante el ascenso.** El guiado avanzaba hacia el primer waypoint mientras subía; a 7.4 m, todavía por debajo del borde del parapeto, el TTC frontal cayó a 0.23 s y el lazo ejecutó `GIRAR_90`.
+2. **Un techo inventado.** La detección de techo contaba los ciclos en que el *guiado* pedía subir sin que la cota cambiara. Durante el giro el comando vertical era cero, de modo que diez ciclos de giro fueron leídos como diez ciclos empujando contra una losa: techo en z = −7.44. Con ese techo, el waypoint a −10 m quedó «bloqueado verticalmente» y el lazo ordenó `PERDER_ALTURA` en cada ciclo, contra el parapeto.
+3. **Una velocidad que no existe.** Con el dron apoyado en la estructura, AirSim reportaba 0.31 m/s horizontales y 0.75 m/s verticales con la posición inmóvil. El contador de «detenido» leía esa velocidad y nunca avanzó; el de «sin progreso» sí llegó a 200 ciclos, pero la regla de descenso por techo se evaluaba antes que la de deadlock y tomaba el ciclo.
+
+Ninguna de las tres produjo un error: cada ciclo tenía una acción válida y una justificación registrada. Es la misma clase de falla que §9.5 y §9.7 —el sistema «funciona» mientras repite indefinidamente una acción inútil—, en este caso entre señales del lazo rápido y no entre el modelo y el lazo.
+
+**Mecanismo de contención.** El despegue es vertical hasta la altitud del primer objetivo (cap. 5, §5.15); la detección de techo usa el comando efectivamente ejecutado, no la demanda del guiado (§5.15.3); el `StallDetector` mide la velocidad por desplazamiento entre ciclos (§5.3.1); y el deadlock se evalúa antes que cualquier otra regla salvo el barrido en curso (§5.3.2), de modo que ninguna acción que se repita sin mover al dron puede taparlo. Un test reproduce la secuencia sobre el grafo compilado (`tests/test_pilot_seed99_regressions.py`).
+
 ## 9.9 Riesgos residuales y trabajo pendiente
 
 Los modos de falla documentados tienen su mecanismo de contención en el sistema, incluido el caso (c) de §9.5.4. Los de §9.8 están contenidos en el código y cubiertos por tests, pero ninguna corrida en el simulador los ha verificado todavía. La arquitectura contiene puntos donde pueden aparecer instancias análogas:

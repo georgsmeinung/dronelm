@@ -28,16 +28,18 @@ capture -> (degradado?) -> perception -> navigate -> motor -> END
 
 ## 3. `navigate_node` (brazo `slm`) — cascada de 8 reglas
 
-Antes de la cascada, cada ciclo: `StallDetector.update()` y `StrategicLayer.tick()` (VLM estrategico, no bloqueante).
+Antes de la cascada, cada ciclo: `StallDetector.update()` y `StrategicLayer.tick()` (VLM estrategico, no bloqueante). Durante el **despegue vertical** (`guidance.takeoff`, hasta 1 m de la altitud del primer objetivo) los tres brazos usan `reactive_node`: sube en el lugar, sin evasion por flujo ni conteo de atasco.
+
+La velocidad de "detenido" se mide por desplazamiento entre ciclos (AirSim reporta la comandada con el dron apoyado en una malla), y la deteccion de techo usa el comando ejecutado (`note_executed_command`), no la demanda del guiado.
 
 | # | Condicion | Accion | Por que |
 |---|---|---|---|
 | 1 | Barrido panoramico en curso | seguir el barrido | Es duenio del dron hasta resolver o caer por sus watchdogs (reemplaza la deteccion de escaneo "huerfano", 71 descartes en las corridas v2). |
-| 2 | Maniobra comprometida | continuarla | Anti flip-flop. |
-| 3 | Contacto IMU o avance ordenado sin movimiento (2 ciclos) | `evasive_node` | Obstaculo que el flujo no ve. |
-| 4 | Bajo el piso optico (4.5 m) sin techo | `reactive_node` | Despegue/aterrizaje: el flujo no es valido. |
-| 5 | WP bajo un techo detectado | `PERDER_ALTURA` | z como dimension de navegacion. |
-| 6 | Trabado (≥10 ciclos con orden de avanzar y sin moverse) o ~10 s sin acercarse 2 m al objetivo | **deadlock** (§5) | Dos senales, sin solapamiento. |
+| 2 | Trabado (>=10 ciclos con orden de avanzar y sin desplazamiento medido) o ~10 s sin acercarse 2 m al objetivo | **deadlock** (§5) | Precede a todo salvo el barrido: una accion que se repite sin mover al dron (maniobra, evasion, descenso por techo) no puede taparlo (piloto v3 seed 99: 220 ciclos de PERDER_ALTURA sin deadlock). |
+| 3 | Maniobra comprometida | continuarla | Anti flip-flop. |
+| 4 | Contacto IMU o avance ordenado sin movimiento (2 ciclos) | `evasive_node` | Obstaculo que el flujo no ve. |
+| 5 | Bajo el piso optico (4.5 m) sin techo | `reactive_node` | Aterrizaje/vuelo bajo: el flujo no es valido. |
+| 6 | WP bajo un techo detectado | `PERDER_ALTURA` | z como dimension de navegacion. |
 | 7 | TTC frontal critico | FOV >60% bloqueado: `GIRAR_90` hacia el WP **y** consulta inmediata al VLM con ese frame; si no: `evasive_node` | El lazo rapido esquiva; el rodeo lo decide el VLM. |
 | 8 | — | `reactive_node` | Guiado nominal. |
 

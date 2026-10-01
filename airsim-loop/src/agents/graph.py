@@ -256,6 +256,12 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         stall.update(state)
         stall.publish(state)
 
+        # Despegue vertical, comun a los tres brazos: el guiado sube en el lugar hasta la altitud del
+        # primer objetivo. El flujo optico de un ascenso puro no es valido (FOE espurio), asi que
+        # tampoco hay evasion basada en flujo. Ver WaypointTracker (TAKEOFF_VERTICAL).
+        if (state.get("waypoint_guidance") or {}).get("takeoff"):
+            return reactive_node(state)
+
         if AGENT_ARM == "reactive":
             return reactive_node(state)
         if AGENT_ARM == "fsm":
@@ -273,7 +279,16 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         if state.get("_scan_phase") is not None or state.get("_deep_scan_request_id") is not None:
             return _deadlock_resolve(state, field, guidance, telem)
 
-        # 2. Maniobra comprometida (anti flip-flop).
+        # 2. Deadlock: trabado (avance ordenado sin movimiento) o ~10 s sin acercarse al objetivo.
+        # Precede a toda otra regla salvo el barrido: en el piloto citysim_pilot seed 99 un
+        # PERDER_ALTURA contra el parapeto de la autopista se repitio 220 ciclos sin que el deadlock
+        # llegara a evaluarse, y con la velocidad medida las evasiones por blind_wall (regla 4) y la
+        # maniobra comprometida (regla 3) lo tapaban igual. Una maniobra que no mueve al dron en 2 s
+        # no es una decision en curso: es un atasco.
+        if stall.stopped_prolonged or stall.wp_no_progress:
+            return _deadlock_resolve(state, field, guidance, telem)
+
+        # 3. Maniobra comprometida (anti flip-flop).
         active_man = state.get("active_maneuver")
         cycles_left = int(state.get("maneuver_cycles_left", 0))
         if active_man and cycles_left > 0:
@@ -287,22 +302,18 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
             state["flight_status"] = f"maniobra_{active_man.lower()}"
             return state
 
-        # 3. Contacto que el flujo optico no ve (IMU / avance ordenado sin movimiento).
+        # 4. Contacto que el flujo optico no ve (IMU / avance ordenado sin movimiento).
         if stall.imu_contact or stall.blind_wall:
             return evasive_node(state)
 
-        # 4. Despegue/aterrizaje: bajo el piso optico el flujo no es valido.
+        # 5. Despegue/aterrizaje: bajo el piso optico el flujo no es valido.
         under_ceiling = guidance.get("ceiling_z") is not None
         if alt_m < _OPTICAL_MIN_ALT_M and not under_ceiling:
             return reactive_node(state)
 
-        # 5. El WP esta bajo un techo detectado: descender (z como dimension de navegacion).
+        # 6. El WP esta bajo un techo detectado: descender (z como dimension de navegacion).
         if guidance.get("z_path_blocked") and float(guidance.get("dz", 0.0)) > 1.0:
             return _dispatch(state, "PERDER_ALTURA", "Camino vertical bloqueado por techo.", "reactive")
-
-        # 6. Deadlock: trabado (avance ordenado sin movimiento) o ~10 s sin acercarse al objetivo.
-        if stall.stopped_prolonged or stall.wp_no_progress:
-            return _deadlock_resolve(state, field, guidance, telem)
 
         if alt_m < _OPTICAL_MIN_ALT_M:  # vuelo bajo un techo: sin evasion basada en flujo
             return reactive_node(state)

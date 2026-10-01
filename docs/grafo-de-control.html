@@ -84,7 +84,7 @@
           <div><dt>Consulta VLM</dt><dd>3 <span>s</span></dd></div>
           <div><dt>Edad máx.</dt><dd>10 <span>s</span></dd></div>
           <div><dt>Deadlock</dt><dd>deep_vlm</dd></div>
-          <div><dt>Tests</dt><dd>202</dd></div>
+          <div><dt>Tests</dt><dd>217</dd></div>
         </dl>
         <div class="badges-row">
           <a class="badge-pill badge-blue"
@@ -379,8 +379,8 @@
               <tr>
                 <td class="step">5</td>
                 <td class="mono">compute_guidance()</td>
-                <td>Vector de guiado (rumbo, <code>vz</code>, detección de techo, <code>z_path_blocked</code>) con
-                  histéresis de régimen y suavizado EMA</td>
+                <td>Vector de guiado (rumbo, <code>vz</code>, despegue vertical, detección de techo,
+                  <code>z_path_blocked</code>) con histéresis de régimen y suavizado EMA</td>
               </tr>
               <tr>
                 <td class="step">6</td>
@@ -395,6 +395,12 @@
               </tr>
               <tr>
                 <td class="step">8</td>
+                <td class="mono">note_executed_command()</td>
+                <td>Informa al tracker el comando realmente ejecutado: la detección de techo cuenta solo los ciclos en
+                  que se ordenó subir</td>
+              </tr>
+              <tr>
+                <td class="step">8b</td>
                 <td class="mono">pop("_escape_reset")</td>
                 <td>Si un deadlock se resolvió → <code>tracker.reset_progress()</code></td>
               </tr>
@@ -407,8 +413,8 @@
               <tr>
                 <td class="step">10</td>
                 <td>Salidas</td>
-                <td>Consola, registro JSONL/CSV, video anotado y visor HTML post-vuelo; al completar la misión,
-                  <code>land_smooth()</code></td>
+                <td>Consola, registro JSONL/CSV, video anotado; al cerrar, <code>land_smooth()</code> y
+                  <code>finalize_run</code> (visor HTML y consolidación de DistMin, ver nota)</td>
               </tr>
               <tr>
                 <td class="step">11</td>
@@ -419,8 +425,17 @@
           </table>
         </div>
 
-        <p>Los pasos <strong>8 y 9</strong> son exactamente los que dependen de la regla de declaración de la sección 3.
+        <p>Los pasos <strong>8b y 9</strong> son exactamente los que dependen de la regla de declaración de la sección 3.
         </p>
+
+        <div class="note">
+          <span class="tag">Auditoría DistMin</span>
+          <p>En paralelo al lazo corre un hilo de auditoría con su <strong>propia</strong> conexión al simulador: cada
+            1 s captura la profundidad de la cámara frontal (percentil 5 del tercio central) y la escribe en
+            <code>&lt;corrida&gt;.distmin.ndjson</code>. No comparte ningún objeto con el grafo ni con
+            <code>DroneState</code>; <code>finalize_run</code> vuelca el mínimo en el <code>summary.json</code>. Es la
+            única lectura de profundidad de una corrida, y la guardia estática lo verifica.</p>
+        </div>
       </section>
 
       <!-- 5 -->
@@ -479,8 +494,10 @@
 
         <p>Antes de la cascada, en cada ciclo: <code>StallDetector.update()</code> y
           <code>StrategicLayer.tick()</code>. El segundo nunca comanda velocidades: envía un pedido si corresponde, o
-          procesa una respuesta y deposita una sub-meta en <code>inject_corner</code>. Luego se evalúa, en orden, la
-          primera regla que aplica:</p>
+          procesa una respuesta y deposita una sub-meta en <code>inject_corner</code>. Durante el
+          <strong>despegue vertical</strong> (<code>guidance.takeoff</code>) los tres brazos usan
+          <code>reactive_node</code>: el dron sube en el lugar, sin evasión por flujo ni conteo de atasco. Fuera del
+          despegue se evalúa, en orden, la primera regla que aplica:</p>
 
         <div class="table-container">
           <table>
@@ -501,34 +518,35 @@
               </tr>
               <tr>
                 <td class="step">2</td>
+                <td><code>stopped_prolonged</code> o <code>wp_no_progress</code></td>
+                <td>Resolución de deadlock (sección 8)</td>
+                <td>Precede a toda otra regla salvo el barrido: una acción que se repite sin mover al dron (maniobra,
+                  evasión por contacto, descenso por techo) no puede tapar al detector. Además, trabado contra una
+                  malla, el flujo puede reportar un corredor libre espurio.</td>
+              </tr>
+              <tr>
+                <td class="step">3</td>
                 <td>Maniobra comprometida (<code>maneuver_cycles_left &gt; 0</code>)</td>
                 <td>Continuarla</td>
                 <td>Anti flip-flop: una maniobra se completa antes de aceptar otra decisión.</td>
               </tr>
               <tr>
-                <td class="step">3</td>
+                <td class="step">4</td>
                 <td><code>imu_contact</code> o <code>blind_wall</code></td>
                 <td><code>evasive_node</code></td>
                 <td>Contacto que el flujo óptico no ve.</td>
               </tr>
               <tr>
-                <td class="step">4</td>
+                <td class="step">5</td>
                 <td>Altitud &lt; 4.5 m sin techo detectado</td>
                 <td><code>reactive_node</code></td>
-                <td>Despegue/aterrizaje: el flujo ve el suelo en movimiento y produce TTC falsos.</td>
-              </tr>
-              <tr>
-                <td class="step">5</td>
-                <td><code>z_path_blocked</code> y <code>dz &gt; 1 m</code></td>
-                <td><code>PERDER_ALTURA</code></td>
-                <td>El waypoint está bajo un techo detectado: z como dimensión de navegación.</td>
+                <td>Aterrizaje y vuelo bajo: el flujo ve el suelo en movimiento y produce TTC falsos.</td>
               </tr>
               <tr>
                 <td class="step">6</td>
-                <td><code>stopped_prolonged</code> o <code>wp_no_progress</code></td>
-                <td>Resolución de deadlock (sección 8)</td>
-                <td>Dron trabado o sin acercarse al objetivo; precede al TTC porque, trabado contra una malla, el flujo
-                  puede reportar un corredor libre espurio.</td>
+                <td><code>z_path_blocked</code> y <code>dz &gt; 1 m</code></td>
+                <td><code>PERDER_ALTURA</code></td>
+                <td>El waypoint está bajo un techo detectado: z como dimensión de navegación.</td>
               </tr>
               <tr>
                 <td class="step">7</td>
@@ -567,36 +585,37 @@
               <tr>
                 <td class="mono">imu_contact</td>
                 <td>Aceleración horizontal IMU ≥ 5 m/s² con avance comandado &gt; 0.3 m/s durante 2 ciclos</td>
-                <td>Regla 3 (evasión)</td>
+                <td>Regla 4 (evasión)</td>
               </tr>
               <tr>
                 <td class="mono">blind_wall</td>
-                <td>Avance ordenado ≥ 0.45 m/s, velocidad real &lt; 0.30 m/s y fracción bloqueada del campo &lt; 0.25 (el flujo no ve el obstáculo), 2 ciclos</td>
-                <td>Regla 3 (evasión)</td>
+                <td>Avance ordenado ≥ 0.45 m/s, velocidad medida &lt; 0.30 m/s y fracción bloqueada del campo &lt; 0.25 (el flujo no ve el obstáculo), 2 ciclos</td>
+                <td>Regla 4 (evasión)</td>
               </tr>
               <tr>
                 <td class="mono">stopped_prolonged</td>
-                <td>Se ordenó avanzar (≥ 0.30 m/s) y el dron no se movió durante 10 ciclos; no cuenta bajo el piso
-                  óptico de 4.5 m</td>
-                <td>Regla 6 (deadlock)</td>
+                <td>Se ordenó avanzar (≥ 0.30 m/s) y el desplazamiento medido entre ciclos es &lt; 0.10 m/s durante
+                  10 ciclos; no cuenta bajo el piso óptico ni en el despegue</td>
+                <td>Regla 2 (deadlock)</td>
               </tr>
               <tr>
                 <td class="mono">wp_no_progress</td>
                 <td>50 ciclos (10 s) sin mejorar 2 m la distancia al objetivo actual; se reinicia al cambiar de
                   objetivo (etiqueta + posición)</td>
-                <td>Regla 6 (deadlock)</td>
+                <td>Regla 2 (deadlock)</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div class="note">
           <span class="tag">El despegue no es un atasco</span>
-          <p>Durante el ascenso inicial el guiado ordena subir y girar en el lugar con <code>vx = 0</code>: como no se
-            ordenó avanzar, esos ciclos no cuentan como «detenido», y bajo el piso óptico ninguna señal de deadlock
-            acumula.</p>
+          <p>El despegue es vertical hasta 1 m de la altitud del primer objetivo (<code>TAKEOFF_VERTICAL</code>): el
+            guiado sube y alinea el rumbo con <code>vx = 0</code>, y ninguna señal de deadlock acumula. La velocidad
+            de «detenido» se mide por desplazamiento entre ciclos: apoyado contra una malla, AirSim reporta la
+            velocidad comandada aunque la posición no cambie.</p>
         </div>
 
-        <p>Las reglas 2, 3, 4, 7 y 8 forman el lazo rápido común en espíritu a los tres brazos —misma percepción, mismo
+        <p>Las reglas 3, 4, 5, 7 y 8 forman el lazo rápido común en espíritu a los tres brazos —misma percepción, mismo
           <code>action_to_command()</code>—, de modo que la comparación entre brazos mide quién decide los rodeos y los
           deadlocks, no quién reacciona mejor a un muro inminente.</p>
       </section>
@@ -793,6 +812,8 @@
               <tr><td class="mono">REACTIVE_FORWARD_SPEED</td><td class="num">3.0 m/s</td><td>Velocidad de crucero del guiado.</td></tr>
               <tr><td class="mono">WAYPOINT_ACCEPTANCE_RADIUS</td><td class="num">3.5 m</td><td>Radio para dar un objetivo por alcanzado.</td></tr>
               <tr><td class="mono">GOV_ENABLED</td><td class="num">true</td><td>Gobernador de velocidad del motor.</td></tr>
+              <tr><td class="mono">TAKEOFF_VERTICAL / TAKEOFF_ALT_TOL_M</td><td class="num">true / 1.0 m</td><td>Despegue vertical hasta la altitud del primer objetivo antes de avanzar.</td></tr>
+              <tr><td class="mono">DISTMIN_TRACK_PERIOD_S</td><td class="num">1.0 s</td><td>Período del hilo de auditoría de DistMin (fuera del lazo).</td></tr>
             </tbody>
           </table>
         </div>
@@ -857,7 +878,7 @@
             <tbody>
               <tr>
                 <td>Ningún componente del lazo de vuelo lee el canal de profundidad del simulador (y la guardia detecta
-                  una lectura reintroducida)</td>
+                  una lectura reintroducida); la única lectura es el hilo aislado de auditoría DistMin</td>
                 <td class="mono wrap">test_no_depth_in_flight_path.py</td>
               </tr>
               <tr>
@@ -917,6 +938,19 @@
                 <td class="mono wrap">test_tracker_inserts_vlm_subgoal_as_is_and_replaces_pending</td>
               </tr>
               <tr>
+                <td>Un descenso por techo contra una estructura llega a deadlock; un giro con <code>vz = 0</code> no
+                  fabrica un techo; la posición inmóvil cuenta como detenido aunque AirSim reporte velocidad</td>
+                <td class="mono wrap">test_pilot_seed99_regressions.py</td>
+              </tr>
+              <tr>
+                <td>El despegue es vertical hasta la altitud de crucero y no cuenta como atasco</td>
+                <td class="mono wrap">test_takeoff_climbs_in_place_until_cruise_altitude<br />test_takeoff_is_not_a_stall</td>
+              </tr>
+              <tr>
+                <td>El hilo DistMin está aislado del lazo; <code>finalize_run</code> consolida sus muestras</td>
+                <td class="mono wrap">test_distmin_thread_is_isolated_from_the_control_loop<br />test_distmin_audit.py</td>
+              </tr>
+              <tr>
                 <td>Sin AirSim, hover explícito y sin consulta al VLM</td>
                 <td class="mono wrap">test_degraded_mode.py</td>
               </tr>
@@ -928,7 +962,7 @@
           </table>
         </div>
 
-        <p><strong>202 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
+        <p><strong>217 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
         <pre><code>python -m pytest tests -q</code></pre>
 
         <div class="note">

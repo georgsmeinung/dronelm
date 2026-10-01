@@ -8,6 +8,10 @@
 #   - ningun .viewer.html.
 # El JSONL se escribe y se vacia ciclo a ciclo y conserva el estado anidado, asi que
 # alcanza para reconstruir todo. Este modulo lo hace de forma idempotente.
+#
+# 2026-0930: tambien es el paso de cierre normal de toda corrida del runner, y consolida DistMin:
+# vuelca en el summary.json las muestras que el hilo de auditoria (distmin_audit.py) escribio en
+# `<stem>.distmin.ndjson` durante el vuelo.
 from __future__ import annotations
 
 import csv
@@ -166,17 +170,17 @@ def repair_video(video_path: Path, fps_hint: float = 5.0) -> int:
 
 
 def finalize_run(run_dir: str, force: bool = False, log=print) -> Dict[str, Any]:
-    """Deja una corrida con CSV aplanado, video valido y viewer.html. Idempotente.
+    """Deja una corrida con CSV aplanado, video valido, viewer.html y DistMin. Idempotente.
 
     Solo toca lo que esta incompleto (salvo force=True). Devuelve un reporte.
     """
     from .flight_viewer import write_viewer_html
 
     d = Path(run_dir)
-    report: Dict[str, Any] = {"run_dir": str(d), "csv": "ok", "video": "ok", "viewer": "ok"}
+    report: Dict[str, Any] = {"run_dir": str(d), "csv": "ok", "video": "ok", "viewer": "ok", "distmin": "ok"}
     jsonls = sorted(d.glob("*.jsonl"))
     if not jsonls:
-        report.update(csv="sin_jsonl", video="-", viewer="-")
+        report.update(csv="sin_jsonl", video="-", viewer="-", distmin="-")
         return report
     jsonl = jsonls[0]
     records = _read_jsonl(jsonl)
@@ -223,7 +227,22 @@ def finalize_run(run_dir: str, force: bool = False, log=print) -> Dict[str, Any]
         log(f"[finalize] {d.name}: viewer.html generado.")
     elif n_frames == 0:
         report["viewer"] = "sin_video"
+
+    report["distmin"] = _finalize_distmin(jsonl, force, log)
     return report
+
+
+def _finalize_distmin(jsonl: Path, force: bool, log) -> str:
+    from .distmin_audit import consolidate, distmin_done, samples_path
+
+    if not force and distmin_done(jsonl.with_name(jsonl.stem + ".summary.json")):
+        return "ok"
+    result = consolidate(jsonl, force=force)
+    if result is None:
+        return "sin_muestras" if not samples_path(jsonl).exists() else "sin_muestras_validas"
+    log(f"[finalize] {jsonl.parent.name}: DistMin = {result['min_obstacle_dist_m']} m "
+        f"({result['min_obstacle_dist_samples']} muestras).")
+    return f"{result['min_obstacle_dist_m']} m ({result['min_obstacle_dist_samples']} muestras)"
 
 
 def needs_finalize(run_dir: str) -> bool:
@@ -233,6 +252,10 @@ def needs_finalize(run_dir: str) -> bool:
     if not jsonls:
         return False
     j = jsonls[0]
+    from .distmin_audit import distmin_done, samples_path
+
+    if samples_path(j).exists() and not distmin_done(j.with_name(j.stem + ".summary.json")):
+        return True
     if j.with_suffix(".csv.tmp").exists() or (j.with_suffix(".webm").exists() and not j.with_suffix(".viewer.html").exists()):
         return True
     header = ""

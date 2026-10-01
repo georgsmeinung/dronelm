@@ -358,6 +358,8 @@ def main() -> None:
             if not occupancy_calibrator.is_calibrated:
                 occupancy_calibrator.feed(final_state.get("obstacle_field"))
 
+            # Deteccion de techo con el comando EJECUTADO, no con la demanda del guiado.
+            waypoint_tracker.note_executed_command(drone_state.get("velocity_command"))
             if drone_state.pop("_escape_reset", False):
                 # Escape de deadlock forzado: el progreso medido (xy) puede no
                 # reflejar la subida vertical, asi que se resetea manualmente

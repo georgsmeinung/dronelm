@@ -66,7 +66,7 @@ El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `setting
 3. **`ApiServerPort: 41451`**: puerto TCP de enlace Msgpack-RPC por el que se comunican `AirSimClient` y el motor de Unreal Engine.
 4. **`CameraDefaults.CaptureSettings`**:
    * `ImageType 0` (`Scene`): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (`FlowTTCEstimator`) y por el modelo deliberativo (`Qwen2.5-VL-3B`).
-   * `ImageType 3` (`DepthPlanar`) / `ImageType 1` (`DepthPerspective`): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).
+   * `ImageType 3` (`DepthPlanar`) / `ImageType 1` (`DepthPerspective`): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, §10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).
    * `ImageType 5` (`Segmentation`): canal de segmentación semántica de mallas para auditoría visual.
    * `Width: 1080, Height: 720`: resolución nativa del render target frontal.
 5. **`SubWindows`**: habilita una ventana secundaria flotante en el visor de Unreal Engine mostrando la cámara frontal a bordo en tiempo real, facilitando la supervisión visual del operador durante las corridas experimentales.
@@ -189,6 +189,8 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `GOV_ENABLED` | `true` | Gobernador de velocidad (cap. 5, §5.13). |
 | `FREEZE_CYCLES` / `FREEZE_RECOVERY` | `25` / `abort` | Ciclos con estado físico idéntico para declarar `physics_locked`, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, §5.19). |
 | `LAND_DESCENT_SPEED_MPS` | `0.5` | Velocidad del descenso de `land_smooth()` al final de la misión. |
+| `DISTMIN_TRACK_ENABLED` / `DISTMIN_TRACK_PERIOD_S` | `true` / `1.0` | Hilo de auditoría de DistMin y período de muestreo de la profundidad (cap. 10, §10.6.1). |
+| `TAKEOFF_VERTICAL` / `TAKEOFF_ALT_TOL_M` | `true` / `1.0` | Despegue vertical hasta la altitud del primer objetivo antes de avanzar (cap. 5, §5.15). |
 | `FLOW_HOLDOVER_MAX_FRAMES` / `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` | `3` / `5.0` | Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, §6.12). |
 
 ### 6. Grabación de Video y Viewport

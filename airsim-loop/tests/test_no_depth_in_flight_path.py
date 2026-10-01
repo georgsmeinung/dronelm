@@ -48,6 +48,8 @@ DEPTH_EXCEPTION_LIST: List[str] = [
     "experiments/collect_ttc_dataset.py",
     "experiments/analyze_ttc.py",
     "experiments/analyze_occupancy.py",
+    # Auditoria DistMin: hilo aislado con conexion RPC propia; escribe solo <stem>.distmin.ndjson.
+    "src/logging/distmin_audit.py",
 ]
 
 _FORBIDDEN_PATTERNS = (
@@ -110,3 +112,24 @@ def test_guard_actually_detects_a_reintroduced_depth_read(tmp_path, monkeypatch)
     )
     text = poisoned.read_text(encoding="utf-8")
     assert any(p in text for p in _FORBIDDEN_PATTERNS)
+
+
+def test_distmin_thread_is_isolated_from_the_control_loop():
+    """La unica lectura de profundidad de una corrida es el hilo DistMin (distmin_audit.py). El runner
+    solo lo arranca y lo detiene; ninguna muestra entra al estado del grafo, y ningun otro modulo de
+    vuelo lo referencia."""
+    code = [ln for ln in _read("src/logging/distmin_audit.py").splitlines() if not ln.lstrip().startswith("#")]
+    assert not any("src.agents" in ln or "DroneState" in ln or "graph" in ln for ln in code)
+    runner = _read("experiments/runner.py")
+    uses = [ln.strip() for ln in runner.splitlines()
+            if ("distmin_tracker" in ln or "distmin_audit" in ln) and not ln.strip().startswith("#")]
+    allowed = ("from src.logging.distmin_audit import start_tracker",
+               "distmin_tracker = start_tracker(out_path, client) if airborne_ok else None",
+               "if distmin_tracker is not None:", "distmin_tracker.stop()")
+    assert all(u in allowed for u in uses), uses
+    assert runner.index("distmin_tracker.stop()") > runner.index("finally:")
+    for rel_path in FLIGHT_WHITELIST:
+        if rel_path == "experiments/runner.py":
+            continue
+        text = _read(rel_path)
+        assert "distmin" not in text.lower(), rel_path
