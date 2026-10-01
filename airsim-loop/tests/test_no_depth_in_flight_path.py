@@ -18,23 +18,28 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # como en comentarios que documenten una llamada real.
 FLIGHT_WHITELIST: List[str] = [
     "main.py",
+    # 2026-0930: el runner de experimentos ES el lazo de vuelo de las corridas de la tesis. Antes
+    # estaba en la lista de excepcion y por ahi entro el freno de proximidad por profundidad
+    # (realimentaba el grafo) -- invalida la comparacion entre brazos.
+    "experiments/runner.py",
+    "src/navigation/waypoint_tracker.py",
+    "src/navigation/speed_governor.py",
+    "src/navigation/freeze_watchdog.py",
     "src/agents/__init__.py",
     "src/agents/action_map.py",
     "src/agents/deep_scan.py",
     "src/agents/deliberation_service.py",
-    "src/agents/deliberative.py",
+    "src/agents/vlm_client.py",
     "src/agents/evasive.py",
     "src/agents/fsm.py",
     "src/agents/graph.py",
     "src/agents/reactive.py",
-    "src/agents/spatial_history.py",
     "src/agents/spatial_scan.py",
     "src/agents/stall_detector.py",
+    "src/agents/vlm_strategic.py",
     "src/perception/__init__.py",
-    "src/perception/depth_estimator.py",  # V4: profundidad monocular estimada (transformers, NO AirSim depth sensor)
     "src/perception/flow_ttc.py",
     "src/perception/obstacle_field.py",
-    "src/navigation/waypoint_tracker.py",
 ]
 
 # Lista de excepcion (§0.2): instrumentacion de laboratorio, corre offline en
@@ -43,10 +48,13 @@ DEPTH_EXCEPTION_LIST: List[str] = [
     "experiments/collect_ttc_dataset.py",
     "experiments/analyze_ttc.py",
     "experiments/analyze_occupancy.py",
-    "experiments/runner.py",
 ]
 
-_FORBIDDEN_PATTERNS = ("return_depth=True", "return_depth = True", "DepthPlanar")
+_FORBIDDEN_PATTERNS = (
+    "return_depth=True", "return_depth = True", "DepthPlanar", "DepthPerspective",
+    # Canal indirecto: un tope/freno armado desde afuera con profundidad del simulador.
+    "_depth_brake_left",
+)
 
 
 def _read(rel_path: str) -> str:
@@ -75,10 +83,10 @@ def test_flight_module_whitelist_covers_every_flight_source_file():
     """
     whitelist_set = set(FLIGHT_WHITELIST)
     missing = []
-    for sub_dir in ("src/agents", "src/perception"):
+    for sub_dir in ("src/agents", "src/perception", "src/navigation"):
         for path in sorted((REPO_ROOT / sub_dir).glob("*.py")):
             rel = path.relative_to(REPO_ROOT).as_posix()
-            if rel not in whitelist_set:
+            if rel not in whitelist_set and not rel.endswith("__init__.py"):
                 missing.append(rel)
     assert not missing, f"Modulos de vuelo sin declarar en FLIGHT_WHITELIST: {missing}"
 

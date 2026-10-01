@@ -37,7 +37,7 @@ El paper también reporta que el espacio latente codifica cantidades físicas re
 
 ## A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente
 
-El SLM del sistema evaluado es un **decisor discreto y semántico**: recibe un resumen verbalizado del `ObstacleField`, la telemetría y una imagen, y emite una macro-acción (`evasive`, `girar_90`, …) con una latencia de 1,2–4,6 s (mediana 1,46 s) en el piloto V2 sobre la RTX 5060, y ~10–11 s reportados para consultas con imagen en la depuración del 2026-09-22 [T] (cap. 8, §8.6). Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
+El VLM del sistema es un **perceptor semántico de escala de segundos**: recibe un fotograma (con columnas dibujadas o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, §5.10), con una latencia de 1,5 a 5,6 s de mediana según la configuración sobre la RTX 5060 [T] (cap. 8, §8.6). Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
 
 | Dimensión | SLM/VLM (Qwen2.5-VL-3B, §8) | LeWM-like (15 M) |
 |---|---|---|

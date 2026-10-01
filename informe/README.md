@@ -14,13 +14,13 @@ reescribir la estructura cada vez.
 | 2 | [`02-ESTADO-DEL-ARTE.md`](02-ESTADO-DEL-ARTE.md) | Redactado — Estado del arte y trabajos relacionados | — |
 | 3 | [`03-ENTORNO-SIMULACION.md`](03-ENTORNO-SIMULACION.md) | Redactado — Unreal Engine 5.5 + Cosys-AirSim, jerarquía de 3 Tiers (MiniSim, TownSim, CitySim) y telemetría Zenodo | — |
 | 4 | [`04-PLANIFICACION-MISION-GCS.md`](04-PLANIFICACION-MISION-GCS.md) | Redactado — Planificación en tierra, GCS WebDCS, estructura de corridas `airsim-runs/` y viewer | — |
-| 5 | [`05-ARQUITECTURA-LAZO-TACTICO.md`](05-ARQUITECTURA-LAZO-TACTICO.md) | Redactado — Grafo LangGraph de cuatro nodos (`capture → perception → navigate → motor`) con política en tres capas dentro de `navigate`, `StallDetector`, consulta asíncrona al VLM, escape vertical forzado, resolución de atasco (`slam_assess`/`deep_vlm` con schema de escena semántica), overrides de trayectoria integrados en `scene_to_action`, `RETROCEDER` y esquinas, detección de techo con `CEILING_SAFE_GAP_M=3 m` y `z_path_blocked`, cadena de esquinas, `DroneState`, registro de vuelo y `land_smooth` | — |
+| 5 | [`05-ARQUITECTURA-LAZO-TACTICO.md`](05-ARQUITECTURA-LAZO-TACTICO.md) | Redactado — Grafo LangGraph de cuatro nodos (`capture → perception → navigate → motor`) con dos lazos desacoplados: lazo rápido a 5 Hz (guiado, evasión por flujo óptico, `GIRAR_90`) y capa estratégica asíncrona del VLM que propone sub-metas ancladas a la pose del fotograma; `StallDetector` (dron trabado, sin progreso al waypoint); resolución de deadlock por barrido panorámico `deep_vlm` con rumbos medidos; `WaypointTracker` y sub-metas; detección de techo y `z_path_blocked`; `DroneState`; salvaguardas (sin canal de profundidad); registro de vuelo, vigilancia de congelamiento y `land_smooth` | — |
 | 6 | [`06-PERCEPCION-MONOCULAR.md`](06-PERCEPCION-MONOCULAR.md) | Redactado — Pipeline completo DIS→derotación→FOE→TTC→ObstacleField; lógica `is_blocked()`; API pública; complementariedad VLM | — |
 | 7 | [`07-ESTIMACION-TTC.md`](07-ESTIMACION-TTC.md) | Redactado — Validación experimental: ground truth de profundidad, dataset 3735 registros, AUC ROC 0.96–0.97, umbrales por Youden; §7.5 calibración ROC del canal de ocupación (D2, parcial) y §7.6 validación de la inhibición ante giros agresivos (D3, parcial) | datos de giros agresivos y dataset ocupación |
-| 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Selección de modelo (Qwen2.5-VL-3B), decodificación restringida + parser tolerante, rol del VLM como perceptor semántico por sectores (no oráculo de acciones), `scene_to_action` como capa de decisión, schema compacto (deg/ok/conf/degradada, §8.8), prompts externalizados, `VlmGoal`, latencia observada y consulta asíncrona con caducidad, LoRA no adoptado | — |
-| 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — 5 modos de falla documentados (schema drift, desalineación temporal, divergencia descalibrada, state clipping en LangGraph, degradaciones sensoriales) + §9.5.4 instancias adicionales (flag descartado, resultados VLM huérfanos, pedido pendiente sin cierre — abierto); metodología de diagnóstico; riesgos residuales | — |
+| 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Selección de modelo (Qwen2.5-VL-3B), decodificación restringida + parser estricto, rol del VLM como perceptor semántico anclado al mundo (columnas con rumbo absoluto en la capa estratégica, imágenes numeradas con rumbo medido en el barrido), `action_to_command`, prompts, latencia y consulta asíncrona con caducidad, nombres de campo compactos, LoRA no adoptado | — |
+| 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — 6 modos de falla documentados (schema drift, desalineación temporal, divergencia descalibrada, state clipping en LangGraph, degradaciones sensoriales, integración del VLM), cada uno con su mecanismo de contención; metodología de diagnóstico; riesgos residuales | — |
 | 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo en 3 Tiers); §10.12 lotes con obstrucción D/E/F previstos | — |
-| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Lote base completo (75 corridas, 8–9 de septiembre). **Pendiente:** ejecución de los escenarios con obstrucción (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`) con el sistema actual (lotes D, E y F, §10.12) y actualización de §11.4.2b–§11.5 | lotes D, E, F |
+| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | ⏳ Lote base completo (75 corridas, 8–9 de septiembre). **Pendiente:** ejecución de los escenarios con obstrucción (`townsim_ini`, `townsim_calib_cruce_frontal`, `citysim_pilot`) con el sistema de los capítulos 5–8 (lotes D, E y F, §10.12) y actualización de §11.4.2b–§11.5 | lotes D, E, F |
 | 12 | [`12-CONCLUSIONES.md`](12-CONCLUSIONES.md) | Redactado sobre el lote base; la evaluación de H1 con obstrucción se reevaluará tras los lotes D, E y F | capítulo 11 |
 | 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado y depurado — todas las entradas citadas en el texto; enlaces y metadatos verificados contra arXiv/DataCite/Crossref o la página original (ver nota de verificación) | — |
 | — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia — selección de modelos GGUF, decodificación estructurada y análisis de innovación | — |
@@ -42,7 +42,7 @@ reescribir la estructura cada vez.
   en vez de definir estructura.
 - Las imágenes y diagramas ya generados (`.png`, `.jpg`, `.mmd`) quedan en `informe/`
   junto a los capítulos que los referencian.
-- El capítulo 5 embebe el diagrama de la arquitectura en capas vigente (`2026-0928 drone_graph_layered_architecture.png`) y describe la topología del grafo compilado en `src/agents/graph.py`.
+- El capítulo 5 embebe el diagrama del grafo de control (`2026-0930 grafo_control.png`) y describe la topología del grafo compilado en `src/agents/graph.py`.
 - El capítulo 3 embebe las imágenes de calibración de telemetría en `informe/` (trayectorias y perfiles de velocidad reales vs. simulados).
 - El capítulo 4 detalla la planificación previa al vuelo en tierra mediante la estación GCS WebDCS y el compilador de misiones a `MissionManifest` JSON inmutable.
 
@@ -64,7 +64,7 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
 
 ### Capítulos pendientes de redactar
 - **Cap. 11 (Resultados)**: corridas piloto seed=1 completas para los tres brazos en 3 Tiers.
-  Falta: semillas 2–5 y escenarios con obstáculos (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`).
+  Falta: semillas 2–5 y escenarios con obstáculos (`townsim_ini`, `townsim_calib_cruce_frontal`, `citysim_pilot`).
   El lote estadístico completo (Brazo × Escenario × Semillas ≥ 5) es el prerequisito para las conclusiones.
 - **Cap. 12 (Conclusiones)**: bloquea en cap. 11.
 

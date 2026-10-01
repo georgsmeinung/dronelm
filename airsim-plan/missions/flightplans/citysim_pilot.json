@@ -1,8 +1,9 @@
 {
   "mission_id": "CITYMAP_PILOT",
-  "summary": "Tier 2 (escenario complejo, piloto): circuito de 7 waypoints tipo grilla urbana sobre el mapa citymap.png (proyecto UE CitySim). Renombrado desde manhattan_b (2026-0827), waypoints reutilizados de A_BASIC_CITY. Formato unico (2026-0828): antes existia por duplicado como citymap_pilot.json (airsim-loop) y A_BASIC_CITY.preloop.json (airsim-plan).",
-  "start_pose": { "x": 26.1, "y": -78.2, "z": -10.0, "yaw_deg": 0.0 },
+  "summary": "Tier 2 (escenario complejo, piloto): circuito tipo grilla urbana sobre citymap.png (proyecto UE CitySim). Renombrado desde manhattan_b (2026-0827), waypoints reutilizados de A_BASIC_CITY. Formato unico (2026-0828): antes existia por duplicado como citymap_pilot.json (airsim-loop) y A_BASIC_CITY.preloop.json (airsim-plan). 2026-0930: (a) map corregido a citymap.png (3.8 px/m, origen = spawn): con citysim_calib.png los WP caian sobre el agua; (b) start_pose corregido al spawn real de settings.json (0,0, yaw 90) -- antes apuntaba a WP_1 y solo se usaba con --seed-jitter, teletransportando el dron al primer WP; (c) WP_0_SUR intermedio en la calle sur (x~-11) / calle y~-50: la autopista elevada corre sobre la calle x~15-20 desde y~-50 hacia el este a la altura de crucero (-10 m); el tramo spawn -> WP_1 la cruzaba y en 2 de 3 corridas el dron quedo trabado sobre el tablero. Los edificios en los tramos spawn -> WP_0_SUR -> WP_1 se dejan para que los resuelva la navegacion.",
+  "start_pose": { "x": 0.0, "y": 0.0, "z": -10.0, "yaw_deg": 90.0 },
   "waypoints": [
+    { "x": -11.0, "y": -50.5, "z": -10.0, "label": "WP_0_SUR" },
     { "x": 26.1, "y": -78.2, "z": -10.0, "label": "WP_1" },
     { "x": 68.9, "y": -78.6, "z": -10.0, "label": "WP_2" },
     { "x": 67.7, "y": -145.0, "z": -10.0, "label": "WP_3" },
@@ -11,5 +12,5 @@
     { "x": -17.9, "y": -78.6, "z": -10.0, "label": "WP_6" },
     { "x": 12.5, "y": -78.6, "z": -10.0, "label": "WP_7" }
   ],
-  "map": "citysim_calib.png"
+  "map": "citymap.png"
 }

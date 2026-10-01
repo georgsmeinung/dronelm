@@ -3,8 +3,8 @@
 # Registra todo lo que F3.3 (runner + analyze) necesita para comparar los
 # brazos SLM / FSM / reactivo: tasa de exito, colisiones, distancia minima a
 # obstaculo, latencias por rama, invocaciones/fallback/timeout del SLM,
-# adherencia al formato JSON. min_obstacle_dist_m sale del canal depth y es
-# SOLO para metricas: no se realimenta al control (no contamina el experimento).
+# adherencia al formato JSON. min_obstacle_dist_m queda siempre en None desde 2026-0930: el lazo
+# de vuelo ya no lee el sensor de profundidad del simulador (ver test_no_depth_in_flight_path.py).
 from __future__ import annotations
 
 import csv
@@ -260,7 +260,12 @@ class FlightLogger:
         self._last_pos = {"x": pos.get("x", 0.0), "y": pos.get("y", 0.0), "z": pos.get("z", 0.0)}
 
         deliberations = state.get("deliberations") or []
-        last_delib = deliberations[-1] if deliberations and state.get("route") == "deliberative" else None
+        # Cada deliberacion NUEVA se cuenta en el ciclo en que aparece, cualquiera sea la ruta: la capa
+        # estrategica del VLM (2026-0930) resuelve mientras el dron vuela por la ruta reactiva/evasiva.
+        last_delib = deliberations[-1] if deliberations else None
+        if (last_delib is not None and last_delib.get("id") == self._last_counted_delib_id
+                and state.get("route") != "deliberative"):
+            last_delib = None
         slm_block = None
         if last_delib is not None:
             delib_id = last_delib.get("id")

@@ -1249,9 +1249,9 @@ diferenciada:</p>
 <p>El brazo <code>rl</code> ocupa la <strong>capa táctica</strong>: recibe el frame RGB actual, el <code>ObstacleField</code>
 producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>waypoint_guidance</code>), y
 produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
-<code>evasive_node</code>. La capa deliberativa (VLM) sigue activa en modo jerárquico: puede inyectar
-waypoints de desvío (<code>inject_corner</code>) o llamar a <code>slam_assess</code> ante atascos duros, igual
-que con los brazos existentes.</p>
+<code>evasive_node</code>. La capa estratégica del VLM sigue activa en modo jerárquico: puede inyectar sub-metas en
+coordenadas del mundo (<code>inject_corner</code>) y resolver atascos duros con el barrido <code>deep_vlm</code>,
+igual que con los brazos existentes (cap. 5, §5.10, §5.12).</p>
 <p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
 <code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
 seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
@@ -1444,9 +1444,8 @@ parcialmente por tres decisiones de diseño:</p>
 </li>
 <li>
 <p><strong>Capa deliberativa activa</strong>: cuando la política RL entra en un estado no representado
-   en el entrenamiento (alta entropía de acción, múltiples ciclos de <code>FRENAR</code>), el nodo
-   deliberativo puede invocar <code>slam_assess</code> para recuperar el control, igual que con los
-   brazos <code>fsm</code> y <code>reactive</code>. Esto limita la región de fallo catastrófico de la política
+   en el entrenamiento (alta entropía de acción, múltiples ciclos de <code>FRENAR</code>), el barrido
+   <code>deep_vlm</code> puede resolver el atasco y proponer una salida, igual que con el brazo <code>fsm</code>. Esto limita la región de fallo catastrófico de la política
    neuronal.</p>
 </li>
 </ol>
@@ -1571,10 +1570,10 @@ especializada en el espacio de maniobras de este sistema.</p>
 <p>La implementación del brazo <code>rl</code> tiene las siguientes dependencias sobre el trabajo ya
 realizado:</p>
 <ul>
-<li><strong>S6 completado</strong> (PLAN-SLAM): la corrida comparativa <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
+<li><strong>Lotes D, E y F completados</strong> (cap. 10, §10.12): la corrida comparativa <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.</li>
-<li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=slam_assess</code>: la política RL se entrenará
+<li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=deep_vlm</code>: la política RL se entrenará
   en el mismo entorno de simulación en el que se midió el <code>slm</code>; si ese entorno cambia
   durante el entrenamiento, los resultados no son comparables.</li>
 </ul>

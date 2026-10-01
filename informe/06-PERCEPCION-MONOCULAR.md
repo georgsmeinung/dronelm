@@ -42,7 +42,7 @@ $$f_x' = f_x \cdot \frac{W'}{W}, \quad f_y' = f_y \cdot \frac{W'}{W}$$
 
 con `CAMERA_FX = CAMERA_FY = 554.0` px (cámara simétrica a la resolución de captura de AirSim) y el centro óptico $(c_x, c_y) = (W'/2, H'/2)$.
 
-**Guard de rotación.** Antes de computar el flujo, el estimador verifica que la rotación máxima entre frames (pitch, yaw, roll) no exceda `FLOW_MAX_ROTATION_DEG` (default 2°). Durante maniobras activas (GIRAR_90, EVADIR) el yaw cambia 4–9°/ciclo a `LOOP_HZ=5` Hz. En esas condiciones, el modelo de derotación lineal de primer orden que se describe en §6.4 introduce errores de linealización que el estimador no puede compensar, y regiones de baja textura (cielo, fachadas uniformes) generan flujo esencialmente aleatorio. El resultado documentado antes de implementar este guard fueron "nubes" de falsos obstáculos durante cada giro (CHANGELOG.md 2026-0826). La solución conservadora es descartar el ciclo y retornar `empty_field(source="degraded")`: es mejor declarar incertidumbre que producir un falso positivo que cancele una maniobra en ejecución.
+**Guard de rotación.** Antes de computar el flujo, el estimador verifica que la rotación máxima entre frames (pitch, yaw, roll) no exceda `FLOW_MAX_ROTATION_DEG` (default 2°). Durante maniobras activas (GIRAR_90, EVADIR) el yaw cambia 4–9°/ciclo a `LOOP_HZ=5` Hz. En esas condiciones, el modelo de derotación lineal de primer orden que se describe en §6.4 introduce errores de linealización que el estimador no puede compensar, y regiones de baja textura (cielo, fachadas uniformes) generan flujo esencialmente aleatorio. Sin este guard, cada giro produce «nubes» de falsos obstáculos. La solución conservadora es descartar el ciclo y retornar `empty_field(source="degraded")`: es mejor declarar incertidumbre que producir un falso positivo que cancele una maniobra en ejecución.
 
 ## 6.4 Etapa 2: flujo óptico denso (DIS)
 
@@ -68,7 +68,7 @@ $$\mathbf{v}_{\text{trans}} = \mathbf{v}_{\text{medido}} - \mathbf{v}_{\text{rot
 
 La implementación (`_derotate()`) vectoriza esta operación sobre el array completo usando `np.mgrid` para construir los mapas de coordenadas $(x, y)$ en una sola operación, sin bucles por píxel. El salto de wrap-around del yaw ($\pm\pi$) se corrige con el módulo estándar antes de usar $\Delta\text{yaw}$ como $\theta_y$.
 
-**Pre-integración de la velocidad angular del IMU (P1, 2026-09-10).** La telemetría incluye ahora `imu_angular_velocity = {wx, wy, wz}` (rad/s, `getImuData()`), y cuando está presente el estimador usa `wz · Δt` como $\Delta\text{yaw}$ en lugar de la diferencia entre los ángulos de orientación de dos ciclos. La diferencia importa si la tasa de guiñada varía dentro del intervalo entre frames. En AirSim, cuyo IMU es ideal, ambos métodos son numéricamente equivalentes; el cambio deja el diseño preparado para hardware real, donde la velocidad angular medida por el giroscopio es la señal disponible.
+**Pre-integración de la velocidad angular del IMU (P1).** La telemetría incluye `imu_angular_velocity = {wx, wy, wz}` (rad/s, `getImuData()`), y cuando está presente el estimador usa `wz · Δt` como $\Delta\text{yaw}$ en lugar de la diferencia entre los ángulos de orientación de dos ciclos. La diferencia importa si la tasa de guiñada varía dentro del intervalo entre frames. En AirSim, cuyo IMU es ideal, ambos métodos son numéricamente equivalentes; el cambio deja el diseño preparado para hardware real, donde la velocidad angular medida por el giroscopio es la señal disponible.
 
 Esta corrección es crítica para el sistema: sin ella, cada corrección de guiado (giro de unos pocos grados hacia el waypoint) genera un flujo rotacional en el sector central que se interpreta como un obstáculo frontal, disparando deliberaciones espurias en cada ciclo de crucero. El mismo principio de derotación por IMU se usa en sistemas de visión activa para vehículos terrestres ([Dickmanns, 2024](13-REFERENCIAS.md#ref-dickmanns-2024)) y SLAM monocular ([Chen et al., 2022](13-REFERENCIAS.md#ref-chen-w-2022)).
 
@@ -128,7 +128,7 @@ La decisión de si una celda está **bloqueada** fusiona los dos canales (ocupac
 def is_blocked(self) -> bool:
     if self.confidence < MIN_CONFIDENCE_FOR_BLOCKED:   # 0.15
         return False
-    if self.occupancy >= OCCUPANCY_BLOCKED_THRESHOLD:  # 0.011 (calibrado, D2; 0.35 era el valor histórico)
+    if self.occupancy >= OCCUPANCY_BLOCKED_THRESHOLD:  # 0.011 (calibrado, D2)
         return True
     return (
         self.confidence >= MIN_CONFIDENCE_FOR_TTC_BLOCKED  # 0.35
@@ -140,11 +140,11 @@ La lógica es: una celda está bloqueada si tiene evidencia mínima de percepci�
 
 **Calibración del umbral de ocupación (D2).** Un valor de umbral fijado a ojo (0.35) supone que la ocupación toma valores comparables a los del canal de TTC, y no es así. Un dataset de calibración (196 frames capturados en TownSim frente a una pared sólida, a cuatro velocidades de aproximación de 0.5 a 3 m/s; verdad de terreno binaria `gt_depth_centro < 5 m`) muestra que la ocupación central nunca supera 0.082 en ese conjunto, de modo que con 0.35 la tasa de verdaderos positivos sería 0: el canal de ocupación quedaría, en la práctica, **desactivado** y el TTC cargaría solo con la detección. La curva ROC sobre `occ_centro` dio AUC = 0.87 y un umbral óptimo por [índice de Youden](13-REFERENCIAS.md#ref-youden-1950) de **0.011** (TPR = 0.93, FPR = 0.22), valor que adoptan `config/.env` y el default del código. Los números se recalcularon a partir del archivo del dataset; el detalle metodológico y sus límites se discuten en §7.5. Para atenuar la dependencia de la escena, `main.py` incorpora un `OccupancyCalibrator` que mide el ruido de ocupación del entorno actual en los primeros 25 ciclos válidos (`mean + 3σ`, acotado a [0.005, 0.05]) y reemplaza el umbral global; **el ejecutor de experimentos no lo usa**, de modo que las corridas en lote operan con el valor fijo de `config/.env`.
 
-**Umbrales diferenciados de confianza.** La confianza mínima para que la ocupación vote bloqueo es `MIN_CONFIDENCE_FOR_BLOCKED = 0.15`, pero para que el TTC vote bloqueo por sí solo (sin apoyo de ocupación) se requiere `MIN_CONFIDENCE_FOR_TTC_BLOCKED = 0.35`. La razón es que el camino de "pocos inliers" en la estimación del FOE (§6.6) produce `foe_confidence = 0.3` como señal de evidencia degradada. Sin el umbral diferenciado, ese 0.3 superaba el piso general (0.15) y el TTC degradado votaba bloqueo con la misma autoridad que un FOE robusto. La separación entre ambos umbrales fue el fix directo de una fuente documentada de falsos positivos (CHANGELOG.md 2026-0826).
+**Umbrales diferenciados de confianza.** La confianza mínima para que la ocupación vote bloqueo es `MIN_CONFIDENCE_FOR_BLOCKED = 0.15`, pero para que el TTC vote bloqueo por sí solo (sin apoyo de ocupación) se requiere `MIN_CONFIDENCE_FOR_TTC_BLOCKED = 0.35`. La razón es que el camino de "pocos inliers" en la estimación del FOE (§6.6) produce `foe_confidence = 0.3` como señal de evidencia degradada. Sin el umbral diferenciado, ese 0.3 superaba el piso general (0.15) y el TTC degradado votaba bloqueo con la misma autoridad que un FOE robusto. Con un único umbral, el TTC degradado votaría bloqueo con la misma autoridad que un FOE robusto y produciría falsos positivos.
 
 ## 6.10 La API pública de `ObstacleField`
 
-Todos los consumidores del sistema de percepción — `navigate_node` (capas reactiva y táctica), `evasive_node`, el constructor del prompt del VLM, `fsm_node`, `FlightLogger` — acceden al campo de obstáculos **únicamente** a través de esta interfaz. Ningún módulo de control lee campos crudos de flujo ni coordenadas del FOE.
+Todos los consumidores del sistema de percepción — `navigate_node` (lazo rápido), `evasive_node`, `fsm_node`, el gobernador de velocidad de `motor_node` y `FlightLogger` — acceden al campo de obstáculos **únicamente** a través de esta interfaz. El VLM **no** recibe el `ObstacleField`: mira el fotograma directamente (cap. 5, §5.10). Ningún módulo de control lee campos crudos de flujo ni coordenadas del FOE.
 
 | Método | Descripción |
 |---|---|
@@ -155,39 +155,16 @@ Todos los consumidores del sistema de percepción — `navigate_node` (capas rea
 | `blocked_fraction()` | Fracción de celdas bloqueadas sobre el total de la grilla 3×3 |
 | `min_ttc()` | TTC mínimo global, sobre todas las celdas con confianza suficiente |
 | `has_evidence()` | `True` si `source == "flow"` y `foe_confidence > 0.0` |
-| `summary_text()` | Texto compacto para el prompt del VLM (§4.3): "CENTRO: BLOQUEADO (TTC=3.2s, fuente: flujo óptico + profundidad monocular)" |
-| `merge_depth_estimate(depth_m, cmd_vx)` | Inyecta una estimación de profundidad monocular en el sector centro: las tres celdas quedan con `occupancy` sobre el umbral de bloqueo, `ttc_s = depth_m / cmd_vx` y `source = "flow+depth"` (V4/A1) |
+| `summary_text()` | Texto compacto por sector para el overlay y el logging (`scene_summary`), p. ej. "CENTRO: BLOQUEADO (TTC=3.2s, fuente: flujo óptico)" |
 | `to_dict()` | Representación serializable para el JSONL de auditoría |
 
-El campo `source` del `ObstacleField` indica el origen de la evidencia: `"flow"` (solo flujo óptico), `"flow+depth"` (flujo + Depth Anything V2 Metric), `"degraded"` (ciclo con rotación alta o sin flujo), `"holdover"` (campo del ciclo anterior por degradación temporal), `"none"` (sin datos). Este campo es visible en `summary_text()` y llega al SLM en el prompt, permitiéndole calibrar su confianza según las fuentes que confirmaron el obstáculo (B1).
+El campo `source` del `ObstacleField` indica el origen de la evidencia: `"flow"` (solo flujo óptico), `"degraded"` (ciclo con rotación alta o sin flujo), `"holdover"` (campo del ciclo anterior por degradación temporal), `"none"` (sin datos). El gobernador de velocidad usa `source` para limitar el avance cuando no hay evidencia (cap. 5, §5.13).
 
-El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo. La excepción es `merge_depth_estimate()`, que retorna un **nuevo** `ObstacleField` con el sector centro modificado — el campo original no se altera.
-
-## 6.10b Segundo canal perceptual: Depth Anything V2 Metric (V4)
-
-El canal usa Depth Anything V2 ([Yang et al., 2024](13-REFERENCIAS.md#ref-yang-2024)), un modelo de estimación de profundidad monocular entrenado con imágenes sintéticas de alta precisión y destilado a partir de un modelo maestro, en su variante de profundidad métrica.
-
-El estimador de flujo óptico tiene un punto ciego estructural ante obstáculos centrados en la trayectoria (cerca del FOE): la divergencia traslacional de esos píxeles es mínima precisamente porque están en el eje de aproximación. Para cubrir ese punto ciego, el sistema incorpora un segundo canal de profundidad **completamente independiente del sensor de profundidad del simulador**: un estimador de profundidad monocular basado en el modelo **Depth Anything V2 Metric** (`src/perception/depth_estimator.py`).
-
-**Principio.** La entrada es únicamente el frame RGB del ciclo actual — el mismo frame que ya captura `capture_node`, sin ninguna llamada adicional a AirSim. El modelo de red neuronal infiere un mapa de profundidad métrico (en metros) del frame. Esta distinción arquitectural es crucial: no es el canal `DepthPlanar` de AirSim (ground truth del simulador, disponible solo en simulación), sino un estimado inferido de una imagen monocular, idéntico a lo que haría un sistema real con un drone sin LiDAR.
-
-**Hilo background.** `DepthEstimator` corre en un hilo daemon independiente para no bloquear el lazo de control a 5 Hz. `perception_node` llama a `depth_estimator.request(frame)` (no bloqueante) y `depth_estimator.poll()` para obtener el resultado más reciente y su edad en ms. Si el resultado tiene más de `DEPTH_MAX_AGE_MS = 3000 ms`, se descarta.
-
-**Trigger condicional.** La inferencia solo se solicita cuando: (a) el drone avanza (`cmd_vx >= 0.30 m/s`), (b) el flujo óptico reporta corredor libre (`blocked_fraction < 0.25`), y (c) la ruta del ciclo anterior no es `"evasive"` (no relanzar inferencia durante maniobras activas). La condición (b) es la más importante: cuando el flujo óptico ve obstáculos (`blocked_fraction > 0.25`), ya tiene control; Depth Anything V2 solo se activa en el caso específico donde el flujo dice "libre" pero el drone no avanza.
-
-**Guarda V4b — anti-falso-positivo.** El mapa de profundidad de Depth Anything V2 sobre renders sintéticos de Unreal Engine puede generar falsos positivos aislados (el modelo fue entrenado sobre imágenes del mundo real y el dominio simulado introduce artefactos). Para filtrarlos, la señal solo se inyecta en el `ObstacleField` cuando `depth_m < DEPTH_BRAKE_M = 5.0 m` durante ≥ `DEPTH_BELOW_THRESHOLD = 2` ciclos consecutivos (`_depth_below_cycles`). Un solo frame con profundidad baja no activa la señal.
-
-**Clasificación por textura (E2).** `DepthEstimator.poll()` retorna también un tipo de obstáculo estimado por análisis del mapa de profundidad del sector frontal:
-- `"follaje"`: CV (std/mean) > 0.55 **o** fracción de píxeles con profundidad > 3× el percentil-5 > 0.30. El follaje tiene huecos que ven objetos lejanos; el CV es alto.
-- `"superficie plana"`: CV < 0.55 y low far_fraction. La pared produce un mapa de profundidad uniforme.
-
-Esta clasificación se añade al `scene_summary` como pista táctica para el SLM (`"follaje: evasión diagonal o +1 m"` vs. `"superficie plana: evasión lateral amplia"`), mejorando la especificidad de la decisión sin modificar el routing.
-
-**Integración con el `ObstacleField` (A1).** Cuando la señal V4 está activa, la profundidad no crea un path de routing separado: se inyecta vía `merge_depth_estimate()` en el campo existente. El resultado es que el router, el SLM y todos los consumidores downstream ven un único `ObstacleField` coherente con `source = "flow+depth"`. No hay condiciones `if depth_available` dispersas en el código de navegación.
+El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo.
 
 ## 6.11 Consultas de nivel superior: `has_open_corridor` y `sector_towards_waypoint`
 
-Dos funciones de módulo sirven como interfaz de alto nivel compartida entre la capa de decisión (`navigate`), el constructor del prompt del VLM y la FSM:
+Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (`has_open_corridor`, para decidir si un atasco tiene un corredor visible); el brazo `slm` detecta el atasco con el `StallDetector` (cap. 5, §5.3.1).
 
 **`sector_towards_waypoint(bearing_err_deg)`** mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
 - Si `bearing_err_deg < -BEARING_SECTOR_DEG` (default 15°) → `"izquierda"`
@@ -207,11 +184,11 @@ for sector in (target, otros_sectores):
 return False
 ```
 
-La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Esta función fue introducida después de documentar un vuelo donde el dron subió 12 m consecutivos mientras el `ObstacleField` reportaba `DERECHA: DESPEJADO` ciclo tras ciclo — el router cortocircuitaba hacia `GANAR_ALTURA` antes de leer el campo (CHANGELOG.md 2026-0824).
+La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Esta función fue introducida después de documentar un vuelo donde el dron subió 12 m consecutivos mientras el `ObstacleField` reportaba `DERECHA: DESPEJADO` ciclo tras ciclo: tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual.
 
 ## 6.12 Comportamiento bajo condiciones extremas
 
-**Hover / velocidad < 0.25 m/s.** Sin traslación entre frames, el flujo traslacional es indistinguible del ruido del estimador. La fracción de píxeles válidos cae por debajo de `MIN_VALID_FRACTION_FOR_FOE = 1%` y el campo retorna vacío (`foe_confidence = 0`). `has_evidence()` devuelve `False`, marcando la situación como "sin información" — no como "despejado". El nodo deliberativo lo detecta vía `_query_reason_note()` y comunica explícitamente al VLM que la consulta se debe a falta de evidencia, no a un bloqueo real (§4.3, §5.10).
+**Hover / velocidad < 0.25 m/s.** Sin traslación entre frames, el flujo traslacional es indistinguible del ruido del estimador. La fracción de píxeles válidos cae por debajo de `MIN_VALID_FRACTION_FOR_FOE = 1%` y el campo retorna vacío (`foe_confidence = 0`). `has_evidence()` devuelve `False`, marcando la situación como "sin información" — no como "despejado". La consecuencia es doble: el gobernador de velocidad limita el avance tras varios ciclos sin evidencia (cap. 5, §5.13), y la capa estratégica del VLM, que mira el fotograma y no el campo, sigue pudiendo describir la escena (cap. 5, §5.10).
 
 **Giro puro (yaw_rate alto).** La rotación excede `FLOW_MAX_ROTATION_DEG = 2°` y el ciclo retorna `empty_field(source="degraded")`. El lazo continúa con la maniobra comprometida (continuación de la maniobra comprometida en `navigate`) sin recurrir a nueva evidencia perceptual. La inhibición se verificó empíricamente (D3, §7.6): con guiñadas comandadas de 0.3 a 1.0 rad/s (18.7–63.9 °/s reales) el 100 % de los 200 frames ensayados quedó en `source = "degraded"` con `foe_confidence = 0`.
 
@@ -237,24 +214,22 @@ El estimador expone todos sus parámetros clave a través de variables de entorn
 | `FOE_OUTLIER_ANGLE_RAD` | 0.35 | Umbral de ángulo para RANSAC-lite (rad, ≈ 20°) |
 | `TTC_AGGREGATION_PERCENTILE` | 20 | Percentil de TTC usado como estimado por celda |
 | `FLOW_MAX_ROTATION_DEG` | 2.0 | Rotación máxima (°) para la que la derotación es confiable |
-| `OBSTACLE_OCCUPANCY_BLOCKED` | 0.011 | Umbral de ocupación para declarar celda bloqueada (calibrado por ROC/Youden, §6.9 y §7.5; el valor histórico era 0.35) |
+| `OBSTACLE_OCCUPANCY_BLOCKED` | 0.011 | Umbral de ocupación para declarar celda bloqueada (calibrado por ROC/Youden, §6.9 y §7.5) |
 | `FLOW_HOLDOVER_MAX_FRAMES` | 3 | Frames máximos de holdover del TTC ante un frame sin evidencia (P2) |
 | `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` | 5.0 | Tope de guiñada (°/s) del guiado cerca de un obstáculo (P3) |
 | `OBSTACLE_TTC_BLOCKED_S` | 2.5 | Umbral de TTC para declarar celda bloqueada (s) |
 | `OBSTACLE_MIN_CONFIDENCE` | 0.15 | Confianza mínima para que ocupación vote bloqueo |
 | `OBSTACLE_MIN_CONFIDENCE_TTC` | 0.35 | Confianza mínima para que TTC vote bloqueo solo |
 
-## 6.14 Complementariedad entre los tres canales de percepción
+## 6.14 Complementariedad entre flujo óptico y VLM
 
-El diseño del sistema asume explícitamente que ningún canal de percepción es completo por sí solo. La arquitectura emplea tres capas con dominios de confiabilidad complementarios:
+El diseño asume que ningún canal de percepción es completo por sí solo. Hay dos canales, uno por lazo de control (cap. 5, §5.1.2):
 
-**Flujo óptico (canal primario)** es fuerte cuando el dron se traslada a velocidad moderada (> 0.5 m/s), la textura es suficiente y la iluminación es estable. Produce `ObstacleField` con `foe_confidence > 0.35` y bloqueos confiables en < 5 ms sin consultar el VLM ni el estimador de profundidad.
+**Flujo óptico (lazo rápido).** Fuerte cuando el dron se traslada a velocidad moderada (> 0.5 m/s), con textura suficiente e iluminación estable: produce bloqueos en < 5 ms, a tiempo para evadir. Es ciego en hover y giro puro, ante texturas uniformes y, por construcción, ante obstáculos centrados en el FOE y superficies horizontales que no se expanden en el sector frontal.
 
-**Depth Anything V2 Metric (canal secundario, V4)** actúa en el punto ciego estructural del flujo óptico: obstáculos centrados en la trayectoria (cerca del FOE) que generan divergencia nula o muy baja. Solo se activa cuando el flujo dice "libre" pero el drone no avanza — exactamente el escenario donde el flujo óptico más falla. Agrega información de profundidad sin costo de sensor adicional (entrada solo RGB). Sus limitaciones: latencia de inferencia (↑ algunas decenas de ms, cubierta por el hilo background), posibles falsos positivos en renders sintéticos (mitigados por la guarda V4b de N ciclos consecutivos), y dependencia de la distribución del modelo preentrenado.
+**VLM (lazo lento).** Mira el fotograma directamente, sin pasar por el `ObstacleField`, y responde una pregunta semántica y geométrica de escala de segundos: por qué dirección se puede volar hacia la meta y si hay una estructura horizontal a la altura del dron (cap. 5, §5.10). No sirve para lo inminente —tarda entre 3 y 6 s— pero sí para decidir el rodeo de un edificio, que es justamente lo que el flujo no puede decidir.
 
-**VLM (capa deliberativa)** cubre los casos donde ambos canales geométricos fallan: hover puro, giro puro, atasco crónico donde el flujo y la profundidad han colapsado, o cuando se necesita razonamiento semántico global (distinguir una calle libre de una fachada con ventanas, elegir el corredor en una intersección). Recibe el fotograma directamente junto con el resumen del `ObstacleField` (que puede llevar `source = "flow+depth"` si el canal V4 aportó evidencia) y la historia de trayectoria acumulada.
-
-**La interfaz entre capas** es el `scene_summary` del `ObstacleField` y el motivo de consulta del prompt: cuando hay evidencia geométrica, el VLM la recibe como contexto cuantitativo con su fuente indicada (`"CENTRO: BLOQUEADO, TTC=3.2s, fuente: flujo óptico + profundidad monocular"`); cuando no la hay, el prompt lo dice explícitamente. Esta transparencia sobre fuente y calidad de la evidencia es el mecanismo que permite al modelo calibrar su respuesta según el nivel de confianza del canal perceptual.
+**La interfaz entre canales es geométrica, no textual.** Cada canal produce su salida en su propio dominio: el flujo, bloqueos por sector para el lazo rápido; el VLM, sub-metas en coordenadas del mundo que el guiado persigue. El VLM no recibe el resumen textual del `ObstacleField`, de modo que no hay que reconciliar dos descripciones de la misma escena con latencias distintas.
 
 ---
 

@@ -100,15 +100,14 @@ def run_one(
     max_cycles: int,
     max_seconds: float,
     seed_jitter: bool = False,
-    deadlock_strategy: str = "slam_assess",  # S4 (PLAN-SLAM): slam_assess es el default desde 2026-0910
+    deadlock_strategy: str = "deep_vlm",  # 2026-0930: slam_assess movido a legacy (sin evidencia)
     record_video: bool = True,
     record_viewport: bool = False,
     record_follow: bool = True,
 ) -> dict:
     os.environ["AGENT_ARM"] = arm
     os.environ["AIRSIM_SEED"] = str(seed)
-    # H3.1/S6 (PLAN-SLAM): segunda variable del factorial (slam_assess /
-    # deep_vlm / blind), leida a nivel de modulo por src/agents/deep_scan.py.
+    # Segunda variable del factorial (deep_vlm | blind), leida a nivel de modulo por src/agents/deep_scan.py.
     # Cada combinacion corre en su propio subproceso (ver main() mas abajo).
     os.environ["DEADLOCK_STRATEGY"] = deadlock_strategy
 
@@ -140,7 +139,6 @@ def run_one(
     _restore_console = _tee_console(out_path.with_name(out_path.stem + ".console.log"))
 
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
-    depth_metric_every_n = int(os.getenv("DEPTH_METRIC_EVERY_N", "5"))  # G3.1: capturar depth cada N ciclos
     client = AirSimClient(loop_hz=loop_hz)
     client.connect()
     # Limpia colision/velocidad/estado del controlador interno que pudiera
@@ -257,7 +255,6 @@ def run_one(
     freeze_wd = FreezeWatchdog()
     pose_hist: "deque" = deque(maxlen=600)
     freeze_recoveries = 0
-    depth_brake_events = 0
     freeze_aborted = False
     pending_freeze_event = None
     try:
@@ -299,7 +296,6 @@ def run_one(
                     break
                 from src.agents.deep_scan import clear_scan_state
 
-                tracker.record_contact(pos.get("x", 0.0), pos.get("y", 0.0))
                 print(f"[{_ts()}][runner] recuperacion {freeze_recoveries + 1}/{FREEZE_MAX_RECOVERIES}: teletransporte a "
                       f"({rec_pose[0]:.1f},{rec_pose[1]:.1f},{rec_pose[2]:.1f}) yaw={rec_pose[3]:.0f}.")
                 client.set_vehicle_pose(rec_pose[0], rec_pose[1], rec_pose[2], yaw_deg=rec_pose[3])
@@ -307,7 +303,6 @@ def run_one(
                 clear_scan_state(state)
                 state["active_maneuver"], state["maneuver_command"], state["maneuver_cycles_left"] = None, None, 0
                 state["_deliberation_pending"] = False
-                state["_post_retroceder_corner_pending"] = False
                 tracker.reset_progress()
                 pending_freeze_event = {
                     "strategy": "freeze_recovery", "arm": arm, "resolved_by_scan": False, "cycles_to_resolve": None,
@@ -354,9 +349,6 @@ def run_one(
             # consumido por FlightLogger para el ablation (mismo patron que
             # main.py: se saca del estado con pop(), nunca queda pisandolo).
             deadlock_event = state.pop("_deadlock_event", None)
-            if deadlock_event:
-                # Punto de contacto para la cadena de esquinas (waypoint_tracker.py).
-                tracker.record_contact(pos.get("x", 0.0), pos.get("y", 0.0))
             if pending_freeze_event is not None and not deadlock_event:
                 deadlock_event, pending_freeze_event = pending_freeze_event, None
             # Instrumentacion de auditoria VLM (2026-0901, mismo patron que
@@ -373,60 +365,21 @@ def run_one(
             if corner and isinstance(corner, dict):
                 injected = tracker.inject_corner_waypoint(
                     corner.get("x", 0.0), corner.get("y", 0.0), corner.get("z", -10.0),
-                    label=corner.get("label", "CORNER_WP"),
+                    label=corner.get("label", "VLM_SUBGOAL"),
                 )
                 if injected:
                     state["waypoints"] = tracker.waypoints
                     state["target_waypoint"] = tracker.current_waypoint
 
-            field = state.get("obstacle_field")
-
-            # G3.1: Capturar profundidad cada N ciclos para métrica min_obstacle_dist_m.
-            # Solo para observabilidad (no realimenta control). Captura adicional sin
-            # impactar hot path si depth_metric_every_n es suficientemente grande (default 5).
-            min_obstacle_dist_m = None
-            if depth_metric_every_n > 0 and cycles % depth_metric_every_n == 0:
-                try:
-                    _, depth, _ = client.capture(return_depth=True)
-                    if depth is not None:
-                        h, w = depth.shape[:2]
-                        center = depth[h // 3: 2 * h // 3, w // 3: 2 * w // 3]
-                        if center.size > 0:
-                            min_obstacle_dist_m = float(__import__("numpy").percentile(center, 5))
-                except Exception:
-                    pass  # Si falla la captura de depth, solo no registramos la métrica
-
-            # Freno de proximidad (2026-0929): cristal/parapets no tienen colision ni flujo util, asi que
-            # la profundidad (solo aqui, capa externa; el grafo no la lee) arma un tope de velocidad
-            # para los proximos ciclos y registra el punto como contacto (valida esquinas futuras).
-            _brake_dist = float(os.getenv("DEPTH_BRAKE_DIST_M", "2.0"))
-            if _brake_dist > 0 and min_obstacle_dist_m is not None and min_obstacle_dist_m < _brake_dist:
-                state["_depth_brake_left"] = int(os.getenv("DEPTH_BRAKE_HOLD_CYCLES", "6"))
-                tracker.record_contact(pos.get("x", 0.0), pos.get("y", 0.0))
-                depth_brake_events += 1
-                print(f"[runner] FRENO PROFUNDIDAD c{cycles}: min_dist={min_obstacle_dist_m:.2f} m < {_brake_dist:.1f} m")
-
-            # Seguridad de proximidad: aborta solo si el drone esta fisicamente
-            # embebido en la malla (depth < umbral Y velocidad casi cero).
-            # Sin la condicion de velocidad, 0.30 m dispara durante navegacion
-            # normal al acercarse a un obstaculo, abortando corridas validas.
-            _emergency_dist = float(os.getenv("DEPTH_EMERGENCY_DIST_M", "0.30"))
-            if min_obstacle_dist_m is not None and min_obstacle_dist_m < _emergency_dist:
-                _vel = telem.get("velocity", {})
-                _spd = (_vel.get("vx", 0.0)**2 + _vel.get("vy", 0.0)**2 + _vel.get("vz", 0.0)**2) ** 0.5
-                _stuck_spd = float(os.getenv("DEPTH_EMERGENCY_MAX_SPEED_MPS", "0.3"))
-                if _spd < _stuck_spd:
-                    print(
-                        f"[runner] PROXIMIDAD CRITICA c{cycles}: "
-                        f"min_dist={min_obstacle_dist_m:.3f} m < {_emergency_dist:.2f} m, "
-                        f"speed={_spd:.2f} m/s -> abortar"
-                    )
-                    break
-
+            # 2026-0930: el lazo de vuelo NO lee el sensor de profundidad del simulador en ningun caso
+            # (ni para control, ni para freno, ni para abortar, ni como metrica): antes el freno de
+            # proximidad por profundidad realimentaba el grafo (freno de proximidad) y registraba
+            # contactos en el tracker, lo que invalidaba la comparacion entre brazos. La seguridad
+            # queda medida solo por colisiones de AirSim y por el vigilante de congelamiento.
             logger.log_cycle(
                 state,
                 latency_ms={"graph": (time.time() - t0) * 1000.0},
-                min_obstacle_dist_m=min_obstacle_dist_m,
+                min_obstacle_dist_m=None,
                 deadlock_event=deadlock_event,
                 delib_frames=delib_frames,
             )
@@ -472,7 +425,6 @@ def run_one(
         if freeze_aborted:
             logger.extra_summary["termination_reason"] = "physics_locked"
         logger.extra_summary["freeze_recoveries"] = freeze_recoveries
-        logger.extra_summary["depth_brake_events"] = depth_brake_events
         summary = logger.close()
         if viewport_capture is not None:
             viewport_capture.close()
@@ -506,10 +458,10 @@ def main():
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
     parser.add_argument(
-        "--deadlock-strategies", nargs="+", default=["slam_assess"],
-        choices=["blind", "deep_vlm", "slam_assess"],
+        "--deadlock-strategies", nargs="+", default=["deep_vlm"],
+        choices=["blind", "deep_vlm"],
         help="H3.1/S6 (PLAN-SLAM): factorial AGENT_ARM x DEADLOCK_STRATEGY. "
-             "'slam_assess' es el default (S4). 'deep_vlm' se usa como baseline para S6.",
+             "'deep_vlm' (default): barrido + VLM. 'blind': escape determinista sin VLM (ablacion).",
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-runs"))
@@ -620,7 +572,7 @@ def _single_main():
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--viewport", action="store_true")
     parser.add_argument("--no-follow-cam", action="store_true")
-    parser.add_argument("--deadlock-strategy", default="slam_assess", choices=["blind", "deep_vlm", "slam_assess"])
+    parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])
     args = parser.parse_args()
     summary = run_one(
         args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,

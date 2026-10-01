@@ -1,3 +1,7 @@
+# CONGELADO 2026-09-30 (legacy, fuera del camino de vuelo, sin tests).
+# FlightTrajectory (stall rates por zona). Alimentaba C1/D1/traj_stall/fallback: sin evidencia de avance.
+# Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
+# apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
 # S1 + S2 (PLAN-SLAM): buffer de trayectoria acumulada para slam_assess.
 #
 # A diferencia de ObstacleField (que depende de foe_confidence y falla

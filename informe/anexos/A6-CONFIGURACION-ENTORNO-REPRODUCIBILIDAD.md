@@ -66,7 +66,7 @@ El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `setting
 3. **`ApiServerPort: 41451`**: puerto TCP de enlace Msgpack-RPC por el que se comunican `AirSimClient` y el motor de Unreal Engine.
 4. **`CameraDefaults.CaptureSettings`**:
    * `ImageType 0` (`Scene`): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (`FlowTTCEstimator`) y por el modelo deliberativo (`Qwen2.5-VL-3B`).
-   * `ImageType 3` (`DepthPlanar`) / `ImageType 1` (`DepthPerspective`): canal de profundidad en punto flotante utilizado exclusivamente para la validación cruzada del TTC monocular (§10.2).
+   * `ImageType 3` (`DepthPlanar`) / `ImageType 1` (`DepthPerspective`): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).
    * `ImageType 5` (`Segmentation`): canal de segmentación semántica de mallas para auditoría visual.
    * `Width: 1080, Height: 720`: resolución nativa del render target frontal.
 5. **`SubWindows`**: habilita una ventana secundaria flotante en el visor de Unreal Engine mostrando la cámara frontal a bordo en tiempo real, facilitando la supervisión visual del operador durante las corridas experimentales.
@@ -128,27 +128,29 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `AIRSIM_RPC_TIMEOUT` | `8` | Segundos de espera máxima por llamada RPC antes de declarar timeout. |
 | `AIRSIM_STRICT` | `true` | Si es `true`, la falla de conexión con AirSim marca `degraded=True` y entra en hover de seguridad; si es `false` (solo en tests unitarios), permite generar fotogramas sintéticos. |
 
-### 2. Servidor de Inferencia Local (VLM / SLM)
+### 2. Servidor de Inferencia Local (VLM)
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
 | `LOCAL_LLM_URL` | `"http://192.168.110.101:1234/v1"` | Endpoint OpenAI-compatible del servidor local de inferencia (LM Studio / `llama.cpp`). |
 | `LOCAL_LLM_MODEL_NAME`| `"qwen/qwen2.5-vl-3b"` | Identificador del modelo cuantizado cargado en VRAM (`Qwen2.5-VL-3B-Instruct.Q4_K_M`). |
-| `VLM_VISION_ENABLED` | `true` | Habilita el envío del fotograma visual en base64 en el prompt multimodal. |
-| `VLM_IMAGE_MAX_SIZE` | `384` | Resolución máxima de la imagen enviada al VLM. Limita la cantidad de tokens visuales generados por el codificador ViT, manteniendo la latencia acotada. |
-| `VLM_USE_JSON_SCHEMA` | `true` | Activa la decodificación gramaticalmente restringida por esquema JSON (Anexo 4). |
-| `SLM_WATCHDOG_MS` | `13000` | Tiempo límite del perro guardián (en ms) para la respuesta del SLM en el servicio asíncrono; debe ser menor que `SLM_HTTP_TIMEOUT_S`. El escaneo de resolución de atasco usa su propio watchdog, `SLM_DEEP_WATCHDOG_MS` (12 000 ms). |
-| `SLM_HTTP_TIMEOUT_S` | `15.0` | Timeout del cliente HTTP en consultas tácticas al VLM. Debe ser mayor que `SLM_WATCHDOG_MS` para que el watchdog gane siempre al corte HTTP. |
-| `SLM_DEEP_HTTP_TIMEOUT_S` | `20.0` | Timeout HTTP del barrido profundo (varias imágenes → prefill mayor). |
-| `SYSTEM_PROMPT_VISION_FILE` / `SYSTEM_PROMPT_TEXT_FILE` | `../config/prompts/system_vision.txt` / `system_text.txt` | Archivos de system prompt (con y sin visión), relativos a `airsim-loop/`. Admiten el placeholder `{safe_margin_ttc_s}`. Si no se configuran, se usa el prompt interno. |
-| `DELIB_FRESHNESS_DIST_M` | `8.0` | Variación de distancia al waypoint (m) a partir de la cual se descartaría una respuesta VLM por obsolescencia. **Sin efecto en el estado actual del código** (cap. 9, §9.5.4). |
-| `DEADLOCK_STRATEGY` | `"slam_assess"` | Estrategia ante atasco duro: `"slam_assess"` (por defecto en `config/.env`) usa historial de trayectoria + frame frontal sin rotación; `"deep_vlm"` ejecuta un barrido panorámico de 4 rumbos con consulta VLM (la usan las corridas experimentales, vía `--deadlock-strategies`); `"blind"` realiza escape vertical sin VLM. |
+| `VLM_IMAGE_MAX_SIZE` | `384` | Lado mayor de la imagen de la capa estratégica. Limita los tokens visuales y, con ellos, la latencia. |
+| `DEEP_SCAN_IMAGE_MAX_SIZE` | `256` | Lado mayor de cada imagen del barrido panorámico (varias imágenes por consulta). |
+| `VLM_USE_JSON_SCHEMA` | `true` | Decodificación restringida por esquema JSON (Anexo 4; cap. 8, §8.2). |
+| `SLM_HTTP_TIMEOUT_S` / `SLM_DEEP_HTTP_TIMEOUT_S` | `15.0` / `20.0` | Timeout del cliente HTTP en la consulta estratégica y en el barrido. |
+| `SLM_DEEP_WATCHDOG_MS` | `18000` | Watchdog del barrido panorámico; debe ser menor que `SLM_DEEP_HTTP_TIMEOUT_S` para que gane siempre al corte HTTP. |
+| `DEADLOCK_STRATEGY` | `"deep_vlm"` | Resolución de atascos: `"deep_vlm"` (barrido + VLM, cap. 5 §5.12) o `"blind"` (escape vertical sin VLM). Cualquier otro valor aborta el arranque. |
+| `VLM_STRATEGIC_ENABLED` | `true` | Habilita la capa estratégica del VLM (cap. 5, §5.10). |
+| `VLM_STRATEGIC_PERIOD_S` / `VLM_STRATEGIC_MAX_AGE_S` | `3.0` / `10.0` | Período mínimo entre consultas estratégicas y edad máxima de una respuesta para aplicarla. |
+| `VLM_STRATEGIC_COLUMNS` / `CAMERA_HFOV_DEG` | `5` / `90.0` | Columnas dibujadas sobre el fotograma y campo visual horizontal con el que se calculan sus rumbos. |
+| `VLM_SUBGOAL_DIST_M` / `VLM_SUBGOAL_MIN_AHEAD_M` / `VLM_CLIMB_M` | `15.0` / `4.0` / `4.0` | Distancia de la sub-meta desde el ancla, distancia mínima por delante del dron para aplicarla y ascenso si hay estructura debajo. |
+| `VLM_STRATEGIC_MAX_GOAL_OFF_DEG` | `40.0` | Solo se consulta si la meta cae dentro de ±40° del eje óptico. |
 
 ### 3. Lazo de Control Táctico
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
 | `LOOP_HZ` | `5.0` | Frecuencia objetivo del bucle de control ($200\text{ ms}$ por ciclo). Calibrada para absorber la captura y el flujo óptico con margen holgado. |
-| `AGENT_ARM` | `slm` | Brazo de política activo en el lazo de control: `slm` (deliberativo jerárquico), `fsm` (máquina de estados determinista) o `reactive` (línea base). |
-| `AIRSIM_SEED` | `1` | Semilla de aleatoriedad para la corrida. En modo `--seed-jitter`, perturba levemente la pose inicial ($\pm 1.5\text{ m}$, $\pm 10^\circ$). |
+| `AGENT_ARM` | `slm` | Brazo activo: `slm` (lazo rápido + VLM), `fsm` (máquina de estados determinista) o `reactive` (línea base). |
+| `AIRSIM_SEED` | `1` | Semilla de la corrida. En modo `--seed-jitter`, perturba levemente la pose inicial ($\pm 1.5\text{ m}$, $\pm 10^\circ$). |
 | `CMD_DURATION_S` | `120.0` | Vigencia asignada al comando de velocidad en AirSim. Previene cabeceos parásitos (*pitch jerk*) causados por reemisiones continuas de comandos idénticos al PID interno de SimpleFlight. |
 
 ### 4. Percepción, Flujo Óptico y TTC
@@ -173,23 +175,19 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 ### 5b. Detección de atasco, escape y cierre de misión
 | Variable | Valor nominal | Justificación y efecto |
 |---|---|---|
-| `STUCK_HARD_FACTOR` | `1.5` | Umbral de atasco duro = factor × umbral efectivo (10 ciclos) = 15 ciclos (3 s). Por defecto en código es 3.0. |
-| `STOPPED_CYCLES_THRESHOLD` / `STOPPED_DELIBERATIVE_CYCLES` | `15` / `10` | Ciclos parado para sumar a `stuck_invisible` y para escalar directamente a la resolución de atasco (`stopped_prolonged`). |
-| `POS_FREEZE_DIST_M` / `POS_FREEZE_THRESHOLD` | `0.50` / `30` | Desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta. |
-| `WP_NO_PROGRESS_MIN_M` / `WP_NO_PROGRESS_THRESHOLD` | `2.0` / `50` | Mejora mínima de la distancia al waypoint y ciclos (10 s) sin ella antes de escalar (`wp_no_progress`). |
-| `STUCK_RETROCEDER_LIMIT` | `30` | Ciclos a velocidad nula con `stuck_invisible` que fuerzan la resolución de atasco. |
-| `ESCAPE_MIN_DISP_M` / `VERTICAL_ESCAPE_FUTILE_SCANS` / `VERTICAL_ESCAPE_FREEZE_CYCLES` / `VERTICAL_ESCAPE_MAX_ALT_M` | `2.0` / `2` / `50` / `25.0` | Escape vertical forzado: desplazamiento mínimo entre escaneos para no considerarlos fútiles, escaneos fútiles consecutivos, ciclos de posición congelada y altitud máxima (cap. 5, §5.3.4). |
-| `MAX_CONSECUTIVE_ESCAPES` | `2` | Escapes verticales consecutivos sin progreso horizontal antes de enclavar el escape. |
-| `SCAN_HEADING_COUNT_DEEP` | `2` | Rumbos del barrido panorámico `deep_vlm` (+0° y +180°). |
-| `SCAN_EVADIR_REPEAT_LIMIT` | `2` | Repeticiones del mismo lado de evasión que escalan a `RETROCEDER`. |
-| `CEILING_DETECT_CYCLES` / `CEILING_DETECT_DZ_M` / `CEILING_MARGIN_M` / `CEILING_RELEASE_M` | `10` / `0.15` / `1.0` / `15.0` | Detección de techo del guiado (cap. 5, §5.15.3). |
-| `CORNER_CHAIN_ENABLED` / `CORNER_CHAIN_CLEARANCE_M` / `CORNER_CHAIN_STEP_M` / `CORNER_CHAIN_MAX` | `true` / `10.0` / `12.0` / `4` | Cadena de esquinas alrededor de puntos de contacto (cap. 5, §5.15.4). |
-| `SCAN_ROT_TIMEOUT_CYCLES` | `10` | Timeout de rotación del barrido panorámico (2 s). |
-| `SLAM_HISTORY_SIZE` | `80` | Tamaño del ring buffer de trayectoria (≈ 16 s a 5 Hz). |
-| `CORNER_OFFSET_M` | `30.0` | Distancia del waypoint de esquina (m); el default en código es 12.0. |
-| `MANEUVER_DURATION_S` | `2.0` | Duración base de las maniobras de evasión (s), multiplicada de forma adaptativa según el stall (cap. 5, §5.12.3). |
-| `EVASION_BACK_SPEED` | `1.2` | Velocidad de `RETROCEDER` (m/s). |
-| `DEPTH_EMERGENCY_DIST_M` / `DEPTH_EMERGENCY_MAX_SPEED_MPS` | `0.05` / `0.1` | Aborto de corrida por dron embebido en la malla (solo en el runner; cap. 5, §5.19). `0.0` deshabilita. |
+| `STOPPED_DELIBERATIVE_CYCLES` / `STOPPED_MIN_CMD_MPS` | `10` / `0.30` | Ciclos con avance comandado (≥ 0.30 m/s) sin movimiento real antes de declarar deadlock por dron trabado (cap. 5, §5.3.1). |
+| `WP_NO_PROGRESS_MIN_M` / `WP_NO_PROGRESS_THRESHOLD` | `2.0` / `50` | Mejora mínima de la distancia al objetivo actual y ciclos (10 s) sin ella antes de declarar deadlock. |
+| `OPTICAL_MIN_ALT_M` | `4.5` | Piso óptico: por debajo, el flujo no es válido y no se cuentan señales de atasco. |
+| `MAX_ESCAPE_ALT_M` | `30.0` | Por encima de esta altitud, el escape determinista es `GIRAR_90` en lugar de `GANAR_ALTURA`. |
+| `SCAN_HEADING_COUNT_DEEP` / `SCAN_SETTLE_CYCLES_DEEP` / `MAX_DEEP_SCAN_IMAGES` | `4` / `2` / `5` | Rumbos del barrido panorámico, ciclos de asentamiento por rumbo e imágenes máximas por consulta. |
+| `SCAN_ROT_TIMEOUT_CYCLES` | `10` | Timeout de rotación del barrido (2 s): si el dron no alcanza el rumbo, el barrido se abandona. |
+| `CORNER_OFFSET_M` | `15.0` | Distancia de la sub-meta producida por el barrido. |
+| `SUBGOAL_DEDUP_M` | `10.0` | Una sub-meta a menos de esta distancia de la pendiente se ignora. |
+| `MANEUVER_DURATION_S` / `ESCAPE_MANEUVER_DURATION_S` / `GIRAR90_DURATION_S` | `2.0` / `1.6` / `1.0` | Duración de las maniobras comprometidas: evasión lateral, escape vertical y giro de 90°. |
+| `EVASION_STUCK_THRESHOLD` / `STUCK_HARD_FACTOR` / `MAX_CONSECUTIVE_ESCAPES` | `10` / `1.5` / `2` | Umbrales de atasco y de escape del brazo `fsm` (cap. 5, §5.11, §5.15.2). |
+| `CEILING_DETECT_CYCLES` / `CEILING_DETECT_DZ_M` / `CEILING_MARGIN_M` / `CEILING_SAFE_GAP_M` / `CEILING_RELEASE_M` | `10` / `0.15` / `0.8` / `3.0` / `15.0` | Detección de techo del guiado (cap. 5, §5.15.3). |
+| `GOV_ENABLED` | `true` | Gobernador de velocidad (cap. 5, §5.13). |
+| `FREEZE_CYCLES` / `FREEZE_RECOVERY` | `25` / `abort` | Ciclos con estado físico idéntico para declarar `physics_locked`, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, §5.19). |
 | `LAND_DESCENT_SPEED_MPS` | `0.5` | Velocidad del descenso de `land_smooth()` al final de la misión. |
 | `FLOW_HOLDOVER_MAX_FRAMES` / `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` | `3` / `5.0` | Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, §6.12). |
 

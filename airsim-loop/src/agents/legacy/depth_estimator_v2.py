@@ -1,3 +1,7 @@
+# CONGELADO 2026-09-30 (legacy, fuera del camino de vuelo, sin tests).
+# Profundidad monocular (Depth Anything V2); estaba desactivada (DEPTH_BRAKE_M=0) en todas las corridas.
+# Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
+# apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
 # V4-VLM-REFINEMENT: Estimación monocular de profundidad (Depth Anything V2 Metric).
 #
 # Arquitectura: mismo patrón productor/consumidor que DeliberationService.

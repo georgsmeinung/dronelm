@@ -6,7 +6,7 @@ En sistemas robóticos que combinan percepción clásica, orquestación de grafo
 
 Un modelo de lenguaje tiene una propiedad que lo hace especialmente peligroso en este contexto: raciocina sobre lo que recibe, no sobre la realidad. Si recibe un resumen de percepción que dice "camino despejado", produce una respuesta consistente con esa premisa. No tiene acceso privilegiado a la verdad del mundo — solo al texto que se le entrega. El corolario es que cualquier corrupción, omisión o malinterpretación en los datos que llegan al modelo produce decisiones estructuralmente correctas pero factualmente equivocadas, sin que el modelo (ni el sistema) lo detecte como error. El sistema "funciona" — no arroja excepciones, no se cae, produce salida JSON válida — mientras toma decisiones sistemáticamente incorrectas. Esta propiedad no es una idiosincrasia de este sistema: es la manifestación, en un lazo de control robótico, del problema general de las respuestas fluidas y plausibles pero no fundamentadas en la entrada real (*hallucination*) documentado extensamente en la literatura de generación de lenguaje natural ([Ji et al., 2023](13-REFERENCIAS.md#ref-ji-2023)), agravado aquí por el hecho de que la salida del modelo no es texto para un lector humano crítico, sino un comando que se ejecuta directamente sobre un vehículo físico.
 
-Este capítulo documenta cinco familias de fallas estructurales identificadas experimentalmente en la arquitectura, organizadas por la capa del sistema donde se originan. La tabla siguiente resume su taxonomía:
+Este capítulo documenta seis familias de fallas estructurales identificadas experimentalmente en la arquitectura, organizadas por la capa del sistema donde se originan. La tabla siguiente resume su taxonomía:
 
 | # | Categoría | Capa de origen | ¿Genera excepción? | Consecuencia en vuelo |
 |---|---|---|---|---|
@@ -15,14 +15,15 @@ Este capítulo documenta cinco familias de fallas estructurales identificadas ex
 | 3 | Descalibración de escala en divergencia | Operador diferencial en flujo | No | Saturación del canal de ocupación |
 | 4 | State clipping + ciclos límite en LangGraph | Orquestación de grafo | No | Ascenso acumulado de >350 m |
 | 5 | Degradación sensorial silenciosa | Captura de imagen y telemetría | No | Deliberación sobre datos corruptos |
+| 6 | Integración del VLM: marco de referencia, defaults silenciosos y reglas apiladas | Interfaz VLM → control | No | Respuestas correctas del modelo ejecutadas al revés o ignoradas |
 
-El denominador común en los cinco casos es la ausencia de excepción en tiempo de ejecución. Este resultado metodológico se discute en §9.7.
+El denominador común en los seis casos es la ausencia de excepción en tiempo de ejecución. Este resultado metodológico se discute en §9.7.
 
 ## 9.2 Falla 1 — Schema drift: el campo nulo leído como ausencia de peligro
 
 ### 9.2.1 Descripción del modo de falla
 
-En una arquitectura temprana del sistema, el estado del campo de obstáculos se comunicaba como una lista de objetos detectados (`detected_obstacles: List[dict]`), con una lista vacía como valor por defecto. La decisión de qué hacer cuando la lista estaba vacía era ambigua: podía significar "la percepción corrió y no detectó nada" (espacio despejado) o "la percepción no corrió, no tiene confianza, o falló silenciosamente" (ausencia de información).
+En una de las configuraciones ensayadas durante el desarrollo, el estado del campo de obstáculos se comunicaba como una lista de objetos detectados (`detected_obstacles: List[dict]`), con una lista vacía como valor por defecto. La decisión de qué hacer cuando la lista estaba vacía era ambigua: podía significar "la percepción corrió y no detectó nada" (espacio despejado) o "la percepción no corrió, no tiene confianza, o falló silenciosamente" (ausencia de información).
 
 Los módulos consumidores — la capa de decisión (`navigate`), el constructor del prompt del VLM y la FSM — resolvían esa ambigüedad en favor de la primera interpretación. El resultado en la práctica fue:
 
@@ -67,6 +68,8 @@ El buffer de historial se reimplementó como un `deque` de capacidad fija con co
 - `delta_t < FRAME_HISTORY_MAX_STALENESS_MS` (el frame anterior no es demasiado antiguo — un frame de hace 3 s no aporta contexto temporal útil a 5 Hz)
 
 Si la verificación falla, el prompt se adapta dinámicamente: en lugar de enviar dos frames etiquetados como `[t-1]` y `[t]`, envía un único frame etiquetado como `[ciclo actual]` con una nota explícita: "historial visual no disponible en este ciclo". Esto es más conservador pero menos peligroso que fabricar una secuencia temporal falsa.
+
+**En el sistema descrito en el capítulo 5** no se envía historial temporal al VLM: la capa estratégica usa el fotograma del ciclo y el barrido, un fotograma por rumbo, ambos con su timestamp y su pose de captura (cap. 5, §5.10, §5.12); `VLM_FRAME_HISTORY_SIZE` vale 1. La lección se trasladó de lo temporal a lo espacial: el riesgo equivalente es enviar al modelo una etiqueta de orientación que no corresponde al fotograma (§9.8.1).
 
 ## 9.4 Falla 3 — Descalibración de escala en el canal de divergencia
 
@@ -173,16 +176,16 @@ Desde el exterior, la corrida registraba una misión "sin errores" (no hay excep
 
 Otras tres situaciones comparten la propiedad que organiza el capítulo: el sistema producía respuestas válidas y plausibles, sin excepciones en el log, y aun así no las ejecutaba.
 
-**(a) Un flag descartado por LangGraph.** `_post_retroceder_corner_pending`, que difiere la inyección de la esquina hasta el escaneo posterior a un `RETROCEDER` (§5.12.3), se escribía correctamente pero no estaba declarada en `DroneState`. Desaparecía entre invocaciones de `graph.invoke()` y la esquina nunca se inyectaba: el dron volvía a la misma fachada. Se diagnosticó en la corrida `seed_1`, donde el flag desaparecía antes del ciclo 1783. Es otra instancia de la Vulnerabilidad A (§9.5.2).
+**(a) Un flag descartado por LangGraph.** Un indicador que difería la inyección de un desvío hasta el escaneo siguiente se escribía correctamente pero no estaba declarado en `DroneState`. Desaparecía entre invocaciones de `graph.invoke()` y el desvío nunca se inyectaba: el dron volvía a la misma fachada. Se diagnosticó en una corrida en la que el indicador desaparecía antes del ciclo 1783. Es otra instancia de la Vulnerabilidad A (§9.5.2).
 
 **(b) Resultados válidos del VLM que nunca se ejecutan.** Dos errores de *precedencia* entre rutas, no de estado descartado, con el mismo síntoma:
 
 - *Maniobra cancelada por un disparador de atasco.* Si al despachar `EVADIR_DERECHA` no se reinicia el contador de atasco, en el ciclo siguiente un disparador basado en ese contador vuelve a enrutar hacia una nueva consulta, cuyo resultado sobrescribe la maniobra comprometida antes de que se ejecute. En la corrida `seed_99` el VLM devolvió `EVADIR_DERECHA` durante 200 ciclos consecutivos (c2585–c2784) sin que la maniobra se ejecutara una sola vez.
 - *Resultado huérfano por el camino de deadlock.* Si la rama de escape por deadlock se evalúa antes que la lectura del pedido pendiente, y el contador de progreso queda congelado por encima del umbral mientras hay un pedido pendiente, la rama intercepta todos los ciclos y el resultado nunca se lee: en c2048–c2135 (80 ciclos) el log del VLM contenía la respuesta correcta —latencia real de 3 731 ms— y la acción ejecutada era `MANTENER_RUMBO` o `FRENAR`.
 
-Ninguno de los dos se veía en las métricas agregadas. Ambos se encontraron comparando, ciclo a ciclo, el campo `slm.raw_response` de la traza JSONL con la acción realmente ejecutada; es decir, la técnica 2 de §9.7 (guardar los datos crudos enviados y recibidos por el modelo) fue la que los hizo visibles. Dos decisiones de la arquitectura en capas (§5.3) los previenen por construcción: la continuación de una maniobra comprometida es la primera condición que evalúa `navigate`, antes que cualquier disparador de atasco, y el resultado del VLM no se «espera» en una ruta propia sino que se deposita en un almacén (`_vlm_intention`) que se consulta al inicio de cada ciclo y se consume con caducidad.
+Ninguno de los dos se veía en las métricas agregadas. Ambos se encontraron comparando, ciclo a ciclo, el campo `slm.raw_response` de la traza JSONL con la acción realmente ejecutada; es decir, la técnica 2 de §9.7 (guardar los datos crudos enviados y recibidos por el modelo) fue la que los hizo visibles. Se previenen por construcción: un barrido en curso y una maniobra comprometida son las dos primeras condiciones que evalúa `navigate`, antes que cualquier disparador de atasco (cap. 5, §5.3.2), y el resultado de cada consulta se recupera por su identificador (`get_result`) al inicio de cada ciclo, de modo que no depende de qué ruta tome el ciclo.
 
-**(c) Un pedido pendiente que nunca se cierra.** Por lectura de código —no reproducido en una corrida— existe una interacción sin resolver entre el pedido proactivo y el escaneo de resolución de atasco: ambos comparten la cola del servicio (tamaño 1), de modo que un escaneo que se encola mientras hay un pedido proactivo en vuelo lo invalida, y `_poll_vlm` solo cierra `slm_request_id` cuando llega un resultado con *ese* identificador. Si eso ocurre, `slm_request_id` permanece activo: `StallDetector` interpreta la espera como intencional y detiene los contadores de inmovilidad, y se inhiben nuevos pedidos proactivos y el escape vertical forzado. Se declara como riesgo residual (§9.8); una corrección posible es cerrar `slm_request_id` cuando el servicio informa que el pedido fue reemplazado o al expirar un plazo.
+**(c) Un pedido pendiente que nunca se cierra.** Por lectura de código —no reproducido en una corrida— existe una interacción sin resolver entre el pedido proactivo y el escaneo de resolución de atasco: ambos comparten la cola del servicio (tamaño 1), de modo que un escaneo que se encola mientras hay un pedido proactivo en vuelo lo invalida, y `_poll_vlm` solo cierra `slm_request_id` cuando llega un resultado con *ese* identificador. Si eso ocurre, `slm_request_id` permanece activo: `StallDetector` interpreta la espera como intencional y detiene los contadores de inmovilidad, y se inhiben nuevos pedidos proactivos y el escape vertical forzado. **Mecanismo de contención:** la consulta estratégica no usa `slm_request_id`; la capa estratégica da por perdido un pedido reemplazado si el servicio no tiene resultado ni pedido pendiente durante 3 s, o al cumplir 10 s, y el deadlock cancela explícitamente la consulta estratégica en vuelo (cap. 5, §5.10.3, §5.3.4).
 
 ## 9.6 Falla 5 — Degradaciones sensoriales silenciosas
 
@@ -222,13 +225,13 @@ Un test unitario verifica, contra una tabla de cuaterniones conocidos (identidad
 
 ## 9.7 Por qué el sistema seguía funcionando: el problema de la observabilidad
 
-Ninguno de los cinco modos de falla descritos se manifestó como un error visible en tiempo de ejecución. En todos los casos:
+Ninguno de los seis modos de falla descritos se manifestó como un error visible en tiempo de ejecución. En todos los casos:
 
 - El modelo de lenguaje seguía produciendo respuestas JSON válidas y plausibles.
 - El lazo de control ejecutaba el ciclo sin excepciones.
 - Las métricas agregadas de la corrida (distancia recorrida, waypoints completados, velocidad media) no distinguían estas corridas de corridas fallidas por otras causas.
 
-Esta propiedad tiene una implicación metodológica directa: las técnicas de depuración habituales para sistemas de software — observar el output, monitorear las métricas, leer el log de errores — son ciegas a esta clase de error. La observación del comportamiento es precisamente la herramienta menos útil porque el sistema exhibe comportamiento *consistente con sus premisas internas*, aunque esas premisas estén corrompidas. Esta dificultad no es exclusiva de este proyecto: el estudio de campo de [Amershi et al. (2019)](13-REFERENCIAS.md#ref-amershi-2019) sobre equipos de ingeniería de software que incorporan componentes de aprendizaje automático en Microsoft identifica, entre las diferencias estructurales frente al desarrollo de software tradicional, precisamente que los componentes de IA son más difíciles de aislar, probar y depurar como módulos independientes que el código determinista convencional — la ausencia de una frontera de excepción clara entre "el componente falló" y "el componente decidió mal" es un síntoma de esa misma dificultad, no una particularidad de los cinco modos de falla de este capítulo.
+Esta propiedad tiene una implicación metodológica directa: las técnicas de depuración habituales para sistemas de software — observar el output, monitorear las métricas, leer el log de errores — son ciegas a esta clase de error. La observación del comportamiento es precisamente la herramienta menos útil porque el sistema exhibe comportamiento *consistente con sus premisas internas*, aunque esas premisas estén corrompidas. Esta dificultad no es exclusiva de este proyecto: el estudio de campo de [Amershi et al. (2019)](13-REFERENCIAS.md#ref-amershi-2019) sobre equipos de ingeniería de software que incorporan componentes de aprendizaje automático en Microsoft identifica, entre las diferencias estructurales frente al desarrollo de software tradicional, precisamente que los componentes de IA son más difíciles de aislar, probar y depurar como módulos independientes que el código determinista convencional — la ausencia de una frontera de excepción clara entre "el componente falló" y "el componente decidió mal" es un síntoma de esa misma dificultad, no una particularidad de los modos de falla de este capítulo.
 
 Las técnicas de diagnóstico que sí funcionaron en este proyecto fueron:
 
@@ -240,12 +243,71 @@ Las técnicas de diagnóstico que sí funcionaron en este proyecto fueron:
 
 **4. Inyección de valores límite en el estado de LangGraph.** Para detectar las claves no declaradas (Falla 4-A), la técnica fue instrumentar el lazo con un interceptor que comparaba `state` al entrar a cada nodo con `state` al salir, reportando cualquier clave presente en la salida que no estuviera en el `TypedDict`. Esta verificación se convirtió en un modo de debug permanente activable via variable de entorno (`LANGGRAPH_DEBUG_STATE_CLIPPING=1`).
 
-## 9.8 Riesgos residuales y trabajo pendiente
+## 9.8 Falla 6 — Integración del VLM: respuestas correctas ejecutadas al revés, ignoradas o casi constantes
 
-Los cinco modos de falla documentados están corregidos en la implementación actual; queda abierto el caso (c) de §9.5.4 (por lectura de código, sin reproducir). Pero la arquitectura contiene puntos donde pueden aparecer instancias análogas:
+Esta familia de fallas se identificó auditando 12 corridas de diagnóstico sobre `citysim_pilot` (ninguna completó la misión; tres terminaron por `physics_locked`) con la técnica 2 de §9.7: comparar, ciclo a ciclo, la respuesta cruda del modelo con la acción ejecutada y con la profundidad de referencia del simulador, consultada a posteriori solo para la auditoría. Como en las fallas anteriores, ninguno de los mecanismos produjo una excepción: el modelo respondía JSON válido, el lazo ejecutaba una acción en cada ciclo y las métricas agregadas registraban deadlocks «resueltos» en el 75–80 % de los casos.
 
-**Riesgo A — Nuevas claves de DroneState.** Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en `DroneState`. La mitigación es el modo `LANGGRAPH_DEBUG_STATE_CLIPPING=1` y el proceso de revisión de `DroneState` antes de cada nueva funcionalidad. El riesgo se materializó en más de una ocasión (§9.5.2 y §9.5.4), lo que indica que la mitigación depende demasiado de la disciplina manual. Una defensa estructural sería un test de contrato que recorra el código fuente de `src/agents/`, extraiga todas las claves `state["_..."]` y `state.get("...")` y falle si alguna no pertenece a `DroneState`; hoy no existe.
+### 9.8.1 Error de marco de referencia: «libre hacia la meta» ejecutado como «evadir a la izquierda»
+
+En las tres corridas analizadas, el primer barrido panorámico respondió correctamente: `{"deg": -53, "tipo": "libre", "ok": true}` para la imagen tomada en el rumbo −53°, a ~16° del rumbo al waypoint. La acción ejecutada fue `EVADIR_IZQUIERDA`, y el dron giró alejándose de la meta. Dos inconsistencias de marco se combinaban:
+
+1. Las imágenes se etiquetaban con su **rumbo absoluto** («[Rumbo −53°]») y el prompt pedía un ángulo **relativo**; el modelo copiaba la etiqueta y el parser interpretaba siempre el valor como relativo.
+2. El error de rumbo hacia la meta se medía respecto del yaw **al final** del barrido (153°), no del yaw de cada imagen.
+
+El dron se alejó de 82.6 m a 94–95 m del primer waypoint y tardó ~37 s en volver a la distancia de partida, en las tres corridas.
+
+**Mecanismo de contención.** El modelo nunca reporta ángulos: identifica las imágenes por número, y el código asigna a cada una el yaw **medido** al capturarla y compara rumbos absolutos, calculando el rumbo a la meta desde las posiciones (cap. 5, §5.12). Un test reproduce el caso (`tests/test_deep_vlm_world_frame.py`).
+
+### 9.8.2 Default silencioso: la respuesta del modelo nunca llegaba a la decisión
+
+El productor de la respuesta devolvía una descripción de escena por sectores, mientras el consumidor leía `decision.get("macro_action", "EVADIR_DERECHA")`. Como la clave no existía, **toda respuesta se ejecutaba como `EVADIR_DERECHA`**, con razonamiento vacío: 11 de 15 despachos en las tres corridas, 5 de ellos contra un lado que el propio modelo había descrito como bloqueado. Es un caso de *schema drift* (§9.2) en sentido inverso: el productor y el consumidor no compartían esquema y el consumidor, en lugar de fallar, funcionaba con un valor por defecto plausible. Ningún test recorría el camino completo desde la respuesta hasta la acción.
+
+**Mecanismo de contención.** Cada modo de consulta tiene un esquema estricto y un parser que lo valida; una respuesta que no coincide no produce ninguna acción (motivo `no_parseable`, registrado), nunca un valor por defecto (cap. 8, §8.2.2). Los tests de integración corren el grafo compilado de punta a punta, desde la respuesta del modelo hasta la sub-meta que llega al bucle externo (§9.9, riesgo A).
+
+### 9.8.3 Salida casi constante del modelo
+
+Se compararon las 185 respuestas del VLM con la profundidad de referencia registrada en las mismas corridas. En las consultas por sectores, excluida una corrida en vegetación, **52 de 53 respuestas declararon el frente transitable**; con la superficie más cercana a ≤ 1.2 m en los 8 s previos, 18 de 19 lo declararon igual. En los barridos, la primera imagen salió marcada como transitable en la gran mayoría de los casos, con valores (`"ok": true, "conf": 0.9`) idénticos al ejemplo del prompt. La respuesta, en la práctica, no dependía de la escena. Ninguno de los 8 deadlocks «resueltos» por el modelo en las tres corridas analizadas produjo avance neto hacia el waypoint (máximo 2.2 m en 10 s).
+
+El hallazgo no se puede atribuir solo al modelo: el prompt contenía un ejemplo con valores concretos y una frase que pedía priorizar evasiones, contradictoria con la instrucción de solo describir, y la pregunta («¿se puede avanzar en este sector?») se hacía sobre imágenes de 256–384 px.
+
+**Mecanismo de contención.** La pregunta, la granularidad y el prompt del sistema están diseñados contra estas causas (cap. 8, §8.3–§8.5), y la métrica de distribución de resultados de la capa estratégica (cap. 10, §10.6.3) permite medir si el modelo discrimina. Que lo logre es una pregunta empírica abierta (§9.9, riesgo D).
+
+### 9.8.4 Deadlock falso en el despegue
+
+En el 100 % de las corridas el primer deadlock se declaró en los ciclos 17–18, con el dron todavía subiendo a la altitud de crucero. Durante el despegue el guiado ordena subir y girar en el lugar hacia el primer waypoint con `vx = 0`; un contador de «detenido» que sumaba esos ciclos disparó, al cruzar el piso óptico de 4.5 m, la resolución de atasco.
+
+**Mecanismo de contención.** «Detenido» se define como «se ordenó avanzar y el dron no se movió», y no se cuenta bajo el piso óptico (cap. 5, §5.3.1). Reproduciendo esa definición sobre la telemetría registrada, ninguna de las tres corridas habría declarado ese deadlock.
+
+### 9.8.5 Una señal de verdad de terreno dentro del brazo evaluado
+
+El runner capturaba el canal de profundidad del simulador «solo como métrica». Esa misma captura terminó armando un freno de proximidad que el grafo consumía, cancelaba maniobras, inyectaba retrocesos y registraba puntos de contacto que el tracker usaba para validar desvíos. El brazo evaluado tenía, así, acceso indirecto a la profundidad exacta del simulador, lo que invalida su comparación con un sistema monocular. La guardia estática no lo detectó porque el runner estaba fuera de su alcance.
+
+**Mecanismo de contención.** Ningún componente del lazo de vuelo lee el canal de profundidad, tampoco como métrica, y la guardia (`test_no_depth_in_flight_path.py`) cubre el runner, `main.py` y todos los módulos de vuelo, incluido el canal indirecto (cap. 5, §5.16).
+
+### 9.8.6 Reglas apiladas sobre la decisión del modelo
+
+Cada falla observada en corridas piloto se había compensado con una regla determinista: retroceder antes del barrido, escalar a un retroceso si el modelo alternaba de lado, inyectar un desvío perpendicular con el lado invertido respecto del modelo, cinco reglas sobre la historia de la trayectoria, un escape vertical tras escaneos «fútiles» y, en el tracker, filtros que reflejaban o descartaban los desvíos. Para cuando el VLM respondía, su decisión pasaba por hasta seis capas de reescritura; el brazo `slm` medía esas reglas tanto como al modelo.
+
+Medidas contra el avance hacia el waypoint real en los 10–20 s siguientes, ninguna mostró beneficio. Los retrocesos tuvieron avance mediano negativo (en el 31–43 % de los casos alejaron al dron más de 2 m); 74 desvíos deterministas dieron una mediana de 0.35 m de avance en 20 s, 16 de ellos alejaron al dron más de 2 m y llevaron al dron sobre la autopista elevada; y un disparador de deadlock basado en la historia de la trayectoria produjo 45 deadlocks sin avance posterior. Solo el lazo reactivo (guiado, evasión por flujo, giro de 90°) mostró avance mediano positivo.
+
+La lección metodológica es la de §9.7 aplicada al diseño: una regla que corrige un síntoma observado en una corrida, sin medir su efecto agregado, no se puede distinguir —desde las métricas de éxito— de una regla que empeora el sistema.
+
+**Mecanismo de contención.** La respuesta del modelo se traduce a geometría y se aplica sin reglas que la reemplacen; solo se descartan respuestas obsoletas (cap. 5, §5.16). El criterio para incluir un componente en el lazo es haber mostrado avance hacia el waypoint real, o ser parte del lazo rápido común a los tres brazos.
+
+### 9.8.7 La causa física de los `physics_locked`
+
+En las tres corridas el dron no chocó de frente: quedó apoyado sobre una **superficie horizontal a la altura de crucero** —el tablero de una autopista elevada (dos corridas) y la cornisa de un edificio (una)—, con los sectores frontales del flujo libres (`occ = 0`, TTC infinito). En una corrida, un `GANAR_ALTURA` liberó al dron hasta −12.2 m y el guiado de altitud lo devolvió a −10 m, sobre la cornisa. Ni el flujo óptico ni una descripción por sectores representan ese tipo de obstáculo.
+
+**Mecanismo de contención.** El manifiesto evita la autopista (`WP_0_SUR`, cap. 10 §10.3.3), la capa estratégica pregunta explícitamente por `estructura_debajo` y sube la sub-meta, y el escape determinista ante falla del VLM es `GANAR_ALTURA` (cap. 5, §5.3.4, §5.10).
+
+## 9.9 Riesgos residuales y trabajo pendiente
+
+Los modos de falla documentados tienen su mecanismo de contención en el sistema, incluido el caso (c) de §9.5.4. Los de §9.8 están contenidos en el código y cubiertos por tests, pero ninguna corrida en el simulador los ha verificado todavía. La arquitectura contiene puntos donde pueden aparecer instancias análogas:
+
+**Riesgo A — Nuevas claves de DroneState.** Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en `DroneState`. La mitigación es el modo `LANGGRAPH_DEBUG_STATE_CLIPPING=1` y el proceso de revisión de `DroneState` antes de cada nueva funcionalidad. El riesgo se materializó en más de una ocasión (§9.5.2 y §9.5.4), lo que indica que la mitigación depende demasiado de la disciplina manual. Los tests de integración corren el grafo compilado y verifican que las claves de control (`inject_corner`, `_escape_reset`, `_deadlock_event`, `_vlm_strategic`) cruzan la frontera de `graph.invoke()` (`tests/test_graph_integration.py`, `tests/test_vlm_strategic_graph.py`). Una defensa más general sería un test de contrato que recorra el código fuente de `src/agents/`, extraiga todas las claves `state["_..."]` y `state.get("...")` y falle si alguna no pertenece a `DroneState`; hoy no existe.
 
 **Riesgo B — Cambios de API del binding de AirSim.** El binding `cosysairsim` es un fork activamente mantenido ([Jansen et al., 2023](13-REFERENCIAS.md#ref-jansen-2023)). Actualizaciones del binding pueden modificar el comportamiento de métodos (como ocurrió con la corrección del cuaternión). Los tests unitarios de conversión de telemetría son la mitigación; deben ejecutarse tras cada actualización del binding.
 
 **Riesgo C — Distribución de imágenes fuera del dominio de entrenamiento del VLM.** La corrección de inversión RGB/BGR es una transformación fija. Pero la brecha de dominio entre imágenes de AirSim/UE5 y el dominio de entrenamiento del VLM (predominantemente imágenes reales del mundo) es una fuente estructural de error que no se elimina con ninguna corrección puntual. La calibración de la frecuencia de respuestas subóptimas del VLM en los escenarios de esta tesis (cap. 11) es el mecanismo de caracterización de ese riesgo residual.
+
+**Riesgo D — Que el VLM no discrimine.** El diseño corrige cómo se pregunta y cómo se usa la respuesta, pero no puede garantizar que Qwen2.5-VL-3B distinga columnas volables de bloqueadas mejor de lo que distinguía sectores (§9.8.3). Si la distribución de resultados de la capa estratégica (cap. 10, §10.6.3) muestra `directo_libre` en casi todas las consultas, también en las corridas que terminan en deadlock, la conclusión correcta será que el modelo no aporta información útil en este dominio, no una nueva regla que lo compense.

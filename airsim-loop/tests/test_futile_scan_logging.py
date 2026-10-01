@@ -22,9 +22,9 @@ def test_failed_scan_watchdog_marks_timeout():
     assert state["_last_delib_frames"] == []
 
 
-def test_reset_freeze_clears_counters():
+def test_reset_clears_counters():
     sd = StallDetector()
-    sd._pos_freeze_cycles = 80
+    sd._wp_no_progress_cycles = 80
     sd._stopped_cycles = 40
-    sd.reset_freeze()
-    assert sd.pos_freeze_cycles == 0 and sd.stopped_cycles == 0
+    sd.reset()
+    assert not sd.wp_no_progress and sd.stopped_cycles == 0

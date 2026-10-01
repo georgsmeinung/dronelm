@@ -608,10 +608,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1022-mecanismo-de-resolucion-de-atascos" class="md-nav__link">
+  <a href="#1022-factor-secundario-estrategia-de-resolucion-de-atascos-deadlock_strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.2.2 Mecanismo de resolución de atascos
+        10.2.2 Factor secundario: estrategia de resolución de atascos (DEADLOCK_STRATEGY)
       
     </span>
   </a>
@@ -719,15 +719,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1033-tier-2-citysim-citysim_calibpng-canones-urbanos" class="md-nav__link">
+  <a href="#1033-tier-2-citysim-citymappng-canones-urbanos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.3.3 Tier 2 — CitySim (citysim_calib.png): cañones urbanos
+        10.3.3 Tier 2 — CitySim (citymap.png): cañones urbanos
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="10.3.3 Tier 2 — CitySim (citysim_calib.png): cañones urbanos">
+    <nav class="md-nav" aria-label="10.3.3 Tier 2 — CitySim (citymap.png): cañones urbanos">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -742,10 +742,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#escenario-2b-citymap_pilot-circuito-de-corredores" class="md-nav__link">
+  <a href="#escenario-2b-citysim_pilot-circuito-de-corredores" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Escenario 2.B — citymap_pilot (circuito de corredores)
+        Escenario 2.B — citysim_pilot (circuito de corredores)
       
     </span>
   </a>
@@ -1113,10 +1113,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1092-artefactos-de-auditoria-de-corridas-interactivas" class="md-nav__link">
+  <a href="#1092-video-y-visor-de-auditoria" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.9.2 Artefactos de auditoría de corridas interactivas
+        10.9.2 Video y visor de auditoría
       
     </span>
   </a>
@@ -1746,10 +1746,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1022-mecanismo-de-resolucion-de-atascos" class="md-nav__link">
+  <a href="#1022-factor-secundario-estrategia-de-resolucion-de-atascos-deadlock_strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.2.2 Mecanismo de resolución de atascos
+        10.2.2 Factor secundario: estrategia de resolución de atascos (DEADLOCK_STRATEGY)
       
     </span>
   </a>
@@ -1857,15 +1857,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1033-tier-2-citysim-citysim_calibpng-canones-urbanos" class="md-nav__link">
+  <a href="#1033-tier-2-citysim-citymappng-canones-urbanos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.3.3 Tier 2 — CitySim (citysim_calib.png): cañones urbanos
+        10.3.3 Tier 2 — CitySim (citymap.png): cañones urbanos
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="10.3.3 Tier 2 — CitySim (citysim_calib.png): cañones urbanos">
+    <nav class="md-nav" aria-label="10.3.3 Tier 2 — CitySim (citymap.png): cañones urbanos">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1880,10 +1880,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#escenario-2b-citymap_pilot-circuito-de-corredores" class="md-nav__link">
+  <a href="#escenario-2b-citysim_pilot-circuito-de-corredores" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Escenario 2.B — citymap_pilot (circuito de corredores)
+        Escenario 2.B — citysim_pilot (circuito de corredores)
       
     </span>
   </a>
@@ -2251,10 +2251,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1092-artefactos-de-auditoria-de-corridas-interactivas" class="md-nav__link">
+  <a href="#1092-video-y-visor-de-auditoria" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.9.2 Artefactos de auditoría de corridas interactivas
+        10.9.2 Video y visor de auditoría
       
     </span>
   </a>
@@ -2458,15 +2458,18 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <h3 id="1021-factor-principal-brazo-de-decision-agent_arm">10.2.1 Factor principal: brazo de decisión (<code>AGENT_ARM</code>)<a class="headerlink" href="#1021-factor-principal-brazo-de-decision-agent_arm" title="Permanent link">&para;</a></h3>
 <p>La evaluación compara tres brazos de decisión sobre <strong>el mismo <code>ObstacleField</code></strong> (cap. 6), <strong>el mismo espacio de macro-acciones</strong> y <strong>el mismo traductor a comandos cinemáticos</strong> (<code>action_to_command</code>, cap. 8). Esta invariancia es lo que hace legítima la comparación: la única diferencia entre brazos es <em>quién elige la macro-acción</em>, no qué percibe el sistema ni cómo ejecuta la decisión.</p>
 <ul>
-<li><strong><code>slm</code></strong> — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como capa deliberativa del grafo en capas (cap. 5, 8). El modelo se consulta de forma <strong>asíncrona</strong>: los pedidos proactivos no frenan al dron (las capas reactiva y táctica siguen gobernando el vuelo) y la respuesta se almacena con marca temporal y se consume con caducidad. En la resolución de atasco (<code>slam_assess</code>), el dron permanece en hover bajo un watchdog de seguridad (<code>SLM_DEEP_WATCHDOG_MS</code> = 12000 ms) con respaldo determinista por historia de trayectoria ante timeout o respuestas no conformes. El modelo recibe un historial temporal de fotogramas (<span class="arithmatex">\(t\)</span> y <span class="arithmatex">\(t-1\)</span>), notas cinemáticas y avisos de contexto (<code>pitch</code>, <code>roll</code>, velocidad, ciclos sin progreso, stall frontal, vibración del IMU) y el motivo explícito de la consulta.</li>
-<li><strong><code>fsm</code></strong> — una máquina de estados finitos explícita (<code>CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE</code>), con transiciones gobernadas por umbrales fijos sobre el mismo <code>ObstacleField</code>. Es la línea de base directa contra la que se evalúa la hipótesis: alta predictibilidad y costo computacional mínimo, sin capacidad de razonamiento contextual ni interpretación semántica del entorno.</li>
+<li><strong><code>slm</code></strong> — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como lazo lento del grafo de control (cap. 5, 8). Cada ≥ 3 s, o de inmediato cuando el lazo rápido ve un muro de frente, el modelo mira el fotograma frontal dividido en cinco columnas y dice cuáles son volables; la respuesta se traduce a una sub-meta en coordenadas del mundo anclada a la pose del fotograma, y el dron nunca se detiene a esperarla. En un deadlock, un barrido panorámico de 4 rumbos y una consulta con las imágenes numeradas producen la sub-meta de salida; ante timeout o respuesta no conforme, escape vertical. No hay reglas deterministas que reescriban la respuesta del modelo.</li>
+<li><strong><code>fsm</code></strong> — una máquina de estados finitos explícita (<code>CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE</code>), con transiciones gobernadas por umbrales fijos sobre el mismo <code>ObstacleField</code>, y su propia lógica de atasco y escape. Es la línea de base directa contra la que se evalúa la hipótesis: alta predictibilidad y costo computacional mínimo, sin capacidad de razonamiento contextual ni interpretación semántica del entorno.</li>
 <li><strong><code>reactive</code></strong> — navegación guiada al waypoint sin evasión de obstáculos: <strong>cota inferior de rendimiento</strong> que permite desacoplar qué porción del desempeño proviene del lazo táctico de evasión y cuánto del seguimiento cinemático de base. Sin este brazo, cualquier diferencia entre <code>slm</code> y <code>fsm</code> sería inseparable del ruido introducido por el guiado.</li>
 </ul>
-<p>El brazo se selecciona por variable de entorno <code>AGENT_ARM</code>, leída <strong>a nivel de módulo</strong> en <code>src/agents/graph.py</code>. Esta decisión de implementación tiene una consecuencia metodológica directa: <strong>cada combinación debe correr en un intérprete propio</strong>, porque reutilizar el proceso arrastraría el primer valor leído. El runner lanza por eso un subproceso por corrida (§10.5), lo que además aísla el fallo de una corrida del resto del batch.</p>
-<h3 id="1022-mecanismo-de-resolucion-de-atascos">10.2.2 Mecanismo de resolución de atascos<a class="headerlink" href="#1022-mecanismo-de-resolucion-de-atascos" title="Permanent link">&para;</a></h3>
-<p>Los brazos <code>slm</code> y <code>fsm</code> utilizan el mecanismo <strong><code>deep_vlm</code></strong> como procedimiento de resolución de atascos duros: ante un <code>deadlock</code> declarado, ejecuta un barrido panorámico espacial multifotograma <strong>dentro del lazo de control</strong> (<code>SCAN_HEADING_COUNT_DEEP = 4</code> rumbos, <code>SCAN_SETTLE_CYCLES_DEEP = 2</code> ciclos de asentamiento por rumbo, hasta <code>MAX_DEEP_SCAN_IMAGES = 5</code> imágenes) seguido de una única consulta deliberativa al VLM con el panorama completo, para identificar visualmente un corredor despejado antes de forzar el escape cinemático como último recurso.</p>
-<p>El brazo <code>reactive</code> nunca declara atasco ni ejecuta escape: el concepto de "objetivo pendiente bloqueado" no existe en un control reactivo puro.</p>
-<p><code>deep_vlm</code> <strong>no introduce macro-acciones nuevas</strong>: elige entre las mismas del vocabulario <code>PROMPT_ACTIONS</code> que usa la consulta táctica ordinaria. El procedimiento aporta evidencia visual multiángulo que la consulta ordinaria, que opera con uno o dos fotogramas frontales, no tiene disponible en condiciones de bloqueo.</p>
+<p>El brazo se selecciona por variable de entorno <code>AGENT_ARM</code>, leída <strong>a nivel de módulo</strong> en <code>src/agents/graph.py</code>. Los tres brazos comparten el mismo bucle externo, el mismo <code>WaypointTracker</code> y el mismo nodo <code>motor</code> (ancla de altitud y gobernador de velocidad). Esta decisión de implementación tiene una consecuencia metodológica directa: <strong>cada combinación debe correr en un intérprete propio</strong>, porque reutilizar el proceso arrastraría el primer valor leído. El runner lanza por eso un subproceso por corrida (§10.5), lo que además aísla el fallo de una corrida del resto del batch.</p>
+<h3 id="1022-factor-secundario-estrategia-de-resolucion-de-atascos-deadlock_strategy">10.2.2 Factor secundario: estrategia de resolución de atascos (<code>DEADLOCK_STRATEGY</code>)<a class="headerlink" href="#1022-factor-secundario-estrategia-de-resolucion-de-atascos-deadlock_strategy" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>deep_vlm</code></strong> (default): ante un deadlock declarado, barrido panorámico <strong>dentro del lazo de control</strong> (<code>SCAN_HEADING_COUNT_DEEP = 4</code> rumbos, <code>SCAN_SETTLE_CYCLES_DEEP = 2</code> ciclos de asentamiento por rumbo, hasta <code>MAX_DEEP_SCAN_IMAGES = 5</code> imágenes) y una única consulta al VLM; el modelo describe cada imagen y el código fija una sub-meta en el rumbo transitable más cercano a la meta (cap. 5, §5.12). Sin respuesta válida, escape vertical.</li>
+<li><strong><code>blind</code></strong>: sin VLM; escape vertical determinista (<code>GANAR_ALTURA</code>) en el brazo <code>slm</code> y alternancia <code>CLIMB</code>/<code>DESCEND</code> propia en el brazo <code>fsm</code>.</li>
+</ul>
+<p>La estrategia se selecciona con <code>--deadlock-strategies</code> en el runner. El brazo <code>reactive</code> nunca declara atasco.</p>
+<p><strong>Advertencia de diseño: el VLM también interviene en el brazo <code>fsm</code>.</strong> Con <code>deep_vlm</code>, la FSM delega sus deadlocks en el mismo barrido con VLM. La comparación <code>slm</code> vs. <code>fsm</code> con <code>deep_vlm</code> aísla, por lo tanto, la capa estratégica y la política del lazo rápido, no la presencia del VLM en la resolución de atascos; ese fue también el caso del lote base (cap. 11), donde ambos brazos resolvieron sus deadlocks con <code>deep_vlm</code>. El brazo <strong>sin VLM en ningún punto</strong> es <code>fsm</code> con <code>blind</code>, y debe incluirse en los lotes con obstrucción (§10.12) para que la pregunta «¿aporta el VLM?» tenga un contraste limpio.</p>
 <h3 id="1023-estructura-de-celdas">10.2.3 Estructura de celdas<a class="headerlink" href="#1023-estructura-de-celdas" title="Permanent link">&para;</a></h3>
 <p>La celda elemental es la tupla</p>
 <div class="arithmatex">\[\text{celda} = (\text{Escenario} \times \text{Brazo})\]</div>
@@ -2510,7 +2513,7 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <ol>
 <li><strong>Prohibición de teletransporte cinemático.</strong> El campo <code>start_pose</code> está inhabilitado en la ruta de producción: todas las misiones despegan desde el <em>PlayerStart</em> nativo del nivel de Unreal Engine y ejecutan un ascenso vertical controlado previo a la navegación horizontal. La razón es que <code>simSetVehiclePose(ignore_collision=True)</code> es un reposicionamiento instantáneo que <strong>no verifica colisión</strong>, con lo que un escenario podría materializar el dron dentro de un edificio o a centímetros de un tronco, generando variación entre corridas que nada tiene que ver con la política de control evaluada. La consecuencia de diseño es que un escenario que necesita empezar lejos del <em>spawn</em> se arma como <strong>misión de varios tramos</strong>: un tramo de tránsito a altitud validada hasta el punto de interés, y recién allí el tramo de prueba a nivel de calle.</li>
 <li><strong>Ninguna coordenada se inventa sobre el PNG del mapa.</strong> Los mapas no tienen archivo de calibración píxel↔metro confiable. Toda coordenada nueva se deriva <strong>por interpolación de coordenadas ya voladas y confirmadas</strong>; la imagen se usa sólo cualitativamente (disposición relativa de plaza, bloques, corredor, avenida). Las coordenadas obtenidas por subdivisión geométrica —no por vuelo— se marcan explícitamente como <strong>PROVISORIAS</strong> y no entran a un batch sin pasar el protocolo de validación del punto 4.</li>
-<li><strong>Exclusión de profundidad del lazo de control.</strong> Ningún escenario reintroduce el canal de profundidad como entrada de control. El canal <em>depth</em> se captura únicamente cada <code>DEPTH_METRIC_EVERY_N = 5</code> ciclos y <strong>sólo para observabilidad</strong> (<code>min_obstacle_dist_m</code>), con una guardia arquitectónica automatizada (<code>tests/test_no_depth_in_flight_path.py</code>) que impide que reingrese al camino de vuelo. Sin esta guardia, la métrica de seguridad estaría contaminada por la propia señal que pretende auditar.</li>
+<li><strong>Exclusión total de profundidad del lazo de vuelo.</strong> Ni el grafo, ni <code>main.py</code>, ni el runner leen el canal de profundidad del simulador: ni como entrada de control, ni como freno, ni como criterio de aborto, ni como métrica. Cualquier uso de esa señal, aun «solo para observabilidad», abre un canal por el que la verdad de terreno puede terminar alimentando al brazo evaluado (cap. 9, §9.8.5). Una guardia automatizada (<code>tests/test_no_depth_in_flight_path.py</code>) cubre el runner, <code>main.py</code> y todos los módulos de vuelo. La seguridad se mide con colisiones y con el vigilante de congelamiento físico (§10.6.1).</li>
 <li><strong>Protocolo de validación previo obligatorio.</strong> Antes de que un escenario entre a un batch estadístico: (a) se redacta el manifiesto en <code>airsim-plan/missions/flightplans/</code>; (b) se dibuja la ruta con <code>scripts/plot_mission_route.py</code> y se confirma en el <em>viewport</em> de UE que la línea cruza donde el escenario pretende (fachada para los de bloqueo, calle abierta para los de control); (c) se corre una <strong>misión piloto de una sola combinación</strong> (<code>slm</code>, una semilla) y se exige <code>success = True</code> con 0 colisiones —o, si no completa, que el motivo sea instructivo (atasco genuino) y no un error de geometría; (d) recién entonces se lanza el batch completo. El criterio es explícito: <em>si ninguna combinación puede tener éxito en el escenario, no tiene sentido gastar el presupuesto del batch</em>.</li>
 </ol>
 <p>Una consecuencia práctica del punto 4 es la limpieza obligatoria de estado antes de cada corrida: el runner invoca <code>client.reset()</code> (que devuelve el vehículo a la pose de <em>spawn</em> de <code>settings.json</code> y limpia colisión/velocidad del controlador interno) y <code>client.clear_debug_markers()</code> (que descarta las primitivas persistentes dibujadas por <code>plot_mission_route.py</code>, las cuales de otro modo aparecen en el fotograma que recibe el VLM y son interpretadas como obstáculos reales).</p>
@@ -2576,7 +2579,7 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <p><strong>Qué se quiere probar.</strong> Rol análogo al de <code>minisim_clear</code> en Tier 0, pero con una diferencia crítica: <strong>la ruta es 3.3× más larga</strong>. Es el escenario que permite testear H2 de forma directa — si el costo del VLM es aditivo en el número de invocaciones y no multiplicativo en la distancia, el ratio <span class="arithmatex">\(t_{\text{slm}}/t_{\text{reactive}}\)</span> debe caer sustancialmente respecto de Tier 0. El dato piloto lo confirma provisionalmente: 1.17× frente a 2.8×, con <code>deliberation_rate</code> de 0.82 % (11 invocaciones sobre 1337 ciclos).</p>
 <p><strong>Dificultad.</strong> Baja en términos de navegación (a −30 m el dron sobrevuela los tres bloques en lugar de negociarlos; el histograma de rutas de la corrida original fue 77 % <code>reactive</code>), pero <strong>alta en términos de duración</strong>: es la corrida más larga del batch de Tier 1 y la que más expone al sistema a la deriva acumulada del estimador y a la degradación por saturación de GPU compartida entre UE y el servidor del VLM.</p>
 <h4 id="escenario-1b-townsim_ini-recorrido-con-vegetacion-en-ruta">Escenario 1.B — <code>townsim_ini</code> (recorrido con vegetación en ruta)<a class="headerlink" href="#escenario-1b-townsim_ini-recorrido-con-vegetacion-en-ruta" title="Permanent link">&para;</a></h4>
-<p>Travesía norte–sur del corredor peatonal arbolado central de TownSim, arrancando en el <em>PlayerStart</em> real (0,0), con dos particularidades estructurales. Primera: <strong>WP_0_ASCENSO sube en el lugar</strong> (mismo <span class="arithmatex">\(x,y\)</span> del <em>spawn</em>, hasta −30 m) antes de trasladarse, para no cruzar la copa de los árboles durante el ascenso. Segunda, incorporada en la versión V2 del manifiesto (2026-09-22) a partir de las corridas piloto: <strong>WP_0b_SOBRE_PLAZA</strong> (−60, 5, −22) cruza la plaza central a 22 m de altitud, porque la ruta directa a −10 m atravesaba la canopy de los árboles del patio (12–15 m de altura según la telemetría piloto) y el dron entraba en la malla de colisión antes de llegar al corredor. Recién entonces desciende a nivel de calle (−10 m): WP_1_ENTRADA_NORTE (−75, 10) entra por el extremo norte, entre los edificios norte y centro; <strong>WP_1b_PASO_MOLDURA</strong> (−70, 0) lo desplaza 8 m al este del saliente de cornisa del edificio oeste (x ≈ −78, y ≈ −14), donde las maniobras de evasión y el sesgo del controlador reactivo lo dejaban trabado (960 ciclos, 192 s, sin salir de y ≈ −14); WP_2_CENTRO_CORREDOR (−75, −35) cruza la zona de mayor densidad de árboles y WP_3_SALIDA_SUR (−75, −70) alcanza la avenida sur. WP_4 sale al este subiendo a −30 m y WP_5 regresa al punto de partida. La ruta total es de ~340 m (8 waypoints); el lote base (§11.4.2b) se ejecutó con la versión previa del manifiesto, sin WP_0b ni WP_1b.</p>
+<p>Travesía norte–sur del corredor peatonal arbolado central de TownSim, arrancando en el <em>PlayerStart</em> real (0,0), con dos particularidades estructurales. Primera: <strong>WP_0_ASCENSO sube en el lugar</strong> (mismo <span class="arithmatex">\(x,y\)</span> del <em>spawn</em>, hasta −30 m) antes de trasladarse, para no cruzar la copa de los árboles durante el ascenso. Segunda: <strong>WP_0b_SOBRE_PLAZA</strong> (−60, 5, −22) cruza la plaza central a 22 m de altitud, porque la ruta directa a −10 m atraviesa la canopy de los árboles del patio (12–15 m de altura según la telemetría piloto) y el dron entra en la malla de colisión antes de llegar al corredor. Recién entonces desciende a nivel de calle (−10 m): WP_1_ENTRADA_NORTE (−75, 10) entra por el extremo norte, entre los edificios norte y centro; <strong>WP_1b_PASO_MOLDURA</strong> (−70, 0) lo desplaza 8 m al este del saliente de cornisa del edificio oeste (x ≈ −78, y ≈ −14), donde, sin ese desplazamiento, las maniobras de evasión y el sesgo del controlador reactivo lo dejan trabado (960 ciclos, 192 s, sin salir de y ≈ −14, en una corrida piloto); WP_2_CENTRO_CORREDOR (−75, −35) cruza la zona de mayor densidad de árboles y WP_3_SALIDA_SUR (−75, −70) alcanza la avenida sur. WP_4 sale al este subiendo a −30 m y WP_5 regresa al punto de partida. La ruta total es de ~340 m (8 waypoints); el lote base (§11.4.2b) se ejecutó sin WP_0b ni WP_1b.</p>
 <p><strong>Qué se quiere probar.</strong> Es el escenario de <strong>interés real</strong> de Tier 1: cruza el interior del complejo por un corredor vegetado e incorpora los tramos de mayor dificultad de todo el batch —el corredor bajo la copa de los árboles y el paso junto a la moldura del edificio oeste—. El desglose <code>summary_by_wp.csv</code> es aquí la herramienta central: permite aislar el comportamiento de cada tramo (ascenso, cruce de la plaza, entrada al corredor, paso de la moldura, cruce central) de la fase de crucero.</p>
 <p><strong>Dificultad.</strong> Media-alta. La obstrucción no es un muro sino un dosel: el sistema debe decidir con evidencia geométrica degradada. Es el escenario donde se espera la primera manifestación de H1.</p>
 <h4 id="escenario-1c-townsim_calib_cruce_frontal-t-calib-2-bloqueo-frontal-masivo">Escenario 1.C — <code>townsim_calib_cruce_frontal</code> / T-CALIB-2 (bloqueo frontal masivo)<a class="headerlink" href="#escenario-1c-townsim_calib_cruce_frontal-t-calib-2-bloqueo-frontal-masivo" title="Permanent link">&para;</a></h4>
@@ -2618,18 +2621,23 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <p><strong>Particularidad.</strong> Es el escenario donde H1 se manifiesta más claramente: si el <code>fsm</code> resuelve el bloqueo escalando por encima del edificio y el <code>slm</code> lo resuelve encontrando la calle transversal, ambos tendrán <code>success = True</code> pero con SPL muy distintos. <strong>Por eso la métrica primaria de este escenario no es el éxito sino el SPL y la distancia recorrida</strong> — la diferencia de calidad entre soluciones aparece en la longitud de la trayectoria, no en el binario de llegada.</p>
 <p><strong>Dificultad.</strong> Alta y deliberada: es el escenario donde se espera una tasa de atascos apreciable en los brazos deliberativos, lo que ejercita el mecanismo <code>deep_vlm</code> de resolución de bloqueos.</p>
 <hr />
-<h3 id="1033-tier-2-citysim-citysim_calibpng-canones-urbanos">10.3.3 Tier 2 — CitySim (<code>citysim_calib.png</code>): cañones urbanos<a class="headerlink" href="#1033-tier-2-citysim-citysim_calibpng-canones-urbanos" title="Permanent link">&para;</a></h3>
+<h3 id="1033-tier-2-citysim-citymappng-canones-urbanos">10.3.3 Tier 2 — CitySim (<code>citymap.png</code>): cañones urbanos<a class="headerlink" href="#1033-tier-2-citysim-citymappng-canones-urbanos" title="Permanent link">&para;</a></h3>
 <p><strong>Entorno.</strong> Proyecto de Unreal Engine 5.5 basado en el <em>Sample City</em> de Epic Games: tejido edilicio masivo en cuadrícula ortogonal regular, con edificios de <strong>50 a 100 m de altura</strong>, pasos restringidos y cañones urbanos angostos.</p>
 <p><strong>La particularidad que define a este tier</strong> es doble. Primero, la <strong>altura de los obstáculos convierte a la altitud en variable de diseño de primer orden</strong>: a diferencia de TownSim, donde −30 m basta para sobrevolar todo, en CitySim la maniobra <code>GANAR_ALTURA</code> deja de ser una salida universal — un escape por altura desde −20 m no despeja un edificio de 80 m. Segundo, la <strong>regularidad y uniformidad de la textura urbana</strong> es adversa para la percepción monocular: dos calles paralelas de ancho idéntico producen campos de flujo casi indistinguibles, y las fachadas repetitivas degradan el emparejamiento denso de DIS. Es el entorno donde la ventaja teórica del VLM (información semántica sobre la escena) enfrenta su prueba más exigente, porque también es el entorno donde una imagen aérea de dos corredores idénticos aporta poca información discriminativa.</p>
 <h4 id="escenario-2a-citysim_clear-control-con-arquitectura-climb-first">Escenario 2.A — <code>citysim_clear</code> (control con arquitectura <em>climb-first</em>)<a class="headerlink" href="#escenario-2a-citysim_clear-control-con-arquitectura-climb-first" title="Permanent link">&para;</a></h4>
 <p>Perímetro de una manzana del grid regular, 7 waypoints, ~430 m, altitud de tránsito <strong>−70 m AGL</strong>. La estructura es <em>climb-first</em>: WP_1→WP_2 mantiene <span class="arithmatex">\(x,y\)</span> constantes y sube de −10 m a −70 m en <strong>vertical puro</strong>, y WP_6→WP_7 desciende en vertical puro desde la esquina noroeste. El patrón sólo es posible gracias al <em>fix</em> <code>near_vertical</code> del <code>WaypointTracker</code> (2026-09-07), que fuerza <span class="arithmatex">\(v_x = 0\)</span> cuando el siguiente waypoint está casi directamente arriba o abajo (<code>dist_xy &lt; 1 m</code> y <code>|dz| &gt; 0.3 m</code>), evitando la rampa diagonal.</p>
 <p><strong>Qué se quiere probar.</strong> Rol de control del tier, análogo a <code>minisim_clear</code> y <code>townsim_clear</code>. Pero su valor metodológico específico es <strong>haber establecido la altitud de tránsito como parámetro crítico documentado</strong>: la primera corrida a −50 m falló con colisión porque la ruta de ascenso atravesaba edificios. Ese fallo es un dato del diseño experimental, no un accidente descartable — establece la cota inferior de altitud segura para todo Tier 2 y explica por qué cualquier atasco observado en escenarios de corredor será atribuible a la geometría del corredor y no a un artefacto de altitud insuficiente.</p>
 <blockquote>
-<p><strong>Nota de estado (verificación de manifiesto, 2026-09-08).</strong> El archivo <code>citysim_clear.json</code> en el árbol de trabajo contiene actualmente una variante de 4 waypoints con altitud máxima de −50 m, distinta de la geometría de 7 waypoints a −70 m con la que se obtuvieron los resultados piloto reportados en el capítulo 11 y descrita en el CHANGELOG del 2026-09-07. La discrepancia es compatible con una sobrescritura del manifiesto desde el editor de misiones de WebDCS. <strong>El manifiesto debe restaurarse a la versión de 7 waypoints a −70 m antes de lanzar el batch de Tier 2</strong>; correrlo en su estado actual reproduciría la condición de −50 m que ya falló por colisión.</p>
+<p><strong>Nota sobre el manifiesto.</strong> El archivo <code>citysim_clear.json</code> del árbol de trabajo contiene una variante de 4 waypoints con altitud máxima de −50 m, distinta de la geometría de 7 waypoints a −70 m con la que se obtuvieron los resultados del capítulo 11, y declara <code>map: citysim_calib.png</code>. <strong>Antes de lanzar el batch de Tier 2 debe restaurarse la geometría de 7 waypoints a −70 m</strong> (a −50 m la ruta de ascenso atraviesa edificios) y el mapa debe declararse como <code>citymap.png</code> (escenario 2.B).</p>
 </blockquote>
-<h4 id="escenario-2b-citymap_pilot-circuito-de-corredores">Escenario 2.B — <code>citymap_pilot</code> (circuito de corredores)<a class="headerlink" href="#escenario-2b-citymap_pilot-circuito-de-corredores" title="Permanent link">&para;</a></h4>
-<p>Circuito de 7 waypoints en grilla urbana a −10 m de altitud constante, atravesando corredores entre edificios altos en lugar de sobrevolarlos.</p>
-<p><strong>Qué se quiere probar.</strong> Es el escenario terminal de la batería: <strong>elección de corredor sin información discriminativa geométrica</strong>. Ni el <code>reactive</code> ni el <code>fsm</code> tienen información semántica para elegir entre dos calles de ancho similar; su decisión se reduce a distancia pura o a la asimetría accidental del flujo óptico. La hipótesis es que el brazo <code>slm</code>, al consultar al VLM con la imagen del corredor, elegirá la ruta más despejada con mayor consistencia.</p>
+<h4 id="escenario-2b-citysim_pilot-circuito-de-corredores">Escenario 2.B — <code>citysim_pilot</code> (circuito de corredores)<a class="headerlink" href="#escenario-2b-citysim_pilot-circuito-de-corredores" title="Permanent link">&para;</a></h4>
+<p>Circuito en grilla urbana a −10 m de altitud constante, atravesando corredores entre edificios en lugar de sobrevolarlos (manifiesto <code>citysim_pilot.json</code>; en el lote base del capítulo 11 figura como <code>citymap_pilot</code>, sin el waypoint <code>WP_0_SUR</code>). Tres elementos del manifiesto merecen explicación:</p>
+<ul>
+<li><strong>Mapa de referencia <code>citymap.png</code></strong> (3.8 px/m, origen en el <em>spawn</em>), sobre el que los waypoints coinciden con intersecciones de la grilla. La imagen de alta resolución <code>citysim_calib.png</code> no registra con la telemetría (los waypoints caen sobre el agua) y no debe usarse para ubicar coordenadas.</li>
+<li><strong><code>start_pose</code></strong> en el <em>spawn</em> real (0, 0, yaw 90°), que solo se usa con <code>--seed-jitter</code> (§10.4.3).</li>
+<li><strong>Waypoint intermedio <code>WP_0_SUR</code> (−11, −50.5, −10)</strong> sobre la calle sur. Una autopista elevada corre sobre la calle x ≈ 15–20 m desde y ≈ −50 m hacia el este, con el tablero a la altura de crucero; un tramo directo <em>spawn</em> → WP_1 la cruza, y el dron puede quedar trabado sobre el tablero (cap. 9, §9.8.7). Los edificios de los tramos <em>spawn</em> → WP_0_SUR → WP_1 quedan para que los resuelva la navegación: WP_1 está detrás de una manzana que debe rodearse.</li>
+</ul>
+<p><strong>Qué se quiere probar.</strong> Es el escenario terminal de la batería: <strong>rodear edificios y elegir corredor sin información discriminativa geométrica</strong>. Ni el <code>reactive</code> ni el <code>fsm</code> tienen información semántica para elegir entre dos calles de ancho similar; su decisión se reduce a distancia pura o a la asimetría accidental del flujo óptico. La hipótesis es que el brazo <code>slm</code>, al consultar al VLM con la imagen del corredor, elegirá la ruta más despejada con mayor consistencia.</p>
 <p><strong>El resultado negativo es igualmente válido y está previsto por diseño</strong>: si el VLM no aporta información útil en un entorno de textura urbana uniforme, ése es un hallazgo relevante sobre los límites de la percepción semántica en entornos repetitivos, y se reporta como tal en el capítulo 9.</p>
 <p><strong>Dificultad.</strong> Máxima del batch. A −10 m entre edificios de 50–100 m, el escape por altura está efectivamente vetado (<code>MAX_ESCAPE_ALT_M = 30 m</code> no despeja la línea de tejados), lo que <strong>elimina la salida universal del brazo <code>fsm</code></strong> y obliga a una decisión lateral genuina. Es, en consecuencia, el escenario donde H1 tiene la mayor potencia discriminativa y donde se espera la mayor tasa de fallo absoluto en los tres brazos.</p>
 <hr />
@@ -2690,7 +2698,7 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 </tr>
 <tr>
 <td>2</td>
-<td>CitySim (<code>citysim_calib.png</code>)</td>
+<td>CitySim (<code>citymap.png</code>)</td>
 <td><code>citysim_clear</code></td>
 <td>Control a altitud franca</td>
 <td>~430 m</td>
@@ -2701,9 +2709,9 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <tr>
 <td>2</td>
 <td>CitySim</td>
-<td><code>citymap_pilot</code></td>
-<td>Elección de corredor</td>
-<td>~290 m</td>
+<td><code>citysim_pilot</code></td>
+<td>Rodeo de manzanas y elección de corredor</td>
+<td>~336 m</td>
 <td>−10 m</td>
 <td><strong>Máxima</strong></td>
 <td><strong>H1, H3</strong></td>
@@ -2726,9 +2734,9 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <ol>
 <li><strong>Jitter temporal del lazo de control.</strong> El lazo corre a <code>LOOP_HZ = 5.0</code> con temporización de reloj de pared (<code>time.sleep(max(0, 1/f - t_ciclo))</code>). El tiempo de cada ciclo depende de la latencia RPC a AirSim, de la carga de GPU y del planificador del sistema operativo. Un ciclo que se pasa del presupuesto desplaza todos los siguientes: dos corridas idénticas divergen en <strong>qué instante exacto de la trayectoria</strong> se toma cada decisión. Con <code>REACTIVE_FORWARD_SPEED = 3.0 m/s</code>, 20 ms de desfase equivalen a 6 cm de desplazamiento por ciclo, que se acumulan.</li>
 <li><strong>Renderizado y física no reproducibles cuadro a cuadro.</strong> Unreal Engine no garantiza determinismo cuadro a cuadro bajo carga variable de GPU; la física de AirSim avanza en tiempo real, no en pasos fijos sincronizados con el cliente. El fotograma capturado en el ciclo <span class="arithmatex">\(n\)</span> no es bit a bit el mismo entre corridas, y el estimador de flujo óptico —que opera sobre diferencias de intensidad a nivel de píxel— amplifica esas diferencias.</li>
-<li><strong>Sensibilidad del estimador de flujo a condiciones iniciales.</strong> El cálculo de FOE por mínimos cuadrados ponderados con rechazo de <em>outliers</em> (RANSAC-lite, <code>FOE_OUTLIER_ANGLE_RAD = 0.35</code>) es una función no lineal del campo de flujo. Pequeñas diferencias en el conteo de inliers cruzan el umbral de confianza diferenciada (&lt; 30 vs. ≥ 30 inliers), lo que cambia el estado epistémico reportado por <code>ObstacleField</code> y, con él, la decisión de enrutamiento del <code>policy_router</code>. Es un sistema con <strong>realimentación</strong>: una decisión distinta cambia la pose, que cambia el fotograma siguiente, que cambia la decisión siguiente.</li>
+<li><strong>Sensibilidad del estimador de flujo a condiciones iniciales.</strong> El cálculo de FOE por mínimos cuadrados ponderados con rechazo de <em>outliers</em> (RANSAC-lite, <code>FOE_OUTLIER_ANGLE_RAD = 0.35</code>) es una función no lineal del campo de flujo. Pequeñas diferencias en el conteo de inliers cruzan el umbral de confianza diferenciada (&lt; 30 vs. ≥ 30 inliers), lo que cambia el estado epistémico reportado por <code>ObstacleField</code> y, con él, qué regla de <code>navigate_node</code> decide el ciclo. Es un sistema con <strong>realimentación</strong>: una decisión distinta cambia la pose, que cambia el fotograma siguiente, que cambia la decisión siguiente.</li>
 <li><strong>Muestreo estocástico del VLM.</strong> La inferencia se realiza con <code>temperature = 0.2</code> y <strong>sin semilla de muestreo fijada</strong> en el servidor de inferencia. Dos consultas con el mismo prompt pueden producir macro-acciones distintas. A esto se suma que la determinación de la inferencia en servidores de LLM no está garantizada aun con temperatura cero: la composición de kernels no invariantes al tamaño de lote con un tamaño de lote que varía según la carga del servidor produce variación de corrida a corrida a nivel de punto flotante (<a href="13-REFERENCIAS.html#ref-he-2025">He, 2025</a>). Esta fuente <strong>afecta únicamente al brazo <code>slm</code></strong>, lo que es metodológicamente relevante: el brazo deliberativo tiene una fuente de varianza adicional que los otros dos no tienen, y por eso se espera —y se debe reportar— una dispersión mayor en sus métricas.</li>
-<li><strong>Deriva temporal del watchdog asíncrono.</strong> El servicio de deliberación corre en hilo separado bajo <code>SLM_WATCHDOG_MS</code>. Que una respuesta llegue <strong>antes o después</strong> del vencimiento del watchdog depende de la latencia de red y de la carga del servidor de inferencia en ese instante; el mismo prompt puede resolverse como decisión del modelo en una corrida y como <em>fallback</em> determinista en otra. Ésta es la fuente de varianza más consecuente para el análisis, porque cambia cualitativamente qué política gobierna ese ciclo.</li>
+<li><strong>Deriva temporal de las respuestas asíncronas.</strong> Que una respuesta estratégica llegue antes o después de su edad máxima (10 s), o de que el dron supere la sub-meta que produciría, y que un barrido se resuelva antes o después de su watchdog (<code>SLM_DEEP_WATCHDOG_MS</code>), depende de la latencia del servidor en ese instante; el mismo fotograma puede producir un rodeo en una corrida y nada —o un escape vertical— en otra. Es la fuente de varianza más consecuente para el análisis, porque cambia cualitativamente qué decide el ciclo.</li>
 </ol>
 <p>Estas cinco fuentes se acumulan multiplicativamente sobre una misión de 1000–2000 ciclos. La divergencia entre dos semillas de la misma celda es, por tanto, real y sustancial — pero es <strong>estocasticidad no controlada</strong>, no un factor manipulado.</p>
 <h3 id="1043-el-modo-de-perturbacion-controlada-y-por-que-no-es-el-modo-por-defecto">10.4.3 El modo de perturbación controlada y por qué no es el modo por defecto<a class="headerlink" href="#1043-el-modo-de-perturbacion-controlada-y-por-que-no-es-el-modo-por-defecto" title="Permanent link">&para;</a></h3>
@@ -2741,7 +2749,7 @@ El signo del efecto de H1 depende del tier: en ambientes despejados el VLM sólo
 <li>El <strong>límite inferior</strong> lo impone la potencia estadística. Con <span class="arithmatex">\(K = 5\)</span> por grupo, el estadístico U de Mann-Whitney tiene un <span class="arithmatex">\(p\)</span>-valor mínimo alcanzable (bilateral, sin empates) de <span class="arithmatex">\(2/\binom{10}{5} = 0.0079\)</span>. Es decir: con 5 semillas por brazo, <strong>sólo una separación perfecta entre las dos muestras puede ser significativa al 5 %</strong>, y ninguna comparación puede sobrevivir la corrección de Bonferroni del §10.7 (<span class="arithmatex">\(\alpha_{\text{ajustado}} \approx 0.0028\)</span>). Este es un límite duro del diseño y debe reportarse como tal.</li>
 <li>El <strong>límite superior</strong> lo impone el presupuesto de tiempo real: cada corrida consume entre 3 y 15 minutos de simulación en tiempo real, y el batch completo con <span class="arithmatex">\(K = 5\)</span> ya supera las 14 horas de máquina (§10.5.4).</li>
 </ul>
-<p>La respuesta operativa a esta tensión es doble. Primero, <strong><span class="arithmatex">\(K = 5\)</span> es el mínimo del batch base y <span class="arithmatex">\(K = 10\)</span> el objetivo de las celdas donde la comparación es central para la tesis</strong> (las de <code>townsim_calib_cruce_frontal</code> y <code>citymap_pilot</code>); con <span class="arithmatex">\(K = 10\)</span> por grupo, el <span class="arithmatex">\(p\)</span> mínimo alcanzable baja a <span class="arithmatex">\(2/\binom{20}{10} \approx 1.1\times10^{-5}\)</span>, holgadamente por debajo del umbral corregido. Segundo, <strong>el reporte no se apoya sólo en el <span class="arithmatex">\(p\)</span>-valor</strong>: se informan tamaños de efecto con intervalo de confianza <em>bootstrap</em> y las distribuciones completas, que es la práctica recomendada precisamente para el régimen de pocas corridas (<a href="13-REFERENCIAS.html#ref-agarwal-2021">Agarwal et al., 2021</a>). Un tamaño de efecto grande con un intervalo de confianza ancho es información útil y honestamente reportable; un <span class="arithmatex">\(p\)</span>-valor no significativo con <span class="arithmatex">\(K = 5\)</span> <strong>no es evidencia de ausencia de efecto</strong>, y así se lo declara en el capítulo 11.</p>
+<p>La respuesta operativa a esta tensión es doble. Primero, <strong><span class="arithmatex">\(K = 5\)</span> es el mínimo del batch base y <span class="arithmatex">\(K = 10\)</span> el objetivo de las celdas donde la comparación es central para la tesis</strong> (las de <code>townsim_calib_cruce_frontal</code> y <code>citysim_pilot</code>); con <span class="arithmatex">\(K = 10\)</span> por grupo, el <span class="arithmatex">\(p\)</span> mínimo alcanzable baja a <span class="arithmatex">\(2/\binom{20}{10} \approx 1.1\times10^{-5}\)</span>, holgadamente por debajo del umbral corregido. Segundo, <strong>el reporte no se apoya sólo en el <span class="arithmatex">\(p\)</span>-valor</strong>: se informan tamaños de efecto con intervalo de confianza <em>bootstrap</em> y las distribuciones completas, que es la práctica recomendada precisamente para el régimen de pocas corridas (<a href="13-REFERENCIAS.html#ref-agarwal-2021">Agarwal et al., 2021</a>). Un tamaño de efecto grande con un intervalo de confianza ancho es información útil y honestamente reportable; un <span class="arithmatex">\(p\)</span>-valor no significativo con <span class="arithmatex">\(K = 5\)</span> <strong>no es evidencia de ausencia de efecto</strong>, y así se lo declara en el capítulo 11.</p>
 <hr />
 <h2 id="105-organizacion-en-tres-batches">10.5 Organización en tres batches<a class="headerlink" href="#105-organizacion-en-tres-batches" title="Permanent link">&para;</a></h2>
 <h3 id="1051-por-que-exactamente-tres-batches-y-no-uno">10.5.1 Por qué exactamente tres batches, y no uno<a class="headerlink" href="#1051-por-que-exactamente-tres-batches-y-no-uno" title="Permanent link">&para;</a></h3>
@@ -2793,7 +2801,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <span class="w">  </span>--out-dir<span class="w"> </span>../airsim-runs/produccion/tier1<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--max-cycles<span class="w"> </span><span class="m">4500</span><span class="w"> </span>--max-seconds<span class="w"> </span><span class="m">900</span>
 </code></pre></div>
-<p><strong>Batch C — Tier 2 (CitySim / <code>citysim_calib.png</code>).</strong> Requiere haber restaurado previamente el manifiesto <code>citysim_clear.json</code> a la geometría de 7 waypoints a −70 m (nota de §10.3.3):</p>
+<p><strong>Batch C — Tier 2 (CitySim / <code>citymap.png</code>).</strong> Requiere haber restaurado previamente el manifiesto <code>citysim_clear.json</code> a la geometría de 7 waypoints a −70 m (nota de §10.3.3):</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># C.1 — control a altitud franca</span>
 python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--scenarios<span class="w"> </span>../airsim-plan/missions/flightplans/citysim_clear.json<span class="w"> </span><span class="se">\</span>
@@ -2805,7 +2813,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 
 <span class="c1"># C.2 — corredores urbanos angostos</span>
 python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--scenarios<span class="w"> </span>../airsim-plan/missions/flightplans/citymap_pilot.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--scenarios<span class="w"> </span>../airsim-plan/missions/flightplans/citysim_pilot.json<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--arms<span class="w"> </span>slm<span class="w"> </span>fsm<span class="w"> </span>reactive<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--deadlock-strategies<span class="w"> </span>deep_vlm<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--seeds<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
@@ -2868,7 +2876,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </tr>
 <tr>
 <td>C (Tier 2)</td>
-<td><code>citymap_pilot</code></td>
+<td><code>citysim_pilot</code></td>
 <td>15</td>
 <td>600</td>
 <td>3000</td>
@@ -2888,12 +2896,12 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <p>El límite <code>--max-cycles</code> es una salvaguarda secundaria: a <code>LOOP_HZ = 5</code> y con el lazo cumpliendo su presupuesto (≈4.9 Hz medidos en los pilotos), <code>--max-seconds</code> se agota primero. El límite de ciclos protege el caso patológico opuesto — un lazo que se acelera porque las capturas fallan silenciosamente.</p>
 <hr />
 <h2 id="106-metricas-reportadas">10.6 Métricas reportadas<a class="headerlink" href="#106-metricas-reportadas" title="Permanent link">&para;</a></h2>
-<p>Todas las métricas se derivan del registro por ciclo del <code>FlightLogger</code> y se consolidan en el <code>summary.json</code> de cada corrida. La distinción entre <strong>métricas de control</strong> (las que realimentan el vuelo) y <strong>métricas de observabilidad</strong> (las que sólo se registran) es arquitectónicamente estricta: <code>min_obstacle_dist_m</code> proviene del canal de profundidad y <strong>nunca realimenta el control</strong>, lo que la convierte en un auditor independiente de la percepción monocular.</p>
+<p>Todas las métricas se derivan del registro por ciclo del <code>FlightLogger</code> y se consolidan en el <code>summary.json</code> de cada corrida.</p>
 <h3 id="1061-eficacia-y-seguridad-de-vuelo">10.6.1 Eficacia y seguridad de vuelo<a class="headerlink" href="#1061-eficacia-y-seguridad-de-vuelo" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Tasa de éxito de misión</strong> (<code>success</code>): arribo a todos los waypoints dentro del presupuesto de ciclos y segundos. Es un binario por corrida; sobre <span class="arithmatex">\(K\)</span> semillas se convierte en una proporción, que es la métrica primaria de fiabilidad.</li>
 <li><strong>Colisiones</strong> por misión y <strong>normalizadas por kilómetro</strong> recorrido. La normalización es necesaria porque los escenarios difieren en longitud por un factor de 3.3×.</li>
-<li><strong>Distancia mínima a obstáculo, percentil 5</strong> (<code>min_obstacle_dist_m</code>), medida por el canal de profundidad cada <code>DEPTH_METRIC_EVERY_N = 5</code> ciclos sobre el tercio central de la imagen. Se reporta el percentil 5 sobre la agregación de semillas, no el mínimo absoluto, para no dejar que un único artefacto domine la métrica de seguridad.</li>
+<li><strong>Motivo de terminación</strong> (<code>termination_reason</code>): éxito, tope de tiempo o de ciclos, colisión, o <code>physics_locked</code> (el vigilante de congelamiento detectó el estado físico idéntico durante 25 ciclos: dron incrustado en la malla, cap. 5 §5.19). <code>physics_locked</code> cuenta como falla de misión, igual que una colisión. La <strong>distancia mínima a obstáculo</strong> (<code>min_obstacle_dist_m</code>) solo puede medirse con el canal de profundidad, por lo que no forma parte de las métricas de los lotes con obstrucción (§10.3.0, punto 3); el lote base del capítulo 11 la registró como auditoría externa.</li>
 <li><strong>SPL</strong> (<em>Success weighted by Path Length</em>), en su definición estándar para agentes de navegación (<a href="13-REFERENCIAS.html#ref-anderson-2018">Anderson et al., 2018</a>): <span class="arithmatex">\(\text{SPL} = S \cdot \ell_{\text{opt}} / \max(\ell_{\text{real}}, \ell_{\text{opt}})\)</span>, con <span class="arithmatex">\(S\)</span> el indicador de éxito. La longitud óptima <span class="arithmatex">\(\ell_{\text{opt}}\)</span> se computa como la suma de distancias euclídeas entre waypoints consecutivos del manifiesto: no es un camino volable en presencia de obstáculos, pero es la referencia estándar y, sobre todo, es <strong>idéntica para los tres brazos</strong>, que es lo que la comparación requiere. El SPL es la única métrica que penaliza simultáneamente no llegar y llegar dando vueltas, y es por eso la métrica principal para los escenarios de bloqueo (§10.3.2, escenario 1.C).</li>
 </ul>
 <blockquote>
@@ -2902,10 +2910,10 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </blockquote>
 <h3 id="1062-dinamica-del-lazo-tactico-y-latencias">10.6.2 Dinámica del lazo táctico y latencias<a class="headerlink" href="#1062-dinamica-del-lazo-tactico-y-latencias" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Latencia total por ciclo</strong> (<span class="arithmatex">\(p_{50}\)</span> y <span class="arithmatex">\(p_{95}\)</span>), desagregada por brazo y por <strong>ruta activa del grafo de control</strong> (<code>reactive</code>, <code>evasive</code>, <code>tactical</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>). El <span class="arithmatex">\(p_{95}\)</span> es la métrica relevante para la viabilidad en tiempo real: un <span class="arithmatex">\(p_{50}\)</span> aceptable con un <span class="arithmatex">\(p_{95}\)</span> que excede el presupuesto de ciclo describe un sistema que cumple "en promedio" y falla justo cuando importa.</li>
+<li><strong>Latencia total por ciclo</strong> (<span class="arithmatex">\(p_{50}\)</span> y <span class="arithmatex">\(p_{95}\)</span>), desagregada por brazo y por <strong>ruta activa del grafo de control</strong> (<code>reactive</code>, <code>evasive</code>, <code>girar_90</code>, <code>deliberative</code> —barrido—, <code>tactical</code> —escape sin VLM—, <code>fsm</code>, <code>degraded</code>). El <span class="arithmatex">\(p_{95}\)</span> es la métrica relevante para la viabilidad en tiempo real: un <span class="arithmatex">\(p_{50}\)</span> aceptable con un <span class="arithmatex">\(p_{95}\)</span> que excede el presupuesto de ciclo describe un sistema que cumple "en promedio" y falla justo cuando importa.</li>
 <li><strong>Histograma de rutas</strong> por corrida: la distribución de ciclos entre nodos del grafo. Es la caracterización más informativa del comportamiento cualitativo de un brazo — una corrida 77 % <code>reactive</code> describe un vuelo que sobrevoló los obstáculos en lugar de negociarlos, independientemente de lo que digan sus métricas de éxito.</li>
-<li><strong><code>deliberation_rate</code></strong>: fracción de ciclos que invocan efectivamente al modelo. Se contabiliza por <strong>transición de identificador único de deliberación</strong>, no por ciclo con ruta <code>deliberative</code>; sin esa distinción, una deliberación que abarca varios ciclos de espera se contaría múltiples veces e inflaría la tasa muy por encima de la real.</li>
-<li>La latencia del <strong>escaneo espacial pre-vuelo</strong> (<code>spatial_scan</code>, cap. 5) es un costo de inicialización de única vez y se registra por separado del presupuesto por ciclo.</li>
+<li><strong><code>deliberation_rate</code></strong>: fracción de ciclos que invocan efectivamente al modelo. Se contabiliza por <strong>transición de identificador único de deliberación</strong>, cualquiera sea la ruta del ciclo; sin esa distinción, una deliberación que abarca varios ciclos de espera se contaría múltiples veces. Incluye las consultas de la capa estratégica, que se resuelven mientras el dron vuela por la ruta reactiva o evasiva.</li>
+<li>El <strong>escaneo espacial pre-vuelo</strong> (<code>spatial_scan</code>, cap. 5 §5.0) solo lo ejecuta <code>main.py</code>; el runner no lo corre, de modo que no interviene en ninguna corrida experimental.</li>
 </ul>
 <h3 id="1063-comportamiento-del-modelo-de-lenguaje">10.6.3 Comportamiento del modelo de lenguaje<a class="headerlink" href="#1063-comportamiento-del-modelo-de-lenguaje" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2913,6 +2921,8 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong>Tasa de <em>fallback</em> determinista</strong> (<code>slm_fallback_rate</code>) ante respuestas inválidas o fuera de esquema.</li>
 <li><strong>Tasa de <em>timeout</em></strong> del watchdog asíncrono (<code>slm_timeout_rate</code>).</li>
 <li><strong>Tasa de adherencia sintáctica</strong> (<code>adherence_rate</code>), con y sin decodificación gramatical estructurada (cap. 8, §8.2).</li>
+<li><strong>Distribución de resultados de la capa estratégica</strong>, a partir de las entradas <code>arm = "vlm_strategic"</code> de <code>deliberations[]</code>: fracción de respuestas que proponen sub-meta, que declaran el camino directo libre (<code>directo_libre</code>), sin columna libre, vencidas, superadas o no parseables. Es la métrica que responde si el modelo <strong>discrimina</strong> (cap. 8, §8.3.1): una capa que declara <code>directo_libre</code> en casi todas las consultas, incluso cuando el dron termina en deadlock, no está aportando información.</li>
+<li><strong>Avance hacia el waypoint real tras cada sub-meta del VLM</strong>: distancia al waypoint de misión (no a la sub-meta) en el momento de la inyección y 20 s después. Es la medida directa de si las sub-metas del VLM ayudan a completar la misión: una sub-meta que no acerca al waypoint real en ese plazo es un desvío sin beneficio.</li>
 </ul>
 <h3 id="1064-resolucion-de-atascos">10.6.4 Resolución de atascos<a class="headerlink" href="#1064-resolucion-de-atascos" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2921,7 +2931,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong><code>deep_scan_avg_cycles_to_resolve</code></strong>: costo medio en ciclos de una resolución exitosa.</li>
 <li><strong><code>deep_scan_fallback_rate</code></strong>: fracción de atascos donde el barrido no resolvió y se cayó al escape ciego de respaldo.</li>
 </ul>
-<p>Estas cuatro métricas sólo tienen valor conjunto: una tasa de resolución alta con un costo de ciclos desmesurado no describe un mecanismo exitoso sino uno caro.</p>
+<p>Estas cuatro métricas sólo tienen valor conjunto: una tasa de resolución alta con un costo de ciclos desmesurado no describe un mecanismo exitoso sino uno caro. «Resuelto» significa que el VLM devolvió una descripción utilizable, <strong>no</strong> que el dron haya salido del atasco; por eso se reporta además el avance hacia el waypoint real tras cada resolución.</p>
 <h3 id="1065-desglose-espacial-por-waypoint">10.6.5 Desglose espacial por waypoint<a class="headerlink" href="#1065-desglose-espacial-por-waypoint" title="Permanent link">&para;</a></h3>
 <p>Cada corrida emite <code>&lt;stem&gt;.summary_by_wp.csv</code> con ciclos consumidos, duración, ciclos deliberativos, tasa de deliberación y eventos de escaneo profundo <strong>por tramo de misión</strong>. Es la herramienta que permite aislar los tramos de ascenso vertical de las fases de crucero y maniobra horizontal, y la que ya identificó en corridas previas que un único waypoint (<code>WP_0_ASCENSO</code> de <code>townsim_ini</code>) concentraba la dificultad de toda la misión. Sin este desglose, una métrica agregada de misión atribuye a "el escenario" una dificultad que pertenece a un solo tramo de 20 segundos.</p>
 <hr />
@@ -2933,7 +2943,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong>Prueba de Kruskal-Wallis</strong> para el contraste conjunto de los tres brazos antes de descender a comparaciones pareadas (<a href="13-REFERENCIAS.html#ref-kruskal-1952">Kruskal &amp; Wallis, 1952</a>).</li>
 </ul>
 <p>La elección de pruebas no paramétricas no es una precaución de rutina: es una necesidad del tipo de dato. Las distribuciones de tiempo de misión están <strong>truncadas por la derecha</strong> por el presupuesto <code>--max-seconds</code> (una corrida que se agota registra el presupuesto, no su tiempo real), lo que produce distribuciones asimétricas con masa concentrada en el límite. Ninguna prueba que asuma normalidad es defendible sobre ese dato.</p>
-<p><strong>Métrica primaria:</strong> tiempo de misión sobre corridas con <code>success = True</code> en los escenarios de control (H2); <strong>SPL</strong> en los escenarios con bloqueo (H1). <strong>Métrica secundaria de seguridad:</strong> <code>min_obstacle_dist_m</code>. La declaración anticipada de la métrica primaria por escenario —antes de ver los datos— es lo que impide elegir <em>a posteriori</em> la métrica que favorece la hipótesis.</p>
+<p><strong>Métrica primaria:</strong> tiempo de misión sobre corridas con <code>success = True</code> en los escenarios de control (H2); <strong>SPL</strong> en los escenarios con bloqueo (H1). <strong>Métrica secundaria de seguridad:</strong> colisiones y terminaciones <code>physics_locked</code>. La declaración anticipada de la métrica primaria por escenario —antes de ver los datos— es lo que impide elegir <em>a posteriori</em> la métrica que favorece la hipótesis.</p>
 <h3 id="1072-tamanos-de-efecto">10.7.2 Tamaños de efecto<a class="headerlink" href="#1072-tamanos-de-efecto" title="Permanent link">&para;</a></h3>
 <p>Se reporta <strong>Cliff's Delta</strong> (<span class="arithmatex">\(\delta\)</span>) para toda comparación pareada (<a href="13-REFERENCIAS.html#ref-cliff-1993">Cliff, 1993</a>), definido como la proporción de pares en que una muestra domina a la otra: <span class="arithmatex">\(\delta = 2U/(n_A n_B) - 1\)</span>. Se adopta la escala de interpretación de <a href="13-REFERENCIAS.html#ref-romano-2006">Romano et al. (2006)</a>: <span class="arithmatex">\(|\delta| &lt; 0.147\)</span> despreciable, <span class="arithmatex">\(0.147\)</span>–<span class="arithmatex">\(0.330\)</span> pequeño, <span class="arithmatex">\(0.330\)</span>–<span class="arithmatex">\(0.474\)</span> mediano, <span class="arithmatex">\(\geq 0.474\)</span> grande. Para el contraste conjunto se reporta <span class="arithmatex">\(\eta^2_H\)</span> o la correlación de rango biserial según corresponda.</p>
 <p>El tamaño de efecto no es un complemento decorativo del <span class="arithmatex">\(p\)</span>-valor: <strong>es el resultado principal cuando <span class="arithmatex">\(K\)</span> es pequeño</strong>. Un <span class="arithmatex">\(p\)</span> significativo con <span class="arithmatex">\(\delta\)</span> despreciable describe una diferencia real de magnitud práctica nula; un <span class="arithmatex">\(\delta\)</span> grande con <span class="arithmatex">\(p\)</span> no significativo describe un efecto que el diseño no tuvo potencia para detectar, no un efecto ausente. Ambos casos se reportan explícitamente como tales.</p>
@@ -2949,7 +2959,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <p>El resultado esperado es <strong>desfavorable al brazo <code>slm</code> y favorable a la hipótesis H2</strong>:</p>
 <ul>
 <li>Orden esperado de tiempo de misión: <code>reactive</code> &lt; <code>fsm</code> &lt; <code>slm</code>, con <span class="arithmatex">\(\delta\)</span> grande (cercano a 1.0) en la comparación <code>reactive</code> vs. <code>slm</code>. Es la comparación con mayor probabilidad de superar el umbral corregido, porque el efecto piloto (84 s vs. 235 s) es enorme respecto de la dispersión plausible.</li>
-<li>Sin diferencias significativas en seguridad: en un campo despejado, ningún brazo puede ser más seguro que otro, y las distancias mínimas al obstáculo del piloto (9.74 / 9.06 / 6.38 m) son consistentes con esa lectura.</li>
+<li>Sin diferencias significativas en seguridad: en un campo despejado, ningún brazo puede ser más seguro que otro, y las distancias mínimas al obstáculo del piloto (9.74 / 9.06 / 6.38 m, medidas con el canal de profundidad en el lote base) son consistentes con esa lectura.</li>
 <li><code>deliberation_rate</code> del orden de unos pocos puntos porcentuales, interpretable directamente como <strong>tasa de falso positivo de percepción</strong> en condiciones benignas.</li>
 <li>La comparación <code>slm</code> vs. <code>fsm</code> se espera más variable, porque depende de cuántos atascos acumule la FSM por corrida — y en Tier 0 un atasco es, por definición, espurio.</li>
 </ul>
@@ -2965,7 +2975,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <h3 id="1083-batch-c-tier-2-que-se-espera">10.8.3 Batch C (Tier 2) — qué se espera<a class="headerlink" href="#1083-batch-c-tier-2-que-se-espera" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><code>citysim_clear</code></strong>: comportamiento análogo al de los otros controles, con el ratio <span class="arithmatex">\(t_{\text{slm}}/t_{\text{reactive}}\)</span> más bajo de los tres tiers (piloto: 1.09×), consistente con H2. Cero atascos en los tres brazos confirma que la ruta de crucero a −70 m no presenta obstrucciones y que la altitud es adecuada.</li>
-<li><strong><code>citymap_pilot</code></strong>: es el escenario terminal y el de mayor incertidumbre. Se esperan <strong>tasas de éxito inferiores a 1.0 en los tres brazos</strong> —es el único escenario del batch donde el fracaso es un resultado esperado y no un síntoma— y una mayor dispersión entre semillas. Es también el escenario donde la hipótesis puede fallar de la forma más informativa: si el VLM no discrimina entre corredores de textura uniforme, <code>slm</code> y <code>fsm</code> empatarán, y ese empate es un resultado sustantivo sobre los límites de la percepción semántica en tejido urbano repetitivo.</li>
+<li><strong><code>citysim_pilot</code></strong>: es el escenario terminal y el de mayor incertidumbre. Se esperan <strong>tasas de éxito inferiores a 1.0 en los tres brazos</strong> —es el único escenario del batch donde el fracaso es un resultado esperado y no un síntoma— y una mayor dispersión entre semillas. Es también el escenario donde la hipótesis puede fallar de la forma más informativa: si el VLM no discrimina entre corredores de textura uniforme, <code>slm</code> y <code>fsm</code> empatarán, y ese empate es un resultado sustantivo sobre los límites de la percepción semántica en tejido urbano repetitivo.</li>
 </ul>
 <h3 id="1084-analisis-comparativo-conjunto">10.8.4 Análisis comparativo conjunto<a class="headerlink" href="#1084-analisis-comparativo-conjunto" title="Permanent link">&para;</a></h3>
 <p>El cruce entre los tres batches es donde se contrasta <strong>H4</strong>, y exige una precaución declarada en §10.5.1: los tres batches corren en sesiones de simulador distintas y sobre proyectos de UE distintos, de modo que <strong>las diferencias absolutas entre tiers arrastran un efecto de sesión no controlado</strong>. La comparación entre tiers se realiza en consecuencia sobre tres tipos de cantidad, todas normalizadas dentro de su propio tier:</p>
@@ -2979,27 +2989,24 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <h2 id="109-organizacion-de-los-resultados-auditoria-y-reproducibilidad">10.9 Organización de los resultados, auditoría y reproducibilidad<a class="headerlink" href="#109-organizacion-de-los-resultados-auditoria-y-reproducibilidad" title="Permanent link">&para;</a></h2>
 <h3 id="1091-disposicion-fisica-de-los-artefactos">10.9.1 Disposición física de los artefactos<a class="headerlink" href="#1091-disposicion-fisica-de-los-artefactos" title="Permanent link">&para;</a></h3>
 <p>El runner escribe de forma determinista bajo la siguiente estructura, derivada de los propios factores del diseño:</p>
-<div class="highlight"><pre><span></span><code>airsim-runs/produccion/&lt;tier&gt;/
-└── &lt;escenario&gt;/                    # stem del manifiesto: townsim_ini, citymap_pilot, …
-    └── &lt;brazo&gt;/                    # slm | fsm | reactive
-        ├── seed_1.jsonl               # telemetría granular ciclo a ciclo
-        ├── seed_1.csv                 # misma corrida, tabular
-        ├── seed_1.summary.json        # indicadores agregados de la corrida
-        ├── seed_1.summary_by_wp.csv   # desglose por tramo de misión
-        ├── seed_2.jsonl
-        │   …
-        └── photo-&lt;timestamp_ISO&gt;.png  # fotogramas exactos enviados al VLM
+<div class="highlight"><pre><span></span><code>airsim-runs/produccion/&lt;lote&gt;/
+└── &lt;escenario&gt;/                         # stem del manifiesto: townsim_ini, citysim_pilot, …
+    └── &lt;brazo&gt;/                         # slm | fsm | reactive
+        └── &lt;estrategia&gt;/                # deep_vlm | blind
+            └── seed_&lt;N&gt;_&lt;timestamp&gt;/    # una carpeta autocontenida por corrida
+                ├── seed_&lt;N&gt;_&lt;ts&gt;.jsonl            # DroneState completo ciclo a ciclo
+                ├── seed_&lt;N&gt;_&lt;ts&gt;.csv              # misma corrida, tabular (columnas state.*)
+                ├── seed_&lt;N&gt;_&lt;ts&gt;.summary.json     # indicadores agregados
+                ├── seed_&lt;N&gt;_&lt;ts&gt;.summary_by_wp.csv
+                ├── seed_&lt;N&gt;_&lt;ts&gt;.console.log      # copia de la consola de la corrida
+                ├── seed_&lt;N&gt;_&lt;ts&gt;.webm / .follow.webm / .viewer.html
+                └── photo-&lt;timestamp_ISO&gt;.png      # fotogramas exactos enviados al VLM
 </code></pre></div>
-<p>La ruta <strong>es</strong> el registro del punto del diseño factorial al que pertenece la corrida: escenario, brazo, estrategia y semilla son directorios y nombre de archivo, no metadatos que haya que parsear. Los fotogramas de auditoría conviven en el directorio de la celda y se nombran por <em>timestamp</em> de captura con precisión de milisegundos (varios fotogramas de una misma deliberación —el barrido panorámico, por ejemplo— comparten segundo), de modo que se cruzan con la telemetría por el campo <code>slm_frame_paths</code> del CSV.</p>
+<p>La ruta <strong>es</strong> el registro del punto del diseño factorial al que pertenece la corrida: escenario, brazo, estrategia y semilla son directorios, no metadatos que haya que parsear, y ninguna corrida sobrescribe a otra. Los fotogramas de auditoría se nombran por <em>timestamp</em> de captura con precisión de milisegundos y se cruzan con la telemetría por el campo <code>slm_frame_paths</code> del CSV.</p>
 <p>El CSV plano por corrida contiene, además de la cinemática y las lecturas sectoriales del <code>ObstacleField</code>, el <strong>prompt completo y la respuesta cruda del VLM</strong> en cada deliberación, junto al identificador de la entrada correspondiente del JSONL. La decisión de duplicar esa información en el CSV es deliberada: permite analizar el comportamiento del modelo sin cruzar archivos.</p>
 <p>Cuando se usa <code>batch_runner.py</code>, se agrega en la raíz del directorio de salida un <code>RESULTS_SUMMARY.json</code> consolidado con una fila por combinación, y un <code>RESULTS_SUMMARY.batch_version.txt</code> con el hash del código que orquestó el batch (que puede diferir del <code>code_version</code> de las corridas si se redeployó a mitad de camino).</p>
-<h3 id="1092-artefactos-de-auditoria-de-corridas-interactivas">10.9.2 Artefactos de auditoría de corridas interactivas<a class="headerlink" href="#1092-artefactos-de-auditoria-de-corridas-interactivas" title="Permanent link">&para;</a></h3>
-<p>Las corridas <strong>interactivas</strong> (<code>main.py</code>, usadas para pilotos y diagnóstico) generan adicionalmente un directorio autónomo de auditoría <code>airsim-runs/&lt;mission_id&gt;-&lt;timestamp&gt;/</code> que incluye dos artefactos que <strong>el runner headless no produce</strong>, por diseño, para no gastar ciclos de CPU en un batch de 130 corridas:</p>
-<ul>
-<li><strong>Grabación de video continua sincronizada</strong>: <code>.webm</code> con códec VP8 (sin dependencias de licencias propietarias), grabado a la tasa nominal <code>LOOP_HZ</code>, con superposición de telemetría cinemática, lecturas sectoriales de TTC y nodo activo del grafo.</li>
-<li><strong>Visor interactivo offline (<code>viewer.html</code>)</strong>: aplicación web autocontenida —el CSV se embebe <em>inline</em>, no se carga por <code>fetch()</code>, de modo que el archivo funciona abierto directamente desde el disco— que vincula un deslizador temporal con el video y la tabla de telemetría, permitiendo inspeccionar sincronizadamente el prompt, los fotogramas y la respuesta del modelo en cada decisión.</li>
-</ul>
-<p>Esta asimetría entre corridas interactivas y batch es intencional y debe declararse: <strong>la evidencia audiovisual del comportamiento cualitativo proviene de las corridas piloto, la evidencia estadística proviene del batch.</strong> Si se desea video de una celda específica del batch, se re-corre esa combinación en modo interactivo con <code>FLIGHT_RECORD_VIDEO=true</code>.</p>
+<h3 id="1092-video-y-visor-de-auditoria">10.9.2 Video y visor de auditoría<a class="headerlink" href="#1092-video-y-visor-de-auditoria" title="Permanent link">&para;</a></h3>
+<p>Tanto las corridas interactivas (<code>main.py</code>) como las del runner generan, por defecto, el video anotado de la cámara frontal (<code>.webm</code>, VP8, un cuadro por ciclo con superposición de telemetría, TTC por sector y ruta activa), el video de la cámara de seguimiento externa (<code>.follow.webm</code>, solo auditoría) y un visor HTML autocontenido que sincroniza ambos videos con la traza por índice de ciclo y muestra el <code>DroneState</code> y la consulta al VLM de cada ciclo. La codificación corre en un hilo aparte para no alterar el período del lazo (cap. 5, §5.18). En lotes largos puede desactivarse con <code>--no-video</code>.</p>
 <h3 id="1093-trazabilidad-y-cuarentena-experimental">10.9.3 Trazabilidad y cuarentena experimental<a class="headerlink" href="#1093-trazabilidad-y-cuarentena-experimental" title="Permanent link">&para;</a></h3>
 <p>Cada corrida incorpora automáticamente el hash de commit de Git (<code>code_version</code>) en su <code>summary.json</code>, obtenido en el momento de cierre del logger. La verificación de que todas las corridas de un batch comparten <code>code_version</code> es un paso obligatorio del procedimiento (§10.5.2, paso 5).</p>
 <p>Se establece además una <strong>política estricta de cuarentena de datos</strong>: ningún vuelo anterior al <strong>2026-09-03</strong> se incluye en el análisis estadístico formal del capítulo 11. Los registros previos estuvieron expuestos a tres artefactos instrumentales ya corregidos que afectaban directamente <strong>lo que el modelo veía</strong>:</p>
@@ -3009,7 +3016,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong>Supresión espuria de los ángulos de <em>pitch<em> y </em>roll</em></strong> en las notas cinemáticas del prompt.</li>
 </ol>
 <p>Las corridas en cuarentena <strong>no se descartan como evidencia</strong>: siguen siendo válidas para establecer que una geometría es volable y que un corredor es transitable. Pero sus métricas de <code>slm_invocations</code>, <code>deliberation_rate</code> e histograma de rutas <strong>no son comparables</strong> con corridas posteriores al fix, y por tanto no entran a ninguna prueba estadística. La magnitud del efecto de los fixes justifica la severidad de la política: la <code>deliberation_rate</code> de <code>townsim_clear</code> cayó de 15.4 % (pre-fix) a 0.82 % (post-fix), una reducción de ×19 que ninguna diferencia entre brazos podría igualar.</p>
-<p><strong>Versionado del código.</strong> La política anterior trata artefactos instrumentales; el mismo criterio se aplica a los cambios de <em>software de decisión</em>. Cada <code>summary.json</code> registra el hash de commit (<code>code_version</code>) y solo se agrupan corridas con el mismo hash: agrupar corridas con software de decisión distinto mezclaría el efecto del software con el de los brazos. Los resultados del lote base (§11) corresponden a la configuración fijada al 8–9 de septiembre y no se agrupan con las corridas con obstrucción de §10.12 en ninguna prueba estadística. El hash identifica el último commit y <strong>no</strong> garantiza un árbol de trabajo limpio (una corrida con cambios sin confirmar registra el hash del commit anterior), por lo que cada lote debe correrse con el árbol confirmado y verificado antes de comenzar (§10.12).</p>
+<p><strong>Versionado del código.</strong> La política anterior trata artefactos instrumentales; el mismo criterio se aplica a los cambios de <em>software de decisión</em>. Cada <code>summary.json</code> registra el hash de commit (<code>code_version</code>) y solo se agrupan corridas con el mismo hash: agrupar corridas con software de decisión distinto mezclaría el efecto del software con el de los brazos. Los resultados del lote base (§11) corresponden a la configuración del 8–9 de septiembre y no se agrupan con corridas de otra configuración en ninguna prueba estadística; las corridas de diagnóstico sobre <code>citysim_pilot</code> se usan solo como evidencia de diagnóstico (cap. 9, §9.8). Los lotes con obstrucción de §10.12 deben correrse con el sistema descrito en los capítulos 5–8 y un único hash. El hash identifica el último commit y <strong>no</strong> garantiza un árbol de trabajo limpio (una corrida con cambios sin confirmar registra el hash del commit anterior), por lo que cada lote debe correrse con el árbol confirmado y verificado antes de comenzar (§10.12).</p>
 <h3 id="1094-publicacion">10.9.4 Publicación<a class="headerlink" href="#1094-publicacion" title="Permanent link">&para;</a></h3>
 <p>El conjunto de validación de TTC (cap. 7, 3735 registros), los archivos de telemetría del batch definitivo, los manifiestos de misión y la configuración completa (<code>config/.env</code>) serán archivados y publicados con un identificador digital persistente (DOI vía Zenodo), acompañados del hash de commit correspondiente, garantizando la auditabilidad y reproducibilidad de los resultados.</p>
 <p><em>(Para la especificación formal del archivo <code>settings.json</code>, el perfil de escalabilidad, la estructura detallada de los manifiestos de misión JSON y el protocolo de ejecución paso a paso, véase el <a href="anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html">Anexo 6</a>).</em></p>
@@ -3076,7 +3083,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <td>Traza la <strong>curva de degradación de la tasa de éxito en función del ancho del corredor</strong> (<a href="13-REFERENCIAS.html#ref-loquercio-2021">Loquercio et al., 2021</a>) — la única forma de responder "¿hasta qué angostura funciona el sistema?" en lugar de "¿funciona?". Es el experimento de mayor valor científico de la lista.</td>
 </tr>
 <tr>
-<td><code>citymap_pilot</code> con tráfico vehicular y agentes de IA activados × 5 semillas</td>
+<td><code>citysim_pilot</code> con tráfico vehicular y agentes de IA activados × 5 semillas</td>
 <td>Introduce <strong>obstáculos móviles</strong>, que el diseño actual no cubre. Es la extensión que más acerca el protocolo a la práctica de la literatura de conducción (<a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>) y la que mayor costo computacional implica por el aumento de varianza ambiental.</td>
 </tr>
 <tr>
@@ -3099,7 +3106,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <td>Separa lo que es propiedad de <strong>la arquitectura del sistema</strong> de lo que es propiedad del modelo concreto. Sin este experimento, toda conclusión sobre el brazo <code>slm</code> está condicionada a un único modelo — la limitación de validez externa más seria del diseño actual.</td>
 </tr>
 <tr>
-<td><code>townsim_calib_cruce_frontal</code> y <code>citymap_pilot</code> × <span class="arithmatex">\(K = 10\)</span> semillas</td>
+<td><code>townsim_calib_cruce_frontal</code> y <code>citysim_pilot</code> × <span class="arithmatex">\(K = 10\)</span> semillas</td>
 <td><strong>Mayor retorno estadístico por hora de máquina</strong>: eleva el <span class="arithmatex">\(p\)</span> mínimo alcanzable de <span class="arithmatex">\(7.9\times10^{-3}\)</span> a <span class="arithmatex">\(1.1\times10^{-5}\)</span> únicamente en las dos celdas donde la comparación es central (§10.4.4).</td>
 </tr>
 <tr>
@@ -3118,12 +3125,12 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <li><strong>Validez externa respecto del modelo.</strong> Todas las conclusiones sobre el brazo <code>slm</code> son conclusiones sobre Qwen2.5-VL-3B cuantizado, no sobre "modelos de lenguaje pequeños" en general. La mitigación es la comparación de modelos descrita en §10.10.4.</li>
 <li><strong>Efecto de sesión entre tiers.</strong> Los tres batches corren en sesiones y proyectos distintos, de modo que las comparaciones absolutas entre tiers no son limpias (§10.5.1). La mitigación parcial es el uso de razones normalizadas; la mitigación completa es la repetición de un batch en segunda sesión descrita en §10.10.4.</li>
 <li><strong>Ausencia de obstáculos dinámicos.</strong> Todo el diseño asume geometría estática. Las conclusiones no se extienden a entornos con agentes móviles, que es precisamente el escalón de dificultad que la literatura de conducción autónoma identifica como decisivo (<a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>). La mitigación es la extensión con agentes de IA descrita en §10.10.3.</li>
-<li><strong>Configuración distinta entre el lote base y los lotes con obstrucción.</strong> Las corridas con obstrucción (§10.12) se ejecutan con el sistema descrito en los capítulos 5–8, que difiere en control y percepción de la configuración con la que se ejecutó el lote base. Las comparaciones válidas son <em>dentro</em> de una configuración (mismo <code>code_version</code>); entre configuraciones solo es legítima la comparación descriptiva. La mitigación es fijar y verificar el hash antes de cada lote y descartar las corridas con otro hash.</li>
+<li><strong>Configuración distinta entre el lote base y los lotes con obstrucción.</strong> El lote base se ejecutó con una configuración del brazo <code>slm</code> distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas en lugar de proponer sub-metas ancladas, la detección de atasco era otra y el runner medía la distancia al obstáculo con el canal de profundidad. Las comparaciones válidas son <em>dentro</em> de una configuración (mismo <code>code_version</code>); entre configuraciones solo es legítima la comparación descriptiva. La mitigación es fijar y verificar el hash antes de cada lote y descartar las corridas con otro hash.</li>
 </ol>
 <p>Ninguna de estas limitaciones invalida el diseño para las preguntas que sí responde; todas acotan el alcance de lo que puede afirmarse a partir de él.</p>
 <h2 id="1012-lotes-con-obstruccion">10.12 Lotes con obstrucción<a class="headerlink" href="#1012-lotes-con-obstruccion" title="Permanent link">&para;</a></h2>
 <h3 id="10121-componentes-del-sistema-que-ejercen-los-escenarios-con-obstruccion">10.12.1 Componentes del sistema que ejercen los escenarios con obstrucción<a class="headerlink" href="#10121-componentes-del-sistema-que-ejercen-los-escenarios-con-obstruccion" title="Permanent link">&para;</a></h3>
-<p>Los escenarios despejados (los 45 runs de control del lote base) no ejercen la capa táctica: el TTC no baja del umbral y los detectores de atasco no disparan. Los escenarios con obstrucción sí, y son los que permiten validar los componentes siguientes y comparar <code>slm</code>, <code>fsm</code> y <code>reactive</code>:</p>
+<p>Los escenarios despejados del lote base no ejercen la capa táctica: el TTC no baja del umbral y los detectores de atasco no disparan. Los escenarios con obstrucción sí, y son los que permiten evaluar los componentes del sistema:</p>
 <table>
 <thead>
 <tr>
@@ -3134,71 +3141,59 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </thead>
 <tbody>
 <tr>
-<td>Profundidad monocular (Depth Anything V2 Metric)</td>
-<td>Freno proactivo (≤ 5 m) sin esperar obstrucción de flujo óptico</td>
-<td>§6.10b</td>
+<td>Capa estratégica del VLM</td>
+<td>Sub-metas ancladas a la pose del fotograma; si el modelo discrimina columnas libres de bloqueadas; si las sub-metas acercan al waypoint real</td>
+<td>§5.10, §8.3.2</td>
 </tr>
 <tr>
-<td>Clasificación de textura de profundidad</td>
-<td>Pista «follaje» / «superficie plana» en el prompt</td>
-<td>§5.6</td>
+<td>Consulta inmediata ante un muro (<code>GIRAR_90</code> + <code>expedite</code>)</td>
+<td>Que el rodeo se decida con el fotograma que ve el muro</td>
+<td>§5.9</td>
 </tr>
 <tr>
-<td>Memoria de trayectoria (<code>FlightTrajectory</code>)</td>
-<td>La evasión lateral y <code>GIRAR_90</code> no repiten el lado con stall ≥ 60–70 %; historia de zonas para la resolución de atasco</td>
-<td>§5.8, §5.9, §5.12.1</td>
+<td>Barrido <code>deep_vlm</code> en marco mundo</td>
+<td>Que la sub-meta de salida apunte al rumbo transitable más cercano a la meta</td>
+<td>§5.12, §8.3.3</td>
 </tr>
 <tr>
-<td>Aviso de obstáculo invisible (G1)</td>
-<td>Aviso al VLM cuando stall frontal ≥ 20 % con ocupación &lt; 15 %</td>
-<td>§5.6</td>
-</tr>
-<tr>
-<td><code>StallDetector</code></td>
-<td>Contacto IMU, pared ciega, parado, posición congelada y falta de progreso neto al waypoint</td>
+<td>Detección de atasco de dos señales</td>
+<td>Ausencia de deadlocks falsos (despegue, sub-metas nuevas) y presencia de los reales</td>
 <td>§5.3.1</td>
 </tr>
 <tr>
-<td>Overrides deterministas y <code>RETROCEDER</code></td>
-<td>El VLM no puede repetir acciones que la historia refutó; marcha atrás y esquina perpendicular al rumbo al waypoint</td>
-<td>§5.12.2, §5.12.3</td>
-</tr>
-<tr>
-<td>Escape vertical forzado</td>
-<td>Rompe el bloqueo cuando los escaneos son fútiles o la posición está congelada</td>
+<td>Escape vertical ante falla del VLM</td>
+<td>Que libere al dron de estructuras horizontales</td>
 <td>§5.3.4</td>
 </tr>
 <tr>
-<td>Detección de techo y cadena de esquinas</td>
-<td>Altitud limitada bajo estructuras horizontales; esquinas encadenadas alrededor de un obstáculo</td>
-<td>§5.15.3, §5.15.4</td>
+<td>Detección de techo</td>
+<td>Altitud limitada bajo estructuras horizontales</td>
+<td>§5.15.3</td>
 </tr>
 <tr>
-<td>Consulta asíncrona con caducidad</td>
-<td>El resultado del VLM llega a ejecutarse sin frenar el vuelo</td>
-<td>§5.10, §8.6</td>
+<td>Gobernador de velocidad</td>
+<td>Avance limitado sin evidencia perceptual</td>
+<td>§5.13</td>
 </tr>
 <tr>
-<td><code>land_smooth</code> y aborto por proximidad</td>
-<td>Aterrizaje sin caída libre; umbral 0.05 m con velocidad &lt; 0.1 m/s</td>
+<td>Vigilante de congelamiento</td>
+<td>Terminación <code>physics_locked</code></td>
 <td>§5.19</td>
 </tr>
 <tr>
-<td>Manifiesto <code>townsim_ini</code> con WP_0b y WP_1b</td>
-<td>Evita la canopy de la plaza y la moldura del edificio oeste</td>
-<td>§10.3.2</td>
+<td>Manifiestos <code>townsim_ini</code> (WP_0b, WP_1b) y <code>citysim_pilot</code> (WP_0_SUR)</td>
+<td>Evitan la canopy de la plaza, la moldura del edificio oeste y la autopista elevada</td>
+<td>§10.3.2, §10.3.3</td>
 </tr>
 </tbody>
 </table>
-<p>La mayoría de los umbrales de la capa táctica (por ejemplo, 7.5 m de altitud de techo o 30 ciclos de congelamiento) se fijaron sobre ejemplos únicos observados en corridas piloto (§5.12.2); ninguno está validado estadísticamente todavía.</p>
+<p>Ninguno de los umbrales de la capa estratégica (período de 3 s, edad máxima de 10 s, sub-meta a 15 m, ascenso de 4 m, deduplicación de 10 m) está validado en vuelo todavía.</p>
 <h3 id="10122-lotes-previstos">10.12.2 Lotes previstos<a class="headerlink" href="#10122-lotes-previstos" title="Permanent link">&para;</a></h3>
-<p>Se definen tres lotes con <code>AGENT_ARM ∈ {slm, fsm, reactive}</code> × 5 semillas, precedidos cada uno por un piloto de validación (semilla 99):</p>
 <table>
 <thead>
 <tr>
 <th>Lote</th>
 <th>Escenario</th>
-<th>Componentes que ejerce</th>
 <th>Corridas</th>
 <th>Presupuesto por corrida</th>
 <th>Tiempo estimado</th>
@@ -3208,35 +3203,32 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <tr>
 <td>D</td>
 <td><code>townsim_ini</code> (Tier 1, vegetación)</td>
-<td>Clasificación de profundidad, memoria de trayectoria, G1, Override 3, <code>StallDetector</code></td>
-<td>15</td>
+<td>20</td>
 <td>900 s · 4500 ciclos</td>
-<td>~2.0–2.5 h</td>
+<td>~3.0–3.5 h</td>
 </tr>
 <tr>
 <td>E</td>
 <td><code>townsim_calib_cruce_frontal</code> (Tier 1, bloqueo frontal)</td>
-<td>G1, D1, F1, Override 3</td>
-<td>15</td>
+<td>20</td>
 <td>900 s · 4500 ciclos</td>
-<td>~2.0–3.0 h</td>
+<td>~3.0–4.0 h</td>
 </tr>
 <tr>
 <td>F</td>
-<td><code>citymap_pilot</code> (Tier 2, corredores)</td>
-<td>Override 3a, memoria de trayectoria, G1, techo, cadena de esquinas</td>
-<td>15</td>
+<td><code>citysim_pilot</code> (Tier 2, rodeo de manzanas)</td>
+<td>20</td>
 <td>1200 s · 5000 ciclos</td>
-<td>~4.0–5.0 h</td>
+<td>~5.0–6.5 h</td>
 </tr>
 </tbody>
 </table>
-<p>Las estrategias de resolución de atasco (<code>slam_assess</code>, <code>deep_vlm</code>, <code>blind</code>) se comparan dentro de cada lote como factor adicional en el brazo <code>slm</code>. Criterios de pase de cada piloto: en D, <code>success = True</code>, Override 3 disparado al menos una vez y <code>deep_scan_resolution_rate &gt; 0</code>; en E, el dron llega al waypoint tras el edificio o al menos lo rodea; en F, avanza al menos dos waypoints sin colisión. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si el lote E o F muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (semillas 6–10; ~6–8 h adicionales), que es el camino previsto hacia la potencia que K = 5 no alcanza (§10.11, punto 1).</p>
-<p>Cada corrida se guarda en su propio directorio (<code>&lt;escenario&gt;/&lt;brazo&gt;/&lt;estrategia&gt;/seed_N_&lt;timestamp&gt;/</code>) con traza JSONL, CSV plano con el <code>DroneState</code> completo, video y visor (§5.18), de modo que ninguna corrida sobrescribe a otra.</p>
-<p><strong>Métricas adicionales.</strong> Además de las de §10.6, se registran: <code>ctrl_depth_proximity_m</code> y <code>ctrl_depth_obstacle_type</code> (cuánto y cuándo la profundidad fue el sensor decisivo, y con qué tipo de obstáculo); <code>ctrl_traj_{frente,izq,der}_stall_rate</code> (evidencia de que la memoria de trayectoria penalizó el lado más bloqueado); <code>ctrl_no_progress_cycles</code>, <code>_pos_freeze_cycles</code> y <code>_stopped_cycles</code> del <code>StallDetector</code>; los escaneos fútiles y escapes verticales (<code>_scan_track</code>); <code>field_source</code> (fracción de ciclos en que la profundidad contribuyó al campo); los campos <code>stuck_invisible</code>, <code>imu_contact</code>, <code>blind_wall</code>, <code>depth_below_cycles</code> de la traza; y la frecuencia de disparo de los overrides deterministas, como validación cualitativa de que el mecanismo está activo.</p>
-<p><strong>Condiciones de descarte y de invalidación.</strong> Se descarta una corrida individual si su <code>code_version</code> difiere del de referencia del lote, si el estimador de profundidad no inicializó, o si <code>total_cycles &lt; 50</code> (falla de infraestructura, no del dron). Se invalida un lote si contiene corridas con hashes distintos que no puedan reemplazarse, o si <code>depth_proximity_m</code> es cero en todos los eventos del brazo <code>slm</code> (estimador deshabilitado durante toda la corrida). Una corrida abortada por proximidad crítica (§5.19) termina con éxito falso y se cuenta como falla de misión, al igual que una colisión.</p>
+<p>Cada lote tiene cuatro celdas de 5 semillas: <code>slm × deep_vlm</code>, <code>fsm × deep_vlm</code>, <code>fsm × blind</code> (el contraste <strong>sin VLM en ningún punto</strong>, §10.2.2) y <code>reactive</code>. Cada lote va precedido por un piloto de validación (<code>slm × deep_vlm</code>, semilla 99). Criterios de pase: en D, el dron cruza el corredor arbolado; en E, rodea el edificio o al menos lo bordea; en F, alcanza WP_0_SUR y WP_1 sin quedar trabado sobre la autopista. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si un lote muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (§10.11, punto 1).</p>
+<p><strong>Comparaciones planificadas por lote.</strong> (i) <code>slm × deep_vlm</code> vs. <code>fsm × blind</code>: ¿aporta el VLM, en su uso completo, frente a un sistema sin VLM? (ii) <code>fsm × deep_vlm</code> vs. <code>fsm × blind</code>: ¿aporta el barrido con VLM en la resolución de atascos, con la misma política de lazo rápido? (iii) <code>slm × deep_vlm</code> vs. <code>fsm × deep_vlm</code>: ¿aporta la capa estratégica? La familia de Bonferroni de §10.7.3 se amplía en consecuencia.</p>
+<p><strong>Métricas adicionales.</strong> Además de las de §10.6: la distribución de resultados de la capa estratégica y el avance hacia el waypoint real tras cada sub-meta (§10.6.3); las señales del <code>StallDetector</code> (<code>_stopped_cycles</code>, <code>_wp_no_progress_cycles</code>, <code>imu_contact_event</code>, <code>blind_wall_event</code>) y qué señal disparó cada deadlock; los deadlocks en los primeros 30 ciclos (deben ser cero: el despegue no es un atasco, cap. 5 §5.3.1); y la fracción de ciclos con el gobernador de velocidad activo (<code>_speed_cap</code>).</p>
+<p><strong>Condiciones de descarte y de invalidación.</strong> Se descarta una corrida individual si su <code>code_version</code> difiere del de referencia del lote o si <code>total_cycles &lt; 50</code> (falla de infraestructura, no del dron). Se invalida un lote si contiene corridas con hashes distintos que no puedan reemplazarse. Una corrida terminada por <code>physics_locked</code> termina con éxito falso y se cuenta como falla de misión, al igual que una colisión.</p>
 <h3 id="10123-estado">10.12.3 Estado<a class="headerlink" href="#10123-estado" title="Permanent link">&para;</a></h3>
-<p>A la fecha de este informe <strong>no se ejecutó ningún lote con obstrucción con hash fijo</strong>. Las corridas piloto sobre <code>townsim_ini</code> (semilla 99, brazo <code>slm</code>) y <code>citysim_pilot</code> son corridas de diagnóstico: en cada una se ajustó el sistema a partir de lo observado, de modo que ninguna constituye evidencia estadística ni entra al capítulo 11. Se las usa únicamente, con esa etiqueta, como evidencia de diagnóstico en los capítulos 5 y 9. La actualización del capítulo 11 (§11.4.2b, §11.4.2c, §11.4.3b y §11.5) y de la evaluación de H1 en el capítulo 12 queda pendiente de la ejecución de los lotes D, E y F sobre un <code>code_version</code> fijo.</p>
+<p>A la fecha de este informe <strong>no se ejecutó ningún lote con obstrucción</strong>. Las corridas piloto sobre <code>townsim_ini</code> y las 12 corridas de diagnóstico sobre <code>citysim_pilot</code> fueron corridas de diagnóstico, con ajustes entre una y otra, de modo que ninguna constituye evidencia estadística ni entra al capítulo 11; se usan, con esa etiqueta, como evidencia de diagnóstico en el capítulo 9. La actualización del capítulo 11 y de la evaluación de H1 en el capítulo 12 queda pendiente de la ejecución de los lotes D, E y F sobre un <code>code_version</code> fijo.</p>
 
 
 

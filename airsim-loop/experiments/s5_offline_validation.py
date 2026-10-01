@@ -31,7 +31,7 @@ from typing import List, Optional, Tuple
 # ─── carga directa de spatial_history sin importar el árbol de src ──────────
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-_sh_path = REPO_ROOT / "src" / "agents" / "spatial_history.py"
+_sh_path = REPO_ROOT / "src" / "agents" / "legacy" / "spatial_history_v2.py"  # movido 2026-0930
 _spec = importlib.util.spec_from_file_location("spatial_history", _sh_path)
 _mod = importlib.util.module_from_spec(_spec)   # type: ignore[arg-type]
 sys.modules["spatial_history"] = _mod

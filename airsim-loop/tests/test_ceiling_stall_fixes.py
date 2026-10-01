@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 import src.agents.deep_scan as deep_scan_mod
-import src.agents.deliberative as deliberative_mod
+import src.agents.vlm_client as deliberative_mod
 import src.navigation.waypoint_tracker as wt
 from src.agents.graph import _build_nodes
 from src.navigation.waypoint_tracker import CEILING_DETECT_CYCLES, WaypointTracker
@@ -121,10 +121,12 @@ def test_below_optical_floor_without_ceiling_stays_pure_reactive(nodes):
     assert int(state.get("_deadlock_cycles", 0)) == 0
 
 
-def test_orphan_scan_is_dropped_after_idle_cycles(nodes):
+def test_scan_in_progress_owns_the_drone_until_resolved(nodes):
+    """2026-0930: reemplaza la deteccion de escaneo "huerfano" (71 descartes en las corridas v2): un
+    barrido en curso tiene prioridad en navigate_node hasta resolver o caer por sus watchdogs."""
     state = _state(z=-10.0, ceiling=None)
-    state["telemetry"]["velocity"]["vx"] = 2.0                        # volando: el detector de atasco no llama al escaneo
-    state.update({"_scan_phase": "rotando", "_scan_started_ts": time.time(), "_deliberation_pending": True})
-    for _ in range(30):
-        state = nodes["navigate"](state)
-    assert state.get("_scan_phase") is None and state.get("_deliberation_pending") is False
+    state["telemetry"]["velocity"]["vx"] = 2.0                        # volando: ningun detector de atasco activo
+    state.update({"_scan_phase": "rotando", "_scan_started_ts": time.time(), "_scan_start_yaw_deg": 0.0,
+                  "_scan_heading_index": 1, "_deliberation_pending": True})
+    state = nodes["navigate"](state)
+    assert state["next_action"] == "ESCANEO" and state.get("_scan_phase") is not None

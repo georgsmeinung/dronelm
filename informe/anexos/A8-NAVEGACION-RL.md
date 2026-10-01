@@ -26,9 +26,9 @@ diferenciada:
 El brazo `rl` ocupa la **capa táctica**: recibe el frame RGB actual, el `ObstacleField`
 producido por `FlowTTCEstimator` y la telemetría de guiado (`waypoint_guidance`), y
 produce directamente una macro-acción del mismo vocabulario que usan `fsm_node` y
-`evasive_node`. La capa deliberativa (VLM) sigue activa en modo jerárquico: puede inyectar
-waypoints de desvío (`inject_corner`) o llamar a `slam_assess` ante atascos duros, igual
-que con los brazos existentes.
+`evasive_node`. La capa estratégica del VLM sigue activa en modo jerárquico: puede inyectar sub-metas en
+coordenadas del mundo (`inject_corner`) y resolver atascos duros con el barrido `deep_vlm`,
+igual que con los brazos existentes (cap. 5, §5.10, §5.12).
 
 Esta posición garantiza que la comparación de los cuatro brazos (`reactive`, `fsm`, `slm`,
 `rl`) mida exclusivamente **quién elige mejor la táctica**, no quién tiene mejor lógica de
@@ -182,9 +182,8 @@ parcialmente por tres decisiones de diseño:
    generalización a geometrías urbanas variadas en lugar de memorizar un circuito.
 
 3. **Capa deliberativa activa**: cuando la política RL entra en un estado no representado
-   en el entrenamiento (alta entropía de acción, múltiples ciclos de `FRENAR`), el nodo
-   deliberativo puede invocar `slam_assess` para recuperar el control, igual que con los
-   brazos `fsm` y `reactive`. Esto limita la región de fallo catastrófico de la política
+   en el entrenamiento (alta entropía de acción, múltiples ciclos de `FRENAR`), el barrido
+   `deep_vlm` puede resolver el atasco y proponer una salida, igual que con el brazo `fsm`. Esto limita la región de fallo catastrófico de la política
    neuronal.
 
 La validación en escenarios no vistos durante el entrenamiento —especialmente
@@ -255,10 +254,10 @@ especializada en el espacio de maniobras de este sistema.
 La implementación del brazo `rl` tiene las siguientes dependencias sobre el trabajo ya
 realizado:
 
-- **S6 completado** (PLAN-SLAM): la corrida comparativa `slm` vs. `fsm` vs. `reactive`
+- **Lotes D, E y F completados** (cap. 10, §10.12): la corrida comparativa `slm` vs. `fsm` vs. `reactive`
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.
-- **Brazo `slm` validado** con `DEADLOCK_STRATEGY=slam_assess`: la política RL se entrenará
+- **Brazo `slm` validado** con `DEADLOCK_STRATEGY=deep_vlm`: la política RL se entrenará
   en el mismo entorno de simulación en el que se midió el `slm`; si ese entorno cambia
   durante el entrenamiento, los resultados no son comparables.
 

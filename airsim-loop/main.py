@@ -133,45 +133,6 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
         print(f"  Control    : [{route_tag}] {action} -> vx={vx:+.2f} vy={vy:+.2f} vz={vz:+.2f} yaw={yaw:+.1f}°/s{rat_str}")
 
 
-def _update_delib_outcomes(drone_state: DroneState, guidance: dict) -> None:
-    """F2.2: memoria corta de resultados de deliberaciones previas para el prompt.
-
-    Compara la distancia al waypoint y el TTC minimo entre el momento en que
-    se tomo la ultima decision deliberativa y el ciclo actual, para que el
-    prompt del SLM incluya el efecto medido de su decision anterior en lugar
-    de re-decidir en el vacio.
-    """
-    baseline = drone_state.get("_delib_baseline")
-    current_dist = guidance.get("distance", 0.0)
-    current_ttc = drone_state.get("estimated_ttc", float("inf"))
-
-    if baseline is not None:
-        outcomes = list(drone_state.get("_delib_outcomes") or [])
-        delta_ttc = None
-        if baseline["min_ttc"] != float("inf") and current_ttc != float("inf"):
-            delta_ttc = current_ttc - baseline["min_ttc"]
-        outcomes.append({
-            "macro_action": baseline["macro_action"],
-            "delta_dist_wp": baseline["dist"] - current_dist,
-            "delta_min_ttc": delta_ttc,
-        })
-        drone_state["_delib_outcomes"] = outcomes[-5:]
-        drone_state["_delib_baseline"] = None
-
-    deliberations = drone_state.get("deliberations") or []
-    if deliberations and drone_state.get("route") == "deliberative" and drone_state.get("next_action") != "FRENAR":
-        last = deliberations[-1]
-        # Solo fijar nueva baseline si esta deliberacion todavia no genero una
-        # (evita sobreescribir con el mismo id en ciclos de espera consecutivos).
-        if drone_state.get("_delib_last_baselined_id") != last.get("id"):
-            drone_state["_delib_baseline"] = {
-                "macro_action": last.get("macro_action", ""),
-                "dist": current_dist,
-                "min_ttc": current_ttc,
-            }
-            drone_state["_delib_last_baselined_id"] = last.get("id")
-
-
 def main() -> None:
     print(f"Inicializando drone autonomo con LangGraph + AirSim... [AGENT_ARM={AGENT_ARM}]")
     import json
@@ -408,22 +369,17 @@ def main() -> None:
             # blind vs. deep_vlm. Mismo patron que _escape_reset arriba: se
             # consume con pop() en el lazo, nunca queda pisando el estado.
             deadlock_event = drone_state.pop("_deadlock_event", None)
-            if deadlock_event:
-                # Punto de contacto para la cadena de esquinas (waypoint_tracker.py).
-                waypoint_tracker.record_contact(pos_now.get("x", 0.0), pos_now.get("y", 0.0))
             # Instrumentacion de auditoria VLM (2026-0901): frames RAW del
             # ciclo exacto en que una deliberacion se resolvio, si los hay.
             # Mismo patron de canal de una sola pasada -- se consumen aca y
             # nunca quedan viviendo en drone_state.
             delib_frames = drone_state.pop("_last_delib_frames", None)
 
-            _update_delib_outcomes(drone_state, guidance)
-
             corner = final_state.get("inject_corner")
             if corner and isinstance(corner, dict):
                 injected = waypoint_tracker.inject_corner_waypoint(
                     corner.get("x", 0.0), corner.get("y", 0.0), corner.get("z", -10.0),
-                    label=corner.get("label", "CORNER_WP"),
+                    label=corner.get("label", "VLM_SUBGOAL"),
                 )
                 final_state["inject_corner"] = None
                 if injected:

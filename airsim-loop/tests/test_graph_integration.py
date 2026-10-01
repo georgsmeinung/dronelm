@@ -1,241 +1,147 @@
-"""Prueba de integracion end-to-end del grafo compilado, sin AirSim real.
+"""Integracion end-to-end del grafo COMPILADO (sin AirSim real), 2026-0930.
 
-Usa un AirSimClient stub (misma interfaz: capture/execute_velocity/get_telemetry)
-y un query_fn del SLM instantaneo para no depender de un servidor real ni de
-timeouts de red. Cubre F0.2 (una sola entrada en deliberations[] por ciclo
-resuelto) y que el grafo compila y corre un ciclo completo sin excepciones.
+Las claves de control cruzan la frontera graph.invoke() solo si estan declaradas en DroneState:
+estos tests corren el grafo compilado, no los nodos sueltos, porque ese bug solo existe ahi.
 """
 from __future__ import annotations
 
 import time
 
 import numpy as np
-import pytest
 
-import src.agents.deliberative as deliberative_mod
-from src.agents.graph import compile_workflow
+import src.agents.deep_scan as deep_scan_mod
+import src.agents.vlm_client as vlm_client
 
 
-class _StubAirSimClient:
+class _StuckClient:
+    """Dron a 10 m que recibe orden de avanzar pero no se mueve (trabado)."""
+
     def __init__(self):
-        self.loop_hz = 5.0
-        self._t = 0.0
         self.commands = []
+        self.yaw = 0.0
 
     def capture(self):
-        self._t += 0.2
-        frame = np.random.randint(0, 255, size=(120, 160, 3), dtype=np.uint8)
-        telemetry = {
+        frame = np.zeros((72, 108, 3), dtype=np.uint8)  # sin textura: el flujo no da evidencia
+        return frame, {
             "position": {"x": 0.0, "y": 0.0, "z": -10.0},
             "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0},
-            "orientation": {"pitch": 0.0, "roll": 0.0, "yaw": 0.0},
+            "orientation": {"pitch": 0.0, "roll": 0.0, "yaw": self.yaw},
             "collision": {"has_collided": False, "object_name": ""},
-            "timestamp": self._t,
-            "source": "airsim",
-        }
-        return frame, telemetry
-
-    def get_telemetry(self):
-        return {
-            "position": {"x": 0.0, "y": 0.0, "z": -10.0},
-            "velocity": {"vx": 0.0, "vy": 0.0, "vz": 0.0},
-            "orientation": {"pitch": 0.0, "roll": 0.0, "yaw": 0.0},
-            "collision": {"has_collided": False, "object_name": ""},
-            "timestamp": self._t,
-            "source": "airsim",
+            "timestamp": time.time(), "source": "airsim",
         }
 
     def execute_velocity(self, vx, vy, vz, yaw_rate=0.0, target_yaw=None):
         self.commands.append((vx, vy, vz, yaw_rate, target_yaw))
+        if target_yaw is not None:  # el giro del barrido se completa al instante
+            import math
+            self.yaw = math.radians(target_yaw)
         return True
 
 
-def _instant_fallback_query(payload):
-    # Simula "SLM no disponible": el nodo debe usar el fallback determinista.
-    return None, "", 5.0, "stub: no hay servidor SLM en el test"
-
-
-def _base_state():
+def _state():
+    wp = {"x": 100.0, "y": 0.0, "z": -10.0, "label": "WP_1"}
     return {
-        "waypoints": [],
-        "current_wp_index": 0,
-        "target_waypoint": None,
-        "waypoint_guidance": {},
-        "mission_completed": False,
-        "rgb_image": None,
-        "telemetry": {},
-        "frame_history": [],
-        "estimated_ttc": float("inf"),
-        "next_action": "",
-        "flight_status": "vuelo",
-        "deliberations": [],
-        "active_maneuver": None,
-        "maneuver_cycles_left": 0,
-        "maneuver_command": None,
-        "evasion_stuck_cycles": 0,
-        "slm_request_id": None,
+        "waypoints": [wp], "current_wp_index": 0, "target_waypoint": wp,
+        "waypoint_guidance": {"target_wp": wp, "distance": 100.0, "dist_xy": 100.0, "bearing_err_deg": 0.0,
+                              "vx": 2.0, "vy": 0.0, "vz": 0.0, "yaw_rate": 0.0, "ceiling_z": None},
+        "deliberations": [], "evasion_stuck_cycles": 0, "active_maneuver": None, "maneuver_cycles_left": 0,
+        "slm_request_id": None, "next_action": "",
     }
 
 
-def test_graph_compiles_and_runs_one_cycle(monkeypatch):
-    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
-    client = _StubAirSimClient()
-    graph, service = compile_workflow(client)
-    try:
-        state = _base_state()
-        result = graph.invoke(state)
-        assert "velocity_command" in result
-        assert len(client.commands) == 1
-    finally:
-        service.stop()
+def _panorama_query(seen):
+    def _q(payload):
+        seen.append(payload.get("mode"))
+        if payload.get("mode") == "deep_scan":
+            n = len(payload.get("images_b64") or [])
+            rumbos = [{"img": i + 1, "tipo": "fachada", "transitable": False, "relativo_deg": 0.0, "confianza": 0.8}
+                      for i in range(n)]
+            rumbos[1]["tipo"], rumbos[1]["transitable"] = "libre", True  # imagen 2 (+90 deg) libre
+            return ({"rumbos": rumbos, "imagen_degradada_global": False, "rationale": ""}, "raw", 5.0, None)
+        return None, "", 5.0, "sin estrategico en este test"
+    return _q
 
 
-def test_single_cycle_produces_at_most_one_new_deliberation(monkeypatch):
-    """Regresion F0.2: la version original invocaba al SLM dos veces por
-
-    ciclo cuando el router entraba en la rama de deliberacion (un nodo
-    devolvia el resultado de llamar directamente a otro, y ademas el grafo
-    tenia una arista hacia el mismo destino). Aca, sea cual sea el numero de
-    invocaciones de graph.invoke() que hagan falta para que la deliberacion
-    asincrona se resuelva, nunca debe haber mas de una entrada nueva en
-    deliberations[] por resolucion.
-    """
-    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
-    monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
-
-    client = _StubAirSimClient()
-    graph, service = compile_workflow(client)
-    try:
-        state = _base_state()
-        # Forzar la rama deliberativa via el escape de deadlock (no depende
-        # de la estimacion real de flujo optico, que con frames aleatorios
-        # no produce evidencia).
-        state["evasion_stuck_cycles"] = 999
-
+def _run(graph, state, n, stop=None):
+    for _ in range(n):
         state = graph.invoke(state)
-        len_after_first = len(state.get("deliberations", []))
+        if stop and stop(state):
+            break
+        state.pop("_escape_reset", None)
+        time.sleep(0.01)
+    return state
 
-        # El escape de deadlock es sincronico (no pasa por el servicio async),
-        # asi que ya debe haber exactamente una entrada.
-        assert len_after_first <= 1
+
+def test_graph_compiles_and_runs_one_cycle(monkeypatch):
+    monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
+    monkeypatch.setattr(vlm_client, "_query_slm_impl", lambda p: (None, "", 1.0, "stub"))
+    from src.agents.graph import compile_workflow
+
+    client = _StuckClient()
+    graph, service = compile_workflow(client)
+    try:
+        state = graph.invoke(_state())
+        assert state["next_action"] and len(client.commands) == 1
     finally:
         service.stop()
 
 
-def test_control_keys_survive_graph_invoke(monkeypatch):
-    """Regresion del deadlock del 2026-0824.
-
-    LangGraph construye los canales del grafo a partir del esquema DroneState
-    y DESCARTA en silencio toda clave que un nodo escriba y no este declarada
-    ahi. `_escape_reset` no lo estaba: el nodo deliberativo lo marcaba, el
-    lazo de main.py/runner.py lo leia para llamar a
-    `WaypointTracker.reset_progress()` -- y nunca llegaba. El contador de
-    atasco jamas se reiniciaba, el router quedaba clavado en la rama
-    deliberativa y el nodo en su rama de escape: 76 ciclos de vuelo real sin
-    una sola consulta al SLM.
-
-    Este test corre el grafo COMPILADO (no el nodo suelto) porque el bug solo
-    existe en esa frontera: los tests que invocan `deliberative_node(dict)`
-    directamente pasaban con el bug presente.
-    """
-    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
+def test_stuck_drone_scans_and_vlm_subgoal_crosses_graph_boundary(monkeypatch):
     monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
+    monkeypatch.setattr(deep_scan_mod, "DEADLOCK_STRATEGY", "deep_vlm")
+    monkeypatch.setattr(deep_scan_mod, "SCAN_SETTLE_CYCLES_DEEP", 1)
+    seen = []
+    monkeypatch.setattr(vlm_client, "_query_slm_impl", _panorama_query(seen))
+    from src.agents.graph import compile_workflow
 
-    client = _StubAirSimClient()
-    graph, service = compile_workflow(client)
+    graph, service = compile_workflow(_StuckClient())
     try:
-        state = _base_state()
-        state["evasion_stuck_cycles"] = 9999  # atasco duro: fuerza la rama de escape
-        state["_delib_baseline"] = {"macro_action": "GANAR_ALTURA", "dist": 10.0, "min_ttc": 1.0}
-        state["inject_corner"] = {"x": 1.0, "y": 2.0, "z": -10.0, "label": "CORNER_TEST"}
-
-        result = graph.invoke(state)
-
-        # Escritas por el nodo: deben cruzar la frontera hacia el lazo.
-        assert result.get("_escape_reset") is True
-        assert result.get("_consecutive_escapes") == 1
-        assert "_escape_baseline_dist" in result
-        # Escritas por el lazo: deben sobrevivir al invoke sin que el nodo las toque.
-        assert result.get("_delib_baseline") == state["_delib_baseline"]
-        assert result.get("inject_corner") == state["inject_corner"]
+        state = _run(graph, _state(), 120, stop=lambda s: s.get("inject_corner") is not None)
+        corner = state.get("inject_corner")
+        assert "deep_scan" in seen
+        assert corner and corner["label"] == "VLM_SCAN_GOAL"
+        assert state.get("_escape_reset") is True                      # reinicia el tracker en el lazo
+        assert state.get("_deadlock_event", {}).get("resolved_by_scan") is True
+        assert any(d.get("arm") == "slm_deep_scan" for d in state["deliberations"])
+        assert "RETROCEDER" not in {d.get("macro_action") for d in state["deliberations"]}
     finally:
         service.stop()
 
 
-def test_stall_counter_resets_after_escape_in_main_loop(monkeypatch):
-    """El escape debe reiniciar el contador de atasco a traves del lazo real.
+def test_blind_strategy_climbs_without_calling_the_vlm(monkeypatch):
+    import src.agents.graph as graph_mod
 
-    Replica el acoplamiento grafo <-> WaypointTracker de main.py/runner.py. Sin
-    el fix, `progress_stall_cycles` crecia monotono (5, 6, 8, 9, 11, ... en el
-    log de vuelo) y el escape se re-disparaba cada ciclo para siempre.
-    """
-    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
-    monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
+    monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
+    monkeypatch.setattr(deep_scan_mod, "DEADLOCK_STRATEGY", "blind")
+    seen = []
+    monkeypatch.setattr(vlm_client, "_query_slm_impl", _panorama_query(seen))
+    from src.agents.graph import compile_workflow
 
-    from src.navigation.waypoint_tracker import WaypointTracker, effective_stall_threshold
-    from src.perception import FlowTTCEstimator
-    from src.perception.obstacle_field import empty_field
-
-    # Frames aleatorios producen un ObstacleField impredecible; aca interesa
-    # el acoplamiento contador <-> escape, no la percepcion.
-    monkeypatch.setattr(FlowTTCEstimator, "estimate", lambda self, *a, **kw: empty_field())
-
-    client = _StubAirSimClient()
-    graph, service = compile_workflow(client)
+    graph, service = compile_workflow(_StuckClient())
     try:
-        tracker = WaypointTracker([{"x": 100.0, "y": 0.0, "z": -10.0, "label": "WP1"}])
-        state = _base_state()
-        threshold = effective_stall_threshold()
+        state = _run(graph, _state(), 30, stop=lambda s: s.get("next_action") == "GANAR_ALTURA")
+        assert state["next_action"] == "GANAR_ALTURA"
+        assert state["_deadlock_event"]["fell_back_to_blind"] is True
+        assert "deep_scan" not in seen
+    finally:
+        service.stop()
 
-        escapes = 0
-        for _ in range(threshold * 3):
-            guidance = tracker.compute_guidance({"x": 0.0, "y": 0.0, "z": -10.0}, current_yaw=0.0)
-            if not state.get("_deliberation_pending", False):
-                tracker.record_progress(guidance["dist_xy"])  # posicion fija: nunca progresa
-            state["waypoint_guidance"] = guidance
-            state["evasion_stuck_cycles"] = tracker.progress_stall_cycles
+
+def test_at_most_one_vlm_request_per_cycle(monkeypatch):
+    monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
+    monkeypatch.setattr(vlm_client, "_query_slm_impl", lambda p: (None, "", 1.0, "stub"))
+    from src.agents.graph import compile_workflow
+
+    graph, service = compile_workflow(_StuckClient())
+    calls = []
+    original = service.request
+    service.request = lambda payload: calls.append(payload) or original(payload)
+    try:
+        state = _state()
+        for _ in range(40):
+            before = len(calls)
             state = graph.invoke(state)
-            if state.pop("_escape_reset", False):
-                tracker.reset_progress()
-                escapes += 1
-                assert tracker.progress_stall_cycles == 0
-
-        # Con el contador reiniciandose, los escapes quedan espaciados por al
-        # menos `threshold` ciclos en vez de dispararse en cada ciclo.
-        assert 0 < escapes <= 3
-    finally:
-        service.stop()
-
-
-def test_deliberative_branch_resolves_to_single_entry_via_service(monkeypatch):
-    monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _instant_fallback_query)
-
-    from src.agents.deliberative import make_deliberation_service, make_deliberative_node
-    from src.perception.obstacle_field import BANDS, SECTORS, Cell, ObstacleField
-
-    service = make_deliberation_service()
-    node = make_deliberative_node(service)
-    try:
-        cells = {
-            (s, b): Cell(sector=s, band=b, occupancy=0.9, ttc_s=1.0, confidence=0.9)
-            for s in SECTORS for b in BANDS
-        }
-        field = ObstacleField(cells=cells, source="flow", foe=(0.0, 0.0), foe_confidence=1.0)
-        state = _base_state()
-        state["obstacle_field"] = field
-
-        state = node(state)  # primer ciclo: encola el pedido, frena
-        assert len(state.get("deliberations", [])) == 0
-        assert state["next_action"] == "FRENAR"
-        assert state["slm_request_id"] is not None
-
-        deadline = time.time() + 2.0
-        while time.time() < deadline:
-            state = node(state)
-            if len(state.get("deliberations", [])) >= 1:
-                break
-            time.sleep(0.01)
-
-        assert len(state["deliberations"]) == 1  # nunca mas de una entrada por resolucion
+            assert len(calls) - before <= 1
+            state.pop("_escape_reset", None)
     finally:
         service.stop()

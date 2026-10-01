@@ -28,9 +28,11 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 
 ```json
 {
-  "mission_id": "CITYSIM_CLEAR_01",
-  "summary": "Patrón de patrullaje urbano sobre cuadrícula con 7 waypoints.",
+  "mission_id": "CITYMAP_PILOT",
+  "summary": "Tier 2: circuito tipo grilla urbana sobre citymap.png ...",
+  "start_pose": { "x": 0.0, "y": 0.0, "z": -10.0, "yaw_deg": 90.0 },
   "waypoints": [
+    {"x": -11.0, "y": -50.5,  "z": -10.0, "label": "WP_0_SUR"},
     {"x": 26.1,  "y": -78.2,  "z": -10.0, "label": "WP_1"},
     {"x": 68.9,  "y": -78.6,  "z": -10.0, "label": "WP_2"},
     {"x": 67.7,  "y": -145.0, "z": -10.0, "label": "WP_3"},
@@ -39,31 +41,25 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
     {"x": -17.9, "y": -78.6,  "z": -10.0, "label": "WP_6"},
     {"x": 12.5,  "y": -78.6,  "z": -10.0, "label": "WP_7"}
   ],
-  "map": "citysim_calib.png"
+  "map": "citymap.png"
 }
 ```
+
+*Manifiesto vigente `citysim_pilot.json` (2026-09-30; cap. 10 §10.3.3 explica `WP_0_SUR` y el cambio de mapa).*
 
 ### Componentes del contrato:
 - **`mission_id`:** identificador único en formato `^[A-Z0-9_]{3,32}$`, validado por el schema. Identifica el escenario experimental y aparece en los nombres de carpeta de telemetría.
 - **`summary`:** descripción textual de la intención operativa (campo opcional, no consumido por el lazo táctico).
 - **`waypoints`:** lista ordenada de puntos de paso tridimensionales en el marco **NED** (*North-East-Down*): $z < 0$ representa altitud sobre el punto de despegue. Cada waypoint lleva una etiqueta opcional (`label`) para identificación en la traza.
-- **`map`:** nombre del archivo de imagen de carta de territorio empleado por WebDCS para la visualización de la trayectoria (por defecto `map.png`).
+- **`map`:** nombre del archivo de imagen de carta de territorio empleado por WebDCS para la visualización de la trayectoria (por defecto `map.png`). La escala (px/m) y el origen de cada imagen se declaran en `airsim-plan/missions/maps/map_scales.json`; un mapa mal registrado no afecta al vuelo pero sí a la planificación de coordenadas (cap. 10 §10.3.3).
+- **`start_pose`** (opcional): pose de partida; solo se usa con `--seed-jitter`, porque el runner devuelve el dron al *spawn* de `settings.json` (cap. 10 §10.4.3). Debe coincidir con ese *spawn*.
 
-**Separación entre manifiesto y prompt táctico.** El manifiesto entrega únicamente metas geométricas; el prompt táctico del VLM no forma parte de él porque no puede ser un texto estático: se construye dinámicamente en cada ciclo de vuelo a partir del estado percibido en ese instante. Su estructura es la siguiente:
+**Separación entre manifiesto y prompts del VLM.** El manifiesto entrega únicamente metas geométricas; los prompts del VLM no forman parte de él porque no pueden ser textos estáticos: se construyen en vuelo a partir del fotograma, la pose y el waypoint activo de ese instante. Hay dos (cap. 5 §5.10, §5.12; cap. 8 §8.5):
 
-**System prompt (estático, fijo en `deliberative.py`):** define el rol del modelo, las reglas de navegación urbana y el conjunto cerrado de macro-acciones posibles. Existen dos variantes — `SYSTEM_PROMPT_TEXT` (solo texto, para SLMs sin capacidad visual) y `SYSTEM_PROMPT_VISION` (texto + imágenes, para VLMs multimodales) — seleccionadas en tiempo de ejecución por la variable de entorno `VLM_VISION_ENABLED`.
+1. **Prompt estratégico** (`vlm_strategic.py`): el fotograma frontal con cinco columnas dibujadas y la marca «META» sobre la columna del destino, más la distancia al destino y la altura del dron. El modelo responde, para cada columna, si se puede volar recto 15 m por ella, y si hay una estructura horizontal cercana.
+2. **Prompt del barrido** (`deep_scan.py`, solo en un deadlock): cuatro imágenes numeradas tomadas girando en el lugar, con el ángulo de cada una respecto de la dirección de vuelo y cuál es la más cercana al destino. El modelo describe cada imagen.
 
-**User prompt (dinámico, construido por `_build_user_prompt()` en cada ciclo):** combina los siguientes componentes:
-
-1. **Resumen del ObstacleField:** estado de los tres sectores de percepción (centro, izquierda, derecha), con TTC estimado y nivel de ocupación por sector.
-2. **Objetivo y altitud:** waypoint activo (etiqueta, distancia horizontal, error de rumbo en grados y dirección relativa), altitud actual y cota segura de operación.
-3. **Estado cinemático:** velocidad horizontal y actitud (pitch, roll) en el ciclo actual. Si el dron está prácticamente detenido (`< 0.3 m/s`), se indica explícitamente — porque un frame estático sin traslación no aporta evidencia de flujo óptico, y sin ese contexto el modelo tiende a sobre-interpretar la imagen.
-4. **Avisos de contexto:** ciclos sin progreso hacia el waypoint, tasa de stall frontal de la trayectoria reciente (cuando supera el 50 %) y nivel de vibración del IMU (cuando no es normal), que le dan al modelo la evidencia de bloqueo que el flujo óptico no ve.
-5. **Motivo de consulta:** distingue si se consulta al VLM porque el sector central registra un obstáculo real (con TTC medido) o porque la percepción no tiene evidencia suficiente en este ciclo (confianza baja por falta de traslación o rotación reciente) — dos causas con implicaciones muy distintas para la decisión.
-
-El constructor admite además un historial de las últimas deliberaciones (macro-acción y resultado medido) y las sub-metas semánticas previas; el pedido táctico del lazo no los incluye.
-
-La respuesta del modelo se fuerza mediante decodificación restringida (`json_schema`, si el servidor lo soporta) al formato `{"macro_action": "<ACCION>", "rationale": "<texto>"}`, con temperatura 0.2 y límite de 200 tokens. Si el servidor no soporta `json_schema`, un parser tolerante (`_parse_decision()`) extrae la decisión del texto libre como red de seguridad. Ante timeout del watchdog o respuesta no parseable, se activa una heurística determinista sobre el ObstacleField (`_fallback_decision()`).
+Ambas respuestas se fuerzan con decodificación restringida (`json_schema`) a esquemas sin campo de acción; el código convierte la descripción en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.
 
 Este nivel de dinamismo hace inviable delegar el prompt al manifiesto: el contenido útil depende de percepciones que solo existen en vuelo.
 
@@ -158,6 +154,6 @@ C occ=0.62 ttc=3.2s! | I occ=0.11 ttc=inf | D occ=0.08 ttc=inf
 
 - Los tres sectores son `C` (centro / frente), `I` (izquierda) y `D` (derecha).
 - `occ` es la fracción de ocupación estimada por flujo óptico monocular; `ttc` es el tiempo a colisión estimado del sector; `!` marca el sector como bloqueado según el umbral de `is_blocked()`.
-- Estos valores son los mismos que alimentan `_build_user_prompt()` (§4.3) y la capa de decisión (§5.3): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1.
+- Estos valores son los mismos que usa el lazo rápido de `navigate` (cap. 5 §5.3): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1. El VLM no los recibe: mira el fotograma directamente (cap. 5 §5.10).
 
 La combinación de estas cuatro líneas permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema, por qué se activó el comportamiento que aparece en el tag, y qué orden cinemática emitió — sin necesidad de cruzar a mano el video con el CSV.

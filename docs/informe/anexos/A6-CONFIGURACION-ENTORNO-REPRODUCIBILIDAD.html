@@ -966,10 +966,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-servidor-de-inferencia-local-vlm-slm" class="md-nav__link">
+  <a href="#2-servidor-de-inferencia-local-vlm" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Servidor de Inferencia Local (VLM / SLM)
+        2. Servidor de Inferencia Local (VLM)
       
     </span>
   </a>
@@ -1436,10 +1436,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-servidor-de-inferencia-local-vlm-slm" class="md-nav__link">
+  <a href="#2-servidor-de-inferencia-local-vlm" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Servidor de Inferencia Local (VLM / SLM)
+        2. Servidor de Inferencia Local (VLM)
       
     </span>
   </a>
@@ -1767,7 +1767,7 @@
 <li><strong><code>ApiServerPort: 41451</code></strong>: puerto TCP de enlace Msgpack-RPC por el que se comunican <code>AirSimClient</code> y el motor de Unreal Engine.</li>
 <li><strong><code>CameraDefaults.CaptureSettings</code></strong>:</li>
 <li><code>ImageType 0</code> (<code>Scene</code>): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (<code>FlowTTCEstimator</code>) y por el modelo deliberativo (<code>Qwen2.5-VL-3B</code>).</li>
-<li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente para la validación cruzada del TTC monocular (§10.2).</li>
+<li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).</li>
 <li><code>ImageType 5</code> (<code>Segmentation</code>): canal de segmentación semántica de mallas para auditoría visual.</li>
 <li><code>Width: 1080, Height: 720</code>: resolución nativa del render target frontal.</li>
 <li><strong><code>SubWindows</code></strong>: habilita una ventana secundaria flotante en el visor de Unreal Engine mostrando la cámara frontal a bordo en tiempo real, facilitando la supervisión visual del operador durante las corridas experimentales.</li>
@@ -1856,7 +1856,7 @@
 </tr>
 </tbody>
 </table>
-<h3 id="2-servidor-de-inferencia-local-vlm-slm">2. Servidor de Inferencia Local (VLM / SLM)<a class="headerlink" href="#2-servidor-de-inferencia-local-vlm-slm" title="Permanent link">&para;</a></h3>
+<h3 id="2-servidor-de-inferencia-local-vlm">2. Servidor de Inferencia Local (VLM)<a class="headerlink" href="#2-servidor-de-inferencia-local-vlm" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -1877,49 +1877,59 @@
 <td>Identificador del modelo cuantizado cargado en VRAM (<code>Qwen2.5-VL-3B-Instruct.Q4_K_M</code>).</td>
 </tr>
 <tr>
-<td><code>VLM_VISION_ENABLED</code></td>
-<td><code>true</code></td>
-<td>Habilita el envío del fotograma visual en base64 en el prompt multimodal.</td>
-</tr>
-<tr>
 <td><code>VLM_IMAGE_MAX_SIZE</code></td>
 <td><code>384</code></td>
-<td>Resolución máxima de la imagen enviada al VLM. Limita la cantidad de tokens visuales generados por el codificador ViT, manteniendo la latencia acotada.</td>
+<td>Lado mayor de la imagen de la capa estratégica. Limita los tokens visuales y, con ellos, la latencia.</td>
+</tr>
+<tr>
+<td><code>DEEP_SCAN_IMAGE_MAX_SIZE</code></td>
+<td><code>256</code></td>
+<td>Lado mayor de cada imagen del barrido panorámico (varias imágenes por consulta).</td>
 </tr>
 <tr>
 <td><code>VLM_USE_JSON_SCHEMA</code></td>
 <td><code>true</code></td>
-<td>Activa la decodificación gramaticalmente restringida por esquema JSON (Anexo 4).</td>
+<td>Decodificación restringida por esquema JSON (Anexo 4; cap. 8, §8.2).</td>
 </tr>
 <tr>
-<td><code>SLM_WATCHDOG_MS</code></td>
-<td><code>13000</code></td>
-<td>Tiempo límite del perro guardián (en ms) para la respuesta del SLM en el servicio asíncrono; debe ser menor que <code>SLM_HTTP_TIMEOUT_S</code>. El escaneo de resolución de atasco usa su propio watchdog, <code>SLM_DEEP_WATCHDOG_MS</code> (12 000 ms).</td>
+<td><code>SLM_HTTP_TIMEOUT_S</code> / <code>SLM_DEEP_HTTP_TIMEOUT_S</code></td>
+<td><code>15.0</code> / <code>20.0</code></td>
+<td>Timeout del cliente HTTP en la consulta estratégica y en el barrido.</td>
 </tr>
 <tr>
-<td><code>SLM_HTTP_TIMEOUT_S</code></td>
-<td><code>15.0</code></td>
-<td>Timeout del cliente HTTP en consultas tácticas al VLM. Debe ser mayor que <code>SLM_WATCHDOG_MS</code> para que el watchdog gane siempre al corte HTTP.</td>
-</tr>
-<tr>
-<td><code>SLM_DEEP_HTTP_TIMEOUT_S</code></td>
-<td><code>20.0</code></td>
-<td>Timeout HTTP del barrido profundo (varias imágenes → prefill mayor).</td>
-</tr>
-<tr>
-<td><code>SYSTEM_PROMPT_VISION_FILE</code> / <code>SYSTEM_PROMPT_TEXT_FILE</code></td>
-<td><code>../config/prompts/system_vision.txt</code> / <code>system_text.txt</code></td>
-<td>Archivos de system prompt (con y sin visión), relativos a <code>airsim-loop/</code>. Admiten el placeholder <code>{safe_margin_ttc_s}</code>. Si no se configuran, se usa el prompt interno.</td>
-</tr>
-<tr>
-<td><code>DELIB_FRESHNESS_DIST_M</code></td>
-<td><code>8.0</code></td>
-<td>Variación de distancia al waypoint (m) a partir de la cual se descartaría una respuesta VLM por obsolescencia. <strong>Sin efecto en el estado actual del código</strong> (cap. 9, §9.5.4).</td>
+<td><code>SLM_DEEP_WATCHDOG_MS</code></td>
+<td><code>18000</code></td>
+<td>Watchdog del barrido panorámico; debe ser menor que <code>SLM_DEEP_HTTP_TIMEOUT_S</code> para que gane siempre al corte HTTP.</td>
 </tr>
 <tr>
 <td><code>DEADLOCK_STRATEGY</code></td>
-<td><code>"slam_assess"</code></td>
-<td>Estrategia ante atasco duro: <code>"slam_assess"</code> (por defecto en <code>config/.env</code>) usa historial de trayectoria + frame frontal sin rotación; <code>"deep_vlm"</code> ejecuta un barrido panorámico de 4 rumbos con consulta VLM (la usan las corridas experimentales, vía <code>--deadlock-strategies</code>); <code>"blind"</code> realiza escape vertical sin VLM.</td>
+<td><code>"deep_vlm"</code></td>
+<td>Resolución de atascos: <code>"deep_vlm"</code> (barrido + VLM, cap. 5 §5.12) o <code>"blind"</code> (escape vertical sin VLM). Cualquier otro valor aborta el arranque.</td>
+</tr>
+<tr>
+<td><code>VLM_STRATEGIC_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Habilita la capa estratégica del VLM (cap. 5, §5.10).</td>
+</tr>
+<tr>
+<td><code>VLM_STRATEGIC_PERIOD_S</code> / <code>VLM_STRATEGIC_MAX_AGE_S</code></td>
+<td><code>3.0</code> / <code>10.0</code></td>
+<td>Período mínimo entre consultas estratégicas y edad máxima de una respuesta para aplicarla.</td>
+</tr>
+<tr>
+<td><code>VLM_STRATEGIC_COLUMNS</code> / <code>CAMERA_HFOV_DEG</code></td>
+<td><code>5</code> / <code>90.0</code></td>
+<td>Columnas dibujadas sobre el fotograma y campo visual horizontal con el que se calculan sus rumbos.</td>
+</tr>
+<tr>
+<td><code>VLM_SUBGOAL_DIST_M</code> / <code>VLM_SUBGOAL_MIN_AHEAD_M</code> / <code>VLM_CLIMB_M</code></td>
+<td><code>15.0</code> / <code>4.0</code> / <code>4.0</code></td>
+<td>Distancia de la sub-meta desde el ancla, distancia mínima por delante del dron para aplicarla y ascenso si hay estructura debajo.</td>
+</tr>
+<tr>
+<td><code>VLM_STRATEGIC_MAX_GOAL_OFF_DEG</code></td>
+<td><code>40.0</code></td>
+<td>Solo se consulta si la meta cae dentro de ±40° del eje óptico.</td>
 </tr>
 </tbody>
 </table>
@@ -1941,12 +1951,12 @@
 <tr>
 <td><code>AGENT_ARM</code></td>
 <td><code>slm</code></td>
-<td>Brazo de política activo en el lazo de control: <code>slm</code> (deliberativo jerárquico), <code>fsm</code> (máquina de estados determinista) o <code>reactive</code> (línea base).</td>
+<td>Brazo activo: <code>slm</code> (lazo rápido + VLM), <code>fsm</code> (máquina de estados determinista) o <code>reactive</code> (línea base).</td>
 </tr>
 <tr>
 <td><code>AIRSIM_SEED</code></td>
 <td><code>1</code></td>
-<td>Semilla de aleatoriedad para la corrida. En modo <code>--seed-jitter</code>, perturba levemente la pose inicial (<span class="arithmatex">\(\pm 1.5\text{ m}\)</span>, <span class="arithmatex">\(\pm 10^\circ\)</span>).</td>
+<td>Semilla de la corrida. En modo <code>--seed-jitter</code>, perturba levemente la pose inicial (<span class="arithmatex">\(\pm 1.5\text{ m}\)</span>, <span class="arithmatex">\(\pm 10^\circ\)</span>).</td>
 </tr>
 <tr>
 <td><code>CMD_DURATION_S</code></td>
@@ -2045,89 +2055,69 @@
 </thead>
 <tbody>
 <tr>
-<td><code>STUCK_HARD_FACTOR</code></td>
-<td><code>1.5</code></td>
-<td>Umbral de atasco duro = factor × umbral efectivo (10 ciclos) = 15 ciclos (3 s). Por defecto en código es 3.0.</td>
-</tr>
-<tr>
-<td><code>STOPPED_CYCLES_THRESHOLD</code> / <code>STOPPED_DELIBERATIVE_CYCLES</code></td>
-<td><code>15</code> / <code>10</code></td>
-<td>Ciclos parado para sumar a <code>stuck_invisible</code> y para escalar directamente a la resolución de atasco (<code>stopped_prolonged</code>).</td>
-</tr>
-<tr>
-<td><code>POS_FREEZE_DIST_M</code> / <code>POS_FREEZE_THRESHOLD</code></td>
-<td><code>0.50</code> / <code>30</code></td>
-<td>Desplazamiento XY mínimo y ciclos (6 s) antes de considerar congelamiento por posición neta.</td>
+<td><code>STOPPED_DELIBERATIVE_CYCLES</code> / <code>STOPPED_MIN_CMD_MPS</code></td>
+<td><code>10</code> / <code>0.30</code></td>
+<td>Ciclos con avance comandado (≥ 0.30 m/s) sin movimiento real antes de declarar deadlock por dron trabado (cap. 5, §5.3.1).</td>
 </tr>
 <tr>
 <td><code>WP_NO_PROGRESS_MIN_M</code> / <code>WP_NO_PROGRESS_THRESHOLD</code></td>
 <td><code>2.0</code> / <code>50</code></td>
-<td>Mejora mínima de la distancia al waypoint y ciclos (10 s) sin ella antes de escalar (<code>wp_no_progress</code>).</td>
+<td>Mejora mínima de la distancia al objetivo actual y ciclos (10 s) sin ella antes de declarar deadlock.</td>
 </tr>
 <tr>
-<td><code>STUCK_RETROCEDER_LIMIT</code></td>
-<td><code>30</code></td>
-<td>Ciclos a velocidad nula con <code>stuck_invisible</code> que fuerzan la resolución de atasco.</td>
+<td><code>OPTICAL_MIN_ALT_M</code></td>
+<td><code>4.5</code></td>
+<td>Piso óptico: por debajo, el flujo no es válido y no se cuentan señales de atasco.</td>
 </tr>
 <tr>
-<td><code>ESCAPE_MIN_DISP_M</code> / <code>VERTICAL_ESCAPE_FUTILE_SCANS</code> / <code>VERTICAL_ESCAPE_FREEZE_CYCLES</code> / <code>VERTICAL_ESCAPE_MAX_ALT_M</code></td>
-<td><code>2.0</code> / <code>2</code> / <code>50</code> / <code>25.0</code></td>
-<td>Escape vertical forzado: desplazamiento mínimo entre escaneos para no considerarlos fútiles, escaneos fútiles consecutivos, ciclos de posición congelada y altitud máxima (cap. 5, §5.3.4).</td>
+<td><code>MAX_ESCAPE_ALT_M</code></td>
+<td><code>30.0</code></td>
+<td>Por encima de esta altitud, el escape determinista es <code>GIRAR_90</code> en lugar de <code>GANAR_ALTURA</code>.</td>
 </tr>
 <tr>
-<td><code>MAX_CONSECUTIVE_ESCAPES</code></td>
-<td><code>2</code></td>
-<td>Escapes verticales consecutivos sin progreso horizontal antes de enclavar el escape.</td>
-</tr>
-<tr>
-<td><code>SCAN_HEADING_COUNT_DEEP</code></td>
-<td><code>2</code></td>
-<td>Rumbos del barrido panorámico <code>deep_vlm</code> (+0° y +180°).</td>
-</tr>
-<tr>
-<td><code>SCAN_EVADIR_REPEAT_LIMIT</code></td>
-<td><code>2</code></td>
-<td>Repeticiones del mismo lado de evasión que escalan a <code>RETROCEDER</code>.</td>
-</tr>
-<tr>
-<td><code>CEILING_DETECT_CYCLES</code> / <code>CEILING_DETECT_DZ_M</code> / <code>CEILING_MARGIN_M</code> / <code>CEILING_RELEASE_M</code></td>
-<td><code>10</code> / <code>0.15</code> / <code>1.0</code> / <code>15.0</code></td>
-<td>Detección de techo del guiado (cap. 5, §5.15.3).</td>
-</tr>
-<tr>
-<td><code>CORNER_CHAIN_ENABLED</code> / <code>CORNER_CHAIN_CLEARANCE_M</code> / <code>CORNER_CHAIN_STEP_M</code> / <code>CORNER_CHAIN_MAX</code></td>
-<td><code>true</code> / <code>10.0</code> / <code>12.0</code> / <code>4</code></td>
-<td>Cadena de esquinas alrededor de puntos de contacto (cap. 5, §5.15.4).</td>
+<td><code>SCAN_HEADING_COUNT_DEEP</code> / <code>SCAN_SETTLE_CYCLES_DEEP</code> / <code>MAX_DEEP_SCAN_IMAGES</code></td>
+<td><code>4</code> / <code>2</code> / <code>5</code></td>
+<td>Rumbos del barrido panorámico, ciclos de asentamiento por rumbo e imágenes máximas por consulta.</td>
 </tr>
 <tr>
 <td><code>SCAN_ROT_TIMEOUT_CYCLES</code></td>
 <td><code>10</code></td>
-<td>Timeout de rotación del barrido panorámico (2 s).</td>
-</tr>
-<tr>
-<td><code>SLAM_HISTORY_SIZE</code></td>
-<td><code>80</code></td>
-<td>Tamaño del ring buffer de trayectoria (≈ 16 s a 5 Hz).</td>
+<td>Timeout de rotación del barrido (2 s): si el dron no alcanza el rumbo, el barrido se abandona.</td>
 </tr>
 <tr>
 <td><code>CORNER_OFFSET_M</code></td>
-<td><code>30.0</code></td>
-<td>Distancia del waypoint de esquina (m); el default en código es 12.0.</td>
+<td><code>15.0</code></td>
+<td>Distancia de la sub-meta producida por el barrido.</td>
 </tr>
 <tr>
-<td><code>MANEUVER_DURATION_S</code></td>
-<td><code>2.0</code></td>
-<td>Duración base de las maniobras de evasión (s), multiplicada de forma adaptativa según el stall (cap. 5, §5.12.3).</td>
+<td><code>SUBGOAL_DEDUP_M</code></td>
+<td><code>10.0</code></td>
+<td>Una sub-meta a menos de esta distancia de la pendiente se ignora.</td>
 </tr>
 <tr>
-<td><code>EVASION_BACK_SPEED</code></td>
-<td><code>1.2</code></td>
-<td>Velocidad de <code>RETROCEDER</code> (m/s).</td>
+<td><code>MANEUVER_DURATION_S</code> / <code>ESCAPE_MANEUVER_DURATION_S</code> / <code>GIRAR90_DURATION_S</code></td>
+<td><code>2.0</code> / <code>1.6</code> / <code>1.0</code></td>
+<td>Duración de las maniobras comprometidas: evasión lateral, escape vertical y giro de 90°.</td>
 </tr>
 <tr>
-<td><code>DEPTH_EMERGENCY_DIST_M</code> / <code>DEPTH_EMERGENCY_MAX_SPEED_MPS</code></td>
-<td><code>0.05</code> / <code>0.1</code></td>
-<td>Aborto de corrida por dron embebido en la malla (solo en el runner; cap. 5, §5.19). <code>0.0</code> deshabilita.</td>
+<td><code>EVASION_STUCK_THRESHOLD</code> / <code>STUCK_HARD_FACTOR</code> / <code>MAX_CONSECUTIVE_ESCAPES</code></td>
+<td><code>10</code> / <code>1.5</code> / <code>2</code></td>
+<td>Umbrales de atasco y de escape del brazo <code>fsm</code> (cap. 5, §5.11, §5.15.2).</td>
+</tr>
+<tr>
+<td><code>CEILING_DETECT_CYCLES</code> / <code>CEILING_DETECT_DZ_M</code> / <code>CEILING_MARGIN_M</code> / <code>CEILING_SAFE_GAP_M</code> / <code>CEILING_RELEASE_M</code></td>
+<td><code>10</code> / <code>0.15</code> / <code>0.8</code> / <code>3.0</code> / <code>15.0</code></td>
+<td>Detección de techo del guiado (cap. 5, §5.15.3).</td>
+</tr>
+<tr>
+<td><code>GOV_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Gobernador de velocidad (cap. 5, §5.13).</td>
+</tr>
+<tr>
+<td><code>FREEZE_CYCLES</code> / <code>FREEZE_RECOVERY</code></td>
+<td><code>25</code> / <code>abort</code></td>
+<td>Ciclos con estado físico idéntico para declarar <code>physics_locked</code>, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, §5.19).</td>
 </tr>
 <tr>
 <td><code>LAND_DESCENT_SPEED_MPS</code></td>

@@ -100,30 +100,11 @@ CEILING_RELEASE_M = float(os.getenv("CEILING_RELEASE_M", "15.0"))
 # pueda despachar PERDER_ALTURA como accion de politica (z como dimension
 # conjunta de navegacion, no solo correccion de setpoint independiente).
 CEILING_SAFE_GAP_M = float(os.getenv("CEILING_SAFE_GAP_M", "3.0"))
-# Cadena de esquinas (2026-0929): un CORNER_WP saca al dron del punto de
-# contacto, pero el WP siguiente suele seguir apuntando contra el mismo
-# edificio (seed_99 00:19: esquina en (102,-126) y de ahi recta a WP_3, que
-# pasa exactamente por la fachada del otro lateral). Al alcanzar una esquina,
-# si el tramo hacia el siguiente WP pasa a menos de CORNER_CHAIN_CLEARANCE_M de
-# un punto de contacto registrado (deadlock previo), se inserta otra esquina a
-# CORNER_CHAIN_STEP_M, hacia el lado contrario al contacto. Hasta
-# CORNER_CHAIN_MAX esquinas encadenadas por WP objetivo.
-CORNER_CHAIN_ENABLED = os.getenv("CORNER_CHAIN_ENABLED", "true").lower() == "true"
-CORNER_CHAIN_CLEARANCE_M = float(os.getenv("CORNER_CHAIN_CLEARANCE_M", "10.0"))
-# Paso propio (NO hereda CORNER_OFFSET_M: con 30 m cada eslabon lanzaba al dron a otro cuadrante).
-CORNER_CHAIN_STEP_M = float(os.getenv("CORNER_CHAIN_STEP_M", "12.0"))
-CORNER_CHAIN_MAX = int(os.getenv("CORNER_CHAIN_MAX", "4"))
-CONTACT_MERGE_M = float(os.getenv("CONTACT_MERGE_M", "3.0"))
-CHAIN_MIN_CORNER_GAP_M = float(os.getenv("CORNER_CHAIN_MIN_GAP_M", "6.0"))
-# Compromiso con la esquina pendiente (seed_99 03:12: 12 esquinas inyectadas, 10 reemplazadas antes de
-# alcanzarse, paseo aleatorio): no se reemplaza hasta pasados CORNER_COMMIT_CYCLES ciclos.
-CORNER_COMMIT_CYCLES = int(os.getenv("CORNER_COMMIT_CYCLES", "120"))
-# Esquina nueva o trayecto a menos de esto de un contacto conocido: se refleja al lado opuesto.
-CORNER_CONTACT_CLEARANCE_M = float(os.getenv("CORNER_CONTACT_CLEARANCE_M", "8.0"))
-# Filtro de avance (2026-0929, seed_99): solo inyectar una esquina si dist(esquina, WP_real)
-# < dist(dron, WP_real) * TOLERANCE. Valor 1.0 estricto (la esquina debe acercar al dron).
-# Confirmado en seed_99: 12/14 esquinas regresivas hubieran sido rechazadas con este filtro.
-CORNER_PROGRESS_TOLERANCE = float(os.getenv("CORNER_PROGRESS_TOLERANCE", "1.0"))
+# 2026-0930: se elimino la maquinaria de esquinas deterministas (cadena, compromiso, reflejo contra
+# contactos, filtro de avance). En las 12 corridas v2, 74 esquinas inyectadas dieron una mediana de
+# 0.35 m de avance hacia el WP real en 20 s (16 retrocedieron > 2 m) y en 2 de 3 corridas llevaron
+# al dron sobre la autopista elevada. Las sub-metas ahora las decide solo el VLM.
+SUBGOAL_DEDUP_M = float(os.getenv("SUBGOAL_DEDUP_M", "10.0"))
 
 
 def effective_stall_threshold() -> int:
@@ -214,74 +195,6 @@ class WaypointTracker:
         self._ceiling_wp_index: int = 0
         self._ceiling_window: deque = deque(maxlen=max(2, CEILING_DETECT_CYCLES))
         self._last_vz_demand: float = 0.0
-        # Cadena de esquinas: puntos de contacto (deadlocks) del WP objetivo
-        # actual, ultima posicion vista y esquinas encadenadas hasta ahora.
-        self._contacts: List[tuple] = []
-        self._last_pos: Optional[tuple] = None
-        self._chain_count: int = 0
-        self._corner_age: int = 0  # ciclos desde la ultima esquina inyectada
-
-    def record_contact(self, x: float, y: float) -> None:
-        """Registra un punto donde el dron quedo bloqueado (deadlock/escape)."""
-        for cx, cy in self._contacts:
-            if math.hypot(cx - x, cy - y) < CONTACT_MERGE_M:
-                return
-        self._contacts.append((float(x), float(y)))
-
-    def _maybe_chain_corner(self, corner: Dict[str, Any]) -> bool:
-        """Tras alcanzar una esquina: encadena otra si el tramo al siguiente WP
-        sigue pasando junto a un punto de contacto conocido."""
-        if not CORNER_CHAIN_ENABLED or not self._contacts or self._chain_count >= CORNER_CHAIN_MAX:
-            return False
-        if self.current_index >= len(self.waypoints):
-            return False
-        nxt = self.waypoints[self.current_index]
-        if nxt.get("is_temporary"):
-            return False  # ya hay una esquina pendiente: la cadena ya existe
-        cx, cy = float(corner.get("x", 0.0)), float(corner.get("y", 0.0))
-        nx, ny = float(nxt.get("x", 0.0)), float(nxt.get("y", 0.0))
-        vx, vy = nx - cx, ny - cy
-        seg_len = math.hypot(vx, vy)
-        if seg_len < 1.0:
-            return False
-        ux, uy = vx / seg_len, vy / seg_len
-        blocking = []
-        for px, py in self._contacts:
-            t = ((px - cx) * ux + (py - cy) * uy) / seg_len
-            lateral = ux * (py - cy) - uy * (px - cx)  # >0: contacto a la izquierda del tramo
-            if 0.0 < t < 1.0 and abs(lateral) < CORNER_CHAIN_CLEARANCE_M:
-                blocking.append((abs(lateral), lateral, px, py))
-        if not blocking:
-            return False
-        blocking.sort()
-        _, lateral, px, py = blocking[0]
-        # Lado: contrario al contacto; si esta sobre la recta, seguir el sentido de
-        # la esquina previa (mismo giro alrededor del obstaculo).
-        if abs(lateral) > 0.5:
-            side = -1.0 if lateral > 0 else 1.0
-        else:
-            ox, oy = corner.get("origin_x"), corner.get("origin_y")
-            if ox is not None:
-                side = 1.0 if (ux * (cy - float(oy)) - uy * (cx - float(ox))) < 0 else -1.0
-            else:
-                side = 1.0
-        z = float(nxt.get("z", corner.get("z", -10.0)))
-
-        def _candidate(sgn: float) -> tuple:
-            return (cx + sgn * (-uy) * CORNER_CHAIN_STEP_M, cy + sgn * ux * CORNER_CHAIN_STEP_M)
-
-        cand = _candidate(side)
-        if any(math.hypot(cand[0] - qx, cand[1] - qy) < CHAIN_MIN_CORNER_GAP_M for qx, qy in self._contacts):
-            cand = _candidate(-side)  # el lado elegido cae sobre otro contacto
-        self._chain_count += 1
-        label = f"CORNER_CHAIN_{self._chain_count}"
-        self.waypoints.insert(self.current_index, {
-            "x": round(cand[0], 2), "y": round(cand[1], 2), "z": round(z, 2),
-            "label": label, "is_temporary": True, "origin_x": cx, "origin_y": cy,
-        })
-        print(f"[CornerChain] {label} en ({cand[0]:.1f},{cand[1]:.1f}): el tramo a "
-              f"{nxt.get('label', 'WP')} pasa a {abs(lateral):.1f} m del contacto ({px:.1f},{py:.1f}).")
-        return True
 
     def _update_ceiling(self, x: float, y: float, z: float) -> None:
         """Actualiza la deteccion de techo con la altitud actual."""
@@ -376,97 +289,30 @@ class WaypointTracker:
             return None
         return self.waypoints[self.current_index]
 
-    def inject_corner_waypoint(self, x: float, y: float, z: float, label: str = "CORNER_WP") -> bool:
-        """Inserta un sub-waypoint temporal de esquina en la ruta para rodear una manzana."""
+    def inject_corner_waypoint(self, x: float, y: float, z: float, label: str = "VLM_SUBGOAL") -> bool:
+        """Inserta una sub-meta temporal delante del WP activo.
+
+        Una sub-meta nueva reemplaza a las temporales aun no alcanzadas (antes se apilaban delante del
+        WP real y, al alcanzar la ultima, el dron desandaba desvios viejos)."""
         if self.is_completed or self.current_index >= len(self.waypoints):
             return False
-
-        # Evitar inyecciones duplicadas consecutivas
-        current_wp = self.current_waypoint
-        if current_wp and str(current_wp.get("label", "")).startswith("CORNER_"):
-            dx = float(current_wp.get("x", 0.0)) - x
-            dy = float(current_wp.get("y", 0.0)) - y
-            if math.hypot(dx, dy) < 10.0:
-                return False
-
-        # Compromiso: una esquina pendiente joven no se reemplaza (evita el vaiven entre lados).
-        if (current_wp and current_wp.get("is_temporary")
-                and self._corner_age < CORNER_COMMIT_CYCLES):
-            print(f"[Manhattan] esquina pendiente {current_wp.get('label')} mantenida "
-                  f"({self._corner_age}/{CORNER_COMMIT_CYCLES} ciclos): {label} descartada.")
+        # Duplicado de la sub-meta pendiente: se ignora. Reemplazarla por otra casi igual reiniciaria el
+        # contador de progreso y un dron atascado nunca declararia el deadlock.
+        current = self.current_waypoint
+        if current and current.get("is_temporary") and math.hypot(
+                float(current.get("x", 0.0)) - x, float(current.get("y", 0.0)) - y) < SUBGOAL_DEDUP_M:
             return False
-
-        # Validar contra contactos: si la esquina o el trayecto hacia ella pasan junto a un punto de
-        # contacto, se prueba el lado opuesto (reflejo respecto de la posicion actual).
-        if self._last_pos is not None and self._contacts:
-            ox, oy = self._last_pos
-
-            def _near_contact(cx: float, cy: float) -> bool:
-                sx, sy = cx - ox, cy - oy
-                seg2 = sx * sx + sy * sy
-                for px, py in self._contacts:
-                    t = 0.0 if seg2 < 1e-9 else max(0.0, min(1.0, ((px - ox) * sx + (py - oy) * sy) / seg2))
-                    if math.hypot(px - (ox + t * sx), py - (oy + t * sy)) < CORNER_CONTACT_CLEARANCE_M:
-                        # el contacto al pie del dron (t~0) no cuenta: es de donde se sale
-                        if math.hypot(px - ox, py - oy) >= CORNER_CONTACT_CLEARANCE_M or t > 0.05:
-                            return True
-                return False
-
-            if _near_contact(float(x), float(y)):
-                mx, my = 2.0 * ox - float(x), 2.0 * oy - float(y)
-                if not _near_contact(mx, my):
-                    print(f"[Manhattan] esquina ({float(x):.1f},{float(y):.1f}) cruza un contacto: "
-                          f"reflejada a ({mx:.1f},{my:.1f}).")
-                    x, y = mx, my
-
-        # Filtro de avance: rechazar si la esquina aleja al dron del WP real.
-        # Busca el primer WP no-temporal como referencia de distancia.
-        if self._last_pos is not None:
-            _real_wp = next(
-                (w for j, w in enumerate(self.waypoints)
-                 if j >= self.current_index and not w.get("is_temporary")),
-                None,
-            )
-            if _real_wp is not None:
-                _d_drone = math.hypot(
-                    self._last_pos[0] - float(_real_wp["x"]),
-                    self._last_pos[1] - float(_real_wp["y"]),
-                )
-                _d_corner = math.hypot(
-                    float(x) - float(_real_wp["x"]),
-                    float(y) - float(_real_wp["y"]),
-                )
-                if _d_corner >= _d_drone * CORNER_PROGRESS_TOLERANCE:
-                    print(
-                        f"[Manhattan] {label} ({float(x):.1f},{float(y):.1f}) rechazada "
-                        f"(no avanza): dist_WP={_d_corner:.1f}m >= dron_WP={_d_drone:.1f}m "
-                        f"x{CORNER_PROGRESS_TOLERANCE:.2f}."
-                    )
-                    return False
-
-        corner_wp = {
-            "x": round(float(x), 2),
-            "y": round(float(y), 2),
-            "z": round(float(z), 2),
-            "label": label,
-            "is_temporary": True,
-        }
-        if self._last_pos is not None:
-            corner_wp["origin_x"], corner_wp["origin_y"] = self._last_pos
-        # Reemplazar, no apilar (2026-0929): una esquina nueva anula las
-        # esquinas temporales AUN NO alcanzadas (indice >= current_index). Antes
-        # se acumulaban delante del WP real (hasta 15 en citysim_pilot seed 99)
-        # y, al alcanzar la ultima, el dron desandaba todos los desvios viejos.
-        # Las esquinas ya alcanzadas (indice < current_index) no se tocan.
         stale = [i for i in range(self.current_index, len(self.waypoints))
                  if self.waypoints[i].get("is_temporary")]
         for i in reversed(stale):
             del self.waypoints[i]
-        if stale:
-            print(f"[Manhattan] {len(stale)} esquina(s) pendiente(s) reemplazada(s) por {label}.")
-        self.waypoints.insert(self.current_index, corner_wp)
-        self._corner_age = 0
-        print(f"[Manhattan] Sub-waypoint de esquina inyectado: {label} (X: {corner_wp['x']}, Y: {corner_wp['y']}, Z: {corner_wp['z']})")
+        self.waypoints.insert(self.current_index, {
+            "x": round(float(x), 2), "y": round(float(y), 2), "z": round(float(z), 2),
+            "label": label, "is_temporary": True,
+        })
+        self.reset_progress()
+        print(f"[WaypointTracker] sub-meta {label} ({x:.1f}, {y:.1f}, {z:.1f})"
+              + (f" reemplaza {len(stale)} pendiente(s)" if stale else ""))
         return True
 
     def update(self, current_pos: Dict[str, float]) -> Optional[Dict[str, Any]]:
@@ -486,8 +332,6 @@ class WaypointTracker:
         wx = float(wp.get("x", 0.0))
         wy = float(wp.get("y", 0.0))
         wz = float(wp.get("z", 0.0))
-        self._last_pos = (x, y)
-        self._corner_age += 1
 
         dist_3d = math.sqrt((wx - x) ** 2 + (wy - y) ** 2 + (wz - z) ** 2)
         if self.ceiling_z is not None:
@@ -512,16 +356,10 @@ class WaypointTracker:
             # histeresis, que son propiedades del segmento hacia el WP
             # anterior y no tiene sentido que sobrevivan al avance).
             self.reset_progress()
-            if not wp.get("is_temporary"):
-                # WP real alcanzado: los contactos y la cadena eran de ese objetivo.
-                self._contacts = []
-                self._chain_count = 0
             if self.current_index >= len(self.waypoints):
                 self.is_completed = True
                 print("[WaypointTracker] ¡Misión completada! Todos los waypoints alcanzados.")
                 return None
-            if wp.get("is_temporary"):
-                self._maybe_chain_corner(wp)
             return self.waypoints[self.current_index]
 
         return wp

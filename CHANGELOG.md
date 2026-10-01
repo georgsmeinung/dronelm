@@ -1,3 +1,124 @@
+# 2026-09-30 (e) - Informe: alineado con el grafo de control final (sin referencias a versiones)
+
+Antes de re-ejecutar el capitulo 11 completo, el informe describe solo el sistema final, sin
+narrar versiones ni evolucion (es lo primero que se presenta en la defensa).
+
+- Cap. 5: grafo `capture -> perception -> navigate -> motor` con dos lazos desacoplados (lazo
+  rapido 5 Hz + capa estrategica asincrona del VLM), `StallDetector`, barrido `deep_vlm` con
+  rumbos medidos, salvaguardas sin canal de profundidad. Figura nueva
+  `informe/2026-0930 grafo_control.png`.
+- Cap. 6, 8: percepcion y rol del VLM como perceptor anclado al mundo (columnas A-E con rumbo
+  absoluto; imagenes numeradas en el barrido); sin estimador de profundidad monocular en el lazo.
+- Cap. 9: nueva §9.8 "Falla 6 - Integracion del VLM" (9.8.1-9.8.7: error de marco, default
+  silencioso, salida casi constante, deadlock falso en despegue, profundidad filtrada al brazo,
+  reglas apiladas, causa fisica de `physics_locked`), cada una con su mecanismo de contencion;
+  §9.9 riesgos residuales. Cap. 1 pasa a "seis modos de falla".
+- Cap. 10: metodologia de los lotes D, E y F (§10.12); `citysim_pilot.json` (§10.3.3);
+  `DistMin` como auditoria externa al lazo.
+- Cap. 11 y 12: aclaran que el lote base (75 corridas, 8-9 sep) uso otra configuracion del brazo
+  `slm` y que los escenarios con obstruccion se reevaluan con D/E/F. `citymap_pilot` se conserva
+  como nombre del escenario en el lote base.
+- Cap. 3, 4, README y anexos A4, A6 (tablas de variables §2, §3, §5b), A8, A9 actualizados.
+- Barrido final: sin `v1/v2/v3`, "grafo v", legacy, §5.20, §6.10b, `slam_assess`,
+  `scene_to_action`, `policy_router` ni `DELIB_FRESHNESS` en el informe.
+- `airsim-loop/GRAFO-DE-CONTROL.md` (doc de codigo) conserva la tabla de evolucion.
+
+# 2026-09-30 (d) - Simplificacion: deep_vlm por defecto, slam_assess y deliberativo a legacy
+
+Se retiraron del lazo todas las reglas que, medidas contra el avance hacia el WP real en los
+10-20 s siguientes, no mostraron beneficio en las corridas de diagnostico de citysim_pilot.
+
+**Movidos a `src/agents/legacy/`** (no se importan desde el lazo de vuelo):
+- `deliberative.py` -> `deliberative_v2.py` (nodo deliberativo, `policy_router`).
+- `spatial_history.py` -> `spatial_history_v2.py` (historia de trayectoria, trigger TRAJ_STALL).
+- `perception/depth_estimator.py` -> `depth_estimator_v2.py` (Depth Anything; desactivado en
+  todas las corridas).
+- `slam_assess` / `scene_to_action` -> `deep_scan_v2.py` (5 corridas, todas truncadas, sin control).
+
+**Eliminado del lazo:**
+- RETROCEDER previo al barrido, escalado a RETROCEDER por alternancia de lado, esquina
+  perpendicular invertida respecto del modelo, filtros de reflejo/descarte de esquinas,
+  escape vertical por escaneos "futiles", trigger de deadlock por N giros GIRAR_90
+  (`BLOCKED_EVENTS_*`), esquina comprometida tras GIRAR_90 (`GIRAR90_COMMIT_CORNER`),
+  descarte de barridos huerfanos (`ORPHAN_SCAN_IDLE_CYCLES`), frescura por distancia
+  (`DELIB_FRESHNESS_DIST_M`), `VLM_VISION_ENABLED`, variables `SLAM_*` del contexto textual.
+- Evidencia: retrocesos con avance mediano negativo (31-43 % alejaron > 2 m); 74 desvios
+  deterministas con mediana 0.35 m en 20 s; trigger TRAJ_STALL con 45 deadlocks sin avance.
+
+**`config/.env`**: `DEADLOCK_STRATEGY=deep_vlm` (default). `blind` queda como ablacion sin VLM;
+cualquier otro valor aborta el arranque. `SCAN_HEADING_COUNT_DEEP=4`.
+
+**Fix: deadlock falso en el despegue** (100 % de las corridas, ciclos 17-18):
+- `stall_detector.py`: `stopped_prolonged` cuenta solo ciclos con avance comandado
+  (>= `STOPPED_MIN_CMD_MPS`=0.30) y velocidad real < 0.1 m/s; no cuenta bajo el piso
+  optico (`OPTICAL_MIN_ALT_M`=4.5). `wp_no_progress` (50 ciclos sin mejorar 2 m) se indexa por
+  etiqueta + posicion del WP, para reiniciarse al cambiar de objetivo.
+- `tests/test_takeoff_no_false_deadlock.py`.
+
+**Tests eliminados** (cubrian componentes retirados): `test_blocked_front_logic`,
+`test_corner_chain`, `test_deliberative_wait_creep`, `test_parser`, `test_policy_router`,
+`test_prompt_invariants`, `test_retroceder_override`, `test_s5_trajectory_context`.
+
+# 2026-09-30 (c) - VLM: capa estrategica anclada a pose + fixes del barrido deep_vlm
+
+La inferencia (~4-6 s con imagen) llegaba cuando el frame ya no representaba la escena. Se
+reemplaza la consulta tactica (macro-accion) por sub-metas en marco mundo.
+
+**`src/agents/vlm_strategic.py`** (nuevo): consulta asincrona cada `VLM_STRATEGIC_PERIOD_S`
+(3 s; `expedite()` ante GIRAR_90). El frame frontal se divide en columnas A-E (rumbos
+absolutos fijados con el yaw DEL FRAME, `CAMERA_HFOV_DEG`); el VLM indica columnas volables y
+`estructura_debajo` (META). La respuesta se convierte en sub-meta a `VLM_SUBGOAL_DIST_M` desde
+la pose de captura (sube `VLM_CLIMB_M` si hay estructura debajo). Se aplica solo si: edad
+<= `VLM_STRATEGIC_MAX_AGE_S` (10 s), mismo WP, sub-meta >= `VLM_SUBGOAL_MIN_AHEAD_M` por
+delante y meta dentro de +/-`VLM_STRATEGIC_MAX_GOAL_OFF_DEG`. Dedup de sub-metas a 10 m.
+
+**`src/agents/vlm_client.py`** (nuevo): cliente HTTP comun (schema JSON estricto, timeouts).
+
+**`src/agents/deep_scan.py`** (solo deep_vlm):
+- Fix error de marco: las imagenes se etiquetaban con rumbo absoluto y el parser lo leia como
+  relativo; el error a la meta se medía contra el yaw al final del barrido. Ahora el VLM
+  identifica imagenes por numero; el codigo asigna el yaw MEDIDO de cada captura y compara
+  rumbos absolutos. Resultado: sub-meta a 15 m (`CORNER_OFFSET_M`).
+- Fix default silencioso: el consumidor leia `decision.get("macro_action", "EVADIR_DERECHA")`
+  sobre una respuesta sin esa clave (11/15 despachos ejecutados como EVADIR_DERECHA). Ahora
+  respuesta no parseable -> `no_parseable` registrado, sin accion por defecto.
+- Prompt sin ejemplo con valores concretos ni instruccion contradictoria de "priorizar evasion".
+- Fallback ante falla del VLM: `GANAR_ALTURA`, o `GIRAR_90` por encima de `MAX_ESCAPE_ALT_M`.
+- Sin overrides deterministas sobre la decision del modelo.
+
+**`graph.py`, `evasive.py`, `fsm.py`, `waypoint_tracker.py`, `flight_logger.py`, `main.py`**:
+integracion de la capa estrategica, claves nuevas declaradas en `DroneState`, registro de
+consultas/respuestas/sub-metas.
+
+**Tests nuevos**: `test_vlm_strategic.py`, `test_vlm_strategic_graph.py`,
+`test_deep_vlm_world_frame.py` (reproduce el caso -53 deg -> EVADIR_IZQUIERDA). 202 tests pasan.
+
+# 2026-09-30 (b) - Manifiesto citysim_pilot: mapa, start_pose y WP_0_SUR
+
+**`airsim-plan/missions/flightplans/citysim_pilot.json`**:
+- `map`: `citysim_calib.png` -> `citymap.png` (3.8 px/m, origen = spawn); con el anterior los WP
+  caian sobre el agua.
+- `start_pose`: (26.1, -78.2) -> spawn real de settings.json (0, 0, -10, yaw 90). Antes apuntaba
+  a WP_1 y con `--seed-jitter` teletransportaba el dron al primer WP.
+- Nuevo `WP_0_SUR` (-11, -50.5, -10): el tramo spawn -> WP_1 cruzaba la autopista elevada a la
+  altura de crucero; en 2 de 3 corridas el dron quedo trabado sobre el tablero
+  (`physics_locked`). Los edificios del recorrido se dejan para que los resuelva la navegacion.
+- `mission_id` se mantiene `CITYMAP_PILOT`.
+
+# 2026-09-30 (a) - Lazo de vuelo sin canal de profundidad (main y runner)
+
+El runner capturaba la profundidad de AirSim "solo como metrica", pero esa captura armaba un
+freno de proximidad consumido por el grafo (cancelaba maniobras, inyectaba RETROCEDER,
+registraba contactos que validaban desvios). Eso daba al brazo evaluado acceso a verdad de
+terreno e invalidaba la comparacion monocular.
+
+- `experiments/runner.py`, `main.py`, `graph.py`: eliminadas la captura de depth, el freno de
+  proximidad (`depth_brake`, revierte 2026-09-29 (u)), el aborto por proximidad
+  (`DEPTH_EMERGENCY_*`) y los contactos derivados de depth.
+- `tests/test_no_depth_in_flight_path.py`: la guardia estatica cubre runner, main y todos los
+  modulos de vuelo, incluido el canal indirecto.
+- Las corridas nuevas no registran `DistMin`; el del lote base queda como auditoria externa.
+
 # 2026-09-29 (u) - Fix: cancelar maniobra activa cuando freno de profundidad actua
 
 Durante una maniobra evasiva lateral (EVADIR_IZQUIERDA / EVADIR_DERECHA), navigate_node

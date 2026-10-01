@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-import src.agents.deliberative as deliberative_mod
+import src.agents.vlm_client as deliberative_mod
 from src.agents.graph import compile_workflow
 
 

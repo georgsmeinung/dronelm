@@ -1,17 +1,11 @@
 """Modulo de agentes: nodos del grafo LangGraph + state."""
 from .action_map import action_to_command
-from .deliberative import make_deliberation_service, make_deliberative_node
 from .evasive import evasive_node
 from .fsm import fsm_node
-from .graph import (
-    DroneState,
-    build_workflow,
-    compile_workflow,
-    get_airsim_client,
-    policy_router,
-)
+from .graph import DroneState, build_workflow, compile_workflow
 from .reactive import reactive_node
 from .stall_detector import StallDetector
+from .vlm_client import make_deliberation_service
 
 __all__ = [
     "DroneState",
@@ -21,9 +15,6 @@ __all__ = [
     "compile_workflow",
     "evasive_node",
     "fsm_node",
-    "get_airsim_client",
     "make_deliberation_service",
-    "make_deliberative_node",
-    "policy_router",
     "reactive_node",
 ]

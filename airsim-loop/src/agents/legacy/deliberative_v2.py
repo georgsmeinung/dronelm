@@ -1,3 +1,7 @@
+# CONGELADO 2026-09-30 (legacy, fuera del camino de vuelo, sin tests).
+# Nodo deliberativo del grafo v1 (brazo slm hasta 2026-09-10) + prompts/parsers tacticos. Evidencia: nunca supero al brazo reactivo (ver memoria vlm-strategic-layer).
+# Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
+# apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
 # Paso 4B: Cerebro Deliberativo (VLM / SLM local), brazo "slm".
 #
 # Se activa cuando el router detecta peligro critico en el sector central del
@@ -374,6 +378,14 @@ def _parse_decision(raw: str) -> Optional[Dict[str, Any]]:
     return {"macro_action": macro, "rationale": rationale}
 
 
+def _extract_json_object(raw: str) -> str:
+    """Primer objeto {...} del texto (tolera cercos ``` y texto alrededor)."""
+    cleaned = re.sub(r"^```(?:json)?\s*", "", (raw or "").strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+    m = re.search(r"\{[\s\S]*\}", cleaned)
+    return m.group(0) if m else cleaned
+
+
 def _parse_scene_response(raw: str) -> Optional[Dict[str, Any]]:
     """Parsea respuesta raw del VLM buscando el schema de escena (sectores).
 
@@ -498,6 +510,9 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
     # -- reusar la etiqueta temporal aca seria el mismo error que corrigio
     # F2.1 (afirmarle al modelo un eje que no es el real, ver deep_scan.py).
     is_deep_scan = payload.get("mode") == "deep_scan"
+    # 2026-0930: capa estrategica anclada a pose (vlm_strategic.py): system prompt, esquema y
+    # parser propios; una sola imagen con columnas dibujadas.
+    is_strategic = payload.get("mode") == "strategic"
     image_labels = payload.get("image_labels")
 
     t0 = time.time()
@@ -517,7 +532,11 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
                     frame_label = f"t-{delta}" if delta > 0 else "t (actual)"
                     user_content.append({"type": "text", "text": f"[Fotograma {frame_label}]:"})
                 user_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}})
-            system_prompt = SYSTEM_PROMPT_DEEP_SCAN if is_deep_scan else SYSTEM_PROMPT_VISION
+            if is_strategic:
+                from .vlm_strategic import SYSTEM_PROMPT_STRATEGIC as _SP_STRAT
+                system_prompt = _SP_STRAT
+            else:
+                system_prompt = SYSTEM_PROMPT_DEEP_SCAN if is_deep_scan else SYSTEM_PROMPT_VISION
         else:
             user_content = prompt
             system_prompt = SYSTEM_PROMPT_TEXT
@@ -544,7 +563,10 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
         used_schema = False
         if VLM_USE_JSON_SCHEMA:
             try:
-                schema = RESPONSE_JSON_SCHEMA_PANORAMA if is_deep_scan else RESPONSE_JSON_SCHEMA_SCENE
+                if is_strategic:
+                    from .vlm_strategic import RESPONSE_JSON_SCHEMA_STRATEGIC as schema
+                else:
+                    schema = RESPONSE_JSON_SCHEMA_PANORAMA if is_deep_scan else RESPONSE_JSON_SCHEMA_SCENE
                 completion = client.chat.completions.create(response_format=schema, **kwargs)
                 raw = completion.choices[0].message.content or ""
                 used_schema = True
@@ -557,6 +579,16 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
         latency_ms = (time.time() - t0) * 1000.0
         # Redesign 2026-0929: intentar schema de escena/panorama primero;
         # si el modelo devuelve el formato viejo (macro_action), usar fallback.
+        if is_strategic:
+            from .vlm_strategic import parse_strategic as _parse_strat
+            try:
+                _sd = _json.loads(_extract_json_object(raw))
+            except Exception:
+                _sd = None
+            parsed = _parse_strat(_sd)
+            if parsed is not None:
+                parsed["used_json_schema"] = used_schema
+            return parsed, raw, latency_ms, None
         if is_deep_scan:
             from .deep_scan import parse_panorama_description as _parse_pano_raw
             _raw_dict: Optional[Dict[str, Any]] = None
