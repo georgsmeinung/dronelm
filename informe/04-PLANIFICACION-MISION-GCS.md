@@ -56,7 +56,7 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 
 **Separación entre manifiesto y prompts del VLM.** El manifiesto entrega únicamente metas geométricas; los prompts del VLM no forman parte de él porque no pueden ser textos estáticos: se construyen en vuelo a partir del fotograma, la pose y el waypoint activo de ese instante. Hay dos (cap. 5 §5.10, §5.12; cap. 8 §8.5):
 
-1. **Prompt estratégico** (`vlm_strategic.py`): el fotograma frontal con cinco columnas dibujadas y la marca «META» sobre la columna del destino, más la distancia al destino y la altura del dron. El modelo responde, para cada columna, si se puede volar recto 15 m por ella, y si hay una estructura horizontal cercana.
+1. **Prompt estratégico** (`vlm_strategic.py`): el fotograma frontal con una grilla de 3×3 dibujada (tercios de la imagen) y la marca «META» en la dirección del destino, más la distancia al destino y la altura del dron. El modelo responde, para cada uno de los nueve sectores, si se puede volar al menos 15 m en esa dirección.
 2. **Prompt del barrido** (`deep_scan.py`, solo en un deadlock): cuatro imágenes numeradas tomadas girando en el lugar, con el ángulo de cada una respecto de la dirección de vuelo y cuál es la más cercana al destino. El modelo describe cada imagen.
 
 Ambas respuestas se fuerzan con decodificación restringida (`json_schema`) a esquemas sin campo de acción; el código convierte la descripción en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.

@@ -28,6 +28,8 @@ if DEADLOCK_STRATEGY not in ("deep_vlm", "blind"):
         "(slam_assess esta en src/agents/legacy/deep_scan_v2.py)."
     )
 SCAN_HEADING_COUNT_DEEP = int(os.getenv("SCAN_HEADING_COUNT_DEEP", "4"))
+# Cerca del WP real (m) no se barre: mismo umbral que la capa estrategica (vlm_strategic.VLM_NEAR_WP_M).
+VLM_NEAR_WP_M = float(os.getenv("VLM_NEAR_WP_M", "8.0"))
 SCAN_SETTLE_CYCLES_DEEP = int(os.getenv("SCAN_SETTLE_CYCLES_DEEP", "2"))
 SCAN_YAW_TOLERANCE_DEG = float(os.getenv("SCAN_YAW_TOLERANCE_DEG", "5.0"))
 # Timeout de rotacion en fase "rotando": si el drone no alcanza el rumbo target en
@@ -248,6 +250,7 @@ def panorama_to_subgoal(
     telem: Dict[str, Any],
     goal_bearing_deg: Optional[float],
     goal_z: float = -10.0,
+    goal_dist_m: Optional[float] = None,
 ) -> Tuple[str, Optional[Dict[str, Any]], str]:
     """Traduce la descripcion panoramica del VLM a una decision en marco MUNDO (2026-0930).
 
@@ -263,9 +266,13 @@ def panorama_to_subgoal(
     Returns (macro_action, sub_meta_o_None, motivo).
     """
     assigned = assign_panorama_entries(rumbos, len(headings_world_deg))
+    # Una entrada transitable tiene que ser coherente: ok=true con tipo distinto de "libre" (p. ej.
+    # "interior" o "fachada") se contradice a si misma y no se usa. Piloto v3 seed 99 190842Z: la
+    # camara quedo dentro del edificio, el modelo marco el interior de una oficina como transitable y
+    # el barrido mando al dron contra la fachada.
     transitable = [
         (headings_world_deg[i], e) for i, e in enumerate(assigned)
-        if e is not None and e.get("transitable", False)
+        if e is not None and e.get("transitable", False) and e.get("tipo") == "libre"
     ]
     if not transitable:
         tipos = {e.get("tipo", "indeterminado") for e in assigned if e is not None}
@@ -276,6 +283,9 @@ def panorama_to_subgoal(
     ref = goal_bearing_deg if goal_bearing_deg is not None else headings_world_deg[0]
     heading, _entry = min(transitable, key=lambda t: abs(_normalize_deg(t[0] - ref)))
     offset_m = float(os.getenv("CORNER_OFFSET_M", "12.0"))
+    if goal_dist_m is not None:
+        # Nunca mas lejos que el WP real: una sub-meta mas alla del WP lo saltea.
+        offset_m = max(5.0, min(offset_m, float(goal_dist_m)))
     pos = (telem or {}).get("position", {}) if isinstance(telem, dict) else {}
     x, y = float(pos.get("x", 0.0)), float(pos.get("y", 0.0))
     rad = math.radians(heading)
@@ -406,6 +416,18 @@ def deep_scan_cycle(
 
     phase = state.get("_scan_phase")
     if phase is None:
+        # Cerca del WP real no se barre: el rumbo a la meta desde tan cerca es casi ruido y una
+        # sub-meta la saltearia. El llamador cae al escape determinista.
+        goal0 = _real_goal(state, guidance)
+        pos0 = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
+        if goal0 is not None and pos0 and math.hypot(
+                float(goal0.get("x", 0.0)) - float(pos0.get("x", 0.0)),
+                float(goal0.get("y", 0.0)) - float(pos0.get("y", 0.0))) < VLM_NEAR_WP_M:
+            state["_deadlock_event"] = {
+                "strategy": "deep_vlm", "arm": arm, "resolved_by_scan": False,
+                "cycles_to_resolve": None, "fell_back_to_blind": True, "reason": "cerca_del_wp",
+            }
+            return False
         state["_scan_phase"] = "rotando"
         state["_scan_started_ts"] = time.time()
         state["_scan_heading_index"] = 0
@@ -554,10 +576,15 @@ def deep_scan_cycle(
 
             pano = parse_panorama_description(decision)
             corner = None
-            if pano is not None and headings:
+            # degradada=true: el propio modelo declara que las imagenes no sirven. Es una falla del
+            # modelo (como un formato invalido), no una descripcion: cae al escape determinista.
+            if pano is not None and headings and not pano["imagen_degradada_global"]:
                 goal_z = float(goal.get("z", -10.0)) if goal is not None else -10.0
+                goal_dist = (math.hypot(float(goal.get("x", 0.0)) - float(pos.get("x", 0.0)),
+                                        float(goal.get("y", 0.0)) - float(pos.get("y", 0.0)))
+                             if goal is not None else None)
                 macro, corner, why = panorama_to_subgoal(
-                    pano["rumbos"], headings, telemetry, goal_bearing, goal_z=goal_z,
+                    pano["rumbos"], headings, telemetry, goal_bearing, goal_z=goal_z, goal_dist_m=goal_dist,
                 )
                 nav_decision = {
                     "macro_action": macro,
@@ -566,8 +593,10 @@ def deep_scan_cycle(
                 }
                 print(f"[deep_vlm] panorama VLM -> {macro} ({why})")
             else:
-                print(f"[deep_scan] ({arm}) respuesta sin formato valido. Cae al escape sincronico.")
-                _record_failed_scan(state, result.raw_response, "sin_accion_viable", result.latency_ms)
+                why_fail = ("degradada" if pano is not None and pano["imagen_degradada_global"]
+                            else (getattr(result, "error", None) or "sin_formato_valido"))
+                print(f"[deep_scan] ({arm}) respuesta no utilizable ({why_fail}). Cae al escape sincronico.")
+                _record_failed_scan(state, result.raw_response, why_fail, result.latency_ms)
                 state["_deadlock_event"] = {
                     "strategy": "deep_vlm",
                     "arm": arm,

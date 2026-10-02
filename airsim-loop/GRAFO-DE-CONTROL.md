@@ -47,20 +47,20 @@ Brazos de comparacion: `reactive` = solo `reactive_node`; `fsm` = [`fsm.py`](src
 
 ## 4. Capa estrategica del VLM ([`vlm_strategic.py`](src/agents/vlm_strategic.py))
 
-- **Cuando:** cada ≥`VLM_STRATEGIC_PERIOD_S` (3 s), a ≥8 m de altura, con un WP de mision (no una sub-meta) como objetivo y la meta dentro de ±40° del eje optico. Tambien de inmediato si la regla 7 ve un muro.
-- **Que ve:** el frame frontal con 5 columnas A-E dibujadas y una marca roja "META". Cada columna tiene un **rumbo absoluto** fijado con el yaw del frame.
-- **Que responde:** cada columna `libre`/`bloqueada` a la altura del dron, `meta_bloqueada`, `estructura_debajo` (tablero, cornisa, techo).
-- **Como se usa:** si la columna de la meta esta libre y nada bloquea, no hace nada. Si no, sub-meta a 15 m sobre la columna libre mas cercana a la meta (con ascenso de 4 m si hay estructura debajo). Se descarta si paso >10 s, cambio el WP o el dron ya la supero.
+- **Cuando:** cada >=`VLM_STRATEGIC_PERIOD_S` (3 s), a >=8 m de altura, con el WP real a >`VLM_NEAR_WP_M` (8 m) y la meta dentro de +-40 deg del eje optico. Tambien con una sub-meta activa (re-planificacion: la pregunta es siempre sobre el WP real). De inmediato si la regla 7 ve un muro. Con la meta fuera de cuadro solo si el dron lleva >=15 ciclos sin acercarse (`VLM_STUCK_QUERY_CYCLES`): entonces no hay sector de la meta y nunca es `directo_libre`. Tope de tokens 384/512; una respuesta cortada (`finish_reason=length`) es `respuesta_truncada`, no se interpreta.
+- **Que ve:** el frame frontal con una grilla de 3x3 por tercios de la imagen (columnas A-C, filas 1 arriba / 2 altura del dron / 3 abajo) y una marca roja "META" en la direccion (azimut y elevacion) del destino. Cada sector tiene una **direccion absoluta** fijada con la pose del frame.
+- **Que responde:** cada sector `libre`/`bloqueado` (volar 15 m en esa direccion).
+- **Como se usa:** si el sector de la meta esta libre, nada (y si habia una sub-meta pendiente se descarta: `_clear_subgoals`). Si no, sub-meta en la direccion del sector libre mas cercano a la meta, a `min(15 m, distancia al WP real)` desde el ancla, con dz = d*tan(elevacion) acotado a +-4 m y altitud >= 6 m. Se descarta si paso >10 s, cambio el WP o el dron ya la supero.
 - **Auditoria:** `deliberations[]` con `arm=vlm_strategic`, frame en `photo-*.png`, ultimo resultado en `_vlm_strategic`.
 
 ## 5. Deadlock
 
-- **`deep_vlm` (default):** barrido de `SCAN_HEADING_COUNT_DEEP`=4 rumbos, una consulta con las imagenes numeradas. El modelo describe cada imagen; el codigo conoce el rumbo medido de cada una y fija una sub-meta sobre la transitable mas cercana a la meta ([`deep_scan.py`](src/agents/deep_scan.py)). Si ninguna es transitable: `GANAR_ALTURA` (o `PERDER_ALTURA` si todo es vegetacion).
+- **`deep_vlm` (default):** barrido de `SCAN_HEADING_COUNT_DEEP`=4 rumbos, una consulta con las imagenes numeradas. El modelo describe cada imagen; el codigo conoce el rumbo medido de cada una y fija una sub-meta sobre la transitable (`ok:true` **y** tipo `libre`) mas cercana a la meta, sin pasar del WP real ([`deep_scan.py`](src/agents/deep_scan.py)). `degradada:true` = falla del modelo (escape). A <8 m del WP real no se barre. Si ninguna es transitable: `GANAR_ALTURA` (o `PERDER_ALTURA` si todo es vegetacion).
 - **`blind`, o el VLM falla:** `GANAR_ALTURA` (por encima de `MAX_ESCAPE_ALT_M`: `GIRAR_90`). En las corridas fue la unica maniobra que libero al dron de una estructura; `RETROCEDER` tuvo avance mediano negativo y se elimino.
 
 ## 6. Sub-metas y tracker ([`waypoint_tracker.py`](src/navigation/waypoint_tracker.py))
 
-Toda sub-meta viene del VLM y se inserta tal cual delante del WP activo, reemplazando la pendiente (salvo un duplicado a <10 m). No hay esquinas deterministas, contactos, reflejos, compromiso ni cadena: 74 esquinas deterministas dieron una mediana de 0.35 m de avance hacia el WP real en 20 s.
+Toda sub-meta viene del VLM y se inserta tal cual delante del WP activo, reemplazando la pendiente (salvo un duplicado a <10 m). El WP real se acepta aunque haya una sub-meta activa (descarta los desvios): en el piloto v3 190842Z el dron estuvo 573 ciclos a <3.5 m de WP_0_SUR sin aceptarlo. No hay esquinas deterministas, contactos, reflejos, compromiso ni cadena: 74 esquinas deterministas dieron una mediana de 0.35 m de avance hacia el WP real en 20 s.
 
 ## 7. Que se elimino y por que (evidencia: 12 corridas `citysim_pilot`, grafo v2)
 

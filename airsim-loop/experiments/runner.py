@@ -350,6 +350,9 @@ def run_one(
             state = graph.invoke(state)
             # Deteccion de techo con el comando EJECUTADO, no con la demanda del guiado.
             tracker.note_executed_command(state.get("velocity_command"))
+            # El VLM vio libre el camino directo al WP real: la sub-meta pendiente sobra.
+            if state.pop("_clear_subgoals", False):
+                tracker.drop_temporary("VLM: camino directo libre")
             if state.pop("_escape_reset", False):
                 tracker.reset_progress()
             # H3.2: evento de resolucion de atasco (blind vs. deep_vlm),

@@ -97,7 +97,7 @@
           </div>
           <div class="card">
             <h4>Capa Estratégica del VLM Anclada a la Pose</h4>
-            <p>Cada 3 s (o de inmediato ante un muro), el VLM ve el fotograma frontal dividido en columnas A–E con rumbo absoluto e indica cuáles son volables. La respuesta se convierte en una <strong>sub-meta en coordenadas del mundo</strong> anclada a la pose del fotograma: sigue siendo válida aunque el dron haya girado mientras el modelo pensaba. Se descarta si tiene más de 10 s, si cambió el waypoint o si ya quedó atrás.</p>
+            <p>Cada 3 s (o de inmediato ante un muro), el VLM ve el fotograma frontal dividido en una grilla de 3×3 (los tercios de la foto) e indica qué sectores son volables: hacia los costados, por arriba o por abajo. La respuesta se convierte en una <strong>sub-meta en coordenadas del mundo</strong> anclada a la pose del fotograma: sigue siendo válida aunque el dron haya girado mientras el modelo pensaba. Se descarta si tiene más de 10 s, si cambió el waypoint o si ya quedó atrás.</p>
           </div>
           <div class="card">
             <h4>Barrido <code>deep_vlm</code> en Marco Mundo</h4>
@@ -199,7 +199,7 @@
             <code>blind_wall</code>), el piso óptico, el atasco (<code>StallDetector</code>) y el TTC: guiado nominal,
             evasión lateral o <code>GIRAR_90</code> ante un muro que ocupa el campo visual.</li>
           <li><strong>Capa estratégica asíncrona del VLM:</strong> Consulta periódica (3 s) e inmediata tras un
-            <code>GIRAR_90</code>. El modelo indica columnas volables del fotograma y si hay estructura debajo; la
+            <code>GIRAR_90</code>. El modelo indica qué sectores de una grilla de 3×3 del fotograma son volables; la
             respuesta se convierte en una sub-meta en el mundo que el <code>WaypointTracker</code> persigue con el guiado
             normal. El dron nunca frena a esperarla.</li>
           <li><strong>Resolución de deadlock (<code>deep_vlm</code>):</strong> Barrido panorámico de 4 rumbos con yaw
@@ -425,7 +425,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-09-30):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). Grafo de control con dos lazos desacoplados, capa estratégica del VLM anclada a la pose y <code>DEADLOCK_STRATEGY=deep_vlm</code> por defecto; 217 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad. Manifiesto <code>citysim_pilot</code> con <code>WP_0_SUR</code> para evitar la autopista elevada. Informe actualizado (caps. 00–13) con seis modos de falla documentados y nueve anexos (A1–A9). Pendiente: re-ejecución de las pruebas del capítulo 11 y lotes con obstrucción D, E y F (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citysim_pilot</code>; 4 celdas × 5 semillas cada uno).</p>
+          <p><strong>Estado actual (2026-09-30):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). Grafo de control con dos lazos desacoplados, capa estratégica del VLM anclada a la pose y <code>DEADLOCK_STRATEGY=deep_vlm</code> por defecto; 237 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad. Manifiesto <code>citysim_pilot</code> con <code>WP_0_SUR</code> para evitar la autopista elevada. Informe actualizado (caps. 00–13) con seis modos de falla documentados y nueve anexos (A1–A9). Pendiente: re-ejecución de las pruebas del capítulo 11 y lotes con obstrucción D, E y F (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citysim_pilot</code>; 4 celdas × 5 semillas cada uno).</p>
         </div>
       </section>
 

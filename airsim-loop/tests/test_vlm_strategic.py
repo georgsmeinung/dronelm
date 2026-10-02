@@ -1,4 +1,4 @@
-"""Capa estrategica del VLM anclada a la pose de captura (2026-0930)."""
+"""Capa estrategica del VLM anclada a la pose de captura, con grilla de 3x3 (2026-1001)."""
 from __future__ import annotations
 
 import math
@@ -9,6 +9,10 @@ import numpy as np
 
 import src.agents.vlm_strategic as vs
 
+W, H = 108, 72          # frame de prueba: f = 54 px con HFOV 90
+AZ = math.degrees(math.atan(36 / 54))   # 33.69: centro de las columnas A y C
+EL = math.degrees(math.atan(24 / 54))   # 23.96: centro de las filas 1 y 3
+
 
 def _state(x=0.0, y=0.0, yaw_deg=0.0, wp=(100.0, 0.0), alt=10.0, temp=False):
     wps = [{"x": wp[0], "y": wp[1], "z": -10.0, "label": "WP_1"}]
@@ -17,66 +21,96 @@ def _state(x=0.0, y=0.0, yaw_deg=0.0, wp=(100.0, 0.0), alt=10.0, temp=False):
     return {
         "telemetry": {"position": {"x": x, "y": y, "z": -alt},
                       "orientation": {"yaw": math.radians(yaw_deg)}, "timestamp": time.time()},
-        "rgb_image": np.full((72, 108, 3), 100, dtype=np.uint8),
+        "rgb_image": np.full((H, W, 3), 100, dtype=np.uint8),
         "waypoints": wps, "current_wp_index": 0,
     }
 
 
-def _cols(**kw):
-    c = {k: "libre" for k in vs.COLUMN_LABELS}
-    c.update(kw)
-    return c
+def _grid(blocked=(), free_only=None):
+    if free_only is not None:
+        return {"sectores": {c: ("libre" if c in free_only else "bloqueado") for c in vs.CELLS}}
+    return {"sectores": {c: ("bloqueado" if c in blocked else "libre") for c in vs.CELLS}}
 
 
-def _parsed(cols, meta_bloqueada=False, estructura=False):
-    return {"columnas": cols, "meta_bloqueada": meta_bloqueada, "estructura_debajo": estructura}
-
-
-def test_column_geometry_is_symmetric():
-    centers = vs.column_centers_deg(90.0, 5)
-    assert centers == {"A": -36.0, "B": -18.0, "C": 0.0, "D": 18.0, "E": 36.0}
-    assert vs.column_for_angle(0.0) == "C" and vs.column_for_angle(-44.0) == "A" and vs.column_for_angle(44.0) == "E"
+def test_grid_geometry_follows_the_thirds_of_the_image():
+    centers = vs.cell_centers_deg(W, H, 90.0)
+    assert centers["B2"] == (0.0, 0.0)
+    assert abs(centers["A2"][0] + AZ) < 1e-6 and abs(centers["C2"][0] - AZ) < 1e-6
+    assert abs(centers["B1"][1] - EL) < 1e-6 and abs(centers["B3"][1] + EL) < 1e-6
+    assert vs.cell_for_direction(0.0, 0.0, W, H) == "B2"
+    assert vs.cell_for_direction(-44.0, 0.0, W, H) == "A2"
+    assert vs.cell_for_direction(0.0, 30.0, W, H) == "B1"
+    assert vs.cell_for_direction(30.0, -30.0, W, H) == "C3"
 
 
 def test_annotation_never_touches_the_flow_frame():
-    frame = np.full((72, 108, 3), 100, dtype=np.uint8)
+    frame = np.full((H, W, 3), 100, dtype=np.uint8)
     before = frame.copy()
-    b64 = vs.annotate_columns(frame, 10.0)
+    b64 = vs.annotate_grid(frame, 10.0, 0.0)
     assert b64 and np.array_equal(frame, before)
 
 
-def test_request_anchors_capture_pose_and_goal_column():
+def test_request_anchors_capture_pose_and_goal_cell():
     payload, anchor = vs.build_request(_state(yaw_deg=0.0, wp=(100.0, 20.0)))
     assert payload["mode"] == "strategic" and len(payload["images_b64"]) == 1
-    assert anchor["goal_col"] == "D" and abs(anchor["goal_rel_deg"] - 11.3) < 0.5  # C cubre -9..9 deg
+    assert anchor["goal_cell"] == "B2" and abs(anchor["goal_az_deg"] - 11.3) < 0.5
+    assert abs(anchor["goal_el_deg"]) < 1e-6 and anchor["wp_dist_xy"] > 100.0
     assert anchor["x"] == 0.0 and anchor["yaw_deg"] == 0.0
 
 
-def test_no_request_when_goal_is_out_of_view():
+def test_no_request_when_goal_is_out_of_view_or_close():
     assert vs.build_request(_state(yaw_deg=90.0, wp=(100.0, 0.0))) is None
+    assert vs.build_request(_state(wp=(vs.VLM_NEAR_WP_M - 1.0, 0.0))) is None
 
 
 def test_direct_path_free_adds_nothing():
     _p, anchor = vs.build_request(_state())
-    sub, why = vs.decide_subgoal(_parsed(_cols()), anchor, _state())
+    sub, why = vs.decide_subgoal(_grid(), anchor, _state())
     assert sub is None and why == "directo_libre"
 
 
-def test_blocked_goal_column_goes_to_nearest_free_column_in_world_frame():
+def test_blocked_goal_sector_goes_to_nearest_free_sector_in_world_frame():
     _p, anchor = vs.build_request(_state(yaw_deg=0.0))
-    parsed = _parsed(_cols(B="bloqueada", C="bloqueada", D="bloqueada", E="libre", A="libre"), meta_bloqueada=True)
+    parsed = _grid(blocked=("A1", "B1", "C1", "B2", "A3", "B3", "C3"))
     # Mientras el VLM pensaba el dron giro 70 deg: la sub-meta NO debe cambiar (anclada al frame).
     later = _state(yaw_deg=70.0, x=1.0)
     sub, why = vs.decide_subgoal(parsed, anchor, later)
-    assert sub is not None and sub["label"] == "VLM_SUBGOAL"
+    assert sub is not None and sub["label"] == "VLM_SUBGOAL" and sub["sector"] in ("A2", "C2")
     bearing = math.degrees(math.atan2(sub["y"], sub["x"]))
-    assert abs(abs(bearing) - 36.0) < 0.5            # A (-36) o E (+36), mismo empate por |angulo|
+    assert abs(abs(bearing) - AZ) < 0.5
     assert abs(math.hypot(sub["x"], sub["y"]) - vs.VLM_SUBGOAL_DIST_M) < 0.1
+    assert sub["z"] == -10.0                      # fila del medio: misma altura
+
+
+def test_only_the_upper_row_free_climbs():
+    _p, anchor = vs.build_request(_state())
+    sub, why = vs.decide_subgoal(_grid(free_only=("A1", "B1", "C1")), anchor, _state())
+    assert sub["sector"] == "B1" and "B1" in why
+    assert sub["z"] == -10.0 - vs.VLM_MAX_DZ_M    # 15 m * tan(24 deg) = 6.7 m, acotado a VLM_MAX_DZ_M
+
+
+def test_subgoal_never_beyond_the_real_waypoint():
+    st = _state(wp=(12.0, 0.0))
+    _p, anchor = vs.build_request(st)
+    sub, _why = vs.decide_subgoal(_grid(blocked=("B2",)), anchor, st)
+    assert sub is not None and abs(math.hypot(sub["x"], sub["y"]) - 12.0) < 0.1
+
+
+def test_lower_row_respects_the_minimum_altitude():
+    st = _state(alt=9.0)
+    _p, anchor = vs.build_request(st)
+    sub, _why = vs.decide_subgoal(_grid(free_only=("B3",)), anchor, st)
+    assert sub["sector"] == "B3" and sub["z"] == -vs.VLM_SUBGOAL_MIN_ALT_M
+
+
+def test_no_free_sector_adds_nothing():
+    _p, anchor = vs.build_request(_state())
+    assert vs.decide_subgoal(_grid(free_only=()), anchor, _state()) == (None, "sin_sector_libre")
 
 
 def test_stale_or_wrong_wp_answers_are_discarded():
     _p, anchor = vs.build_request(_state())
-    parsed = _parsed(_cols(C="bloqueada"), meta_bloqueada=True)
+    parsed = _grid(blocked=("B2",))
     sub, why = vs.decide_subgoal(parsed, anchor, _state(), now=time.time() + vs.VLM_STRATEGIC_MAX_AGE_S + 1)
     assert sub is None and why.startswith("vencida")
     other = _state()
@@ -86,24 +120,21 @@ def test_stale_or_wrong_wp_answers_are_discarded():
 
 def test_subgoal_already_passed_is_discarded():
     _p, anchor = vs.build_request(_state())
-    parsed = _parsed(_cols(C="bloqueada", B="libre"), meta_bloqueada=True)
-    # El dron avanzo casi toda la distancia en el rumbo de la columna B mientras el modelo pensaba.
-    rad = math.radians(-18.0)
+    parsed = _grid(free_only=("A2",))
+    # El dron avanzo casi toda la distancia en el rumbo del sector A2 mientras el modelo pensaba.
+    rad = math.radians(-AZ)
     d = vs.VLM_SUBGOAL_DIST_M - 1.0
     later = _state(x=d * math.cos(rad), y=d * math.sin(rad))
     assert vs.decide_subgoal(parsed, anchor, later) == (None, "superada")
 
 
-def test_structure_below_climbs():
-    _p, anchor = vs.build_request(_state())
-    sub, why = vs.decide_subgoal(_parsed(_cols(), estructura=True), anchor, _state())
-    assert sub is not None and sub["z"] == -10.0 - vs.VLM_CLIMB_M and "subir" in why
-
-
 def test_parse_rejects_malformed():
-    assert vs.parse_strategic({"columnas": {"A": "libre"}}) is None
-    assert vs.parse_strategic({"columnas": _cols(C="quizas")}) is None
-    assert vs.parse_strategic({"columnas": _cols(), "meta_bloqueada": True})["meta_bloqueada"] is True
+    assert vs.parse_strategic({"sectores": {"A1": "libre"}}) is None
+    bad = _grid()
+    bad["sectores"]["B2"] = "quizas"
+    assert vs.parse_strategic(bad) is None
+    assert vs.parse_strategic({"columnas": {}}) is None
+    assert vs.parse_strategic(_grid(blocked=("B2",)))["sectores"]["B2"] == "bloqueado"
 
 
 class _FakeService:
@@ -125,7 +156,7 @@ class _FakeService:
 
 def test_layer_sends_then_injects_and_respects_period(monkeypatch):
     monkeypatch.setattr(vs, "VLM_STRATEGIC_PERIOD_S", 100.0)
-    svc = _FakeService(_parsed(_cols(C="bloqueada", B="bloqueada", D="libre"), meta_bloqueada=True))
+    svc = _FakeService(_grid(blocked=("B2", "A2")))
     layer = vs.StrategicLayer(svc)
     st = _state()
     assert layer.tick(st) is None and len(svc.requests) == 1        # envia
@@ -134,12 +165,21 @@ def test_layer_sends_then_injects_and_respects_period(monkeypatch):
     assert layer.tick(_state()) is None and len(svc.requests) == 1   # respeta el periodo
 
 
-def test_layer_skips_during_scan_takeoff_and_temporary_targets():
+def test_layer_skips_during_scan_and_takeoff():
     svc = _FakeService(None)
     layer = vs.StrategicLayer(svc)
     scan = _state()
     scan["_scan_phase"] = "rotando"
     layer.tick(scan)
     layer.tick(_state(alt=3.0))
-    layer.tick(_state(temp=True))
     assert svc.requests == []
+
+
+def test_layer_replans_with_a_subgoal_active_and_clears_it_when_direct_is_free():
+    svc = _FakeService(_grid())          # todo libre: camino directo
+    layer = vs.StrategicLayer(svc)
+    st = _state(temp=True)
+    layer.tick(st)
+    assert len(svc.requests) == 1        # consulta aunque el objetivo activo sea una sub-meta
+    layer.tick(st)
+    assert st.get("_clear_subgoals") is True and "inject_corner" not in st

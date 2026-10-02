@@ -360,6 +360,9 @@ def main() -> None:
 
             # Deteccion de techo con el comando EJECUTADO, no con la demanda del guiado.
             waypoint_tracker.note_executed_command(drone_state.get("velocity_command"))
+            # El VLM vio libre el camino directo al WP real: la sub-meta pendiente sobra.
+            if drone_state.pop("_clear_subgoals", False):
+                waypoint_tracker.drop_temporary("VLM: camino directo libre")
             if drone_state.pop("_escape_reset", False):
                 # Escape de deadlock forzado: el progreso medido (xy) puede no
                 # reflejar la subida vertical, asi que se resetea manualmente

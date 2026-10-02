@@ -1,4 +1,4 @@
-"""La capa estrategica atraviesa la frontera graph.invoke() del grafo COMPILADO (2026-0930)."""
+"""La capa estrategica (grilla 3x3) atraviesa la frontera graph.invoke() del grafo COMPILADO."""
 from __future__ import annotations
 
 import math
@@ -17,9 +17,9 @@ def test_strategic_subgoal_survives_compiled_graph(monkeypatch):
 
     def _query(payload):
         calls.append(payload.get("mode"))
-        cols = {c: "libre" for c in vs.COLUMN_LABELS}
-        cols.update({"B": "bloqueada", "C": "bloqueada", "D": "bloqueada"})
-        return {"columnas": cols, "meta_bloqueada": True, "estructura_debajo": False}, "{}", 30.0, None
+        cells = {c: "bloqueado" for c in vs.CELLS}
+        cells.update({"A2": "libre", "C2": "libre"})   # solo los costados, a la altura del dron
+        return {"sectores": cells}, "{}", 30.0, None
 
     monkeypatch.setattr(deliberative_mod, "_query_slm_impl", _query)
     from src.agents.graph import compile_workflow
@@ -54,7 +54,7 @@ def test_strategic_subgoal_survives_compiled_graph(monkeypatch):
             time.sleep(0.02)
         assert calls and set(calls) == {"strategic"}          # nunca el tactico por sector
         assert corner and corner["label"] == "VLM_SUBGOAL"
-        assert abs(abs(math.degrees(math.atan2(corner["y"], corner["x"]))) - 36.0) < 0.5
+        assert abs(abs(math.degrees(math.atan2(corner["y"], corner["x"]))) - math.degrees(math.atan(36 / 54))) < 0.5
         assert state.get("_vlm_strategic", {}).get("outcome") == "subgoal"
         assert any(d.get("arm") == "vlm_strategic" for d in state.get("deliberations") or [])
     finally:

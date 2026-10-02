@@ -33,15 +33,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 def _get_code_version() -> str:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=5,
-        )
-        v = result.stdout.strip()
-        return v if v else "unknown"
-    except Exception:
-        return "unknown"
+    from src.logging.code_version import get_code_version  # con "-dirty" si hay cambios sin commitear
+
+    return get_code_version()
 
 
 def run_experiment(

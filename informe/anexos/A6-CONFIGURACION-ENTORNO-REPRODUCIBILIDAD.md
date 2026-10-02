@@ -141,8 +141,13 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `DEADLOCK_STRATEGY` | `"deep_vlm"` | Resolución de atascos: `"deep_vlm"` (barrido + VLM, cap. 5 §5.12) o `"blind"` (escape vertical sin VLM). Cualquier otro valor aborta el arranque. |
 | `VLM_STRATEGIC_ENABLED` | `true` | Habilita la capa estratégica del VLM (cap. 5, §5.10). |
 | `VLM_STRATEGIC_PERIOD_S` / `VLM_STRATEGIC_MAX_AGE_S` | `3.0` / `10.0` | Período mínimo entre consultas estratégicas y edad máxima de una respuesta para aplicarla. |
-| `VLM_STRATEGIC_COLUMNS` / `CAMERA_HFOV_DEG` | `5` / `90.0` | Columnas dibujadas sobre el fotograma y campo visual horizontal con el que se calculan sus rumbos. |
-| `VLM_SUBGOAL_DIST_M` / `VLM_SUBGOAL_MIN_AHEAD_M` / `VLM_CLIMB_M` | `15.0` / `4.0` / `4.0` | Distancia de la sub-meta desde el ancla, distancia mínima por delante del dron para aplicarla y ascenso si hay estructura debajo. |
+| `CAMERA_HFOV_DEG` | `90.0` | Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, §5.10.3). |
+| `VLM_SUBGOAL_DIST_M` / `VLM_SUBGOAL_MIN_AHEAD_M` | `15.0` / `4.0` | Distancia máxima de la sub-meta desde el ancla (nunca más lejos que el waypoint real) y distancia mínima por delante del dron para aplicarla. |
+| `VLM_MAX_DZ_M` / `VLM_SUBGOAL_MIN_ALT_M` | `4.0` / `6.0` | Cambio máximo de altitud de una sub-meta (filas 1 y 3 de la grilla) y altitud mínima de una sub-meta. |
+| `VLM_NEAR_WP_M` | `8.0` | A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre. |
+| `VLM_STUCK_QUERY_CYCLES` | `15` | Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, §5.10.1). |
+| `VLM_MAX_TOKENS_STRATEGIC` / `VLM_MAX_TOKENS_DEEP` | `384` / `512` | Tope de tokens de la respuesta por modo; una respuesta cortada por el tope se reporta como `respuesta_truncada` (cap. 8, §8.5.4). |
+| `CEILING_SIDEWAYS_STUCK_M` | `0.03` | Desplazamiento horizontal por ciclo por debajo del cual, con avance ordenado, el dron está trabado de costado y no se cuenta para detectar techo. |
 | `VLM_STRATEGIC_MAX_GOAL_OFF_DEG` | `40.0` | Solo se consulta si la meta cae dentro de ±40° del eje óptico. |
 
 ### 3. Lazo de Control Táctico
@@ -248,7 +253,7 @@ Contiene los metadatos globales del experimento y los indicadores clave de rendi
 }
 ```
 
-*Nota sobre trazabilidad:* el campo `code_version` almacena el hash SHA-1 de Git del commit exacto sobre el que se ejecutó el vuelo, asegurando trazabilidad matemática estricta con el código fuente.
+*Nota sobre trazabilidad:* el campo `code_version` almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en `airsim-loop/`, `config/` o `airsim-plan/`, lleva el sufijo `-dirty` (`src/logging/code_version.py`): el hash solo identifica el código con el árbol limpio, y una corrida `-dirty` no entra a un lote (cap. 10, §10.12).
 
 ### A6.4.2 Estructura del log de telemetría ciclo a ciclo (`.jsonl`)
 Cada línea del archivo es un registro JSON generado a la frecuencia de 5 Hz por `FlightLogger`, capturando el estado completo del sistema:

@@ -93,6 +93,7 @@ class DroneState(TypedDict, total=False):
     _last_delib_frames: Optional[List[Any]]
     _vlm_strategic: Optional[Dict[str, Any]]
     inject_corner: Optional[Dict[str, Any]]
+    _clear_subgoals: bool
     # Deadlock / barrido panoramico (deep_scan.py)
     _escape_reset: bool
     _deadlock_cycles: int

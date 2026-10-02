@@ -2,7 +2,7 @@
 #
 # Reemplaza la parte de infraestructura de deliberative.py (movido a legacy/deliberative_v2.py junto
 # con el nodo deliberativo del grafo v1). Solo hay dos consumidores en el camino de vuelo:
-#   - "strategic": capa estrategica anclada a pose (vlm_strategic.py), 1 imagen con columnas.
+#   - "strategic": capa estrategica anclada a pose (vlm_strategic.py), 1 imagen con grilla 3x3.
 #   - "deep_scan": barrido panoramico en deadlock (deep_scan.py), N imagenes numeradas.
 # Cada modo trae su propio system prompt, esquema JSON (decodificacion restringida) y parser.
 # La consulta corre en el hilo de DeliberationService: el lazo de control nunca bloquea.
@@ -68,16 +68,25 @@ def _extract_json_object(raw: str) -> str:
     return m.group(0) if m else cleaned
 
 
+# Tope de tokens por modo. Con decodificacion restringida la generacion termina sola al cerrar el
+# esquema; el tope solo protege de una generacion desbocada (modo libre sin esquema). Tiene que sobrar:
+# con 160 el barrido (JSON con indentacion, ~4 imagenes) se cortaba antes de la llave final en 5 de 12
+# respuestas (pilotos v3 190842Z y 193631Z) y el barrido caia al escape vertical sin usar la respuesta.
+VLM_MAX_TOKENS_STRATEGIC = int(os.getenv("VLM_MAX_TOKENS_STRATEGIC", "384"))
+VLM_MAX_TOKENS_DEEP = int(os.getenv("VLM_MAX_TOKENS_DEEP", "512"))
+TRUNCATED_ERROR = "respuesta_truncada"
+
+
 def _mode_spec(mode: str) -> Tuple[str, Dict[str, Any], Any, int, float]:
     """(system_prompt, schema, parser, max_tokens, http_timeout) de cada modo."""
     if mode == "strategic":
         from .vlm_strategic import RESPONSE_JSON_SCHEMA_STRATEGIC, SYSTEM_PROMPT_STRATEGIC, parse_strategic
 
-        return SYSTEM_PROMPT_STRATEGIC, RESPONSE_JSON_SCHEMA_STRATEGIC, parse_strategic, 120, SLM_HTTP_TIMEOUT_S
+        return SYSTEM_PROMPT_STRATEGIC, RESPONSE_JSON_SCHEMA_STRATEGIC, parse_strategic, VLM_MAX_TOKENS_STRATEGIC, SLM_HTTP_TIMEOUT_S
     if mode == "deep_scan":
         from .deep_scan import RESPONSE_JSON_SCHEMA_PANORAMA, SYSTEM_PROMPT_DEEP_SCAN, parse_panorama_description
 
-        return SYSTEM_PROMPT_DEEP_SCAN, RESPONSE_JSON_SCHEMA_PANORAMA, parse_panorama_description, 160, SLM_DEEP_HTTP_TIMEOUT_S
+        return SYSTEM_PROMPT_DEEP_SCAN, RESPONSE_JSON_SCHEMA_PANORAMA, parse_panorama_description, VLM_MAX_TOKENS_DEEP, SLM_DEEP_HTTP_TIMEOUT_S
     raise ValueError(f"modo VLM desconocido: {mode!r} (validos: {MODES})")
 
 
@@ -109,18 +118,24 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
             max_tokens=max_tokens,
             timeout=timeout,
         )
-        raw, used_schema = "", False
+        raw, used_schema, finish = "", False, None
         if VLM_USE_JSON_SCHEMA:
             try:
                 completion = client.chat.completions.create(response_format=schema, **kwargs)
                 raw = completion.choices[0].message.content or ""
+                finish = getattr(completion.choices[0], "finish_reason", None)
                 used_schema = True
             except Exception:
                 raw = ""
         if not raw:
             completion = client.chat.completions.create(**kwargs)
             raw = completion.choices[0].message.content or ""
+            finish = getattr(completion.choices[0], "finish_reason", None)
         latency_ms = (time.time() - t0) * 1000.0
+        if finish == "length":
+            # Cortada por el tope de tokens: no es una respuesta del modelo, es una falla de la consulta.
+            print(f"[vlm_client] respuesta truncada por max_tokens={max_tokens} ({len(raw)} caracteres).")
+            return None, raw, latency_ms, TRUNCATED_ERROR
         try:
             data = _json.loads(_extract_json_object(raw))
         except Exception:

@@ -44,30 +44,29 @@ La respuesta se solicita con `response_format={"type": "json_schema", "json_sche
 
 Hay **dos esquemas**, uno por modo de consulta (§5.10.5), y ninguno contiene un campo de acción: el modelo describe, el código traduce.
 
-**Esquema estratégico** (`RESPONSE_JSON_SCHEMA_STRATEGIC`, `vlm_strategic.py`): una entrada por columna del fotograma con valor `libre` o `bloqueada` (enum cerrado), más dos booleanos.
+**Esquema estratégico** (`RESPONSE_JSON_SCHEMA_STRATEGIC`, `vlm_strategic.py`): una entrada por sector de la grilla de 3×3 del fotograma con valor `libre` o `bloqueado` (enum cerrado); los nueve sectores son obligatorios.
 
 ```json
 {
   "type": "object",
   "properties": {
-    "columnas": {
+    "sectores": {
       "type": "object",
-      "properties": {"A": {"enum": ["libre", "bloqueada"]}, "B": {...}, "C": {...}, "D": {...}, "E": {...}},
-      "required": ["A", "B", "C", "D", "E"], "additionalProperties": false
-    },
-    "meta_bloqueada":    {"type": "boolean"},
-    "estructura_debajo": {"type": "boolean"}
+      "properties": {"A1": {"enum": ["libre", "bloqueado"]}, "B1": {...}, ..., "C3": {...}},
+      "required": ["A1", "B1", "C1", "A2", "B2", "C2", "A3", "B3", "C3"],
+      "additionalProperties": false
+    }
   },
-  "required": ["columnas", "meta_bloqueada", "estructura_debajo"],
+  "required": ["sectores"],
   "additionalProperties": false
 }
 ```
 
-**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `rumbos` de objetos `{img, tipo, ok, conf}` —número de imagen, superficie predominante (enum de seis tipos: `libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`), transitable y certeza— más `degradada`. Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (§8.3.3).
+**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `rumbos` de objetos `{img, tipo, ok, conf}` —número de imagen, superficie predominante (enum de seis tipos: `libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`), transitable y certeza— más `degradada`. Una respuesta con `degradada: true` no se usa (el modelo declara que las imágenes no sirven) y una entrada `ok: true` cuyo tipo no es `libre` se contradice a sí misma y no cuenta como transitable (cap. 5, §5.12). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (§8.3.3).
 
 ### 8.2.2 Parser como red de seguridad
 
-La garantía de `json_schema` depende de que el backend la soporte. Si la llamada con esquema falla, `vlm_client._query_slm_impl()` reintenta en modo libre; en ambos casos `_extract_json_object()` elimina cercos de markdown y extrae el primer objeto `{...}` del texto, y el parser del modo (`parse_strategic` o `parse_panorama_description`) lo valida: una respuesta estratégica con alguna columna ausente o con un valor fuera del enum se rechaza completa, y una respuesta panorámica sin array `rumbos` también. Una respuesta rechazada **no se sustituye por una decisión determinista**: la capa estratégica simplemente no propone sub-meta en ese ciclo (motivo `no_parseable`), y un barrido sin respuesta válida cae al escape vertical de §5.3.4 como cualquier otra falla del modelo.
+La garantía de `json_schema` depende de que el backend la soporte. Si la llamada con esquema falla, `vlm_client._query_slm_impl()` reintenta en modo libre; en ambos casos `_extract_json_object()` elimina cercos de markdown y extrae el primer objeto `{...}` del texto, y el parser del modo (`parse_strategic` o `parse_panorama_description`) lo valida: una respuesta estratégica con algún sector ausente o con un valor fuera del enum se rechaza completa, y una respuesta panorámica sin array `rumbos` también. Una respuesta rechazada **no se sustituye por una decisión determinista**: la capa estratégica simplemente no propone sub-meta en ese ciclo (motivo `no_parseable`), y un barrido sin respuesta válida cae al escape vertical de §5.3.4 como cualquier otra falla del modelo.
 
 ## 8.3 Rol del VLM: percepción semántica anclada al mundo
 
@@ -80,13 +79,15 @@ Una interfaz aparentemente más simple —pedir al modelo que describa tres sect
 1. **Latencia.** Una respuesta con imagen tarda 5.3 s de mediana (p95 12.9 s, 73 consultas). A 5 Hz son ~26 ciclos: el «frente» de la respuesta ya no es el frente del dron.
 2. **Contenido informativo.** En 52 de 53 respuestas sectoriales (excluida una corrida en vegetación) el modelo declaró el frente transitable, incluso cuando la profundidad de referencia del simulador, consultada a posteriori, marcaba una superficie a 0.1–1 m. La respuesta era casi constante.
 
-El diseño responde al primero anclando la respuesta a la pose del fotograma (§8.3.2) y, al segundo, con más granularidad (cinco columnas, con la meta marcada en la imagen) y un prompt sin ejemplos de valores concretos que un modelo de 3B pueda copiar (§8.5.1). Si esto alcanza para que el modelo discrimine es una pregunta empírica abierta, que el registro de auditoría (§5.10.4) permite responder.
+El diseño responde al primero anclando la respuesta a la pose del fotograma (§8.3.2) y, al segundo, con más granularidad (una grilla de 3×3, con la meta marcada en la imagen) y un prompt sin ejemplos de valores concretos que un modelo de 3B pueda copiar (§8.5.1). Si esto alcanza para que el modelo discrimine es una pregunta empírica abierta, que el registro de auditoría (§5.10.4) permite responder.
 
-### 8.3.2 Capa estratégica: columnas con rumbo absoluto
+### 8.3.2 Capa estratégica: grilla de 3×3 con dirección absoluta
 
-El fotograma frontal se divide en cinco columnas A–E equiespaciadas en ángulo sobre el campo visual de 90° (centros en −36°, −18°, 0°, +18°, +36°) y se marca la columna en la que cae el destino. Para cada columna el modelo dice si se puede volar recto 15 m a la altura del dron; además indica si algo se interpone entre el dron y la meta (`meta_bloqueada`) y si hay una superficie horizontal cercana (`estructura_debajo`).
+El fotograma frontal se divide en una grilla de 3×3 por tercios de la imagen —la grilla de composición fotográfica—: columnas A, B, C (izquierda a derecha) y filas 1, 2, 3 (arriba, a la altura del dron, abajo). Se marca en la imagen la dirección del destino, en azimut y elevación. Para cada sector el modelo dice si se puede volar en esa dirección al menos 15 m.
 
-La traducción (`decide_subgoal`, detalle en §5.10.3) usa el yaw **del fotograma**: rumbo absoluto de la columna = yaw del ancla + centro de la columna, y la sub-meta se fija a 15 m desde la posición del ancla. Así, la geometría que el modelo describió se transporta al mundo sin depender de hacia dónde mira el dron cuando la respuesta llega. Si la columna de la meta está libre, la capa no hace nada: la respuesta más frecuente esperable («todo libre») no genera maniobras.
+Una partición en columnas solo describe el eje horizontal. La grilla agrega el vertical: permite que la respuesta diga que un obstáculo a la altura del dron se pasa por arriba (fila 1 libre, fila 2 bloqueada) y que una superficie horizontal se ve en la fila del medio, sin pedir al modelo un concepto abstracto como «estructura debajo». En corridas de diagnóstico, una pregunta de ese tipo («¿hay una estructura horizontal cercana?») recibió `true` en 5 de 6 consultas, con imágenes muy distintas (cap. 9, §9.8.9).
+
+La traducción (`decide_subgoal`, detalle en §5.10.3) usa la pose **del fotograma**: la dirección absoluta del sector es el yaw del ancla más el azimut del centro del sector, con la elevación del centro del sector. La sub-meta se fija desde la posición del ancla, a no más de 15 m y nunca más lejos que el waypoint real. Así, la geometría que el modelo describió se transporta al mundo sin depender de hacia dónde mira el dron cuando la respuesta llega. Si el sector de la meta está libre, la capa no agrega nada y descarta cualquier desvío pendiente: la respuesta más frecuente esperable («el camino directo está libre») no genera maniobras.
 
 ### 8.3.3 Barrido: imágenes numeradas, rumbos medidos
 
@@ -112,14 +113,14 @@ Los prompts siguen cuatro reglas:
 
 1. **Solo hechos, ninguna sugerencia de acción.** Un prompt que pide al modelo «describir sin decidir» y a la vez le sugiere qué maniobra priorizar es contradictorio (cap. 9, §9.8.3). Los prompts describen la situación (distancia y dirección del destino, altura, qué imagen es cuál) y piden una descripción.
 2. **Ejemplos sin valores concretos.** El ejemplo del esquema se escribe con marcadores (`<bool>`, `<0-1>`), no con valores. Un modelo de 3B tiende a copiar los valores del ejemplo (`"ok": true, "conf": 0.9`) en sus respuestas (cap. 9, §9.8.3).
-3. **La geometría la aporta el código.** El modelo nunca reporta ángulos ni posiciones: identifica columnas o imágenes por su etiqueta, y el código conoce su rumbo.
-4. **Lo visual en la imagen, no en el texto.** La meta se marca **sobre** el fotograma (marca roja «META» sobre su columna) en lugar de describirse como «X grados a la derecha».
+3. **La geometría la aporta el código.** El modelo nunca reporta ángulos ni posiciones: identifica sectores o imágenes por su etiqueta, y el código conoce su dirección.
+4. **Lo visual en la imagen, no en el texto.** La meta se marca **sobre** el fotograma (marca roja «META» en su dirección, dentro de la grilla) en lugar de describirse como «X grados a la derecha».
 
 ### 8.5.2 Prompt de la capa estratégica
 
-**System prompt** (`SYSTEM_PROMPT_STRATEGIC`): rol de sistema de percepción de un dron a ~10 m de altura; definición operativa de `libre` («se ve calle, plaza, cielo o espacio abierto a la altura del dron») y de `bloqueada` (edificio, fachada, muro, árbol, puente, autopista elevada, cornisa, balcón o techo dentro de 15 m); definición de `meta_bloqueada` y `estructura_debajo`; instrucción de responder solo el JSON.
+**System prompt** (`SYSTEM_PROMPT_STRATEGIC`): rol de sistema de percepción de un dron a ~10 m de altura; descripción de la grilla (columnas, filas y qué significa cada fila); definición operativa de `libre` («se ve cielo, calle, plaza o espacio abierto en ese sector») y de `bloqueado` (edificio, fachada, vidrio, muro, árbol, puente, autopista elevada, cornisa, balcón, techo o el interior de un edificio a menos de 15 m); instrucción de responder solo el JSON con los nueve sectores.
 
-**User prompt** (`build_request`): distancia al destino y su etiqueta, columna en la que cae la meta, altura del dron y lista de columnas. Una única imagen de 384 px con las columnas dibujadas.
+**User prompt** (`build_request`): distancia al destino y su etiqueta, sector en el que cae la meta, altura del dron y la disposición de los sectores. Una única imagen de 384 px con la grilla y la marca de la meta dibujadas.
 
 ### 8.5.3 Prompt del barrido
 
@@ -129,7 +130,7 @@ Los prompts siguen cuatro reglas:
 
 ### 8.5.4 Parámetros de inferencia
 
-`temperature = 0.2`; `max_tokens = 120` en el modo estratégico (cinco valores de enum y dos booleanos) y 160 en el barrido. La respuesta estratégica no tiene campos de texto libre: no hay razonamiento que generar, lo que acota la latencia de decodificación.
+`temperature = 0.2`; tope de 384 tokens en el modo estratégico (nueve valores de enum) y 512 en el barrido. El tope no fija la longitud de la respuesta —con decodificación restringida, la generación termina al cerrar el esquema—: solo corta una generación desbocada, y una respuesta cortada se reporta como falla (`respuesta_truncada`), nunca se interpreta. Las respuestas no tienen campos de texto libre: no hay razonamiento que generar, lo que acota la latencia de decodificación.
 
 Los system prompts están en el código (`vlm_strategic.py`, `deep_scan.py`).
 

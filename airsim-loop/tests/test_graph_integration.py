@@ -145,3 +145,32 @@ def test_at_most_one_vlm_request_per_cycle(monkeypatch):
             state.pop("_escape_reset", None)
     finally:
         service.stop()
+
+
+def test_scan_answer_marked_degraded_falls_back_to_the_vertical_escape(monkeypatch):
+    """degradada=true: el propio modelo dice que las imagenes no sirven -> falla, no descripcion."""
+    import src.agents.graph as graph_mod
+
+    monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
+    monkeypatch.setattr(deep_scan_mod, "DEADLOCK_STRATEGY", "deep_vlm")
+    monkeypatch.setattr(deep_scan_mod, "SCAN_SETTLE_CYCLES_DEEP", 1)
+    seen = []
+    base = _panorama_query(seen)
+
+    def _degraded(payload):
+        out = base(payload)
+        if payload.get("mode") == "deep_scan":
+            out[0]["imagen_degradada_global"] = True
+        return out
+
+    monkeypatch.setattr(vlm_client, "_query_slm_impl", _degraded)
+    from src.agents.graph import compile_workflow
+
+    graph, service = compile_workflow(_StuckClient())
+    try:
+        state = _run(graph, _state(), 120, stop=lambda s: (s.get("_deadlock_event") or {}).get("fell_back_to_blind"))
+        assert "deep_scan" in seen
+        assert state["_deadlock_event"]["fell_back_to_blind"] is True
+        assert state.get("inject_corner") is None
+    finally:
+        service.stop()

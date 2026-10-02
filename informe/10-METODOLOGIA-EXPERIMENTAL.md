@@ -31,7 +31,7 @@ Esta última hipótesis es la que dicta la arquitectura de escenarios en tres ni
 
 La evaluación compara tres brazos de decisión sobre **el mismo `ObstacleField`** (cap. 6), **el mismo espacio de macro-acciones** y **el mismo traductor a comandos cinemáticos** (`action_to_command`, cap. 8). Esta invariancia es lo que hace legítima la comparación: la única diferencia entre brazos es *quién elige la macro-acción*, no qué percibe el sistema ni cómo ejecuta la decisión.
 
-- **`slm`** — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como lazo lento del grafo de control (cap. 5, 8). Cada ≥ 3 s, o de inmediato cuando el lazo rápido ve un muro de frente, el modelo mira el fotograma frontal dividido en cinco columnas y dice cuáles son volables; la respuesta se traduce a una sub-meta en coordenadas del mundo anclada a la pose del fotograma, y el dron nunca se detiene a esperarla. En un deadlock, un barrido panorámico de 4 rumbos y una consulta con las imágenes numeradas producen la sub-meta de salida; ante timeout o respuesta no conforme, escape vertical. No hay reglas deterministas que reescriban la respuesta del modelo.
+- **`slm`** — el modelo de lenguaje multimodal (Qwen2.5-VL-3B cuantizado) como lazo lento del grafo de control (cap. 5, 8). Cada ≥ 3 s, o de inmediato cuando el lazo rápido ve un muro de frente, el modelo mira el fotograma frontal dividido en una grilla de 3×3 y dice qué sectores son volables; la respuesta se traduce a una sub-meta en coordenadas del mundo anclada a la pose del fotograma, y el dron nunca se detiene a esperarla. En un deadlock, un barrido panorámico de 4 rumbos y una consulta con las imágenes numeradas producen la sub-meta de salida; ante timeout o respuesta no conforme, escape vertical. No hay reglas deterministas que reescriban la respuesta del modelo.
 - **`fsm`** — una máquina de estados finitos explícita (`CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE`), con transiciones gobernadas por umbrales fijos sobre el mismo `ObstacleField`, y su propia lógica de atasco y escape. Es la línea de base directa contra la que se evalúa la hipótesis: alta predictibilidad y costo computacional mínimo, sin capacidad de razonamiento contextual ni interpretación semántica del entorno.
 - **`reactive`** — navegación guiada al waypoint sin evasión de obstáculos: **cota inferior de rendimiento** que permite desacoplar qué porción del desempeño proviene del lazo táctico de evasión y cuánto del seguimiento cinemático de base. Sin este brazo, cualquier diferencia entre `slm` y `fsm` sería inseparable del ruido introducido por el guiado.
 
@@ -169,7 +169,7 @@ Circuito en grilla urbana a −10 m de altitud constante, atravesando corredores
 
 - **Mapa de referencia `citymap.png`** (3.8 px/m, origen en el *spawn*), sobre el que los waypoints coinciden con intersecciones de la grilla. La imagen de alta resolución `citysim_calib.png` no registra con la telemetría (los waypoints caen sobre el agua) y no debe usarse para ubicar coordenadas.
 - **`start_pose`** en el *spawn* real (0, 0, yaw 90°), que solo se usa con `--seed-jitter` (§10.4.3).
-- **Waypoint intermedio `WP_0_SUR` (−11, −50.5, −10)** sobre la calle sur. Una autopista elevada corre sobre la calle x ≈ 15–20 m desde y ≈ −50 m hacia el este, con el tablero a la altura de crucero; un tramo directo *spawn* → WP_1 la cruza, y el dron puede quedar trabado sobre el tablero (cap. 9, §9.8.7). Los edificios de los tramos *spawn* → WP_0_SUR → WP_1 quedan para que los resuelva la navegación: WP_1 está detrás de una manzana que debe rodearse.
+- **Waypoint intermedio `WP_0_SUR` (−5, −51, −10)** sobre la calle sur, en un punto ya volado libre (§10.3.0, punto 2). Una autopista elevada corre sobre la calle x ≈ 15–20 m desde y ≈ −50 m hacia el este, con el tablero a la altura de crucero; un tramo directo *spawn* → WP_1 la cruza, y el dron puede quedar trabado sobre el tablero (cap. 9, §9.8.7). Los edificios de los tramos *spawn* → WP_0_SUR → WP_1 quedan para que los resuelva la navegación: WP_1 está detrás de una manzana que debe rodearse.
 
 **Qué se quiere probar.** Es el escenario terminal de la batería: **rodear edificios y elegir corredor sin información discriminativa geométrica**. Ni el `reactive` ni el `fsm` tienen información semántica para elegir entre dos calles de ancho similar; su decisión se reduce a distancia pura o a la asimetría accidental del flujo óptico. La hipótesis es que el brazo `slm`, al consultar al VLM con la imagen del corredor, elegirá la ruta más despejada con mayor consistencia.
 
@@ -368,7 +368,7 @@ Todas las métricas se derivan del registro por ciclo del `FlightLogger` y se co
 - **Tasa de *fallback* determinista** (`slm_fallback_rate`) ante respuestas inválidas o fuera de esquema.
 - **Tasa de *timeout*** del watchdog asíncrono (`slm_timeout_rate`).
 - **Tasa de adherencia sintáctica** (`adherence_rate`), con y sin decodificación gramatical estructurada (cap. 8, §8.2).
-- **Distribución de resultados de la capa estratégica**, a partir de las entradas `arm = "vlm_strategic"` de `deliberations[]`: fracción de respuestas que proponen sub-meta, que declaran el camino directo libre (`directo_libre`), sin columna libre, vencidas, superadas o no parseables. Es la métrica que responde si el modelo **discrimina** (cap. 8, §8.3.1): una capa que declara `directo_libre` en casi todas las consultas, incluso cuando el dron termina en deadlock, no está aportando información.
+- **Distribución de resultados de la capa estratégica**, a partir de las entradas `arm = "vlm_strategic"` de `deliberations[]`: fracción de respuestas que proponen sub-meta, que declaran el camino directo libre (`directo_libre`), sin sector libre, vencidas, superadas o no parseables. Es la métrica que responde si el modelo **discrimina** (cap. 8, §8.3.1): una capa que declara `directo_libre` en casi todas las consultas, incluso cuando el dron termina en deadlock, no está aportando información.
 - **Avance hacia el waypoint real tras cada sub-meta del VLM**: distancia al waypoint de misión (no a la sub-meta) en el momento de la inyección y 20 s después. Es la medida directa de si las sub-metas del VLM ayudan a completar la misión: una sub-meta que no acerca al waypoint real en ese plazo es un desvío sin beneficio.
 
 ### 10.6.4 Resolución de atascos
@@ -492,7 +492,7 @@ Tanto las corridas interactivas (`main.py`) como las del runner generan, por def
 
 ### 10.9.3 Trazabilidad y cuarentena experimental
 
-Cada corrida incorpora automáticamente el hash de commit de Git (`code_version`) en su `summary.json`, obtenido en el momento de cierre del logger. La verificación de que todas las corridas de un batch comparten `code_version` es un paso obligatorio del procedimiento (§10.5.2, paso 5).
+Cada corrida incorpora automáticamente el hash de commit de Git (`code_version`) en su `summary.json`, obtenido en el momento de cierre del logger. Si al correr había cambios sin commitear en el código, la configuración o los manifiestos (`airsim-loop/`, `config/`, `airsim-plan/`), el valor lleva el sufijo `-dirty`: el hash solo identifica el código si el árbol está limpio. La verificación de que todas las corridas de un batch comparten `code_version` es un paso obligatorio del procedimiento (§10.5.2, paso 5).
 
 Se establece además una **política estricta de cuarentena de datos**: ningún vuelo anterior al **2026-09-03** se incluye en el análisis estadístico formal del capítulo 11. Los registros previos estuvieron expuestos a tres artefactos instrumentales ya corregidos que afectaban directamente **lo que el modelo veía**:
 
@@ -574,7 +574,7 @@ Los escenarios despejados del lote base no ejercen la capa táctica: el TTC no b
 
 | Componente | Comportamiento que se evalúa | Referencia |
 |---|---|---|
-| Capa estratégica del VLM | Sub-metas ancladas a la pose del fotograma; si el modelo discrimina columnas libres de bloqueadas; si las sub-metas acercan al waypoint real | §5.10, §8.3.2 |
+| Capa estratégica del VLM | Sub-metas ancladas a la pose del fotograma; si el modelo discrimina sectores libres de bloqueados; si las sub-metas acercan al waypoint real | §5.10, §8.3.2 |
 | Consulta inmediata ante un muro (`GIRAR_90` + `expedite`) | Que el rodeo se decida con el fotograma que ve el muro | §5.9 |
 | Barrido `deep_vlm` en marco mundo | Que la sub-meta de salida apunte al rumbo transitable más cercano a la meta | §5.12, §8.3.3 |
 | Detección de atasco de dos señales | Ausencia de deadlocks falsos (despegue, sub-metas nuevas) y presencia de los reales | §5.3.1 |
@@ -600,7 +600,7 @@ Cada lote tiene cuatro celdas de 5 semillas: `slm × deep_vlm`, `fsm × deep_vlm
 
 **Métricas adicionales.** Además de las de §10.6: la distribución de resultados de la capa estratégica y el avance hacia el waypoint real tras cada sub-meta (§10.6.3); las señales del `StallDetector` (`_stopped_cycles`, `_wp_no_progress_cycles`, `imu_contact_event`, `blind_wall_event`) y qué señal disparó cada deadlock; los deadlocks en los primeros 30 ciclos (deben ser cero: el despegue no es un atasco, cap. 5 §5.3.1); y la fracción de ciclos con el gobernador de velocidad activo (`_speed_cap`).
 
-**Condiciones de descarte y de invalidación.** Se descarta una corrida individual si su `code_version` difiere del de referencia del lote o si `total_cycles < 50` (falla de infraestructura, no del dron). Se invalida un lote si contiene corridas con hashes distintos que no puedan reemplazarse. Una corrida terminada por `physics_locked` termina con éxito falso y se cuenta como falla de misión, al igual que una colisión.
+**Condiciones de descarte y de invalidación.** Se descarta una corrida individual si su `code_version` difiere del de referencia del lote, si termina en `-dirty`, o si `total_cycles < 50` (falla de infraestructura, no del dron). Se invalida un lote si contiene corridas con hashes distintos que no puedan reemplazarse. Una corrida terminada por `physics_locked` termina con éxito falso y se cuenta como falla de misión, al igual que una colisión.
 
 ### 10.12.3 Estado
 

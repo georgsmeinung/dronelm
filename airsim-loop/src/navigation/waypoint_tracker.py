@@ -111,6 +111,9 @@ SUBGOAL_DEDUP_M = float(os.getenv("SUBGOAL_DEDUP_M", "10.0"))
 # de su borde. La fase termina una sola vez por mision (o si se detecta un techo: no se puede subir).
 TAKEOFF_VERTICAL = os.getenv("TAKEOFF_VERTICAL", "true").lower() == "true"
 TAKEOFF_ALT_TOL_M = float(os.getenv("TAKEOFF_ALT_TOL_M", "1.0"))
+# Desplazamiento horizontal por ciclo por debajo del cual, con avance ordenado, el dron esta trabado de
+# costado (0.03 m a 5 Hz = 0.15 m/s): esos ciclos no cuentan para la deteccion de techo.
+CEILING_SIDEWAYS_STUCK_M = float(os.getenv("CEILING_SIDEWAYS_STUCK_M", "0.03"))
 
 
 def effective_stall_threshold() -> int:
@@ -205,12 +208,15 @@ class WaypointTracker:
         # guiado, un GIRAR_90 (vz=0) mientras el guiado pedia subir fabricaba un techo falso
         # (piloto citysim_pilot seed 99, c43-c52).
         self._last_vz_demand: float = 0.0
+        self._last_vx_cmd: float = 0.0
+        self._ceiling_last_xy: Optional[tuple] = None
         self._takeoff_done: bool = not TAKEOFF_VERTICAL
 
     def note_executed_command(self, cmd: Optional[Dict[str, Any]]) -> None:
         """El lazo externo informa el comando de velocidad efectivamente enviado este ciclo."""
         if isinstance(cmd, dict):
             self._last_vz_demand = float(cmd.get("vz", 0.0) or 0.0)
+            self._last_vx_cmd = float(cmd.get("vx", 0.0) or 0.0)
 
     def _update_ceiling(self, x: float, y: float, z: float) -> None:
         """Actualiza la deteccion de techo con la altitud actual."""
@@ -223,7 +229,15 @@ class WaypointTracker:
                 self._ceiling_anchor = None
                 self._ceiling_window.clear()
             return
-        pushing_up = self._last_vz_demand < -0.3 and abs(z) >= CEILING_MIN_ALT_M
+        # Trabado de costado (se ordeno avanzar y no hubo desplazamiento horizontal): el roce contra una
+        # pared tambien impide subir, pero eso no es una losa encima -- lo resuelve el deadlock. Piloto
+        # v3 seed 99 190842Z c293: techo "detectado" con el dron pegado a una fachada; los escapes
+        # GANAR_ALTURA subieron despues a -16 m sin problema y la regla de techo los volvia a bajar.
+        last = self._ceiling_last_xy
+        self._ceiling_last_xy = (x, y)
+        sideways_stuck = (last is not None and self._last_vx_cmd >= 0.3
+                          and math.hypot(x - last[0], y - last[1]) < CEILING_SIDEWAYS_STUCK_M)
+        pushing_up = self._last_vz_demand < -0.3 and abs(z) >= CEILING_MIN_ALT_M and not sideways_stuck
         self._ceiling_window.append((z, pushing_up))
         w = self._ceiling_window
         if (len(w) == w.maxlen and all(p for _, p in w)
@@ -331,6 +345,27 @@ class WaypointTracker:
               + (f" reemplaza {len(stale)} pendiente(s)" if stale else ""))
         return True
 
+    def drop_temporary(self, reason: str = "") -> int:
+        """Descarta las sub-metas pendientes (desde el indice activo): el objetivo vuelve a ser el WP real."""
+        stale = [i for i in range(self.current_index, len(self.waypoints))
+                 if self.waypoints[i].get("is_temporary")]
+        for i in reversed(stale):
+            del self.waypoints[i]
+        if stale:
+            self.reset_progress()
+            self._overshot_latch = False
+            print(f"[WaypointTracker] {len(stale)} sub-meta(s) descartada(s)" + (f": {reason}" if reason else ""))
+        return len(stale)
+
+    def _acceptance_dist(self, wp: Dict[str, Any], x: float, y: float, z: float) -> float:
+        wx, wy, wz = float(wp.get("x", 0.0)), float(wp.get("y", 0.0)), float(wp.get("z", 0.0))
+        if self.ceiling_z is not None:
+            # Bajo un techo la altura del WP puede ser inalcanzable (compute_guidance ya la limita a
+            # ceiling_z + margen): aceptar por distancia HORIZONTAL. Con la z sin limitar, un WP a
+            # z=-10 bajo un techo a -5.8 tenia dist_3d >= 4 m y nunca se aceptaba.
+            return math.hypot(wx - x, wy - y)
+        return math.sqrt((wx - x) ** 2 + (wy - y) ** 2 + (wz - z) ** 2)
+
     def update(self, current_pos: Dict[str, float]) -> Optional[Dict[str, Any]]:
         """Verifica la posición del dron y avanza al siguiente waypoint si se alcanzó
 
@@ -340,21 +375,21 @@ class WaypointTracker:
             self.is_completed = True
             return None
 
-        wp = self.waypoints[self.current_index]
         x = float(current_pos.get("x", 0.0))
         y = float(current_pos.get("y", 0.0))
         z = float(current_pos.get("z", 0.0))
 
-        wx = float(wp.get("x", 0.0))
-        wy = float(wp.get("y", 0.0))
-        wz = float(wp.get("z", 0.0))
+        # El WP real se acepta aunque el objetivo activo sea una sub-meta: una sub-meta es un medio
+        # para llegar al WP, no una condicion. Piloto v3 seed 99 190842Z: 573 ciclos a < 3.5 m de
+        # WP_0_SUR sin aceptarlo, porque el objetivo activo era siempre una sub-meta del VLM.
+        if self.waypoints[self.current_index].get("is_temporary"):
+            real = next((w for w in self.waypoints[self.current_index:] if not w.get("is_temporary")), None)
+            if real is not None and self._acceptance_dist(real, x, y, z) <= self.acceptance_radius:
+                self.drop_temporary(f"{real.get('label', 'WP')} alcanzado durante el desvio")
 
-        dist_3d = math.sqrt((wx - x) ** 2 + (wy - y) ** 2 + (wz - z) ** 2)
-        if self.ceiling_z is not None:
-            # Bajo un techo la altura del WP puede ser inalcanzable (compute_guidance ya la limita a
-            # ceiling_z + margen): aceptar por distancia HORIZONTAL. Con la z sin limitar, un WP a
-            # z=-10 bajo un techo a -5.8 tenia dist_3d >= 4 m y nunca se aceptaba.
-            dist_3d = math.hypot(wx - x, wy - y)
+        wp = self.waypoints[self.current_index]
+
+        dist_3d = self._acceptance_dist(wp, x, y, z)
 
         if dist_3d <= self.acceptance_radius:
             label = wp.get("label", f"WP_{self.current_index + 1}")

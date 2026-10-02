@@ -1,3 +1,55 @@
+# 2026-10-01 (b) - Piloto v3 193631Z: max_tokens, consulta con la meta fuera de cuadro, code_version -dirty
+
+Piloto `v3/pilot/.../seed_99_20261001T193631Z` (720 ciclos, `physics_locked`): alcanzo WP_0_SUR, WP_1 y
+WP_2; en el tramo a WP_3 quedo contra la fachada de un edificio. El VLM marco bloqueado B2 (correcto) y
+libres los costados aunque la fachada llenaba el cuadro (A2 libre 28/28, A1 bloqueado 24/28: sesgo de
+posicion); la sub-meta A2 quedo detras de la fachada y el dron se deslizo ~180 ciclos. La capa
+estrategica no consulto entre c471 y c705 (meta fuera de +-40 deg). Los dos barridos se perdieron:
+max_tokens=160 cortaba el JSON antes de la llave final (5 de 12 barridos en 190842Z+193631Z).
+
+- **`vlm_client.py`**: topes `VLM_MAX_TOKENS_STRATEGIC`=384 / `VLM_MAX_TOKENS_DEEP`=512 (antes 120/160);
+  `finish_reason == "length"` -> error `respuesta_truncada` (no se interpreta). El barrido y la capa
+  estrategica registran ese motivo en lugar de "sin_formato_valido"/"no_parseable".
+- **`vlm_strategic.py`**: con la meta fuera de +-40 deg se consulta si `_wp_no_progress_cycles` >=
+  `VLM_STUCK_QUERY_CYCLES` (15); sin sector de la meta, prompt "fuera de la imagen, hacia la
+  izquierda/derecha", nunca `directo_libre`.
+- **`src/logging/code_version.py`** (nuevo): hash de HEAD + `-dirty` si hay cambios sin commitear en
+  `airsim-loop/`, `config/` o `airsim-plan/`. Lo usan `FlightLogger` y `batch_runner`.
+- Tests: `tests/test_pilot_193631z_regressions.py` (6). 237 tests pasan.
+- Informe: cap. 5 §5.10.1, §5.10.5; cap. 8 §8.5.4; cap. 9 §9.8.10 nuevo; cap. 10 §10.9 y §10.12 (descarte
+  de corridas `-dirty`); A6.
+
+# 2026-10-01 (a) - Piloto v3 190842Z: sub-metas que ocultan al WP real, grilla 3x3 del VLM
+
+Piloto `v3/pilot/citysim_pilot/slm/deep_vlm/seed_99_20261001T190842Z` (1520 ciclos, interrumpido): el
+dron llego a la zona de WP_0_SUR en c199 y paso el resto pegado a la fachada vidriada del edificio
+oeste. 573 ciclos a <3.5 m de WP_0_SUR sin aceptarlo (objetivo activo: VLM_SUBGOAL 332, VLM_SCAN_GOAL
+241). Sub-metas a 15 m con el WP a 1-6 m (dentro del edificio); capa estrategica muda con sub-meta
+activa -> ciclo limite GIRAR_90 / guiado contra la fachada; techo falso (-11.8) por roce contra la
+pared peleando con GANAR_ALTURA; respuestas casi constantes ("A bloqueada, B-E libres" 5/6,
+estructura_debajo 5/6; barridos "2 y 4 libres" 8/8, degradada 8/8); camara dentro de la malla:
+interior de oficina marcado "libre, ok:true" y elegido por el barrido. WP_0_SUR estaba sobre la fachada.
+
+- **Tracker** (`waypoint_tracker.py`): el WP real se acepta aunque haya una sub-meta activa
+  (`drop_temporary()` descarta los desvios); `_acceptance_dist()` comun. Techo: no cuentan los ciclos
+  con el dron trabado de costado (`CEILING_SIDEWAYS_STUCK_M`=0.03 m/ciclo con vx ordenado >=0.3).
+- **Capa estrategica** (`vlm_strategic.py`): grilla de 3x3 por tercios de la imagen (A-C x 1-3;
+  fila 2 = altura del dron) en lugar de 5 columnas; esquema `{"sectores": {A1..C3: libre|bloqueado}}`
+  (se quitan `meta_bloqueada` y `estructura_debajo`). Cada sector tiene azimut y elevacion (pinhole);
+  sub-meta en la direccion del sector libre mas cercano a la meta, a `min(15 m, dist al WP real)`, dz =
+  d*tan(elev) acotado a `VLM_MAX_DZ_M` (4 m), altitud >= `VLM_SUBGOAL_MIN_ALT_M` (6 m). Consulta tambien
+  con sub-meta activa (re-planificacion); `directo_libre` con sub-meta activa -> `_clear_subgoals`
+  (nuevo en DroneState; runner/main llaman `tracker.drop_temporary`). Sin consultas a <`VLM_NEAR_WP_M`
+  (8 m) del WP real. Se quitan `VLM_STRATEGIC_COLUMNS` y `VLM_CLIMB_M`.
+- **Barrido** (`deep_scan.py`): sin barrido a <8 m del WP real (escape determinista); sub-meta sin pasar
+  del WP real; `degradada:true` = falla del modelo; entrada `ok:true` con tipo != `libre` no es
+  transitable (respuesta que se contradice, no un override).
+- **Manifiesto** `citysim_pilot.json`: WP_0_SUR (-11,-50.5) -> (-5,-51), punto volado libre.
+- Tests: `test_vlm_strategic.py` reescrito para la grilla, `test_pilot_190842z_regressions.py` (10),
+  barrido degradado en `test_graph_integration.py`. 231 tests pasan.
+- Informe: cap. 4, 5 (§5.10, §5.12, §5.15.3, §5.15.4), 8 (§8.2.1, §8.3.2, §8.5), 9 (§9.8.7, nuevo
+  §9.8.9, riesgo D), 10, 12, A4, A6, A9, README. Docs: GRAFO-DE-CONTROL.md, docs/*.html.
+
 # 2026-09-30 (g) - Piloto v3 citysim_pilot seed 99: despegue vertical, techo falso y deadlock tapado
 
 Piloto `v3/pilot/citysim_pilot/slm/deep_vlm/seed_99_20260930T220813Z` (interrumpido en c277): el dron

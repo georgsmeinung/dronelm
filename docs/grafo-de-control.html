@@ -84,7 +84,7 @@
           <div><dt>Consulta VLM</dt><dd>3 <span>s</span></dd></div>
           <div><dt>Edad máx.</dt><dd>10 <span>s</span></dd></div>
           <div><dt>Deadlock</dt><dd>deep_vlm</dd></div>
-          <div><dt>Tests</dt><dd>217</dd></div>
+          <div><dt>Tests</dt><dd>237</dd></div>
         </dl>
         <div class="badges-row">
           <a class="badge-pill badge-blue"
@@ -629,26 +629,29 @@
         <div class="card-grid">
           <div class="card">
             <h4>Cuándo se consulta</h4>
-            <p>Cada ≥ <code>VLM_STRATEGIC_PERIOD_S</code> (3 s), a ≥ 8 m de altura, con un waypoint de misión (no una
-              sub-meta) como objetivo y la meta dentro de ±40° del eje óptico. No durante un barrido ni en el
+            <p>Cada ≥ <code>VLM_STRATEGIC_PERIOD_S</code> (3 s), a ≥ 8 m de altura, con el waypoint real a más de
+              8 m y la meta dentro de ±40° del eje óptico (o fuera de cuadro si el dron lleva 3 s sin acercarse a su
+              objetivo). También con una sub-meta activa: la pregunta es siempre sobre el waypoint real y la
+              respuesta nueva reemplaza a la vieja. No durante un barrido ni en el
               despegue. De inmediato si la regla 7 ve un muro (<code>expedite()</code>).</p>
           </div>
           <div class="card">
             <h4>Qué ve</h4>
-            <p>El fotograma frontal (≤ 384 px) con 5 columnas A–E dibujadas y una marca roja «META». Cada columna tiene
-              un <strong>rumbo absoluto</strong> fijado con el yaw del fotograma y el campo visual de 90°. La anotación
-              nunca toca el fotograma del flujo óptico.</p>
+            <p>El fotograma frontal (≤ 384 px) con una <strong>grilla de 3×3</strong> por tercios de la imagen
+              (columnas A–C; filas 1 arriba, 2 a la altura del dron, 3 abajo) y una marca roja «META» en la dirección
+              del destino. Cada sector tiene una <strong>dirección absoluta</strong> (rumbo y elevación) fijada con la
+              pose del fotograma. La anotación nunca toca el fotograma del flujo óptico.</p>
           </div>
           <div class="card">
             <h4>Qué responde</h4>
-            <p>JSON con esquema estricto: cada columna <code>libre</code>/<code>bloqueada</code> a la altura del dron,
-              <code>meta_bloqueada</code> y <code>estructura_debajo</code> (autopista elevada, puente, techo, cornisa).
-              El modelo describe; no decide acciones.</p>
+            <p>JSON con esquema estricto: cada uno de los nueve sectores <code>libre</code>/<code>bloqueado</code>
+              (volar 15 m en esa dirección). El modelo describe; no decide acciones.</p>
           </div>
           <div class="card">
             <h4>Cómo se usa</h4>
-            <p>Si la columna de la meta está libre y nada bloquea, no hace nada. Si no, sub-meta a 15 m desde el ancla
-              sobre la columna libre más cercana a la meta, con 4 m de ascenso si hay estructura debajo.</p>
+            <p>Si el sector de la meta está libre, no agrega nada y descarta el desvío pendiente. Si no, sub-meta en
+              la dirección del sector libre más cercano a la meta, a <code>min(15 m, distancia al waypoint)</code> desde
+              el ancla, con la altitud que da la elevación del sector (±4 m como máximo).</p>
           </div>
         </div>
 
@@ -849,9 +852,10 @@
               <tr><td class="mono">VLM_STRATEGIC_ENABLED</td><td class="num">true</td><td>Habilita la capa estratégica.</td></tr>
               <tr><td class="mono">VLM_STRATEGIC_PERIOD_S</td><td class="num">3.0 s</td><td>Período mínimo entre consultas.</td></tr>
               <tr><td class="mono">VLM_STRATEGIC_MAX_AGE_S</td><td class="num">10 s</td><td>Edad máxima de una respuesta para aplicarla.</td></tr>
-              <tr><td class="mono">VLM_STRATEGIC_COLUMNS / CAMERA_HFOV_DEG</td><td class="num">5 / 90°</td><td>Columnas dibujadas y campo visual con el que se calculan sus rumbos.</td></tr>
+              <tr><td class="mono">CAMERA_HFOV_DEG</td><td class="num">90°</td><td>Campo visual con el que se calculan las direcciones de los sectores de la grilla 3×3.</td></tr>
               <tr><td class="mono">VLM_SUBGOAL_DIST_M / VLM_SUBGOAL_MIN_AHEAD_M</td><td class="num">15 / 4 m</td><td>Distancia de la sub-meta desde el ancla y mínima por delante del dron.</td></tr>
-              <tr><td class="mono">VLM_CLIMB_M</td><td class="num">4 m</td><td>Ascenso de la sub-meta si hay estructura debajo.</td></tr>
+              <tr><td class="mono">VLM_MAX_DZ_M / VLM_SUBGOAL_MIN_ALT_M</td><td class="num">4 / 6 m</td><td>Cambio máximo de altitud de una sub-meta y altitud mínima.</td></tr>
+              <tr><td class="mono">VLM_NEAR_WP_M</td><td class="num">8 m</td><td>Sin consultas ni barridos a menos de esta distancia del waypoint real.</td></tr>
               <tr><td class="mono">VLM_STRATEGIC_MAX_GOAL_OFF_DEG</td><td class="num">40°</td><td>Solo se consulta con la meta dentro del campo visual útil.</td></tr>
               <tr><td class="mono">SLM_MIN_ALT_M</td><td class="num">8 m</td><td>Altura mínima para consultar.</td></tr>
               <tr><td class="mono">SUBGOAL_DEDUP_M</td><td class="num">10 m</td><td>Una sub-meta a menos de esta distancia de la pendiente se ignora.</td></tr>
@@ -907,8 +911,13 @@
                 <td class="mono wrap">test_closest_transitable_to_goal_wins<br />test_nothing_transitable_climbs</td>
               </tr>
               <tr>
-                <td>La columna bloqueada lleva a la columna libre más cercana, en marco mundo</td>
-                <td class="mono wrap">test_blocked_goal_column_goes_to_nearest_free_column_in_world_frame</td>
+                <td>El sector bloqueado lleva al sector libre más cercano, en marco mundo; nunca más allá del waypoint</td>
+                <td class="mono wrap">test_blocked_goal_sector_goes_to_nearest_free_sector_in_world_frame<br />test_subgoal_never_beyond_the_real_waypoint</td>
+              </tr>
+              <tr>
+                <td>El waypoint real se acepta con una sub-meta activa; una entrada <code>ok:true</code> no libre o una
+                  respuesta degradada no se usan</td>
+                <td class="mono wrap">test_pilot_190842z_regressions.py</td>
               </tr>
               <tr>
                 <td>Respuestas viejas, de otro waypoint o ya superadas se descartan</td>
@@ -920,7 +929,7 @@
                 <td class="mono wrap">test_parse_rejects_malformed</td>
               </tr>
               <tr>
-                <td>La anotación de columnas nunca toca el fotograma del flujo óptico</td>
+                <td>La anotación de la grilla nunca toca el fotograma del flujo óptico</td>
                 <td class="mono wrap">test_annotation_never_touches_the_flow_frame</td>
               </tr>
               <tr>
@@ -962,7 +971,7 @@
           </table>
         </div>
 
-        <p><strong>217 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
+        <p><strong>237 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
         <pre><code>python -m pytest tests -q</code></pre>
 
         <div class="note">
@@ -981,7 +990,7 @@
             sus umbrales no están calibrados con corridas en el simulador; los lotes con obstrucción D, E y F están
             pendientes.</li>
           <li><strong>Capacidad de discriminación del VLM no demostrada.</strong> No hay evidencia todavía de que
-            Qwen2.5-VL-3B distinga columnas volables de bloqueadas en el render de CitySim. Si no lo hace, el brazo
+            Qwen2.5-VL-3B distinga sectores volables de bloqueados en el render de CitySim; en el piloto de validación sus respuestas fueron casi constantes. Si no lo hace, el brazo
             <code>slm</code> se reduce, en la práctica, al lazo rápido más escapes verticales; la distribución de
             respuestas de la capa estratégica es una métrica de los lotes.</li>
           <li><strong>Punto ciego del foco de expansión.</strong> El flujo óptico traslacional se anula en los

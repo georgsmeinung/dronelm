@@ -77,7 +77,8 @@ Tres principios de diseño acompañan esta separación:
 |---|---|---|
 | `deliberations` | `List[Dict]` | Registro de solo agregado de todas las consultas al VLM (estratégicas, de barrido y fallidas) |
 | `last_deliberation` | `Dict\|None` | Última entrada, actualizada por `motor_node` |
-| `_vlm_strategic` | `Dict\|None` | Último resultado de la capa estratégica: `outcome`, motivo, latencia, columna de la meta, ancla y sub-meta (§5.10) |
+| `_vlm_strategic` | `Dict\|None` | Último resultado de la capa estratégica: `outcome`, motivo, latencia, sector de la meta, ancla y sub-meta (§5.10) |
+| `_clear_subgoals` | `bool` | La capa estratégica vio libre el camino directo al waypoint real: el bucle externo descarta la sub-meta pendiente (§5.15.4) |
 | `inject_corner` | `Dict\|None` | Sub-meta `{x, y, z, label}` en coordenadas del mundo que el bucle externo inserta en el tracker (§5.15.4) |
 | `_deliberation_pending` | `bool` | `True` durante un barrido: el bucle externo no cuenta esos ciclos como falta de progreso |
 | `_pending_delib_prompt` / `_pending_delib_frames` / `_last_delib_frames` | — | Auditoría: prompt y fotogramas enviados; `_last_delib_frames` es un canal de una sola pasada hacia `FlightLogger` |
@@ -198,29 +199,34 @@ Gira 90° sin traslación (`yaw_rate` ±20°/s, `target_yaw` redondeado a la cua
 - pasó `VLM_STRATEGIC_PERIOD_S` (3 s) desde el último pedido, o la regla 7 llamó a `expedite()`;
 - no hay barrido en curso ni pedido de barrido pendiente (comparten la cola del servicio);
 - altitud ≥ `VLM_STRATEGIC_MIN_ALT_M` (8 m);
-- el objetivo actual es un waypoint de misión, no una sub-meta (mientras una sub-meta está pendiente, el dron la persigue sin nuevas consultas);
-- la meta está dentro de ±`VLM_STRATEGIC_MAX_GOAL_OFF_DEG` (40°) del eje óptico: si no, el guiado todavía está girando hacia ella y el fotograma no muestra lo que importa.
+- el waypoint real está a más de `VLM_NEAR_WP_M` (8 m) en horizontal: más cerca, el guiado directo alcanza, y una sub-meta lo saltearía;
+- la meta está dentro de ±`VLM_STRATEGIC_MAX_GOAL_OFF_DEG` (40°) del eje óptico: si no, el guiado todavía está girando hacia ella y el fotograma no muestra lo que importa. La excepción es un dron que lleva `VLM_STUCK_QUERY_CYCLES` (15) ciclos sin acercarse a su objetivo —por ejemplo, deslizándose a lo largo de una fachada, de costado a la meta—: entonces se consulta igual, porque conviene mirar hacia donde está el dron. En ese caso no hay sector de la meta, la marca «META» queda en el borde del lado del destino, el prompt dice que el destino está fuera de la imagen y la respuesta nunca se interpreta como «camino directo libre».
+
+La consulta se hace **también con una sub-meta activa**. La pregunta es siempre sobre el waypoint real, y una respuesta nueva reemplaza a la sub-meta pendiente: así una sub-meta mala se corrige en la consulta siguiente, en lugar de persistir hasta que el detector de atasco la saque (cap. 9, §9.8.9).
 
 ### 5.10.2 Qué ve el modelo y qué responde
 
-El pedido lleva **un fotograma**: una copia reescalada (384 px) del fotograma del ciclo —el original, que usa el flujo óptico, no se modifica— con **cinco columnas verticales A–E** dibujadas y una marca roja «META» sobre la columna en la que cae el destino. Las columnas están equiespaciadas en ángulo sobre el campo visual horizontal de 90° (centros en −36°, −18°, 0°, +18°, +36°) y sus bordes se dibujan con proyección *pinhole*.
+El pedido lleva **un fotograma**: una copia reescalada (384 px) del fotograma del ciclo —el original, que usa el flujo óptico, no se modifica— dividida en una **grilla de 3×3 por tercios de la imagen**, la grilla de composición fotográfica. Las columnas A, B y C van de izquierda a derecha; las filas 1, 2 y 3, de arriba abajo. La fila 2 es la altura del dron; la fila 1, pasar por arriba; la fila 3, por abajo. Cada sector lleva su etiqueta (`A1` … `C3`) y una marca roja «META» señala la dirección del destino en azimut **y** elevación.
+
+Una partición en columnas solo describe el eje horizontal: no puede decir que un obstáculo se pasa por arriba, ni distinguir un tablero de autopista a la altura del dron de la calle que se ve debajo. La grilla separa las dos dimensiones.
 
 El modelo responde, con decodificación restringida por esquema JSON (§8.2):
 
 ```json
-{"columnas": {"A": "libre", "B": "bloqueada", "C": "bloqueada", "D": "libre", "E": "libre"},
- "meta_bloqueada": true, "estructura_debajo": false}
+{"sectores": {"A1": "libre", "B1": "libre", "C1": "libre",
+              "A2": "bloqueado", "B2": "bloqueado", "C2": "libre",
+              "A3": "bloqueado", "B3": "bloqueado", "C3": "bloqueado"}}
 ```
 
-`libre` significa «se puede volar recto 15 m por esa columna a la altura del dron»; `estructura_debajo` indica una superficie horizontal cercana (autopista elevada, puente, techo, cornisa), un tipo de obstáculo que el flujo óptico frontal no representa y en el que el dron puede quedar apoyado (cap. 9, §9.8.7).
+`libre` significa «se puede volar al menos 15 m en la dirección de ese sector sin chocar»; `bloqueado`, que hay un edificio, fachada, vidrio, muro, árbol, puente, autopista elevada, cornisa, balcón, techo o el interior de un edificio a menos de 15 m.
 
 ### 5.10.3 Ancla y sincronización
 
-Al enviar, la capa guarda un **ancla**: posición (x, y, z) y yaw del fotograma, timestamp, etiqueta del waypoint real, su altitud y la columna de la meta. Cada columna tiene así un **rumbo absoluto** = yaw del ancla + centro de la columna. Cuando la respuesta llega (`get_result(request_id)`), `decide_subgoal()` la traduce y valida contra el presente:
+Al enviar, la capa guarda un **ancla**: posición (x, y, z) y yaw del fotograma, timestamp, etiqueta del waypoint real y su distancia horizontal, la dirección de la meta (azimut y elevación respecto del eje óptico) y el sector en el que cae. Cada sector tiene así una **dirección absoluta**: rumbo = yaw del ancla + azimut del centro del sector, y elevación del centro del sector, ambos calculados con proyección *pinhole* sobre los tercios de la imagen (para un fotograma de 3:2 y 90° de campo horizontal, ±33.7° en azimut y ±24.0° en elevación). Cuando la respuesta llega (`get_result(request_id)`), `decide_subgoal()` la traduce y valida contra el presente:
 
 1. Descarta la respuesta si pasaron más de `VLM_STRATEGIC_MAX_AGE_S` (10 s) o si el waypoint real cambió.
-2. Si la columna de la meta está libre, no hay estructura debajo y el modelo no marca la meta como bloqueada: **no hace nada** (el guiado ya va directo).
-3. Si no: elige la columna libre más cercana a la de la meta (a igualdad, la más central) y fija una sub-meta a `VLM_SUBGOAL_DIST_M` (15 m) **desde el ancla**, en el rumbo absoluto de esa columna, a la altitud del waypoint real; si hay estructura debajo, `VLM_CLIMB_M` (4 m) más arriba. Sin columna libre pero con estructura debajo: sub-meta hacia la meta, 4 m más arriba. Sin columna libre ni estructura: nada.
+2. Si el sector de la meta está libre: **no agrega nada** (`directo_libre`). Si había una sub-meta pendiente, la marca para descartar (`_clear_subgoals`): el camino directo está libre y el desvío sobra.
+3. Si no: elige el sector libre más cercano en ángulo a la dirección de la meta (a igualdad, la fila del medio, después la de arriba, después la de abajo) y fija una sub-meta **desde el ancla** en el rumbo de ese sector, a una distancia horizontal `d = min(VLM_SUBGOAL_DIST_M, distancia al waypoint real)` —15 m como máximo, y **nunca más lejos que el waypoint**—. La altitud cambia `d · tan(elevación del sector)`, acotada a ±`VLM_MAX_DZ_M` (4 m) y sin bajar de `VLM_SUBGOAL_MIN_ALT_M` (6 m). Sin sectores libres: nada (`sin_sector_libre`).
 4. Descarta la sub-meta si el dron ya la superó mientras el modelo pensaba (quedó a menos de `VLM_SUBGOAL_MIN_AHEAD_M` = 4 m).
 
 La sub-meta se deposita en `inject_corner`; el bucle externo la inserta en el tracker (§5.15.4) y el guiado normal la persigue. **El dron nunca se detiene a esperar.** Como la geometría está anclada al fotograma, girar mientras el modelo piensa no invalida la respuesta; solo la invalida el paso del tiempo o haberla superado, y ambos casos se verifican.
@@ -229,13 +235,13 @@ Si el servicio no tiene el resultado y no hay pedido pendiente durante más de `
 
 ### 5.10.4 Auditoría
 
-Cada respuesta deja una entrada en `deliberations[]` con `arm = "vlm_strategic"`, el prompt, la respuesta cruda, el motivo de la decisión (`directo_libre`, `columna B (−18 deg)`, `vencida`, `wp_cambio`, `superada`, `sin_columna_libre`, `no_parseable`) y la latencia; el fotograma exacto que vio el modelo se guarda como `photo-*.png` vía `_last_delib_frames`. El último resultado queda en `_vlm_strategic`. Esto permite medir, por corrida, con qué frecuencia la capa propone un rodeo y con qué frecuencia el modelo declara «todo libre».
+Cada respuesta deja una entrada en `deliberations[]` con `arm = "vlm_strategic"`, el prompt, la respuesta cruda, el motivo de la decisión (`directo_libre`, `sector C2 (+34 deg, +0 deg, 15 m)`, `vencida`, `wp_cambio`, `superada`, `sin_sector_libre`, `no_parseable`) y la latencia; el fotograma exacto que vio el modelo se guarda como `photo-*.png` vía `_last_delib_frames`. El último resultado queda en `_vlm_strategic`. Esto permite medir, por corrida, con qué frecuencia la capa propone un rodeo, hacia qué fila, y con qué frecuencia el modelo declara «todo libre».
 
 ### 5.10.5 `DeliberationService`
 
 Un hilo daemon con cola de entrada de tamaño 1: `request(payload)` vacía la cola antes de encolar, de modo que el worker procese siempre el pedido más reciente. Los resultados se guardan por identificador (últimos 16), y cada consumidor recupera el suyo con `get_result(request_id)`, de modo que un pedido posterior no pisa un resultado ya producido. El servicio es único por misión y lo comparten la capa estratégica, el barrido y el brazo FSM.
 
-`vlm_client._query_slm_impl()` atiende dos modos, cada uno con su system prompt, esquema JSON y parser: `strategic` (una imagen, `max_tokens` 120, timeout HTTP `SLM_HTTP_TIMEOUT_S` = 15 s) y `deep_scan` (N imágenes, `max_tokens` 160, timeout `SLM_DEEP_HTTP_TIMEOUT_S` = 20 s). Intenta primero con `response_format = json_schema` y, si el servidor no lo soporta, reintenta en modo libre; el parser extrae el primer objeto JSON del texto y lo valida contra el formato del modo.
+`vlm_client._query_slm_impl()` atiende dos modos, cada uno con su system prompt, esquema JSON y parser: `strategic` (una imagen, tope `VLM_MAX_TOKENS_STRATEGIC` = 384 tokens, timeout HTTP `SLM_HTTP_TIMEOUT_S` = 15 s) y `deep_scan` (N imágenes, tope `VLM_MAX_TOKENS_DEEP` = 512, timeout `SLM_DEEP_HTTP_TIMEOUT_S` = 20 s). Con decodificación restringida la generación termina sola al cerrar el esquema; el tope solo protege de una generación desbocada en modo libre, y tiene que sobrar. Si el servidor informa que la respuesta se cortó por el tope (`finish_reason = length`), la consulta devuelve el error `respuesta_truncada` y no se interpreta (cap. 9, §9.8.10). Intenta primero con `response_format = json_schema` y, si el servidor no lo soporta, reintenta en modo libre; el parser extrae el primer objeto JSON del texto y lo valida contra el formato del modo.
 
 ## 5.11 Nodo `fsm`
 
@@ -260,7 +266,7 @@ Su detección de atasco usa el contador de progreso del tracker (`evasion_stuck_
 
 Máquina de estados sostenida entre ciclos por los campos `_scan_*`:
 
-**Inicio.** `_scan_phase = "rotando"`, `_scan_start_yaw_deg = yaw actual`, cancela cualquier maniobra activa. Durante todo el barrido, `_deliberation_pending = True` evita que el bucle externo cuente el giro en el lugar como falta de progreso.
+**Inicio.** Si el waypoint real está a menos de `VLM_NEAR_WP_M` (8 m) en horizontal, no barre: desde tan cerca el rumbo a la meta es casi ruido y una sub-meta la saltearía; devuelve `False` (escape de §5.3.4). Si no, `_scan_phase = "rotando"`, `_scan_start_yaw_deg = yaw actual`, cancela cualquier maniobra activa. Durante todo el barrido, `_deliberation_pending = True` evita que el bucle externo cuente el giro en el lugar como falta de progreso.
 
 **`rotando`.** Comanda `target_yaw = yaw_inicial + i × 360° / SCAN_HEADING_COUNT_DEEP` (4 rumbos: 0°, +90°, +180°, +270°), sin traslación. Al llegar a `SCAN_YAW_TOLERANCE_DEG` (5°) pasa a `asentando`. Si en `SCAN_ROT_TIMEOUT_CYCLES` (10) ciclos no alcanza el rumbo —dron trabado en una malla—, abandona el barrido y devuelve `False` (escape de §5.3.4).
 
@@ -273,11 +279,11 @@ Máquina de estados sostenida entre ciclos por los campos `_scan_*`:
             {"img": 2, "tipo": "libre",   "ok": true,  "conf": 0.9}, ...], "degradada": false}
 ```
 
-**Interpretación en marco mundo (`panorama_to_subgoal`).** Las entradas se asignan a las imágenes por el campo `img` (o por orden si falta); las entradas sobrantes que el modelo inventa se descartan. Entre las imágenes transitables se elige la de **rumbo absoluto** más cercano al rumbo absoluto hacia el waypoint real (calculado con posiciones, no con el yaw), y se fija una sub-meta a `CORNER_OFFSET_M` (15 m en producción) en ese rumbo, con macro `MANTENER_RUMBO`: el guiado la persigue. Sin imágenes transitables: `GANAR_ALTURA` (`PERDER_ALTURA` si todo es vegetación). La resolución se registra en `deliberations[]` (`arm = "{brazo}_deep_scan"`), escribe `_deadlock_event` con la sub-meta y pide `_escape_reset`.
+**Interpretación en marco mundo (`panorama_to_subgoal`).** Las entradas se asignan a las imágenes por el campo `img` (o por orden si falta); las entradas sobrantes que el modelo inventa se descartan. Una imagen es transitable si el modelo la marcó `ok: true` **y** de tipo `libre`: una entrada `ok: true` con otro tipo (`interior`, `fachada`) se contradice a sí misma y no se usa. Entre las imágenes transitables se elige la de **rumbo absoluto** más cercano al rumbo absoluto hacia el waypoint real (calculado con posiciones, no con el yaw), y se fija una sub-meta en ese rumbo a `CORNER_OFFSET_M` (15 m en producción), sin pasar de la distancia al waypoint real, con macro `MANTENER_RUMBO`: el guiado la persigue. Sin imágenes transitables: `GANAR_ALTURA` (`PERDER_ALTURA` si todo es vegetación). La resolución se registra en `deliberations[]` (`arm = "{brazo}_deep_scan"`), escribe `_deadlock_event` con la sub-meta y pide `_escape_reset`.
 
 Este diseño evita dos errores de marco de referencia que convierten una respuesta correcta en una maniobra en sentido contrario (cap. 9, §9.8.1): etiquetar las imágenes con el rumbo absoluto y pedir al modelo un ángulo relativo, y medir el error de rumbo a la meta desde el yaw final del barrido en lugar del de cada imagen. Por eso el modelo nunca reporta ángulos: identifica imágenes por número y el código usa el yaw medido.
 
-**Fallas.** Watchdog `SLM_DEEP_WATCHDOG_MS` (18 s en producción) vencido, pedido perdido (`SCAN_LOST_GRACE_MS`, 3 s) o respuesta sin el formato del modo: el barrido deja una entrada `arm = "deep_scan_failed"` con sus fotogramas y devuelve `False`.
+**Fallas.** Watchdog `SLM_DEEP_WATCHDOG_MS` (18 s en producción) vencido, pedido perdido (`SCAN_LOST_GRACE_MS`, 3 s), respuesta sin el formato del modo o respuesta con `degradada: true` —el propio modelo declara que las imágenes no sirven—: el barrido deja una entrada `arm = "deep_scan_failed"` con sus fotogramas y devuelve `False`.
 
 ## 5.13 Nodo `motor`
 
@@ -323,11 +329,13 @@ Las duraciones de las maniobras comprometidas son: `MANEUVER_DURATION_S` (2.0 s 
 
 ### 5.15.3 Detección de techo
 
-Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja al dron contra la losa. El tracker lo detecta: si durante 10 ciclos se **ordena** ascenso (`vz < −0.3 m/s` en el comando efectivamente ejecutado, que el bucle externo le informa con `note_executed_command()`; altitud ≥ 3 m) sin que la cota varíe más de 0.15 m, declara un techo (`ceiling_z`), liberado al alejarse 15 m o al cambiar de waypoint. Con techo, `compute_guidance()` limita la altitud objetivo a `ceiling_z + CEILING_MARGIN_M` (0.8 m) y, si el waypoint cae dentro de `CEILING_SAFE_GAP_M` (3 m) del techo, lo baja a esa banda y exporta `z_path_blocked = True`, que `navigate` resuelve con `PERDER_ALTURA` (regla 6). Usar el comando ejecutado y no la demanda del guiado importa: durante un `GIRAR_90` o un `FRENAR` el comando vertical es cero aunque el guiado pida subir, y esos ciclos no prueban que haya una losa encima.
+Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja al dron contra la losa. El tracker lo detecta: si durante 10 ciclos, con el dron libre en horizontal, se **ordena** ascenso (`vz < −0.3 m/s` en el comando efectivamente ejecutado, que el bucle externo le informa con `note_executed_command()`; altitud ≥ 3 m) sin que la cota varíe más de 0.15 m, declara un techo (`ceiling_z`), liberado al alejarse 15 m o al cambiar de waypoint. Con techo, `compute_guidance()` limita la altitud objetivo a `ceiling_z + CEILING_MARGIN_M` (0.8 m) y, si el waypoint cae dentro de `CEILING_SAFE_GAP_M` (3 m) del techo, lo baja a esa banda y exporta `z_path_blocked = True`, que `navigate` resuelve con `PERDER_ALTURA` (regla 6). Usar el comando ejecutado y no la demanda del guiado importa: durante un `GIRAR_90` o un `FRENAR` el comando vertical es cero aunque el guiado pida subir, y esos ciclos no prueban que haya una losa encima. Por la misma razón no cuentan los ciclos en que el dron está trabado de costado —se ordenó avanzar y no se desplazó más de `CEILING_SIDEWAYS_STUCK_M` (3 cm por ciclo)—: el roce contra una pared también impide subir, y ese caso lo resuelve el deadlock.
 
 ### 5.15.4 Sub-metas del VLM
 
 `inject_corner_waypoint(x, y, z, label)` inserta una sub-meta temporal delante del waypoint activo. Todas las sub-metas del brazo `slm` provienen del VLM (capa estratégica o barrido) y se insertan **tal cual**: una sub-meta nueva reemplaza a las temporales pendientes y reinicia el contador de progreso. La única condición es la deduplicación: si la sub-meta pendiente está a menos de `SUBGOAL_DEDUP_M` (10 m) de la nueva, la nueva se ignora; reemplazarla por otra casi igual reiniciaría el contador de progreso y un dron atascado nunca declararía el deadlock.
+
+**Una sub-meta es un medio, no una condición.** `update()` mide en cada ciclo la distancia al waypoint **real** aunque el objetivo activo sea una sub-meta: si el dron entra en el radio de aceptación del waypoint real, descarta las sub-metas pendientes (`drop_temporary()`) y lo acepta. El bucle externo también las descarta cuando la capa estratégica marca `_clear_subgoals` (§5.10.3).
 
 ## 5.16 Salvaguardas y contratos de diseño
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 import csv
 import json
 import os
-import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -449,15 +448,9 @@ class FlightLogger:
 
     @staticmethod
     def _get_code_version() -> str:
-        try:
-            result = subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True, text=True, timeout=5,
-            )
-            v = result.stdout.strip()
-            return v if v else "unknown"
-        except Exception:
-            return "unknown"
+        from .code_version import get_code_version  # hash de HEAD, con "-dirty" si hay cambios sin commitear
+
+        return get_code_version()
 
     def close(self) -> Dict[str, Any]:
         # H3.2/H3.3/S4 (PLAN-SLAM): deep_scan_events cuenta todos los eventos
