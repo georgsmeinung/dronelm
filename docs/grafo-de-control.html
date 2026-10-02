@@ -84,7 +84,7 @@
           <div><dt>Consulta VLM</dt><dd>3 <span>s</span></dd></div>
           <div><dt>Edad máx.</dt><dd>10 <span>s</span></dd></div>
           <div><dt>Deadlock</dt><dd>deep_vlm</dd></div>
-          <div><dt>Tests</dt><dd>237</dd></div>
+          <div><dt>Tests</dt><dd>246</dd></div>
         </dl>
         <div class="badges-row">
           <a class="badge-pill badge-blue"
@@ -630,14 +630,16 @@
           <div class="card">
             <h4>Cuándo se consulta</h4>
             <p>Cada ≥ <code>VLM_STRATEGIC_PERIOD_S</code> (3 s), a ≥ 8 m de altura, con el waypoint real a más de
-              8 m y la meta dentro de ±40° del eje óptico (o fuera de cuadro si el dron lleva 3 s sin acercarse a su
+              8 m y la meta dentro del recorte cuadrado que ve el modelo, ±33.7° (o fuera de cuadro si el dron lleva 3 s sin acercarse a su
               objetivo). También con una sub-meta activa: la pregunta es siempre sobre el waypoint real y la
               respuesta nueva reemplaza a la vieja. No durante un barrido ni en el
               despegue. De inmediato si la regla 7 ve un muro (<code>expedite()</code>).</p>
           </div>
           <div class="card">
             <h4>Qué ve</h4>
-            <p>El fotograma frontal (≤ 384 px) con una <strong>grilla de 3×3</strong> por tercios de la imagen
+            <p>Un recorte cuadrado del centro del fotograma (384 × 384 px; se cortan los dos costados del ancho) con
+              una <strong>grilla de 3×3</strong> por tercios, con sectores laterales y verticales a la misma distancia
+              angular (±24°)
               (columnas A–C; filas 1 arriba, 2 a la altura del dron, 3 abajo) y una marca roja «META» en la dirección
               del destino. Cada sector tiene una <strong>dirección absoluta</strong> (rumbo y elevación) fijada con la
               pose del fotograma. La anotación nunca toca el fotograma del flujo óptico.</p>
@@ -686,7 +688,12 @@
             ángulos.</li>
           <li><strong>Geometría:</strong> el código asigna a cada imagen el yaw <strong>medido</strong> al
             capturarla y calcula el rumbo a la meta desde las posiciones. La salida es una sub-meta a
-            <code>CORNER_OFFSET_M</code> = 15 m sobre el rumbo transitable más cercano a la meta.</li>
+            15 m como máximo (sin pasar del waypoint real) sobre el rumbo transitable más cercano a la meta, con la
+            misma función que la capa estratégica (<code>subgoal.build_subgoal</code>) y a la altitud actual.</li>
+          <li><strong>Salida del deadlock:</strong> se descartan los rumbos a menos de 45° del que falló (hacia el
+            objetivo activo) o de uno ya probado en un deadlock a menos de 10 m; con deadlocks repetidos se elige el
+            rumbo libre más distinto de lo ya probado; si no queda ninguno, <code>GANAR_ALTURA</code>. La selección
+            completa queda en <code>_deadlock_event.scan_selection</code>.</li>
           <li><strong>Sin rumbo transitable:</strong> <code>GANAR_ALTURA</code> (o <code>PERDER_ALTURA</code> si todo
             es vegetación).</li>
         </ol>
@@ -834,7 +841,7 @@
               <tr><td class="mono">SCAN_HEADING_COUNT_DEEP / SCAN_SETTLE_CYCLES_DEEP</td><td class="num">4 / 2</td><td>Rumbos del barrido y ciclos de asentamiento por rumbo.</td></tr>
               <tr><td class="mono">SCAN_ROT_TIMEOUT_CYCLES</td><td class="num">10</td><td>Rotación imposible: el barrido se abandona.</td></tr>
               <tr><td class="mono">SLM_DEEP_WATCHDOG_MS / SLM_DEEP_HTTP_TIMEOUT_S</td><td class="num">18 000 / 20 s</td><td>Watchdog del barrido; siempre menor que el corte HTTP.</td></tr>
-              <tr><td class="mono">CORNER_OFFSET_M</td><td class="num">15 m</td><td>Distancia de la sub-meta del barrido.</td></tr>
+              <tr><td class="mono">CORNER_OFFSET_M</td><td class="num">15 m</td><td>Desvío determinista del brazo <code>fsm</code> (el barrido usa <code>VLM_SUBGOAL_DIST_M</code>).</td></tr>
               <tr><td class="mono">MAX_ESCAPE_ALT_M</td><td class="num">30 m</td><td>Por encima, el escape determinista es <code>GIRAR_90</code>.</td></tr>
               <tr><td class="mono">FREEZE_CYCLES / FREEZE_RECOVERY</td><td class="num">25 / abort</td><td>Vigilante de congelamiento (<code>physics_locked</code>).</td></tr>
             </tbody>
@@ -856,7 +863,7 @@
               <tr><td class="mono">VLM_SUBGOAL_DIST_M / VLM_SUBGOAL_MIN_AHEAD_M</td><td class="num">15 / 4 m</td><td>Distancia de la sub-meta desde el ancla y mínima por delante del dron.</td></tr>
               <tr><td class="mono">VLM_MAX_DZ_M / VLM_SUBGOAL_MIN_ALT_M</td><td class="num">4 / 6 m</td><td>Cambio máximo de altitud de una sub-meta y altitud mínima.</td></tr>
               <tr><td class="mono">VLM_NEAR_WP_M</td><td class="num">8 m</td><td>Sin consultas ni barridos a menos de esta distancia del waypoint real.</td></tr>
-              <tr><td class="mono">VLM_STRATEGIC_MAX_GOAL_OFF_DEG</td><td class="num">40°</td><td>Solo se consulta con la meta dentro del campo visual útil.</td></tr>
+              <tr><td class="mono">VLM_STRATEGIC_MAX_GOAL_OFF_DEG</td><td class="num">40°</td><td>Azimut máximo de la meta para consultar; rige el recorte cuadrado (±33.7°).</td></tr>
               <tr><td class="mono">SLM_MIN_ALT_M</td><td class="num">8 m</td><td>Altura mínima para consultar.</td></tr>
               <tr><td class="mono">SUBGOAL_DEDUP_M</td><td class="num">10 m</td><td>Una sub-meta a menos de esta distancia de la pendiente se ignora.</td></tr>
             </tbody>
@@ -915,8 +922,7 @@
                 <td class="mono wrap">test_blocked_goal_sector_goes_to_nearest_free_sector_in_world_frame<br />test_subgoal_never_beyond_the_real_waypoint</td>
               </tr>
               <tr>
-                <td>El waypoint real se acepta con una sub-meta activa; una entrada <code>ok:true</code> no libre o una
-                  respuesta degradada no se usan</td>
+                <td>El waypoint real se acepta con una sub-meta activa; una entrada <code>ok:true</code> no libre no se usa</td>
                 <td class="mono wrap">test_pilot_190842z_regressions.py</td>
               </tr>
               <tr>
@@ -971,7 +977,7 @@
           </table>
         </div>
 
-        <p><strong>237 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
+        <p><strong>246 tests</strong>, sin AirSim (stub con la misma interfaz):</p>
         <pre><code>python -m pytest tests -q</code></pre>
 
         <div class="note">

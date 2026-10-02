@@ -147,8 +147,9 @@ def test_at_most_one_vlm_request_per_cycle(monkeypatch):
         service.stop()
 
 
-def test_scan_answer_marked_degraded_falls_back_to_the_vertical_escape(monkeypatch):
-    """degradada=true: el propio modelo dice que las imagenes no sirven -> falla, no descripcion."""
+def test_scan_answer_marked_degraded_is_still_used_and_logged(monkeypatch):
+    """degradada no decide: en los pilotos v3 salio true en 19 de 19 respuestas completas (incluidas
+    imagenes nitidas) y como regla de falla descartaba todos los barridos. Se usa la respuesta y se registra."""
     import src.agents.graph as graph_mod
 
     monkeypatch.setattr(graph_mod, "AGENT_ARM", "slm")
@@ -168,9 +169,11 @@ def test_scan_answer_marked_degraded_falls_back_to_the_vertical_escape(monkeypat
 
     graph, service = compile_workflow(_StuckClient())
     try:
-        state = _run(graph, _state(), 120, stop=lambda s: (s.get("_deadlock_event") or {}).get("fell_back_to_blind"))
-        assert "deep_scan" in seen
-        assert state["_deadlock_event"]["fell_back_to_blind"] is True
-        assert state.get("inject_corner") is None
+        state = _run(graph, _state(), 120, stop=lambda s: s.get("inject_corner") is not None)
+        sel = state["_deadlock_event"]["scan_selection"]
+        assert state.get("inject_corner") is not None
+        assert sel["degradada"] is True and sel["mode"] == "hacia_meta"
+        assert sel["failed_heading_deg"] == 0.0          # intentaba ir hacia el WP, al este
+        assert state["_deadlock_history"][-1]["outcome"] == "subgoal"
     finally:
         service.stop()

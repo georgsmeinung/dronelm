@@ -89,8 +89,20 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-09-30)</h2>
+        <h2>Actualizaciones Recientes (2026-10-02)</h2>
         <div class="card-grid">
+          <div class="card">
+            <h4>Plan de Ruta con el VLM sobre el Mapa</h4>
+            <p>Antes del despegue, y una sola vez por misión, cada tramo se compara contra rutas alternativas (la recta, dos en L y desvíos paralelos). Cada una se dibuja sobre el mapa cenital y el VLM juzga si va por la calle o por encima de los edificios. Se elige la aprobada de mayor probabilidad (leída de los <em>logprobs</em>) y sus vértices se insertan como waypoints <code>VIA_*</code>. Todas las corridas de un lote vuelan el mismo plan.</p>
+          </div>
+          <div class="card">
+            <h4>Mapa Cenital Registrado con el Simulador</h4>
+            <p>El mapa de CitySim se reconstruyó con 286 capturas cenitales de AirSim a 1000 m (FOV 15°), registrado en NED por construcción: el mapa anterior estaba rotado 90° y con otra escala. Antes de cada toma el dron baja a 40 m para que Unreal cargue la zona. Con el mapa correcto, <code>WP_3</code> de <code>citysim_pilot</code> resultó estar dentro de un edificio y se movió a la calle.</p>
+          </div>
+          <div class="card">
+            <h4>Banco de Prueba del VLM</h4>
+            <p>Calibración fuera de vuelo: las poses de las corridas se reproducen en AirSim para obtener profundidad y, con ella, la verdad de terreno de cada pregunta (sector libre, lado por donde rodear, espacio por encima, dirección más abierta, rutas sobre el mapa). Se mide exactitud balanceada, AUC con probabilidades del modelo, respuestas constantes y sesgo por posición (grilla con etiquetas permutadas).</p>
+          </div>
           <div class="card">
             <h4>Dos Lazos Desacoplados</h4>
             <p>El lazo rápido (5 Hz: guiado, evasión por flujo óptico, <code>GIRAR_90</code>, detección de atasco) es el único que comanda velocidades. El VLM opera en un lazo lento y asíncrono: su inferencia (3–6 s, 15–30 ciclos) nunca detiene al dron en vuelo normal.</p>
@@ -181,6 +193,12 @@
           táctico se audita <em>post-vuelo</em> mediante un visor HTML autocontenido que sincroniza el video anotado del
           vuelo con la traza completa de decisiones (prompt, respuesta estructurada cruda y latencia de inferencia de
           cada consulta al SLM).
+        </p>
+        <p>
+          Antes del vuelo, la estación terrena también <strong>planifica la ruta con el VLM sobre el mapa cenital</strong>:
+          propone rutas alternativas para cada tramo, el modelo juzga cuáles van por la calle y los vértices de la elegida
+          se agregan al manifiesto. El mapa de CitySim se construye con capturas del propio simulador, de modo que coincide
+          con el mundo de vuelo.
         </p>
 
         <h3>2. Lazo Táctico Autónomo en Vuelo (<code>airsim-loop</code>)</h3>
@@ -425,7 +443,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-09-30):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). Grafo de control con dos lazos desacoplados, capa estratégica del VLM anclada a la pose y <code>DEADLOCK_STRATEGY=deep_vlm</code> por defecto; 237 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad. Manifiesto <code>citysim_pilot</code> con <code>WP_0_SUR</code> para evitar la autopista elevada. Informe actualizado (caps. 00–13) con seis modos de falla documentados y nueve anexos (A1–A9). Pendiente: re-ejecución de las pruebas del capítulo 11 y lotes con obstrucción D, E y F (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citysim_pilot</code>; 4 celdas × 5 semillas cada uno).</p>
+          <p><strong>Estado actual (2026-09-30):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). Grafo de control con dos lazos desacoplados, capa estratégica del VLM anclada a la pose y <code>DEADLOCK_STRATEGY=deep_vlm</code> por defecto; 272 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad. Manifiesto <code>citysim_pilot</code> con <code>WP_0_SUR</code> para evitar la autopista elevada. Informe actualizado (caps. 00–13) con seis modos de falla documentados y nueve anexos (A1–A9). Pendiente: re-ejecución de las pruebas del capítulo 11 y lotes con obstrucción D, E y F (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citysim_pilot</code>; 4 celdas × 5 semillas cada uno).</p>
         </div>
       </section>
 

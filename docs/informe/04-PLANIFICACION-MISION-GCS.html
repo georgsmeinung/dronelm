@@ -456,6 +456,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#431-plan-de-ruta-con-el-vlm-sobre-el-mapa-cenital" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3.1 Plan de ruta con el VLM sobre el mapa cenital
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#432-mapa-cenital-registrado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3.2 Mapa cenital registrado
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1163,6 +1185,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#431-plan-de-ruta-con-el-vlm-sobre-el-mapa-cenital" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3.1 Plan de ruta con el VLM sobre el mapa cenital
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#432-mapa-cenital-registrado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3.2 Mapa cenital registrado
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1274,37 +1318,48 @@
 <p>El producto final del planificador terrestre es un archivo JSON denominado <strong><code>MissionManifest</code></strong>. Este documento actúa como un contrato formal e inmutable entre la estación terrena y el lazo táctico de vuelo. Su schema canónico está definido en Pydantic (<code>manifest.py</code>) y validado contra un JSON Schema (<code>manifest_schema.json</code>).</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CITYMAP_PILOT&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 2: circuito tipo grilla urbana sobre citymap.png ...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 2: circuito tipo grilla urbana sobre citysim_ortho.png ...&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;start_pose&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;yaw_deg&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">90.0</span><span class="w"> </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-11.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-50.5</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_0_SUR&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-51.0</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_0_SUR&quot;</span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">26.1</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.2</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1&quot;</span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">68.9</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.6</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2&quot;</span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">67.7</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-145.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_3&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">67.7</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-156.5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_3&quot;</span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">26.5</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-145.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_4&quot;</span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-16.3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-145.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_5&quot;</span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-17.9</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.6</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_6&quot;</span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">12.5</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-78.6</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_7&quot;</span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citymap.png&quot;</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_ortho.png&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
-<p><em>Manifiesto vigente <code>citysim_pilot.json</code> (2026-09-30; cap. 10 §10.3.3 explica <code>WP_0_SUR</code> y el cambio de mapa).</em></p>
+<p><em>Manifiesto vigente <code>citysim_pilot.json</code> (cap. 10 §10.3.3 explica <code>WP_0_SUR</code>; el mapa se describe en §4.3.2).</em></p>
 <h3 id="componentes-del-contrato">Componentes del contrato:<a class="headerlink" href="#componentes-del-contrato" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><code>mission_id</code>:</strong> identificador único en formato <code>^[A-Z0-9_]{3,32}$</code>, validado por el schema. Identifica el escenario experimental y aparece en los nombres de carpeta de telemetría.</li>
 <li><strong><code>summary</code>:</strong> descripción textual de la intención operativa (campo opcional, no consumido por el lazo táctico).</li>
 <li><strong><code>waypoints</code>:</strong> lista ordenada de puntos de paso tridimensionales en el marco <strong>NED</strong> (<em>North-East-Down</em>): <span class="arithmatex">\(z &lt; 0\)</span> representa altitud sobre el punto de despegue. Cada waypoint lleva una etiqueta opcional (<code>label</code>) para identificación en la traza.</li>
-<li><strong><code>map</code>:</strong> nombre del archivo de imagen de carta de territorio empleado por WebDCS para la visualización de la trayectoria (por defecto <code>map.png</code>). La escala (px/m) y el origen de cada imagen se declaran en <code>airsim-plan/missions/maps/map_scales.json</code>; un mapa mal registrado no afecta al vuelo pero sí a la planificación de coordenadas (cap. 10 §10.3.3).</li>
+<li><strong><code>map</code>:</strong> nombre de la imagen cenital del escenario. WebDCS la usa para ubicar y mostrar los waypoints, y el planificador de ruta (§4.3.1) para decidir por dónde va cada tramo. La escala (px/m) y el origen de cada imagen se declaran en <code>airsim-plan/missions/maps/map_scales.json</code>, con la convención: centro de la imagen = <code>ned_offset</code>, arriba = norte (+x), derecha = este (+y). Como el plan de ruta se deriva del mapa, un mapa mal registrado sí afecta al vuelo (§4.3.2).</li>
 <li><strong><code>start_pose</code></strong> (opcional): pose de partida; solo se usa con <code>--seed-jitter</code>, porque el runner devuelve el dron al <em>spawn</em> de <code>settings.json</code> (cap. 10 §10.4.3). Debe coincidir con ese <em>spawn</em>.</li>
 </ul>
 <p><strong>Separación entre manifiesto y prompts del VLM.</strong> El manifiesto entrega únicamente metas geométricas; los prompts del VLM no forman parte de él porque no pueden ser textos estáticos: se construyen en vuelo a partir del fotograma, la pose y el waypoint activo de ese instante. Hay dos (cap. 5 §5.10, §5.12; cap. 8 §8.5):</p>
 <ol>
-<li><strong>Prompt estratégico</strong> (<code>vlm_strategic.py</code>): el fotograma frontal con cinco columnas dibujadas y la marca «META» sobre la columna del destino, más la distancia al destino y la altura del dron. El modelo responde, para cada columna, si se puede volar recto 15 m por ella, y si hay una estructura horizontal cercana.</li>
+<li><strong>Prompt estratégico</strong> (<code>vlm_strategic.py</code>): el fotograma frontal con una grilla de 3×3 dibujada (tercios de la imagen) y la marca «META» en la dirección del destino, más la distancia al destino y la altura del dron. El modelo responde, para cada uno de los nueve sectores, si se puede volar al menos 15 m en esa dirección.</li>
 <li><strong>Prompt del barrido</strong> (<code>deep_scan.py</code>, solo en un deadlock): cuatro imágenes numeradas tomadas girando en el lugar, con el ángulo de cada una respecto de la dirección de vuelo y cuál es la más cercana al destino. El modelo describe cada imagen.</li>
 </ol>
 <p>Ambas respuestas se fuerzan con decodificación restringida (<code>json_schema</code>) a esquemas sin campo de acción; el código convierte la descripción en una sub-meta en coordenadas del mundo, que el <code>WaypointTracker</code> inserta delante del waypoint del manifiesto como un waypoint temporal.</p>
 <p>Este nivel de dinamismo hace inviable delegar el prompt al manifiesto: el contenido útil depende de percepciones que solo existen en vuelo.</p>
+<h3 id="431-plan-de-ruta-con-el-vlm-sobre-el-mapa-cenital">4.3.1 Plan de ruta con el VLM sobre el mapa cenital<a class="headerlink" href="#431-plan-de-ruta-con-el-vlm-sobre-el-mapa-cenital" title="Permanent link">&para;</a></h3>
+<p>El manifiesto une los waypoints en línea recta, y en una ciudad la recta suele cruzar una manzana. En vuelo, el VLM ve solo lo que tiene delante a 10 m de altura y debe inferir por dónde rodear un edificio cuyo final no ve; desde arriba, la misma pregunta se vuelve de reconocimiento: si una línea dibujada sobre el mapa va por la calle o por encima de los edificios. Es el tipo de juicio que un VLM pequeño resuelve mejor, porque no exige estimar distancias en primera persona. Por eso la estación terrena agrega un paso de planificación con el VLM <strong>antes del despegue</strong> (<code>src/planning/route_planner.py</code>): corre una sola vez por misión, la misión espera su resultado y nada de esto ocurre dentro del lazo táctico.</p>
+<ol>
+<li><strong>Candidatas geométricas.</strong> Para cada tramo A → B (incluido el tramo desde el <em>spawn</em> al primer waypoint) se generan rutas sin mirar el mapa: la recta, las dos rutas en L (primero norte-sur o primero este-oeste) y desvíos paralelos a ±25 y ±50 m a cada lado.</li>
+<li><strong>Juicio del VLM.</strong> Cada candidata se dibuja sobre el recorte del mapa que contiene a todas las del tramo, a la misma escala (línea roja; inicio en verde, destino en azul; 672 × 672 px), y se le pregunta al modelo si la línea va en todo su recorrido por calles o espacios abiertos sin pasar por encima de edificios. La respuesta se fuerza con decodificación restringida a <code>si</code>/<code>no</code> (temperatura 0), y la probabilidad de <code>si</code> se lee de los <em>logprobs</em> del token de la respuesta.</li>
+<li><strong>Elección.</strong> Entre las candidatas que el modelo aprobó se toma la de mayor probabilidad; a menos de 0.05 de la mejor, la más corta. Si no aprobó ninguna, queda la recta y el tramo se resuelve en vuelo como siempre. Los vértices intermedios de la elegida se insertan en el manifiesto como waypoints <code>VIA_&lt;WP&gt;_&lt;k&gt;</code> (con <code>planned_via: true</code> y la altura del waypoint de destino), delante del waypoint del tramo.</li>
+</ol>
+<p>El modelo evalúa; el código solo genera las opciones y toma la mejor según el propio modelo. El plan completo —cada candidata con su imagen, respuesta y probabilidad, la elegida y el motivo— queda en <code>&lt;out-dir&gt;/&lt;escenario&gt;/route_plan/</code> junto al manifiesto planificado, y se cachea por contenido (waypoints, mapa, modelo y prompt): <code>runner.py</code> y <code>batch_runner.py</code> planifican una vez por escenario antes de la primera corrida (<code>--route-plan vlm</code>, valor por defecto de <code>ROUTE_PLAN_MODE</code>), de modo que todas las semillas y brazos de un lote vuelan el mismo plan, y cada <code>summary.json</code> registra el plan con el que voló (<code>route_plan</code>). <code>--route-plan off</code> vuela el manifiesto tal cual. La validez del juicio del modelo sobre el mapa se mide antes de usarlo, contra la geometría del simulador (cap. 11 §11.0).</p>
+<h3 id="432-mapa-cenital-registrado">4.3.2 Mapa cenital registrado<a class="headerlink" href="#432-mapa-cenital-registrado" title="Permanent link">&para;</a></h3>
+<p>El plan de ruta solo tiene sentido si el mapa coincide con el mundo de vuelo. El mapa de CitySim se construye con el propio simulador (<code>airsim-plan/scripts/capture_ortho_map.py</code>): el dron se reubica sobre una grilla de puntos a 1000 m de altura con la cámara frontal apuntando 90° hacia abajo y un campo visual de 15°, de modo que la vista es casi ortográfica. De cada toma se usa la mitad central y se la pega en el lienzo a 2 px/m, con el origen NED en el centro de la imagen, el norte arriba y el este a la derecha. La orientación y la escala se verifican en el arranque desplazando el dron 20 m al norte y 20 m al este y midiendo el corrimiento de la imagen por correlación de fase.</p>
+<p>Unreal Engine carga el escenario por zonas alrededor del punto de vista, y desde 1000 m no carga la zona de abajo: la imagen muestra solo calles y bases vacías. Por eso, antes de cada toma el dron baja a 40 m sobre el punto (la carga se completa en unos 3 s), vuelve a subir y captura enseguida. La toma se acepta cuando la fracción de píxeles de edificio, medida con la profundidad, deja de crecer entre dos capturas; un criterio por color no sirve, porque el agua animada nunca se estabiliza y una zona sin cargar está quieta. El resultado, <code>citysim_ortho.png</code>, cubre la ciudad completa (1920 m norte-sur por 1640 m este-oeste) y es el mapa de todas las misiones de CitySim.</p>
 <p>En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la <strong>reproducibilidad experimental</strong>: los escenarios de benchmark por Tiers (<code>minisim_clear</code>, <code>townsim_ini</code>, <code>citysim_clear</code>) se definen a través de manifiestos fijos e inmutables, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.</p>
 <h2 id="44-estacion-terrena-webdcs-planificacion-y-auditoria-post-vuelo">4.4 Estación Terrena WebDCS: planificación y auditoría post-vuelo<a class="headerlink" href="#44-estacion-terrena-webdcs-planificacion-y-auditoria-post-vuelo" title="Permanent link">&para;</a></h2>
 <p><strong>WebDCS</strong> (<em>Web-based Drone Control Station</em>) es la interfaz de control en tierra, construida sobre <strong>FastAPI</strong> con frontend en HTML5, CSS y JavaScript. Expone su API REST en <code>http://localhost:8000</code> y sirve el panel de operación como aplicación web estática.</p>

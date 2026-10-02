@@ -1,3 +1,116 @@
+# 2026-10-02 (b) - Banco del VLM como medicion generalista; prompts sin objetos de escenario
+
+Criterio (decision del autor): la solucion debe ser generalista; ajustar prompts o umbrales a un escenario
+seria un entrenamiento manual por entorno (lo que se evita al no usar RL). El banco mide capacidad, no ajusta.
+- **Prompts** (`vlm_strategic`, `deep_scan`, `route_planner`, banco): sin altura fija ni objetos propios de
+  un escenario ("en una ciudad a unos 10 m" -> "a baja altura en un entorno urbano"; "autopista elevada" ->
+  "puente o estructura elevada"; "arbol" -> "arbol o vegetacion"). El planificador recibe la altura del
+  tramo en cada consulta.
+- **`report.py`**: criterio de pase por entorno = exactitud balanceada de la respuesta tal como sale >= 0.65
+  y limite inferior del IC 95 % (bootstrap por corrida, `cluster_bootstrap_ci`) por encima del azar. AUC y
+  umbral calibrado (LORO) quedan rotulados como diagnostico. Varios bancos (`--bench citysim=... townsim=...`)
+  -> `cross_report.md`: una pregunta es apta para el vuelo solo si pasa en todos los entornos.
+- **Orden**: no se elige con CitySim solo; la seleccion se decide con CitySim y TownSim medidos.
+- `common.read_jsonl` saltea lineas truncadas (antes cortaba la lectura); `vlm_bench/run_all.sh`
+  reanudable (sin borrar el directorio). Banco CitySim detenido con 595 muestras de verdad de terreno.
+- Tests: 274 pasan. Informe: cap. 10 §10.12.2.
+
+# 2026-10-02 (a) - Mapa cenital registrado, waypoints corregidos, banco de prueba del VLM y plan de ruta con el VLM
+
+**Mapa de CitySim.** `citymap.png` (3.8 px/m) no registraba con el mundo de AirSim: rotado 90 grados y
+con otra escala. Superponiendo las trayectorias voladas de las 16 corridas con los dos videos, el dron
+cruzaba manzanas a 10 m de altura y el spawn caia sobre una azotea (en el video esta en medio de la calle).
+- `airsim-plan/scripts/capture_ortho_map.py` (nuevo): mosaico cenital capturado con AirSim (1000 m, FOV
+  15 deg, 286 tomas, mitad central de cada una) -> `missions/maps/citysim_ortho.png` (2 px/m, centro =
+  origen NED, norte arriba, este a la derecha; ciudad completa x [-960,960], y [-820,820]) + `.json` con
+  los parametros. UE carga el mundo por zonas: desde 1000 m la zona de abajo nunca carga (medido: 5 % de
+  pixeles de edificio en 9 s; bajando a 40 m, 47 % estable desde los 3 s). Cada toma baja primero a 40 m,
+  sube y captura; se acepta cuando la fraccion de edificio medida con PROFUNDIDAD deja de subir (por color
+  no sirve: el agua animada nunca se estabiliza y una zona sin cargar esta quieta). Orientacion y escala
+  verificadas en el arranque por correlacion de fase (+20 m norte, +20 m este).
+- `map_scales.json`: entrada `citysim_ortho.png`; `citymap.png` y `citysim_calib.png` marcados como no
+  registrados. Campo `map` -> `citysim_ortho.png` en a_basic_city, a_city, citysim_clear, citysim_pilot,
+  nueva_mision_5 y nueva_mision_6 (sin tocar waypoints).
+
+**Waypoints de `citysim_pilot`** (verificados en AirSim: profundidad en 4 direcciones y hacia abajo a -10 m):
+WP_3 (67.7,-145) estaba DENTRO de un edificio (paredes a 0.2-2 m) -> (67.7,-156.5), centro de la calle oeste;
+WP_0_SUR (-5,-51) sobre el borde de la fachada norte del edificio sur -> (3,-51), centro de la calle
+este-oeste (fachada a 13 m). WP_1, WP_2 y WP_5 quedan a 1.6-2.6 m sobre el tablero de la autopista
+elevada (no se movieron). La recta WP_2 -> WP_3 atraviesa la manzana x 50-92, y -146..-112: el dron del
+piloto 232026Z quedo trabado en (68,-112), su fachada este.
+
+**Camara con FOV alterado.** Los scripts de captura interrumpidos dejaron la camara frontal con FOV 15 deg
+(y el mosaico "restauraba" el valor leido al arrancar, ya alterado). Restaurado a 90. `AirSimClient.connect`
+ahora falla con `CameraConfigError` si el FOV difiere de `CAMERA_HFOV_DEG` (no lo corrige: una corrida
+con la camara alterada invalidaria la comparacion sin rastro). El mosaico restaura siempre CAMERA_HFOV_DEG;
+el banco verifica el FOV antes de capturar. Test: `test_camera_fov_guard.py`.
+
+**Banco de prueba del VLM** (`airsim-loop/experiments/vlm_bench/`, cap. 11 §11.0):
+- `dataset.py`: corridas con los dos videos -> muestras (consultas estrategicas con su respuesta en vuelo,
+  imagenes de barrido, poses de trayectoria de-duplicadas 2 m/20 deg) + cuadros frontal y FollowCam.
+- `ground_truth.py`: reubica el dron en cada pose (posicion y actitud), espera a que UE cargue (p5 por
+  sector estable), captura RGB + DepthPlanar -> etiquetas (`labels.py`: sector libre = p5 >= 15 m sobre la
+  grilla 3x3 del recorte cuadrado; lado del hueco libre mas cercano; espacio libre por encima; tercio mas
+  abierto; camara dentro de la geometria). Alineacion: correlacion con la foto de vuelo o el cuadro del video.
+- `questions.py`: grid_prod / grid_perm (etiquetas permutadas: escena vs posicion), centro_libre,
+  borde_lateral, borde_superior, direccion_abierta, scan_prod / scan_perm.
+- `evaluate.py`: estratificado por clase verdadera, decodificacion restringida, temperatura 0, P(opcion)
+  leida de los logprobs (top_logprobs es la distribucion previa a la gramatica). Reanudable.
+- `report.py`: exactitud balanceada, AUC, umbral calibrado dejando una corrida afuera, respuestas
+  constantes, sesgo por posicion, acuerdo bajo permutacion.
+- `route_bench.py`: juicio del VLM sobre rutas dibujadas en el mapa vs geometria (la ruta se recorre cada
+  4 m mirando hacia adelante; libre si nunca hay obstaculo a < 6 m en la ventana central).
+
+**Plan de ruta con el VLM sobre el mapa cenital** (`src/planning/route_planner.py`, cap. 4 §4.3.1): antes
+del vuelo, una vez por escenario; candidatas geometricas por tramo (recta, dos L, desvios +-25/50 m), cada
+una dibujada sobre el mapa y juzgada por el VLM (si/no + P(si) por logprobs); se elige la aprobada de mayor
+P (a < 0.05, la mas corta); si ninguna, la recta. Vertices -> waypoints `VIA_<WP>_<k>` (`planned_via`).
+`runner.py` y `batch_runner.py`: `--route-plan vlm|off` (default `ROUTE_PLAN_MODE=vlm`), plan cacheado en
+`<out-dir>/<escenario>/route_plan/`, todas las corridas del lote vuelan el mismo; `summary.json` registra
+`route_plan`. `experiments/plan_route.py`: plan sin volar + vista general. `src/planning/vlm_logprobs.py`:
+lectura de P(opcion). Primera corrida sobre citysim_pilot (WPs viejos): el modelo respondio "no" a las 37
+candidatas (P(si) 0.007-0.06), incluidas rutas por la calle.
+- Guardia de profundidad: `src/planning/*` en la lista blanca; `vlm_bench/ground_truth.py` y
+  `route_bench.py` en la de excepcion. Tests: `test_vlm_bench.py` (18), `test_route_planner.py` (6),
+  `test_camera_fov_guard.py` (2). 272 pasan.
+- Informe: cap. 3; cap. 4 §4.3 (ejemplo), §4.3.1 y §4.3.2 nuevos; cap. 10 §10.3.3, §10.12.1-§10.12.2; A6.
+
+# 2026-10-01 (d) - Salida de deadlock: rumbo fallido, rumbos ya probados y exploracion; degradada no decide
+
+Evidencia (3 pilotos v3, 26 barridos): 7 cortados por max_tokens (ya corregido), 19 completos con el
+MISMO patron ok=[F,T,F,T] (imagenes 2 y 4, a +-90 deg, transitables; frente y atras bloqueados, aunque
+atras es de donde venia el dron) y degradada=true en 19/19, incluidas imagenes nitidas. Avance al WP
+real 20 s despues de la sub-meta del barrido: ~0 en la mayoria, dos casos > +5 m (alejandose). En
+232026Z la regla "degradada = falla" descarto 8/8 barridos y el dron quedo ~800 ciclos contra la fachada.
+
+- **`deep_scan.py`**: `degradada` se registra, no decide. Seleccion de salida en
+  `panorama_to_subgoal`: se descartan transitables a < `SCAN_FAILED_SECTOR_DEG` (45) del rumbo que fallo
+  (`_scan_failed_heading_deg`: hacia el objetivo activo al iniciar el barrido) o de un rumbo ya probado
+  en un deadlock a < `SCAN_REPEAT_RADIUS_M` (10 m) para el mismo WP; sin historia -> mas cercano a la
+  meta (`hacia_meta`); con historia -> mas distinto de lo probado (`exploracion`); sin restantes ->
+  GANAR_ALTURA (`sin_rumbo_nuevo`). Historia `_deadlock_history` (ultimos `SCAN_HISTORY_MAX`=12, incluye
+  barridos fallidos) y `_deadlock_event.scan_selection` con candidatos, descartados y motivo, modo y
+  rumbo elegido. Nuevas claves en DroneState.
+- Tests: `test_scan_escape_selection.py` (4); integracion: respuesta degradada usada y registrada. 246 pasan.
+- Informe: cap. 5 §5.12; cap. 8 §8.2.1; cap. 9 §9.8.9 y nuevo §9.8.11; A6. Docs: GRAFO-DE-CONTROL.md, docs/*.html.
+
+# 2026-10-01 (c) - Sub-meta comun para capa estrategica y barrido; grilla sobre recorte cuadrado
+
+- **`src/agents/subgoal.py`** (nuevo): `build_subgoal(x, y, z, rumbo, elevacion, dist_wp, label)` y
+  `subgoal_distance()`: distancia `min(VLM_SUBGOAL_DIST_M, dist al WP real)` (piso 5 m), dz =
+  d*tan(elevacion) acotado a +-`VLM_MAX_DZ_M`, altitud >= `VLM_SUBGOAL_MIN_ALT_M`. Lo usan
+  `vlm_strategic.decide_subgoal` y `deep_scan.panorama_to_subgoal` (antes el barrido usaba
+  `CORNER_OFFSET_M` y la altura del WP; ahora `VLM_SUBGOAL_DIST_M` y la altitud actual, elevacion 0).
+  `CORNER_OFFSET_M` queda solo para el desvio determinista del brazo `fsm`.
+- **Grilla 3x3 sobre un recorte cuadrado** (`vlm_strategic.square_crop`): se cortan los dos costados
+  del ancho; con un frame 3:2 de 90 deg el recorte cubre +-33.7 deg y los centros de los sectores
+  laterales y verticales quedan a +-24 deg. Sobre el frame completo los laterales quedaban a 33.7 deg y
+  los verticales a 24: un rodeo por arriba/abajo ganaba siempre al lateral por la forma del cuadro. Ahora
+  empatan y desempata la fila del medio. La meta "en vista" es la que cae dentro del recorte. El frame
+  de auditoria es el recorte que vio el modelo.
+- Tests: `test_subgoal.py` (3), `test_vlm_strategic.py` (recorte, empate lateral/vertical). 242 pasan.
+- Informe: cap. 5 §5.10.1-§5.10.3, §5.12; cap. 8 §8.3.2; A6. Docs: GRAFO-DE-CONTROL.md, docs/*.html.
+
 # 2026-10-01 (b) - Piloto v3 193631Z: max_tokens, consulta con la meta fuera de cuadro, code_version -dirty
 
 Piloto `v3/pilot/.../seed_99_20261001T193631Z` (720 ciclos, `physics_locked`): alcanzo WP_0_SUR, WP_1 y

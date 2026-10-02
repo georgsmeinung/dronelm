@@ -62,7 +62,7 @@ Hay **dos esquemas**, uno por modo de consulta (§5.10.5), y ninguno contiene un
 }
 ```
 
-**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `rumbos` de objetos `{img, tipo, ok, conf}` —número de imagen, superficie predominante (enum de seis tipos: `libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`), transitable y certeza— más `degradada`. Una respuesta con `degradada: true` no se usa (el modelo declara que las imágenes no sirven) y una entrada `ok: true` cuyo tipo no es `libre` se contradice a sí misma y no cuenta como transitable (cap. 5, §5.12). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (§8.3.3).
+**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `rumbos` de objetos `{img, tipo, ok, conf}` —número de imagen, superficie predominante (enum de seis tipos: `libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`), transitable y certeza— más `degradada`, que se registra pero no decide (en las corridas piloto el modelo lo marcó `true` en todas las respuestas). Una entrada `ok: true` cuyo tipo no es `libre` se contradice a sí misma y no cuenta como transitable (cap. 5, §5.12). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (§8.3.3).
 
 ### 8.2.2 Parser como red de seguridad
 
@@ -83,11 +83,11 @@ El diseño responde al primero anclando la respuesta a la pose del fotograma (§
 
 ### 8.3.2 Capa estratégica: grilla de 3×3 con dirección absoluta
 
-El fotograma frontal se divide en una grilla de 3×3 por tercios de la imagen —la grilla de composición fotográfica—: columnas A, B, C (izquierda a derecha) y filas 1, 2, 3 (arriba, a la altura del dron, abajo). Se marca en la imagen la dirección del destino, en azimut y elevación. Para cada sector el modelo dice si se puede volar en esa dirección al menos 15 m.
+Un recorte cuadrado del centro del fotograma frontal —se cortan los dos costados del ancho— se divide en una grilla de 3×3 por tercios —la grilla de composición fotográfica—: columnas A, B, C (izquierda a derecha) y filas 1, 2, 3 (arriba, a la altura del dron, abajo). Se marca en la imagen la dirección del destino, en azimut y elevación. Para cada sector el modelo dice si se puede volar en esa dirección al menos 15 m.
 
 Una partición en columnas solo describe el eje horizontal. La grilla agrega el vertical: permite que la respuesta diga que un obstáculo a la altura del dron se pasa por arriba (fila 1 libre, fila 2 bloqueada) y que una superficie horizontal se ve en la fila del medio, sin pedir al modelo un concepto abstracto como «estructura debajo». En corridas de diagnóstico, una pregunta de ese tipo («¿hay una estructura horizontal cercana?») recibió `true` en 5 de 6 consultas, con imágenes muy distintas (cap. 9, §9.8.9).
 
-La traducción (`decide_subgoal`, detalle en §5.10.3) usa la pose **del fotograma**: la dirección absoluta del sector es el yaw del ancla más el azimut del centro del sector, con la elevación del centro del sector. La sub-meta se fija desde la posición del ancla, a no más de 15 m y nunca más lejos que el waypoint real. Así, la geometría que el modelo describió se transporta al mundo sin depender de hacia dónde mira el dron cuando la respuesta llega. Si el sector de la meta está libre, la capa no agrega nada y descarta cualquier desvío pendiente: la respuesta más frecuente esperable («el camino directo está libre») no genera maniobras.
+La traducción (`decide_subgoal`, detalle en §5.10.3) usa la pose **del fotograma**: la dirección absoluta del sector es el yaw del ancla más el azimut del centro del sector, con la elevación del centro del sector. La sub-meta se fija desde la posición del ancla, a no más de 15 m y nunca más lejos que el waypoint real, con la misma función que usa el barrido. El recorte cuadrado deja los sectores laterales y los verticales a la misma distancia angular del centro (±24°), de modo que la preferencia entre un rodeo por el costado y uno por arriba no la decide la forma del cuadro: a igual distancia gana la fila del medio. Así, la geometría que el modelo describió se transporta al mundo sin depender de hacia dónde mira el dron cuando la respuesta llega. Si el sector de la meta está libre, la capa no agrega nada y descarta cualquier desvío pendiente: la respuesta más frecuente esperable («el camino directo está libre») no genera maniobras.
 
 ### 8.3.3 Barrido: imágenes numeradas, rumbos medidos
 

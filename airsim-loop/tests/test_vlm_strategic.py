@@ -9,9 +9,10 @@ import numpy as np
 
 import src.agents.vlm_strategic as vs
 
-W, H = 108, 72          # frame de prueba: f = 54 px con HFOV 90
-AZ = math.degrees(math.atan(36 / 54))   # 33.69: centro de las columnas A y C
-EL = math.degrees(math.atan(24 / 54))   # 23.96: centro de las filas 1 y 3
+W, H = 108, 72          # frame de prueba 3:2: f = 54 px con HFOV 90; recorte cuadrado de 72 px
+SIDE, F = 72, 54.0
+AZ = math.degrees(math.atan(24 / 54))   # 23.96: centro de las columnas A y C del recorte
+EL = AZ                                 # recorte cuadrado: filas 1 y 3 a la misma distancia angular
 
 
 def _state(x=0.0, y=0.0, yaw_deg=0.0, wp=(100.0, 0.0), alt=10.0, temp=False):
@@ -32,21 +33,34 @@ def _grid(blocked=(), free_only=None):
     return {"sectores": {c: ("bloqueado" if c in blocked else "libre") for c in vs.CELLS}}
 
 
-def test_grid_geometry_follows_the_thirds_of_the_image():
-    centers = vs.cell_centers_deg(W, H, 90.0)
+def test_square_crop_cuts_both_sides_of_the_width():
+    frame = np.zeros((H, W, 3), dtype=np.uint8)
+    frame[:, :18] = 255                     # franja izquierda que el recorte debe descartar
+    frame[:, -18:] = 255                    # franja derecha
+    crop, side, f = vs.square_crop(frame)
+    assert crop.shape[:2] == (SIDE, SIDE) and side == SIDE and abs(f - F) < 1e-9
+    assert crop.max() == 0                  # quedo solo el centro
+    assert abs(vs.crop_half_fov_deg(SIDE, F) - math.degrees(math.atan(36 / 54))) < 1e-9
+
+
+def test_grid_geometry_follows_the_thirds_of_the_square_crop():
+    centers = vs.cell_centers_deg(SIDE, F)
     assert centers["B2"] == (0.0, 0.0)
     assert abs(centers["A2"][0] + AZ) < 1e-6 and abs(centers["C2"][0] - AZ) < 1e-6
     assert abs(centers["B1"][1] - EL) < 1e-6 and abs(centers["B3"][1] + EL) < 1e-6
-    assert vs.cell_for_direction(0.0, 0.0, W, H) == "B2"
-    assert vs.cell_for_direction(-44.0, 0.0, W, H) == "A2"
-    assert vs.cell_for_direction(0.0, 30.0, W, H) == "B1"
-    assert vs.cell_for_direction(30.0, -30.0, W, H) == "C3"
+    # laterales y verticales a la misma distancia angular: ninguno gana por la forma del cuadro
+    assert abs(abs(centers["A2"][0]) - abs(centers["B1"][1])) < 1e-9
+    assert vs.cell_for_direction(0.0, 0.0, SIDE, F) == "B2"
+    assert vs.cell_for_direction(-44.0, 0.0, SIDE, F) == "A2"
+    assert vs.cell_for_direction(0.0, 30.0, SIDE, F) == "B1"
+    assert vs.cell_for_direction(30.0, -30.0, SIDE, F) == "C3"
 
 
 def test_annotation_never_touches_the_flow_frame():
     frame = np.full((H, W, 3), 100, dtype=np.uint8)
     before = frame.copy()
-    b64 = vs.annotate_grid(frame, 10.0, 0.0)
+    crop, side, f = vs.square_crop(frame)
+    b64 = vs.annotate_grid(crop, f, 10.0, 0.0)
     assert b64 and np.array_equal(frame, before)
 
 
@@ -80,6 +94,12 @@ def test_blocked_goal_sector_goes_to_nearest_free_sector_in_world_frame():
     assert abs(abs(bearing) - AZ) < 0.5
     assert abs(math.hypot(sub["x"], sub["y"]) - vs.VLM_SUBGOAL_DIST_M) < 0.1
     assert sub["z"] == -10.0                      # fila del medio: misma altura
+
+
+def test_lateral_and_vertical_detours_tie_and_the_middle_row_wins():
+    _p, anchor = vs.build_request(_state())
+    sub, _why = vs.decide_subgoal(_grid(free_only=("B1", "C2")), anchor, _state())
+    assert sub["sector"] == "C2" and sub["z"] == -10.0
 
 
 def test_only_the_upper_row_free_climbs():

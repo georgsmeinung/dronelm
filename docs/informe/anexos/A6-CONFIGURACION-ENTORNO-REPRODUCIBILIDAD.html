@@ -1767,7 +1767,7 @@
 <li><strong><code>ApiServerPort: 41451</code></strong>: puerto TCP de enlace Msgpack-RPC por el que se comunican <code>AirSimClient</code> y el motor de Unreal Engine.</li>
 <li><strong><code>CameraDefaults.CaptureSettings</code></strong>:</li>
 <li><code>ImageType 0</code> (<code>Scene</code>): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (<code>FlowTTCEstimator</code>) y por el modelo deliberativo (<code>Qwen2.5-VL-3B</code>).</li>
-<li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).</li>
+<li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, §10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).</li>
 <li><code>ImageType 5</code> (<code>Segmentation</code>): canal de segmentación semántica de mallas para auditoría visual.</li>
 <li><code>Width: 1080, Height: 720</code>: resolución nativa del render target frontal.</li>
 <li><strong><code>SubWindows</code></strong>: habilita una ventana secundaria flotante en el visor de Unreal Engine mostrando la cámara frontal a bordo en tiempo real, facilitando la supervisión visual del operador durante las corridas experimentales.</li>
@@ -1917,19 +1917,64 @@
 <td>Período mínimo entre consultas estratégicas y edad máxima de una respuesta para aplicarla.</td>
 </tr>
 <tr>
-<td><code>VLM_STRATEGIC_COLUMNS</code> / <code>CAMERA_HFOV_DEG</code></td>
-<td><code>5</code> / <code>90.0</code></td>
-<td>Columnas dibujadas sobre el fotograma y campo visual horizontal con el que se calculan sus rumbos.</td>
+<td><code>CAMERA_HFOV_DEG</code></td>
+<td><code>90.0</code></td>
+<td>Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, §5.10.3).</td>
 </tr>
 <tr>
-<td><code>VLM_SUBGOAL_DIST_M</code> / <code>VLM_SUBGOAL_MIN_AHEAD_M</code> / <code>VLM_CLIMB_M</code></td>
-<td><code>15.0</code> / <code>4.0</code> / <code>4.0</code></td>
-<td>Distancia de la sub-meta desde el ancla, distancia mínima por delante del dron para aplicarla y ascenso si hay estructura debajo.</td>
+<td><code>VLM_SUBGOAL_DIST_M</code> / <code>VLM_SUBGOAL_MIN_AHEAD_M</code></td>
+<td><code>15.0</code> / <code>4.0</code></td>
+<td>Distancia máxima de la sub-meta desde el ancla (nunca más lejos que el waypoint real) y distancia mínima por delante del dron para aplicarla.</td>
+</tr>
+<tr>
+<td><code>VLM_MAX_DZ_M</code> / <code>VLM_SUBGOAL_MIN_ALT_M</code></td>
+<td><code>4.0</code> / <code>6.0</code></td>
+<td>Cambio máximo de altitud de una sub-meta (filas 1 y 3 de la grilla) y altitud mínima de una sub-meta.</td>
+</tr>
+<tr>
+<td><code>VLM_NEAR_WP_M</code></td>
+<td><code>8.0</code></td>
+<td>A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre.</td>
+</tr>
+<tr>
+<td><code>SCAN_FAILED_SECTOR_DEG</code> / <code>SCAN_REPEAT_RADIUS_M</code> / <code>SCAN_HISTORY_MAX</code></td>
+<td><code>45.0</code> / <code>10.0</code> / <code>12</code></td>
+<td>Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, §5.12).</td>
+</tr>
+<tr>
+<td><code>ROUTE_PLAN_MODE</code></td>
+<td><code>vlm</code></td>
+<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>off</code>: manifiesto tal cual); una vez por escenario, el mismo plan para todo el lote (cap. 4 §4.3.1).</td>
+</tr>
+<tr>
+<td><code>ROUTE_DETOURS_M</code> / <code>ROUTE_MIN_SIDE_M</code> / <code>ROUTE_MARGIN_M</code></td>
+<td><code>25,50</code> / <code>10.0</code> / <code>25.0</code></td>
+<td>Rutas candidatas por tramo: desvíos paralelos a cada lado, lado mínimo de una ruta en L y margen del recorte del mapa.</td>
+</tr>
+<tr>
+<td><code>ROUTE_IMAGE_PX</code> / <code>ROUTE_TIE_EPS</code></td>
+<td><code>672</code> / <code>0.05</code></td>
+<td>Tamaño de la imagen del mapa que ve el modelo y diferencia de probabilidad por debajo de la cual se elige la candidata más corta.</td>
+</tr>
+<tr>
+<td><code>VLM_STUCK_QUERY_CYCLES</code></td>
+<td><code>15</code></td>
+<td>Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, §5.10.1).</td>
+</tr>
+<tr>
+<td><code>VLM_MAX_TOKENS_STRATEGIC</code> / <code>VLM_MAX_TOKENS_DEEP</code></td>
+<td><code>384</code> / <code>512</code></td>
+<td>Tope de tokens de la respuesta por modo; una respuesta cortada por el tope se reporta como <code>respuesta_truncada</code> (cap. 8, §8.5.4).</td>
+</tr>
+<tr>
+<td><code>CEILING_SIDEWAYS_STUCK_M</code></td>
+<td><code>0.03</code></td>
+<td>Desplazamiento horizontal por ciclo por debajo del cual, con avance ordenado, el dron está trabado de costado y no se cuenta para detectar techo.</td>
 </tr>
 <tr>
 <td><code>VLM_STRATEGIC_MAX_GOAL_OFF_DEG</code></td>
 <td><code>40.0</code></td>
-<td>Solo se consulta si la meta cae dentro de ±40° del eje óptico.</td>
+<td>Azimut máximo de la meta para consultar; en la práctica rige el recorte cuadrado (±33.7° en un fotograma de 3:2).</td>
 </tr>
 </tbody>
 </table>
@@ -2087,7 +2132,7 @@
 <tr>
 <td><code>CORNER_OFFSET_M</code></td>
 <td><code>15.0</code></td>
-<td>Distancia de la sub-meta producida por el barrido.</td>
+<td>Distancia del desvío determinista del brazo <code>fsm</code>. El barrido usa <code>VLM_SUBGOAL_DIST_M</code>, igual que la capa estratégica.</td>
 </tr>
 <tr>
 <td><code>SUBGOAL_DEDUP_M</code></td>
@@ -2123,6 +2168,16 @@
 <td><code>LAND_DESCENT_SPEED_MPS</code></td>
 <td><code>0.5</code></td>
 <td>Velocidad del descenso de <code>land_smooth()</code> al final de la misión.</td>
+</tr>
+<tr>
+<td><code>DISTMIN_TRACK_ENABLED</code> / <code>DISTMIN_TRACK_PERIOD_S</code></td>
+<td><code>true</code> / <code>1.0</code></td>
+<td>Hilo de auditoría de DistMin y período de muestreo de la profundidad (cap. 10, §10.6.1).</td>
+</tr>
+<tr>
+<td><code>TAKEOFF_VERTICAL</code> / <code>TAKEOFF_ALT_TOL_M</code></td>
+<td><code>true</code> / <code>1.0</code></td>
+<td>Despegue vertical hasta la altitud del primer objetivo antes de avanzar (cap. 5, §5.15).</td>
 </tr>
 <tr>
 <td><code>FLOW_HOLDOVER_MAX_FRAMES</code> / <code>FLOW_MAX_YAW_DPS_NEAR_OBSTACLE</code></td>
@@ -2212,7 +2267,7 @@
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-<p><em>Nota sobre trazabilidad:</em> el campo <code>code_version</code> almacena el hash SHA-1 de Git del commit exacto sobre el que se ejecutó el vuelo, asegurando trazabilidad matemática estricta con el código fuente.</p>
+<p><em>Nota sobre trazabilidad:</em> el campo <code>code_version</code> almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en <code>airsim-loop/</code>, <code>config/</code> o <code>airsim-plan/</code>, lleva el sufijo <code>-dirty</code> (<code>src/logging/code_version.py</code>): el hash solo identifica el código con el árbol limpio, y una corrida <code>-dirty</code> no entra a un lote (cap. 10, §10.12).</p>
 <h3 id="a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl">A6.4.2 Estructura del log de telemetría ciclo a ciclo (<code>.jsonl</code>)<a class="headerlink" href="#a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl" title="Permanent link">&para;</a></h3>
 <p>Cada línea del archivo es un registro JSON generado a la frecuencia de 5 Hz por <code>FlightLogger</code>, capturando el estado completo del sistema:
 * <code>timestamp</code>: tiempo Unix en segundos con precisión de microsegundos.

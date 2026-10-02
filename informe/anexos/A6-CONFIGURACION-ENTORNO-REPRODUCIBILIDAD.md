@@ -145,10 +145,14 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_SUBGOAL_DIST_M` / `VLM_SUBGOAL_MIN_AHEAD_M` | `15.0` / `4.0` | Distancia máxima de la sub-meta desde el ancla (nunca más lejos que el waypoint real) y distancia mínima por delante del dron para aplicarla. |
 | `VLM_MAX_DZ_M` / `VLM_SUBGOAL_MIN_ALT_M` | `4.0` / `6.0` | Cambio máximo de altitud de una sub-meta (filas 1 y 3 de la grilla) y altitud mínima de una sub-meta. |
 | `VLM_NEAR_WP_M` | `8.0` | A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre. |
+| `SCAN_FAILED_SECTOR_DEG` / `SCAN_REPEAT_RADIUS_M` / `SCAN_HISTORY_MAX` | `45.0` / `10.0` / `12` | Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, §5.12). |
+| `ROUTE_PLAN_MODE` | `vlm` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`off`: manifiesto tal cual); una vez por escenario, el mismo plan para todo el lote (cap. 4 §4.3.1). |
+| `ROUTE_DETOURS_M` / `ROUTE_MIN_SIDE_M` / `ROUTE_MARGIN_M` | `25,50` / `10.0` / `25.0` | Rutas candidatas por tramo: desvíos paralelos a cada lado, lado mínimo de una ruta en L y margen del recorte del mapa. |
+| `ROUTE_IMAGE_PX` / `ROUTE_TIE_EPS` | `672` / `0.05` | Tamaño de la imagen del mapa que ve el modelo y diferencia de probabilidad por debajo de la cual se elige la candidata más corta. |
 | `VLM_STUCK_QUERY_CYCLES` | `15` | Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, §5.10.1). |
 | `VLM_MAX_TOKENS_STRATEGIC` / `VLM_MAX_TOKENS_DEEP` | `384` / `512` | Tope de tokens de la respuesta por modo; una respuesta cortada por el tope se reporta como `respuesta_truncada` (cap. 8, §8.5.4). |
 | `CEILING_SIDEWAYS_STUCK_M` | `0.03` | Desplazamiento horizontal por ciclo por debajo del cual, con avance ordenado, el dron está trabado de costado y no se cuenta para detectar techo. |
-| `VLM_STRATEGIC_MAX_GOAL_OFF_DEG` | `40.0` | Solo se consulta si la meta cae dentro de ±40° del eje óptico. |
+| `VLM_STRATEGIC_MAX_GOAL_OFF_DEG` | `40.0` | Azimut máximo de la meta para consultar; en la práctica rige el recorte cuadrado (±33.7° en un fotograma de 3:2). |
 
 ### 3. Lazo de Control Táctico
 | Variable | Valor Nominal | Justificación y Efecto |
@@ -186,7 +190,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `MAX_ESCAPE_ALT_M` | `30.0` | Por encima de esta altitud, el escape determinista es `GIRAR_90` en lugar de `GANAR_ALTURA`. |
 | `SCAN_HEADING_COUNT_DEEP` / `SCAN_SETTLE_CYCLES_DEEP` / `MAX_DEEP_SCAN_IMAGES` | `4` / `2` / `5` | Rumbos del barrido panorámico, ciclos de asentamiento por rumbo e imágenes máximas por consulta. |
 | `SCAN_ROT_TIMEOUT_CYCLES` | `10` | Timeout de rotación del barrido (2 s): si el dron no alcanza el rumbo, el barrido se abandona. |
-| `CORNER_OFFSET_M` | `15.0` | Distancia de la sub-meta producida por el barrido. |
+| `CORNER_OFFSET_M` | `15.0` | Distancia del desvío determinista del brazo `fsm`. El barrido usa `VLM_SUBGOAL_DIST_M`, igual que la capa estratégica. |
 | `SUBGOAL_DEDUP_M` | `10.0` | Una sub-meta a menos de esta distancia de la pendiente se ignora. |
 | `MANEUVER_DURATION_S` / `ESCAPE_MANEUVER_DURATION_S` / `GIRAR90_DURATION_S` | `2.0` / `1.6` / `1.0` | Duración de las maniobras comprometidas: evasión lateral, escape vertical y giro de 90°. |
 | `EVASION_STUCK_THRESHOLD` / `STUCK_HARD_FACTOR` / `MAX_CONSECUTIVE_ESCAPES` | `10` / `1.5` / `2` | Umbrales de atasco y de escape del brazo `fsm` (cap. 5, §5.11, §5.15.2). |

@@ -36,10 +36,14 @@ FLIGHT_WHITELIST: List[str] = [
     "src/agents/reactive.py",
     "src/agents/spatial_scan.py",
     "src/agents/stall_detector.py",
+    "src/agents/subgoal.py",
     "src/agents/vlm_strategic.py",
     "src/perception/__init__.py",
     "src/perception/flow_ttc.py",
     "src/perception/obstacle_field.py",
+    # Plan de ruta previo al vuelo (corre en el runner antes del despegue): solo mapa cenital + VLM.
+    "src/planning/route_planner.py",
+    "src/planning/vlm_logprobs.py",
 ]
 
 # Lista de excepcion (§0.2): instrumentacion de laboratorio, corre offline en
@@ -50,6 +54,9 @@ DEPTH_EXCEPTION_LIST: List[str] = [
     "experiments/analyze_occupancy.py",
     # Auditoria DistMin: hilo aislado con conexion RPC propia; escribe solo <stem>.distmin.ndjson.
     "src/logging/distmin_audit.py",
+    # Banco de prueba del VLM (cap. 11): reubica el dron en poses registradas, fuera de vuelo.
+    "experiments/vlm_bench/ground_truth.py",
+    "experiments/vlm_bench/route_bench.py",
 ]
 
 _FORBIDDEN_PATTERNS = (
@@ -85,7 +92,7 @@ def test_flight_module_whitelist_covers_every_flight_source_file():
     """
     whitelist_set = set(FLIGHT_WHITELIST)
     missing = []
-    for sub_dir in ("src/agents", "src/perception", "src/navigation"):
+    for sub_dir in ("src/agents", "src/perception", "src/navigation", "src/planning"):
         for path in sorted((REPO_ROOT / sub_dir).glob("*.py")):
             rel = path.relative_to(REPO_ROOT).as_posix()
             if rel not in whitelist_set and not rel.endswith("__init__.py"):

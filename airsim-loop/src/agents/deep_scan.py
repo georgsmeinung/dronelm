@@ -17,6 +17,7 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+from .subgoal import VLM_SUBGOAL_DIST_M, build_subgoal  # reglas comunes con la capa estrategica
 from .action_map import action_to_command
 from .deliberation_service import DeliberationService
 
@@ -30,6 +31,15 @@ if DEADLOCK_STRATEGY not in ("deep_vlm", "blind"):
 SCAN_HEADING_COUNT_DEEP = int(os.getenv("SCAN_HEADING_COUNT_DEEP", "4"))
 # Cerca del WP real (m) no se barre: mismo umbral que la capa estrategica (vlm_strategic.VLM_NEAR_WP_M).
 VLM_NEAR_WP_M = float(os.getenv("VLM_NEAR_WP_M", "8.0"))
+# Seleccion de salida en deadlock (2026-10-01). Un deadlock es evidencia de que el rumbo que el dron
+# intentaba no funciona: entre los rumbos que el VLM marco transitables se descartan (1) los que caen a
+# menos de SCAN_FAILED_SECTOR_DEG del rumbo que fallo y (2) los ya probados en deadlocks anteriores a
+# menos de SCAN_REPEAT_RADIUS_M, para el mismo WP. Con deadlocks repetidos en la zona se elige el rumbo
+# libre mas distinto de los ya probados (exploracion), no el mas cercano a la meta. El modelo sigue
+# decidiendo que esta libre; esto solo elige entre sus opciones con lo que el dron ya comprobo.
+SCAN_FAILED_SECTOR_DEG = float(os.getenv("SCAN_FAILED_SECTOR_DEG", "45.0"))
+SCAN_REPEAT_RADIUS_M = float(os.getenv("SCAN_REPEAT_RADIUS_M", "10.0"))
+SCAN_HISTORY_MAX = int(os.getenv("SCAN_HISTORY_MAX", "12"))
 SCAN_SETTLE_CYCLES_DEEP = int(os.getenv("SCAN_SETTLE_CYCLES_DEEP", "2"))
 SCAN_YAW_TOLERANCE_DEG = float(os.getenv("SCAN_YAW_TOLERANCE_DEG", "5.0"))
 # Timeout de rotacion en fase "rotando": si el drone no alcanza el rumbo target en
@@ -88,7 +98,7 @@ RESPONSE_JSON_SCHEMA_PANORAMA = {
 # 2026-0930: el ejemplo ya no trae valores concretos ("ok": true, "conf": 0.9): el modelo 3B los
 # copiaba (52 de 53 respuestas sectoriales decian "frente transitable", incluso a 0.1 m de un muro).
 SYSTEM_PROMPT_DEEP_SCAN = (
-    "Sos el sistema de percepcion semantica de un dron autonomo que vuela a unos 10 m de altura.\n"
+    "Sos el sistema de percepcion semantica de un dron autonomo que vuela a baja altura en un entorno urbano.\n"
     "Se te muestran varias imagenes numeradas, tomadas girando en el lugar, cada una hacia un rumbo "
     "distinto (NO son fotogramas consecutivos en el tiempo).\n"
     "Describe lo que ves en cada imagen. NO decides acciones.\n\n"
@@ -96,7 +106,7 @@ SYSTEM_PROMPT_DEEP_SCAN = (
     "- img: el numero de la imagen (1, 2, ...)\n"
     "- tipo: la superficie u obstaculo predominante A LA ALTURA DEL DRON en los proximos 15 m\n"
     "- ok: true SOLO si el dron puede volar recto en esa direccion 15 m sin chocar; false si hay "
-    "edificio, muro, fachada, arbol, puente, autopista elevada, cornisa o techo cerca\n"
+    "edificio, muro, fachada, arbol o vegetacion, puente o estructura elevada, cornisa o techo cerca\n"
     "- conf: certeza de 0.0 a 1.0\n\n"
     "Tipos validos:\n"
     "- 'libre': calle, plaza, cielo, espacio abierto a la altura del dron\n"
@@ -249,19 +259,29 @@ def panorama_to_subgoal(
     headings_world_deg: List[float],
     telem: Dict[str, Any],
     goal_bearing_deg: Optional[float],
-    goal_z: float = -10.0,
     goal_dist_m: Optional[float] = None,
+    failed_heading_deg: Optional[float] = None,
+    tried_headings_deg: Optional[List[float]] = None,
+    log: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, Optional[Dict[str, Any]], str]:
     """Traduce la descripcion panoramica del VLM a una decision en marco MUNDO (2026-0930).
 
     Cada imagen tiene un rumbo absoluto conocido (el que tenia el dron al capturarla). Entre los
     rumbos que el modelo marco transitables se elige el mas cercano al rumbo absoluto hacia la meta
-    y se fija una sub-meta a CORNER_OFFSET_M en esa direccion.
+    y se fija una sub-meta en esa direccion con las mismas reglas que la capa estrategica
+    (subgoal.build_subgoal): VLM_SUBGOAL_DIST_M como maximo, nunca mas lejos que el WP real, a la altitud
+    actual (las imagenes del barrido no describen filas: elevacion 0).
     El guiado normal la persigue; no se emiten maniobras relativas al cuerpo, que dejarian de ser
     validas en cuanto el dron gira (tras el barrido el dron mira al ULTIMO rumbo, no al primero).
 
     Sin rumbo transitable: GANAR_ALTURA (o PERDER_ALTURA si todo es vegetacion) -- es la unica
     lectura posible de "todo bloqueado a esta altura".
+
+    Salida de deadlock: se descartan los transitables a menos de SCAN_FAILED_SECTOR_DEG del rumbo que
+    fallo (`failed_heading_deg`) o de un rumbo ya probado en la zona (`tried_headings_deg`). Si quedan,
+    sin historia se elige el mas cercano a la meta; con historia, el mas distinto de lo ya probado. Si
+    todos los transitables estaban descartados: GANAR_ALTURA. `log` (opcional) recibe la seleccion
+    completa para auditoria.
 
     Returns (macro_action, sub_meta_o_None, motivo).
     """
@@ -281,21 +301,81 @@ def panorama_to_subgoal(
         return "GANAR_ALTURA", None, "ningun rumbo transitable"
 
     ref = goal_bearing_deg if goal_bearing_deg is not None else headings_world_deg[0]
-    heading, _entry = min(transitable, key=lambda t: abs(_normalize_deg(t[0] - ref)))
-    offset_m = float(os.getenv("CORNER_OFFSET_M", "12.0"))
-    if goal_dist_m is not None:
-        # Nunca mas lejos que el WP real: una sub-meta mas alla del WP lo saltea.
-        offset_m = max(5.0, min(offset_m, float(goal_dist_m)))
+    tried = [float(t) for t in (tried_headings_deg or [])]
+
+    def _ang(a: float, b: float) -> float:
+        return abs(_normalize_deg(a - b))
+
+    remaining, excluded = [], []
+    for h, e in transitable:
+        if failed_heading_deg is not None and _ang(h, failed_heading_deg) <= SCAN_FAILED_SECTOR_DEG:
+            excluded.append({"heading_deg": round(h, 1), "reason": "rumbo_fallido"})
+        elif any(_ang(h, t) <= SCAN_FAILED_SECTOR_DEG for t in tried):
+            excluded.append({"heading_deg": round(h, 1), "reason": "ya_probado"})
+        else:
+            remaining.append((h, e))
+    if log is not None:
+        log.update({
+            "candidates_deg": [round(h, 1) for h, _e in transitable],
+            "excluded": excluded,
+            "failed_heading_deg": None if failed_heading_deg is None else round(failed_heading_deg, 1),
+            "tried_headings_deg": [round(t, 1) for t in tried],
+            "goal_bearing_deg": round(ref, 1),
+        })
+    if not remaining:
+        if log is not None:
+            log.update({"mode": "sin_rumbo_nuevo", "chosen_heading_deg": None})
+        return "GANAR_ALTURA", None, "solo rumbos fallidos o ya probados"
+    if tried:
+        # Deadlock repetido en la zona: explorar el rumbo libre mas distinto de lo ya probado.
+        avoid = tried + ([failed_heading_deg] if failed_heading_deg is not None else [])
+        heading, _entry = max(remaining, key=lambda t: (min(_ang(t[0], a) for a in avoid), -_ang(t[0], ref)))
+        mode = "exploracion"
+    else:
+        heading, _entry = min(remaining, key=lambda t: _ang(t[0], ref))
+        mode = "hacia_meta"
+    if log is not None:
+        log.update({"mode": mode, "chosen_heading_deg": round(heading, 1)})
     pos = (telem or {}).get("position", {}) if isinstance(telem, dict) else {}
-    x, y = float(pos.get("x", 0.0)), float(pos.get("y", 0.0))
-    rad = math.radians(heading)
-    corner = {
-        "x": round(x + offset_m * math.cos(rad), 2),
-        "y": round(y + offset_m * math.sin(rad), 2),
-        "z": round(float(goal_z), 2),
-        "label": "VLM_SCAN_GOAL",
-    }
-    return "MANTENER_RUMBO", corner, f"rumbo {heading:.0f} deg (meta {ref:.0f} deg)"
+    corner = build_subgoal(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)), float(pos.get("z", -10.0)),
+                           heading, 0.0, goal_dist_m if goal_dist_m is not None else VLM_SUBGOAL_DIST_M,
+                           "VLM_SCAN_GOAL")
+    corner.pop("dist_m", None)
+    return "MANTENER_RUMBO", corner, f"rumbo {heading:.0f} deg ({mode}; meta {ref:.0f} deg)"
+
+
+def _angle_to_target(pos: Dict[str, Any], target: Optional[Dict[str, Any]]) -> Optional[float]:
+    if not target or not pos:
+        return None
+    dx = float(target.get("x", 0.0)) - float(pos.get("x", 0.0))
+    dy = float(target.get("y", 0.0)) - float(pos.get("y", 0.0))
+    if math.hypot(dx, dy) < 0.5:
+        return None
+    return math.degrees(math.atan2(dy, dx))
+
+
+def nearby_tried_headings(state: Dict[str, Any], pos: Dict[str, Any], wp_label: Any) -> List[float]:
+    """Rumbos fallidos y elegidos en deadlocks anteriores a menos de SCAN_REPEAT_RADIUS_M, mismo WP."""
+    out: List[float] = []
+    for h in state.get("_deadlock_history") or []:
+        if h.get("wp_label") != wp_label:
+            continue
+        if math.hypot(float(h["x"]) - float(pos.get("x", 0.0)), float(h["y"]) - float(pos.get("y", 0.0))) > SCAN_REPEAT_RADIUS_M:
+            continue
+        out += [float(v) for v in (h.get("failed_heading_deg"), h.get("chosen_heading_deg")) if v is not None]
+    return out
+
+
+def record_deadlock(state: Dict[str, Any], pos: Dict[str, Any], wp_label: Any,
+                    failed_heading: Optional[float], chosen_heading: Optional[float], outcome: str) -> None:
+    hist = list(state.get("_deadlock_history") or [])
+    hist.append({
+        "t": round(time.time(), 2), "x": round(float(pos.get("x", 0.0)), 2), "y": round(float(pos.get("y", 0.0)), 2),
+        "wp_label": wp_label, "outcome": outcome,
+        "failed_heading_deg": None if failed_heading is None else round(failed_heading, 1),
+        "chosen_heading_deg": None if chosen_heading is None else round(chosen_heading, 1),
+    })
+    state["_deadlock_history"] = hist[-SCAN_HISTORY_MAX:]
 
 
 def clear_scan_state(state: Dict[str, Any]) -> None:
@@ -429,6 +509,9 @@ def deep_scan_cycle(
             }
             return False
         state["_scan_phase"] = "rotando"
+        # Rumbo que el dron intentaba al quedar trabado: hacia su objetivo activo (sub-meta o WP).
+        tgt = (guidance or {}).get("target_wp") if isinstance(guidance, dict) else None
+        state["_scan_failed_heading_deg"] = _angle_to_target(pos0, tgt)
         state["_scan_started_ts"] = time.time()
         state["_scan_heading_index"] = 0
         state["_scan_frames"] = []
@@ -474,6 +557,10 @@ def deep_scan_cycle(
                     f"[deep_scan] ({arm}) timeout de rotacion: yaw_err={yaw_err:.0f}° "
                     f"sin corregir en {rot_stall} ciclos. Cae al escape sincronico."
                 )
+                _g = _real_goal(state, guidance)
+                record_deadlock(state, telemetry.get("position", {}) if isinstance(telemetry, dict) else {},
+                                _g.get("label") if _g else None, state.get("_scan_failed_heading_deg"), None,
+                                "falla_rotacion")
                 clear_scan_state(state)
                 state["_deadlock_event"] = {
                     "strategy": "deep_vlm",
@@ -572,20 +659,28 @@ def deep_scan_cycle(
         if result is not None and result.request_id == pending_id:
             decision = result.parsed_decision
             headings = [float(h) for h, _f, _t in (state.get("_scan_frames") or [])]
+            failed_heading = state.get("_scan_failed_heading_deg")
+            wp_label = goal.get("label") if goal is not None else None
+            tried = nearby_tried_headings(state, pos, wp_label)
             clear_scan_state(state)
 
             pano = parse_panorama_description(decision)
             corner = None
-            # degradada=true: el propio modelo declara que las imagenes no sirven. Es una falla del
-            # modelo (como un formato invalido), no una descripcion: cae al escape determinista.
-            if pano is not None and headings and not pano["imagen_degradada_global"]:
-                goal_z = float(goal.get("z", -10.0)) if goal is not None else -10.0
+            selection: Dict[str, Any] = {}
+            # `degradada` no se usa para decidir: en los pilotos v3 el modelo la marco true en las 19
+            # respuestas completas, incluidas imagenes nitidas de calle abierta. Como regla de falla
+            # descartaba el 100 % de los barridos (piloto 232026Z: 8 de 8). Se registra para auditoria.
+            if pano is not None and headings:
                 goal_dist = (math.hypot(float(goal.get("x", 0.0)) - float(pos.get("x", 0.0)),
                                         float(goal.get("y", 0.0)) - float(pos.get("y", 0.0)))
                              if goal is not None else None)
                 macro, corner, why = panorama_to_subgoal(
-                    pano["rumbos"], headings, telemetry, goal_bearing, goal_z=goal_z, goal_dist_m=goal_dist,
+                    pano["rumbos"], headings, telemetry, goal_bearing, goal_dist_m=goal_dist,
+                    failed_heading_deg=failed_heading, tried_headings_deg=tried, log=selection,
                 )
+                selection["degradada"] = bool(pano["imagen_degradada_global"])
+                record_deadlock(state, pos, wp_label, failed_heading, selection.get("chosen_heading_deg"),
+                                "subgoal" if corner else macro)
                 nav_decision = {
                     "macro_action": macro,
                     "rationale": f"VLM panorama: {why}",
@@ -593,8 +688,8 @@ def deep_scan_cycle(
                 }
                 print(f"[deep_vlm] panorama VLM -> {macro} ({why})")
             else:
-                why_fail = ("degradada" if pano is not None and pano["imagen_degradada_global"]
-                            else (getattr(result, "error", None) or "sin_formato_valido"))
+                why_fail = getattr(result, "error", None) or "sin_formato_valido"
+                record_deadlock(state, pos, wp_label, failed_heading, None, f"falla_{why_fail}")
                 print(f"[deep_scan] ({arm}) respuesta no utilizable ({why_fail}). Cae al escape sincronico.")
                 _record_failed_scan(state, result.raw_response, why_fail, result.latency_ms)
                 state["_deadlock_event"] = {
@@ -612,12 +707,17 @@ def deep_scan_cycle(
             )
             if corner:
                 state["inject_corner"] = corner
-                if state.get("_deadlock_event"):
+            if state.get("_deadlock_event") is not None:
+                if corner:
                     state["_deadlock_event"]["vlm_subgoal"] = corner
+                state["_deadlock_event"]["scan_selection"] = selection
+            print(f"[deep_vlm] seleccion: {selection}")
             return True
 
         if lost or age_ms > SLM_DEEP_WATCHDOG_MS:
             print(f"[deep_scan] WATCHDOG ({arm}): {'pedido perdido' if lost else 'sin respuesta del VLM'} en {age_ms:.0f}ms. Cae al escape sincronico.")
+            record_deadlock(state, pos, goal.get("label") if goal is not None else None,
+                            state.get("_scan_failed_heading_deg"), None, "falla_" + ("perdido" if lost else "watchdog"))
             clear_scan_state(state)
             _record_failed_scan(state, "", "perdido" if lost else "watchdog", age_ms)
             state["_deadlock_event"] = {

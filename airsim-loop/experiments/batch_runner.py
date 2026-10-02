@@ -96,6 +96,9 @@ def main():
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
     parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])
+    parser.add_argument("--route-plan", choices=["vlm", "off"], default=os.getenv("ROUTE_PLAN_MODE", "vlm"),
+                        help="Plan de ruta con el VLM sobre el mapa cenital, una vez por escenario antes de "
+                             "las corridas (ver runner.py --route-plan).")
     args = parser.parse_args()
 
     out_dir_path = Path(args.out_dir)
@@ -107,6 +110,16 @@ def main():
     print(f"  Semillas: {len(args.seeds)} ({args.seeds[0]}-{args.seeds[-1]})")
     print(f"  Total: {len(args.scenarios) * len(args.arms) * len(args.seeds)} corridas")
     print()
+
+    # Plan de ruta en tierra, antes del primer despegue: todas las corridas del escenario vuelan el mismo.
+    flown = {}
+    for scenario_path in args.scenarios:
+        if args.route_plan == "vlm":
+            from src.planning.route_planner import plan_scenario
+
+            flown[scenario_path] = plan_scenario(scenario_path, args.out_dir)
+        else:
+            flown[scenario_path] = scenario_path
 
     results = []
     total = len(args.scenarios) * len(args.arms) * len(args.seeds)
@@ -121,7 +134,7 @@ def main():
 
                 t_start = time.time()
                 success, summary = run_experiment(
-                    scenario_path, arm, seed, args.out_dir, args.max_cycles, args.max_seconds,
+                    flown[scenario_path], arm, seed, args.out_dir, args.max_cycles, args.max_seconds,
                     deadlock_strategy=args.deadlock_strategy,
                 )
                 elapsed = time.time() - t_start

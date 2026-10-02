@@ -41,16 +41,10 @@ VLM_STRATEGIC_PERIOD_S = float(os.getenv("VLM_STRATEGIC_PERIOD_S", "3.0"))
 VLM_STRATEGIC_MAX_AGE_S = float(os.getenv("VLM_STRATEGIC_MAX_AGE_S", "10.0"))
 # Gracia antes de dar por perdido un pedido que otro consumidor (escaneo profundo) piso en la cola.
 VLM_STRATEGIC_LOST_GRACE_S = float(os.getenv("VLM_STRATEGIC_LOST_GRACE_S", "3.0"))
-# Distancia horizontal maxima de la sub-meta desde el punto de captura. Nunca mas lejos que el WP real:
-# una sub-meta mas alla del WP lo saltea (piloto v3 seed 99 190842Z: sub-meta a 15 m con el WP a 6 m,
-# dentro del edificio).
-VLM_SUBGOAL_DIST_M = float(os.getenv("VLM_SUBGOAL_DIST_M", "15.0"))
-# Si la sub-meta quedo a menos de esto del dron al llegar la respuesta, ya no aporta: se descarta.
-VLM_SUBGOAL_MIN_AHEAD_M = float(os.getenv("VLM_SUBGOAL_MIN_AHEAD_M", "4.0"))
-# Cambio maximo de altitud de una sub-meta respecto del punto de captura (fila de arriba / de abajo).
-VLM_MAX_DZ_M = float(os.getenv("VLM_MAX_DZ_M", "4.0"))
-# Altitud minima de una sub-meta (por encima del piso optico).
-VLM_SUBGOAL_MIN_ALT_M = float(os.getenv("VLM_SUBGOAL_MIN_ALT_M", "6.0"))
+from .subgoal import (  # noqa: E402  reglas de distancia y altura comunes con el barrido
+    VLM_MAX_DZ_M, VLM_SUBGOAL_DIST_M, VLM_SUBGOAL_MIN_AHEAD_M, VLM_SUBGOAL_MIN_ALT_M, build_subgoal,
+)
+
 # Cerca del WP real no se consulta al VLM ni se barre: el guiado directo alcanza y el rumbo a la meta
 # desde tan cerca es casi ruido.
 VLM_NEAR_WP_M = float(os.getenv("VLM_NEAR_WP_M", "8.0"))
@@ -66,8 +60,12 @@ VLM_STRATEGIC_MIN_ALT_M = float(os.getenv("VLM_STRATEGIC_MIN_ALT_M", os.getenv("
 CAMERA_HFOV_DEG = float(os.getenv("CAMERA_HFOV_DEG", "90.0"))
 VLM_STRATEGIC_IMAGE_MAX_SIZE = int(os.getenv("VLM_STRATEGIC_IMAGE_MAX_SIZE", os.getenv("VLM_IMAGE_MAX_SIZE", "384")))
 
-# Grilla de 3x3 por tercios de la imagen. Columnas A (izquierda), B (centro), C (derecha); filas
-# 1 (arriba), 2 (medio, la altura del dron), 3 (abajo). Sector "B2" = de frente, a la misma altura.
+# Grilla de 3x3 por tercios de un RECORTE CUADRADO del centro del frame (se cortan los dos costados del
+# ancho). Columnas A (izquierda), B (centro), C (derecha); filas 1 (arriba), 2 (medio, la altura del
+# dron), 3 (abajo). Sector "B2" = de frente, a la misma altura. Con el recorte cuadrado los sectores
+# laterales y los verticales quedan a la misma distancia angular del centro (~24 deg en un frame 3:2 de
+# 90 deg): sobre el frame completo los laterales quedaban a 33.7 deg y los verticales a 24, y un rodeo
+# por arriba o por abajo ganaba siempre a uno por el costado por la forma del cuadro, no por la escena.
 GRID_COLS = "ABC"
 GRID_ROWS = "123"
 CELLS = [c + r for r in GRID_ROWS for c in GRID_COLS]
@@ -77,7 +75,7 @@ CELL_STATES = ["libre", "bloqueado"]
 _ROW_PREF = {"2": 0, "1": 1, "3": 2}
 
 SYSTEM_PROMPT_STRATEGIC = (
-    "Sos el sistema de percepcion de un dron que vuela a unos 10 m de altura en una ciudad.\n"
+    "Sos el sistema de percepcion de un dron que vuela a baja altura en un entorno urbano.\n"
     "Recibes la imagen de la camara frontal dividida en una grilla de 3x3 sectores, como la grilla de "
     "tercios de una foto. Columnas A, B, C (izquierda a derecha); filas 1, 2, 3 (arriba, medio, abajo). "
     "La fila 2 es la altura del dron; la fila 1 es pasar por arriba; la fila 3, por abajo. "
@@ -85,7 +83,7 @@ SYSTEM_PROMPT_STRATEGIC = (
     "NO decides acciones: describes lo que ves.\n\n"
     "Para cada sector indica si el dron puede volar en esa direccion al menos 15 m sin chocar:\n"
     "- 'libre': se ve cielo, calle, plaza o espacio abierto en ese sector.\n"
-    "- 'bloqueado': hay un edificio, fachada, vidrio, muro, arbol, puente, autopista elevada, cornisa, "
+    "- 'bloqueado': hay un edificio, fachada, vidrio, muro, arbol o vegetacion, puente o estructura elevada, cornisa, "
     "balcon, techo o el interior de un edificio en ese sector, a menos de 15 m.\n\n"
     "Responde UNICAMENTE con JSON con la clave 'sectores' y los nueve sectores A1..C3."
 )
@@ -120,34 +118,41 @@ def _focal_px(width: int, hfov_deg: float = CAMERA_HFOV_DEG) -> float:
     return (width / 2.0) / math.tan(math.radians(hfov_deg / 2.0))
 
 
-def cell_centers_deg(width: int, height: int, hfov_deg: float = CAMERA_HFOV_DEG) -> Dict[str, Tuple[float, float]]:
+def square_crop(frame: Any) -> Tuple[Any, int, float]:
+    """(recorte cuadrado central, lado en px, focal en px). La focal es la del frame completo: el recorte
+    no cambia la optica, solo el campo visual (90 deg de ancho -> ~67 deg en un frame 3:2)."""
+    h, w = frame.shape[:2]
+    side = min(h, w)
+    x0, y0 = (w - side) // 2, (h - side) // 2
+    return frame[y0:y0 + side, x0:x0 + side], side, _focal_px(w)
+
+
+def crop_half_fov_deg(side: int, f: float) -> float:
+    return math.degrees(math.atan((side / 2.0) / f))
+
+
+def cell_centers_deg(side: int, f: float) -> Dict[str, Tuple[float, float]]:
     """(azimut, elevacion) del centro de cada sector respecto del eje optico (+derecha, +arriba).
 
-    Los sectores son tercios de la IMAGEN (pinhole, pixeles cuadrados), no tercios de angulo."""
-    f = _focal_px(width, hfov_deg)
+    Los sectores son tercios del recorte cuadrado (pinhole, pixeles cuadrados), no tercios de angulo."""
     out: Dict[str, Tuple[float, float]] = {}
     for ci, c in enumerate(GRID_COLS):
-        cx = (ci + 0.5) * width / 3.0
-        az = math.degrees(math.atan((cx - width / 2.0) / f))
+        az = math.degrees(math.atan(((ci + 0.5) * side / 3.0 - side / 2.0) / f))
         for ri, r in enumerate(GRID_ROWS):
-            cy = (ri + 0.5) * height / 3.0
-            el = math.degrees(math.atan((height / 2.0 - cy) / f))
+            el = math.degrees(math.atan((side / 2.0 - (ri + 0.5) * side / 3.0) / f))
             out[c + r] = (az, el)
     return out
 
 
-def direction_to_px(az_deg: float, el_deg: float, width: int, height: int,
-                    hfov_deg: float = CAMERA_HFOV_DEG) -> Tuple[float, float]:
-    f = _focal_px(width, hfov_deg)
-    return (width / 2.0 + f * math.tan(math.radians(az_deg)),
-            height / 2.0 - f * math.tan(math.radians(el_deg)))
+def direction_to_px(az_deg: float, el_deg: float, side: int, f: float) -> Tuple[float, float]:
+    return (side / 2.0 + f * math.tan(math.radians(az_deg)),
+            side / 2.0 - f * math.tan(math.radians(el_deg)))
 
 
-def cell_for_direction(az_deg: float, el_deg: float, width: int, height: int,
-                       hfov_deg: float = CAMERA_HFOV_DEG) -> str:
-    px, py = direction_to_px(az_deg, el_deg, width, height, hfov_deg)
-    ci = max(0, min(2, int(px // (width / 3.0))))
-    ri = max(0, min(2, int(py // (height / 3.0))))
+def cell_for_direction(az_deg: float, el_deg: float, side: int, f: float) -> str:
+    px, py = direction_to_px(az_deg, el_deg, side, f)
+    ci = max(0, min(2, int(px // (side / 3.0))))
+    ri = max(0, min(2, int(py // (side / 3.0))))
     return GRID_COLS[ci] + GRID_ROWS[ri]
 
 
@@ -181,35 +186,32 @@ def dist_xy_to_real_wp(state: Dict[str, Any]) -> Optional[float]:
 
 
 # --------------------------------------------------------------------------- imagen
-def annotate_grid(frame: Any, goal_az_deg: float, goal_el_deg: float, hfov_deg: float = CAMERA_HFOV_DEG,
+def annotate_grid(crop: Any, f: float, goal_az_deg: float, goal_el_deg: float,
                   max_size: int = VLM_STRATEGIC_IMAGE_MAX_SIZE) -> Optional[str]:
-    """Copia reescalada del frame con la grilla 3x3, las etiquetas y la marca META; JPEG base64.
+    """Copia reescalada del recorte cuadrado con la grilla 3x3, las etiquetas y la marca META; JPEG base64.
 
     Nunca modifica el frame original (lo usa el flujo optico)."""
-    if frame is None:
+    if crop is None:
         return None
     try:
         # pyrefly: ignore [missing-import]
         import cv2
 
-        h, w = frame.shape[:2]
-        if max(h, w) > max_size:
-            s = max_size / max(h, w)
-            img = cv2.resize(frame, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
-        else:
-            img = frame.copy()
-        h, w = img.shape[:2]
+        side = crop.shape[0]
+        out = min(max_size, side)
+        img = cv2.resize(crop, (out, out), interpolation=cv2.INTER_AREA) if out != side else crop.copy()
+        fs = f * out / float(side)
         for k in (1, 2):
-            cv2.line(img, (k * w // 3, 0), (k * w // 3, h - 1), (255, 255, 255), 1)
-            cv2.line(img, (0, k * h // 3), (w - 1, k * h // 3), (255, 255, 255), 1)
-        scale = max(0.4, w / 640.0)
+            cv2.line(img, (k * out // 3, 0), (k * out // 3, out - 1), (255, 255, 255), 1)
+            cv2.line(img, (0, k * out // 3), (out - 1, k * out // 3), (255, 255, 255), 1)
+        scale = max(0.4, out / 640.0)
         for ci, c in enumerate(GRID_COLS):
             for ri, r in enumerate(GRID_ROWS):
-                org = (ci * w // 3 + int(4 * scale), ri * h // 3 + int(18 * scale))
+                org = (ci * out // 3 + int(4 * scale), ri * out // 3 + int(18 * scale))
                 cv2.putText(img, c + r, org, cv2.FONT_HERSHEY_SIMPLEX, 0.6 * scale, (0, 0, 0), 3)
                 cv2.putText(img, c + r, org, cv2.FONT_HERSHEY_SIMPLEX, 0.6 * scale, (255, 255, 255), 1)
-        gx, gy = direction_to_px(goal_az_deg, goal_el_deg, w, h, hfov_deg)
-        gx, gy = int(max(6, min(w - 7, gx))), int(max(6, min(h - 7, gy)))
+        gx, gy = direction_to_px(goal_az_deg, goal_el_deg, out, fs)
+        gx, gy = int(max(6, min(out - 7, gx))), int(max(6, min(out - 7, gy)))
         r = int(7 * scale)
         cv2.circle(img, (gx, gy), r, (0, 0, 255), 2)  # BGR: rojo
         cv2.line(img, (gx - r, gy), (gx + r, gy), (0, 0, 255), 1)
@@ -237,23 +239,24 @@ def build_request(state: Dict[str, Any]) -> Optional[Tuple[Dict[str, Any], Dict[
         return None
     yaw_deg = math.degrees(float((telem.get("orientation") or {}).get("yaw", 0.0)))
     goal_az = _norm_deg(bearing_to(pos, wp) - yaw_deg)
-    in_view = abs(goal_az) <= VLM_STRATEGIC_MAX_GOAL_OFF_DEG
-    if not in_view and int(state.get("_wp_no_progress_cycles") or 0) < VLM_STUCK_QUERY_CYCLES:
-        return None
     # NED: z negativo es arriba. Elevacion > 0 si la meta esta por encima del dron.
     goal_el = math.degrees(math.atan2(float(pos.get("z", 0.0)) - float(wp.get("z", -10.0)), max(dist, 1e-3)))
-    h, w = frame.shape[:2]
-    # Meta fuera de cuadro: no hay sector de la meta (nunca "camino directo libre"); la marca queda en el
-    # borde del lado de la meta y la sub-meta sale del sector libre mas cercano a su direccion.
-    goal_cell = cell_for_direction(goal_az, goal_el, w, h) if in_view else None
-    img = annotate_grid(frame, goal_az, goal_el)
+    crop, side, f = square_crop(frame)
+    half = crop_half_fov_deg(side, f)
+    in_view = abs(goal_az) <= min(VLM_STRATEGIC_MAX_GOAL_OFF_DEG, half) and abs(goal_el) <= half
+    if not in_view and int(state.get("_wp_no_progress_cycles") or 0) < VLM_STUCK_QUERY_CYCLES:
+        return None
+    # Meta fuera del recorte: no hay sector de la meta (nunca "camino directo libre"); la marca queda en
+    # el borde del lado de la meta y la sub-meta sale del sector libre mas cercano a su direccion.
+    goal_cell = cell_for_direction(goal_az, goal_el, side, f) if in_view else None
+    img = annotate_grid(crop, f, goal_az, goal_el)
     if img is None:
         return None
     if goal_cell is not None:
         where = f"en el sector {goal_cell} (marca META)"
     else:
-        side = "izquierda" if goal_az < 0 else "derecha"
-        where = f"fuera de la imagen, hacia la {side} ({abs(goal_az):.0f} grados; marca META en el borde)"
+        lado = "izquierda" if goal_az < 0 else "derecha"
+        where = f"fuera de la imagen, hacia la {lado} ({abs(goal_az):.0f} grados; marca META en el borde)"
     prompt = (
         f"Destino ({wp.get('label', 'WP')}): {dist:.0f} m, {where}. "
         f"Altura del dron: {abs(float(pos.get('z', 0.0))):.0f} m.\n"
@@ -263,15 +266,15 @@ def build_request(state: Dict[str, Any]) -> Optional[Tuple[Dict[str, Any], Dict[
     anchor = {
         "x": float(pos.get("x", 0.0)), "y": float(pos.get("y", 0.0)), "z": float(pos.get("z", 0.0)),
         "yaw_deg": yaw_deg, "ts": float(telem.get("timestamp") or time.time()), "sent_at": time.time(),
-        "goal_az_deg": goal_az, "goal_el_deg": goal_el, "goal_cell": goal_cell, "img_w": w, "img_h": h,
+        "goal_az_deg": goal_az, "goal_el_deg": goal_el, "goal_cell": goal_cell, "crop_side": side, "focal_px": f,
         "wp_label": wp.get("label"), "wp_dist_xy": dist,
-        "frame": frame,  # auditoria: el frame exacto que vio el modelo
+        "frame": crop,  # auditoria: el recorte que vio el modelo (sin la grilla dibujada)
     }
     payload = {
         "mode": "strategic",
         "prompt": prompt,
         "images_b64": [img],
-        "image_labels": ["[Camara frontal con grilla 3x3]"],
+        "image_labels": ["[Camara frontal, recorte cuadrado con grilla 3x3]"],
     }
     return payload, anchor
 
@@ -316,31 +319,24 @@ def decide_subgoal(parsed: Dict[str, Any], anchor: Dict[str, Any], state: Dict[s
     if not free:
         return None, "sin_sector_libre"
 
-    centers = cell_centers_deg(int(anchor["img_w"]), int(anchor["img_h"]))
+    centers = cell_centers_deg(int(anchor["crop_side"]), float(anchor["focal_px"]))
     gaz, gel = float(anchor["goal_az_deg"]), float(anchor["goal_el_deg"])
     best = min(free, key=lambda c: (math.hypot(centers[c][0] - gaz, centers[c][1] - gel), _ROW_PREF[c[1]]))
     az, el = centers[best]
-
-    # Nunca mas lejos que el WP real (medido desde el ancla).
-    d = max(VLM_SUBGOAL_MIN_AHEAD_M + 1.0,
-            min(VLM_SUBGOAL_DIST_M, float(anchor.get("wp_dist_xy", VLM_SUBGOAL_DIST_M))))
+    sub = build_subgoal(anchor["x"], anchor["y"], anchor["z"], float(anchor["yaw_deg"]) + az, el,
+                        float(anchor.get("wp_dist_xy", VLM_SUBGOAL_DIST_M)), "VLM_SUBGOAL")
+    d = sub.pop("dist_m")
     world = math.radians(float(anchor["yaw_deg"]) + az)
-    sx = float(anchor["x"]) + d * math.cos(world)
-    sy = float(anchor["y"]) + d * math.sin(world)
-    dz_up = max(-VLM_MAX_DZ_M, min(VLM_MAX_DZ_M, d * math.tan(math.radians(el))))
-    sz = min(float(anchor["z"]) - dz_up, -VLM_SUBGOAL_MIN_ALT_M)   # NED: subir = z mas negativa
 
     pos = (state.get("telemetry") or {}).get("position") or {}
     px, py = float(pos.get("x", anchor["x"])), float(pos.get("y", anchor["y"]))
     # Superada: el dron ya esta cerca o paso la sub-meta a lo largo del rumbo elegido mientras el
     # modelo pensaba.
     along = (px - float(anchor["x"])) * math.cos(world) + (py - float(anchor["y"])) * math.sin(world)
-    if math.hypot(sx - px, sy - py) < VLM_SUBGOAL_MIN_AHEAD_M or along > d - VLM_SUBGOAL_MIN_AHEAD_M:
+    if math.hypot(sub["x"] - px, sub["y"] - py) < VLM_SUBGOAL_MIN_AHEAD_M or along > d - VLM_SUBGOAL_MIN_AHEAD_M:
         return None, "superada"
-    return {
-        "x": round(sx, 2), "y": round(sy, 2), "z": round(sz, 2),
-        "label": "VLM_SUBGOAL", "sector": best,
-    }, f"sector {best} ({az:+.0f} deg, {el:+.0f} deg, {d:.0f} m)"
+    sub["sector"] = best
+    return sub, f"sector {best} ({az:+.0f} deg, {el:+.0f} deg, {d:.0f} m)"
 
 
 class StrategicLayer:

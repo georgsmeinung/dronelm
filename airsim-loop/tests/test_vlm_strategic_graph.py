@@ -54,7 +54,7 @@ def test_strategic_subgoal_survives_compiled_graph(monkeypatch):
             time.sleep(0.02)
         assert calls and set(calls) == {"strategic"}          # nunca el tactico por sector
         assert corner and corner["label"] == "VLM_SUBGOAL"
-        assert abs(abs(math.degrees(math.atan2(corner["y"], corner["x"]))) - math.degrees(math.atan(36 / 54))) < 0.5
+        assert abs(abs(math.degrees(math.atan2(corner["y"], corner["x"]))) - math.degrees(math.atan(24 / 54))) < 0.5
         assert state.get("_vlm_strategic", {}).get("outcome") == "subgoal"
         assert any(d.get("arm") == "vlm_strategic" for d in state.get("deliberations") or [])
     finally:

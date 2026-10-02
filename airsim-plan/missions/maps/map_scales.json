@@ -1,27 +1,50 @@
 {
   "crater.png": {
     "scale": 8.0,
-    "ned_offset": { "x": 0, "y": 0 },
+    "ned_offset": {
+      "x": 0,
+      "y": 0
+    },
     "notes": "MiniSim / Tier 0 — crater ~200m de diámetro"
   },
   "townsim.png": {
     "scale": 4.5,
-    "ned_offset": { "x": 0, "y": 0 },
+    "ned_offset": {
+      "x": 0,
+      "y": 0
+    },
     "notes": "TownSim / Tier 1 — pueblo, ~400m de extensión"
   },
   "townsim_calib.png": {
     "scale": 6.5,
-    "ned_offset": { "x": 0, "y": 0 },
+    "ned_offset": {
+      "x": 0,
+      "y": 0
+    },
     "notes": "TownSim calib / Tier 1 — misma escena, imagen de calibración 2000×2000"
   },
   "citymap.png": {
     "scale": 3.8,
-    "ned_offset": { "x": 0, "y": 0 },
-    "notes": "CitySim / Tier 2 — mapa amplio 3847×2095 px"
+    "ned_offset": {
+      "x": 0,
+      "y": 0
+    },
+    "notes": "CitySim / Tier 2 — NO REGISTRADO con el mundo de AirSim (rotado 90 grados y escala distinta: las trayectorias voladas cruzan manzanas). Reemplazado por citysim_ortho.png (2026-10-02)."
   },
   "citysim_calib.png": {
     "scale": 25.0,
-    "ned_offset": { "x": 0, "y": 0 },
-    "notes": "CitySim calib / Tier 2 — imagen de alta resolución 7680×7680 px, área reducida"
+    "ned_offset": {
+      "x": 0,
+      "y": 0
+    },
+    "notes": "CitySim calib / Tier 2 — NO REGISTRADO con el mundo de AirSim; usar citysim_ortho.png."
+  },
+  "citysim_ortho.png": {
+    "scale": 2.0,
+    "ned_offset": {
+      "x": 0,
+      "y": 0
+    },
+    "notes": "CitySim / Tier 2 — mosaico cenital capturado con AirSim (airsim-plan/scripts/capture_ortho_map.py, 2026-10-02): 1000 m de altura, FOV 15, 286 tomas; registrado en NED por construccion (centro = origen, norte arriba, este a la derecha). Ciudad completa: x [-960, 960], y [-820, 820] m."
   }
 }

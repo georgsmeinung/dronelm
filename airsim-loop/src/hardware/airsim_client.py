@@ -89,6 +89,17 @@ class VehicleNotFoundError(RuntimeError):
     """AIRSIM_VEHICLE_NAME no existe en la simulacion (config invalida)."""
 
 
+class CameraConfigError(RuntimeError):
+    """La camara frontal no tiene el campo visual que asume la percepcion (CAMERA_HFOV_DEG)."""
+
+
+# Campo visual horizontal que asumen el flujo optico, la grilla del VLM y la sub-meta. La camara puede
+# quedar con otro valor si una herramienta de laboratorio lo cambia en tiempo de ejecucion y no lo
+# restaura (2026-10-02: el FOV quedo en 15 deg tras capturar el mapa cenital): se verifica al conectar.
+CAMERA_HFOV_DEG = float(os.getenv("CAMERA_HFOV_DEG", "90.0"))
+CAMERA_FOV_TOL_DEG = 0.5
+
+
 @dataclass
 class AirSimClient:
     """Cliente ligero para AirSim (modo Drone por defecto).
@@ -135,6 +146,20 @@ class AirSimClient:
     # ------------------------------------------------------------------ #
     # Conexión                                                           #
     # ------------------------------------------------------------------ #
+    def _verify_camera_fov(self) -> None:
+        """Falla si la camara frontal no tiene el FOV que asume la percepcion (no lo corrige: una
+        corrida con la camara alterada invalidaria la comparacion sin dejar rastro)."""
+        cam = int(self.camera_name) if str(self.camera_name).isdigit() else self.camera_name
+        try:
+            fov = float(self._client.simGetCameraInfo(cam, vehicle_name=self.vehicle_name).fov)
+        except Exception as exc:  # pragma: no cover - servidor sin la llamada
+            print(f"[AirSimClient] no se pudo leer el FOV de la camara ({exc}).")
+            return
+        if abs(fov - CAMERA_HFOV_DEG) > CAMERA_FOV_TOL_DEG:
+            raise CameraConfigError(
+                f"La camara '{self.camera_name}' tiene FOV {fov:.1f} deg y la percepcion asume "
+                f"CAMERA_HFOV_DEG={CAMERA_HFOV_DEG:.1f}. Restaurar con simSetCameraFov o reiniciar AirSim.")
+
     def _verify_vehicle(self) -> None:
         """Falla con un mensaje claro si `vehicle_name` no existe en la simulacion.
 
@@ -173,6 +198,7 @@ class AirSimClient:
             )
             self._client.confirmConnection()
             self._verify_vehicle()
+            self._verify_camera_fov()
             try:
                 self._client.enableApiControl(True, vehicle_name=self.vehicle_name)
                 self._client.armDisarm(True, vehicle_name=self.vehicle_name)
@@ -182,7 +208,7 @@ class AirSimClient:
             self._connected = True
             self.ensure_airborne()
             return True
-        except VehicleNotFoundError:
+        except (VehicleNotFoundError, CameraConfigError):
             self._client = None
             self._connected = False
             raise  # configuracion invalida: no degradar a datos simulados

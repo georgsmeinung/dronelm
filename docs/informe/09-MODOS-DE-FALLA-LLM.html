@@ -896,6 +896,50 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#988-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.8 Señales que se tapan entre sí: un techo inventado y una velocidad que no existe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#989-sub-metas-que-ocultan-al-waypoint-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.9 Sub-metas que ocultan al waypoint real
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9810-una-respuesta-cortada-y-una-capa-sin-voz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.10 Una respuesta cortada y una capa sin voz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9811-un-barrido-que-no-describe-la-escena" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.11 Un barrido que no describe la escena
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1717,6 +1761,50 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#988-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.8 Señales que se tapan entre sí: un techo inventado y una velocidad que no existe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#989-sub-metas-que-ocultan-al-waypoint-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.9 Sub-metas que ocultan al waypoint real
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9810-una-respuesta-cortada-y-una-capa-sin-voz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.10 Una respuesta cortada y una capa sin voz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9811-un-barrido-que-no-describe-la-escena" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.8.11 Un barrido que no describe la escena
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1990,13 +2078,47 @@ $$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))\]</div>
 <p><strong>Mecanismo de contención.</strong> La respuesta del modelo se traduce a geometría y se aplica sin reglas que la reemplacen; solo se descartan respuestas obsoletas (cap. 5, §5.16). El criterio para incluir un componente en el lazo es haber mostrado avance hacia el waypoint real, o ser parte del lazo rápido común a los tres brazos.</p>
 <h3 id="987-la-causa-fisica-de-los-physics_locked">9.8.7 La causa física de los <code>physics_locked</code><a class="headerlink" href="#987-la-causa-fisica-de-los-physics_locked" title="Permanent link">&para;</a></h3>
 <p>En las tres corridas el dron no chocó de frente: quedó apoyado sobre una <strong>superficie horizontal a la altura de crucero</strong> —el tablero de una autopista elevada (dos corridas) y la cornisa de un edificio (una)—, con los sectores frontales del flujo libres (<code>occ = 0</code>, TTC infinito). En una corrida, un <code>GANAR_ALTURA</code> liberó al dron hasta −12.2 m y el guiado de altitud lo devolvió a −10 m, sobre la cornisa. Ni el flujo óptico ni una descripción por sectores representan ese tipo de obstáculo.</p>
-<p><strong>Mecanismo de contención.</strong> El manifiesto evita la autopista (<code>WP_0_SUR</code>, cap. 10 §10.3.3), la capa estratégica pregunta explícitamente por <code>estructura_debajo</code> y sube la sub-meta, y el escape determinista ante falla del VLM es <code>GANAR_ALTURA</code> (cap. 5, §5.3.4, §5.10).</p>
+<p><strong>Mecanismo de contención.</strong> El manifiesto evita la autopista (<code>WP_0_SUR</code>, cap. 10 §10.3.3), la capa estratégica describe el fotograma en una grilla de 3×3, de modo que un obstáculo a la altura del dron puede rodearse por la fila de arriba, y el escape determinista ante falla del VLM es <code>GANAR_ALTURA</code> (cap. 5, §5.3.4, §5.10).</p>
+<h3 id="988-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe">9.8.8 Señales que se tapan entre sí: un techo inventado y una velocidad que no existe<a class="headerlink" href="#988-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe" title="Permanent link">&para;</a></h3>
+<p>En la corrida piloto de validación sobre <code>citysim_pilot</code>, el dron quedó 220 ciclos apoyado sobre el parapeto de la autopista elevada, pegada al punto de partida, sin que se declarara un solo deadlock. Tres mecanismos, cada uno razonable por separado, se encadenaron:</p>
+<ol>
+<li><strong>Avance durante el ascenso.</strong> El guiado avanzaba hacia el primer waypoint mientras subía; a 7.4 m, todavía por debajo del borde del parapeto, el TTC frontal cayó a 0.23 s y el lazo ejecutó <code>GIRAR_90</code>.</li>
+<li><strong>Un techo inventado.</strong> La detección de techo contaba los ciclos en que el <em>guiado</em> pedía subir sin que la cota cambiara. Durante el giro el comando vertical era cero, de modo que diez ciclos de giro fueron leídos como diez ciclos empujando contra una losa: techo en z = −7.44. Con ese techo, el waypoint a −10 m quedó «bloqueado verticalmente» y el lazo ordenó <code>PERDER_ALTURA</code> en cada ciclo, contra el parapeto.</li>
+<li><strong>Una velocidad que no existe.</strong> Con el dron apoyado en la estructura, AirSim reportaba 0.31 m/s horizontales y 0.75 m/s verticales con la posición inmóvil. El contador de «detenido» leía esa velocidad y nunca avanzó; el de «sin progreso» sí llegó a 200 ciclos, pero la regla de descenso por techo se evaluaba antes que la de deadlock y tomaba el ciclo.</li>
+</ol>
+<p>Ninguna de las tres produjo un error: cada ciclo tenía una acción válida y una justificación registrada. Es la misma clase de falla que §9.5 y §9.7 —el sistema «funciona» mientras repite indefinidamente una acción inútil—, en este caso entre señales del lazo rápido y no entre el modelo y el lazo.</p>
+<p><strong>Mecanismo de contención.</strong> El despegue es vertical hasta la altitud del primer objetivo (cap. 5, §5.15); la detección de techo usa el comando efectivamente ejecutado, no la demanda del guiado (§5.15.3); el <code>StallDetector</code> mide la velocidad por desplazamiento entre ciclos (§5.3.1); y el deadlock se evalúa antes que cualquier otra regla salvo el barrido en curso (§5.3.2), de modo que ninguna acción que se repita sin mover al dron puede taparlo. Un test reproduce la secuencia sobre el grafo compilado (<code>tests/test_pilot_seed99_regressions.py</code>).</p>
+<h3 id="989-sub-metas-que-ocultan-al-waypoint-real">9.8.9 Sub-metas que ocultan al waypoint real<a class="headerlink" href="#989-sub-metas-que-ocultan-al-waypoint-real" title="Permanent link">&para;</a></h3>
+<p>En la corrida piloto de validación posterior a §9.8.8, el dron llegó a la zona del primer waypoint a los 40 s y pasó el resto de la corrida —más de cuatro minutos— pegado a la fachada vidriada del edificio contiguo. Estuvo <strong>573 ciclos a menos de 3.5 m del waypoint</strong>, el radio de aceptación, sin aceptarlo nunca. Cinco mecanismos se encadenaron:</p>
+<ol>
+<li><strong>La sub-meta ocultaba al waypoint.</strong> El tracker solo medía la llegada al objetivo activo. En los 573 ciclos el objetivo activo era una sub-meta del VLM (332 de la capa estratégica, 241 del barrido), de modo que pasar por encima del waypoint no contaba.</li>
+<li><strong>Sub-metas más lejos que el waypoint.</strong> La capa estratégica y el barrido fijaban la sub-meta siempre a 15 m. Con el waypoint a 6 m, una sub-meta a 15 m queda 9 m más allá: en este caso, dentro del edificio. A 1 m del waypoint, el rumbo hacia la meta que usa el barrido es casi ruido, y la sub-meta lo amplifica.</li>
+<li><strong>Sin re-planificación.</strong> La capa estratégica solo consultaba con un waypoint real como objetivo. Con una sub-meta mala activa quedaba muda, y el lazo rápido entraba en un ciclo límite: el guiado apuntaba a la sub-meta dentro del edificio, el TTC caía a 0–0.2 s, <code>GIRAR_90</code> desviaba un segundo y el guiado volvía a apuntar a la fachada (cinco giros en 55 ciclos, seis en 50). Solo un deadlock, 10 s después, reemplazaba la sub-meta.</li>
+<li><strong>Respuestas casi constantes, incluso sobre imágenes del interior del edificio.</strong> La capa estratégica respondió «la primera columna bloqueada, las demás libres» en 5 de 6 consultas, incluida una con la fachada ocupando casi todo el cuadro, y marcó «estructura debajo» en 5 de 6, lo que subía todas las sub-metas 4 m. En los 8 barridos, las imágenes 2 y 4 salieron libres y la 1 y la 3 bloqueadas, sin importar hacia dónde miraba el dron, y las 8 respuestas declararon las imágenes degradadas. Con el dron pegado a la fachada, la cámara quedó dentro de la malla del edificio en dos barridos: el modelo marcó el interior de una oficina como <code>libre, ok: true</code> y, como apuntaba hacia el waypoint, el barrido lo eligió.</li>
+<li><strong>Un techo inventado por una pared.</strong> Con el dron trabado contra la fachada, el roce impedía subir y la detección de techo declaró una losa a −11.8 m; los escapes <code>GANAR_ALTURA</code> subieron después hasta −16 m sin obstáculo, y la regla de techo los devolvía hacia abajo.</li>
+</ol>
+<p>Además, el waypoint mismo estaba mal ubicado: sus coordenadas se habían tomado del mapa y caían sobre la fachada, en contra del principio de derivar coordenadas solo de posiciones ya voladas (cap. 10, §10.3.0).</p>
+<p><strong>Mecanismo de contención.</strong> El tracker acepta el waypoint real aunque haya una sub-meta activa y descarta los desvíos pendientes (cap. 5, §5.15.4); ninguna sub-meta queda más lejos que el waypoint real, y a menos de 8 m del waypoint no se consulta al VLM ni se barre (§5.10.1, §5.12); la capa estratégica re-planifica con una sub-meta activa, y si ve libre el camino directo descarta el desvío (§5.10.3); el barrido no usa entradas que se contradicen (<code>ok: true</code> con un tipo distinto de <code>libre</code>), lo que no reemplaza la decisión del modelo sino que descarta respuestas internamente inconsistentes, igual que una respuesta mal formada (§5.12); la capa estratégica describe una grilla de 3×3 en lugar de columnas, de modo que el eje vertical sale de la descripción y no de una pregunta abstracta (cap. 8, §8.3.2); la detección de techo no cuenta los ciclos en que el dron está trabado de costado (§5.15.3); y el waypoint se movió a un punto volado libre. Los tests <code>tests/test_pilot_190842z_regressions.py</code> reproducen cada mecanismo.</p>
+<p>Lo que estos cambios no corrigen es el punto 4: que el modelo casi no distinga escenas. Con ellos, una respuesta mala deja de atrapar al dron; que el modelo aporte información es la pregunta de §9.9, riesgo D.</p>
+<h3 id="9810-una-respuesta-cortada-y-una-capa-sin-voz">9.8.10 Una respuesta cortada y una capa sin voz<a class="headerlink" href="#9810-una-respuesta-cortada-y-una-capa-sin-voz" title="Permanent link">&para;</a></h3>
+<p>En la corrida piloto siguiente a §9.8.9, el dron llegó a los tres primeros waypoints —incluido el que está detrás de una manzana— y quedó trabado en el tramo hacia el cuarto, contra la fachada de un edificio que la recta atraviesa. Tres mecanismos lo dejaron sin salida:</p>
+<ol>
+<li><strong>El modelo marcó libres los costados de una fachada.</strong> En las cinco consultas del tramo marcó bloqueado el sector de frente —lo correcto— y libres los demás, incluso en fotogramas en los que la fachada ocupaba todo el cuadro. En las 28 consultas de la corrida, el sector de la izquierda a la altura del dron salió libre las 28 veces y el de arriba a la izquierda, bloqueado 24: un sesgo por posición en la grilla, no una descripción de la escena. La sub-meta elegida quedó del otro lado de la fachada, y el dron se deslizó a lo largo de ella unos 180 ciclos.</li>
+<li><strong>La capa estratégica no consultó en todo ese tiempo.</strong> El dron miraba a lo largo de la pared, con la meta fuera de los ±40° del eje óptico, la condición para consultar: justo cuando hacía falta replanificar, la capa no tenía cómo hacerlo.</li>
+<li><strong>Los barridos se perdieron por el tope de tokens.</strong> El tope de 160 tokens cortaba la respuesta del barrido —un JSON con indentación— antes de la llave final. Pasó en 5 de los 12 barridos de las dos últimas corridas y en los dos de esta, que cayeron al escape vertical sin usar la respuesta del modelo. La falla no se veía: el registro la clasificaba como «sin formato válido», igual que una respuesta mal formada del modelo.</li>
+</ol>
+<p>La corrida terminó por <code>physics_locked</code>, con el dron apoyado en la baranda de un balcón (§9.8.7). Además, se ejecutó con cambios sin commitear y quedó registrada con el mismo <code>code_version</code> que la anterior, que usaba otro código: el criterio de descarte por versión no la habría distinguido.</p>
+<p><strong>Mecanismo de contención.</strong> El tope de tokens pasa a 384 y 512 y una respuesta cortada se reporta como <code>respuesta_truncada</code>, separada de las respuestas mal formadas (cap. 5, §5.10.5); la capa estratégica consulta con la meta fuera de cuadro cuando el dron lleva 3 s sin acercarse a su objetivo, sin interpretar nunca esa respuesta como «camino directo libre» (§5.10.1); y <code>code_version</code> lleva el sufijo <code>-dirty</code> si hay cambios sin commitear, lo que excluye la corrida de un lote (cap. 10, §10.12). Los tests <code>tests/test_pilot_193631z_regressions.py</code> reproducen cada caso. El punto 1 —que el modelo describa la grilla por posición y no por contenido— no tiene mecanismo de contención: es la pregunta de §9.9, riesgo D, y la medición que la responde es la comparación sector por sector contra una verdad de terreno.</p>
+<h3 id="9811-un-barrido-que-no-describe-la-escena">9.8.11 Un barrido que no describe la escena<a class="headerlink" href="#9811-un-barrido-que-no-describe-la-escena" title="Permanent link">&para;</a></h3>
+<p>Con las respuestas del barrido ya completas (§9.8.10), las tres corridas piloto suman 19 respuestas utilizables. En las 19 el patrón de transitabilidad fue el mismo: las imágenes 2 y 4 —a 90° a cada lado del rumbo inicial— transitables, y la 1 y la 3 —el frente y la dirección de la que venía el dron— bloqueadas, sin importar dónde estaba el dron ni qué mostraban las imágenes. La dirección de la que venía el dron, casi siempre libre, salió bloqueada las 19 veces. Además, el modelo marcó todas las respuestas como degradadas, incluidas imágenes nítidas de calle abierta, y en varias asignó <code>ok: true</code> a imágenes de tipo <code>fachada</code> o <code>interior</code>. Medido contra el avance hacia el waypoint real, las sub-metas del barrido no mostraron efecto: en la mayoría de los casos el avance a los 20 s fue nulo, y en dos el dron se alejó más de 5 m.</p>
+<p>La consecuencia de diseño es doble. Primero, una respuesta constante convierte al barrido, en la práctica, en una regla fija («girar 90° hacia el lado más cercano a la meta»), y una regla de falla basada en <code>degradada</code> lo convertía en un escape vertical ciego: en la última corrida piloto descartó los 8 barridos. Segundo, elegir el rumbo transitable más cercano a la meta devuelve al dron, deadlock tras deadlock, contra el mismo obstáculo.</p>
+<p><strong>Mecanismo de contención.</strong> <code>degradada</code> se registra pero no decide; y la salida del deadlock descarta el rumbo que falló y los rumbos ya probados en la zona, y con deadlocks repetidos explora el rumbo libre más distinto de lo ya probado (cap. 5, §5.12). Esto no corrige que el modelo responda lo mismo siempre: con una respuesta constante, la salida queda determinada por la historia del dron y no por la imagen, y así debe leerse en los resultados. El registro de la selección permite separar ambos efectos.</p>
 <h2 id="99-riesgos-residuales-y-trabajo-pendiente">9.9 Riesgos residuales y trabajo pendiente<a class="headerlink" href="#99-riesgos-residuales-y-trabajo-pendiente" title="Permanent link">&para;</a></h2>
 <p>Los modos de falla documentados tienen su mecanismo de contención en el sistema, incluido el caso (c) de §9.5.4. Los de §9.8 están contenidos en el código y cubiertos por tests, pero ninguna corrida en el simulador los ha verificado todavía. La arquitectura contiene puntos donde pueden aparecer instancias análogas:</p>
 <p><strong>Riesgo A — Nuevas claves de DroneState.</strong> Cada vez que se añade una funcionalidad que requiere persistir estado entre ciclos, existe el riesgo de que la clave correspondiente no se declare en <code>DroneState</code>. La mitigación es el modo <code>LANGGRAPH_DEBUG_STATE_CLIPPING=1</code> y el proceso de revisión de <code>DroneState</code> antes de cada nueva funcionalidad. El riesgo se materializó en más de una ocasión (§9.5.2 y §9.5.4), lo que indica que la mitigación depende demasiado de la disciplina manual. Los tests de integración corren el grafo compilado y verifican que las claves de control (<code>inject_corner</code>, <code>_escape_reset</code>, <code>_deadlock_event</code>, <code>_vlm_strategic</code>) cruzan la frontera de <code>graph.invoke()</code> (<code>tests/test_graph_integration.py</code>, <code>tests/test_vlm_strategic_graph.py</code>). Una defensa más general sería un test de contrato que recorra el código fuente de <code>src/agents/</code>, extraiga todas las claves <code>state["_..."]</code> y <code>state.get("...")</code> y falle si alguna no pertenece a <code>DroneState</code>; hoy no existe.</p>
 <p><strong>Riesgo B — Cambios de API del binding de AirSim.</strong> El binding <code>cosysairsim</code> es un fork activamente mantenido (<a href="13-REFERENCIAS.html#ref-jansen-2023">Jansen et al., 2023</a>). Actualizaciones del binding pueden modificar el comportamiento de métodos (como ocurrió con la corrección del cuaternión). Los tests unitarios de conversión de telemetría son la mitigación; deben ejecutarse tras cada actualización del binding.</p>
 <p><strong>Riesgo C — Distribución de imágenes fuera del dominio de entrenamiento del VLM.</strong> La corrección de inversión RGB/BGR es una transformación fija. Pero la brecha de dominio entre imágenes de AirSim/UE5 y el dominio de entrenamiento del VLM (predominantemente imágenes reales del mundo) es una fuente estructural de error que no se elimina con ninguna corrección puntual. La calibración de la frecuencia de respuestas subóptimas del VLM en los escenarios de esta tesis (cap. 11) es el mecanismo de caracterización de ese riesgo residual.</p>
-<p><strong>Riesgo D — Que el VLM no discrimine.</strong> El diseño corrige cómo se pregunta y cómo se usa la respuesta, pero no puede garantizar que Qwen2.5-VL-3B distinga columnas volables de bloqueadas mejor de lo que distinguía sectores (§9.8.3). Si la distribución de resultados de la capa estratégica (cap. 10, §10.6.3) muestra <code>directo_libre</code> en casi todas las consultas, también en las corridas que terminan en deadlock, la conclusión correcta será que el modelo no aporta información útil en este dominio, no una nueva regla que lo compense.</p>
+<p><strong>Riesgo D — Que el VLM no discrimine.</strong> El diseño corrige cómo se pregunta y cómo se usa la respuesta, pero no puede garantizar que Qwen2.5-VL-3B distinga sectores volables de bloqueados mejor de lo que distinguía sectores (§9.8.3). Si la distribución de resultados de la capa estratégica (cap. 10, §10.6.3) muestra <code>directo_libre</code> en casi todas las consultas, también en las corridas que terminan en deadlock, la conclusión correcta será que el modelo no aporta información útil en este dominio, no una nueva regla que lo compense.</p>
 
 
 

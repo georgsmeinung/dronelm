@@ -1,16 +1,16 @@
 {
   "mission_id": "CITYMAP_PILOT",
-  "summary": "Tier 2 (escenario complejo, piloto): circuito tipo grilla urbana sobre citymap.png (proyecto UE CitySim). Renombrado desde manhattan_b (2026-0827), waypoints reutilizados de A_BASIC_CITY. Formato unico (2026-0828): antes existia por duplicado como citymap_pilot.json (airsim-loop) y A_BASIC_CITY.preloop.json (airsim-plan). 2026-0930: (a) map corregido a citymap.png (3.8 px/m, origen = spawn): con citysim_calib.png los WP caian sobre el agua; (b) start_pose corregido al spawn real de settings.json (0,0, yaw 90) -- antes apuntaba a WP_1 y solo se usaba con --seed-jitter, teletransportando el dron al primer WP; (c) WP_0_SUR intermedio en la calle sur (x~-11) / calle y~-50: la autopista elevada corre sobre la calle x~15-20 desde y~-50 hacia el este a la altura de crucero (-10 m); el tramo spawn -> WP_1 la cruzaba y en 2 de 3 corridas el dron quedo trabado sobre el tablero. Los edificios en los tramos spawn -> WP_0_SUR -> WP_1 se dejan para que los resuelva la navegacion. 2026-1001: WP_0_SUR movido de (-11,-50.5) a (-5,-51): el primero quedaba sobre la fachada vidriada del edificio oeste (el dron no pasa de x=-10); (-5,-51) es un punto volado libre en el piloto v3 seed 99 190842Z (posiciones (-6.9,-50.3), (-4.1,-51.9), (-2.1,-48.7)).",
+  "summary": "Tier 2 (escenario complejo, piloto): circuito tipo grilla urbana sobre citymap.png (proyecto UE CitySim). Renombrado desde manhattan_b (2026-0827), waypoints reutilizados de A_BASIC_CITY. Formato unico (2026-0828): antes existia por duplicado como citymap_pilot.json (airsim-loop) y A_BASIC_CITY.preloop.json (airsim-plan). 2026-0930: (a) map corregido a citymap.png (3.8 px/m, origen = spawn): con citysim_calib.png los WP caian sobre el agua; (b) start_pose corregido al spawn real de settings.json (0,0, yaw 90) -- antes apuntaba a WP_1 y solo se usaba con --seed-jitter, teletransportando el dron al primer WP; (c) WP_0_SUR intermedio en la calle sur (x~-11) / calle y~-50: la autopista elevada corre sobre la calle x~15-20 desde y~-50 hacia el este a la altura de crucero (-10 m); el tramo spawn -> WP_1 la cruzaba y en 2 de 3 corridas el dron quedo trabado sobre el tablero. Los edificios en los tramos spawn -> WP_0_SUR -> WP_1 se dejan para que los resuelva la navegacion. 2026-1001: WP_0_SUR movido de (-11,-50.5) a (-5,-51): el primero quedaba sobre la fachada vidriada del edificio oeste (el dron no pasa de x=-10); (-5,-51) es un punto volado libre en el piloto v3 seed 99 190842Z (posiciones (-6.9,-50.3), (-4.1,-51.9), (-2.1,-48.7)). 2026-1002: map citymap.png -> citysim_ortho.png (mosaico cenital capturado con AirSim, registrado en NED); citymap.png estaba rotado 90 grados y con otra escala: las trayectorias voladas cruzaban manzanas. Con el mapa registrado y verificacion en AirSim (profundidad en 4 direcciones y hacia abajo a z=-10): WP_3 (67.7,-145) quedaba DENTRO del edificio (paredes a 0.2-2 m) -> (67.7,-156.5), centro de la calle oeste (fachadas a ~7 y ~10 m); WP_0_SUR (-5,-51) quedaba sobre el borde de la fachada norte del edificio sur -> (3,-51), centro de la calle este-oeste (fachada sur a 13 m). WP_1, WP_2 y WP_5 quedan a 1.6-2.6 m sobre el tablero de la autopista elevada (no se movieron).",
   "start_pose": { "x": 0.0, "y": 0.0, "z": -10.0, "yaw_deg": 90.0 },
   "waypoints": [
-    { "x": -5.0, "y": -51.0, "z": -10.0, "label": "WP_0_SUR" },
+    { "x": 3.0, "y": -51.0, "z": -10.0, "label": "WP_0_SUR" },
     { "x": 26.1, "y": -78.2, "z": -10.0, "label": "WP_1" },
     { "x": 68.9, "y": -78.6, "z": -10.0, "label": "WP_2" },
-    { "x": 67.7, "y": -145.0, "z": -10.0, "label": "WP_3" },
+    { "x": 67.7, "y": -156.5, "z": -10.0, "label": "WP_3" },
     { "x": 26.5, "y": -145.0, "z": -10.0, "label": "WP_4" },
     { "x": -16.3, "y": -145.0, "z": -10.0, "label": "WP_5" },
     { "x": -17.9, "y": -78.6, "z": -10.0, "label": "WP_6" },
     { "x": 12.5, "y": -78.6, "z": -10.0, "label": "WP_7" }
   ],
-  "map": "citymap.png"
+  "map": "citysim_ortho.png"
 }

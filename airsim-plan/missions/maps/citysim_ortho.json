@@ -1,0 +1,26 @@
+{
+  "scale": 2.0,
+  "ned_offset": {
+    "x": 0,
+    "y": 0
+  },
+  "extent_m": {
+    "x": [
+      -960.0,
+      960.0
+    ],
+    "y": [
+      -820.0,
+      820.0
+    ]
+  },
+  "capture": {
+    "alt_m": 1000.0,
+    "fov_deg": 15.0,
+    "tile_px_per_m": 4.1077,
+    "tiles": 286,
+    "unstable_tiles": [],
+    "utc": "2026-10-02T03:28:25Z"
+  },
+  "convention": "centro de la imagen = ned_offset; arriba = norte (+x); derecha = este (+y)"
+}

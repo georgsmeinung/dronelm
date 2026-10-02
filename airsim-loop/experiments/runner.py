@@ -437,6 +437,8 @@ def run_one(
         if freeze_aborted:
             logger.extra_summary["termination_reason"] = "physics_locked"
         logger.extra_summary["freeze_recoveries"] = freeze_recoveries
+        # Plan de ruta previo al vuelo (src/planning/route_planner.py): "off" si el manifiesto no lo trae.
+        logger.extra_summary["route_plan"] = manifest.get("route_plan") or {"mode": "off"}
         summary = logger.close()
         if viewport_capture is not None:
             viewport_capture.close()
@@ -485,6 +487,11 @@ def main():
                          help="No grabar el video de la camara externa FollowCam (por defecto se graba si existe en settings.json).")
     parser.add_argument("--viewport", action="store_true",
                          help="Video split-screen con la captura del viewport de Unreal (requiere mss/pywin32).")
+    parser.add_argument("--route-plan", choices=["vlm", "off"], default=os.getenv("ROUTE_PLAN_MODE", "vlm"),
+                         help="Planificacion de ruta con el VLM sobre el mapa cenital, una vez por escenario y "
+                              "antes de lanzar las corridas (src/planning/route_planner.py). Todas las corridas "
+                              "del escenario vuelan el mismo plan (cacheado en <out-dir>/<escenario>/route_plan/). "
+                              "'off': el manifiesto tal cual.")
     parser.add_argument("--seed-jitter", action="store_true",
                          help="Teletransportar (ignore_collision=True) a una pose con jitter aleatorio "
                               "por semilla, en vez de arrancar del spawn limpio de AirSim. Desactivado "
@@ -498,6 +505,17 @@ def main():
     # primer valor. Ademas aisla crashes de una corrida del resto del batch.
     import subprocess
 
+    # Plan de ruta: en tierra, antes del primer despegue; la mision espera el resultado. Si falla, no se
+    # vuela: correr sin plan cambiaria la condicion experimental sin que quede a la vista.
+    flown = {}
+    for scenario in args.scenarios:
+        if args.route_plan == "vlm":
+            from src.planning.route_planner import plan_scenario
+
+            flown[scenario] = plan_scenario(scenario, args.out_dir, log=lambda m: print(f"[{_ts()}]{m}"))
+        else:
+            flown[scenario] = scenario
+
     results = []
     for scenario in args.scenarios:
         for arm in args.arms:
@@ -506,7 +524,7 @@ def main():
                     print(f"[{_ts()}][runner] scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}")
                     cmd = [
                         sys.executable, __file__, "--_single",
-                        "--scenario", scenario, "--arm", arm, "--seed", str(seed),
+                        "--scenario", flown[scenario], "--arm", arm, "--seed", str(seed),
                         "--out-dir", args.out_dir, "--max-cycles", str(args.max_cycles),
                         "--max-seconds", str(args.max_seconds),
                         "--deadlock-strategy", deadlock_strategy,

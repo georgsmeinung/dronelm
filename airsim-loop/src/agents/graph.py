@@ -107,6 +107,8 @@ class DroneState(TypedDict, total=False):
     _deep_scan_request_id: Optional[int]
     _deep_scan_request_ts: Optional[float]
     _scan_started_ts: Optional[float]
+    _scan_failed_heading_deg: Optional[float]
+    _deadlock_history: List[Dict[str, Any]]
     # StallDetector (publicado para logging)
     imu_jitter_level: str
     imu_contact_event: bool

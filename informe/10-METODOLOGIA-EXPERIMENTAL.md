@@ -149,7 +149,7 @@ Travesía norte–sur del corredor peatonal arbolado central de TownSim, arranca
 
 ---
 
-### 10.3.3 Tier 2 — CitySim (`citymap.png`): cañones urbanos
+### 10.3.3 Tier 2 — CitySim (`citysim_ortho.png`): cañones urbanos
 
 **Entorno.** Proyecto de Unreal Engine 5.5 basado en el *Sample City* de Epic Games: tejido edilicio masivo en cuadrícula ortogonal regular, con edificios de **50 a 100 m de altura**, pasos restringidos y cañones urbanos angostos.
 
@@ -161,15 +161,15 @@ Perímetro de una manzana del grid regular, 7 waypoints, ~430 m, altitud de trá
 
 **Qué se quiere probar.** Rol de control del tier, análogo a `minisim_clear` y `townsim_clear`. Pero su valor metodológico específico es **haber establecido la altitud de tránsito como parámetro crítico documentado**: la primera corrida a −50 m falló con colisión porque la ruta de ascenso atravesaba edificios. Ese fallo es un dato del diseño experimental, no un accidente descartable — establece la cota inferior de altitud segura para todo Tier 2 y explica por qué cualquier atasco observado en escenarios de corredor será atribuible a la geometría del corredor y no a un artefacto de altitud insuficiente.
 
-> **Nota sobre el manifiesto.** El archivo `citysim_clear.json` del árbol de trabajo contiene una variante de 4 waypoints con altitud máxima de −50 m, distinta de la geometría de 7 waypoints a −70 m con la que se obtuvieron los resultados del capítulo 11, y declara `map: citysim_calib.png`. **Antes de lanzar el batch de Tier 2 debe restaurarse la geometría de 7 waypoints a −70 m** (a −50 m la ruta de ascenso atraviesa edificios) y el mapa debe declararse como `citymap.png` (escenario 2.B).
+> **Nota sobre el manifiesto.** El archivo `citysim_clear.json` del árbol de trabajo contiene una variante de 4 waypoints con altitud máxima de −50 m, distinta de la geometría de 7 waypoints a −70 m con la que se obtuvieron los resultados del capítulo 11, y declara `map: citysim_calib.png`. **Antes de lanzar el batch de Tier 2 debe restaurarse la geometría de 7 waypoints a −70 m** (a −50 m la ruta de ascenso atraviesa edificios) y el mapa debe declararse como `citysim_ortho.png` (cap. 4 §4.3.2).
 
 #### Escenario 2.B — `citysim_pilot` (circuito de corredores)
 
 Circuito en grilla urbana a −10 m de altitud constante, atravesando corredores entre edificios en lugar de sobrevolarlos (manifiesto `citysim_pilot.json`; en el lote base del capítulo 11 figura como `citymap_pilot`, sin el waypoint `WP_0_SUR`). Tres elementos del manifiesto merecen explicación:
 
-- **Mapa de referencia `citymap.png`** (3.8 px/m, origen en el *spawn*), sobre el que los waypoints coinciden con intersecciones de la grilla. La imagen de alta resolución `citysim_calib.png` no registra con la telemetría (los waypoints caen sobre el agua) y no debe usarse para ubicar coordenadas.
+- **Mapa `citysim_ortho.png`** (cap. 4 §4.3.2): mosaico cenital construido con el propio simulador, registrado con el marco NED por construcción. Sobre él se planifica la ruta antes del vuelo (cap. 4 §4.3.1). Las imágenes anteriores de CitySim (`citymap.png`, `citysim_calib.png`) no registran con el mundo de vuelo: superponiendo las trayectorias voladas, el dron cruzaba manzanas a 10 m de altura y el *spawn* caía sobre una azotea.
 - **`start_pose`** en el *spawn* real (0, 0, yaw 90°), que solo se usa con `--seed-jitter` (§10.4.3).
-- **Waypoint intermedio `WP_0_SUR` (−5, −51, −10)** sobre la calle sur, en un punto ya volado libre (§10.3.0, punto 2). Una autopista elevada corre sobre la calle x ≈ 15–20 m desde y ≈ −50 m hacia el este, con el tablero a la altura de crucero; un tramo directo *spawn* → WP_1 la cruza, y el dron puede quedar trabado sobre el tablero (cap. 9, §9.8.7). Los edificios de los tramos *spawn* → WP_0_SUR → WP_1 quedan para que los resuelva la navegación: WP_1 está detrás de una manzana que debe rodearse.
+- **Waypoints verificados en el simulador.** Cada waypoint se comprueba ubicando el dron en él a −10 m y midiendo la profundidad en las cuatro direcciones y hacia abajo. `WP_0_SUR` (3, −51, −10) está en el centro de la calle este-oeste que sale del *spawn*, con la fachada del edificio sur a 13 m; `WP_3` (67.7, −156.5, −10) está en el centro de la calle oeste de la manzana que separa WP_2 de WP_3, con fachadas a unos 7 y 10 m. Ambos se ubicaron sobre el mapa registrado: con el mapa anterior, WP_3 caía dentro de ese edificio y WP_0_SUR sobre el borde de su fachada. WP_1, WP_2 y WP_5 quedan a 1.6–2.6 m por encima del tablero de la autopista elevada que cruza la zona a la altura de crucero (cap. 9, §9.8.7). El tramo WP_2 → WP_3 en línea recta atraviesa esa manzana (x ≈ 50–92 m, y ≈ −146 a −112 m): es el rodeo que la misión obliga a resolver.
 
 **Qué se quiere probar.** Es el escenario terminal de la batería: **rodear edificios y elegir corredor sin información discriminativa geométrica**. Ni el `reactive` ni el `fsm` tienen información semántica para elegir entre dos calles de ancho similar; su decisión se reduce a distancia pura o a la asimetría accidental del flujo óptico. La hipótesis es que el brazo `slm`, al consultar al VLM con la imagen del corredor, elegirá la ruta más despejada con mayor consistencia.
 
@@ -187,7 +187,7 @@ Circuito en grilla urbana a −10 m de altitud constante, atravesando corredores
 | 1 | TownSim (`townsim_calib.png`) | `townsim_clear` | Control de crucero largo | ~640 m | −30 m | Baja | H2 (dilución del costo) |
 | 1 | TownSim | `townsim_ini` | Vegetación en ruta | ~340 m | −30/−22/−10 m | Media-alta | H1 |
 | 1 | TownSim | `townsim_calib_cruce_frontal` | Bloqueo frontal masivo | ~320 m | −30/−10 m | Alta | **H1** |
-| 2 | CitySim (`citymap.png`) | `citysim_clear` | Control a altitud franca | ~430 m | −70 m | Baja | H2, H3 |
+| 2 | CitySim (`citysim_ortho.png`) | `citysim_clear` | Control a altitud franca | ~430 m | −70 m | Baja | H2, H3 |
 | 2 | CitySim | `citysim_pilot` | Rodeo de manzanas y elección de corredor | ~336 m | −10 m | **Máxima** | **H1, H3** |
 
 ---
@@ -298,7 +298,7 @@ python experiments/runner.py \
   --max-cycles 4500 --max-seconds 900
 ```
 
-**Batch C — Tier 2 (CitySim / `citymap.png`).** Requiere haber restaurado previamente el manifiesto `citysim_clear.json` a la geometría de 7 waypoints a −70 m (nota de §10.3.3):
+**Batch C — Tier 2 (CitySim / `citysim_ortho.png`).** Requiere haber restaurado previamente el manifiesto `citysim_clear.json` a la geometría de 7 waypoints a −70 m (nota de §10.3.3):
 
 ```bash
 # C.1 — control a altitud franca
@@ -582,6 +582,7 @@ Los escenarios despejados del lote base no ejercen la capa táctica: el TTC no b
 | Detección de techo | Altitud limitada bajo estructuras horizontales | §5.15.3 |
 | Gobernador de velocidad | Avance limitado sin evidencia perceptual | §5.13 |
 | Vigilante de congelamiento | Terminación `physics_locked` | §5.19 |
+| Plan de ruta con el VLM sobre el mapa cenital | Que los tramos que cruzan una manzana se desvíen por la calle antes del vuelo; si el plan elegido es libre en la geometría real | §4.3.1, §11.0 |
 | Manifiestos `townsim_ini` (WP_0b, WP_1b) y `citysim_pilot` (WP_0_SUR) | Evitan la canopy de la plaza, la moldura del edificio oeste y la autopista elevada | §10.3.2, §10.3.3 |
 
 Ninguno de los umbrales de la capa estratégica (período de 3 s, edad máxima de 10 s, sub-meta a 15 m, ascenso de 4 m, deduplicación de 10 m) está validado en vuelo todavía.
@@ -593,6 +594,10 @@ Ninguno de los umbrales de la capa estratégica (período de 3 s, edad máxima d
 | D | `townsim_ini` (Tier 1, vegetación) | 20 | 900 s · 4500 ciclos | ~3.0–3.5 h |
 | E | `townsim_calib_cruce_frontal` (Tier 1, bloqueo frontal) | 20 | 900 s · 4500 ciclos | ~3.0–4.0 h |
 | F | `citysim_pilot` (Tier 2, rodeo de manzanas) | 20 | 1200 s · 5000 ciclos | ~5.0–6.5 h |
+
+**Calibración previa.** Antes de cualquier lote se corre el banco de prueba del VLM (cap. 11 §11.0): mide, fuera de vuelo y contra la profundidad del simulador, qué preguntas sabe responder el modelo y si su juicio sobre las rutas del mapa es válido. El banco mide **capacidad generalista**, no ajusta el sistema a un escenario: los prompts son fijos y no nombran objetos de un entorno, la respuesta se lee tal como sale (sin umbrales calibrados) y una pregunta se lleva al vuelo solo si pasa en **CitySim y TownSim** con el mismo prompt: exactitud balanceada ≥ 0.65 y límite inferior del intervalo de confianza del 95 % (bootstrap por corrida) por encima del azar. La selección se hace con los dos entornos medidos, nunca con uno solo. Si una pregunta no pasa, se la descarta: el modelo no tiene esa capacidad sin entrenamiento, y adaptarla al escenario sería un ajuste equivalente a entrenar por entorno, que es justamente lo que el enfoque generalista evita.
+
+**Plan de ruta.** El plan se calcula una vez por escenario, antes de la primera corrida, y todas las celdas del lote vuelan el mismo (`--route-plan vlm`): forma parte de la definición de la misión, igual que el manifiesto, y no distingue brazos. Por eso la celda «sin VLM en ningún punto» lo es en vuelo, no en la planificación. Para medir el aporte del plan se agrega una celda de ablación `slm × deep_vlm` con `--route-plan off`.
 
 Cada lote tiene cuatro celdas de 5 semillas: `slm × deep_vlm`, `fsm × deep_vlm`, `fsm × blind` (el contraste **sin VLM en ningún punto**, §10.2.2) y `reactive`. Cada lote va precedido por un piloto de validación (`slm × deep_vlm`, semilla 99). Criterios de pase: en D, el dron cruza el corredor arbolado; en E, rodea el edificio o al menos lo bordea; en F, alcanza WP_0_SUR y WP_1 sin quedar trabado sobre la autopista. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si un lote muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (§10.11, punto 1).
 

@@ -29,29 +29,29 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 ```json
 {
   "mission_id": "CITYMAP_PILOT",
-  "summary": "Tier 2: circuito tipo grilla urbana sobre citymap.png ...",
+  "summary": "Tier 2: circuito tipo grilla urbana sobre citysim_ortho.png ...",
   "start_pose": { "x": 0.0, "y": 0.0, "z": -10.0, "yaw_deg": 90.0 },
   "waypoints": [
-    {"x": -11.0, "y": -50.5,  "z": -10.0, "label": "WP_0_SUR"},
+    {"x": 3.0,   "y": -51.0,  "z": -10.0, "label": "WP_0_SUR"},
     {"x": 26.1,  "y": -78.2,  "z": -10.0, "label": "WP_1"},
     {"x": 68.9,  "y": -78.6,  "z": -10.0, "label": "WP_2"},
-    {"x": 67.7,  "y": -145.0, "z": -10.0, "label": "WP_3"},
+    {"x": 67.7,  "y": -156.5, "z": -10.0, "label": "WP_3"},
     {"x": 26.5,  "y": -145.0, "z": -10.0, "label": "WP_4"},
     {"x": -16.3, "y": -145.0, "z": -10.0, "label": "WP_5"},
     {"x": -17.9, "y": -78.6,  "z": -10.0, "label": "WP_6"},
     {"x": 12.5,  "y": -78.6,  "z": -10.0, "label": "WP_7"}
   ],
-  "map": "citymap.png"
+  "map": "citysim_ortho.png"
 }
 ```
 
-*Manifiesto vigente `citysim_pilot.json` (2026-09-30; cap. 10 §10.3.3 explica `WP_0_SUR` y el cambio de mapa).*
+*Manifiesto vigente `citysim_pilot.json` (cap. 10 §10.3.3 explica `WP_0_SUR`; el mapa se describe en §4.3.2).*
 
 ### Componentes del contrato:
 - **`mission_id`:** identificador único en formato `^[A-Z0-9_]{3,32}$`, validado por el schema. Identifica el escenario experimental y aparece en los nombres de carpeta de telemetría.
 - **`summary`:** descripción textual de la intención operativa (campo opcional, no consumido por el lazo táctico).
 - **`waypoints`:** lista ordenada de puntos de paso tridimensionales en el marco **NED** (*North-East-Down*): $z < 0$ representa altitud sobre el punto de despegue. Cada waypoint lleva una etiqueta opcional (`label`) para identificación en la traza.
-- **`map`:** nombre del archivo de imagen de carta de territorio empleado por WebDCS para la visualización de la trayectoria (por defecto `map.png`). La escala (px/m) y el origen de cada imagen se declaran en `airsim-plan/missions/maps/map_scales.json`; un mapa mal registrado no afecta al vuelo pero sí a la planificación de coordenadas (cap. 10 §10.3.3).
+- **`map`:** nombre de la imagen cenital del escenario. WebDCS la usa para ubicar y mostrar los waypoints, y el planificador de ruta (§4.3.1) para decidir por dónde va cada tramo. La escala (px/m) y el origen de cada imagen se declaran en `airsim-plan/missions/maps/map_scales.json`, con la convención: centro de la imagen = `ned_offset`, arriba = norte (+x), derecha = este (+y). Como el plan de ruta se deriva del mapa, un mapa mal registrado sí afecta al vuelo (§4.3.2).
 - **`start_pose`** (opcional): pose de partida; solo se usa con `--seed-jitter`, porque el runner devuelve el dron al *spawn* de `settings.json` (cap. 10 §10.4.3). Debe coincidir con ese *spawn*.
 
 **Separación entre manifiesto y prompts del VLM.** El manifiesto entrega únicamente metas geométricas; los prompts del VLM no forman parte de él porque no pueden ser textos estáticos: se construyen en vuelo a partir del fotograma, la pose y el waypoint activo de ese instante. Hay dos (cap. 5 §5.10, §5.12; cap. 8 §8.5):
@@ -62,6 +62,22 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 Ambas respuestas se fuerzan con decodificación restringida (`json_schema`) a esquemas sin campo de acción; el código convierte la descripción en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.
 
 Este nivel de dinamismo hace inviable delegar el prompt al manifiesto: el contenido útil depende de percepciones que solo existen en vuelo.
+
+### 4.3.1 Plan de ruta con el VLM sobre el mapa cenital
+
+El manifiesto une los waypoints en línea recta, y en una ciudad la recta suele cruzar una manzana. En vuelo, el VLM ve solo lo que tiene delante a 10 m de altura y debe inferir por dónde rodear un edificio cuyo final no ve; desde arriba, la misma pregunta se vuelve de reconocimiento: si una línea dibujada sobre el mapa va por la calle o por encima de los edificios. Es el tipo de juicio que un VLM pequeño resuelve mejor, porque no exige estimar distancias en primera persona. Por eso la estación terrena agrega un paso de planificación con el VLM **antes del despegue** (`src/planning/route_planner.py`): corre una sola vez por misión, la misión espera su resultado y nada de esto ocurre dentro del lazo táctico.
+
+1. **Candidatas geométricas.** Para cada tramo A → B (incluido el tramo desde el *spawn* al primer waypoint) se generan rutas sin mirar el mapa: la recta, las dos rutas en L (primero norte-sur o primero este-oeste) y desvíos paralelos a ±25 y ±50 m a cada lado.
+2. **Juicio del VLM.** Cada candidata se dibuja sobre el recorte del mapa que contiene a todas las del tramo, a la misma escala (línea roja; inicio en verde, destino en azul; 672 × 672 px), y se le pregunta al modelo si la línea va en todo su recorrido por calles o espacios abiertos sin pasar por encima de edificios. La respuesta se fuerza con decodificación restringida a `si`/`no` (temperatura 0), y la probabilidad de `si` se lee de los *logprobs* del token de la respuesta.
+3. **Elección.** Entre las candidatas que el modelo aprobó se toma la de mayor probabilidad; a menos de 0.05 de la mejor, la más corta. Si no aprobó ninguna, queda la recta y el tramo se resuelve en vuelo como siempre. Los vértices intermedios de la elegida se insertan en el manifiesto como waypoints `VIA_<WP>_<k>` (con `planned_via: true` y la altura del waypoint de destino), delante del waypoint del tramo.
+
+El modelo evalúa; el código solo genera las opciones y toma la mejor según el propio modelo. El plan completo —cada candidata con su imagen, respuesta y probabilidad, la elegida y el motivo— queda en `<out-dir>/<escenario>/route_plan/` junto al manifiesto planificado, y se cachea por contenido (waypoints, mapa, modelo y prompt): `runner.py` y `batch_runner.py` planifican una vez por escenario antes de la primera corrida (`--route-plan vlm`, valor por defecto de `ROUTE_PLAN_MODE`), de modo que todas las semillas y brazos de un lote vuelan el mismo plan, y cada `summary.json` registra el plan con el que voló (`route_plan`). `--route-plan off` vuela el manifiesto tal cual. La validez del juicio del modelo sobre el mapa se mide antes de usarlo, contra la geometría del simulador (cap. 11 §11.0).
+
+### 4.3.2 Mapa cenital registrado
+
+El plan de ruta solo tiene sentido si el mapa coincide con el mundo de vuelo. El mapa de CitySim se construye con el propio simulador (`airsim-plan/scripts/capture_ortho_map.py`): el dron se reubica sobre una grilla de puntos a 1000 m de altura con la cámara frontal apuntando 90° hacia abajo y un campo visual de 15°, de modo que la vista es casi ortográfica. De cada toma se usa la mitad central y se la pega en el lienzo a 2 px/m, con el origen NED en el centro de la imagen, el norte arriba y el este a la derecha. La orientación y la escala se verifican en el arranque desplazando el dron 20 m al norte y 20 m al este y midiendo el corrimiento de la imagen por correlación de fase.
+
+Unreal Engine carga el escenario por zonas alrededor del punto de vista, y desde 1000 m no carga la zona de abajo: la imagen muestra solo calles y bases vacías. Por eso, antes de cada toma el dron baja a 40 m sobre el punto (la carga se completa en unos 3 s), vuelve a subir y captura enseguida. La toma se acepta cuando la fracción de píxeles de edificio, medida con la profundidad, deja de crecer entre dos capturas; un criterio por color no sirve, porque el agua animada nunca se estabiliza y una zona sin cargar está quieta. El resultado, `citysim_ortho.png`, cubre la ciudad completa (1920 m norte-sur por 1640 m este-oeste) y es el mapa de todas las misiones de CitySim.
 
 En el marco de la metodología experimental de esta tesis (capítulo 10), el uso de manifiestos estructurados garantiza la **reproducibilidad experimental**: los escenarios de benchmark por Tiers (`minisim_clear`, `townsim_ini`, `citysim_clear`) se definen a través de manifiestos fijos e inmutables, asegurando que las comparaciones de rendimiento entre brazos de control (SLM, FSM y reactivo) se inicien exactamente con las mismas metas cinemáticas y espaciales.
 
