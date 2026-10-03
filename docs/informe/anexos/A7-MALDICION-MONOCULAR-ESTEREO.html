@@ -1456,8 +1456,8 @@ necesidad de calibración extrínseca adicional en simulación). El procesamient
 </ol>
 <p><strong>Nota metodológica para una futura implementación:</strong> si se incorpora este canal, la profundidad
 debe derivarse del <em>matching</em> estéreo real (con su ruido de correspondencia y sus errores en zonas
-de textura ambigua) y no leerse directamente del <code>DepthPlanar</code> de ground truth que AirSim provee
-para otros propósitos de depuración. Usar el ground truth directamente compararía el sistema contra
+de textura ambigua) y no leerse directamente del <code>DepthPlanar</code> de referencia que AirSim provee
+para otros propósitos de depuración. Usar la profundidad de referencia directamente compararía el sistema contra
 un LiDAR ideal en lugar de contra el estéreo real que se busca evaluar, invalidando la comparación
 de costo/beneficio que motiva la propuesta.</p>
 <hr />

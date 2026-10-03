@@ -3,7 +3,7 @@
 Para cada tramo de las misiones dadas se generan las mismas rutas candidatas que usa el planificador
 (src/planning/route_planner.py) y, para cada una:
 
-  - Verdad de terreno (AirSim, fuera de vuelo): se recorre la ruta cada STEP_M metros a la altura del
+  - Etiqueta de referencia (AirSim, fuera de vuelo): se recorre la ruta cada STEP_M metros a la altura del
     tramo, mirando en la direccion de avance, y se captura la profundidad. La ruta es "libre" si en ningun
     punto hay un obstaculo en la ventana central de la imagen (+-WINDOW_FRAC del ancho y alto) a menos de
     CLEAR_M (un paso y medio), y si la camara nunca queda dentro de la geometria. Antes de cada tramo se

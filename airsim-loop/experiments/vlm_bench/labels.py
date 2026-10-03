@@ -1,4 +1,4 @@
-"""Verdad de terreno a partir de la profundidad planar de la camara frontal (funciones puras).
+"""Etiquetas de referencia a partir de la profundidad planar de la camara frontal (funciones puras).
 
 Todas las etiquetas usan la misma geometria que ve el VLM en vuelo: el recorte cuadrado central del
 frame y su grilla de 3x3 por tercios (vlm_strategic.square_crop). "Libre" = el percentil 5 de la

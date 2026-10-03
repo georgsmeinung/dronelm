@@ -278,7 +278,7 @@ En el 100 % de las corridas el primer deadlock se declaró en los ciclos 17–18
 
 **Mecanismo de contención.** «Detenido» se define como «se ordenó avanzar y el dron no se movió», y no se cuenta bajo el piso óptico (cap. 5, §5.3.1). Reproduciendo esa definición sobre la telemetría registrada, ninguna de las tres corridas habría declarado ese deadlock.
 
-### 9.8.5 Una señal de verdad de terreno dentro del brazo evaluado
+### 9.8.5 Una señal de referencia dentro del brazo evaluado
 
 El runner capturaba el canal de profundidad del simulador «solo como métrica». Esa misma captura terminó armando un freno de proximidad que el grafo consumía, cancelaba maniobras, inyectaba retrocesos y registraba puntos de contacto que el tracker usaba para validar desvíos. El brazo evaluado tenía, así, acceso indirecto a la profundidad exacta del simulador, lo que invalida su comparación con un sistema monocular. La guardia estática no lo detectó porque el runner estaba fuera de su alcance.
 
@@ -338,7 +338,7 @@ En la corrida piloto siguiente a §9.8.9, el dron llegó a los tres primeros way
 
 La corrida terminó por `physics_locked`, con el dron apoyado en la baranda de un balcón (§9.8.7). Además, se ejecutó con cambios sin commitear y quedó registrada con el mismo `code_version` que la anterior, que usaba otro código: el criterio de descarte por versión no la habría distinguido.
 
-**Mecanismo de contención.** El tope de tokens pasa a 384 y 512 y una respuesta cortada se reporta como `respuesta_truncada`, separada de las respuestas mal formadas (cap. 5, §5.10.5); la capa estratégica consulta con la meta fuera de cuadro cuando el dron lleva 3 s sin acercarse a su objetivo, sin interpretar nunca esa respuesta como «camino directo libre» (§5.10.1); y `code_version` lleva el sufijo `-dirty` si hay cambios sin commitear, lo que excluye la corrida de un lote (cap. 10, §10.12). Los tests `tests/test_pilot_193631z_regressions.py` reproducen cada caso. El punto 1 —que el modelo describa la grilla por posición y no por contenido— no tiene mecanismo de contención: es la pregunta de §9.9, riesgo D, y la medición que la responde es la comparación sector por sector contra una verdad de terreno.
+**Mecanismo de contención.** El tope de tokens pasa a 384 y 512 y una respuesta cortada se reporta como `respuesta_truncada`, separada de las respuestas mal formadas (cap. 5, §5.10.5); la capa estratégica consulta con la meta fuera de cuadro cuando el dron lleva 3 s sin acercarse a su objetivo, sin interpretar nunca esa respuesta como «camino directo libre» (§5.10.1); y `code_version` lleva el sufijo `-dirty` si hay cambios sin commitear, lo que excluye la corrida de un lote (cap. 10, §10.12). Los tests `tests/test_pilot_193631z_regressions.py` reproducen cada caso. El punto 1 —que el modelo describa la grilla por posición y no por contenido— no tiene mecanismo de contención: es la pregunta de §9.9, riesgo D, y la medición que la responde es la comparación sector por sector contra una etiqueta de referencia (cap. 10, §10.12.2).
 
 ### 9.8.11 Un barrido que no describe la escena
 

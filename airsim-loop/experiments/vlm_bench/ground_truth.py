@@ -1,4 +1,5 @@
-"""Verdad de terreno del banco: reubica el dron en cada pose registrada y captura RGB + profundidad.
+"""Etiquetas de referencia del banco (en ingles, ground truth): reubica el dron en cada pose
+registrada y captura RGB + profundidad.
 
 Herramienta de laboratorio, fuera del lazo de vuelo (misma categoria que la calibracion del TTC): es el
 unico lugar del banco que lee la profundidad del simulador. Por muestra:

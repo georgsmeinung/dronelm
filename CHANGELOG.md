@@ -12,7 +12,7 @@ seria un entrenamiento manual por entorno (lo que se evita al no usar RL). El ba
   -> `cross_report.md`: una pregunta es apta para el vuelo solo si pasa en todos los entornos.
 - **Orden**: no se elige con CitySim solo; la seleccion se decide con CitySim y TownSim medidos.
 - `common.read_jsonl` saltea lineas truncadas (antes cortaba la lectura); `vlm_bench/run_all.sh`
-  reanudable (sin borrar el directorio). Banco CitySim detenido con 595 muestras de verdad de terreno.
+  reanudable (sin borrar el directorio). Banco CitySim detenido con 595 muestras con etiqueta de referencia.
 - Tests: 274 pasan. Informe: cap. 10 §10.12.2.
 
 # 2026-10-02 (a) - Mapa cenital registrado, waypoints corregidos, banco de prueba del VLM y plan de ruta con el VLM

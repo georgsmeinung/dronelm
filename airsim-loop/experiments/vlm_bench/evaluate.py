@@ -1,4 +1,4 @@
-"""Hace las preguntas del catalogo al VLM sobre las muestras con verdad de terreno.
+"""Hace las preguntas del catalogo al VLM sobre las muestras con etiqueta de referencia.
 
 Seleccion: solo muestras validas (camara fuera de la geometria, captura estable y, si hay con que
 compararla, pose bien reproducida: correlacion >= --align-min). Para cada pregunta se toman hasta
@@ -140,7 +140,7 @@ def main() -> None:
     done = {(r["question"], r["id"], r["size"], r["source"]) for r in read_jsonl(out_path)}
     cat = catalog()
     print(f"[eval] modelo {LOCAL_LLM_MODEL_NAME}; {len(singles)} muestras validas, {len(groups)} barridos "
-          f"(de {len(all_samples)} con verdad de terreno)")
+          f"(de {len(all_samples)} con etiqueta de referencia)")
 
     for qname in args.questions:
         q = cat[qname]
