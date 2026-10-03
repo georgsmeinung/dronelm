@@ -194,3 +194,25 @@ def test_a_question_must_pass_in_every_environment():
     k = "centro_libre@384/replay"
     assert report.cross_environment({"citysim": _env(True), "townsim": _env(False)})[k]["passes_all"] is False
     assert report.cross_environment({"citysim": _env(True), "townsim": _env(True)})[k]["passes_all"] is True
+
+
+def test_single_questions_answer_in_english_but_map_to_reference_labels():
+    import questions
+    for name, spec in questions.SINGLE.items():
+        assert len(spec["choices"]) == len(spec["labels"])
+        assert len({c[0] for c in spec["choices"]}) == len(spec["choices"])   # iniciales distintas (logprobs)
+    q = questions.SingleQuestion("direccion_abierta")
+    assert q.to_label["center"] == "centro" and q.to_label["none"] == "ninguna"
+
+
+def test_route_metrics_patch_judge_uses_scores_and_plan_choice():
+    rows = []
+    for leg, (pd, pdet, cd, cdet) in {"00": (0.35, 0.53, False, True), "01": (0.60, 0.58, True, True)}.items():
+        rows.append({"mission": "m", "leg": leg, "candidate": "directo", "length_m": 50.0, "judge": "patches",
+                     "answer": None, "p_si": pd, "clear": cd})
+        rows.append({"mission": "m", "leg": leg, "candidate": "desvio_izq_25m", "length_m": 100.0,
+                     "judge": "patches", "answer": None, "p_si": pdet, "clear": cdet})
+    m = report.route_metrics(rows)
+    assert m["auc"] == 1.0
+    assert m["plan_clear_rate"] == 1.0 and m["direct_clear_rate"] == 0.5
+    assert "balanced_accuracy" not in m and m["passes"] is False

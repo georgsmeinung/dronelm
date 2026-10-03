@@ -275,13 +275,15 @@ def route_metrics(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     ok = [r for r in rows if r.get("answer") in ("si", "no")]
     truth = ["si" if r["clear"] else "no" for r in ok]
     pred = [r["answer"] for r in ok]
-    lo, hi = cluster_bootstrap_ci([(r["mission"] + "/" + r["leg"], t, p) for r, t, p in zip(ok, truth, pred)])
-    out: Dict[str, Any] = {"n": len(ok), "errors": len(rows) - len(ok), "accuracy": accuracy(truth, pred),
-                           "balanced_accuracy": balanced_accuracy(truth, pred), "chance": 0.5,
-                           "ci_low": lo, "ci_high": hi,
-                           "answers": answer_stats(pred), "truth_distribution": dict(Counter(truth)),
-                           "confusion": confusion(truth, pred)}
-    with_p = [r for r in ok if r.get("p_si") is not None]
+    out: Dict[str, Any] = {"n": len(rows), "chance": 0.5,
+                           "truth_distribution": dict(Counter("si" if r["clear"] else "no" for r in rows))}
+    if ok:
+        # Juicio 'image' (si/no por ruta). El juicio 'patches' no da respuesta absoluta: solo AUC y eleccion.
+        lo, hi = cluster_bootstrap_ci([(r["mission"] + "/" + r["leg"], t, p) for r, t, p in zip(ok, truth, pred)])
+        out.update({"n": len(ok), "errors": len(rows) - len(ok), "accuracy": accuracy(truth, pred),
+                    "balanced_accuracy": balanced_accuracy(truth, pred), "ci_low": lo, "ci_high": hi,
+                    "answers": answer_stats(pred), "confusion": confusion(truth, pred)})
+    with_p = [r for r in rows if r.get("p_si") is not None]
     if with_p:
         out["auc"] = auc([r["p_si"] for r in with_p], [r["clear"] for r in with_p])
         out["loro_calibrated_balanced_accuracy"] = loro_calibrated(
@@ -294,7 +296,7 @@ def route_metrics(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         if not any(c["candidate"] == "directo" for c in cs):
             continue
         best, why = choose([{"name": c["candidate"], "answer": c.get("answer"), "p_si": c.get("p_si"),
-                             "length_m": c["length_m"]} for c in cs])
+                             "judge": c.get("judge", "image"), "length_m": c["length_m"]} for c in cs])
         chosen = next(c for c in cs if c["candidate"] == best["name"])
         direct = next(c for c in cs if c["candidate"] == "directo")
         per_leg.append({"mission": mission, "leg": leg, "chosen": best["name"], "reason": why,
@@ -355,7 +357,9 @@ def build(bench: Path, align_min: float = ALIGN_MIN) -> Dict[str, Any]:
         else:
             metrics["questions"][key] = scan_metrics(rows)
     if routes:
-        metrics["questions"]["ruta_mapa@672/mapa"] = route_metrics(routes)
+        for judge in sorted({r.get("judge", "image") for r in routes}):
+            metrics["questions"][f"ruta_mapa/{judge}"] = route_metrics(
+                [r for r in routes if r.get("judge", "image") == judge])
     for size, src in {(s, src) for (_q, s, src) in by}:
         if by.get(("grid_prod", size, src)) and by.get(("grid_perm", size, src)):
             metrics["questions"][f"grid_perm@{size}/{src}"]["permutation"] = grid_permutation(
@@ -381,8 +385,8 @@ def to_markdown(m: Dict[str, Any]) -> str:
              "|---|---:|---|---:|:---:|---|:---:|---:|---:|---:|"]
     for k, q in m["questions"].items():
         n = q.get("n", q.get("n_images"))
-        top = q["answers"]
-        lines.append(f"| `{k}` | {n} | {_f(q['balanced_accuracy'], True)} [{_f(q.get('ci_low'), True)}-"
+        top = q.get("answers") or {"top_answer": "-", "top_share": None, "constant": False}
+        lines.append(f"| `{k}` | {n} | {_f(q.get('balanced_accuracy'), True)} [{_f(q.get('ci_low'), True)}-"
                      f"{_f(q.get('ci_high'), True)}] | {_f(q['chance'], True)} | {'si' if q.get('passes') else 'no'} | "
                      f"{top['top_answer']} ({_f(top['top_share'], True)}) | {'si' if top['constant'] else 'no'} | "
                      f"{_f(q.get('auc'))} | {_f(q.get('loro_calibrated_balanced_accuracy'), True)} | "

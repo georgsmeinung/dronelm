@@ -1,3 +1,270 @@
+# 2026-10-02 (k) - Planificador reactivado con juicio por parches (solo mapa)
+
+Decision del autor: modificar el planificador con la unica forma de preguntar que mostro senal (entradas i y
+j) y activarlo.
+- **Solo mapa, sin escaneos.** El plan usa la imagen cenital y los waypoints del manifiesto; no mueve el dron
+  ni lee camara ni profundidad (equivalente real: imagen satelital u ortofoto + VLM antes de despegar).
+  AirSim solo interviene en las herramientas de medicion (`map_probe.py label`, `route_bench.py`).
+- **`src/planning/route_planner.py`** (`PLANNER_VERSION` = 3):
+  - `ROUTE_JUDGE=patches` (nuevo, por defecto). Cada candidata se muestrea cada `ROUTE_PATCH_STEP_M` (8 m)
+    con `patch_points`. Para cada punto, `patch_crop` recorta `ROUTE_PATCH_CONTEXT_M` (48 m) con un cuadrado
+    rojo en los `ROUTE_PATCH_M` (16 m) centrales, a `ROUTE_PATCH_PX` (336 px).
+  - `default_patch_query` y `read_patch` hacen la pregunta de cinco clases (`PATCH_PROMPT`: street,
+    building, trees, parking, elevated road) y leen P(calle) = P(street) + P(parking) de los logprobs.
+  - `judge_patches` puntua la candidata con la P(calle) media; `judge_candidate` elige entre `patches` e
+    `image` (el si/no anterior).
+  - `choose`: con `patches` compara todas las candidatas (no hay respuesta absoluta). Gana la de mayor
+    puntaje; a menos de `ROUTE_TIE_EPS` (0.05) de la mejor, la mas corta, de modo que la recta gana los
+    empates. Motivo: `mejor_puntaje`.
+  - Cache de parches por plan: las candidatas comparten inicio, final y tramos. En citysim_pilot hay 579
+    parches y 404 distintos.
+  - `plan_key` incluye el juicio y los parametros de parche; el plan registra `judge`.
+- **`vlm_bench/route_bench.py`**: `--judge patches|image` usa `rp.judge_candidate`; las filas llevan
+  `judge`. La etiqueta de referencia se reutiliza entre juicios sin volver a AirSim.
+- **`vlm_bench/report.py`**: metricas de rutas por juicio (`ruta_mapa/<juicio>`). Con `patches`: AUC y
+  eleccion por tramo (`plan_clear_rate` contra `direct_clear_rate`), sin exactitud de respuesta absoluta.
+- **`vlm_bench/map_probe.py`**: usa `rp.patch_crop` y la pregunta del planificador (una sola definicion).
+- **`config/.env`**: `ROUTE_PLAN_MODE=vlm`, `ROUTE_JUDGE=patches`, `ROUTE_PATCH_STEP_M=8.0`,
+  `ROUTE_PATCH_M=16.0`, `ROUTE_PATCH_CONTEXT_M=48.0`, `ROUTE_PATCH_PX=336`. El modelo sigue siendo
+  `liquidai/lfm2.5-vl-1.6b`.
+- **Tests**: 285 (nuevos: juicio por parches con desvio, empate a favor de la recta, cache, metricas de
+  rutas con `patches`).
+- **Plan de citysim_pilot** (LFM, 485 s sin cache; `airsim-runs/produccion/v3/pilot/citysim_pilot/route_plan/`,
+  vista en `plan_overview.png`): 3 tramos desviados, 6 puntos de paso.
+
+  | Tramo | Elegida | P(calle) recta | P(calle) elegida |
+  |---|---|---:|---:|
+  | WP_1 -> WP_2 | desvio_der_50m | 0.51 | 0.69 |
+  | WP_2 -> WP_3 | desvio_izq_25m (rodea el edificio por el sur) | 0.35 | 0.54 |
+  | WP_5 -> WP_6 | desvio_izq_50m | 0.46 | 0.67 |
+
+  Los otros 5 tramos quedan en la recta. START -> WP_0_SUR, la recta por la calle, ahora gana: 0.57 contra
+  0.57 del desvio, empate a favor de la mas corta.
+- **Pendiente**:
+  - Verificar con el banco de rutas (CitySim abierto): si la elegida es transitable mas seguido que la
+    recta, con `route_bench.py --judge patches`.
+  - Revisar que los desvios de WP_1 -> WP_2 y WP_5 -> WP_6 no crucen la autopista elevada, que el modelo
+    no distingue bien.
+  - Volar el piloto con el plan.
+  - Informe: cap. 4 §4.3.1, cap. 10 §10.12.2 y anexo A6 todavia dicen "desactivado" (entrada h); falta
+    describir el juicio por parches y su evidencia (map_probe: LFM cinco clases, exactitud balanceada 0.72,
+    AUC 0.80).
+
+# 2026-10-02 (j) - Rutas puntuadas por parches (LFM, cinco clases): prueba en dos tramos
+
+Prueba fuera de vuelo; no cambia codigo de produccion. Cada candidata se muestrea cada 8 m. En cada punto
+se hace la pregunta de cinco clases de `map_probe.py` (recorte de 48 m, cuadrado de 16 m) con LFM2.5-VL-1.6B.
+La puntuacion de la candidata es la P(calle) media (street + parking, leida de los logprobs).
+
+| Tramo | directo | izq 25 | der 25 | izq 50 | der 50 |
+|---|---:|---:|---:|---:|---:|
+| START -> WP_0_SUR (la recta va por la calle) | 0.53 | 0.45 | **0.58** | 0.47 | 0.49 |
+| WP_2 -> WP_3 (la recta cruza un edificio) | **0.35** (la peor) | 0.51 | 0.38 | **0.53** | 0.42 |
+
+- **WP_2 -> WP_3**: la recta sobre el techo queda ultima (10 de 10 parches "building"). Ganan los desvios
+  que rodean el edificio por el sur (izq 50 0.53, izq 25 0.51). Ordena bien. Pero el ganador recorre un
+  tramo largo sobre el tablero de la autopista elevada (a ~7 m; el dron vuela a 10 m), que el modelo no
+  separa del suelo.
+- **START -> WP_0_SUR**: gana `desvio_der_25m` (0.58), que va por calle y estacionamiento y parece
+  transitable, pero duplica el largo (101 m contra 51 m). La recta por la calle quedo segunda (0.53) porque 5
+  de sus 7 parches salieron "building": la calle vacia se confunde con un techo. Es el atajo anticipado en
+  (i): el modelo reconoce autos estacionados mas que el nivel de calle.
+- **Lectura**: comparando candidatas por P media aparece una senal util (evita el edificio del tramo
+  problematico), pero con desvios innecesarios y sin distinguir la autopista elevada. Dos tramos son una
+  anecdota. Medirlo exige el banco de rutas en AirSim (`route_bench.py`) con este modo de puntuacion.
+- Costo: 7-22 parches por candidata, ~0.5 s cada uno; ~1-2 min por tramo con LFM.
+
+# 2026-10-02 (i) - Prueba de percepcion del mapa: calle o techo, parche por parche
+
+Nueva herramienta de laboratorio `airsim-loop/experiments/vlm_bench/map_probe.py` (etapas `label`, `ask`,
+`report`; en la lista de excepcion de la guardia de profundidad). Mide si el VLM reconoce lo que hay en un
+lugar del mapa cenital, antes de cualquier forma de preguntar por una ruta.
+- **Etiqueta de referencia** (AirSim, solo para corregir):
+  - 160 parches de 16 x 16 m alrededor de citysim_pilot, vistos con la camara hacia abajo desde 40 m.
+  - Altura de la superficie = 40 m - profundidad; suelo a -2.3 m.
+  - `ground` si menos del 10 % del parche esta a mas de 3 m sobre el suelo; `raised` si mas del 70 %.
+  - Resultado: 64 ground, 54 raised, 42 mixed (descartados).
+  - El registro del mapa se verifico contra las fotos de AirSim (techo, autopista, estacionamiento).
+- **Pregunta**: recorte de 48 m del mapa con un cuadrado rojo en los 16 m centrales, 336 px, prompt en
+  ingles. Cuatro formas: yes/no, par street/building en los dos ordenes, y cinco clases (street, building,
+  trees, parking, elevated road). 30 parches por clase y dos modelos. Resultados en
+  `airsim-runs/vlm_bench/map_probe/report.md`.
+- **Resultado**:
+
+  | Modelo | Pregunta | Exactitud bal. | AUC P(calle) | Respuestas |
+  |---|---|---:|---:|---|
+  | LFM2.5-VL-1.6B | cinco clases | **0.72** (IC 95 % 0.60-0.82) | **0.80** | building 35, parking 25 |
+  | LFM2.5-VL-1.6B | yes/no | 0.60 | 0.71 | yes 52 |
+  | LFM2.5-VL-1.6B | par (ambos ordenes) | 0.50 | 0.56 | building 60 |
+  | Qwen2.5-VL-3B | cinco clases | 0.53 | 0.63 | building 26, elevated road 24 |
+  | Qwen2.5-VL-3B | yes/no | 0.50 | 0.60 | yes 60 |
+  | Qwen2.5-VL-3B | par | 0.50-0.52 | ~0.5 | 25 % cambia con el orden |
+
+  - LFM con cinco clases es la unica combinacion con senal: raised -> building 24/30; ground -> parking
+    19/30, building 11/30. Latencia mediana 0.47 s.
+  - Cautela: los parches de suelo de esta zona son mayormente estacionamientos, y LFM puede estar
+    reconociendo autos mas que el nivel de calle.
+  - Con 37 % de parches de calle tomados por edificio, una ruta por la calle de 10 parches seria
+    rechazada casi siempre si se exige que ningun parche sea edificio. Solo sirve comparando candidatas
+    por la probabilidad (AUC 0.80), no como juicio absoluto.
+  - Las preguntas binarias (yes/no y par) quedan en sesgo puro.
+
+# 2026-10-02 (h) - Planificador de ruta apagado (ROUTE_PLAN_MODE=off)
+
+Decision del autor, tras las pruebas de las entradas (e)-(g):
+- con la linea, Qwen2.5-VL-3B dijo "no" a todo y LFM2.5-VL-1.6B "si" a todo;
+- con el pasillo, los dos dijeron "si" a todo;
+- con la pregunta invertida, los dos dijeron "si, cruza un edificio" a todo, incluida la recta que va
+  por la calle.
+Ningun modelo distingue en el mapa una ruta por la calle de una sobre un edificio. El plan nunca cambia la
+ruta y solo sumaba tiempo y una variable al experimento.
+- **`config/.env`**: `ROUTE_PLAN_MODE=off`. `runner.py` y `batch_runner.py` vuelan el manifiesto tal cual y
+  registran `route_plan: {"mode": "off"}` en cada `summary.json`. `--route-plan vlm` sigue disponible.
+- **Se conserva**: `src/planning/route_planner.py`, `experiments/plan_route.py` y el banco de rutas
+  (`vlm_bench/route_bench.py`), para documentar el resultado negativo con etiqueta de referencia en §11.0.
+- **Lotes**: sin la celda de ablacion `--route-plan off` (ya no hay plan que ablacionar). La celda "sin VLM
+  en ningun punto" lo es tambien en la planificacion.
+- **Informe**: cap. 4 §4.3.1 (estado en la version final: desactivado, con la evidencia), cap. 10 (tabla de
+  mecanismos a validar y §10.12.2), anexo A6.
+
+# 2026-10-02 (g) - Planificador: candidatas dibujadas como pasillo (opcion 2). Tampoco discrimina
+
+Ultimo intento con el VLM antes de descartar el planificador: dibujar la pregunta de forma mas facil de ver.
+- **Dibujo** (`route_planner.render_corridor`, `ROUTE_RENDER=corridor`, por defecto):
+  - cada candidata es un pasillo de `ROUTE_CORRIDOR_M` (10 m), en su propio recorte;
+  - el recorte se rota para que la ruta vaya del inicio (abajo, verde) al destino (arriba, azul) y se
+    acerca a la candidata;
+  - fuera del pasillo el mapa queda al 30 % de brillo, y el pasillo lleva borde rojo.
+  `ROUTE_RENDER=line` conserva el dibujo anterior para comparar en el banco. Cada dibujo tiene su prompt
+  (`_PROMPTS`). Para el pasillo: "Is the whole bright strip street or open ground? yes or no."
+- `render()` elige el dibujo, y lo usan `plan_route` y `vlm_bench/route_bench.py` (que ahora registra
+  `render`). `plan_key` incluye `render` y `corridor`. `PLANNER_VERSION` = 2.
+- **Evidencia** (citysim_pilot, tramos START->WP_0_SUR y WP_2->WP_3, 5 candidatas cada uno; a la vista,
+  la recta del primer tramo va por la calle y la del segundo cruza el techo de un edificio):
+  - *Pasillo, pregunta "es todo calle?"*:
+    - LFM2.5-VL-1.6B: `yes` a las 10, P 0.993-0.996.
+    - Qwen2.5-VL-3B: `yes` a las 10, P 0.50-0.72. La recta sobre el techo (0.68) queda por encima de la
+      recta por la calle (0.63).
+  - *Diagnostico de sesgo, pregunta invertida "el pasillo cruza algun techo?"*:
+    - LFM: `yes` a las 10, P 0.51-0.76. La recta por la calle (0.68) queda mas alta que la recta sobre
+      el techo (0.52).
+    - Qwen: P 0.45-0.55 en las 10, sin relacion con lo que hay debajo.
+  - Los dos modelos responden al formato de la pregunta (sesgo a `yes`), no a la imagen. Hacer el dibujo
+    mas claro no cambio eso: a este tamaño de modelo falta la capacidad de leer el mapa, no la claridad
+    del dibujo.
+  - Con LFM el plan aprueba todas las candidatas y elige la recta (la mas corta entre las empatadas): el
+    planificador no altera la ruta.
+- **Test**: `test_corridor_render_puts_start_at_bottom_and_end_at_top` (281 en total).
+- **`config/.env`**: `ROUTE_RENDER=corridor`, `ROUTE_CORRIDOR_M=10.0`. Informe: cap. 4 §4.3.1 (dibujo y
+  prompt), anexo A6.
+- **Pendiente (decision del autor)**: apagar el planificador (`ROUTE_PLAN_MODE=off`) o reemplazarlo por uno
+  sin VLM. El banco de rutas (`route_bench.py`, con etiqueta de referencia en AirSim) queda para documentar
+  el resultado negativo en §11.0.
+
+# 2026-10-02 (f) - Prompts en ingles y compactos; planificador tambien con LFM2.5-VL-1.6B
+
+Decision del autor: prompts mucho mas cortos y concretos, en ingles, en el lazo de control y en el
+planificador; entre modelos que no se distinguen en calidad, el mas rapido.
+- **Capa estrategica** (`vlm_strategic.py`): system prompt de 3 oraciones (~380 caracteres, antes ~900). El
+  mensaje de cada consulta es solo `Goal WP_3: 34 m, in cell B2. Altitude 10 m.` (`strategic_prompt`). La
+  marca de la imagen dice `GOAL` (antes `META`) y la imagen se rotula `[Front camera, 3x3 grid]`.
+  Esquema: `cells` con `free`/`blocked`. `parse_strategic` traduce a `libre`/`bloqueado` (valores internos;
+  sub-meta, registros y banco sin cambios) y sigue aceptando el formato anterior.
+- **Barrido** (`deep_scan.py`): system prompt de 4 lineas. El mensaje es `4 images. Altitude 10 m.` (sin
+  angulos, meta ni ciclos de atasco: el modelo solo describe; el rumbo de cada imagen lo resuelve el codigo).
+  Las imagenes se rotulan `[Image n]`. Esquema: `views` con `{img, view, free}`, con `view` en
+  open/facade/wall/vegetation/inside/unclear. Se quitan `conf` y `degradada`: el modelo los copiaba (el mismo
+  0.95/0.92/0.89/0.86 en 3 de 4 barridos del piloto 222804Z) y no decidian nada. El parser traduce a
+  `tipo`/`transitable` internos.
+- **Planificador** (`route_planner.py`): system prompt de 3 oraciones; el mensaje es `Drone altitude 10 m.
+  Can it follow the red line? yes or no.` Esquema `answer` = yes/no; `read_judgement` traduce a si/no. El
+  cambio de prompt invalida los planes guardados (forma parte de `plan_key`).
+- **Banco** (`vlm_bench/questions.py`, `evaluate.py`): las preguntas aisladas, la grilla y el barrido usan
+  los mismos prompts. Las opciones estan en ingles, con iniciales distintas para leer logprobs, y se
+  traducen a las etiquetas de referencia.
+- **`config/.env`**: `ROUTE_LLM_MODEL_NAME="liquidai/lfm2.5-vl-1.6b"` (antes Qwen; ver evidencia).
+- **Evidencia con los prompts nuevos** (prueba rapida, no reemplaza al banco):
+  - *Planificador*, tramos START->WP_0_SUR y WP_2->WP_3, 5 candidatas cada uno:
+    - LFM responde `yes` a las 10 (P 0.96-0.98, 0.8 s cada una).
+    - Qwen da P entre 0.43 y 0.68 (2.9 s cada una), y sigue sin ordenar bien: la recta que cruza el
+      edificio (0.65) queda por encima del desvio que lo rodea (0.56), y la recta que va por la calle,
+      por debajo de 0.5.
+    - Ninguno discrimina. Con LFM el planificador elige siempre la recta (todas aprobadas, gana la mas
+      corta) y tarda ~5 s en vez de ~130 s.
+  - *Capa estrategica*, LFM, 40 muestras del banco (20 con el centro libre, 20 bloqueado):
+    - B2 `free` en las 40: exactitud balanceada 0.50.
+    - Celdas acertadas: 188 de 360.
+    - Las respuestas se concentran en patrones fijos por posicion.
+    - Latencia mediana: 1.2 s.
+  - Acortar el prompt cambio el sesgo, pero no la capacidad de discriminar.
+- **Tests**: 280 (5 nuevos: traduccion de respuestas en ingles y prompt compacto).
+- **Informe**: cap. 4 §4.3.1 (prompt del planificador), cap. 5 §5.10.2 y §5.12 (ejemplos de respuesta),
+  cap. 8 §8.2 (esquemas), §8.5 (quinta regla: en ingles y breves; prompts completos), §8.7, anexo A6.
+
+# 2026-10-02 (e) - Modelo de vuelo: LFM2.5-VL-1.6B Q4_0 [GGUF] (1.55 GB), no la version MLX
+
+Modelo tactico (lazo lento del grafo: capa estrategica y barrido) = **LFM2.5-VL-1.6B, cuantizacion Q4_0,
+formato GGUF, 1.55 GB**, servido por LM Studio (runtime llama.cpp) en la Mac mini M4
+(192.168.110.101:1234). Identificador en el servidor: `liquidai/lfm2.5-vl-1.6b`.
+- **Reemplaza** la version MLX 4-bit de la entrada (c) (`mlx-community/lfm2.5-vl-1.6b`).
+- **Motivo**: las dos versiones estan en el servidor, y `lfm2.5-vl-1.6b` a secas era ambiguo. Medido con la misma imagen del
+  planificador:
+  - la MLX devuelve texto vacio si la consulta pide JSON forzado y logprobs a la vez;
+  - la GGUF responde con las dos cosas (`{"respuesta": "si"}`, 8 tokens con logprobs, 2.8 s con la carga).
+- **`config/.env`**: `LOCAL_LLM_MODEL_NAME`, `OLLAMA_MODEL` y `TACTICAL_MODEL` = `"liquidai/lfm2.5-vl-1.6b"`
+  (identificador exacto).
+- **Pendiente de la entrada (c), resuelto**: el identificador es el que devuelve `/v1/models`.
+- **Planificador de ruta**: sigue en `qwen/qwen2.5-vl-3b` (`ROUTE_LLM_MODEL_NAME`, entrada d) por decision del
+  autor; con la GGUF tambien podria usar LFM.
+- **Informe**: cap. 8 §8.1.2 (modelo adoptado, tabla de candidatos, criterio), §8.6 (las latencias medidas
+  son de Qwen2.5-VL-3B), cap. 1, cap. 10 (brazo `slm`, comparacion de modelos, validez externa), cap. 12 y
+  anexo A6 (variables y paso 3 de la puesta en marcha).
+- **Memoria del servidor**: LM Studio carga los modelos bajo demanda. Al pedir uno que no esta cargado, el
+  servidor puede descargar el otro; durante las pruebas quedo cargado solo el que se uso ultimo. Conviene
+  dejar cargados LFM GGUF (vuelo) y Qwen (planificador) antes de un lote.
+
+# 2026-10-02 (d) - Modelo propio para el planificador de ruta: Qwen2.5-VL-3B (vuelo sigue con LFM2.5-VL-1.6B)
+
+- **Sintoma**: el plan de `citysim_pilot` con `lfm2.5-vl-1.6b` dio `None/None` en las 37 candidatas y dejo
+  todos los tramos en `directo` (`ninguna_aprobada`). No fue un rechazo del modelo: `lfm2.5-vl-1.6b` resolvia a la
+  version MLX, que devuelve texto vacio (genera 9 tokens, `finish=stop`) cuando la consulta pide a la vez JSON
+  forzado y logprobs; cada opcion por separado responde. La version GGUF no tiene el problema (entrada e). Qwen2.5-VL-3B responde con las dos (`{"respuesta": "no"}`, P(si) 0.013 y 0.099
+  en las rectas START->WP_0_SUR y WP_2->WP_3).
+- **Cambio**: nueva variable `ROUTE_LLM_MODEL_NAME="qwen/qwen2.5-vl-3b"` en `config/.env`, mismo servidor
+  (`LOCAL_LLM_URL`). `route_planner.model_name()` la usa y, si no esta, cae en `LOCAL_LLM_MODEL_NAME`. El
+  modelo ya forma parte de `plan_key`, asi que el plan guardado con LFM se descarta y se recalcula. El vuelo
+  (`LOCAL_LLM_MODEL_NAME`) sigue en `lfm2.5-vl-1.6b`. `route_bench.py` usa la misma consulta y queda con Qwen.
+  La latencia del plan no afecta el vuelo: se calcula antes del despegue (primera consulta ~13 s con la
+  carga del modelo, luego ~3 s por candidata).
+- **Test**: `test_planner_model_falls_back_to_flight_model`.
+- **Pendiente**: el planificador no distingue "sin respuesta" de "ninguna aprobada". (El banco de preguntas
+  pide JSON forzado y logprobs con `LOCAL_LLM_MODEL_NAME`; con la GGUF de la entrada e responde.)
+
+# 2026-10-02 (c) - Cambio de VLM: Qwen2.5-VL-3B -> LFM2.5-VL-1.6B (MLX 4-bit)
+
+Decision del autor: reemplazar `qwen/qwen2.5-vl-3b` por `mlx-community/LFM2.5-VL-1.6B-4bit`
+(https://huggingface.co/mlx-community/LFM2.5-VL-1.6B-4bit), servido por LM Studio (runtime MLX) en la
+Mac mini M4 (192.168.110.101:1234).
+- **Motivo**: latencia. Qwen2.5-VL-3B tarda ~10-12 s por consulta con imagen (watchdogs en 13 s / 18 s) y
+  la evidencia disponible no muestra que discrimine (52 de 53 respuestas sectoriales "transitable",
+  respuestas casi constantes; cap. 9 §9.8, cap. 12). LFM2.5-VL-1.6B: backbone LFM2.5-1.2B (hibrido con
+  convoluciones, decodificacion rapida) + SigLIP2 NaFlex 400M, 64-256 tokens por imagen; RealWorldQA 64.8,
+  MMStar 50.7 segun la ficha del modelo (Qwen2.5-VL-3B en el mismo rango en RealWorldQA, ~5 puntos mas en
+  MMStar). Se espera ~2x menos tiempo de generacion, no 7x (se descarto LFM2.5-VL-450M por razonamiento
+  espacial). Ningun benchmark publico mide la tarea; la decide el banco.
+- **Formato**: el repo original `LiquidAI/LFM2.5-VL-1.6B` (safetensors de PyTorch) no carga en LM Studio
+  ("No LM Runtime found for model format 'torchSafetensors'"); hace falta la conversion MLX (o GGUF + mmproj).
+- **Banco del VLM, uno por modelo**: `airsim-runs/vlm_bench/v1` (Qwen) y `v1_lfm16` (LFM). `evaluate.py`,
+  `route_bench.py` y `report.py` no separan por modelo (la clave de reanudacion no incluye `model`), por eso
+  bancos separados; `v1_lfm16` se crea copiando `samples.jsonl`, `samples_gt.jsonl`, `frames/` y `replay/`
+  una vez completas las etiquetas de `v1` (hoy 595). Comparacion: `report.py --bench qwen3b=... lfm16=...`.
+- **Pendiente**: `config/.env` (`LOCAL_LLM_MODEL_NAME`, `OLLAMA_MODEL`, `TACTICAL_MODEL`) dice
+  `lfm2.5-vl-1.6b` (el repo original): poner el identificador que devuelva `/v1/models` para la version MLX.
+  Verificar logprobs, JSON schema y `finish_reason != length`. Recalibrar `SLM_WATCHDOG_MS` y
+  `SLM_DEEP_WATCHDOG_MS`. Registrar la cuantizacion de cada modelo (4-bit en un 1.6B puede costar mas
+  precision que en un 3B) y el runtime: si Qwen corre en otro runtime, la latencia compara runtimes ademas
+  de modelos. Lotes D/E/F con el modelo que respalde el banco.
+
 # 2026-10-02 (b) - Banco del VLM como medicion generalista; prompts sin objetos de escenario
 
 Criterio (decision del autor): la solucion debe ser generalista; ajustar prompts o umbrales a un escenario

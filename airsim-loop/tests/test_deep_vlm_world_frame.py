@@ -129,7 +129,7 @@ def test_full_scan_injects_forced_world_subgoal(monkeypatch):
         corner = state.get("inject_corner")
         assert corner and corner["label"] == "VLM_SCAN_GOAL"
         assert abs(abs(math.degrees(math.atan2(corner["y"], corner["x"]))) - 180.0) < 2.0
-        assert "Imagen 1" in seen["image_labels"][0] and "Rumbo" not in seen["image_labels"][0]
+        assert seen["image_labels"][0] == "[Image 1]"
         assert "Prioriza" not in seen["prompt"]
     finally:
         service.stop()

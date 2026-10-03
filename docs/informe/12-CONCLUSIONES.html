@@ -1244,7 +1244,7 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Sistema sin validación en vuelo:</strong> la capa estratégica, el barrido en marco mundo y la detección de atasco de dos señales están cubiertos por tests (incluido el grafo compilado de punta a punta) pero no tienen corridas en el simulador. Sus umbrales (período de 3 s, edad máxima de 10 s, sub-meta a 15 m como máximo, cambio de altitud de 4 m como máximo, deduplicación de 10 m, radio de 8 m sin consultas alrededor del waypoint, grilla de 3×3) son decisiones de diseño, no valores calibrados.</p>
 </li>
 <li>
-<p><strong>Capacidad de discriminación del VLM no demostrada:</strong> en las corridas de diagnóstico, 52 de 53 respuestas sectoriales declararon el frente transitable, incluso a menos de un metro de una superficie (cap. 9, §9.8.3). El diseño del sistema cambia la pregunta y el prompt (cap. 8, §8.3–§8.5), pero no hay evidencia todavía de que Qwen2.5-VL-3B distinga sectores volables de bloqueados en el render de CitySim; en la corrida piloto de validación, las respuestas de la capa estratégica y del barrido fueron casi constantes (cap. 9, §9.8.9). Si no lo hace, el brazo <code>slm</code> se reduce, en la práctica, al lazo rápido más escapes verticales.</p>
+<p><strong>Capacidad de discriminación del VLM no demostrada:</strong> en las corridas de diagnóstico, 52 de 53 respuestas sectoriales declararon el frente transitable, incluso a menos de un metro de una superficie (cap. 9, §9.8.3). El diseño del sistema cambia la pregunta y el prompt (cap. 8, §8.3–§8.5), pero no hay evidencia todavía de que el VLM (Qwen2.5-VL-3B en esas corridas; LFM2.5-VL-1.6B en la versión final) distinga sectores volables de bloqueados en el render de CitySim; en la corrida piloto de validación, las respuestas de la capa estratégica y del barrido fueron casi constantes (cap. 9, §9.8.9). Si no lo hace, el brazo <code>slm</code> se reduce, en la práctica, al lazo rápido más escapes verticales.</p>
 </li>
 <li>
 <p><strong>Componentes del lazo rápido sin evaluar por separado:</strong> la evasión por flujo, <code>GIRAR_90</code>, el gobernador de velocidad, la detección de techo y la reacción a contacto forman parte del sistema por ser comunes en espíritu a los tres brazos, no por evidencia de beneficio. Varios de sus umbrales se fijaron sobre una o dos corridas.</p>
@@ -1268,7 +1268,7 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Un único mapa por escenario:</strong> cada escenario de obstrucción se corrió en un solo mapa urbano (TownSim o CitySim). La generalización de los resultados a otras geometrías urbanas no está garantizada con los datos disponibles.</p>
 </li>
 <li>
-<p><strong>VLM fijo (Qwen2.5-VL-3B-Instruct, zero-shot):</strong> el modelo opera en régimen zero-shot sin sintonización al dominio de vuelo. Los resultados de deliberación están acotados por la distribución de preentrenamiento del modelo y el diseño del prompt, no por la capacidad máxima de la arquitectura.</p>
+<p><strong>VLM fijo (LFM2.5-VL-1.6B, zero-shot):</strong> el modelo opera en régimen zero-shot sin sintonización al dominio de vuelo. Los resultados de deliberación están acotados por la distribución de preentrenamiento del modelo y el diseño del prompt, no por la capacidad máxima de la arquitectura.</p>
 </li>
 </ul>
 <hr />

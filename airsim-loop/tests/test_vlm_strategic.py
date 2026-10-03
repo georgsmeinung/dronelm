@@ -203,3 +203,19 @@ def test_layer_replans_with_a_subgoal_active_and_clears_it_when_direct_is_free()
     assert len(svc.requests) == 1        # consulta aunque el objetivo activo sea una sub-meta
     layer.tick(st)
     assert st.get("_clear_subgoals") is True and "inject_corner" not in st
+
+
+def test_english_answer_is_translated_to_internal_states():
+    cells = {c: ("free" if c == "B2" else "blocked") for c in vs.CELLS}
+    parsed = vs.parse_strategic({"cells": cells})
+    assert parsed["sectores"]["B2"] == "libre" and parsed["sectores"]["A1"] == "bloqueado"
+    assert vs.parse_strategic({"cells": dict(cells, B2="maybe")}) is None
+    # formato anterior (castellano) sigue aceptado
+    assert vs.parse_strategic({"sectores": {c: "libre" for c in vs.CELLS}})["sectores"]["C3"] == "libre"
+
+
+def test_strategic_prompt_is_short_english_facts():
+    assert vs.strategic_prompt("WP_3", 34.4, "B2", 0.0, 10.2) == "Goal WP_3: 34 m, in cell B2. Altitude 10 m."
+    off = vs.strategic_prompt("WP_3", 34.0, None, -97.0, 10.0)
+    assert "outside the image, 97 deg to the left" in off
+    assert len(vs.SYSTEM_PROMPT_STRATEGIC) < 450

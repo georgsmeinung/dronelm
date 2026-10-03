@@ -69,23 +69,19 @@ VLM_STRATEGIC_IMAGE_MAX_SIZE = int(os.getenv("VLM_STRATEGIC_IMAGE_MAX_SIZE", os.
 GRID_COLS = "ABC"
 GRID_ROWS = "123"
 CELLS = [c + r for r in GRID_ROWS for c in GRID_COLS]
-CELL_STATES = ["libre", "bloqueado"]
+CELL_STATES = ["libre", "bloqueado"]          # valores internos (registros, sub-meta, banco)
+# 2026-10-02: el modelo responde en ingles (prompt en ingles); el parser traduce a CELL_STATES.
+CELL_ANSWERS = ["free", "blocked"]
+ANSWER_TO_STATE = dict(zip(CELL_ANSWERS, CELL_STATES))
 # Desempate entre sectores igual de cerca de la meta: la fila del medio, despues arriba (el suelo esta
 # abajo), despues abajo.
 _ROW_PREF = {"2": 0, "1": 1, "3": 2}
 
 SYSTEM_PROMPT_STRATEGIC = (
-    "Sos el sistema de percepcion de un dron que vuela a baja altura en un entorno urbano.\n"
-    "Recibes la imagen de la camara frontal dividida en una grilla de 3x3 sectores, como la grilla de "
-    "tercios de una foto. Columnas A, B, C (izquierda a derecha); filas 1, 2, 3 (arriba, medio, abajo). "
-    "La fila 2 es la altura del dron; la fila 1 es pasar por arriba; la fila 3, por abajo. "
-    "Una marca roja 'META' indica la direccion del destino.\n"
-    "NO decides acciones: describes lo que ves.\n\n"
-    "Para cada sector indica si el dron puede volar en esa direccion al menos 15 m sin chocar:\n"
-    "- 'libre': se ve cielo, calle, plaza o espacio abierto en ese sector.\n"
-    "- 'bloqueado': hay un edificio, fachada, vidrio, muro, arbol o vegetacion, puente o estructura elevada, cornisa, "
-    "balcon, techo o el interior de un edificio en ese sector, a menos de 15 m.\n\n"
-    "Responde UNICAMENTE con JSON con la clave 'sectores' y los nueve sectores A1..C3."
+    "You see the front camera of a drone flying low in a city, split into a 3x3 grid: columns A B C "
+    "(left to right), rows 1 2 3 (top, drone height, bottom). The red GOAL mark is the destination.\n"
+    "For each cell: \"free\" if the drone can fly 15 m that way, \"blocked\" if a building, wall, "
+    "tree, bridge or roof is closer than 15 m. Reply with JSON only."
 )
 
 RESPONSE_JSON_SCHEMA_STRATEGIC = {
@@ -95,14 +91,14 @@ RESPONSE_JSON_SCHEMA_STRATEGIC = {
         "schema": {
             "type": "object",
             "properties": {
-                "sectores": {
+                "cells": {
                     "type": "object",
-                    "properties": {c: {"type": "string", "enum": CELL_STATES} for c in CELLS},
+                    "properties": {c: {"type": "string", "enum": CELL_ANSWERS} for c in CELLS},
                     "required": list(CELLS),
                     "additionalProperties": False,
                 },
             },
-            "required": ["sectores"],
+            "required": ["cells"],
             "additionalProperties": False,
         },
     },
@@ -216,7 +212,7 @@ def annotate_grid(crop: Any, f: float, goal_az_deg: float, goal_el_deg: float,
         cv2.circle(img, (gx, gy), r, (0, 0, 255), 2)  # BGR: rojo
         cv2.line(img, (gx - r, gy), (gx + r, gy), (0, 0, 255), 1)
         cv2.line(img, (gx, gy - r), (gx, gy + r), (0, 0, 255), 1)
-        cv2.putText(img, "META", (max(0, gx - int(18 * scale)), max(10, gy - r - 3)),
+        cv2.putText(img, "GOAL", (max(0, gx - int(18 * scale)), max(10, gy - r - 3)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45 * scale, (0, 0, 255), 2)
         ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 80])
         return base64.b64encode(buf).decode("utf-8") if ok else None
@@ -252,17 +248,7 @@ def build_request(state: Dict[str, Any]) -> Optional[Tuple[Dict[str, Any], Dict[
     img = annotate_grid(crop, f, goal_az, goal_el)
     if img is None:
         return None
-    if goal_cell is not None:
-        where = f"en el sector {goal_cell} (marca META)"
-    else:
-        lado = "izquierda" if goal_az < 0 else "derecha"
-        where = f"fuera de la imagen, hacia la {lado} ({abs(goal_az):.0f} grados; marca META en el borde)"
-    prompt = (
-        f"Destino ({wp.get('label', 'WP')}): {dist:.0f} m, {where}. "
-        f"Altura del dron: {abs(float(pos.get('z', 0.0))):.0f} m.\n"
-        "Sectores: A1 B1 C1 (arriba), A2 B2 C2 (altura del dron), A3 B3 C3 (abajo).\n"
-        "Describe cada sector y responde solo el JSON."
-    )
+    prompt = strategic_prompt(wp.get("label", "WP"), dist, goal_cell, goal_az, abs(float(pos.get("z", 0.0))))
     anchor = {
         "x": float(pos.get("x", 0.0)), "y": float(pos.get("y", 0.0)), "z": float(pos.get("z", 0.0)),
         "yaw_deg": yaw_deg, "ts": float(telem.get("timestamp") or time.time()), "sent_at": time.time(),
@@ -274,22 +260,38 @@ def build_request(state: Dict[str, Any]) -> Optional[Tuple[Dict[str, Any], Dict[
         "mode": "strategic",
         "prompt": prompt,
         "images_b64": [img],
-        "image_labels": ["[Camara frontal, recorte cuadrado con grilla 3x3]"],
+        "image_labels": [STRATEGIC_IMAGE_LABEL],
     }
     return payload, anchor
 
 
+STRATEGIC_IMAGE_LABEL = "[Front camera, 3x3 grid]"
+
+
+def strategic_prompt(label: str, dist: float, goal_cell: Optional[str], goal_az: float, alt_m: float) -> str:
+    """Mensaje de cada consulta: solo los hechos que el modelo no ve en la imagen."""
+    if goal_cell is not None:
+        where = f"in cell {goal_cell}"
+    else:
+        where = f"outside the image, {abs(goal_az):.0f} deg to the {'left' if goal_az < 0 else 'right'} (GOAL mark on the edge)"
+    return f"Goal {label}: {dist:.0f} m, {where}. Altitude {alt_m:.0f} m."
+
+
 # --------------------------------------------------------------------------- respuesta
 def parse_strategic(data: Any) -> Optional[Dict[str, Any]]:
-    """Normaliza la respuesta. None si no tiene el formato esperado (nunca un valor por defecto)."""
+    """Normaliza la respuesta a valores internos ({"sectores": {celda: libre|bloqueado}}).
+
+    None si no tiene el formato esperado (nunca un valor por defecto). Acepta el formato en ingles
+    ("cells": free|blocked) y el anterior en castellano ("sectores": libre|bloqueado)."""
     if not isinstance(data, dict):
         return None
-    cells = data.get("sectores")
+    cells = data.get("cells") if isinstance(data.get("cells"), dict) else data.get("sectores")
     if not isinstance(cells, dict):
         return None
     out: Dict[str, str] = {}
     for c in CELLS:
         v = str(cells.get(c, "")).strip().lower()
+        v = ANSWER_TO_STATE.get(v, v)
         if v not in CELL_STATES:
             return None
         out[c] = v

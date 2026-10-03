@@ -60,21 +60,25 @@ LOCAL_LLM_MODEL_NAME = os.getenv("LOCAL_LLM_MODEL_NAME", "phi3")
 # Tipos de obstaculo reconocidos por el VLM (rediseno 2026-0929).
 # El VLM ahora describe la escena en lugar de elegir acciones.
 OBSTACLE_TIPOS = ["libre", "fachada", "muro", "vegetacion", "interior", "indeterminado"]
+# 2026-10-02: el modelo responde en ingles; el parser traduce a OBSTACLE_TIPOS (valores internos).
+VIEW_ANSWERS = ["open", "facade", "wall", "vegetation", "inside", "unclear"]
+VIEW_TO_TIPO = dict(zip(VIEW_ANSWERS, OBSTACLE_TIPOS))
 
 # Schema JSON para descripcion panoramica (deep_vlm: N rumbos con imagen por rumbo).
 # 2026-0930: cada entrada se identifica por el NUMERO de imagen ("img", 1..N), no por un angulo.
 # Antes el modelo devolvia "deg" a veces absoluto (copiando la etiqueta "[Rumbo -53 deg]") y a veces
 # relativo, y el parser lo interpretaba siempre como relativo: "el camino a la meta esta libre" se
 # convertia en EVADIR_IZQUIERDA. El rumbo real de cada imagen lo conoce el codigo, no el modelo.
+# 2026-10-02: sin "conf" ni "degradada": el modelo los copiaba (0.95, 0.92, 0.89, 0.86 en 3 de 4
+# barridos del piloto 222804Z) y ninguno se usa para decidir.
 _SECTOR_SCHEMA_ITEM = {
     "type": "object",
     "properties": {
         "img":  {"type": "integer", "minimum": 1},
-        "tipo": {"type": "string", "enum": OBSTACLE_TIPOS},
-        "ok":   {"type": "boolean"},
-        "conf": {"type": "number"},
+        "view": {"type": "string", "enum": VIEW_ANSWERS},
+        "free": {"type": "boolean"},
     },
-    "required": ["img", "tipo", "ok"],
+    "required": ["img", "view", "free"],
     "additionalProperties": False,
 }
 RESPONSE_JSON_SCHEMA_PANORAMA = {
@@ -84,41 +88,25 @@ RESPONSE_JSON_SCHEMA_PANORAMA = {
         "schema": {
             "type": "object",
             "properties": {
-                "rumbos":    {"type": "array", "items": _SECTOR_SCHEMA_ITEM},
-                "degradada": {"type": "boolean"},
-                "r":         {"type": "string"},
+                "views": {"type": "array", "items": _SECTOR_SCHEMA_ITEM},
             },
-            "required": ["rumbos", "degradada"],
+            "required": ["views"],
             "additionalProperties": False,
         },
     },
 }
 
-# Prompt panoramico para deep_vlm — N rumbos, una imagen por rumbo.
-# 2026-0930: el ejemplo ya no trae valores concretos ("ok": true, "conf": 0.9): el modelo 3B los
-# copiaba (52 de 53 respuestas sectoriales decian "frente transitable", incluso a 0.1 m de un muro).
+# Prompt panoramico para deep_vlm — N rumbos, una imagen por rumbo. Sin ejemplo con valores: el modelo
+# los copia. 2026-10-02: en ingles y corto; los tipos se explican en la misma linea.
 SYSTEM_PROMPT_DEEP_SCAN = (
-    "Sos el sistema de percepcion semantica de un dron autonomo que vuela a baja altura en un entorno urbano.\n"
-    "Se te muestran varias imagenes numeradas, tomadas girando en el lugar, cada una hacia un rumbo "
-    "distinto (NO son fotogramas consecutivos en el tiempo).\n"
-    "Describe lo que ves en cada imagen. NO decides acciones.\n\n"
-    "Para CADA imagen genera exactamente una entrada en 'rumbos', en el mismo orden, con:\n"
-    "- img: el numero de la imagen (1, 2, ...)\n"
-    "- tipo: la superficie u obstaculo predominante A LA ALTURA DEL DRON en los proximos 15 m\n"
-    "- ok: true SOLO si el dron puede volar recto en esa direccion 15 m sin chocar; false si hay "
-    "edificio, muro, fachada, arbol o vegetacion, puente o estructura elevada, cornisa o techo cerca\n"
-    "- conf: certeza de 0.0 a 1.0\n\n"
-    "Tipos validos:\n"
-    "- 'libre': calle, plaza, cielo, espacio abierto a la altura del dron\n"
-    "- 'fachada': superficie plana (vidrio, metal, hormigon liso, reflectante)\n"
-    "- 'muro': superficie con textura (ladrillo, roca, hormigon rugoso), guardarrail, baranda\n"
-    "- 'vegetacion': arboles, ramas, follaje, setos\n"
-    "- 'interior': imagen oscura o uniforme sin informacion util\n"
-    "- 'indeterminado': no se puede determinar con la imagen disponible\n\n"
-    "degradada: true si la mayoria de las imagenes son oscuras o uniformes.\n\n"
-    "Responde UNICAMENTE con JSON: {\"rumbos\": [{\"img\": <n>, \"tipo\": <tipo>, \"ok\": <bool>, "
-    "\"conf\": <0-1>}, ...], \"degradada\": <bool>}"
+    "You see numbered images from a drone flying low in a city; it turned in place and each image faces "
+    "a different direction. For each image give:\n"
+    "- view: what is ahead at drone height within 15 m: open (street, square, sky), facade, wall, "
+    "vegetation, inside (dark or uniform, inside a building) or unclear.\n"
+    "- free: true only if the drone can fly straight 15 m without hitting anything.\n"
+    "Reply with JSON only."
 )
+SCAN_IMAGE_LABEL = "[Image {n}]"
 
 
 def _normalize_deg(deg: float) -> float:
@@ -194,20 +182,21 @@ def parse_panorama_description(decision: Optional[Dict[str, Any]]) -> Optional[D
     """
     if not isinstance(decision, dict):
         return None
-    rumbos_raw = decision.get("rumbos")
+    rumbos_raw = decision.get("views", decision.get("rumbos"))
     if not isinstance(rumbos_raw, list) or len(rumbos_raw) == 0:
         return None
     normalized = []
     for r in rumbos_raw:
         if not isinstance(r, dict):
             continue
-        tipo = r.get("tipo", "indeterminado")
+        # ingles (view/free, 2026-10-02) o castellano (tipo/ok)
+        tipo = VIEW_TO_TIPO.get(r.get("view"), r.get("tipo", "indeterminado"))
         if tipo not in OBSTACLE_TIPOS:
             tipo = "indeterminado"
         # compact: deg → relativo_deg
         deg = r.get("relativo_deg", r.get("deg", 0.0))
         # compact: ok → transitable
-        transitable = r.get("transitable", r.get("ok", False))
+        transitable = r.get("free", r.get("transitable", r.get("ok", False)))
         # compact: conf → confianza
         confianza = r.get("confianza", r.get("conf", 0.5))
         img = r.get("img")
@@ -432,35 +421,14 @@ def _build_panorama_prompt(
     telemetry: Dict[str, Any],
     deadlock_cycles: int,
 ) -> str:
-    """Prompt del barrido (2026-0930): solo hechos, sin sugerir acciones.
+    """Mensaje del barrido: solo lo que el modelo necesita para describir las imagenes.
 
-    Antes el prompt decia "Prioriza EVADIR_IZQUIERDA, EVADIR_DERECHA o GANAR_ALTURA" aunque el
-    sistema le pide al modelo que NO decida acciones."""
+    2026-10-02: sin angulos, meta ni ciclos de atasco. El modelo solo describe cada imagen; el rumbo
+    de cada una y la eleccion los resuelve el codigo (panorama_to_subgoal). Los argumentos quedan
+    por compatibilidad con los llamadores."""
     pos = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
     altitude = abs(float(pos.get("z", 0.0))) if isinstance(pos, dict) else 0.0
-    lines = [
-        f"El dron lleva {deadlock_cycles} ciclos sin avanzar hacia su destino y giro en el lugar "
-        f"para mirar {len(headings_world_deg)} direcciones. Altura: {altitude:.0f} m.",
-        "Imagenes (angulo respecto de la direccion en la que venia volando, + = derecha):",
-    ]
-    goal_img = None
-    if goal_bearing_deg is not None and headings_world_deg:
-        goal_img = min(range(len(headings_world_deg)),
-                       key=lambda i: abs(_normalize_deg(headings_world_deg[i] - goal_bearing_deg)))
-    for i, h in enumerate(headings_world_deg):
-        rel = _normalize_deg(h - start_yaw_deg)
-        tags = []
-        if i == 0:
-            tags.append("direccion en la que no pudo avanzar")
-        if i == goal_img:
-            tags.append("la mas cercana a la direccion del destino")
-        lines.append(f"- Imagen {i + 1}: {rel:+.0f} deg" + (f" ({'; '.join(tags)})" if tags else ""))
-    if goal is not None and goal_bearing_deg is not None:
-        dist = math.hypot(float(goal.get("x", 0.0)) - float(pos.get("x", 0.0)),
-                          float(goal.get("y", 0.0)) - float(pos.get("y", 0.0)))
-        lines.append(f"Destino ({goal.get('label', 'WP')}) a {dist:.0f} m.")
-    lines.append("Describe cada imagen y responde solo el JSON.")
-    return "\n".join(lines)
+    return f"{len(headings_world_deg)} images. Altitude {altitude:.0f} m."
 
 
 def deep_scan_cycle(
@@ -632,7 +600,7 @@ def deep_scan_cycle(
                     continue
                 images_b64.append(encoded)
                 headings.append(float(heading))
-                labels.append(f"[Imagen {len(images_b64)}]")
+                labels.append(SCAN_IMAGE_LABEL.format(n=len(images_b64)))
             state["_scan_frames"] = [f for f in frames if f[1] is not None][: len(headings)]
 
             prompt = _build_panorama_prompt(headings, start_yaw, goal_bearing, goal, telemetry, deadlock_cycles)

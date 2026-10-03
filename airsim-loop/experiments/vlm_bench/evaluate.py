@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import LOCAL_LLM_MODEL_NAME, append_jsonl, choice_probs_at, parse_json, query_vlm, read_jsonl, value_offsets  # noqa: E402
-from questions import CELLS, QUESTION_NAMES, GridQuestion, ScanQuestion, SingleQuestion, catalog  # noqa: E402
+from questions import CELLS, QUESTION_NAMES, GridQuestion, ScanQuestion, SingleQuestion, catalog, vs  # noqa: E402
 
 ALIGN_MIN = 0.5
 
@@ -88,30 +88,32 @@ def load_images(sample: Dict[str, Any], bench: Path, source: str) -> Optional[Li
 def read_answer(q, sample: Dict[str, Any], text: str, tokens: List[Any]) -> Dict[str, Any]:
     data = parse_json(text)
     if isinstance(q, SingleQuestion):
-        ans = (data or {}).get("respuesta")
-        offs = value_offsets(text, "respuesta")
+        ans = q.to_label.get((data or {}).get("answer"))
+        offs = value_offsets(text, "answer")
         probs = choice_probs_at(tokens, offs[0], q.choices) if offs and tokens else None
+        probs = {q.to_label[k]: v for k, v in probs.items()} if probs else None
         return {"answer": ans, "probs": probs, "truth": q.truth(sample)}
     if isinstance(q, GridQuestion):
-        sect = (data or {}).get("sectores") or {}
+        sect = (vs.parse_strategic(data) or {}).get("sectores") or {}
         probs_by_label = {}
         for lab in CELLS:
             offs = value_offsets(text, lab)
-            probs_by_label[lab] = choice_probs_at(tokens, offs[0], q.choices) if offs and tokens else None
+            pr = choice_probs_at(tokens, offs[0], q.choices) if offs and tokens else None
+            probs_by_label[lab] = {vs.ANSWER_TO_STATE[k]: v for k, v in pr.items()} if pr else None
         labels = q.labels(sample) or {c: c for c in CELLS}
         return {"answer": q.physical(sample, sect),
                 "probs": {pos: probs_by_label.get(lab) for pos, lab in labels.items()},
                 "truth": {c: ("libre" if sample["gt"]["cell_free"][c] else "bloqueado") for c in CELLS}}
     # barrido
-    rumbos = (data or {}).get("rumbos") or []
+    rumbos = (data or {}).get("views") or []
     order = q.order(sample)
-    offs = value_offsets(text, "ok", quoted=False)
+    offs = value_offsets(text, "free", quoted=False)
     n = len(sample["members"])
     ok_by_member: List[Optional[bool]] = [None] * n
     p_by_member: List[Optional[float]] = [None] * n
     for k, member_idx in enumerate(order):
         if k < len(rumbos) and isinstance(rumbos[k], dict):
-            ok_by_member[member_idx] = rumbos[k].get("ok")
+            ok_by_member[member_idx] = rumbos[k].get("free")
         if k < len(offs) and tokens:
             pr = choice_probs_at(tokens, offs[k], ["true", "false"])
             p_by_member[member_idx] = pr["true"] if pr else None

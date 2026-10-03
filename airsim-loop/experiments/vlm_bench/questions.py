@@ -30,7 +30,7 @@ from common import ROOT, encode_jpeg, image_part, text_part  # noqa: E402
 sys.path.insert(0, str(ROOT))
 from src.agents import vlm_strategic as vs  # noqa: E402
 from src.agents.deep_scan import (  # noqa: E402
-    DEEP_SCAN_IMAGE_MAX_SIZE, RESPONSE_JSON_SCHEMA_PANORAMA, SYSTEM_PROMPT_DEEP_SCAN,
+    DEEP_SCAN_IMAGE_MAX_SIZE, RESPONSE_JSON_SCHEMA_PANORAMA, SCAN_IMAGE_LABEL, SYSTEM_PROMPT_DEEP_SCAN,
 )
 
 CELLS = vs.CELLS
@@ -38,39 +38,36 @@ CELLS = vs.CELLS
 
 def _enum_schema(name: str, choices: List[str]) -> Dict[str, Any]:
     return {"type": "json_schema", "json_schema": {"name": name, "schema": {
-        "type": "object", "properties": {"respuesta": {"type": "string", "enum": choices}},
-        "required": ["respuesta"], "additionalProperties": False}}}
+        "type": "object", "properties": {"answer": {"type": "string", "enum": choices}},
+        "required": ["answer"], "additionalProperties": False}}}
 
 
-SYSTEM_SHORT = (
-    "Sos el sistema de percepcion de un dron que vuela a baja altura en un entorno urbano. Recibes la "
-    "imagen de su camara frontal. El centro de la imagen es la direccion en la que avanza el dron, a su "
-    "altura. Responde UNICAMENTE con JSON {\"respuesta\": <opcion>}."
-)
+# 2026-10-02: preguntas en ingles y cortas, como los prompts de vuelo. El modelo responde con `choices`
+# (ingles); `labels` son los valores internos de la etiqueta de referencia, en el mismo orden.
+SYSTEM_SHORT = ("You see the front camera of a drone flying low in a city. The image center is where it "
+                "is heading, at its height. Reply with JSON only.")
 
 SINGLE = {
     "centro_libre": {
-        "choices": ["si", "no"], "positive": "si", "gt": "center_free",
-        "prompt": "Puede el dron avanzar en linea recta hacia el centro de la imagen al menos 15 m sin chocar "
-                  "con nada (edificio, fachada, vidrio, muro, arbol o vegetacion, puente o estructura elevada, "
-                  "cornisa)? Opciones: si, no.",
+        "choices": ["yes", "no"], "labels": ["si", "no"], "positive": "si", "gt": "center_free",
+        "prompt": "Can the drone fly straight toward the image center for 15 m without hitting anything? yes or no.",
     },
     "borde_lateral": {
-        "choices": ["izquierda", "derecha", "ninguno"], "positive": None, "gt": "edge_side",
-        "prompt": "Delante del dron hay un obstaculo. Por que lado termina el obstaculo, es decir, por donde "
-                  "se ve espacio libre para rodearlo a la misma altura? Opciones: izquierda, derecha, "
-                  "ninguno (no se ve donde termina).",
+        "choices": ["left", "right", "none"], "labels": ["izquierda", "derecha", "ninguno"], "positive": None,
+        "gt": "edge_side",
+        "prompt": "There is an obstacle ahead. On which side does it end, leaving room to fly around it at the "
+                  "same height? left, right or none (the end is not visible).",
     },
     "borde_superior": {
-        "choices": ["si", "no"], "positive": "si", "gt": "top_clear",
-        "prompt": "Delante del dron hay un obstaculo. Se ve cielo o espacio libre justo por encima de el, "
-                  "en la parte de arriba del centro de la imagen? Opciones: si, no.",
+        "choices": ["yes", "no"], "labels": ["si", "no"], "positive": "si", "gt": "top_clear",
+        "prompt": "There is an obstacle ahead. Is there sky or open space right above it, at the top center of "
+                  "the image? yes or no.",
     },
     "direccion_abierta": {
-        "choices": ["izquierda", "centro", "derecha", "ninguna"], "positive": None, "gt": "open_dir",
-        "prompt": "En cual tercio de la imagen (izquierda, centro, derecha) hay mas espacio libre para volar "
-                  "a la altura del dron, como una calle que se aleja? Si en ninguno hay al menos 15 m "
-                  "libres, responde ninguna. Opciones: izquierda, centro, derecha, ninguna.",
+        "choices": ["left", "center", "right", "none"], "labels": ["izquierda", "centro", "derecha", "ninguna"],
+        "positive": None, "gt": "open_dir",
+        "prompt": "Which third of the image has the most open space at drone height, like a street going away? "
+                  "left, center or right; none if no third is open for 15 m.",
     },
 }
 
@@ -125,21 +122,17 @@ def grid_prompt(sample: Dict[str, Any], labels: Optional[Dict[str, str]] = None)
     gd = goal_dir(sample)
     crop_side, f = 720, vs._focal_px(1080)
     in_view = abs(gd["az"]) <= vs.crop_half_fov_deg(crop_side, f) and abs(gd["el"]) <= vs.crop_half_fov_deg(crop_side, f)
-    if in_view:
-        cell = vs.cell_for_direction(gd["az"], gd["el"], crop_side, f)
-        where = f"en el sector {labels[cell] if labels else cell} (marca META)"
-    else:
-        lado = "izquierda" if gd["az"] < 0 else "derecha"
-        where = f"fuera de la imagen, hacia la {lado} ({abs(gd['az']):.0f} grados; marca META en el borde)"
+    cell = vs.cell_for_direction(gd["az"], gd["el"], crop_side, f) if in_view else None
+    if cell is not None and labels:
+        cell = labels[cell]
+    text = vs.strategic_prompt((sample.get("goal") or {}).get("label", "WP"), gd["dist"], cell, gd["az"],
+                               abs(sample["pose"]["z"]))
     if labels is None:
-        rows = "Sectores: A1 B1 C1 (arriba), A2 B2 C2 (altura del dron), A3 B3 C3 (abajo)."
-    else:
-        rows = ("Las etiquetas de los sectores estan dibujadas en la esquina de cada uno. Fila de arriba: "
-                + " ".join(labels[c + "1"] for c in "ABC") + "; fila del medio (altura del dron): "
-                + " ".join(labels[c + "2"] for c in "ABC") + "; fila de abajo: "
-                + " ".join(labels[c + "3"] for c in "ABC") + ".")
-    return (f"Destino ({(sample.get('goal') or {}).get('label', 'WP')}): {gd['dist']:.0f} m, {where}. "
-            f"Altura del dron: {abs(sample['pose']['z']):.0f} m.\n{rows}\nDescribe cada sector y responde solo el JSON.")
+        return text
+    # Con las etiquetas permutadas el modelo no puede deducirlas de la posicion: se las listamos.
+    return (text + "\nCell labels are drawn in each corner. Top row: " + " ".join(labels[c + "1"] for c in "ABC")
+            + "; middle row: " + " ".join(labels[c + "2"] for c in "ABC") + "; bottom row: "
+            + " ".join(labels[c + "3"] for c in "ABC") + ".")
 
 
 # --------------------------------------------------------------------------- interfaz comun
@@ -159,6 +152,7 @@ class SingleQuestion(Question):
         self.name = name
         self.spec = SINGLE[name]
         self.choices = self.spec["choices"]
+        self.to_label = dict(zip(self.spec["choices"], self.spec["labels"]))
 
     def truth(self, sample: Dict[str, Any]) -> Optional[str]:
         return sample["gt"].get(self.spec["gt"])
@@ -178,7 +172,7 @@ class GridQuestion(Question):
     def __init__(self, permuted: bool) -> None:
         self.permuted = permuted
         self.name = "grid_perm" if permuted else "grid_prod"
-        self.choices = vs.CELL_STATES
+        self.choices = vs.CELL_ANSWERS
 
     def applies(self, sample):
         return goal_dir(sample) is not None
@@ -192,7 +186,7 @@ class GridQuestion(Question):
         if b64 is None:
             return None
         return {"system": vs.SYSTEM_PROMPT_STRATEGIC,
-                "parts": [text_part(grid_prompt(sample, labels)), text_part("[Camara frontal, recorte cuadrado con grilla 3x3]:"),
+                "parts": [text_part(grid_prompt(sample, labels)), text_part(vs.STRATEGIC_IMAGE_LABEL + ":"),
                           image_part(b64)],
                 "schema": vs.RESPONSE_JSON_SCHEMA_STRATEGIC, "keys": CELLS, "max_tokens": 384}
 
@@ -223,10 +217,9 @@ class ScanQuestion(Question):
 
     def build(self, sample, images, size):
         size = min(size, DEEP_SCAN_IMAGE_MAX_SIZE) if size <= 384 else size
-        parts = [text_part(f"Barrido de {len(images)} rumbos a {abs(sample['pose']['z']):.0f} m de altura. "
-                           "Describe cada imagen y responde solo el JSON.")]
+        parts = [text_part(f"{len(images)} images. Altitude {abs(sample['pose']['z']):.0f} m.")]
         for k, i in enumerate(self.order(sample)):
-            parts.append(text_part(f"[Imagen {k + 1}]:"))
+            parts.append(text_part(SCAN_IMAGE_LABEL.format(n=k + 1) + ":"))
             parts.append(image_part(encode_jpeg(images[i], size)))
         return {"system": SYSTEM_PROMPT_DEEP_SCAN, "parts": parts, "schema": RESPONSE_JSON_SCHEMA_PANORAMA,
                 "keys": [], "max_tokens": 512}

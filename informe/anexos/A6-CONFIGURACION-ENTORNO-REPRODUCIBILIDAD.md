@@ -132,7 +132,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
 | `LOCAL_LLM_URL` | `"http://192.168.110.101:1234/v1"` | Endpoint OpenAI-compatible del servidor local de inferencia (LM Studio / `llama.cpp`). |
-| `LOCAL_LLM_MODEL_NAME`| `"qwen/qwen2.5-vl-3b"` | Identificador del modelo cuantizado cargado en VRAM (`Qwen2.5-VL-3B-Instruct.Q4_K_M`). |
+| `LOCAL_LLM_MODEL_NAME`| `"liquidai/lfm2.5-vl-1.6b"` | Modelo de vuelo: LFM2.5-VL-1.6B, Q4_0, GGUF (1.55 GB). El identificador es el exacto que devuelve `/v1/models`; la versión MLX del mismo modelo no sirve (respuesta vacía con JSON restringido y *logprobs*). |
 | `VLM_IMAGE_MAX_SIZE` | `384` | Lado mayor de la imagen de la capa estratégica. Limita los tokens visuales y, con ellos, la latencia. |
 | `DEEP_SCAN_IMAGE_MAX_SIZE` | `256` | Lado mayor de cada imagen del barrido panorámico (varias imágenes por consulta). |
 | `VLM_USE_JSON_SCHEMA` | `true` | Decodificación restringida por esquema JSON (Anexo 4; cap. 8, §8.2). |
@@ -146,7 +146,10 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_MAX_DZ_M` / `VLM_SUBGOAL_MIN_ALT_M` | `4.0` / `6.0` | Cambio máximo de altitud de una sub-meta (filas 1 y 3 de la grilla) y altitud mínima de una sub-meta. |
 | `VLM_NEAR_WP_M` | `8.0` | A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre. |
 | `SCAN_FAILED_SECTOR_DEG` / `SCAN_REPEAT_RADIUS_M` / `SCAN_HISTORY_MAX` | `45.0` / `10.0` / `12` | Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, §5.12). |
-| `ROUTE_PLAN_MODE` | `vlm` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`off`: manifiesto tal cual); una vez por escenario, el mismo plan para todo el lote (cap. 4 §4.3.1). |
+| `ROUTE_PLAN_MODE` | `off` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`vlm`) o manifiesto tal cual (`off`). Desactivado en la versión final: los modelos evaluados no distinguen en el mapa una ruta por la calle de una sobre un edificio (cap. 4 §4.3.1). |
+| `ROUTE_RENDER` | `corridor` | Dibujo de cada candidata para el planificador: `corridor` (pasillo con recorte propio, rotado y con el resto oscurecido) o `line` (línea roja sobre el recorte común del tramo, norte arriba). Cada uno tiene su prompt (cap. 4 §4.3.1). |
+| `ROUTE_CORRIDOR_M` | `10.0` | Ancho del pasillo dibujado (m). |
+| `ROUTE_LLM_MODEL_NAME` | `"liquidai/lfm2.5-vl-1.6b"` | Modelo del planificador de ruta, en el mismo servidor que el de vuelo; si falta, se usa `LOCAL_LLM_MODEL_NAME`. Necesita JSON forzado y *logprobs* en la misma consulta (la versión GGUF de LFM los da; la MLX no). |
 | `ROUTE_DETOURS_M` / `ROUTE_MIN_SIDE_M` / `ROUTE_MARGIN_M` | `25,50` / `10.0` / `25.0` | Rutas candidatas por tramo: desvíos paralelos a cada lado, lado mínimo de una ruta en L y margen del recorte del mapa. |
 | `ROUTE_IMAGE_PX` / `ROUTE_TIE_EPS` | `672` / `0.05` | Tamaño de la imagen del mapa que ve el modelo y diferencia de probabilidad por debajo de la cual se elige la candidata más corta. |
 | `VLM_STUCK_QUERY_CYCLES` | `15` | Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, §5.10.1). |
@@ -373,7 +376,7 @@ Copy-Item "config/settings.json" "$HOME\Documents\AirSim\settings.json" -Force
 
 ### Paso 3: Inicialización del servidor de modelos (LM Studio)
 1. Abrir **LM Studio** (o instancia de `llama.cpp` / Ollama).
-2. Cargar el modelo multimodal `Qwen/Qwen2.5-VL-3B-Instruct` cuantizado en `Q4_K_M`.
+2. Cargar el modelo multimodal `LiquidAI/LFM2.5-VL-1.6B` en GGUF `Q4_0` (vuelo y planificador de ruta) y dejarlo cargado para no pagar la carga durante el lote.
 3. Iniciar el servidor local en el puerto `1234` con compatibilidad de API OpenAI (`http://127.0.0.1:1234/v1`).
 4. Verificar la respuesta del servidor mediante:
    ```bash

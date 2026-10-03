@@ -57,6 +57,7 @@ DEPTH_EXCEPTION_LIST: List[str] = [
     # Banco de prueba del VLM (cap. 11): reubica el dron en poses registradas, fuera de vuelo.
     "experiments/vlm_bench/ground_truth.py",
     "experiments/vlm_bench/route_bench.py",
+    "experiments/vlm_bench/map_probe.py",
 ]
 
 _FORBIDDEN_PATTERNS = (

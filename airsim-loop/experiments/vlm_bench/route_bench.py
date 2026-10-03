@@ -111,13 +111,20 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bench", required=True)
     ap.add_argument("--missions", nargs="+", required=True)
+    ap.add_argument("--judge", choices=["patches", "image"], default=rp.ROUTE_JUDGE,
+                    help="juicio del planificador a medir (ROUTE_JUDGE)")
     args = ap.parse_args()
 
     bench = Path(args.bench)
     img_dir = bench / "routes"
     img_dir.mkdir(parents=True, exist_ok=True)
     out_path = bench / "routes.jsonl"
-    done = {(r["mission"], r["leg"], r["candidate"]) for r in read_jsonl(out_path)}
+    prev = read_jsonl(out_path)
+    judge_mode = args.judge
+    done = {(r["mission"], r["leg"], r["candidate"], r.get("judge", "image")) for r in prev}
+    # La etiqueta de referencia no depende del juicio: se reutiliza la de una pasada anterior.
+    truth_cache = {(r["mission"], r["leg"], r["candidate"]): {k: r[k] for k in ("clear", "blocked_at", "points_checked", "min_p5")}
+                   for r in prev if "clear" in r}
 
     client = airsim.MultirotorClient(timeout_value=30)
     client.confirmConnection()
@@ -132,22 +139,22 @@ def main() -> None:
                 z = float(b.get("z", -10.0))
                 leg = f"{li:02d}_{a['label']}->{b['label']}"
                 cands = rp.leg_candidates(A, B)
-                window = rp.leg_window(cands)
                 warmed = False
                 for c in cands:
-                    if (mission, leg, c["name"]) in done:
+                    if (mission, leg, c["name"], judge_mode) in done:
                         continue
-                    if not warmed:
-                        warm_leg(client, A, B, z)
-                        warmed = True
-                    img = rp.render_candidate(mv, c["points"], window)
+                    truth = truth_cache.get((mission, leg, c["name"]))
+                    if truth is None:
+                        if not warmed:
+                            warm_leg(client, A, B, z)
+                            warmed = True
+                        truth = route_truth(client, c["points"], z)
+                    img, judge = rp.judge_candidate(mv, c, cands, abs(z), judge=judge_mode)
                     name = f"{mission}_{li:02d}_{c['name']}.jpg"
                     cv2.imwrite(str(img_dir / name), img, [cv2.IMWRITE_JPEG_QUALITY, 88])
-                    judge = rp.read_judgement(rp.default_query(img, alt_m=abs(z)))
-                    truth = route_truth(client, c["points"], z)
                     rec = {"mission": mission, "leg": leg, "candidate": c["name"], "points": c["points"],
                            "length_m": c["length_m"], "z": z, "image": f"routes/{name}", "model": rp.model_name(),
-                           **judge, **truth}
+                           "render": rp.ROUTE_RENDER, **judge, **truth}
                     append_jsonl(out_path, rec)
                     print(f"[routes] {mission} {leg} {c['name']}: vlm={judge['answer']}/{judge['p_si']} "
                           f"real={'libre' if truth['clear'] else 'bloqueada'}", flush=True)

@@ -18,17 +18,18 @@ Una distinción de diseño previa a la selección del modelo es si la consulta a
 
 ### 8.1.2 Modelo adoptado y candidatos evaluados
 
-El modelo adoptado en la implementación definitiva es **Qwen2.5-VL-3B-Instruct** (cuantización Q4_K_M, ~2.0 GB de VRAM), ejecutado vía LM Studio. Combina capacidad de razonamiento simbólico, comprensión visual real de la cámara y seguimiento de instrucciones estructuradas. Los modelos candidatos evaluados durante el diseño (documentados en `informe/anexos/A1-EXPLORACION-SLM-GGUF.md`) son:
+El modelo adoptado en la implementación definitiva es **LFM2.5-VL-1.6B** (Liquid AI; cuantización Q4_0, formato GGUF, 1.55 GB), servido por LM Studio en una Mac mini M4 con 16 GB de memoria unificada. Combina un núcleo de lenguaje de 1.2 B de parámetros con arquitectura híbrida de convoluciones (decodificación rápida) y un codificador visual SigLIP2 de 400 M que representa cada imagen con 64–256 tokens. Reemplazó a **Qwen2.5-VL-3B-Instruct**, con el que se hicieron las corridas de diagnóstico del cap. 9, por latencia: Qwen tardaba ~10–12 s por consulta con imagen (§8.6), y la evidencia de esas corridas no mostraba que discriminara mejor (cap. 9, §9.8.3). En los *benchmarks* públicos de comprensión visual ambos están en el mismo rango; ninguno mide la tarea de vuelo, que la decide el banco de prueba (cap. 11, §11.0). Se usa la versión GGUF y no la conversión MLX porque esta última devuelve una respuesta vacía cuando la consulta pide a la vez salida JSON restringida y *logprobs*. LFM2.5-VL-1.6B también es el modelo del planificador de ruta previo al vuelo (cap. 4, §4.3.1); Qwen2.5-VL-3B queda como segundo modelo de la comparación de §10.10.4. Los modelos candidatos evaluados durante el diseño (documentados en `informe/anexos/A1-EXPLORACION-SLM-GGUF.md`) son:
 
 | Modelo | Tamaño (cuant.) | VRAM aprox. | Descartado por |
 |---|---|---|---|
 | Phi-4-mini-Instruct | ~2.5 GB | ~2–3 GB | Sin capacidad de visión nativa |
 | Qwen3-4B-Instruct | ~3 GB | ~2.5–3.5 GB | Sin soporte visual en la rama 3B |
 | SmolLM3-3B | ~2 GB | ~1.8 GB | Sin soporte visual; razonamiento débil |
-| **Qwen2.5-VL-3B-Instruct** | ~2 GB | **~2.0 GB** | **Adoptado** |
+| **LFM2.5-VL-1.6B** (Q4_0, GGUF) | 1.55 GB | **~1.6 GB** | **Adoptado** |
+| Qwen2.5-VL-3B-Instruct (Q4_K_M) | ~2 GB | ~2.0 GB | ~10–12 s por consulta con imagen, sin mejor discriminación (§8.1.2) |
 | Qwen2.5-VL-7B-Instruct | ~4.5 GB | ~4–5 GB | VRAM insuficiente con UE5.5 activo |
 
-El criterio de selección fue: **(a)** soporte de visión nativa, **(b)** VRAM < 2.5 GB con Q4_K_M, **(c)** soporte de `response_format: json_schema` en el backend de inferencia, **(d)** latencia de inferencia < 2 s en el hardware disponible para prompts de ~500 tokens con dos imágenes. Es un criterio de diseño; las latencias efectivamente observadas en la configuración de producción, que en consultas con imagen lo superan, se documentan en §8.6.
+El criterio de selección fue: **(a)** soporte de visión nativa, **(b)** memoria < 2.5 GB cuantizado, **(c)** soporte de `response_format: json_schema` en el backend de inferencia, **(d)** latencia de inferencia < 2 s en el hardware disponible para prompts de ~500 tokens con dos imágenes. Es un criterio de diseño; las latencias efectivamente observadas en la configuración de producción, que en consultas con imagen lo superan, se documentan en §8.6.
 
 ### 8.1.3 Posicionamiento respecto al estado del arte
 
@@ -44,29 +45,29 @@ La respuesta se solicita con `response_format={"type": "json_schema", "json_sche
 
 Hay **dos esquemas**, uno por modo de consulta (§5.10.5), y ninguno contiene un campo de acción: el modelo describe, el código traduce.
 
-**Esquema estratégico** (`RESPONSE_JSON_SCHEMA_STRATEGIC`, `vlm_strategic.py`): una entrada por sector de la grilla de 3×3 del fotograma con valor `libre` o `bloqueado` (enum cerrado); los nueve sectores son obligatorios.
+**Esquema estratégico** (`RESPONSE_JSON_SCHEMA_STRATEGIC`, `vlm_strategic.py`): una entrada por sector de la grilla de 3×3 del fotograma con valor `free` o `blocked` (enum cerrado); los nueve sectores son obligatorios. El parser los traduce a los valores internos `libre` y `bloqueado`, que son los que usan la sub-meta, los registros y el banco de prueba.
 
 ```json
 {
   "type": "object",
   "properties": {
-    "sectores": {
+    "cells": {
       "type": "object",
-      "properties": {"A1": {"enum": ["libre", "bloqueado"]}, "B1": {...}, ..., "C3": {...}},
+      "properties": {"A1": {"enum": ["free", "blocked"]}, "B1": {...}, ..., "C3": {...}},
       "required": ["A1", "B1", "C1", "A2", "B2", "C2", "A3", "B3", "C3"],
       "additionalProperties": false
     }
   },
-  "required": ["sectores"],
+  "required": ["cells"],
   "additionalProperties": false
 }
 ```
 
-**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `rumbos` de objetos `{img, tipo, ok, conf}` —número de imagen, superficie predominante (enum de seis tipos: `libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`), transitable y certeza— más `degradada`, que se registra pero no decide (en las corridas piloto el modelo lo marcó `true` en todas las respuestas). Una entrada `ok: true` cuyo tipo no es `libre` se contradice a sí misma y no cuenta como transitable (cap. 5, §5.12). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (§8.3.3).
+**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `views` de objetos `{img, view, free}`: número de imagen, lo que hay delante a la altura del dron (enum de seis valores: `open`, `facade`, `wall`, `vegetation`, `inside`, `unclear`) y si se puede volar recto 15 m. El parser los traduce a los valores internos (`libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`; `transitable`). El esquema no pide certeza ni un indicador de imagen degradada: el modelo los rellenaba con valores fijos (el mismo `0.95, 0.92, 0.89, 0.86` en tres de cuatro barridos de un piloto; `degradada: true` en todas las respuestas) y ninguno decidía nada. Una entrada `free: true` cuya vista no es `open` se contradice a sí misma y no cuenta como transitable (cap. 5, §5.12). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (§8.3.3).
 
 ### 8.2.2 Parser como red de seguridad
 
-La garantía de `json_schema` depende de que el backend la soporte. Si la llamada con esquema falla, `vlm_client._query_slm_impl()` reintenta en modo libre; en ambos casos `_extract_json_object()` elimina cercos de markdown y extrae el primer objeto `{...}` del texto, y el parser del modo (`parse_strategic` o `parse_panorama_description`) lo valida: una respuesta estratégica con algún sector ausente o con un valor fuera del enum se rechaza completa, y una respuesta panorámica sin array `rumbos` también. Una respuesta rechazada **no se sustituye por una decisión determinista**: la capa estratégica simplemente no propone sub-meta en ese ciclo (motivo `no_parseable`), y un barrido sin respuesta válida cae al escape vertical de §5.3.4 como cualquier otra falla del modelo.
+La garantía de `json_schema` depende de que el backend la soporte. Si la llamada con esquema falla, `vlm_client._query_slm_impl()` reintenta en modo libre; en ambos casos `_extract_json_object()` elimina cercos de markdown y extrae el primer objeto `{...}` del texto, y el parser del modo (`parse_strategic` o `parse_panorama_description`) lo valida: una respuesta estratégica con algún sector ausente o con un valor fuera del enum se rechaza completa, y una respuesta panorámica sin array `views` también. Una respuesta rechazada **no se sustituye por una decisión determinista**: la capa estratégica simplemente no propone sub-meta en ese ciclo (motivo `no_parseable`), y un barrido sin respuesta válida cae al escape vertical de §5.3.4 como cualquier otra falla del modelo.
 
 ## 8.3 Rol del VLM: percepción semántica anclada al mundo
 
@@ -91,7 +92,7 @@ La traducción (`decide_subgoal`, detalle en §5.10.3) usa la pose **del fotogra
 
 ### 8.3.3 Barrido: imágenes numeradas, rumbos medidos
 
-En el barrido de resolución de atasco (§5.12), el modelo recibe cuatro imágenes numeradas y describe cada una (`img`, `tipo`, `ok`, `conf`). El código asigna a cada imagen el yaw **medido** en el ciclo en que se capturó y elige, entre las transitables, la de rumbo absoluto más cercano al rumbo absoluto hacia el waypoint real. Las entradas se asignan por número de imagen (o por orden si falta), y las entradas que el modelo inventa de más se descartan.
+En el barrido de resolución de atasco (§5.12), el modelo recibe cuatro imágenes numeradas y describe cada una (`img`, `view`, `free`). El código asigna a cada imagen el yaw **medido** en el ciclo en que se capturó y elige, entre las transitables, la de rumbo absoluto más cercano al rumbo absoluto hacia el waypoint real. Las entradas se asignan por número de imagen (o por orden si falta), y las entradas que el modelo inventa de más se descartan.
 
 El diseño evita un error de marco de referencia documentado en el capítulo 9 (§9.8.1): si las imágenes se etiquetan con su rumbo absoluto y se pide al modelo un ángulo relativo, el modelo copia la etiqueta y el código la interpreta como relativa, de modo que «la dirección hacia la meta está libre» termina ejecutándose como una evasión hacia el lado contrario.
 
@@ -109,24 +110,33 @@ Cada macro-acción se traduce a un comando cinemático en `action_to_command()` 
 
 ### 8.5.1 Principios
 
-Los prompts siguen cuatro reglas:
+Los prompts siguen cinco reglas:
 
-1. **Solo hechos, ninguna sugerencia de acción.** Un prompt que pide al modelo «describir sin decidir» y a la vez le sugiere qué maniobra priorizar es contradictorio (cap. 9, §9.8.3). Los prompts describen la situación (distancia y dirección del destino, altura, qué imagen es cuál) y piden una descripción.
-2. **Ejemplos sin valores concretos.** El ejemplo del esquema se escribe con marcadores (`<bool>`, `<0-1>`), no con valores. Un modelo de 3B tiende a copiar los valores del ejemplo (`"ok": true, "conf": 0.9`) en sus respuestas (cap. 9, §9.8.3).
+1. **Solo hechos, ninguna sugerencia de acción.** Un prompt que pide al modelo «describir sin decidir» y a la vez le sugiere qué maniobra priorizar es contradictorio (cap. 9, §9.8.3). Los prompts dan solo lo que el modelo no puede ver en la imagen (distancia al destino, sector de la meta, altura) y piden una descripción.
+2. **Sin ejemplos.** El esquema JSON ya fija la forma de la respuesta, y un modelo pequeño copia los valores de cualquier ejemplo (`"ok": true, "conf": 0.9`) en sus respuestas (cap. 9, §9.8.3).
 3. **La geometría la aporta el código.** El modelo nunca reporta ángulos ni posiciones: identifica sectores o imágenes por su etiqueta, y el código conoce su dirección.
-4. **Lo visual en la imagen, no en el texto.** La meta se marca **sobre** el fotograma (marca roja «META» en su dirección, dentro de la grilla) en lugar de describirse como «X grados a la derecha».
+4. **Lo visual en la imagen, no en el texto.** La meta se marca **sobre** el fotograma (marca roja «GOAL» en su dirección, dentro de la grilla) en lugar de describirse como «X grados a la derecha».
+5. **En inglés y breves.** Los modelos de este tamaño se ajustan a instrucciones mayoritariamente en inglés, y cada token del prompt se procesa en cada consulta. Cada prompt de sistema tiene tres o cuatro oraciones: qué ve el modelo, qué debe responder con una definición operativa de una línea y «solo JSON». Los valores del esquema también están en inglés; el parser los traduce a los valores internos. Ningún prompt nombra objetos de un escenario en particular (cap. 10, §10.12.2).
 
 ### 8.5.2 Prompt de la capa estratégica
 
-**System prompt** (`SYSTEM_PROMPT_STRATEGIC`): rol de sistema de percepción de un dron a ~10 m de altura; descripción de la grilla (columnas, filas y qué significa cada fila); definición operativa de `libre` («se ve cielo, calle, plaza o espacio abierto en ese sector») y de `bloqueado` (edificio, fachada, vidrio, muro, árbol, puente, autopista elevada, cornisa, balcón, techo o el interior de un edificio a menos de 15 m); instrucción de responder solo el JSON con los nueve sectores.
+**System prompt** (`SYSTEM_PROMPT_STRATEGIC`), completo:
 
-**User prompt** (`build_request`): distancia al destino y su etiqueta, sector en el que cae la meta, altura del dron y la disposición de los sectores. Una única imagen de 384 px con la grilla y la marca de la meta dibujadas.
+> You see the front camera of a drone flying low in a city, split into a 3x3 grid: columns A B C (left to right), rows 1 2 3 (top, drone height, bottom). The red GOAL mark is the destination.
+> For each cell: "free" if the drone can fly 15 m that way, "blocked" if a building, wall, tree, bridge or roof is closer than 15 m. Reply with JSON only.
+
+**User prompt** (`strategic_prompt`): `Goal WP_3: 34 m, in cell B2. Altitude 10 m.` Si la meta está fuera del recorte: `Goal WP_3: 34 m, outside the image, 97 deg to the left (GOAL mark on the edge). Altitude 10 m.` Le sigue una única imagen de 384 px con la grilla y la marca de la meta dibujadas, rotulada `[Front camera, 3x3 grid]`.
 
 ### 8.5.3 Prompt del barrido
 
-**System prompt** (`SYSTEM_PROMPT_DEEP_SCAN`): las imágenes son direcciones distintas vistas desde el mismo punto (no fotogramas consecutivos); una entrada por imagen, en orden; definición de los seis tipos de superficie; `ok` verdadero **solo** si se puede volar recto 15 m sin chocar.
+**System prompt** (`SYSTEM_PROMPT_DEEP_SCAN`), completo:
 
-**User prompt** (`_build_panorama_prompt`): cuántos ciclos lleva el atasco, altura, y para cada imagen su ángulo respecto de la dirección en que el dron venía volando, cuál es la dirección en la que no pudo avanzar y cuál la más cercana al destino; distancia al destino. Hasta cinco imágenes de 256 px etiquetadas «Imagen 1…N».
+> You see numbered images from a drone flying low in a city; it turned in place and each image faces a different direction. For each image give:
+> - view: what is ahead at drone height within 15 m: open (street, square, sky), facade, wall, vegetation, inside (dark or uniform, inside a building) or unclear.
+> - free: true only if the drone can fly straight 15 m without hitting anything.
+> Reply with JSON only.
+
+**User prompt** (`_build_panorama_prompt`): `4 images. Altitude 10 m.`, seguido de hasta cinco imágenes de 256 px rotuladas `[Image 1]` … `[Image N]`. El prompt no da ángulos, meta ni duración del atasco: el modelo solo describe cada imagen, y el rumbo de cada una y la elección los resuelve el código (cap. 5, §5.12).
 
 ### 8.5.4 Parámetros de inferencia
 
@@ -138,7 +148,7 @@ Los system prompts están en el código (`vlm_strategic.py`, `deep_scan.py`).
 
 El tiempo de inferencia del VLM es un orden de magnitud mayor que el período del lazo (200 ms). La consulta corre en el hilo de `DeliberationService` (§5.10.5) y nunca bloquea al grafo. Esta separación entre una capa de ejecución rápida que siempre responde y una capa de razonamiento lento desacoplada es la instancia concreta, con un VLM como capa deliberativa, del patrón de arquitecturas de tres capas ([Gat, 1998](13-REFERENCIAS.md#ref-gat-1998)).
 
-**Latencia observada.** Las fuentes disponibles no provienen de una medición controlada que aísle carga de GPU, tamaño de imagen y arranque en frío:
+**Latencia observada.** Las fuentes disponibles son todas con Qwen2.5-VL-3B, el modelo de vuelo anterior (§8.1.2); la latencia de LFM2.5-VL-1.6B se mide en el banco de prueba y en los pilotos. No provienen de una medición controlada que aísle carga de GPU, tamaño de imagen y arranque en frío:
 
 | Fuente | Condición | Latencia |
 |---|---|---|
@@ -158,7 +168,7 @@ La diferencia entre el piloto y las corridas de diagnóstico no se ha atribuido 
 
 ## 8.7 Nombres de campo compactos
 
-A ~15 tokens/s de generación, cada token de la respuesta cuesta ~67 ms. El esquema panorámico usa nombres compactos (`img`, `ok`, `conf`, `degradada`) en lugar de nombres descriptivos (`relativo_deg`, `transitable`, `confianza`, `imagen_degradada_global`) y no exige un campo de razonamiento (`r`); con nombres compactos, una respuesta de cuatro rumbos baja de ~80–95 a ~40–55 tokens. El esquema estratégico lleva la idea al extremo: siete valores de enum o booleanos y ningún texto libre. El parser panorámico acepta ambos vocabularios y normaliza internamente a los nombres largos.
+A ~15 tokens/s de generación, cada token de la respuesta cuesta ~67 ms. El esquema panorámico usa tres campos cortos por imagen (`img`, `view`, `free`), sin certeza, sin indicador de imagen degradada y sin campo de razonamiento; los nombres descriptivos de versiones anteriores (`relativo_deg`, `transitable`, `confianza`) llevaban una respuesta de cuatro imágenes a ~80–95 tokens. El esquema estratégico lleva la idea al extremo: nueve valores de enum y ningún texto libre. Los parsers aceptan también los formatos anteriores y normalizan a los nombres internos.
 
 ## 8.8 Nota: LoRA como alternativa explorada y no adoptada
 

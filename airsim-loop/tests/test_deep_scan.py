@@ -186,3 +186,12 @@ def test_deep_scan_state_survives_compiled_graph_invoke(monkeypatch):
         assert state.get("_scan_heading_index", 0) >= 1 or state.get("_scan_phase") == "capturado"
     finally:
         service.stop()
+
+
+def test_panorama_english_views_are_translated():
+    pano = deep_scan_mod.parse_panorama_description(
+        {"views": [{"img": 1, "view": "facade", "free": False}, {"img": 2, "view": "open", "free": True}]})
+    assert [r["tipo"] for r in pano["rumbos"]] == ["fachada", "libre"]
+    assert [r["transitable"] for r in pano["rumbos"]] == [False, True]
+    props = deep_scan_mod.RESPONSE_JSON_SCHEMA_PANORAMA["json_schema"]["schema"]["properties"]
+    assert set(props) == {"views"} and "conf" not in props["views"]["items"]["properties"]

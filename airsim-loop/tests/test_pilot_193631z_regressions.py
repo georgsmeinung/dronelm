@@ -71,7 +71,7 @@ def test_goal_out_of_view_is_only_queried_when_not_progressing():
     built = vs.build_request(_state(180.0, no_progress=vs.VLM_STUCK_QUERY_CYCLES))
     assert built is not None
     payload, anchor = built
-    assert anchor["goal_cell"] is None and "fuera de la imagen" in payload["prompt"]
+    assert anchor["goal_cell"] is None and "outside the image" in payload["prompt"]
 
 
 def test_goal_out_of_view_never_means_direct_path_free():

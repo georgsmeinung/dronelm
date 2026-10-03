@@ -1873,8 +1873,8 @@
 </tr>
 <tr>
 <td><code>LOCAL_LLM_MODEL_NAME</code></td>
-<td><code>"qwen/qwen2.5-vl-3b"</code></td>
-<td>Identificador del modelo cuantizado cargado en VRAM (<code>Qwen2.5-VL-3B-Instruct.Q4_K_M</code>).</td>
+<td><code>"liquidai/lfm2.5-vl-1.6b"</code></td>
+<td>Modelo de vuelo: LFM2.5-VL-1.6B, Q4_0, GGUF (1.55 GB). El identificador es el exacto que devuelve <code>/v1/models</code>; la versión MLX del mismo modelo no sirve (respuesta vacía con JSON restringido y <em>logprobs</em>).</td>
 </tr>
 <tr>
 <td><code>VLM_IMAGE_MAX_SIZE</code></td>
@@ -1943,8 +1943,23 @@
 </tr>
 <tr>
 <td><code>ROUTE_PLAN_MODE</code></td>
-<td><code>vlm</code></td>
-<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>off</code>: manifiesto tal cual); una vez por escenario, el mismo plan para todo el lote (cap. 4 §4.3.1).</td>
+<td><code>off</code></td>
+<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>vlm</code>) o manifiesto tal cual (<code>off</code>). Desactivado en la versión final: los modelos evaluados no distinguen en el mapa una ruta por la calle de una sobre un edificio (cap. 4 §4.3.1).</td>
+</tr>
+<tr>
+<td><code>ROUTE_RENDER</code></td>
+<td><code>corridor</code></td>
+<td>Dibujo de cada candidata para el planificador: <code>corridor</code> (pasillo con recorte propio, rotado y con el resto oscurecido) o <code>line</code> (línea roja sobre el recorte común del tramo, norte arriba). Cada uno tiene su prompt (cap. 4 §4.3.1).</td>
+</tr>
+<tr>
+<td><code>ROUTE_CORRIDOR_M</code></td>
+<td><code>10.0</code></td>
+<td>Ancho del pasillo dibujado (m).</td>
+</tr>
+<tr>
+<td><code>ROUTE_LLM_MODEL_NAME</code></td>
+<td><code>"liquidai/lfm2.5-vl-1.6b"</code></td>
+<td>Modelo del planificador de ruta, en el mismo servidor que el de vuelo; si falta, se usa <code>LOCAL_LLM_MODEL_NAME</code>. Necesita JSON forzado y <em>logprobs</em> en la misma consulta (la versión GGUF de LFM los da; la MLX no).</td>
 </tr>
 <tr>
 <td><code>ROUTE_DETOURS_M</code> / <code>ROUTE_MIN_SIDE_M</code> / <code>ROUTE_MARGIN_M</code></td>
@@ -2361,7 +2376,7 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <h3 id="paso-3-inicializacion-del-servidor-de-modelos-lm-studio">Paso 3: Inicialización del servidor de modelos (LM Studio)<a class="headerlink" href="#paso-3-inicializacion-del-servidor-de-modelos-lm-studio" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Abrir <strong>LM Studio</strong> (o instancia de <code>llama.cpp</code> / Ollama).</li>
-<li>Cargar el modelo multimodal <code>Qwen/Qwen2.5-VL-3B-Instruct</code> cuantizado en <code>Q4_K_M</code>.</li>
+<li>Cargar el modelo multimodal <code>LiquidAI/LFM2.5-VL-1.6B</code> en GGUF <code>Q4_0</code> (vuelo y planificador de ruta) y dejarlo cargado para no pagar la carga durante el lote.</li>
 <li>Iniciar el servidor local en el puerto <code>1234</code> con compatibilidad de API OpenAI (<code>http://127.0.0.1:1234/v1</code>).</li>
 <li>Verificar la respuesta del servidor mediante:
    <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:1234/v1/models
