@@ -102,6 +102,27 @@ def test_lateral_and_vertical_detours_tie_and_the_middle_row_wins():
     assert sub["sector"] == "C2" and sub["z"] == -10.0
 
 
+def test_goal_slightly_below_does_not_pick_the_lower_row():
+    # Piloto 2026-10-07 c686: meta fuera de cuadro a la izquierda y 0.5 deg por debajo; A1 y A3 libres.
+    # Con empate exacto ganaba A3 y el dron bajaba hasta apoyarse en la autopista elevada.
+    st = _state(alt=10.2, wp=(10.0, -40.0))
+    st["_wp_no_progress_cycles"] = vs.VLM_STUCK_QUERY_CYCLES
+    _p, anchor = vs.build_request(st)
+    assert anchor["goal_cell"] is None and -1.0 < anchor["goal_el_deg"] < 0.0
+    sub, _why = vs.decide_subgoal(_grid(free_only=("A1", "A3", "C1", "C3")), anchor, st)
+    assert sub["sector"] == "A1"
+
+
+def test_a_clearly_closer_lower_sector_still_wins():
+    # Fuera del margen de empate manda la distancia angular: meta muy por debajo (en B3, bloqueado).
+    st = _state(alt=10.0, wp=(20.0, 0.0))
+    st["waypoints"][0]["z"] = -2.0
+    _p, anchor = vs.build_request(st)
+    assert anchor["goal_cell"] == "B3"
+    sub, _why = vs.decide_subgoal(_grid(free_only=("B1", "C3")), anchor, st)
+    assert sub["sector"] == "C3"
+
+
 def test_only_the_upper_row_free_climbs():
     _p, anchor = vs.build_request(_state())
     sub, why = vs.decide_subgoal(_grid(free_only=("A1", "B1", "C1")), anchor, _state())

@@ -1,3 +1,77 @@
+# 2026-10-07 (a) - Servidor de inferencia: Ollama local en la misma GPU que Unreal
+
+El VLM pasa del Mac mini M4 (LM Studio, `192.168.110.101:1234`) a Ollama en la PC de simulacion
+(RTX 5060, 8 GB, compartida con Unreal). No cambia codigo de produccion; cambian configuracion y modelo.
+- **`config/.env`**: `LOCAL_LLM_URL`, `OLLAMA_BASE_URL`, `TACTICAL_BASE_URL` -> `http://127.0.0.1:11434/v1`;
+  `OLLAMA_HOST` -> `http://127.0.0.1:11434`. Modelo (`LOCAL_LLM_MODEL_NAME`, `OLLAMA_MODEL`,
+  `TACTICAL_MODEL`, `ROUTE_LLM_MODEL_NAME`) -> `lfm2.5-vl-1.6b:q4km-ctx8k`.
+  - `127.0.0.1` y no `localhost`: en esta maquina `localhost` resuelve primero a `::1` y cada conexion espera
+    ~2 s antes de caer a IPv4.
+  - El tag `lfm2.5-vl-1.6b:q4km-ctx8k` es `hf.co/LiquidAI/LFM2.5-VL-1.6B-GGUF:Q4_K_M` con `num_ctx=8192`.
+    El GGUF carga 128k de contexto por defecto y Ollama reservaba 3.1 GB de VRAM, casi todo cache KV. Peor
+    consulta medida: 4 imagenes de 384 px, ~815 tokens de entrada (+512 de salida). Costo real medido con
+    `nvidia-smi`: ~1.6 GB (Ollama informa 0.93 GB; el resto es el mmproj, buffers y contexto CUDA).
+    `num_batch` 256/512/1024 no cambia el consumo.
+  - Cuantizacion: Q4_K_M (en el Mac era Q4_0). Mismo tamano (+5 %), algo menos error; el mmproj de vision es
+    el mismo. La comparacion Mac -> local mezcla servidor y cuantizacion.
+- **`D:\TesisMCD\startOllama.ps1`** (fuera del repo): prepara Ollama antes de los experimentos.
+  Lee el modelo de `config/.env`; reinicia el servidor con `OLLAMA_MODELS=U:\Users\jenic\.ollama\models`
+  (la carpeta de la app de Ollama), `OLLAMA_KEEP_ALIVE=-1` y `OLLAMA_CONTEXT_LENGTH=8192`; cierra los
+  `llama-server` huerfanos (en Windows sobreviven al cierre de `ollama.exe` y retenian ~2.7 GB de VRAM);
+  descarga el GGUF base y crea el tag si faltan; descarga de VRAM cualquier otro modelo y precarga el de
+  vuelo. Escucha solo en `127.0.0.1` (la app escuchaba en `0.0.0.0`).
+- **Descartado: `LFM2.5-VL-1.6B-Extract`** (primera prueba, por error de variante). Rellena el esquema JSON
+  sin mirar la imagen:
+  - `map_probe.py ask` (60 parches): "parking" en 60/60 (cinco clases), "no" en 60/60 (si/no), par en los
+    dos ordenes consistente 0.45 (LFM base en el Mac: 1.00). La AUC de P(calle) se mantiene (0.83 contra
+    0.80) porque los logprobs si separan, pero el rango de P(calle) se comprime.
+  - Piloto `citysim_pilot` seed 99 (`airsim-runs/prueba_ollama/.../seed_99_20261007T205546Z`): las 43
+    consultas estrategicas devolvieron la misma grilla (A1 libre, el resto bloqueado; la primera clave del
+    esquema); 5 de 8 escaneos profundos `{"views": []}` -> fallback. 166 s trabado en WP 1 contra una
+    fachada; salio la capa reactiva.
+  - La latencia mas baja de esa corrida (1 imagen p50 741 ms contra 1208-1553 ms en el Mac) no es comparable:
+    las respuestas son cortas y degeneradas.
+- **GPU compartida**: con Unreal en Play y el VLM en la misma GPU, captura y lazo no cambian (piloto Extract
+  contra los 3 pilotos del Mac): `simGetImages` p50 94 ms (91-94), periodo del lazo p50 215 ms (216-228),
+  grafo p50 157 ms (163-179).
+- **Plan de ruta de citysim_pilot con LFM base Q4_K_M local** (`airsim-runs/prueba_ollama/citysim_pilot/route_plan/`):
+  153 s contra 485 s en el Mac (579 parches; ~0.26 s contra ~0.84 s por parche). 6 de 8 tramos eligen lo
+  mismo que el plan del Mac:
+
+  | Tramo | Mac (Q4_0) | Local (Q4_K_M) |
+  |---|---|---|
+  | -> WP_1 | directo | L_norte_sur_primero (0.78; la mejor, desvio_der_25m 0.82, empate -> la mas corta; recta 0.73) |
+  | -> WP_2 | desvio_der_50m | desvio_der_25m (0.75; el de 50 m 0.77, empate -> el mas corto) |
+  | resto | igual | igual |
+
+  P(calle) queda mas alta y mas comprimida (minimos por tramo 0.50-0.58 contra 0.35-0.51); con
+  `ROUTE_TIE_EPS=0.05` absoluto hay mas empates.
+- **Piloto citysim_pilot seed 99 con LFM base Q4_K_M local** (`seed_99_20261007T214055Z`) contra los 3
+  pilotos del Mac (`produccion/v3/pilot/citysim_pilot/slm/deep_vlm/seed_99_20261002T2*`):
+
+  | | Mac (3 pilotos) | Local |
+  |---|---:|---:|
+  | SLM 1 imagen p50 / p90 / max (ms) | 1208-1553 / 1230-1591 / 3045-4802 | **770 / 803 / 2773** |
+  | Timeouts | 0 | 0 |
+  | WP mas lejano (indice) | 5-9 | **12** |
+  | Recorrido (m) | 206-261 | 383 |
+  | Mayor espera en un WP (s) | 88-193 | ~41 |
+  | Bloqueos (deadlock) | 6 | 2 |
+  | Colisiones | 0 | 0 |
+  | Grafo p50 / periodo lazo p50 / simGetImages p50 (ms) | 163-179 / 216-228 / 91-94 | 195 / 237 / 103 |
+
+  - Latencia del SLM ~40-50 % menor con respuestas reales: celdas libres por consulta entre 6 y 9 (Mac
+    3-8). Bordea el edificio de WP_2/WP_3 en vez de quedar contra la fachada.
+  - 12 de 65 consultas marcan las 9 celdas libres (en el Mac nunca). Revisadas sobre el cuadro: la mitad es
+    plausible (estacionamiento o autopista abiertos adelante) y la otra mitad ignora una fachada en un
+    tercio de la imagen. Modelo algo optimista.
+  - Los 2 escaneos profundos no llegaron al VLM: timeout de rotacion (yaw_err 90-95 grados en 11 ciclos) y
+    escape sincronico. No es del servidor.
+  - El lazo queda ~10 % mas lento que en el piloto Extract (grafo 195 contra 157 ms); compartir la GPU con
+    65 consultas reales cuesta algo, sin llegar a afectar el control.
+  - Una semilla por condicion: es un piloto, no una comparacion estadistica.
+- **Pendiente**: informe, servidor de inferencia en el cap. de arquitectura; revisar el sesgo a "todo libre".
+
 # 2026-10-02 (k) - Planificador reactivado con juicio por parches (solo mapa)
 
 Decision del autor: modificar el planificador con la unica forma de preguntar que mostro senal (entradas i y

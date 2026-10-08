@@ -76,6 +76,10 @@ ANSWER_TO_STATE = dict(zip(CELL_ANSWERS, CELL_STATES))
 # Desempate entre sectores igual de cerca de la meta: la fila del medio, despues arriba (el suelo esta
 # abajo), despues abajo.
 _ROW_PREF = {"2": 0, "1": 1, "3": 2}
+# Sectores libres a menos de este margen (deg) del mas cercano a la meta cuentan como empatados y decide
+# _ROW_PREF. 2026-10-07: con empate exacto, una meta 0.5 deg por debajo del dron hacia ganar siempre a la
+# fila de abajo (12 de 31 sub-metas en A3/C3); el dron bajo a ~7 m y quedo apoyado en la autopista elevada.
+VLM_SUBGOAL_TIE_DEG = float(os.getenv("VLM_SUBGOAL_TIE_DEG", "10.0"))
 
 SYSTEM_PROMPT_STRATEGIC = (
     "You see the front camera of a drone flying low in a city, split into a 3x3 grid: columns A B C "
@@ -323,7 +327,9 @@ def decide_subgoal(parsed: Dict[str, Any], anchor: Dict[str, Any], state: Dict[s
 
     centers = cell_centers_deg(int(anchor["crop_side"]), float(anchor["focal_px"]))
     gaz, gel = float(anchor["goal_az_deg"]), float(anchor["goal_el_deg"])
-    best = min(free, key=lambda c: (math.hypot(centers[c][0] - gaz, centers[c][1] - gel), _ROW_PREF[c[1]]))
+    off = {c: math.hypot(centers[c][0] - gaz, centers[c][1] - gel) for c in free}
+    near = [c for c in free if off[c] <= min(off.values()) + VLM_SUBGOAL_TIE_DEG]
+    best = min(near, key=lambda c: (_ROW_PREF[c[1]], off[c]))
     az, el = centers[best]
     sub = build_subgoal(anchor["x"], anchor["y"], anchor["z"], float(anchor["yaw_deg"]) + az, el,
                         float(anchor.get("wp_dist_xy", VLM_SUBGOAL_DIST_M)), "VLM_SUBGOAL")
