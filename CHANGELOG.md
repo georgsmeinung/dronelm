@@ -1,3 +1,107 @@
+# 2026-10-08 (b) - Reconocimiento por region en la camara frontal (`region_probe.py`)
+
+Pregunta: si el VLM no juzga distancias (banco v2), reconoce al menos QUE hay en cada sector, como en el
+mapa? Nueva herramienta `airsim-loop/experiments/vlm_bench/region_probe.py` (etapas `ask`/`report`, sin
+AirSim; mismas 120 muestras que las preguntas de una imagen, 9 sectores cada una). Cinco clases (wall,
+distant buildings, sky, road, trees); regla fijada antes de correr: abierto = sky + distant buildings +
+road. Etiqueta: `cell_free` del banco (p5 >= 15 m). Tests: 289 (+2: cuadrado rojo en el sector pedido,
+lectura de P(abierto)).
+
+| Modo | Exactitud bal. [IC 95 %] | AUC P(abierto) | AUC casos obvios (<5 m vs >=40 m) | AUC fila 1 / 2 / 3 | Latencia |
+|---|---|---:|---:|---|---:|
+| `marker` (cuadro completo + cuadrado rojo) | 48 % [45-51] | 0.53 | 0.49 | 0.75 / 0.52 / 0.46 | 488 ms |
+| `crop` (solo el recorte del sector) | 49 % [44-52] | 0.62 | 0.62 | 0.79 / 0.63 / 0.55 | 480 ms |
+
+- `marker`: el modelo no ubica el cuadrado rojo (texto libre: "A red square.", "Nothing.") y contesta la
+  primera opcion del enum ("wall" 88 %; con el enum invertido, "sky" en los tres casos probados). Mide la
+  consigna, no el reconocimiento.
+- `crop`: describe bien el recorte en texto libre ("Two buildings", "A tall building against a cloudy
+  sky", "A parking lot"), pero con el enum responde "wall" el 81 %. Cuando dice sky o distant buildings
+  acierta (87 % abiertos), pero lo dice en 68 de 1080. "road" sale abierto solo 36 %: en la fila 3 la calle
+  esta a menos de 15 m (la regla fijada la contaba como abierta).
+- Ninguno pasa. Hay senal latente debil en `crop` (AUC 0.62; fila del medio 0.63), lejos del mapa (0.81).
+  El recorte no acelera la consulta (~0.48 s cada una; 3-4 sectores serian 1.5-2 s).
+- Lectura: con LFM2.5-VL-1.6B la camara frontal no aporta un juicio de espacio libre utilizable, ni
+  preguntando por distancia (grilla, centro libre) ni por reconocimiento; la unica senal util del VLM
+  sigue siendo el mapa cenital.
+
+# 2026-10-08 (a) - Banco del VLM regenerado con el modelo a bordo: nueva linea base (`vlm_bench/v2`)
+
+Decision del autor: la linea base de todas las comparaciones es el modelo corriendo en la misma GPU que
+Unreal y el grafo de control (Ollama, `lfm2.5-vl-1.6b:q4km-ctx8k`), por ser la condicion representativa de
+un VLM a bordo. Los numeros del Mac (LM Studio, Q4_0) quedan como historia.
+
+- **Dataset** (`airsim-runs/vlm_bench/v2/`, `dataset.py`): las 21 corridas con telemetria y los dos videos
+  (pilotos citysim v2, v3 y los tres de `prueba_ollama`); 6926 poses. `v1` (7 corridas del 29-09) queda
+  intacto.
+- **Etiquetas** (`ground_truth.py`, AirSim, 92 min): 1908 poses reproducidas (429 estrategicas, 579 de
+  barrido, 900 de trayectoria). Validas 915; fuera: camara dentro de la geometria 190, captura inestable
+  384, pose mal reproducida 589. Centro libre 51 %.
+- **Preguntas** (`evaluate.py --sizes 384`, 10 min) - ninguna pasa (exactitud bal. >= 0.65 con IC sobre el
+  azar):
+
+  | Pregunta | n | Exactitud bal. [IC 95 %] | Respuesta mas frecuente | AUC | Latencia |
+  |---|---:|---|---|---:|---:|
+  | grid_prod | 120 | 53 % [50-55] | libre 82 % | 0.53 | 0.88 s |
+  | grid_perm | 120 | 51 % [49-53] | libre 85 % | 0.51 | 0.88 s |
+  | centro_libre | 120 | 50 % | si 100 % (constante) | 0.52 | 0.34 s |
+  | borde_lateral | 180 | 33 % (azar 33) | izquierda 100 % (constante) | - | 0.35 s |
+  | borde_superior | 120 | 53 % [50-58] | si 95 % | 0.69 | 0.36 s |
+  | direccion_abierta | 208 | 32 % [28-36] (azar 25) | izquierda 62 % | - | 0.36 s |
+  | scan_prod / scan_perm | 14 / 22 | 50 % | todo transitable 100 % | n chico | 2.6 / 3.1 s |
+
+  - Grilla: filas 1 y 3 "libre" en el 100 % (reales 72-78 % y 38-47 %); fila del medio por posicion
+    (A2 14 %, B2 70 %, C2 52 %). Acuerdo bajo permutacion 75 %.
+  - Unica senal latente: `borde_superior` (AUC 0.69).
+- **Mapa** (`map_probe.py ask`, cinco clases): exactitud bal. 0.65, AUC P(calle) 0.79.
+- **Rutas** (`route_bench.py --judge patches`, 12 min; 59 candidatas, 11 tramos de citysim_pilot y
+  citysim_clear, 28 libres): AUC 0.81. Ruta elegida libre en 10/11 tramos, igual que la recta: en el unico
+  tramo con la recta bloqueada (pilot WP_2 -> WP_3) elige un desvio libre; en citysim_clear WP_3 -> WP_4
+  elige `desvio_der_25m` bloqueado con la recta libre.
+- **Informe**: cap. 11 §11.0 nuevo (banco, linea base a bordo); cap. 8 §8.1 y §8.1.2 (Ollama, Q4_K_M,
+  ctx 8k, misma GPU; Extract descartado), §8.3.2 y cap. 5 §5.10.3 (desempate con `VLM_SUBGOAL_TIE_DEG`),
+  §8.6 (latencia a bordo); cap. 1 §1.3; cap. 12 (discriminacion del VLM); anexo A1 (configuracion
+  vigente) y A6 (variables y paso 3 con `startOllama.ps1`). HTML regenerado (`build.ps1 -HtmlOnly`).
+- **Pendiente**: cap. 10 §10.12.2 y A6 todavia dicen `ROUTE_PLAN_MODE=off`/plan desactivado, pero
+  `config/.env` tiene `vlm` (entrada 2026-10-02 k); decidir si los lotes vuelan con plan.
+
+# 2026-10-07 (b) - Sub-meta del VLM: desempate por fila con margen; banco de la grilla con el modelo local
+
+**Causa de los dos bloqueos del piloto `seed_99_20261007T214055Z`** (no era el control de giro):
+`decide_subgoal` elegia el sector libre de menor distancia angular a la meta y `_ROW_PREF` solo
+desempataba igualdades exactas. Con la meta 0.5 deg por debajo del dron (z -10.21 contra -10.0), A3 le
+ganaba a A1 por medio grado: 12 de 31 sub-metas fueron a la fila de abajo (A3/C3), que baja hasta
+`VLM_SUBGOAL_MIN_ALT_M` (6.2 m). En c686-c704 el dron bajo de 10.2 a 7.19 m y quedo apoyado en el tablero de
+la autopista elevada (~7 m; `has_collided` false, IMU sin contacto ni vibracion). Apoyado no puede girar:
+el escaneo profundo agoto `SCAN_ROT_TIMEOUT_CYCLES` y cayo al escape (el timeout hizo lo suyo).
+
+- **`src/agents/vlm_strategic.py`**: `VLM_SUBGOAL_TIE_DEG` (10). Los sectores libres a menos de ese margen
+  del mas cercano a la meta empatan y decide la fila (medio > arriba > abajo); fuera del margen manda la
+  distancia angular.
+- **`config/.env`**: `VLM_SUBGOAL_TIE_DEG=10.0`.
+- **Tests** (287): `test_goal_slightly_below_does_not_pick_the_lower_row` (el caso c686; falla sin el
+  cambio) y `test_a_clearly_closer_lower_sector_still_wins`.
+- **IMU**: se lee en cada ciclo y `stall_detector` publica `imu_jitter_level`/`imu_contact_event` solo para
+  el registro; ningun nodo decide con ellas. En este episodio no habrian servido (0 ciclos de contacto).
+
+**Banco de la grilla con `lfm2.5-vl-1.6b:q4km-ctx8k`** (`vlm_bench/v1`, primera corrida guardada del banco;
+`results.jsonl`, `report.md`): 120 muestras estratificadas por centro libre, 384 px, latencia p50 ~0.85 s.
+
+| Pregunta | Exactitud bal. [IC 95 %] | AUC | 'libre' respondido |
+|---|---|---:|---:|
+| grid_prod | 51 % [46-53 %] | 0.54 | 85 % |
+| grid_perm | 52 % [48-55 %] | 0.53 | 84 % |
+
+- En `grid_prod` las filas 1 y 3 salen "free" en el 100 % de las muestras (reales: 54-67 %). Solo la fila
+  del medio varia y con sesgo de posicion (A2 libre 27 %, B2 80 %, C2 62 %; reales ~50 %). Patrones mas
+  frecuentes: `FFF.FFFFF` (37 %), `FFF.F.FFF` (22 %), todo libre (20 %).
+- La grilla esta al nivel del azar: la sub-meta sale de la posicion de las celdas, no de la escena. Con el
+  desempate nuevo, cuando la fila del medio sale bloqueada gana la de arriba (siempre "free"): sube en vez
+  de bajar, que es lo seguro, pero sigue sin informacion de la escena. Los logprobs no lo arreglan
+  (AUC 0.54).
+- **Pendiente**: misma corrida del banco con LFM Q4_0 (el modelo del Mac) para separar cuantizacion de
+  modelo; si tambien esta al azar, revisar la pregunta (no el umbral).
+
 # 2026-10-07 (a) - Servidor de inferencia: Ollama local en la misma GPU que Unreal
 
 El VLM pasa del Mac mini M4 (LM Studio, `192.168.110.101:1234`) a Ollama en la PC de simulacion

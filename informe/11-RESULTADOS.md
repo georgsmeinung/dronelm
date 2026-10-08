@@ -1,12 +1,41 @@
 # 11. Resultados comparativos SLM vs. FSM
 
-> **Alcance de este capítulo.** Todos los resultados que siguen corresponden al **lote base** (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo `slm` distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:
+> **Alcance de este capítulo.** Salvo el banco de prueba del VLM (§11.0), que usa la configuración vigente, todos los resultados que siguen corresponden al **lote base** (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo `slm` distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:
 >
 > 1. **Escenarios de control** (§11.1, §11.4.1, §11.4.2, §11.4.3): no ejercen la capa táctica de atasco y son válidos como medida del costo del brazo `slm` (H2).
 > 2. **Escenarios con obstrucción** (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`; §11.4.2b, §11.4.2c, §11.4.3b y §11.5.2–§11.5.4): se ejecutaron sin los waypoints WP_0b y WP_1b de `townsim_ini` ni `WP_0_SUR` de `citymap_pilot` (cap. 10 §10.3.3), con más de un `code_version` por escenario y con el umbral de ocupación en 0.35 (canal efectivamente inactivo, cap. 7 §7.5). **No describen el desempeño del sistema de los capítulos 5–8**, que se evaluará con los lotes D, E y F (§10.12).
 > 3. **El VLM intervino en los brazos `slm` y `fsm`.** Ambos resolvieron sus deadlocks con `deep_vlm` (barrido + consulta al VLM) y el lote no tiene una celda sin VLM en la resolución de atascos, por lo que **ninguna diferencia entre los brazos deliberativos y el `reactive` puede atribuirse al contenido de las respuestas del modelo** (cap. 10 §10.2.2). La auditoría de corridas de diagnóstico (cap. 9 §9.8) encontró además respuestas del barrido casi constantes, lo que refuerza esta cautela.
 >
 > La distancia mínima al obstáculo (`DistMin`) se midió en este lote con el canal de profundidad del simulador, como auditoría externa al lazo de control; el sistema de los capítulos 5–8 no usa ese canal (cap. 10 §10.3.0).
+
+## 11.0 Banco de prueba del VLM: línea base a bordo
+
+El banco (`airsim-loop/experiments/vlm_bench/`, protocolo en cap. 10 §10.12) mide, fuera de vuelo, qué preguntas sabe responder el modelo, contra una etiqueta de referencia tomada de la profundidad del simulador en la misma pose. La **línea base** de todas las comparaciones es la corrida del 7–8 de octubre de 2026 (`airsim-runs/vlm_bench/v2/`) con la configuración de vuelo vigente: LFM2.5-VL-1.6B Q4_K_M en Ollama, contexto de 8192 tokens, **en la misma GPU que Unreal Engine y el grafo de control** (cap. 8 §8.1.2). Se toma esa condición, y no la del servidor dedicado anterior, porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo.
+
+**Datos.** Muestras de las 21 corridas que tienen telemetría y los dos videos (frontal y FollowCam): pilotos `citysim_pilot` v2 y v3 y los tres pilotos con el modelo local. De 6926 poses se reprodujeron en AirSim 1908 (todas las consultas estratégicas, 429, y los barridos, 579, más 900 de trayectoria al azar). Válidas para evaluar: 915; se excluyen 190 con la cámara dentro de la geometría, 384 con captura inestable y 589 con la pose mal reproducida (correlación con lo registrado en vuelo < 0.5). El centro está libre en el 51 % de las válidas. Cada pregunta se hace con decodificación restringida y temperatura 0, a 384 px (los barridos a 256 px, como en vuelo), sobre hasta 60 muestras por clase.
+
+**Criterio de pase:** exactitud balanceada de la respuesta tal como sale ≥ 0.65 y límite inferior del IC 95 % (*bootstrap* por corrida) por encima del azar. El AUC, calculado con la probabilidad de la opción leída de los *logprobs*, es diagnóstico: indica si hay señal que el modelo no expresa en la respuesta, no configura el vuelo.
+
+| Pregunta | n | Exactitud bal. [IC 95 %] | Azar | Pasa | Respuesta más frecuente | AUC (diag.) | Latencia mediana |
+|---|---:|---|---:|:---:|---|---:|---:|
+| `grid_prod` (pregunta de vuelo, grilla 3×3) | 120 | 53 % [50–55 %] | 50 % | no | libre (82 %) | 0.53 | 0.88 s |
+| `grid_perm` (ídem, etiquetas permutadas) | 120 | 51 % [49–53 %] | 50 % | no | libre (85 %) | 0.51 | 0.88 s |
+| `centro_libre` (¿recto 15 m?) | 120 | 50 % [50–50 %] | 50 % | no | sí (100 %, constante) | 0.52 | 0.34 s |
+| `borde_lateral` | 180 | 33 % [33–33 %] | 33 % | no | izquierda (100 %, constante) | — | 0.35 s |
+| `borde_superior` | 120 | 53 % [50–58 %] | 50 % | no | sí (95 %) | 0.69 | 0.36 s |
+| `direccion_abierta` | 208 | 32 % [28–36 %] | 25 % | no | izquierda (62 %) | — | 0.36 s |
+| `scan_prod` (barrido de vuelo) | 14 | 50 % | 50 % | no | todo transitable (100 %) | 0.04* | 2.6 s |
+| `scan_perm` (ídem, orden permutado) | 22 | 50 % | 50 % | no | todo transitable (100 %) | 0.92* | 3.1 s |
+
+\* Con 14 y 22 barridos el AUC se calcula sobre muy pocos pares y cambia de extremo a extremo con el orden de las imágenes: no es interpretable.
+
+**Ninguna pregunta pasa.** Tres son constantes y el resto queda a pocos puntos del azar. En la pregunta de vuelo, las filas 1 y 3 de la grilla salen «libre» en el 100 % de las muestras (realmente libres: 72–78 % arriba, 38–47 % abajo), y en la fila del medio la respuesta depende de la posición del sector más que de la escena (A2 libre 14 %, B2 70 %, C2 52 %, con ~50–57 % reales). Con las etiquetas permutadas la respuesta coincide con la del orden normal en el 75 % de los sectores: el modelo responde sobre todo a la posición en la imagen. Los *logprobs* no rescatan la grilla (AUC 0.53); la única señal latente apreciable está en `borde_superior` (AUC 0.69, frente a una respuesta casi constante).
+
+Dos consecuencias para el vuelo. La sub-meta de la capa estratégica sale de la posición de las celdas, no de la escena: en el piloto `seed_99_20261007T214055Z`, 12 de 31 sub-metas eligieron la fila de abajo —siempre «libre»— y el dron descendió hasta apoyarse en el tablero de una autopista elevada a ~7 m, del que no pudo girar para el barrido. El desempate por fila con margen (`VLM_SUBGOAL_TIE_DEG`, cap. 5 §5.10.3) evita ese descenso, pero no aporta información de la escena. Y el barrido declara transitables todos los rumbos, de modo que la salida del atasco la decide la exclusión de rumbos ya probados (cap. 5 §5.12), no el modelo.
+
+**Plan de ruta sobre el mapa** (juicio por parches, cap. 4 §4.3.1; 59 candidatas en 11 tramos de `citysim_pilot` y `citysim_clear`, 28 realmente libres). La probabilidad media de «calle» separa las rutas libres de las bloqueadas con AUC 0.81. La ruta elegida es libre en 10 de 11 tramos, igual que la recta: en el único tramo con la recta bloqueada (`citysim_pilot` WP_2 → WP_3, la recta cruza un edificio) el plan elige un desvío libre, y en un tramo de `citysim_clear` elige un desvío bloqueado con la recta libre. En la prueba de parches del mapa (60 parches etiquetados, cinco clases) el modelo local obtiene exactitud balanceada 0.65 y AUC 0.79; el planificador usa la probabilidad, no la respuesta.
+
+**Latencia en vuelo con el modelo a bordo** (piloto `seed_99_20261007T214055Z`, 65 consultas estratégicas): mediana 0.77 s, p90 0.80 s, máximo 2.8 s, sin *timeouts*. La captura (`simGetImages`, mediana 103 ms) y el período del lazo (mediana 237 ms) quedan en el rango de los pilotos con el servidor dedicado (91–94 ms y 216–228 ms).
 
 ## 11.1 Resultados del lote base (5 semillas)
 

@@ -1297,7 +1297,7 @@
 <li><strong>Robustez fuera de distribución (OOD):</strong> A diferencia de modelos supervisados dependientes de categorías predefinidas de obstáculos, el cálculo de divergencia del campo de flujo modela directamente el fenómeno físico de aproximación: reacciona ante cualquier geometría sin importar su textura o clase semántica, una propiedad crítica en entornos no estructurados como el litoral marítimo o un área de incendio.</li>
 <li><strong>Adecuación a la geometría del vuelo urbano:</strong> Para un cuadricóptero con cámara frontal en cañón urbano, el campo visual está dominado por estructuras verticales y fachadas. El flujo óptico traslacional permite estimar la ocupación espacial (<code>ObstacleField</code>) en cuadrantes discretos de forma directa y determinista sin ningún entrenamiento previo.</li>
 </ol>
-<p>La capa de decisión implementa un modelo de lenguaje pequeño cuantizado (LFM2.5-VL-1.6B, cuantizado a 1.55 GB) ejecutado localmente con decodificación estructurada mediante <code>json_schema</code>, orquestado por un grafo LangGraph con dos lazos desacoplados: un lazo rápido de guiado y evasión por flujo óptico, que es el único que comanda velocidades, y un lazo lento en el que el VLM, de forma asíncrona, propone sub-metas en coordenadas del mundo ancladas a la pose del fotograma que observó. El capítulo 6 desarrolla los fundamentos del módulo de percepción y el capítulo 8 la ingeniería de la capa de decisión.</p>
+<p>La capa de decisión implementa un modelo de lenguaje pequeño cuantizado (LFM2.5-VL-1.6B, cuantizado Q4_K_M, ~1.6 GB con el codificador visual) ejecutado a bordo, en la misma GPU que la simulación, con decodificación estructurada mediante <code>json_schema</code>, orquestado por un grafo LangGraph con dos lazos desacoplados: un lazo rápido de guiado y evasión por flujo óptico, que es el único que comanda velocidades, y un lazo lento en el que el VLM, de forma asíncrona, propone sub-metas en coordenadas del mundo ancladas a la pose del fotograma que observó. El capítulo 6 desarrolla los fundamentos del módulo de percepción y el capítulo 8 la ingeniería de la capa de decisión.</p>
 <h2 id="01-introduccion-14-el-hilo-conductor-de-la-tesis">1.4 El hilo conductor de la tesis<a class="headerlink" href="#01-introduccion-14-el-hilo-conductor-de-la-tesis" title="Permanent link">&para;</a></h2>
 <p>En arquitecturas robóticas híbridas donde un modelo de lenguaje consume descripciones simbólicas o estructuradas del entorno para tomar decisiones de navegación, la integridad del contrato de interfaz entre la percepción y el modelo resulta crítica. La experiencia experimental demuestra que <strong>el fallo más severo en estos sistemas no radica en la capacidad de razonamiento del modelo de lenguaje, sino en la fidelidad y consistencia del contrato de datos que lo alimenta</strong>.</p>
 <p>Cuando la capa de percepción o el estado del sistema entrega representaciones desincronizadas, degradadas o vacías, los modelos de lenguaje tienden a generar respuestas sintácticamente válidas y aparentemente razonables a partir de premisas falsas. Dado que el modelo no se interrumpe con excepciones visibles y el vehículo continúa su trayectoria, estas fallas resultan estructuralmente invisibles si solo se observa el comportamiento cinemático superficial. <a href="#13-referencias-ref-zhu-2024">Zhu et al. (2024)</a> plantean formalmente la pregunta de hasta qué punto los LLMs comprenden el contexto que reciben; este trabajo la responde empíricamente desde el ángulo opuesto: ¿qué ocurre cuando el contexto que el modelo recibe está sistemáticamente corrompido?</p>
@@ -1966,7 +1966,7 @@ r.DetailMode=2
 <ol>
 <li>Descarta la respuesta si pasaron más de <code>VLM_STRATEGIC_MAX_AGE_S</code> (10 s) o si el waypoint real cambió.</li>
 <li>Si el sector de la meta está libre: <strong>no agrega nada</strong> (<code>directo_libre</code>). Si había una sub-meta pendiente, la marca para descartar (<code>_clear_subgoals</code>): el camino directo está libre y el desvío sobra.</li>
-<li>Si no: elige el sector libre más cercano en ángulo a la dirección de la meta —a igualdad, la fila del medio, después la de arriba, después la de abajo, de modo que con la meta de frente un rodeo por el costado precede a uno vertical— y fija una sub-meta <strong>desde el ancla</strong> en la dirección de ese sector (<code>subgoal.build_subgoal</code>, la misma función que usa el barrido, §5.12), a una distancia horizontal <code>d = min(VLM_SUBGOAL_DIST_M, distancia al waypoint real)</code> —15 m como máximo, y <strong>nunca más lejos que el waypoint</strong>—. La altitud cambia <code>d · tan(elevación del sector)</code>, acotada a ±<code>VLM_MAX_DZ_M</code> (4 m) y sin bajar de <code>VLM_SUBGOAL_MIN_ALT_M</code> (6 m). Sin sectores libres: nada (<code>sin_sector_libre</code>).</li>
+<li>Si no: elige el sector libre más cercano en ángulo a la dirección de la meta —entre los que quedan a menos de <code>VLM_SUBGOAL_TIE_DEG</code> (10°) del más cercano, la fila del medio, después la de arriba, después la de abajo, de modo que con la meta de frente un rodeo por el costado precede a uno vertical— y fija una sub-meta <strong>desde el ancla</strong> en la dirección de ese sector (<code>subgoal.build_subgoal</code>, la misma función que usa el barrido, §5.12), a una distancia horizontal <code>d = min(VLM_SUBGOAL_DIST_M, distancia al waypoint real)</code> —15 m como máximo, y <strong>nunca más lejos que el waypoint</strong>—. La altitud cambia <code>d · tan(elevación del sector)</code>, acotada a ±<code>VLM_MAX_DZ_M</code> (4 m) y sin bajar de <code>VLM_SUBGOAL_MIN_ALT_M</code> (6 m). Sin sectores libres: nada (<code>sin_sector_libre</code>).</li>
 <li>Descarta la sub-meta si el dron ya la superó mientras el modelo pensaba (quedó a menos de <code>VLM_SUBGOAL_MIN_AHEAD_M</code> = 4 m).</li>
 </ol>
 <p>La sub-meta se deposita en <code>inject_corner</code>; el bucle externo la inserta en el tracker (§5.15.4) y el guiado normal la persigue. <strong>El dron nunca se detiene a esperar.</strong> Como la geometría está anclada al fotograma, girar mientras el modelo piensa no invalida la respuesta; solo la invalida el paso del tiempo o haberla superado, y ambos casos se verifican.</p>
@@ -2544,7 +2544,7 @@ r.DetailMode=2
 <p>El capítulo 5 documenta la arquitectura de la consulta asíncrona al VLM (cuándo se solicita, cómo se integra al grafo, qué hace el sistema con la respuesta). El capítulo 6 documenta por qué hace falta un VLM (los puntos ciegos del estimador de flujo). Este capítulo documenta las decisiones de ingeniería que hacen que ese VLM funcione de forma confiable: selección del modelo bajo restricciones de hardware, salida estructurada, rol del modelo como perceptor semántico, ingeniería del prompt y gestión de la latencia.</p>
 <h2 id="08-decisiones-slm-81-seleccion-del-modelo-restricciones-de-hardware-como-parametro-de-diseno">8.1 Selección del modelo: restricciones de hardware como parámetro de diseño<a class="headerlink" href="#08-decisiones-slm-81-seleccion-del-modelo-restricciones-de-hardware-como-parametro-de-diseno" title="Permanent link">&para;</a></h2>
 <p>La selección del modelo de lenguaje no fue un proceso de <em>benchmark</em> abstracto sino un proceso de diseño con restricciones duras. El sistema corre en una RTX 5060 con 8 GB de VRAM compartidos con una simulación de Unreal Engine 5.5. AirSim sobre UE5.5 consume, en condiciones de vuelo activo, entre 4.5 y 6 GB de VRAM (<a href="#13-referencias-ref-turco-2024">Turco et al., 2024</a>). El presupuesto efectivo disponible para la inferencia del modelo es de <strong>2 a 3.5 GB de VRAM</strong>, incluyendo la KV cache del historial de prompt.</p>
-<p>Esta restricción excluye inmediatamente a los modelos de referencia del estado del arte (GPT-4o, Claude 3.5, Gemini 1.5 — todos en la nube o con hardware dedicado de 24–80 GB) y orienta la búsqueda hacia modelos multimodales compactos cuantizados (<em>Small Vision-Language Models</em>, VLM), del orden de 3 a 7 mil millones de parámetros, ejecutados localmente bajo LM Studio o vLLM.</p>
+<p>Esta restricción excluye inmediatamente a los modelos de referencia del estado del arte (GPT-4o, Claude 3.5, Gemini 1.5 — todos en la nube o con hardware dedicado de 24–80 GB) y orienta la búsqueda hacia modelos multimodales compactos cuantizados (<em>Small Vision-Language Models</em>, VLM), del orden de 3 a 7 mil millones de parámetros, ejecutados localmente (LM Studio, Ollama o vLLM).</p>
 <h3 id="08-decisiones-slm-811-el-requisito-de-vision-directa">8.1.1 El requisito de visión directa<a class="headerlink" href="#08-decisiones-slm-811-el-requisito-de-vision-directa" title="Permanent link">&para;</a></h3>
 <p>Una distinción de diseño previa a la selección del modelo es si la consulta al modelo debe usar un modelo textual puro (recibe solo telemetría y resúmenes de percepción serializados) o un VLM multimodal (recibe además el fotograma de la cámara). El sistema adopta un VLM multimodal por razones que no son de conveniencia sino de cobertura funcional:</p>
 <ul>
@@ -2553,7 +2553,7 @@ r.DetailMode=2
 <li><strong>Geometría que el flujo no representa</strong>: las superficies horizontales a la altura de vuelo (tablero de una autopista elevada, cornisas, balcones) no producen expansión en el sector frontal; el fotograma sí las muestra. En las corridas de diagnóstico fue el obstáculo sobre el que el dron quedó apoyado e inmovilizado (cap. 9, §9.8.7).</li>
 </ul>
 <h3 id="08-decisiones-slm-812-modelo-adoptado-y-candidatos-evaluados">8.1.2 Modelo adoptado y candidatos evaluados<a class="headerlink" href="#08-decisiones-slm-812-modelo-adoptado-y-candidatos-evaluados" title="Permanent link">&para;</a></h3>
-<p>El modelo adoptado en la implementación definitiva es <strong>LFM2.5-VL-1.6B</strong> (Liquid AI; cuantización Q4_0, formato GGUF, 1.55 GB), servido por LM Studio en una Mac mini M4 con 16 GB de memoria unificada. Combina un núcleo de lenguaje de 1.2 B de parámetros con arquitectura híbrida de convoluciones (decodificación rápida) y un codificador visual SigLIP2 de 400 M que representa cada imagen con 64–256 tokens. Reemplazó a <strong>Qwen2.5-VL-3B-Instruct</strong>, con el que se hicieron las corridas de diagnóstico del cap. 9, por latencia: Qwen tardaba ~10–12 s por consulta con imagen (§8.6), y la evidencia de esas corridas no mostraba que discriminara mejor (cap. 9, §9.8.3). En los <em>benchmarks</em> públicos de comprensión visual ambos están en el mismo rango; ninguno mide la tarea de vuelo, que la decide el banco de prueba (cap. 11, §11.0). Se usa la versión GGUF y no la conversión MLX porque esta última devuelve una respuesta vacía cuando la consulta pide a la vez salida JSON restringida y <em>logprobs</em>. LFM2.5-VL-1.6B también es el modelo del planificador de ruta previo al vuelo (cap. 4, §4.3.1); Qwen2.5-VL-3B queda como segundo modelo de la comparación de §10.10.4. Los modelos candidatos evaluados durante el diseño (documentados en <code>informe/anexos/A1-EXPLORACION-SLM-GGUF.md</code>) son:</p>
+<p>El modelo adoptado en la implementación definitiva es <strong>LFM2.5-VL-1.6B</strong> (Liquid AI; cuantización Q4_K_M, formato GGUF, 731 MB más el codificador visual), servido por Ollama en la <strong>misma estación y la misma GPU</strong> que la simulación y el grafo de control, con un contexto limitado a 8192 tokens. Hasta el 7 de octubre de 2026 se servía en Q4_0 con LM Studio desde una Mac mini M4 dedicada; se trasladó a la GPU de la simulación porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo, y esa es la condición representativa del dron real. Con 8192 tokens de contexto el modelo ocupa ~1.6 GB de VRAM medidos (con el contexto por defecto de 128 k, 3.1 GB, casi todo caché de atención); la consulta más pesada del sistema, un barrido de cuatro imágenes, usa ~800 tokens de entrada. La variante <em>Extract</em> del mismo modelo, ajustada para extracción, se descartó: completa el esquema JSON sin mirar la imagen (la misma grilla en las 43 consultas de un piloto). Combina un núcleo de lenguaje de 1.2 B de parámetros con arquitectura híbrida de convoluciones (decodificación rápida) y un codificador visual SigLIP2 de 400 M que representa cada imagen con 64–256 tokens. Reemplazó a <strong>Qwen2.5-VL-3B-Instruct</strong>, con el que se hicieron las corridas de diagnóstico del cap. 9, por latencia: Qwen tardaba ~10–12 s por consulta con imagen (§8.6), y la evidencia de esas corridas no mostraba que discriminara mejor (cap. 9, §9.8.3). En los <em>benchmarks</em> públicos de comprensión visual ambos están en el mismo rango; ninguno mide la tarea de vuelo, que la decide el banco de prueba (cap. 11, §11.0). Se usa la versión GGUF y no la conversión MLX porque esta última devuelve una respuesta vacía cuando la consulta pide a la vez salida JSON restringida y <em>logprobs</em>. LFM2.5-VL-1.6B también es el modelo del planificador de ruta previo al vuelo (cap. 4, §4.3.1); Qwen2.5-VL-3B queda como segundo modelo de la comparación de §10.10.4. Los modelos candidatos evaluados durante el diseño (documentados en <code>informe/anexos/A1-EXPLORACION-SLM-GGUF.md</code>) son:</p>
 <table>
 <thead>
 <tr>
@@ -2583,9 +2583,9 @@ r.DetailMode=2
 <td>Sin soporte visual; razonamiento débil</td>
 </tr>
 <tr>
-<td><strong>LFM2.5-VL-1.6B</strong> (Q4_0, GGUF)</td>
-<td>1.55 GB</td>
-<td><strong>~1.6 GB</strong></td>
+<td><strong>LFM2.5-VL-1.6B</strong> (Q4_K_M, GGUF)</td>
+<td>0.73 GB + codificador visual</td>
+<td><strong>~1.6 GB</strong> (contexto 8 k)</td>
 <td><strong>Adoptado</strong></td>
 </tr>
 <tr>
@@ -2640,7 +2640,7 @@ r.DetailMode=2
 <h3 id="08-decisiones-slm-832-capa-estrategica-grilla-de-33-con-direccion-absoluta">8.3.2 Capa estratégica: grilla de 3×3 con dirección absoluta<a class="headerlink" href="#08-decisiones-slm-832-capa-estrategica-grilla-de-33-con-direccion-absoluta" title="Permanent link">&para;</a></h3>
 <p>Un recorte cuadrado del centro del fotograma frontal —se cortan los dos costados del ancho— se divide en una grilla de 3×3 por tercios —la grilla de composición fotográfica—: columnas A, B, C (izquierda a derecha) y filas 1, 2, 3 (arriba, a la altura del dron, abajo). Se marca en la imagen la dirección del destino, en azimut y elevación. Para cada sector el modelo dice si se puede volar en esa dirección al menos 15 m.</p>
 <p>Una partición en columnas solo describe el eje horizontal. La grilla agrega el vertical: permite que la respuesta diga que un obstáculo a la altura del dron se pasa por arriba (fila 1 libre, fila 2 bloqueada) y que una superficie horizontal se ve en la fila del medio, sin pedir al modelo un concepto abstracto como «estructura debajo». En corridas de diagnóstico, una pregunta de ese tipo («¿hay una estructura horizontal cercana?») recibió <code>true</code> en 5 de 6 consultas, con imágenes muy distintas (cap. 9, §9.8.9).</p>
-<p>La traducción (<code>decide_subgoal</code>, detalle en §5.10.3) usa la pose <strong>del fotograma</strong>: la dirección absoluta del sector es el yaw del ancla más el azimut del centro del sector, con la elevación del centro del sector. La sub-meta se fija desde la posición del ancla, a no más de 15 m y nunca más lejos que el waypoint real, con la misma función que usa el barrido. El recorte cuadrado deja los sectores laterales y los verticales a la misma distancia angular del centro (±24°), de modo que la preferencia entre un rodeo por el costado y uno por arriba no la decide la forma del cuadro: a igual distancia gana la fila del medio. Así, la geometría que el modelo describió se transporta al mundo sin depender de hacia dónde mira el dron cuando la respuesta llega. Si el sector de la meta está libre, la capa no agrega nada y descarta cualquier desvío pendiente: la respuesta más frecuente esperable («el camino directo está libre») no genera maniobras.</p>
+<p>La traducción (<code>decide_subgoal</code>, detalle en §5.10.3) usa la pose <strong>del fotograma</strong>: la dirección absoluta del sector es el yaw del ancla más el azimut del centro del sector, con la elevación del centro del sector. La sub-meta se fija desde la posición del ancla, a no más de 15 m y nunca más lejos que el waypoint real, con la misma función que usa el barrido. El recorte cuadrado deja los sectores laterales y los verticales a la misma distancia angular del centro (±24°), de modo que la preferencia entre un rodeo por el costado y uno por arriba no la decide la forma del cuadro: a igual distancia gana la fila del medio. La igualdad se toma con un margen de 10° (<code>VLM_SUBGOAL_TIE_DEG</code>): con empate exacto, una meta medio grado por debajo del dron hacía ganar siempre a la fila de abajo, y en un piloto el dron descendió hasta apoyarse en el tablero de una autopista elevada (cap. 11, §11.0). Así, la geometría que el modelo describió se transporta al mundo sin depender de hacia dónde mira el dron cuando la respuesta llega. Si el sector de la meta está libre, la capa no agrega nada y descarta cualquier desvío pendiente: la respuesta más frecuente esperable («el camino directo está libre») no genera maniobras.</p>
 <h3 id="08-decisiones-slm-833-barrido-imagenes-numeradas-rumbos-medidos">8.3.3 Barrido: imágenes numeradas, rumbos medidos<a class="headerlink" href="#08-decisiones-slm-833-barrido-imagenes-numeradas-rumbos-medidos" title="Permanent link">&para;</a></h3>
 <p>En el barrido de resolución de atasco (§5.12), el modelo recibe cuatro imágenes numeradas y describe cada una (<code>img</code>, <code>view</code>, <code>free</code>). El código asigna a cada imagen el yaw <strong>medido</strong> en el ciclo en que se capturó y elige, entre las transitables, la de rumbo absoluto más cercano al rumbo absoluto hacia el waypoint real. Las entradas se asignan por número de imagen (o por orden si falta), y las entradas que el modelo inventa de más se descartan.</p>
 <p>El diseño evita un error de marco de referencia documentado en el capítulo 9 (§9.8.1): si las imágenes se etiquetan con su rumbo absoluto y se pide al modelo un ángulo relativo, el modelo copia la etiqueta y el código la interpreta como relativa, de modo que «la dirección hacia la meta está libre» termina ejecutándose como una evasión hacia el lado contrario.</p>
@@ -2680,7 +2680,7 @@ Reply with JSON only.</p>
 <p>Los system prompts están en el código (<code>vlm_strategic.py</code>, <code>deep_scan.py</code>).</p>
 <h2 id="08-decisiones-slm-86-gestion-de-latencia">8.6 Gestión de latencia<a class="headerlink" href="#08-decisiones-slm-86-gestion-de-latencia" title="Permanent link">&para;</a></h2>
 <p>El tiempo de inferencia del VLM es un orden de magnitud mayor que el período del lazo (200 ms). La consulta corre en el hilo de <code>DeliberationService</code> (§5.10.5) y nunca bloquea al grafo. Esta separación entre una capa de ejecución rápida que siempre responde y una capa de razonamiento lento desacoplada es la instancia concreta, con un VLM como capa deliberativa, del patrón de arquitecturas de tres capas (<a href="#13-referencias-ref-gat-1998">Gat, 1998</a>).</p>
-<p><strong>Latencia observada.</strong> Las fuentes disponibles son todas con Qwen2.5-VL-3B, el modelo de vuelo anterior (§8.1.2); la latencia de LFM2.5-VL-1.6B se mide en el banco de prueba y en los pilotos. No provienen de una medición controlada que aísle carga de GPU, tamaño de imagen y arranque en frío:</p>
+<p><strong>Latencia observada.</strong> Las filas de la tabla corresponden a Qwen2.5-VL-3B, el modelo de vuelo anterior (§8.1.2). Con LFM2.5-VL-1.6B a bordo (Q4_K_M, misma GPU que la simulación), en el piloto <code>seed_99_20261007T214055Z</code> la consulta estratégica tardó mediana 0.77 s, p90 0.80 s y máximo 2.8 s (65 consultas, sin <em>timeouts</em>); en el banco, 0.88 s la grilla y 2.6–3.1 s el barrido de cuatro imágenes (cap. 11, §11.0). Con el mismo modelo en Q4_0 servido desde la Mac mini M4, tres pilotos dieron medianas de 1.2–1.6 s. No provienen de una medición controlada que aísle carga de GPU, tamaño de imagen y arranque en frío:</p>
 <table>
 <thead>
 <tr>
@@ -3812,7 +3812,7 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 <h3 id="10-metodologia-experimental-10123-estado">10.12.3 Estado<a class="headerlink" href="#10-metodologia-experimental-10123-estado" title="Permanent link">&para;</a></h3>
 <p>A la fecha de este informe <strong>no se ejecutó ningún lote con obstrucción</strong>. Las corridas piloto sobre <code>townsim_ini</code> y las 12 corridas de diagnóstico sobre <code>citysim_pilot</code> fueron corridas de diagnóstico, con ajustes entre una y otra, de modo que ninguna constituye evidencia estadística ni entra al capítulo 11; se usan, con esa etiqueta, como evidencia de diagnóstico en el capítulo 9. La actualización del capítulo 11 y de la evaluación de H1 en el capítulo 12 queda pendiente de la ejecución de los lotes D, E y F sobre un <code>code_version</code> fijo.</p></section><section class="print-page" id="11-resultados" heading-number="12"><h1 id="11-resultados-11-resultados-comparativos-slm-vs-fsm">11. Resultados comparativos SLM vs. FSM<a class="headerlink" href="#11-resultados-11-resultados-comparativos-slm-vs-fsm" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Alcance de este capítulo.</strong> Todos los resultados que siguen corresponden al <strong>lote base</strong> (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo <code>slm</code> distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:</p>
+<p><strong>Alcance de este capítulo.</strong> Salvo el banco de prueba del VLM (§11.0), que usa la configuración vigente, todos los resultados que siguen corresponden al <strong>lote base</strong> (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo <code>slm</code> distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:</p>
 <ol>
 <li><strong>Escenarios de control</strong> (§11.1, §11.4.1, §11.4.2, §11.4.3): no ejercen la capa táctica de atasco y son válidos como medida del costo del brazo <code>slm</code> (H2).</li>
 <li><strong>Escenarios con obstrucción</strong> (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citymap_pilot</code>; §11.4.2b, §11.4.2c, §11.4.3b y §11.5.2–§11.5.4): se ejecutaron sin los waypoints WP_0b y WP_1b de <code>townsim_ini</code> ni <code>WP_0_SUR</code> de <code>citymap_pilot</code> (cap. 10 §10.3.3), con más de un <code>code_version</code> por escenario y con el umbral de ocupación en 0.35 (canal efectivamente inactivo, cap. 7 §7.5). <strong>No describen el desempeño del sistema de los capítulos 5–8</strong>, que se evaluará con los lotes D, E y F (§10.12).</li>
@@ -3820,6 +3820,111 @@ python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span
 </ol>
 <p>La distancia mínima al obstáculo (<code>DistMin</code>) se midió en este lote con el canal de profundidad del simulador, como auditoría externa al lazo de control; el sistema de los capítulos 5–8 no usa ese canal (cap. 10 §10.3.0).</p>
 </blockquote>
+<h2 id="11-resultados-110-banco-de-prueba-del-vlm-linea-base-a-bordo">11.0 Banco de prueba del VLM: línea base a bordo<a class="headerlink" href="#11-resultados-110-banco-de-prueba-del-vlm-linea-base-a-bordo" title="Permanent link">&para;</a></h2>
+<p>El banco (<code>airsim-loop/experiments/vlm_bench/</code>, protocolo en cap. 10 §10.12) mide, fuera de vuelo, qué preguntas sabe responder el modelo, contra una etiqueta de referencia tomada de la profundidad del simulador en la misma pose. La <strong>línea base</strong> de todas las comparaciones es la corrida del 7–8 de octubre de 2026 (<code>airsim-runs/vlm_bench/v2/</code>) con la configuración de vuelo vigente: LFM2.5-VL-1.6B Q4_K_M en Ollama, contexto de 8192 tokens, <strong>en la misma GPU que Unreal Engine y el grafo de control</strong> (cap. 8 §8.1.2). Se toma esa condición, y no la del servidor dedicado anterior, porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo.</p>
+<p><strong>Datos.</strong> Muestras de las 21 corridas que tienen telemetría y los dos videos (frontal y FollowCam): pilotos <code>citysim_pilot</code> v2 y v3 y los tres pilotos con el modelo local. De 6926 poses se reprodujeron en AirSim 1908 (todas las consultas estratégicas, 429, y los barridos, 579, más 900 de trayectoria al azar). Válidas para evaluar: 915; se excluyen 190 con la cámara dentro de la geometría, 384 con captura inestable y 589 con la pose mal reproducida (correlación con lo registrado en vuelo &lt; 0.5). El centro está libre en el 51 % de las válidas. Cada pregunta se hace con decodificación restringida y temperatura 0, a 384 px (los barridos a 256 px, como en vuelo), sobre hasta 60 muestras por clase.</p>
+<p><strong>Criterio de pase:</strong> exactitud balanceada de la respuesta tal como sale ≥ 0.65 y límite inferior del IC 95 % (<em>bootstrap</em> por corrida) por encima del azar. El AUC, calculado con la probabilidad de la opción leída de los <em>logprobs</em>, es diagnóstico: indica si hay señal que el modelo no expresa en la respuesta, no configura el vuelo.</p>
+<table>
+<thead>
+<tr>
+<th>Pregunta</th>
+<th style="text-align: right;">n</th>
+<th>Exactitud bal. [IC 95 %]</th>
+<th style="text-align: right;">Azar</th>
+<th style="text-align: center;">Pasa</th>
+<th>Respuesta más frecuente</th>
+<th style="text-align: right;">AUC (diag.)</th>
+<th style="text-align: right;">Latencia mediana</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>grid_prod</code> (pregunta de vuelo, grilla 3×3)</td>
+<td style="text-align: right;">120</td>
+<td>53 % [50–55 %]</td>
+<td style="text-align: right;">50 %</td>
+<td style="text-align: center;">no</td>
+<td>libre (82 %)</td>
+<td style="text-align: right;">0.53</td>
+<td style="text-align: right;">0.88 s</td>
+</tr>
+<tr>
+<td><code>grid_perm</code> (ídem, etiquetas permutadas)</td>
+<td style="text-align: right;">120</td>
+<td>51 % [49–53 %]</td>
+<td style="text-align: right;">50 %</td>
+<td style="text-align: center;">no</td>
+<td>libre (85 %)</td>
+<td style="text-align: right;">0.51</td>
+<td style="text-align: right;">0.88 s</td>
+</tr>
+<tr>
+<td><code>centro_libre</code> (¿recto 15 m?)</td>
+<td style="text-align: right;">120</td>
+<td>50 % [50–50 %]</td>
+<td style="text-align: right;">50 %</td>
+<td style="text-align: center;">no</td>
+<td>sí (100 %, constante)</td>
+<td style="text-align: right;">0.52</td>
+<td style="text-align: right;">0.34 s</td>
+</tr>
+<tr>
+<td><code>borde_lateral</code></td>
+<td style="text-align: right;">180</td>
+<td>33 % [33–33 %]</td>
+<td style="text-align: right;">33 %</td>
+<td style="text-align: center;">no</td>
+<td>izquierda (100 %, constante)</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.35 s</td>
+</tr>
+<tr>
+<td><code>borde_superior</code></td>
+<td style="text-align: right;">120</td>
+<td>53 % [50–58 %]</td>
+<td style="text-align: right;">50 %</td>
+<td style="text-align: center;">no</td>
+<td>sí (95 %)</td>
+<td style="text-align: right;">0.69</td>
+<td style="text-align: right;">0.36 s</td>
+</tr>
+<tr>
+<td><code>direccion_abierta</code></td>
+<td style="text-align: right;">208</td>
+<td>32 % [28–36 %]</td>
+<td style="text-align: right;">25 %</td>
+<td style="text-align: center;">no</td>
+<td>izquierda (62 %)</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.36 s</td>
+</tr>
+<tr>
+<td><code>scan_prod</code> (barrido de vuelo)</td>
+<td style="text-align: right;">14</td>
+<td>50 %</td>
+<td style="text-align: right;">50 %</td>
+<td style="text-align: center;">no</td>
+<td>todo transitable (100 %)</td>
+<td style="text-align: right;">0.04*</td>
+<td style="text-align: right;">2.6 s</td>
+</tr>
+<tr>
+<td><code>scan_perm</code> (ídem, orden permutado)</td>
+<td style="text-align: right;">22</td>
+<td>50 %</td>
+<td style="text-align: right;">50 %</td>
+<td style="text-align: center;">no</td>
+<td>todo transitable (100 %)</td>
+<td style="text-align: right;">0.92*</td>
+<td style="text-align: right;">3.1 s</td>
+</tr>
+</tbody>
+</table>
+<p>* Con 14 y 22 barridos el AUC se calcula sobre muy pocos pares y cambia de extremo a extremo con el orden de las imágenes: no es interpretable.</p>
+<p><strong>Ninguna pregunta pasa.</strong> Tres son constantes y el resto queda a pocos puntos del azar. En la pregunta de vuelo, las filas 1 y 3 de la grilla salen «libre» en el 100 % de las muestras (realmente libres: 72–78 % arriba, 38–47 % abajo), y en la fila del medio la respuesta depende de la posición del sector más que de la escena (A2 libre 14 %, B2 70 %, C2 52 %, con ~50–57 % reales). Con las etiquetas permutadas la respuesta coincide con la del orden normal en el 75 % de los sectores: el modelo responde sobre todo a la posición en la imagen. Los <em>logprobs</em> no rescatan la grilla (AUC 0.53); la única señal latente apreciable está en <code>borde_superior</code> (AUC 0.69, frente a una respuesta casi constante).</p>
+<p>Dos consecuencias para el vuelo. La sub-meta de la capa estratégica sale de la posición de las celdas, no de la escena: en el piloto <code>seed_99_20261007T214055Z</code>, 12 de 31 sub-metas eligieron la fila de abajo —siempre «libre»— y el dron descendió hasta apoyarse en el tablero de una autopista elevada a ~7 m, del que no pudo girar para el barrido. El desempate por fila con margen (<code>VLM_SUBGOAL_TIE_DEG</code>, cap. 5 §5.10.3) evita ese descenso, pero no aporta información de la escena. Y el barrido declara transitables todos los rumbos, de modo que la salida del atasco la decide la exclusión de rumbos ya probados (cap. 5 §5.12), no el modelo.</p>
+<p><strong>Plan de ruta sobre el mapa</strong> (juicio por parches, cap. 4 §4.3.1; 59 candidatas en 11 tramos de <code>citysim_pilot</code> y <code>citysim_clear</code>, 28 realmente libres). La probabilidad media de «calle» separa las rutas libres de las bloqueadas con AUC 0.81. La ruta elegida es libre en 10 de 11 tramos, igual que la recta: en el único tramo con la recta bloqueada (<code>citysim_pilot</code> WP_2 → WP_3, la recta cruza un edificio) el plan elige un desvío libre, y en un tramo de <code>citysim_clear</code> elige un desvío bloqueado con la recta libre. En la prueba de parches del mapa (60 parches etiquetados, cinco clases) el modelo local obtiene exactitud balanceada 0.65 y AUC 0.79; el planificador usa la probabilidad, no la respuesta.</p>
+<p><strong>Latencia en vuelo con el modelo a bordo</strong> (piloto <code>seed_99_20261007T214055Z</code>, 65 consultas estratégicas): mediana 0.77 s, p90 0.80 s, máximo 2.8 s, sin <em>timeouts</em>. La captura (<code>simGetImages</code>, mediana 103 ms) y el período del lazo (mediana 237 ms) quedan en el rango de los pilotos con el servidor dedicado (91–94 ms y 216–228 ms).</p>
 <h2 id="11-resultados-111-resultados-del-lote-base-5-semillas">11.1 Resultados del lote base (5 semillas)<a class="headerlink" href="#11-resultados-111-resultados-del-lote-base-5-semillas" title="Permanent link">&para;</a></h2>
 <p>Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos. Las celdas muestran media ± desviación
 estándar sobre las 5 semillas independientes. Tasa de éxito: 5/5 y 0 colisiones en los 45 runs.</p>
@@ -4981,7 +5086,7 @@ límite del sensor, no del algoritmo.</p>
 <p><strong>Sistema sin validación en vuelo:</strong> la capa estratégica, el barrido en marco mundo y la detección de atasco de dos señales están cubiertos por tests (incluido el grafo compilado de punta a punta) pero no tienen corridas en el simulador. Sus umbrales (período de 3 s, edad máxima de 10 s, sub-meta a 15 m como máximo, cambio de altitud de 4 m como máximo, deduplicación de 10 m, radio de 8 m sin consultas alrededor del waypoint, grilla de 3×3) son decisiones de diseño, no valores calibrados.</p>
 </li>
 <li>
-<p><strong>Capacidad de discriminación del VLM no demostrada:</strong> en las corridas de diagnóstico, 52 de 53 respuestas sectoriales declararon el frente transitable, incluso a menos de un metro de una superficie (cap. 9, §9.8.3). El diseño del sistema cambia la pregunta y el prompt (cap. 8, §8.3–§8.5), pero no hay evidencia todavía de que el VLM (Qwen2.5-VL-3B en esas corridas; LFM2.5-VL-1.6B en la versión final) distinga sectores volables de bloqueados en el render de CitySim; en la corrida piloto de validación, las respuestas de la capa estratégica y del barrido fueron casi constantes (cap. 9, §9.8.9). Si no lo hace, el brazo <code>slm</code> se reduce, en la práctica, al lazo rápido más escapes verticales.</p>
+<p><strong>Capacidad de discriminación del VLM no demostrada:</strong> en las corridas de diagnóstico, 52 de 53 respuestas sectoriales declararon el frente transitable, incluso a menos de un metro de una superficie (cap. 9, §9.8.3). El diseño del sistema cambia la pregunta y el prompt (cap. 8, §8.3–§8.5), y el banco de prueba con el modelo a bordo (cap. 11, §11.0) muestra que LFM2.5-VL-1.6B no distingue sectores volables de bloqueados en el render de CitySim: ninguna de las ocho preguntas evaluadas supera el criterio, la grilla de vuelo queda en 53 % de exactitud balanceada y el barrido declara transitables todos los rumbos. La única señal aprovechable está en el mapa cenital (AUC 0.81 para rutas libres frente a bloqueadas). Si no lo hace, el brazo <code>slm</code> se reduce, en la práctica, al lazo rápido más escapes verticales.</p>
 </li>
 <li>
 <p><strong>Componentes del lazo rápido sin evaluar por separado:</strong> la evasión por flujo, <code>GIRAR_90</code>, el gobernador de velocidad, la detección de techo y la reacción a contacto forman parte del sistema por ser comunes en espíritu a los tres brazos, no por evidencia de beneficio. Varios de sus umbrales se fijaron sobre una o dos corridas.</p>
@@ -5289,7 +5394,10 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <p>En arquitecturas modulares, la interacción entre el modelo deliberativo y las herramientas externas (sensores, registros de vuelo, interfaces con Unreal Engine) puede articularse mediante el <strong>Model Context Protocol</strong> (MCP; <a href="#13-referencias-ref-anthropic-2024">Anthropic, 2024</a>). MCP define un protocolo de cliente-servidor en JSON-RPC que desacopla la lógica del modelo de los servicios del sistema anfitrión, permitiendo exponer primitivas de consulta y actuación de forma segura, determinista y local sin conexión a Internet.</p>
 <hr />
 <h2 id="anexos-a1-exploracion-slm-gguf-a14-procedimiento-practico-de-configuracion-e-integracion-local">A1.4 Procedimiento práctico de configuración e integración local<a class="headerlink" href="#anexos-a1-exploracion-slm-gguf-a14-procedimiento-practico-de-configuracion-e-integracion-local" title="Permanent link">&para;</a></h2>
-<p>La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:</p>
+<p>La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas siguió, durante la fase exploratoria, un flujo de tres fases con la inferencia en un nodo separado:</p>
+<blockquote>
+<p><strong>Configuración vigente (desde el 7 de octubre de 2026).</strong> La inferencia ya no está desacoplada: LFM2.5-VL-1.6B (Q4_K_M, contexto de 8192 tokens) corre en Ollama sobre la misma RTX 5060 que Unreal Engine 5.5 y el grafo de control (<code>http://127.0.0.1:11434/v1</code>), con ~1.6 GB de VRAM. Un VLM a bordo comparte el cómputo con el resto del sistema de vuelo; esa es la condición que se toma como representativa y como línea base del banco de prueba (cap. 11, §11.0). Lo que sigue describe la configuración anterior de dos nodos.</p>
+</blockquote>
 <p><img src="anexos/a1-integracion-local.jpg"/></p>
 <ol>
 <li><strong>Gestión de capas y memoria en Apple Silicon (<em>Metal Offloading</em> en Mac mini M4)</strong>:</li>
@@ -6349,13 +6457,13 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <tbody>
 <tr>
 <td><code>LOCAL_LLM_URL</code></td>
-<td><code>"http://192.168.110.101:1234/v1"</code></td>
-<td>Endpoint OpenAI-compatible del servidor local de inferencia (LM Studio / <code>llama.cpp</code>).</td>
+<td><code>"http://127.0.0.1:11434/v1"</code></td>
+<td>Endpoint OpenAI-compatible de Ollama, en la misma estación y GPU que la simulación. <code>127.0.0.1</code> y no <code>localhost</code>: en Windows <code>localhost</code> resuelve primero a <code>::1</code> y cada conexión espera ~2 s antes de caer a IPv4.</td>
 </tr>
 <tr>
 <td><code>LOCAL_LLM_MODEL_NAME</code></td>
-<td><code>"liquidai/lfm2.5-vl-1.6b"</code></td>
-<td>Modelo de vuelo: LFM2.5-VL-1.6B, Q4_0, GGUF (1.55 GB). El identificador es el exacto que devuelve <code>/v1/models</code>; la versión MLX del mismo modelo no sirve (respuesta vacía con JSON restringido y <em>logprobs</em>).</td>
+<td><code>"lfm2.5-vl-1.6b:q4km-ctx8k"</code></td>
+<td>Modelo de vuelo: tag local de Ollama creado desde <code>hf.co/LiquidAI/LFM2.5-VL-1.6B-GGUF:Q4_K_M</code> con <code>num_ctx=8192</code> (~1.6 GB de VRAM; con el contexto por defecto, 3.1 GB). No usar la variante <code>-Extract</code> (completa el esquema sin mirar la imagen) ni la conversión MLX (respuesta vacía con JSON restringido y <em>logprobs</em>).</td>
 </tr>
 <tr>
 <td><code>VLM_IMAGE_MAX_SIZE</code></td>
@@ -6413,6 +6521,11 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <td>Cambio máximo de altitud de una sub-meta (filas 1 y 3 de la grilla) y altitud mínima de una sub-meta.</td>
 </tr>
 <tr>
+<td><code>VLM_SUBGOAL_TIE_DEG</code></td>
+<td><code>10.0</code></td>
+<td>Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio &gt; arriba &gt; abajo) (cap. 5, §5.10.3).</td>
+</tr>
+<tr>
 <td><code>VLM_NEAR_WP_M</code></td>
 <td><code>8.0</code></td>
 <td>A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre.</td>
@@ -6439,7 +6552,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 </tr>
 <tr>
 <td><code>ROUTE_LLM_MODEL_NAME</code></td>
-<td><code>"liquidai/lfm2.5-vl-1.6b"</code></td>
+<td><code>"lfm2.5-vl-1.6b:q4km-ctx8k"</code></td>
 <td>Modelo del planificador de ruta, en el mismo servidor que el de vuelo; si falta, se usa <code>LOCAL_LLM_MODEL_NAME</code>. Necesita JSON forzado y <em>logprobs</em> en la misma consulta (la versión GGUF de LFM los da; la MLX no).</td>
 </tr>
 <tr>
@@ -6854,13 +6967,13 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <p>Copiar el archivo de configuración del Anexo 6 (§A6.1) en el directorio de usuario:
 <div class="highlight"><pre><span></span><code><span class="nb">Copy-Item</span> <span class="s2">&quot;config/settings.json&quot;</span> <span class="s2">&quot;$HOME\Documents\AirSim\settings.json&quot;</span> <span class="n">-Force</span>
 </code></pre></div></p>
-<h3 id="anexos-a6-configuracion-entorno-reproducibilidad-paso-3-inicializacion-del-servidor-de-modelos-lm-studio">Paso 3: Inicialización del servidor de modelos (LM Studio)<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-paso-3-inicializacion-del-servidor-de-modelos-lm-studio" title="Permanent link">&para;</a></h3>
+<h3 id="anexos-a6-configuracion-entorno-reproducibilidad-paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu">Paso 3: Inicialización del servidor de modelos (Ollama, misma GPU)<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Abrir <strong>LM Studio</strong> (o instancia de <code>llama.cpp</code> / Ollama).</li>
-<li>Cargar el modelo multimodal <code>LiquidAI/LFM2.5-VL-1.6B</code> en GGUF <code>Q4_0</code> (vuelo y planificador de ruta) y dejarlo cargado para no pagar la carga durante el lote.</li>
-<li>Iniciar el servidor local en el puerto <code>1234</code> con compatibilidad de API OpenAI (<code>http://127.0.0.1:1234/v1</code>).</li>
-<li>Verificar la respuesta del servidor mediante:
-   <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:1234/v1/models
+<li>Ejecutar <code>startOllama.ps1</code> (raíz <code>D:\TesisMCD</code>, fuera del repositorio). El script lee el modelo de <code>config/.env</code>; reinicia Ollama con <code>OLLAMA_MODELS</code> apuntando a la carpeta de modelos de la aplicación, <code>OLLAMA_KEEP_ALIVE=-1</code> (el modelo no se descarga entre corridas) y <code>OLLAMA_CONTEXT_LENGTH=8192</code>; cierra los <code>llama-server</code> huérfanos (en Windows sobreviven al cierre de <code>ollama.exe</code> y retienen VRAM); descarga el GGUF base y crea el tag de 8 k si faltan, y precarga el modelo de vuelo:
+   <div class="highlight"><pre><span></span><code><span class="n">powershell</span> <span class="n">-ExecutionPolicy</span> <span class="n">Bypass</span> <span class="o">-File</span> <span class="n">D</span><span class="p">:\</span><span class="n">TesisMCD</span><span class="p">\</span><span class="n">startOllama</span><span class="p">.</span><span class="n">ps1</span>
+</code></pre></div></li>
+<li>Verificar que el modelo quedó residente:
+   <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:11434/api/ps
 </code></pre></div></li>
 </ol>
 <h3 id="anexos-a6-configuracion-entorno-reproducibilidad-paso-4-lanzamiento-de-la-simulacion">Paso 4: Lanzamiento de la simulación<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-paso-4-lanzamiento-de-la-simulacion" title="Permanent link">&para;</a></h3>

@@ -1171,10 +1171,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#paso-3-inicializacion-del-servidor-de-modelos-lm-studio" class="md-nav__link">
+  <a href="#paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Paso 3: Inicialización del servidor de modelos (LM Studio)
+        Paso 3: Inicialización del servidor de modelos (Ollama, misma GPU)
       
     </span>
   </a>
@@ -1641,10 +1641,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#paso-3-inicializacion-del-servidor-de-modelos-lm-studio" class="md-nav__link">
+  <a href="#paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Paso 3: Inicialización del servidor de modelos (LM Studio)
+        Paso 3: Inicialización del servidor de modelos (Ollama, misma GPU)
       
     </span>
   </a>
@@ -1868,13 +1868,13 @@
 <tbody>
 <tr>
 <td><code>LOCAL_LLM_URL</code></td>
-<td><code>"http://192.168.110.101:1234/v1"</code></td>
-<td>Endpoint OpenAI-compatible del servidor local de inferencia (LM Studio / <code>llama.cpp</code>).</td>
+<td><code>"http://127.0.0.1:11434/v1"</code></td>
+<td>Endpoint OpenAI-compatible de Ollama, en la misma estación y GPU que la simulación. <code>127.0.0.1</code> y no <code>localhost</code>: en Windows <code>localhost</code> resuelve primero a <code>::1</code> y cada conexión espera ~2 s antes de caer a IPv4.</td>
 </tr>
 <tr>
 <td><code>LOCAL_LLM_MODEL_NAME</code></td>
-<td><code>"liquidai/lfm2.5-vl-1.6b"</code></td>
-<td>Modelo de vuelo: LFM2.5-VL-1.6B, Q4_0, GGUF (1.55 GB). El identificador es el exacto que devuelve <code>/v1/models</code>; la versión MLX del mismo modelo no sirve (respuesta vacía con JSON restringido y <em>logprobs</em>).</td>
+<td><code>"lfm2.5-vl-1.6b:q4km-ctx8k"</code></td>
+<td>Modelo de vuelo: tag local de Ollama creado desde <code>hf.co/LiquidAI/LFM2.5-VL-1.6B-GGUF:Q4_K_M</code> con <code>num_ctx=8192</code> (~1.6 GB de VRAM; con el contexto por defecto, 3.1 GB). No usar la variante <code>-Extract</code> (completa el esquema sin mirar la imagen) ni la conversión MLX (respuesta vacía con JSON restringido y <em>logprobs</em>).</td>
 </tr>
 <tr>
 <td><code>VLM_IMAGE_MAX_SIZE</code></td>
@@ -1932,6 +1932,11 @@
 <td>Cambio máximo de altitud de una sub-meta (filas 1 y 3 de la grilla) y altitud mínima de una sub-meta.</td>
 </tr>
 <tr>
+<td><code>VLM_SUBGOAL_TIE_DEG</code></td>
+<td><code>10.0</code></td>
+<td>Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio &gt; arriba &gt; abajo) (cap. 5, §5.10.3).</td>
+</tr>
+<tr>
 <td><code>VLM_NEAR_WP_M</code></td>
 <td><code>8.0</code></td>
 <td>A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre.</td>
@@ -1958,7 +1963,7 @@
 </tr>
 <tr>
 <td><code>ROUTE_LLM_MODEL_NAME</code></td>
-<td><code>"liquidai/lfm2.5-vl-1.6b"</code></td>
+<td><code>"lfm2.5-vl-1.6b:q4km-ctx8k"</code></td>
 <td>Modelo del planificador de ruta, en el mismo servidor que el de vuelo; si falta, se usa <code>LOCAL_LLM_MODEL_NAME</code>. Necesita JSON forzado y <em>logprobs</em> en la misma consulta (la versión GGUF de LFM los da; la MLX no).</td>
 </tr>
 <tr>
@@ -2373,13 +2378,13 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <p>Copiar el archivo de configuración del Anexo 6 (§A6.1) en el directorio de usuario:
 <div class="highlight"><pre><span></span><code><span class="nb">Copy-Item</span> <span class="s2">&quot;config/settings.json&quot;</span> <span class="s2">&quot;$HOME\Documents\AirSim\settings.json&quot;</span> <span class="n">-Force</span>
 </code></pre></div></p>
-<h3 id="paso-3-inicializacion-del-servidor-de-modelos-lm-studio">Paso 3: Inicialización del servidor de modelos (LM Studio)<a class="headerlink" href="#paso-3-inicializacion-del-servidor-de-modelos-lm-studio" title="Permanent link">&para;</a></h3>
+<h3 id="paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu">Paso 3: Inicialización del servidor de modelos (Ollama, misma GPU)<a class="headerlink" href="#paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Abrir <strong>LM Studio</strong> (o instancia de <code>llama.cpp</code> / Ollama).</li>
-<li>Cargar el modelo multimodal <code>LiquidAI/LFM2.5-VL-1.6B</code> en GGUF <code>Q4_0</code> (vuelo y planificador de ruta) y dejarlo cargado para no pagar la carga durante el lote.</li>
-<li>Iniciar el servidor local en el puerto <code>1234</code> con compatibilidad de API OpenAI (<code>http://127.0.0.1:1234/v1</code>).</li>
-<li>Verificar la respuesta del servidor mediante:
-   <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:1234/v1/models
+<li>Ejecutar <code>startOllama.ps1</code> (raíz <code>D:\TesisMCD</code>, fuera del repositorio). El script lee el modelo de <code>config/.env</code>; reinicia Ollama con <code>OLLAMA_MODELS</code> apuntando a la carpeta de modelos de la aplicación, <code>OLLAMA_KEEP_ALIVE=-1</code> (el modelo no se descarga entre corridas) y <code>OLLAMA_CONTEXT_LENGTH=8192</code>; cierra los <code>llama-server</code> huérfanos (en Windows sobreviven al cierre de <code>ollama.exe</code> y retienen VRAM); descarga el GGUF base y crea el tag de 8 k si faltan, y precarga el modelo de vuelo:
+   <div class="highlight"><pre><span></span><code><span class="n">powershell</span> <span class="n">-ExecutionPolicy</span> <span class="n">Bypass</span> <span class="o">-File</span> <span class="n">D</span><span class="p">:\</span><span class="n">TesisMCD</span><span class="p">\</span><span class="n">startOllama</span><span class="p">.</span><span class="n">ps1</span>
+</code></pre></div></li>
+<li>Verificar que el modelo quedó residente:
+   <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:11434/api/ps
 </code></pre></div></li>
 </ol>
 <h3 id="paso-4-lanzamiento-de-la-simulacion">Paso 4: Lanzamiento de la simulación<a class="headerlink" href="#paso-4-lanzamiento-de-la-simulacion" title="Permanent link">&para;</a></h3>

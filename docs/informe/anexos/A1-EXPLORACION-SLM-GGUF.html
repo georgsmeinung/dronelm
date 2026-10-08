@@ -1461,7 +1461,10 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <p>En arquitecturas modulares, la interacción entre el modelo deliberativo y las herramientas externas (sensores, registros de vuelo, interfaces con Unreal Engine) puede articularse mediante el <strong>Model Context Protocol</strong> (MCP; <a href="../13-REFERENCIAS.html#ref-anthropic-2024">Anthropic, 2024</a>). MCP define un protocolo de cliente-servidor en JSON-RPC que desacopla la lógica del modelo de los servicios del sistema anfitrión, permitiendo exponer primitivas de consulta y actuación de forma segura, determinista y local sin conexión a Internet.</p>
 <hr />
 <h2 id="a14-procedimiento-practico-de-configuracion-e-integracion-local">A1.4 Procedimiento práctico de configuración e integración local<a class="headerlink" href="#a14-procedimiento-practico-de-configuracion-e-integracion-local" title="Permanent link">&para;</a></h2>
-<p>La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:</p>
+<p>La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas siguió, durante la fase exploratoria, un flujo de tres fases con la inferencia en un nodo separado:</p>
+<blockquote>
+<p><strong>Configuración vigente (desde el 7 de octubre de 2026).</strong> La inferencia ya no está desacoplada: LFM2.5-VL-1.6B (Q4_K_M, contexto de 8192 tokens) corre en Ollama sobre la misma RTX 5060 que Unreal Engine 5.5 y el grafo de control (<code>http://127.0.0.1:11434/v1</code>), con ~1.6 GB de VRAM. Un VLM a bordo comparte el cómputo con el resto del sistema de vuelo; esa es la condición que se toma como representativa y como línea base del banco de prueba (cap. 11, §11.0). Lo que sigue describe la configuración anterior de dos nodos.</p>
+</blockquote>
 <p><img src="a1-integracion-local.jpg"/></p>
 <ol>
 <li><strong>Gestión de capas y memoria en Apple Silicon (<em>Metal Offloading</em> en Mac mini M4)</strong>:</li>

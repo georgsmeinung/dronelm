@@ -216,3 +216,29 @@ def test_route_metrics_patch_judge_uses_scores_and_plan_choice():
     assert m["auc"] == 1.0
     assert m["plan_clear_rate"] == 1.0 and m["direct_clear_rate"] == 0.5
     assert "balanced_accuracy" not in m and m["passes"] is False
+
+
+def test_region_image_marks_only_the_asked_sector():
+    import region_probe as rgp
+
+    img = np.zeros((72, 108, 3), dtype=np.uint8)
+    out = rgp.region_image(img, "C3", size=96)
+    red = (out[:, :, 2] > 200) & (out[:, :, 1] < 50)
+    ys, xs = np.nonzero(red)
+    assert out.shape[:2] == (96, 96)
+    assert xs.min() >= 64 and ys.min() >= 64       # solo el tercio derecho de la fila de abajo
+
+
+def test_region_answer_maps_to_open_with_logprobs():
+    import region_probe as rgp
+
+    text = '{"answer": "sky"}'
+    tokens = [{"token": '{"answer": "', "logprob": 0.0, "top_logprobs": []},
+              {"token": "sky", "logprob": math.log(0.6),
+               "top_logprobs": [{"token": "sky", "logprob": math.log(0.6)},
+                                {"token": "wall", "logprob": math.log(0.3)},
+                                {"token": "road", "logprob": math.log(0.1)}]},
+              {"token": '"}', "logprob": 0.0, "top_logprobs": []}]
+    r = rgp.read_region(text, tokens)
+    assert r["answer"] == "sky" and r["pred_open"] is True
+    assert abs(r["p_open"] - 0.7) < 1e-3                # sky + road

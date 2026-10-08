@@ -85,7 +85,9 @@ En arquitecturas modulares, la interacción entre el modelo deliberativo y las h
 
 ## A1.4 Procedimiento práctico de configuración e integración local
 
-La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas sigue un flujo de tres fases:
+La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas siguió, durante la fase exploratoria, un flujo de tres fases con la inferencia en un nodo separado:
+
+> **Configuración vigente (desde el 7 de octubre de 2026).** La inferencia ya no está desacoplada: LFM2.5-VL-1.6B (Q4_K_M, contexto de 8192 tokens) corre en Ollama sobre la misma RTX 5060 que Unreal Engine 5.5 y el grafo de control (`http://127.0.0.1:11434/v1`), con ~1.6 GB de VRAM. Un VLM a bordo comparte el cómputo con el resto del sistema de vuelo; esa es la condición que se toma como representativa y como línea base del banco de prueba (cap. 11, §11.0). Lo que sigue describe la configuración anterior de dos nodos.
 
 <img src="a1-integracion-local.jpg"/>
 
