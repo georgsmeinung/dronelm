@@ -37,6 +37,14 @@ from typing import Any, Dict, Optional, Tuple
 VLM_STRATEGIC_ENABLED = os.getenv("VLM_STRATEGIC_ENABLED", "true").lower() == "true"
 # Periodo minimo entre consultas (s). Con ~4 s de latencia, 3 s deja siempre a lo sumo 1 en vuelo.
 VLM_STRATEGIC_PERIOD_S = float(os.getenv("VLM_STRATEGIC_PERIOD_S", "3.0"))
+# 2026-10-08: fuente de "libre/bloqueado" por sector. "depth" (default): profundidad estimada desde el RGB
+# (src/agents/depth_client.py); "vlm": la grilla del VLM; "off": sin capa estrategica. En el banco v2 la
+# profundidad separa sectores libres de bloqueados (AUC 0.83) y el VLM no (0.53).
+STRATEGIC_SOURCE = os.getenv("STRATEGIC_SOURCE", "depth").lower()
+if STRATEGIC_SOURCE not in ("depth", "vlm", "off"):
+    raise ValueError(f"STRATEGIC_SOURCE={STRATEGIC_SOURCE!r} no soportada: usar depth, vlm u off.")
+# Con profundidad la consulta tarda ~0.1 s: se re-evalua mas seguido que con el VLM.
+DEPTH_STRATEGIC_PERIOD_S = float(os.getenv("DEPTH_STRATEGIC_PERIOD_S", "1.0"))
 # Edad maxima de una respuesta (desde la captura del frame) para aplicarla.
 VLM_STRATEGIC_MAX_AGE_S = float(os.getenv("VLM_STRATEGIC_MAX_AGE_S", "10.0"))
 # Gracia antes de dar por perdido un pedido que otro consumidor (escaneo profundo) piso en la cola.
@@ -226,8 +234,11 @@ def annotate_grid(crop: Any, f: float, goal_az_deg: float, goal_el_deg: float,
 
 
 # --------------------------------------------------------------------------- pedido
-def build_request(state: Dict[str, Any]) -> Optional[Tuple[Dict[str, Any], Dict[str, Any]]]:
-    """Arma (payload, ancla) o None si este frame no sirve para preguntar."""
+def build_request(state: Dict[str, Any], with_image: bool = True) -> Optional[Tuple[Dict[str, Any], Dict[str, Any]]]:
+    """Arma (payload, ancla) o None si este frame no sirve para preguntar.
+
+    `with_image=False` (fuente de profundidad): el payload lleva el fotograma crudo en "frames" y no se
+    dibuja ni codifica la grilla."""
     telem = state.get("telemetry") or {}
     pos = telem.get("position") or {}
     frame = state.get("rgb_image")
@@ -249,8 +260,8 @@ def build_request(state: Dict[str, Any]) -> Optional[Tuple[Dict[str, Any], Dict[
     # Meta fuera del recorte: no hay sector de la meta (nunca "camino directo libre"); la marca queda en
     # el borde del lado de la meta y la sub-meta sale del sector libre mas cercano a su direccion.
     goal_cell = cell_for_direction(goal_az, goal_el, side, f) if in_view else None
-    img = annotate_grid(crop, f, goal_az, goal_el)
-    if img is None:
+    img = annotate_grid(crop, f, goal_az, goal_el) if with_image else None
+    if with_image and img is None:
         return None
     prompt = strategic_prompt(wp.get("label", "WP"), dist, goal_cell, goal_az, abs(float(pos.get("z", 0.0))))
     anchor = {
@@ -260,6 +271,8 @@ def build_request(state: Dict[str, Any]) -> Optional[Tuple[Dict[str, Any], Dict[
         "wp_label": wp.get("label"), "wp_dist_xy": dist,
         "frame": crop,  # auditoria: el recorte que vio el modelo (sin la grilla dibujada)
     }
+    if not with_image:
+        return {"mode": "strategic", "prompt": prompt, "frames": [frame]}, anchor
     payload = {
         "mode": "strategic",
         "prompt": prompt,
@@ -348,10 +361,16 @@ def decide_subgoal(parsed: Dict[str, Any], anchor: Dict[str, Any], state: Dict[s
 
 
 class StrategicLayer:
-    """Estado de proceso de la capa lenta: un pedido en vuelo a la vez, con su ancla."""
+    """Estado de proceso de la capa lenta: un pedido en vuelo a la vez, con su ancla.
 
-    def __init__(self, service: Any) -> None:
+    `source` = "vlm" (grilla del VLM) o "depth" (profundidad estimada, depth_client.make_depth_service):
+    cambia el pedido y el periodo; la traduccion a sub-meta (decide_subgoal) es la misma."""
+
+    def __init__(self, service: Any, source: str = "vlm") -> None:
         self.service = service
+        self.source = source
+        self.period_s = DEPTH_STRATEGIC_PERIOD_S if source == "depth" else VLM_STRATEGIC_PERIOD_S
+        self.enabled = True if source == "depth" else VLM_STRATEGIC_ENABLED
         self.req_id: Optional[int] = None
         self.anchor: Optional[Dict[str, Any]] = None
         self.payload: Optional[Dict[str, Any]] = None
@@ -379,7 +398,7 @@ class StrategicLayer:
 
     def tick(self, state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Llamar una vez por ciclo. Devuelve el registro de auditoria si llego una respuesta."""
-        if not VLM_STRATEGIC_ENABLED:
+        if not self.enabled:
             return None
         if self.req_id is not None:
             return self._poll(state)
@@ -388,7 +407,7 @@ class StrategicLayer:
 
     def _maybe_send(self, state: Dict[str, Any]) -> None:
         now = time.time()
-        if now - self.last_sent < VLM_STRATEGIC_PERIOD_S:
+        if now - self.last_sent < self.period_s:
             return
         # El escaneo profundo usa el mismo servicio (una sola cola): no competir.
         if state.get("_scan_phase") is not None or state.get("_deep_scan_request_id") is not None:
@@ -399,7 +418,7 @@ class StrategicLayer:
         alt = abs(float(((state.get("telemetry") or {}).get("position") or {}).get("z", 0.0)))
         if alt < VLM_STRATEGIC_MIN_ALT_M:
             return
-        built = build_request(state)
+        built = build_request(state, with_image=self.source != "depth")
         if built is None:
             return
         self.payload, self.anchor = built
@@ -427,7 +446,7 @@ class StrategicLayer:
             state["_clear_subgoals"] = True   # el camino directo al WP esta libre: el desvio sobra
         if subgoal is not None:
             state["inject_corner"] = subgoal
-            print(f"[vlm_strategic] sub-meta {reason} -> ({subgoal['x']:.1f},{subgoal['y']:.1f},{subgoal['z']:.1f}) "
+            print(f"[{self.source}_strategic] sub-meta {reason} -> ({subgoal['x']:.1f},{subgoal['y']:.1f},{subgoal['z']:.1f}) "
                   f"[latencia {result.latency_ms:.0f} ms]")
         self.last_outcome = {
             "outcome": "subgoal" if subgoal else reason, "reason": reason,
@@ -436,7 +455,7 @@ class StrategicLayer:
             "parsed": parsed, "subgoal": subgoal,
         }
         return {
-            "arm": "vlm_strategic", "prompt": payload.get("prompt", ""), "raw_response": result.raw_response or "",
+            "arm": f"{self.source}_strategic", "prompt": payload.get("prompt", ""), "raw_response": result.raw_response or "",
             "parsed": parsed, "reason": reason, "subgoal": subgoal,
             "latency_ms": round(float(result.latency_ms or 0.0), 1), "timestamp": result.completed_at,
             "frame": anchor.get("frame"), "frame_ts": anchor.get("ts"),

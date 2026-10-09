@@ -21,11 +21,15 @@ from .subgoal import VLM_SUBGOAL_DIST_M, build_subgoal  # reglas comunes con la 
 from .action_map import action_to_command
 from .deliberation_service import DeliberationService
 
-# "deep_vlm" (barrido + VLM) | "blind" (sin VLM: escape determinista en graph.py).
-DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "deep_vlm")
-if DEADLOCK_STRATEGY not in ("deep_vlm", "blind"):
+# "depth" (barrido + profundidad estimada, default desde 2026-10-08) | "deep_vlm" (barrido + VLM) |
+# "blind" (sin barrido: escape determinista en graph.py). Con "depth" el rumbo de cada imagen es
+# transitable si el p5 estimado del sector central es >= DEPTH_FREE_M (depth_client.SCAN_SECTOR); la
+# eleccion entre los transitables (panorama_to_subgoal) es la misma. Banco v2: el VLM declaraba
+# transitables todos los rumbos de todos los barridos (scan_prod, 14/14).
+DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "depth")
+if DEADLOCK_STRATEGY not in ("depth", "deep_vlm", "blind"):
     raise ValueError(
-        f"DEADLOCK_STRATEGY={DEADLOCK_STRATEGY!r} no soportada: usar deep_vlm o blind "
+        f"DEADLOCK_STRATEGY={DEADLOCK_STRATEGY!r} no soportada: usar depth, deep_vlm o blind "
         "(slam_assess esta en src/agents/legacy/deep_scan_v2.py)."
     )
 SCAN_HEADING_COUNT_DEEP = int(os.getenv("SCAN_HEADING_COUNT_DEEP", "4"))
@@ -109,6 +113,13 @@ SYSTEM_PROMPT_DEEP_SCAN = (
 SCAN_IMAGE_LABEL = "[Image {n}]"
 
 
+def _scan_model() -> str:
+    """Modelo que juzgo el barrido, para la auditoria."""
+    if DEADLOCK_STRATEGY == "depth":
+        return "depth:" + os.getenv("DEPTH_MODEL", "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf")
+    return LOCAL_LLM_MODEL_NAME
+
+
 def _normalize_deg(deg: float) -> float:
     return (deg + 180.0) % 360.0 - 180.0
 
@@ -151,9 +162,9 @@ def _record_failed_scan(state: Dict[str, Any], raw_response: str, reason: str, l
             "id": len(deliberations_list) + 1,
             "timestamp": time.time(),
             "arm": "deep_scan_failed",
-            "model": LOCAL_LLM_MODEL_NAME,
+            "model": _scan_model(),
             "vision_enabled": True,
-            "system_prompt": SYSTEM_PROMPT_DEEP_SCAN,
+            "system_prompt": SYSTEM_PROMPT_DEEP_SCAN if DEADLOCK_STRATEGY == "deep_vlm" else "",
             "prompt": state.get("_pending_delib_prompt", "") or "",
             "raw_response": raw_response or "",
             "macro_action": None,
@@ -472,7 +483,7 @@ def deep_scan_cycle(
                 float(goal0.get("x", 0.0)) - float(pos0.get("x", 0.0)),
                 float(goal0.get("y", 0.0)) - float(pos0.get("y", 0.0))) < VLM_NEAR_WP_M:
             state["_deadlock_event"] = {
-                "strategy": "deep_vlm", "arm": arm, "resolved_by_scan": False,
+                "strategy": DEADLOCK_STRATEGY, "arm": arm, "resolved_by_scan": False,
                 "cycles_to_resolve": None, "fell_back_to_blind": True, "reason": "cerca_del_wp",
             }
             return False
@@ -514,7 +525,7 @@ def deep_scan_cycle(
             state["_scan_phase"] = "asentando"
             state["_scan_settle_left"] = SCAN_SETTLE_CYCLES_DEEP
             state["_scan_rot_stall"] = 0
-            cmd = _hover_cmd(f"Escaneo profundo ({arm}): rumbo {target_heading:.0f}° alcanzado, asentando.")
+            cmd = _hover_cmd(f"Escaneo profundo ({arm}): rumbo {target_heading:.0f} deg alcanzado, asentando.")
         else:
             # Timeout de rotacion: si el drone no puede girar (trabado en una malla), abandonar el
             # barrido y caer al escape sincronico.
@@ -522,7 +533,7 @@ def deep_scan_cycle(
             state["_scan_rot_stall"] = rot_stall
             if rot_stall > SCAN_ROT_TIMEOUT_CYCLES:
                 print(
-                    f"[deep_scan] ({arm}) timeout de rotacion: yaw_err={yaw_err:.0f}° "
+                    f"[deep_scan] ({arm}) timeout de rotacion: yaw_err={yaw_err:.0f} deg "
                     f"sin corregir en {rot_stall} ciclos. Cae al escape sincronico."
                 )
                 _g = _real_goal(state, guidance)
@@ -531,7 +542,7 @@ def deep_scan_cycle(
                                 "falla_rotacion")
                 clear_scan_state(state)
                 state["_deadlock_event"] = {
-                    "strategy": "deep_vlm",
+                    "strategy": DEADLOCK_STRATEGY,
                     "arm": arm,
                     "resolved_by_scan": False,
                     "cycles_to_resolve": None,
@@ -548,7 +559,7 @@ def deep_scan_cycle(
                 "yaw_rate": 0.0,
                 "target_yaw": target_heading,
                 "rationale": (
-                    f"Escaneo profundo ({arm}): girando a rumbo {target_heading:.0f}° "
+                    f"Escaneo profundo ({arm}): girando a rumbo {target_heading:.0f} deg "
                     f"({heading_index + 1}/{SCAN_HEADING_COUNT_DEEP}, intento {rot_stall}/{SCAN_ROT_TIMEOUT_CYCLES})."
                 ),
             }
@@ -561,7 +572,7 @@ def deep_scan_cycle(
         settle_left = int(state.get("_scan_settle_left", 0)) - 1
         state["next_action"] = "ESCANEO"
         state["velocity_command"] = _hover_cmd(
-            f"Escaneo profundo ({arm}): asentando en rumbo {target_heading:.0f}°."
+            f"Escaneo profundo ({arm}): asentando en rumbo {target_heading:.0f} deg."
         )
         state["flight_status"] = "escaneo_profundo"
         if settle_left > 0:
@@ -588,6 +599,20 @@ def deep_scan_cycle(
                                     float(goal.get("x", 0.0)) - float(pos.get("x", 0.0))))
             if goal is not None else None
         )
+
+        if pending_id is None and getattr(service, "kind", "vlm") == "depth":
+            # Profundidad estimada: fotogramas crudos, sin JPEG ni prompt (depth_client).
+            frames = [f for f in (state.get("_scan_frames") or [])[:MAX_DEEP_SCAN_IMAGES] if f[1] is not None]
+            state["_scan_frames"] = frames
+            request_id = service.request({"mode": "deep_scan", "frames": [frame for _h, frame, _t in frames]})
+            state["_deep_scan_request_id"] = request_id
+            state["_deep_scan_request_ts"] = time.time()
+            state["_pending_delib_prompt"] = f"{len(frames)} images (depth)"
+            state["_pending_delib_frames"] = [(frame, capture_ts) for _heading, frame, capture_ts in frames]
+            state["next_action"] = "ESCANEO"
+            state["velocity_command"] = _hover_cmd(f"Escaneo profundo ({arm}): panorama capturado, estimando profundidad.")
+            state["flight_status"] = "escaneo_profundo_depth"
+            return True
 
         if pending_id is None:
             frames: List[Any] = (state.get("_scan_frames") or [])[:MAX_DEEP_SCAN_IMAGES]
@@ -651,17 +676,17 @@ def deep_scan_cycle(
                                 "subgoal" if corner else macro)
                 nav_decision = {
                     "macro_action": macro,
-                    "rationale": f"VLM panorama: {why}",
+                    "rationale": f"{DEADLOCK_STRATEGY} panorama: {why}",
                     "used_json_schema": (decision or {}).get("used_json_schema", False),
                 }
-                print(f"[deep_vlm] panorama VLM -> {macro} ({why})")
+                print(f"[{DEADLOCK_STRATEGY}] panorama -> {macro} ({why})")
             else:
                 why_fail = getattr(result, "error", None) or "sin_formato_valido"
                 record_deadlock(state, pos, wp_label, failed_heading, None, f"falla_{why_fail}")
                 print(f"[deep_scan] ({arm}) respuesta no utilizable ({why_fail}). Cae al escape sincronico.")
                 _record_failed_scan(state, result.raw_response, why_fail, result.latency_ms)
                 state["_deadlock_event"] = {
-                    "strategy": "deep_vlm",
+                    "strategy": DEADLOCK_STRATEGY,
                     "arm": arm,
                     "resolved_by_scan": False,
                     "cycles_to_resolve": None,
@@ -679,7 +704,7 @@ def deep_scan_cycle(
                 if corner:
                     state["_deadlock_event"]["vlm_subgoal"] = corner
                 state["_deadlock_event"]["scan_selection"] = selection
-            print(f"[deep_vlm] seleccion: {selection}")
+            print(f"[{DEADLOCK_STRATEGY}] seleccion: {selection}")
             return True
 
         if lost or age_ms > SLM_DEEP_WATCHDOG_MS:
@@ -689,7 +714,7 @@ def deep_scan_cycle(
             clear_scan_state(state)
             _record_failed_scan(state, "", "perdido" if lost else "watchdog", age_ms)
             state["_deadlock_event"] = {
-                "strategy": "deep_vlm",
+                "strategy": DEADLOCK_STRATEGY,
                 "arm": arm,
                 "resolved_by_scan": False,
                 "cycles_to_resolve": None,
@@ -728,9 +753,9 @@ def _apply_scan_resolution(
             "id": len(deliberations_list) + 1,
             "timestamp": time.time(),
             "arm": f"{arm}_deep_scan",
-            "model": LOCAL_LLM_MODEL_NAME,
+            "model": _scan_model(),
             "vision_enabled": True,
-            "system_prompt": SYSTEM_PROMPT_DEEP_SCAN,
+            "system_prompt": SYSTEM_PROMPT_DEEP_SCAN if DEADLOCK_STRATEGY == "deep_vlm" else "",
             "prompt": state.get("_pending_delib_prompt", ""),
             "raw_response": raw_response,
             "macro_action": macro,
@@ -750,7 +775,7 @@ def _apply_scan_resolution(
     state["velocity_command"] = cmd
     state["flight_status"] = "escaneo_profundo_resuelto"
     state["_deadlock_event"] = {
-        "strategy": "deep_vlm",
+        "strategy": DEADLOCK_STRATEGY,
         "arm": arm,
         "resolved_by_scan": True,
         "cycles_to_resolve": deadlock_cycles,

@@ -488,7 +488,8 @@ def main() -> None:
                 except Exception as exc:
                     print(f"[FlightViewer] Error generando el visor: {exc}")
 
-        deliberation_service.stop()
+        if deliberation_service is not None:
+            deliberation_service.stop()
 
         if airsim_client is not None:
             try:

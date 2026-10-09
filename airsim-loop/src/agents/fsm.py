@@ -30,9 +30,14 @@ _fallback_deep_scan_service: Optional[DeliberationService] = None
 def _get_fallback_deep_scan_service() -> DeliberationService:
     global _fallback_deep_scan_service
     if _fallback_deep_scan_service is None:
-        from .vlm_client import make_deliberation_service
+        if deep_scan.DEADLOCK_STRATEGY == "depth":
+            from .depth_client import make_depth_service
 
-        _fallback_deep_scan_service = make_deliberation_service()
+            _fallback_deep_scan_service = make_depth_service()
+        else:
+            from .vlm_client import make_deliberation_service
+
+            _fallback_deep_scan_service = make_deliberation_service()
     return _fallback_deep_scan_service
 
 FSM_TTC_BRAKE_S = float(os.getenv("FSM_TTC_BRAKE_S", "1.5"))
@@ -181,7 +186,7 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
 
     if deadlock:
         state["_deadlock_cycles"] = int(state.get("_deadlock_cycles", 0)) + 1
-        if deep_scan.DEADLOCK_STRATEGY == "deep_vlm":
+        if deep_scan.DEADLOCK_STRATEGY in ("deep_vlm", "depth"):
             svc = service or _get_fallback_deep_scan_service()
             handled = deep_scan.deep_scan_cycle(
                 state, svc, field, telemetry, guidance,

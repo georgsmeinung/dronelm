@@ -1,3 +1,147 @@
+# 2026-10-08 (g) - Lote de fuentes estrategicas: equivalentes en avance; sin capa estrategica, mas exito
+
+`airsim-runs/lote_estrategico/` (15 corridas, 21:23-23:21; `strategic_batch_report.md`,
+`experiments/analyze_strategic_batch.py`). `citysim_pilot`, `slm`, barrido `depth` en todas, semillas 1-5
+con jitter, 480 s, mismo plan `ad4dd01a2281`.
+
+| Fuente | Plan a 150 / 300 / 400 s (mediana) | Exito | Colisiones | DistMin mediana (min) | Deadlocks (total) | Latencia capa |
+|---|---|---:|---:|---:|---:|---:|
+| depth | 5 / 10 / 13 | 3/5 | 0 | 5.83 m (0.10) | 4 | 108 ms |
+| vlm | 6 / 10 / 13 | 4/5 | 0 | 3.29 m (0.13) | 2 | 788 ms |
+| **off** | 6 / 11 / 13 | **5/5** | 0 | 4.95 m (1.89) | **0** | - |
+
+- **Regla de decision (fijada en f)**: ningun par cumple (diferencias de medianas 0 WP; ninguna fuente gana
+  en >= 4 de 5 semillas) -> **equivalentes en avance**; se decide por costo y seguridad.
+- Por costo y seguridad gana `off`: 5/5 misiones completas, 0 deadlocks, el menor peor caso de distancia
+  (1.89 m), sin servicio ni latencia. Las fallas de las otras celdas: depth s1 (14/15 al tope de tiempo,
+  1 deadlock), depth s5 (13/15, 3 deadlocks, DistMin 0.10 m), vlm s2 (abortada a los 300 s: dron
+  incrustado en la malla tras sub-metas repetidas a la fila de abajo, C3 -24 deg). Con 5 semillas, 5/5
+  contra 3/5 no es significativo (Fisher p ~ 0.44): la lectura es "no aporta", no "empeora".
+- Sub-metas por fila (1/2/3): depth 112/202/0, vlm 79/150/16 (el desempate no evita la fila 3 cuando el
+  VLM solo marca libres las de abajo).
+- **Conclusion**: en este escenario la capa estrategica, con cualquier fuente, no aporta avance; el avance
+  lo dan el plan de ruta previo y el lazo rapido de flujo optico. El barrido con profundidad fue comun a
+  las tres celdas y no se evalua aca (en `off` no hubo deadlocks).
+- **`experiments/runner.py`**: el padre lee la salida del hijo en utf-8 con `errors="replace"` (5
+  tracebacks de decodificacion cp1252 en `batch.err.log`; los datos de las corridas no se afectaron).
+  `deep_scan.py`: "deg" en vez del simbolo de grados en los mensajes (regla de consola ASCII).
+
+# 2026-10-08 (f) - Lote de fuentes de la capa estrategica (depth | vlm | off): preparado, regla fijada
+
+Pregunta: aporta la capa estrategica al avance de la mision, y cual fuente aporta mas senal?
+
+- **`experiments/runner.py`**: `--strategic-sources depth vlm off` (tercera variable del factorial; setea
+  `STRATEGIC_SOURCE` por subproceso). Celdas `strat_<fuente>__<deadlock>`; sin el argumento, el nombre viejo
+  `<deadlock>`. Dentro de cada semilla las fuentes se alternan (reparte la deriva en el tiempo entre ellas).
+- **`experiments/analyze_strategic_batch.py`** (nuevo): avance = waypoints DEL PLAN completados (no
+  `wp_index`, que cuenta sub-metas, ni conteos de `summary_by_wp.csv`, que repite etiquetas); avance a
+  150/300/400 s, final, exito, colisiones, DistMin, deadlocks, latencia de la capa. Verificado sobre los
+  cuatro pilotos del 7-8/10 (reproduce los valores calculados a mano). Tests: 298
+  (`test_strategic_batch.py`: celdas, medida del avance).
+- **Diseno**: `citysim_pilot`, brazo `slm`, `DEADLOCK_STRATEGY=depth` fijo (el barrido con profundidad es
+  comun a las tres celdas: aisla la capa estrategica), fuentes depth / vlm / off, semillas 1-5 con
+  `--seed-jitter`, `--max-seconds 480 --max-cycles 2400` (el tiempo es el tope, igual para todas), mismo
+  plan de ruta `ad4dd01a2281` (copiado a `airsim-runs/lote_estrategico/citysim_pilot/route_plan/`).
+  15 corridas, ~2.5 h.
+- **Regla de decision (fijada antes de correr)**: A aporta mas que B si la mediana del avance del plan a
+  400 s supera a la de B en >= 2 waypoints Y A gana en >= 4 de las 5 semillas emparejadas. Si ningun par
+  cumple, las fuentes son equivalentes en avance y se decide por costo (latencia, VRAM) y seguridad
+  (colisiones, DistMin). El p-valor es diagnostico (Wilcoxon exacto con 5 pares: minimo 0.0625).
+- Lectura prevista: `off` equivalente a depth y vlm -> la capa estrategica no aporta avance y el sistema
+  se simplifica; depth > off -> la capa aporta y la profundidad es la fuente; vlm > depth -> revisar.
+
+# 2026-10-08 (e) - Pilotos con profundidad estimada (depth/depth): funciona, avance similar al VLM
+
+Dos pilotos `citysim_pilot` seed 99 con `STRATEGIC_SOURCE=depth` y `DEADLOCK_STRATEGY=depth`
+(`airsim-runs/prueba_depth/`), mismo plan de ruta (`ad4dd01a2281`) que los dos pilotos con el VLM local.
+Avance medido en waypoints DEL PLAN completados (el `wp_index` del registro cuenta tambien las sub-metas
+insertadas y `summary_by_wp.csv` repite etiquetas: ninguno de los dos mide el avance de la mision).
+
+| Piloto | Plan a 150 s / 290 s / 400 s | Mas lejos | Duracion | Deadlocks | DistMin | Sub-metas fila 1/2/3 |
+|---|---|---|---:|---:|---:|---|
+| VLM sin desempate (214055Z) | 5 / 9 / - | WP_3 (9/15) | 301 s | 2 | 0.42 m | 10/9/12 |
+| VLM con desempate (220334Z) | 5 / 9 / 13 | VIA_WP_6_2 (13/15) | 469 s | 0 | 3.93 m | 13/35/3 |
+| **depth (205504Z)** | 4 / 8 / - | VIA_WP_3_2 (8/15) | 301 s | 0 | 0.70 m | 10/22/0 |
+| **depth (210052Z)** | 4 / 10 / 12 | WP_6 (14/15) | 503 s (tope de 2000 ciclos) | 1 | 0.14 m | 15/44/0 |
+
+- La capa con profundidad hace lo previsto: ~108 ms por consulta (VLM 770 ms), ninguna sub-meta a la fila
+  de abajo, sin timeouts de rotacion. El barrido de 210052Z estimo p5 B2 de 3.8 / 13.6 / 11.3 / 7.0 m en
+  los cuatro rumbos -> "ningun rumbo transitable" -> GANAR_ALTURA, y el dron siguio avanzando.
+- El avance de la mision es del mismo orden con las dos fuentes (8-10 contra 9 del plan a 290 s). Una
+  capa que si lee la escena (banco: 75 %) no cambio el avance respecto de una que casi no la lee (53 %):
+  el avance parece depender del plan de ruta y del lazo rapido de flujo optico, no de la capa
+  estrategica. Una semilla por condicion: es una hipotesis, no un resultado.
+- DistMin mas bajo en los dos pilotos depth (0.70 y 0.14 m, sin colisiones) que en el VLM con desempate
+  (3.93 m): a revisar en el lote.
+- **Siguiente**: lote con varias semillas y tres fuentes estrategicas (`depth`, `vlm`, `off`) para medir
+  si la capa estrategica aporta, sea cual sea su fuente.
+
+# 2026-10-08 (d) - Profundidad estimada en la capa estrategica y en el barrido; el VLM sale del vuelo
+
+Decision del autor: aceptar profundidad ESTIMADA desde el RGB en el lazo (no el sensor de AirSim, que
+sigue prohibido) y sacar el VLM del vuelo. Evidencia: entradas (a)-(c) de hoy.
+
+- **`src/perception/depth_estimator.py`** (nuevo): `DepthEstimator` (Depth Anything V2 Metric Outdoor
+  Small, carga perezosa) y `sector_p5` (p5 por sector de la grilla 3x3 del recorte cuadrado: el mismo
+  estadistico que la etiqueta del banco). `DEPTH_FREE_M` = 15 m (= `VLM_SUBGOAL_DIST_M`).
+- **`src/agents/depth_client.py`** (nuevo): `make_depth_service` arma un `DeliberationService` (hilo
+  propio) cuya consulta corre la red y devuelve las MISMAS estructuras que el VLM: `{"sectores": ...}`
+  para la capa estrategica y `{"views": [...]}` para el barrido (rumbo transitable si el p5 del sector
+  central B2 >= 15 m). `decide_subgoal` y `panorama_to_subgoal` no cambian. Precarga la red al crearse.
+- **`src/agents/vlm_strategic.py`**: `STRATEGIC_SOURCE` = depth (default) | vlm | off;
+  `StrategicLayer(service, source)`; con depth el pedido lleva el fotograma crudo y el periodo es
+  `DEPTH_STRATEGIC_PERIOD_S` (1 s).
+- **`src/agents/deep_scan.py`**: `DEADLOCK_STRATEGY` = depth (default) | deep_vlm | blind; con un
+  servicio de profundidad el pedido lleva los fotogramas crudos; los eventos registran la estrategia real.
+- **`src/agents/graph.py`**: cada servicio se crea solo si alguna capa lo usa. Con depth/depth **no se
+  crea el servicio del VLM** (no corre ningun hilo del VLM en vuelo); el VLM queda en el plan de ruta
+  previo al vuelo. `fsm.py`, `flight_logger.py` (`strategic_source` en el summary), `runner.py` y
+  `batch_runner.py` (`--deadlock-strategy depth`, default desde `config/.env`), `main.py`.
+- **`config/.env`**: `DEADLOCK_STRATEGY=depth`, `STRATEGIC_SOURCE=depth`, `DEPTH_MODEL`,
+  `DEPTH_FREE_M=15.0`, `DEPTH_STRATEGIC_PERIOD_S=1.0`.
+- **Tests** (296): `test_depth_strategic.py` (6: geometria de sectores, forma de las respuestas, falla sin
+  valor por defecto, capa estrategica, barrido que elige el rumbo libre, umbral), grafo compilado con
+  depth sin servicio del VLM (`test_vlm_strategic_graph.py`), `conftest.py` (los tests no cargan la red),
+  guardia de profundidad con los dos modulos nuevos.
+- **Servicio real** sobre una imagen del banco: mismo p5 que `seg_depth_probe`, 86-94 ms por fotograma,
+  +440 MiB de VRAM, 19 s de carga al crear el grafo.
+- **Barridos** (`seg_depth_probe.py run --scan`, 290 imagenes de barridos reales, sector B2): profundidad
+  exactitud bal. 75 % [68-82], AUC 0.87; el VLM sobre los barridos del banco: "todo transitable" en
+  14/14 (exactitud 50 %).
+- **Pendiente**: piloto `citysim_pilot` seed 99 con depth/depth; Ollama sigue residente (~1.6 GB) aunque
+  en vuelo ya no se usa; informe (cap. 5 §5.10-§5.12, cap. 8, A6).
+
+# 2026-10-08 (c) - Percepcion rapida por sector: profundidad monocular si, segmentacion no (`seg_depth_probe.py`)
+
+Antes de repartir roles (percepcion rapida para "por donde", VLM para "hacia donde"), se midio en el banco
+v2 si dos redes chicas que solo ven el RGB juzgan el espacio libre por sector mejor que el VLM. Nueva
+herramienta `airsim-loop/experiments/vlm_bench/seg_depth_probe.py` (etapas `run`/`report`; sin AirSim, sin
+leer la profundidad del simulador; misma geometria y mismo estadistico que la etiqueta: `labels.cell_stats`).
+Modelos ya en disco: `weights/yolo26n-sem.pt` (Cityscapes, 19 clases) y Depth Anything V2 Metric Outdoor
+Small (cache de Hugging Face). Reglas fijadas antes de correr: depth libre si p5 estimado >= 15 m; seg libre
+si obstaculo < 5 % del sector.
+
+625 muestras validas x 9 sectores (abiertos 61 %); en las 120 de las preguntas del VLM, entre corchetes:
+
+| Senal | Exactitud bal. [IC 95 %] | AUC | AUC casos obvios | AUC fila 1 / 2 / 3 | Latencia |
+|---|---|---:|---:|---|---:|
+| **Depth Anything V2 Small: p5 estimado** | **75 % [72-77]** (76 % [73-81]) | **0.83** (0.84) | 1.00 | 0.97 / 0.80 / 0.78 | 82 ms |
+| yolo26n-sem: 1 - fraccion de obstaculo | 45 % [42-47] (45 %) | 0.50 (0.50) | 0.39 | 0.74 / 0.49 / 0.45 | 32 ms |
+| yolo26n-sem: fraccion de cielo (diag.) | - | 0.69 (0.68) | 0.87 | 0.82 / 0.57 / 0.50 | |
+| *VLM, misma pregunta (grid_prod / region crop)* | *53 % / 49 %* | *0.53 / 0.62* | *- / 0.62* | | *880 / 480 ms* |
+
+- La profundidad monocular pasa el criterio del banco (exactitud >= 65 % con IC sobre el azar) y separa
+  los casos obvios sin error; en la fila del medio, la que decide el rumbo, AUC 0.80-0.85.
+- La segmentacion no sirve para esta pregunta: "building" incluye edificios a 100 m, y la clase no dice la
+  distancia. Solo el cielo aporta algo (AUC 0.69).
+- Lectura: el espacio libre es una pregunta de distancia; la resuelve una red de profundidad de 25 M de
+  parametros en ~80 ms, no el VLM (0.53) ni la segmentacion (0.50).
+- Validez: la etiqueta sale de la profundidad del render y Depth Anything se entreno en parte con datos
+  sinteticos; en camara real el desempeno puede ser menor.
+- Decision pendiente del autor: la red estima profundidad desde el RGB (equivalente a bordo: una red en el
+  dron, sin sensor); no es leer la profundidad de AirSim, pero agrega un canal de profundidad estimada que
+  el diseno actual no tiene.
+
 # 2026-10-08 (b) - Reconocimiento por region en la camara frontal (`region_probe.py`)
 
 Pregunta: si el VLM no juzga distancias (banco v2), reconoce al menos QUE hay en cada sector, como en el

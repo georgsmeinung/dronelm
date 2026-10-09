@@ -28,6 +28,8 @@ FLIGHT_WHITELIST: List[str] = [
     "src/agents/__init__.py",
     "src/agents/action_map.py",
     "src/agents/deep_scan.py",
+    # 2026-10-08: profundidad ESTIMADA desde el RGB por una red (no el sensor de AirSim).
+    "src/agents/depth_client.py",
     "src/agents/deliberation_service.py",
     "src/agents/vlm_client.py",
     "src/agents/evasive.py",
@@ -40,6 +42,7 @@ FLIGHT_WHITELIST: List[str] = [
     "src/agents/vlm_strategic.py",
     "src/perception/__init__.py",
     "src/perception/flow_ttc.py",
+    "src/perception/depth_estimator.py",
     "src/perception/obstacle_field.py",
     # Plan de ruta previo al vuelo (corre en el runner antes del despegue): solo mapa cenital + VLM.
     "src/planning/route_planner.py",

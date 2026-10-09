@@ -40,7 +40,7 @@ def _get_code_version() -> str:
 
 def run_experiment(
     scenario_path: str, arm: str, seed: int, out_dir: str, max_cycles: int, max_seconds: float,
-    deadlock_strategy: str = "deep_vlm",
+    deadlock_strategy: str = "depth",
 ) -> tuple[bool, Dict[str, Any]]:
     """Ejecuta una corrida individual del runner.py en subproceso.
 
@@ -95,7 +95,7 @@ def main():
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-runs"))
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
-    parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])
+    parser.add_argument("--deadlock-strategy", default=os.getenv("DEADLOCK_STRATEGY", "depth"), choices=["depth", "deep_vlm", "blind"])
     parser.add_argument("--route-plan", choices=["vlm", "off"], default=os.getenv("ROUTE_PLAN_MODE", "vlm"),
                         help="Plan de ruta con el VLM sobre el mapa cenital, una vez por escenario antes de "
                              "las corridas (ver runner.py --route-plan).")

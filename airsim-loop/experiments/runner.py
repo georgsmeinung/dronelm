@@ -24,6 +24,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 # Jitter reproducible del start_pose por semilla (2026-0824): AIRSIM_SEED no
 # perturbaba nada -- se pasaba a FlightLogger solo como etiqueta del archivo.
@@ -100,7 +101,8 @@ def run_one(
     max_cycles: int,
     max_seconds: float,
     seed_jitter: bool = False,
-    deadlock_strategy: str = "deep_vlm",  # 2026-0930: slam_assess movido a legacy (sin evidencia)
+    deadlock_strategy: str = "depth",  # 2026-0930: slam_assess movido a legacy (sin evidencia)
+    strategic_source: Optional[str] = None,
     record_video: bool = True,
     record_viewport: bool = False,
     record_follow: bool = True,
@@ -110,6 +112,10 @@ def run_one(
     # Segunda variable del factorial (deep_vlm | blind), leida a nivel de modulo por src/agents/deep_scan.py.
     # Cada combinacion corre en su propio subproceso (ver main() mas abajo).
     os.environ["DEADLOCK_STRATEGY"] = deadlock_strategy
+    # 2026-10-08: tercera variable (fuente de la capa estrategica: depth | vlm | off), leida a nivel de
+    # modulo por src/agents/vlm_strategic.py. None: la de config/.env, y la celda conserva el nombre viejo.
+    if strategic_source is not None:
+        os.environ["STRATEGIC_SOURCE"] = strategic_source
 
     # Import diferido: AGENT_ARM se lee a nivel de modulo en graph.py, asi que
     # cada corrida necesita un interprete/subproceso propio para que el valor
@@ -132,7 +138,7 @@ def run_one(
     # auditoria quedan juntos y autocontenidos. Antes los PNG de todas las
     # corridas de una celda se mezclaban en el mismo directorio.
     run_name = f"seed_{seed}_{iso_ts}"
-    out_path = Path(out_dir) / scenario_name / arm / deadlock_strategy / run_name / f"{run_name}.jsonl"
+    out_path = Path(out_dir) / scenario_name / arm / _cell(deadlock_strategy, strategic_source) / run_name / f"{run_name}.jsonl"
     # Copia de la consola de esta corrida junto al resto de los archivos (antes solo se veia la
     # ultima linea y los avisos del arranque -- fallo al armar/despegar, camara, etc. -- se perdian).
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -472,10 +478,17 @@ def main():
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
     parser.add_argument(
-        "--deadlock-strategies", nargs="+", default=["deep_vlm"],
-        choices=["blind", "deep_vlm"],
+        "--deadlock-strategies", nargs="+", default=[os.getenv("DEADLOCK_STRATEGY", "depth")],
+        choices=["depth", "deep_vlm", "blind"],
         help="H3.1/S6 (PLAN-SLAM): factorial AGENT_ARM x DEADLOCK_STRATEGY. "
              "'deep_vlm' (default): barrido + VLM. 'blind': escape determinista sin VLM (ablacion).",
+    )
+    parser.add_argument(
+        "--strategic-sources", nargs="+", default=None, choices=["depth", "vlm", "off"],
+        help="2026-10-08: fuente de la capa estrategica (tercera variable del factorial). Sin el argumento se "
+             "usa STRATEGIC_SOURCE de config/.env y las celdas conservan el nombre <deadlock_strategy>; con el "
+             "argumento, las celdas son strat_<fuente>__<deadlock_strategy>. Dentro de cada semilla las "
+             "fuentes se alternan, para repartir entre ellas la deriva en el tiempo.",
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-runs"))
@@ -520,8 +533,9 @@ def main():
     for scenario in args.scenarios:
         for arm in args.arms:
             for deadlock_strategy in args.deadlock_strategies:
-                for seed in args.seeds:
-                    print(f"[{_ts()}][runner] scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}")
+                for seed, strategic_source in [(sd, src) for sd in args.seeds for src in (args.strategic_sources or [None])]:
+                    cell = _cell(deadlock_strategy, strategic_source)
+                    print(f"[{_ts()}][runner] scenario={scenario} arm={arm} cell={cell} seed={seed}")
                     cmd = [
                         sys.executable, __file__, "--_single",
                         "--scenario", flown[scenario], "--arm", arm, "--seed", str(seed),
@@ -529,6 +543,8 @@ def main():
                         "--max-seconds", str(args.max_seconds),
                         "--deadlock-strategy", deadlock_strategy,
                     ]
+                    if strategic_source is not None:
+                        cmd += ["--strategic-source", strategic_source]
                     if args.seed_jitter:
                         cmd.append("--seed-jitter")
                     if args.no_video:
@@ -541,7 +557,11 @@ def main():
                     # hijo a los 0.25 s y lo corta a mitad de close() (cola de video,
                     # CSV aplanado, visor). Aca se espera su cierre ordenado.
                     run_started = time.time()
-                    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    # utf-8 + replace: con la codificacion de la consola de Windows (cp1252) un caracter no ASCII en la
+                    # salida del hijo mataba el hilo lector del padre (lote 2026-10-08, 5 tracebacks; los datos
+                    # de cada corrida no se afectaban).
+                    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                             encoding="utf-8", errors="replace")
                     interrupted = False
                     try:
                         out_txt, err_txt = popen.communicate()
@@ -557,7 +577,7 @@ def main():
                     proc = subprocess.CompletedProcess(cmd, popen.returncode, out_txt, err_txt)
                     # Red de seguridad: si el hijo murio antes de cerrar (kill, 2do Ctrl+C,
                     # crash), reconstruir CSV aplanado / video / visor desde el JSONL.
-                    _finalize_if_incomplete(args.out_dir, scenario, arm, deadlock_strategy, run_started)
+                    _finalize_if_incomplete(args.out_dir, scenario, arm, cell, run_started)
                     if proc.returncode != 0:
                         print(f"[{_ts()}][runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
                     else:
@@ -565,6 +585,7 @@ def main():
                         print(f"[{_ts()}] {last}")
                     results.append({
                         "scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
+                        "strategic_source": strategic_source,
                         "seed": seed, "returncode": proc.returncode,
                     })
                     if interrupted:
@@ -580,6 +601,11 @@ def _read_summary_field(jsonl_path: Path, key: str):
         return json.loads(jsonl_path.with_name(jsonl_path.stem + ".summary.json").read_text(encoding="utf-8")).get(key)
     except (OSError, ValueError):
         return None
+
+
+def _cell(deadlock_strategy: str, strategic_source: Optional[str]) -> str:
+    """Directorio de la celda del factorial: la estrategia de deadlock y, si se fijo, la fuente estrategica."""
+    return deadlock_strategy if strategic_source is None else f"strat_{strategic_source}__{deadlock_strategy}"
 
 
 def _finalize_if_incomplete(out_dir: str, scenario: str, arm: str, strategy: str, since: float) -> None:
@@ -609,11 +635,13 @@ def _single_main():
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--viewport", action="store_true")
     parser.add_argument("--no-follow-cam", action="store_true")
-    parser.add_argument("--deadlock-strategy", default="deep_vlm", choices=["blind", "deep_vlm"])
+    parser.add_argument("--deadlock-strategy", default=os.getenv("DEADLOCK_STRATEGY", "depth"), choices=["depth", "deep_vlm", "blind"])
+    parser.add_argument("--strategic-source", default=None, choices=["depth", "vlm", "off"])
     args = parser.parse_args()
     summary = run_one(
         args.scenario, args.arm, args.seed, args.out_dir, args.max_cycles, args.max_seconds,
         seed_jitter=args.seed_jitter, deadlock_strategy=args.deadlock_strategy,
+        strategic_source=args.strategic_source,
         record_video=not args.no_video, record_viewport=args.viewport,
         record_follow=not args.no_follow_cam,
     )

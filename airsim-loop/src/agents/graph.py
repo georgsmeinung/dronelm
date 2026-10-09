@@ -141,15 +141,27 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
     from .action_map import action_to_command
     from .stall_detector import StallDetector
     from .vlm_client import make_deliberation_service
-    from .vlm_strategic import StrategicLayer
+    from .vlm_strategic import STRATEGIC_SOURCE, StrategicLayer
     from .deep_scan import DEADLOCK_STRATEGY, deep_scan_cycle
     from src.perception import FlowTTCEstimator
 
     flow_ttc_estimator = FlowTTCEstimator()
     stall = StallDetector()
     governor = SpeedGovernor()
-    deliberation_service = make_deliberation_service()
-    strategic = StrategicLayer(deliberation_service)
+    # 2026-10-08: cada servicio (un hilo propio) se crea solo si alguna capa lo usa. Con la configuracion
+    # por defecto (STRATEGIC_SOURCE=depth, DEADLOCK_STRATEGY=depth) el VLM no corre durante el vuelo: en el
+    # banco v2 no separa sectores libres de bloqueados y el barrido lo declaraba todo transitable. El VLM
+    # queda en el plan de ruta previo al vuelo (src/planning/route_planner.py).
+    need_depth = STRATEGIC_SOURCE == "depth" or DEADLOCK_STRATEGY == "depth"
+    need_vlm = STRATEGIC_SOURCE == "vlm" or DEADLOCK_STRATEGY == "deep_vlm"
+    if need_depth:
+        from .depth_client import make_depth_service
+    depth_service = make_depth_service() if need_depth else None
+    vlm_service = make_deliberation_service() if need_vlm else None
+    strategic = (None if STRATEGIC_SOURCE == "off" else
+                 StrategicLayer(depth_service if STRATEGIC_SOURCE == "depth" else vlm_service, STRATEGIC_SOURCE))
+    # Servicio del barrido de deadlock (None con blind).
+    scan_service = depth_service if DEADLOCK_STRATEGY == "depth" else vlm_service
     frame_history_size = int(os.getenv("VLM_FRAME_HISTORY_SIZE", "1"))
     loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
 
@@ -191,7 +203,9 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
 
     # ------------------------------------------------------------------ 3. navegacion
     def _strategic_tick(state: DroneState) -> None:
-        """VLM estrategico: no bloqueante, nunca comanda velocidades (ver vlm_strategic.py)."""
+        """Capa estrategica (profundidad o VLM): no bloqueante, nunca comanda velocidades (vlm_strategic.py)."""
+        if strategic is None:
+            return
         audit = strategic.tick(state)
         state["_vlm_strategic"] = strategic.last_outcome
         if audit is None:
@@ -232,12 +246,13 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         return state
 
     def _deadlock_resolve(state: DroneState, field: ObstacleField, guidance: Dict, telem: Dict) -> DroneState:
-        """Deadlock: barrido + VLM (deep_vlm) o, si no hay VLM / falla, escape vertical."""
-        strategic.cancel("cancelado_por_deadlock")
+        """Deadlock: barrido (profundidad o VLM) o, con blind o si el barrido falla, escape vertical."""
+        if strategic is not None:
+            strategic.cancel("cancelado_por_deadlock")
         dc = int(state.get("_deadlock_cycles", 0)) + 1
         state["_deadlock_cycles"] = dc
-        if DEADLOCK_STRATEGY == "deep_vlm":
-            if deep_scan_cycle(state, deliberation_service, field, telem, guidance, AGENT_ARM, dc):
+        if scan_service is not None:
+            if deep_scan_cycle(state, scan_service, field, telem, guidance, AGENT_ARM, dc):
                 if state.get("_escape_reset"):
                     stall.reset()
                 return state
@@ -252,7 +267,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
                 "strategy": DEADLOCK_STRATEGY, "arm": AGENT_ARM, "resolved_by_scan": False,
                 "cycles_to_resolve": None, "fell_back_to_blind": True, "macro": macro,
             }
-        return _dispatch(state, macro, f"Deadlock sin resolucion del VLM ({DEADLOCK_STRATEGY}): escape {macro}.",
+        return _dispatch(state, macro, f"Deadlock sin resolucion del barrido ({DEADLOCK_STRATEGY}): escape {macro}.",
                          "tactical")
 
     def navigate_node(state: DroneState) -> DroneState:
@@ -268,14 +283,14 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         if AGENT_ARM == "reactive":
             return reactive_node(state)
         if AGENT_ARM == "fsm":
-            return _fsm_node_fn(state, service=deliberation_service)
+            return _fsm_node_fn(state, service=scan_service)
 
         telem = state.get("telemetry") or {}
         guidance = state.get("waypoint_guidance") or {}
         field: ObstacleField = state.get("obstacle_field") or empty_field()
         alt_m = abs(float((telem.get("position") or {}).get("z", 0.0)))
 
-        # Lazo lento: el VLM estrategico corre siempre en segundo plano.
+        # Lazo lento: la capa estrategica corre siempre en segundo plano.
         _strategic_tick(state)
 
         # 1. Un barrido en curso es duenio del dron hasta resolver o fallar (sus watchdogs lo acotan).
@@ -326,9 +341,10 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         center_blocked = field.is_blocked("centro")
         if center_ttc <= TTC_EVASION_THRESHOLD or (center_blocked and center_ttc <= TTC_SAFE_THRESHOLD):
             if field.blocked_fraction() > FOV_BLOCKED_THRESHOLD:
-                # Muro de frente: girar hacia el lado del WP y adelantar la consulta al VLM con el
-                # frame que ve el muro (el rodeo lo decide el modelo, no una esquina fija).
-                strategic.expedite()
+                # Muro de frente: girar hacia el lado del WP y adelantar la consulta estrategica con el
+                # frame que ve el muro (el rodeo lo decide esa capa, no una esquina fija).
+                if strategic is not None:
+                    strategic.expedite()
                 _strategic_tick(state)
                 return _dispatch(state, "GIRAR_90",
                                  f"FOV bloqueado ({field.blocked_fraction() * 100:.0f}%).", "girar_90")
@@ -393,7 +409,8 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         "navigate": navigate_node,
         "motor": motor_node,
         "_airsim_client": airsim_client,
-        "_deliberation_service": deliberation_service,
+        # Servicio que main.py detiene al cerrar (None si no hay ninguno: STRATEGIC_SOURCE=off + blind).
+        "_deliberation_service": vlm_service or depth_service,
     }
 
 
