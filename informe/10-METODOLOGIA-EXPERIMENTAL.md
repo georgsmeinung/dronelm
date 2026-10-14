@@ -2,7 +2,7 @@
 
 Este capítulo especifica el protocolo experimental completo con el que se evalúa la hipótesis central de la tesis: si la deliberación contextual de un modelo de lenguaje multimodal pequeño (VLM/SLM) aporta un beneficio medible sobre una heurística rígida en la capa táctica de un dron autónomo con percepción monocular, y a qué costo. Se describen las preguntas experimentales, el diseño factorial, el contenido y la dificultad específica de cada escenario, el rol de las semillas, la organización de las corridas en tres *batches*, el protocolo estadístico, la disposición física de los resultados y un plan extendido de pruebas.
 
-La estructura de este capítulo responde a un orden deliberado: primero *qué se quiere probar* (§10.1), luego *con qué factores* (§10.2), *sobre qué escenarios* (§10.3), *con cuántas repeticiones y por qué* (§10.4), *ejecutado cómo* (§10.5), *midiendo qué* (§10.6), *analizado cómo* (§10.7–§10.8), *dejando qué evidencia* (§10.9) y *qué falta por hacer* (§10.10). El capítulo 11 consume directamente esta especificación: las tablas de resultados están definidas aquí antes de existir los datos, para evitar el sesgo de elegir las métricas después de verlas.
+La estructura de este capítulo responde a un orden deliberado: primero *qué se quiere probar* (§10.1), luego *con qué factores* (§10.2), *sobre qué escenarios* (§10.3), *con cuántas repeticiones y por qué* (§10.4), *ejecutado cómo* (§10.5), *midiendo qué* (§10.6), *analizado cómo* (§10.7–§10.8), *dejando qué evidencia* (§10.9) y *qué falta por hacer* (§10.10–§10.12). §10.13 describe el banco de prueba a bordo, el instrumento con el que se decide, fuera de vuelo, si una fuente sabe responder la pregunta del lazo lento antes de llevarla a un lote. El capítulo 11 consume directamente esta especificación: las tablas de resultados están definidas aquí antes de existir los datos, para evitar el sesgo de elegir las métricas después de verlas.
 
 ---
 
@@ -31,20 +31,25 @@ Esta última hipótesis es la que dicta la arquitectura de escenarios en tres ni
 
 La evaluación compara tres brazos de decisión sobre **el mismo `ObstacleField`** (cap. 6), **el mismo espacio de macro-acciones** y **el mismo traductor a comandos cinemáticos** (`action_to_command`, cap. 8). Esta invariancia es lo que hace legítima la comparación: la única diferencia entre brazos es *quién elige la macro-acción*, no qué percibe el sistema ni cómo ejecuta la decisión.
 
-- **`slm`** — el modelo de lenguaje multimodal (LFM2.5-VL-1.6B cuantizado) como lazo lento del grafo de control (cap. 5, 8). Cada ≥ 3 s, o de inmediato cuando el lazo rápido ve un muro de frente, el modelo mira el fotograma frontal dividido en una grilla de 3×3 y dice qué sectores son volables; la respuesta se traduce a una sub-meta en coordenadas del mundo anclada a la pose del fotograma, y el dron nunca se detiene a esperarla. En un deadlock, un barrido panorámico de 4 rumbos y una consulta con las imágenes numeradas producen la sub-meta de salida; ante timeout o respuesta no conforme, escape vertical. No hay reglas deterministas que reescriban la respuesta del modelo.
+- **`slm`** — el grafo de control con sus dos lazos (cap. 5). El lazo lento, cada ≥ 1 s (≥ 3 s con el VLM) o de inmediato cuando el lazo rápido ve un muro de frente, juzga qué sectores de una grilla de 3×3 del fotograma frontal son volables; la respuesta se traduce a una sub-meta en coordenadas del mundo anclada a la pose del fotograma, y el dron nunca se detiene a esperarla. En un deadlock, un barrido panorámico de 4 rumbos produce la sub-meta de salida; ante una falla, escape vertical. La fuente del juicio es la variable `STRATEGIC_SOURCE` (§10.2.2): en la configuración final, la red de profundidad estimada (cap. 6, §6.14); en el diseño original y como ablación, el VLM (LFM2.5-VL-1.6B, cap. 8). El nombre del brazo es histórico: con la configuración final el VLM no interviene en vuelo y solo planifica la ruta antes del despegue (cap. 4, §4.3.1). No hay reglas deterministas que reescriban la respuesta de la fuente.
 - **`fsm`** — una máquina de estados finitos explícita (`CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE`), con transiciones gobernadas por umbrales fijos sobre el mismo `ObstacleField`, y su propia lógica de atasco y escape. Es la línea de base directa contra la que se evalúa la hipótesis: alta predictibilidad y costo computacional mínimo, sin capacidad de razonamiento contextual ni interpretación semántica del entorno.
 - **`reactive`** — navegación guiada al waypoint sin evasión de obstáculos: **cota inferior de rendimiento** que permite desacoplar qué porción del desempeño proviene del lazo táctico de evasión y cuánto del seguimiento cinemático de base. Sin este brazo, cualquier diferencia entre `slm` y `fsm` sería inseparable del ruido introducido por el guiado.
 
 El brazo se selecciona por variable de entorno `AGENT_ARM`, leída **a nivel de módulo** en `src/agents/graph.py`. Los tres brazos comparten el mismo bucle externo, el mismo `WaypointTracker` y el mismo nodo `motor` (ancla de altitud y gobernador de velocidad). Esta decisión de implementación tiene una consecuencia metodológica directa: **cada combinación debe correr en un intérprete propio**, porque reutilizar el proceso arrastraría el primer valor leído. El runner lanza por eso un subproceso por corrida (§10.5), lo que además aísla el fallo de una corrida del resto del batch.
 
-### 10.2.2 Factor secundario: estrategia de resolución de atascos (`DEADLOCK_STRATEGY`)
+### 10.2.2 Factores secundarios: resolución de atascos (`DEADLOCK_STRATEGY`) y fuente de la capa estratégica (`STRATEGIC_SOURCE`)
 
-- **`deep_vlm`** (default): ante un deadlock declarado, barrido panorámico **dentro del lazo de control** (`SCAN_HEADING_COUNT_DEEP = 4` rumbos, `SCAN_SETTLE_CYCLES_DEEP = 2` ciclos de asentamiento por rumbo, hasta `MAX_DEEP_SCAN_IMAGES = 5` imágenes) y una única consulta al VLM; el modelo describe cada imagen y el código fija una sub-meta en el rumbo transitable más cercano a la meta (cap. 5, §5.12). Sin respuesta válida, escape vertical.
-- **`blind`**: sin VLM; escape vertical determinista (`GANAR_ALTURA`) en el brazo `slm` y alternancia `CLIMB`/`DESCEND` propia en el brazo `fsm`.
+**Resolución de atascos.** Ante un deadlock declarado, barrido panorámico **dentro del lazo de control** (`SCAN_HEADING_COUNT_DEEP = 4` rumbos, `SCAN_SETTLE_CYCLES_DEEP = 2` ciclos de asentamiento por rumbo, hasta `MAX_DEEP_SCAN_IMAGES = 5` imágenes) y una única consulta que juzga cada imagen; el código fija una sub-meta en el rumbo transitable elegido (cap. 5, §5.12). Sin respuesta válida, escape vertical. Valores:
 
-La estrategia se selecciona con `--deadlock-strategies` en el runner. El brazo `reactive` nunca declara atasco.
+- **`depth`** (default): los rumbos los juzga la profundidad estimada (p5 del sector central ≥ 15 m).
+- **`deep_vlm`**: los juzga el VLM (ablación; fue la estrategia del lote base).
+- **`blind`**: sin barrido; escape vertical determinista (`GANAR_ALTURA`) en el brazo `slm` y alternancia `CLIMB`/`DESCEND` propia en el brazo `fsm`.
 
-**Advertencia de diseño: el VLM también interviene en el brazo `fsm`.** Con `deep_vlm`, la FSM delega sus deadlocks en el mismo barrido con VLM. La comparación `slm` vs. `fsm` con `deep_vlm` aísla, por lo tanto, la capa estratégica y la política del lazo rápido, no la presencia del VLM en la resolución de atascos; ese fue también el caso del lote base (cap. 11), donde ambos brazos resolvieron sus deadlocks con `deep_vlm`. El brazo **sin VLM en ningún punto** es `fsm` con `blind`, y debe incluirse en los lotes con obstrucción (§10.12) para que la pregunta «¿aporta el VLM?» tenga un contraste limpio.
+Se selecciona con `--deadlock-strategies` en el runner (por defecto, el valor de `config/.env`). El brazo `reactive` nunca declara atasco.
+
+**Fuente de la capa estratégica** (solo brazo `slm`): `depth` (default), `vlm` u `off` (sin capa). Se selecciona con `--strategic-sources`; con el argumento, las celdas se nombran `strat_<fuente>__<estrategia>` y, dentro de cada semilla, las fuentes se alternan para repartir entre ellas la deriva en el tiempo. Los lotes de octubre (cap. 11, §11.6) variaron este factor con la estrategia fija en `depth`.
+
+**Advertencia de diseño: el barrido es común a `slm` y `fsm`.** Con `depth` o `deep_vlm`, la FSM delega sus deadlocks en el mismo barrido que el brazo `slm`. La comparación `slm` vs. `fsm` aísla, por lo tanto, la capa estratégica y la política del lazo rápido, no la resolución de atascos; en el lote base (cap. 11) ambos brazos resolvieron sus deadlocks con `deep_vlm`, de modo que **el VLM intervino en los dos**. El brazo sin barrido es `fsm` con `blind`.
 
 ### 10.2.3 Estructura de celdas
 
@@ -76,7 +81,7 @@ Cuatro principios metodológicos gobiernan la construcción de cualquier escenar
 3. **Exclusión total de profundidad del lazo de vuelo.** Ni el grafo, ni `main.py`, ni el runner leen el canal de profundidad del simulador: ni como entrada de control, ni como freno, ni como criterio de aborto. Cualquier uso de esa señal dentro del lazo, aun «solo para observabilidad», abre un canal por el que la profundidad del simulador —de la que salen las etiquetas de referencia— puede terminar alimentando al brazo evaluado (cap. 9, §9.8.5). Una guardia automatizada (`tests/test_no_depth_in_flight_path.py`) cubre el runner, `main.py` y todos los módulos de vuelo. La única lectura de profundidad de una corrida es la **auditoría de la distancia mínima a obstáculo** (§10.6.1): un hilo aislado, con su propia conexión al simulador, que solo escribe un archivo de muestras; la misma guardia verifica que no importe ningún módulo del grafo y que el runner se limite a arrancarlo y detenerlo.
 4. **Protocolo de validación previo obligatorio.** Antes de que un escenario entre a un batch estadístico: (a) se redacta el manifiesto en `airsim-plan/missions/flightplans/`; (b) se dibuja la ruta con `scripts/plot_mission_route.py` y se confirma en el *viewport* de UE que la línea cruza donde el escenario pretende (fachada para los de bloqueo, calle abierta para los de control); (c) se corre una **misión piloto de una sola combinación** (`slm`, una semilla) y se exige `success = True` con 0 colisiones —o, si no completa, que el motivo sea instructivo (atasco genuino) y no un error de geometría; (d) recién entonces se lanza el batch completo. El criterio es explícito: *si ninguna combinación puede tener éxito en el escenario, no tiene sentido gastar el presupuesto del batch*.
 
-Una consecuencia práctica del punto 4 es la limpieza obligatoria de estado antes de cada corrida: el runner invoca `client.reset()` (que devuelve el vehículo a la pose de *spawn* de `settings.json` y limpia colisión/velocidad del controlador interno) y `client.clear_debug_markers()` (que descarta las primitivas persistentes dibujadas por `plot_mission_route.py`, las cuales de otro modo aparecen en el fotograma que recibe el VLM y son interpretadas como obstáculos reales).
+Una consecuencia práctica del punto 4 es la limpieza obligatoria de estado antes de cada corrida: el runner invoca `client.reset()` (que devuelve el vehículo a la pose de *spawn* de `settings.json` y limpia colisión/velocidad del controlador interno) y `client.clear_debug_markers()` (que descarta las primitivas persistentes dibujadas por `plot_mission_route.py`, las cuales de otro modo aparecen en el fotograma que recibe la capa estratégica y son interpretadas como obstáculos reales).
 
 ---
 
@@ -213,7 +218,7 @@ En consecuencia, en el batch base **una semilla identifica una réplica independ
 1. **Jitter temporal del lazo de control.** El lazo corre a `LOOP_HZ = 5.0` con temporización de reloj de pared (`time.sleep(max(0, 1/f - t_ciclo))`). El tiempo de cada ciclo depende de la latencia RPC a AirSim, de la carga de GPU y del planificador del sistema operativo. Un ciclo que se pasa del presupuesto desplaza todos los siguientes: dos corridas idénticas divergen en **qué instante exacto de la trayectoria** se toma cada decisión. Con `REACTIVE_FORWARD_SPEED = 3.0 m/s`, 20 ms de desfase equivalen a 6 cm de desplazamiento por ciclo, que se acumulan.
 2. **Renderizado y física no reproducibles cuadro a cuadro.** Unreal Engine no garantiza determinismo cuadro a cuadro bajo carga variable de GPU; la física de AirSim avanza en tiempo real, no en pasos fijos sincronizados con el cliente. El fotograma capturado en el ciclo $n$ no es bit a bit el mismo entre corridas, y el estimador de flujo óptico —que opera sobre diferencias de intensidad a nivel de píxel— amplifica esas diferencias.
 3. **Sensibilidad del estimador de flujo a condiciones iniciales.** El cálculo de FOE por mínimos cuadrados ponderados con rechazo de *outliers* (RANSAC-lite, `FOE_OUTLIER_ANGLE_RAD = 0.35`) es una función no lineal del campo de flujo. Pequeñas diferencias en el conteo de inliers cruzan el umbral de confianza diferenciada (< 30 vs. ≥ 30 inliers), lo que cambia el estado epistémico reportado por `ObstacleField` y, con él, qué regla de `navigate_node` decide el ciclo. Es un sistema con **realimentación**: una decisión distinta cambia la pose, que cambia el fotograma siguiente, que cambia la decisión siguiente.
-4. **Muestreo estocástico del VLM.** La inferencia se realiza con `temperature = 0.2` y **sin semilla de muestreo fijada** en el servidor de inferencia. Dos consultas con el mismo prompt pueden producir macro-acciones distintas. A esto se suma que la determinación de la inferencia en servidores de LLM no está garantizada aun con temperatura cero: la composición de kernels no invariantes al tamaño de lote con un tamaño de lote que varía según la carga del servidor produce variación de corrida a corrida a nivel de punto flotante ([He, 2025](13-REFERENCIAS.md#ref-he-2025)). Esta fuente **afecta únicamente al brazo `slm`**, lo que es metodológicamente relevante: el brazo deliberativo tiene una fuente de varianza adicional que los otros dos no tienen, y por eso se espera —y se debe reportar— una dispersión mayor en sus métricas.
+4. **Muestreo estocástico del VLM** (solo con `STRATEGIC_SOURCE = vlm` o `deep_vlm`; la red de profundidad es determinista salvo diferencias numéricas mínimas de la GPU). La inferencia se realiza con `temperature = 0.2` y **sin semilla de muestreo fijada** en el servidor de inferencia. Dos consultas con el mismo prompt pueden producir macro-acciones distintas. A esto se suma que la determinación de la inferencia en servidores de LLM no está garantizada aun con temperatura cero: la composición de kernels no invariantes al tamaño de lote con un tamaño de lote que varía según la carga del servidor produce variación de corrida a corrida a nivel de punto flotante ([He, 2025](13-REFERENCIAS.md#ref-he-2025)). Esta fuente **afecta únicamente al brazo `slm`**, lo que es metodológicamente relevante: el brazo deliberativo tiene una fuente de varianza adicional que los otros dos no tienen, y por eso se espera —y se debe reportar— una dispersión mayor en sus métricas.
 5. **Deriva temporal de las respuestas asíncronas.** Que una respuesta estratégica llegue antes o después de su edad máxima (10 s), o de que el dron supere la sub-meta que produciría, y que un barrido se resuelva antes o después de su watchdog (`SLM_DEEP_WATCHDOG_MS`), depende de la latencia del servidor en ese instante; el mismo fotograma puede producir un rodeo en una corrida y nada —o un escape vertical— en otra. Es la fuente de varianza más consecuente para el análisis, porque cambia cualitativamente qué decide el ciclo.
 
 Estas cinco fuentes se acumulan multiplicativamente sobre una misión de 1000–2000 ciclos. La divergencia entre dos semillas de la misma celda es, por tanto, real y sustancial — pero es **estocasticidad no controlada**, no un factor manipulado.
@@ -252,7 +257,7 @@ En consecuencia, la unidad de ejecución del protocolo es el **batch = conjunto 
 
 Cada batch se ejecuta según la siguiente secuencia, en este orden estricto:
 
-1. **Preparación del entorno.** Lanzar el proyecto de UE correspondiente al tier; aplicar el perfil de escalabilidad mínima documentado en el capítulo 3 (`Config/DefaultScalability.ini` con `sg.ShadowQuality` forzado, necesario para que la estimación de TTC disponga de las sombras que usa el flujo); verificar que el servidor de inferencia responde (`GET {LOCAL_LLM_URL}/models`, chequeo que el propio runner ejecuta antes de cada corrida del brazo `slm` y que aborta la corrida si falla); **precargar el modelo en VRAM** con una consulta trivial antes de cada corrida (`curl` al endpoint `/chat/completions`; ~8–10 s), porque el arranque en frío del modelo produjo el único *timeout* observado del brazo `slm` en las corridas de verificación del 2026-09-10 y esta mitigación operacional evita alterar el código o el watchdog.
+1. **Preparación del entorno.** Lanzar el proyecto de UE correspondiente al tier; aplicar el perfil de escalabilidad mínima documentado en el capítulo 3 (`Config/DefaultScalability.ini` con `sg.ShadowQuality` forzado, necesario para que la estimación de TTC disponga de las sombras que usa el flujo); si alguna capa usa el VLM en vuelo (`STRATEGIC_SOURCE = vlm` o `DEADLOCK_STRATEGY = deep_vlm`), verificar que el servidor de inferencia responde (`GET {LOCAL_LLM_URL}/models`, chequeo que el propio runner ejecuta antes de cada corrida del brazo `slm` en ese caso y que aborta la corrida si falla) y **precargar el modelo en VRAM** con una consulta trivial (~8–10 s), porque el arranque en frío produjo el único *timeout* observado del brazo `slm` en las corridas de verificación del 2026-09-10. Con la configuración final el servidor solo hace falta para el plan de ruta (`--route-plan vlm`), que el runner calcula una vez por escenario antes de la primera corrida; con `--route-plan off` puede quedar cerrado y su VRAM queda para Unreal (Anexo 6). La red de profundidad la carga el propio grafo al compilarse (~19 s).
 2. **Higiene de estado.** El runner ejecuta `client.reset()` y `client.clear_debug_markers()` al inicio de cada corrida. No se depende de que el operador recuerde limpiar los marcadores de `plot_mission_route.py`.
 3. **Piloto de validación.** Una corrida `slm`, una semilla, por cada escenario nuevo del batch (§10.3.0, punto 4).
 4. **Batch completo.** Un subproceso por combinación (escenario × brazo × estrategia × semilla).
@@ -268,7 +273,7 @@ cd airsim-loop
 python experiments/runner.py \
   --scenarios ../airsim-plan/missions/flightplans/minisim_clear.json \
   --arms slm fsm reactive \
-  --deadlock-strategies deep_vlm \
+  --deadlock-strategies depth \
   --seeds 1 2 3 4 5 \
   --out-dir ../airsim-runs/produccion/tier0 \
   --max-cycles 2400 \
@@ -282,7 +287,7 @@ python experiments/runner.py \
 python experiments/runner.py \
   --scenarios ../airsim-plan/missions/flightplans/townsim_clear.json \
   --arms slm fsm reactive \
-  --deadlock-strategies deep_vlm \
+  --deadlock-strategies depth \
   --seeds 1 2 3 4 5 \
   --out-dir ../airsim-runs/produccion/tier1 \
   --max-cycles 4500 --max-seconds 900
@@ -292,7 +297,7 @@ python experiments/runner.py \
   --scenarios ../airsim-plan/missions/flightplans/townsim_ini.json \
                ../airsim-plan/missions/flightplans/townsim_calib_cruce_frontal.json \
   --arms slm fsm reactive \
-  --deadlock-strategies deep_vlm \
+  --deadlock-strategies depth \
   --seeds 1 2 3 4 5 \
   --out-dir ../airsim-runs/produccion/tier1 \
   --max-cycles 4500 --max-seconds 900
@@ -305,7 +310,7 @@ python experiments/runner.py \
 python experiments/runner.py \
   --scenarios ../airsim-plan/missions/flightplans/citysim_clear.json \
   --arms slm fsm reactive \
-  --deadlock-strategies deep_vlm \
+  --deadlock-strategies depth \
   --seeds 1 2 3 4 5 \
   --out-dir ../airsim-runs/produccion/tier2 \
   --max-cycles 3000 --max-seconds 600
@@ -314,7 +319,7 @@ python experiments/runner.py \
 python experiments/runner.py \
   --scenarios ../airsim-plan/missions/flightplans/citysim_pilot.json \
   --arms slm fsm reactive \
-  --deadlock-strategies deep_vlm \
+  --deadlock-strategies depth \
   --seeds 1 2 3 4 5 \
   --out-dir ../airsim-runs/produccion/tier2 \
   --max-cycles 3000 --max-seconds 600
@@ -322,7 +327,7 @@ python experiments/runner.py \
 
 ### 10.5.4 Presupuestos y volumen del batch
 
-Los presupuestos temporales **no se dimensionan sobre la velocidad nominal** (`REACTIVE_FORWARD_SPEED = 3.0 m/s`) sino sobre la **velocidad de crucero efectivamente medida en vuelo**, que descuenta frenadas, deliberación y maniobras: ≈1.9 m/s en `TOWNSIM_CALIB_0` (656 m en 349.6 s de vuelo). Sobre esa base se aplica un margen ≥2.5×, con margen adicional en los escenarios con `deep_vlm` por el freno propio del barrido panorámico.
+Los presupuestos temporales **no se dimensionan sobre la velocidad nominal** (`REACTIVE_FORWARD_SPEED = 3.0 m/s`) sino sobre la **velocidad de crucero efectivamente medida en vuelo**, que descuenta frenadas, deliberación y maniobras: ≈1.9 m/s en `TOWNSIM_CALIB_0` (656 m en 349.6 s de vuelo). Sobre esa base se aplica un margen ≥2.5×, con margen adicional en los escenarios con obstrucción por el freno propio del barrido panorámico.
 
 | Batch | Escenario | Corridas | `--max-seconds` | `--max-cycles` | Tiempo estimado |
 |---|---|---|---|---|---|
@@ -334,7 +339,7 @@ Los presupuestos temporales **no se dimensionan sobre la velocidad nominal** (`R
 | C (Tier 2) | `citysim_pilot` | 15 | 600 | 3000 | ~1.5 h |
 | **Total** | | **90** | | | **~9.2 h** |
 
-Cada escenario aporta 15 corridas: tres brazos × 5 semillas, todas con el mecanismo `deep_vlm`.
+Cada escenario aporta 15 corridas: tres brazos × 5 semillas, con la estrategia de atasco de `config/.env` (`depth`). El lote base de septiembre se corrió con `deep_vlm` (cap. 11).
 
 El límite `--max-cycles` es una salvaguarda secundaria: a `LOOP_HZ = 5` y con el lazo cumpliendo su presupuesto (≈4.9 Hz medidos en los pilotos), `--max-seconds` se agota primero. El límite de ciclos protege el caso patológico opuesto — un lazo que se acelera porque las capturas fallan silenciosamente.
 
@@ -368,8 +373,9 @@ Todas las métricas se derivan del registro por ciclo del `FlightLogger` y se co
 - **Tasa de *fallback* determinista** (`slm_fallback_rate`) ante respuestas inválidas o fuera de esquema.
 - **Tasa de *timeout*** del watchdog asíncrono (`slm_timeout_rate`).
 - **Tasa de adherencia sintáctica** (`adherence_rate`), con y sin decodificación gramatical estructurada (cap. 8, §8.2).
-- **Distribución de resultados de la capa estratégica**, a partir de las entradas `arm = "vlm_strategic"` de `deliberations[]`: fracción de respuestas que proponen sub-meta, que declaran el camino directo libre (`directo_libre`), sin sector libre, vencidas, superadas o no parseables. Es la métrica que responde si el modelo **discrimina** (cap. 8, §8.3.1): una capa que declara `directo_libre` en casi todas las consultas, incluso cuando el dron termina en deadlock, no está aportando información.
-- **Avance hacia el waypoint real tras cada sub-meta del VLM**: distancia al waypoint de misión (no a la sub-meta) en el momento de la inyección y 20 s después. Es la medida directa de si las sub-metas del VLM ayudan a completar la misión: una sub-meta que no acerca al waypoint real en ese plazo es un desvío sin beneficio.
+- **Distribución de resultados de la capa estratégica**, a partir de las entradas `arm = "{fuente}_strategic"` (`depth_strategic` o `vlm_strategic`) de `deliberations[]`: fracción de respuestas que proponen sub-meta, que declaran el camino directo libre (`directo_libre`), sin sector libre, vencidas, superadas o no parseables. Complementa al banco de prueba (cap. 11, §11.0), que mide si la fuente **discrimina** contra etiquetas de referencia: una capa que declara `directo_libre` en casi todas las consultas, incluso cuando el dron termina en deadlock, no está aportando información.
+- **Avance hacia el waypoint real tras cada sub-meta**: distancia al waypoint de misión (no a la sub-meta) en el momento de la inyección y 20 s después. Es la medida directa de si las sub-metas ayudan a completar la misión: una sub-meta que no acerca al waypoint real en ese plazo es un desvío sin beneficio.
+- **Avance en waypoints del plan a tiempos de referencia** y **segundos a menos de 1 m de un obstáculo** por tramo (con la posición de cada muestra de DistMin): las métricas de la regla de decisión de los lotes de octubre (`analyze_strategic_batch.py`, cap. 11 §11.6).
 
 ### 10.6.4 Resolución de atascos
 
@@ -378,7 +384,7 @@ Todas las métricas se derivan del registro por ciclo del `FlightLogger` y se co
 - **`deep_scan_avg_cycles_to_resolve`**: costo medio en ciclos de una resolución exitosa.
 - **`deep_scan_fallback_rate`**: fracción de atascos donde el barrido no resolvió y se cayó al escape ciego de respaldo.
 
-Estas cuatro métricas sólo tienen valor conjunto: una tasa de resolución alta con un costo de ciclos desmesurado no describe un mecanismo exitoso sino uno caro. «Resuelto» significa que el VLM devolvió una descripción utilizable, **no** que el dron haya salido del atasco; por eso se reporta además el avance hacia el waypoint real tras cada resolución.
+Estas cuatro métricas sólo tienen valor conjunto: una tasa de resolución alta con un costo de ciclos desmesurado no describe un mecanismo exitoso sino uno caro. «Resuelto» significa que la fuente del barrido (profundidad o VLM) encontró un rumbo transitable y se fijó una sub-meta, **no** que el dron haya salido del atasco; por eso se reporta además el avance hacia el waypoint real tras cada resolución.
 
 ### 10.6.5 Desglose espacial por waypoint
 
@@ -469,26 +475,29 @@ El runner escribe de forma determinista bajo la siguiente estructura, derivada d
 airsim-runs/produccion/<lote>/
 └── <escenario>/                         # stem del manifiesto: townsim_ini, citysim_pilot, …
     └── <brazo>/                         # slm | fsm | reactive
-        └── <estrategia>/                # deep_vlm | blind
+        └── <celda>/                     # depth | deep_vlm | blind, o strat_<fuente>__<estrategia>
             └── seed_<N>_<timestamp>/    # una carpeta autocontenida por corrida
                 ├── seed_<N>_<ts>.jsonl            # DroneState completo ciclo a ciclo
                 ├── seed_<N>_<ts>.csv              # misma corrida, tabular (columnas state.*)
                 ├── seed_<N>_<ts>.summary.json     # indicadores agregados
                 ├── seed_<N>_<ts>.summary_by_wp.csv
+                ├── seed_<N>_<ts>.distmin.ndjson   # muestras de la auditoría de DistMin (1 Hz)
                 ├── seed_<N>_<ts>.console.log      # copia de la consola de la corrida
                 ├── seed_<N>_<ts>.webm / .follow.webm / .viewer.html
-                └── photo-<timestamp_ISO>.png      # fotogramas exactos enviados al VLM
+                └── photo-<timestamp_ISO>.png      # fotogramas de cada consulta del lazo lento
 ```
+
+El contenido de cada archivo —campos de la traza, columnas del CSV, indicadores del resumen— y el uso del visor se describen en el capítulo 4 (§4.4).
 
 La ruta **es** el registro del punto del diseño factorial al que pertenece la corrida: escenario, brazo, estrategia y semilla son directorios, no metadatos que haya que parsear, y ninguna corrida sobrescribe a otra. Los fotogramas de auditoría se nombran por *timestamp* de captura con precisión de milisegundos y se cruzan con la telemetría por el campo `slm_frame_paths` del CSV.
 
-El CSV plano por corrida contiene, además de la cinemática y las lecturas sectoriales del `ObstacleField`, el **prompt completo y la respuesta cruda del VLM** en cada deliberación, junto al identificador de la entrada correspondiente del JSONL. La decisión de duplicar esa información en el CSV es deliberada: permite analizar el comportamiento del modelo sin cruzar archivos.
+El CSV plano por corrida contiene, además de la cinemática y las lecturas sectoriales del `ObstacleField`, el **prompt y la respuesta cruda** de cada consulta del lazo lento (con la profundidad, el p5 por sector), junto al identificador de la entrada correspondiente del JSONL. La decisión de duplicar esa información en el CSV es deliberada: permite analizar el comportamiento del modelo sin cruzar archivos.
 
 Cuando se usa `batch_runner.py`, se agrega en la raíz del directorio de salida un `RESULTS_SUMMARY.json` consolidado con una fila por combinación, y un `RESULTS_SUMMARY.batch_version.txt` con el hash del código que orquestó el batch (que puede diferir del `code_version` de las corridas si se redeployó a mitad de camino).
 
 ### 10.9.2 Video y visor de auditoría
 
-Tanto las corridas interactivas (`main.py`) como las del runner generan, por defecto, el video anotado de la cámara frontal (`.webm`, VP8, un cuadro por ciclo con superposición de telemetría, TTC por sector y ruta activa), el video de la cámara de seguimiento externa (`.follow.webm`, solo auditoría) y un visor HTML autocontenido que sincroniza ambos videos con la traza por índice de ciclo y muestra el `DroneState` y la consulta al VLM de cada ciclo. La codificación corre en un hilo aparte para no alterar el período del lazo (cap. 5, §5.18). En lotes largos puede desactivarse con `--no-video`.
+Tanto las corridas interactivas (`main.py`) como las del runner generan, por defecto, el video anotado de la cámara frontal (`.webm`, VP8, un cuadro por ciclo con superposición de telemetría, TTC por sector y ruta activa), el video de la cámara de seguimiento externa (`.follow.webm`, solo auditoría) y un visor HTML autocontenido que sincroniza ambos videos con la traza por índice de ciclo y muestra el `DroneState` y la consulta del lazo lento de cada ciclo (cap. 4, §4.4). La codificación corre en un hilo aparte para no alterar el período del lazo (cap. 5, §5.18). En lotes largos puede desactivarse con `--no-video`.
 
 ### 10.9.3 Trazabilidad y cuarentena experimental
 
@@ -559,7 +568,7 @@ Si el presupuesto sólo permite un subconjunto, el orden de prioridad es: (1) el
 El protocolo tiene cinco limitaciones conocidas que se declaran explícitamente y se arrastran a las conclusiones del capítulo 12:
 
 1. **Potencia estadística.** Con $K = 5$, ninguna comparación puede superar el umbral de Bonferroni salvo separación perfecta (§10.4.4). Todo resultado no significativo del lote base debe leerse como "no detectado con esta potencia", nunca como "ausente". La mitigación es la elevación de $K$ a 10 en las celdas decisivas (§10.10.4).
-2. **Validez externa respecto del modelo.** Todas las conclusiones sobre el brazo `slm` son conclusiones sobre LFM2.5-VL-1.6B cuantizado, no sobre "modelos de lenguaje pequeños" en general. La mitigación es la comparación de modelos descrita en §10.10.4.
+2. **Validez externa respecto del modelo.** Las conclusiones sobre el VLM son conclusiones sobre LFM2.5-VL-1.6B cuantizado (`lfm2.5-vl-1.6b:q4km-ctx8k`), no sobre "modelos de lenguaje pequeños" en general; las del brazo `slm` con la configuración final, sobre una red de profundidad concreta (Depth Anything V2 Metric Outdoor Small). La mitigación es la comparación de modelos descrita en §10.10.4.
 3. **Efecto de sesión entre tiers.** Los tres batches corren en sesiones y proyectos distintos, de modo que las comparaciones absolutas entre tiers no son limpias (§10.5.1). La mitigación parcial es el uso de razones normalizadas; la mitigación completa es la repetición de un batch en segunda sesión descrita en §10.10.4.
 4. **Ausencia de obstáculos dinámicos.** Todo el diseño asume geometría estática. Las conclusiones no se extienden a entornos con agentes móviles, que es precisamente el escalón de dificultad que la literatura de conducción autónoma identifica como decisivo ([Codevilla et al., 2019](13-REFERENCIAS.md#ref-codevilla-2019)). La mitigación es la extensión con agentes de IA descrita en §10.10.3.
 5. **Configuración distinta entre el lote base y los lotes con obstrucción.** El lote base se ejecutó con una configuración del brazo `slm` distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas en lugar de proponer sub-metas ancladas, la detección de atasco era otra y el runner medía la distancia al obstáculo con el canal de profundidad. Las comparaciones válidas son *dentro* de una configuración (mismo `code_version`); entre configuraciones solo es legítima la comparación descriptiva. La mitigación es fijar y verificar el hash antes de cada lote y descartar las corridas con otro hash.
@@ -574,18 +583,18 @@ Los escenarios despejados del lote base no ejercen la capa táctica: el TTC no b
 
 | Componente | Comportamiento que se evalúa | Referencia |
 |---|---|---|
-| Capa estratégica del VLM | Sub-metas ancladas a la pose del fotograma; si el modelo discrimina sectores libres de bloqueados; si las sub-metas acercan al waypoint real | §5.10, §8.3.2 |
+| Capa estratégica (profundidad estimada; VLM como ablación) | Sub-metas ancladas a la pose del fotograma; si las sub-metas acercan al waypoint real y si alejan al dron de los obstáculos | §5.10, §6.14 |
 | Consulta inmediata ante un muro (`GIRAR_90` + `expedite`) | Que el rodeo se decida con el fotograma que ve el muro | §5.9 |
-| Barrido `deep_vlm` en marco mundo | Que la sub-meta de salida apunte al rumbo transitable más cercano a la meta | §5.12, §8.3.3 |
+| Barrido en marco mundo (`depth`; `deep_vlm` como ablación) | Que la sub-meta de salida apunte a un rumbo transitable y que el dron salga del atasco | §5.12 |
 | Detección de atasco de dos señales | Ausencia de deadlocks falsos (despegue, sub-metas nuevas) y presencia de los reales | §5.3.1 |
-| Escape vertical ante falla del VLM | Que libere al dron de estructuras horizontales | §5.3.4 |
+| Escape vertical cuando el barrido no resuelve | Que libere al dron de estructuras horizontales | §5.3.4 |
 | Detección de techo | Altitud limitada bajo estructuras horizontales | §5.15.3 |
 | Gobernador de velocidad | Avance limitado sin evidencia perceptual | §5.13 |
 | Vigilante de congelamiento | Terminación `physics_locked` | §5.19 |
-| Plan de ruta con el VLM sobre el mapa cenital (desactivado) | Si el juicio del modelo sobre el mapa coincide con la geometría real; solo en el banco, no en los lotes | §4.3.1, §11.0 |
+| Plan de ruta con el VLM sobre el mapa cenital (juicio por parches) | Si el plan elige desvíos libres cuando la recta está bloqueada; solo en CitySim, cuyo mapa está registrado | §4.3.1, §11.0 |
 | Manifiestos `townsim_ini` (WP_0b, WP_1b) y `citysim_pilot` (WP_0_SUR) | Evitan la canopy de la plaza, la moldura del edificio oeste y la autopista elevada | §10.3.2, §10.3.3 |
 
-Ninguno de los umbrales de la capa estratégica (período de 3 s, edad máxima de 10 s, sub-meta a 15 m, ascenso de 4 m, deduplicación de 10 m) está validado en vuelo todavía.
+Los umbrales de la capa estratégica (período de 1 s con la profundidad, edad máxima de 10 s, sub-meta a 15 m, cambio de altura de 4 m, deduplicación de 10 m) se usaron en los lotes de octubre (cap. 11, §11.6) pero no se calibraron: son decisiones de diseño.
 
 ### 10.12.2 Lotes previstos
 
@@ -595,15 +604,13 @@ Ninguno de los umbrales de la capa estratégica (período de 3 s, edad máxima d
 | E | `townsim_calib_cruce_frontal` (Tier 1, bloqueo frontal) | 20 | 900 s · 4500 ciclos | ~3.0–4.0 h |
 | F | `citysim_pilot` (Tier 2, rodeo de manzanas) | 20 | 1200 s · 5000 ciclos | ~5.0–6.5 h |
 
-**Calibración previa.** Antes de cualquier lote se corre el banco de prueba del VLM (cap. 11 §11.0): mide, fuera de vuelo y contra la profundidad del simulador, qué preguntas sabe responder el modelo y si su juicio sobre las rutas del mapa es válido. El banco mide **capacidad generalista**, no ajusta el sistema a un escenario: los prompts son fijos y no nombran objetos de un entorno, la respuesta se lee tal como sale (sin umbrales calibrados) y una pregunta se lleva al vuelo solo si pasa en **CitySim y TownSim** con el mismo prompt: exactitud balanceada ≥ 0.65 y límite inferior del intervalo de confianza del 95 % (bootstrap por corrida) por encima del azar. La selección se hace con los dos entornos medidos, nunca con uno solo. Si una pregunta no pasa, se la descarta: el modelo no tiene esa capacidad sin entrenamiento, y adaptarla al escenario sería un ajuste equivalente a entrenar por entorno, que es justamente lo que el enfoque generalista evita.
+**Calibración previa.** Antes de cualquier lote, la fuente del lazo lento pasa por el banco de prueba a bordo (§10.13): una pregunta se lleva al vuelo solo si la fuente la responde, contra la etiqueta de referencia, por encima del criterio de pase.
 
-**Etiquetas de referencia del banco.** Cada muestra del banco es una foto o un cuadro de video de una corrida, con la pose del dron registrada en ese instante (posición y actitud). Su etiqueta de referencia (definición en cap. 7, §7.1) se calcula fuera de vuelo, con una herramienta de laboratorio aislada del lazo: (1) se reubica el dron en AirSim en esa pose exacta, con la cámara en el mismo campo de visión de vuelo (90°); (2) se espera a que Unreal termine de cargar la geometría de la zona, repitiendo la captura hasta que la profundidad de cada sector cambie menos de 0.5 m entre dos capturas seguidas; (3) se capturan la imagen y la profundidad planar, y se descartan las muestras cuya imagen reproducida no coincide con la registrada en vuelo (correlación normalizada < 0.5: la pose no se reprodujo bien); (4) sobre el recorte cuadrado central —el mismo que recibe el VLM— dividido en una grilla de 3 × 3, se toma el percentil 5 de la profundidad de cada sector; (5) un sector es **libre** si ese percentil es ≥ 15 m, la misma distancia que se le pide juzgar al modelo. De ahí salen las etiquetas de cada pregunta: *centro libre* es el estado del sector central; *lado por donde termina el obstáculo* es el lado del hueco libre más cercano al centro en la franja a la altura del dron; *espacio libre por encima* es si al menos la mitad del sector superior central está libre; *dirección más abierta* es el tercio de la franja con mayor profundidad mediana, o «ninguna» si ninguno llega a 15 m. Para las rutas del mapa, la etiqueta se obtiene recorriendo la ruta cada 4 m a la altura de vuelo, mirando en la dirección del tramo: la ruta es transitable si en ningún punto el percentil 5 de la ventana central de la imagen baja de 6 m. Estas etiquetas solo sirven para medir; nunca entran al lazo de vuelo.
+**Resultado de la calibración previa.** Ninguna pregunta en vuelo pasó con el VLM (cap. 11, §11.0); la profundidad estimada sí (cap. 6, §6.14; secuencia completa en §10.13.4). Por esa regla, el VLM salió del lazo de vuelo y las preguntas de la capa estratégica y del barrido las responde la profundidad. El plan de ruta sobre el mapa sí mostró señal (AUC 0.81) y está activado (`--route-plan vlm`) en CitySim, cuyo mapa está registrado con el mundo; en TownSim los lotes vuelan el manifiesto tal cual (`--route-plan off`), porque su mapa no está verificado.
 
-**Plan de ruta.** Los lotes vuelan el manifiesto tal cual (`--route-plan off`): el plan de ruta con el VLM está desactivado porque los modelos evaluados no distinguen en el mapa una ruta por la calle de una sobre un edificio (cap. 4, §4.3.1). Así la celda «sin VLM en ningún punto» lo es también en la planificación. El juicio del modelo sobre el mapa se documenta solo en el banco de prueba (cap. 11, §11.0).
+Cada lote tiene cuatro celdas de 5 semillas: `slm × depth`, `fsm × depth`, `fsm × blind` (sin barrido, §10.2.2) y `reactive`. Cada lote va precedido por un piloto de validación (`slm × depth`, semilla 99). Criterios de pase: en D, el dron cruza el corredor arbolado; en E, rodea el edificio o al menos lo bordea; en F, alcanza WP_0_SUR y WP_1 sin quedar trabado sobre la autopista. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si un lote muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (§10.11, punto 1).
 
-Cada lote tiene cuatro celdas de 5 semillas: `slm × deep_vlm`, `fsm × deep_vlm`, `fsm × blind` (el contraste **sin VLM en ningún punto**, §10.2.2) y `reactive`. Cada lote va precedido por un piloto de validación (`slm × deep_vlm`, semilla 99). Criterios de pase: en D, el dron cruza el corredor arbolado; en E, rodea el edificio o al menos lo bordea; en F, alcanza WP_0_SUR y WP_1 sin quedar trabado sobre la autopista. Un piloto que no cumple su criterio indica una regresión que debe diagnosticarse antes de lanzar el lote. Si un lote muestra separación parcial sin significancia formal, se prevé una extensión a K = 10 (§10.11, punto 1).
-
-**Comparaciones planificadas por lote.** (i) `slm × deep_vlm` vs. `fsm × blind`: ¿aporta el VLM, en su uso completo, frente a un sistema sin VLM? (ii) `fsm × deep_vlm` vs. `fsm × blind`: ¿aporta el barrido con VLM en la resolución de atascos, con la misma política de lazo rápido? (iii) `slm × deep_vlm` vs. `fsm × deep_vlm`: ¿aporta la capa estratégica? La familia de Bonferroni de §10.7.3 se amplía en consecuencia.
+**Comparaciones planificadas por lote.** (i) `slm × depth` vs. `fsm × blind`: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) `fsm × depth` vs. `fsm × blind`: ¿aporta el barrido con profundidad en la resolución de atascos, con la misma política de lazo rápido? (iii) `slm × depth` vs. `fsm × depth`: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo `slm`? La pregunta «¿aporta el VLM en vuelo?» ya no es una comparación de estos lotes: la respondieron el banco y los lotes de la capa estratégica (cap. 11, §11.0 y §11.6). La familia de Bonferroni de §10.7.3 se amplía en consecuencia.
 
 **Métricas adicionales.** Además de las de §10.6: la distribución de resultados de la capa estratégica y el avance hacia el waypoint real tras cada sub-meta (§10.6.3); las señales del `StallDetector` (`_stopped_cycles`, `_wp_no_progress_cycles`, `imu_contact_event`, `blind_wall_event`) y qué señal disparó cada deadlock; los deadlocks en los primeros 30 ciclos (deben ser cero: el despegue no es un atasco, cap. 5 §5.3.1); y la fracción de ciclos con el gobernador de velocidad activo (`_speed_cap`).
 
@@ -611,4 +618,92 @@ Cada lote tiene cuatro celdas de 5 semillas: `slm × deep_vlm`, `fsm × deep_vlm
 
 ### 10.12.3 Estado
 
-A la fecha de este informe **no se ejecutó ningún lote con obstrucción**. Las corridas piloto sobre `townsim_ini` y las 12 corridas de diagnóstico sobre `citysim_pilot` fueron corridas de diagnóstico, con ajustes entre una y otra, de modo que ninguna constituye evidencia estadística ni entra al capítulo 11; se usan, con esa etiqueta, como evidencia de diagnóstico en el capítulo 9. La actualización del capítulo 11 y de la evaluación de H1 en el capítulo 12 queda pendiente de la ejecución de los lotes D, E y F sobre un `code_version` fijo.
+En octubre se ejecutaron el banco de prueba a bordo (cap. 11, §11.0) y dos lotes del brazo `slm` sobre escenarios con obstrucción —`citysim_pilot` (15 corridas, fuentes `depth`, `vlm` y `off`) y `townsim_ini` (10 corridas, fuentes `depth` y `off`)— con una regla de decisión fijada antes de correr (cap. 11, §11.6). Esos lotes decidieron la configuración final; no comparan brazos. Las corridas piloto anteriores y las 12 corridas de diagnóstico sobre `citysim_pilot` siguen siendo solo evidencia de diagnóstico (cap. 9). La comparación entre brazos con el sistema final —lotes D, E y F sobre un `code_version` fijo— y la evaluación de H1 en el capítulo 12 quedan pendientes.
+
+## 10.13 Banco de prueba a bordo (`vlm_bench`)
+
+### 10.13.1 Qué es y para qué sirve
+
+El banco de prueba es una herramienta de medición **fuera de vuelo**. Responde una pregunta previa a cualquier lote: **¿la fuente del lazo lento sabe responder la pregunta que el lazo le hace?** Por ejemplo, si un sector de la imagen está libre a 15 m, si un rumbo del barrido es transitable o si un tramo de ruta sobre el mapa va por la calle. Para responderla compara, muestra por muestra, la respuesta de la fuente con una **etiqueta de referencia** independiente, calculada con la profundidad del simulador en la misma pose (cap. 7, §7.1).
+
+Un lote de vuelo no puede responder esa pregunta. El resultado de una misión mezcla la percepción con el guiado, el lazo rápido, los atascos y el azar del simulador; con 5 semillas, una fuente que responde al azar puede empatar con una que acierta. El banco aísla el juicio. Si una fuente no lo supera, volarla no puede aportar, y el lote no se corre. Si lo supera, el lote mide lo que el banco no puede medir: si ese juicio mejora el vuelo (§11.6).
+
+Tres reglas lo mantienen como medición **generalista** y no como ajuste del sistema a un escenario:
+
+1. **Prompts y preguntas fijos**, iguales a los de vuelo e independientes del escenario: no nombran objetos de un entorno.
+2. **La respuesta se lee tal como sale.** El criterio de pase usa la etiqueta que la fuente devuelve, sin umbrales calibrados sobre los datos. El AUC, calculado con la probabilidad de cada opción, se informa solo como diagnóstico: indica si hay información que la respuesta no expresa, pero no configura el vuelo.
+3. **Pasar en todos los entornos medidos con el mismo prompt.** Por entorno, el criterio es exactitud balanceada ≥ 0.65 y límite inferior del intervalo de confianza del 95 % por encima del azar. El intervalo se calcula por *bootstrap* por corrida: se remuestrean corridas enteras, porque las vistas de una misma corrida no son independientes. Si una pregunta no pasa, se descarta: el modelo no tiene esa capacidad sin entrenamiento, y adaptarla al escenario sería un entrenamiento manual por entorno, lo que el enfoque generalista evita.
+
+### 10.13.2 Cómo se construyó
+
+El código está en `airsim-loop/experiments/vlm_bench/` y la tubería completa se ejecuta con `run_all.sh`. Cada etapa es reanudable: si se corta, al relanzarla saltea lo ya hecho.
+
+| Etapa | Módulo | Qué hace |
+|---|---|---|
+| 1. Muestras | `dataset.py` | Toma las corridas que tienen telemetría y los dos videos (frontal y `FollowCam`) y extrae poses registradas en vuelo (posición, actitud y meta activa). Hay tres clases de muestra: **estratégicas** (cada consulta de la capa estratégica, con la respuesta que dio en vuelo y la foto enviada), **de barrido** (cada rumbo de cada barrido) y **de trayectoria** (ciclos sin consulta, a ≥ 8 m de altura, sin duplicados en celdas de 2 m y 20°: un dron trabado cientos de ciclos cuenta una vez). |
+| 2. Etiquetas | `ground_truth.py`, `labels.py` | Ver §10.13.3. Es el único módulo del banco que lee la profundidad del simulador. |
+| 3. Preguntas | `questions.py` | Catálogo: para cada pregunta, a qué muestras aplica, cómo arma la imagen y el prompt, su esquema JSON (igual que en vuelo), cuál es la etiqueta verdadera y cómo se lee la respuesta. Las opciones tienen iniciales distintas para leer la probabilidad de cada una en los *logprobs*. |
+| 4. Evaluación | `evaluate.py` | Selecciona hasta 60 muestras válidas por clase verdadera (los barridos, todos) y hace cada pregunta con decodificación restringida y temperatura 0. Guarda la respuesta, la probabilidad de cada opción y la latencia. |
+| 5. Reporte | `report.py` | Calcula exactitud balanceada con su intervalo, AUC, respuestas constantes, sesgo por posición y acuerdo bajo permutación, y aplica el criterio de pase. Con bancos de varios entornos produce `cross_report.md`. |
+
+Las preguntas del catálogo son:
+
+| Pregunta | Qué pregunta | Para qué está |
+|---|---|---|
+| `grid_prod` | La pregunta de vuelo de la capa estratégica tal cual: grilla de 3×3, marca de la meta, «libre» o «bloqueado» por sector | Medir la capacidad que usa el vuelo |
+| `grid_perm` | La misma, con las etiquetas de los sectores permutadas | Control: si la respuesta no cambia con la permutación, el modelo responde a la posición en la imagen y no a la escena |
+| `centro_libre` | ¿Se puede avanzar recto 15 m? (sin grilla) | La forma más simple de la pregunta |
+| `borde_lateral` | Con un obstáculo de frente, ¿por qué lado termina? | Información para elegir el rodeo |
+| `borde_superior` | Con un obstáculo de frente, ¿hay espacio libre por encima? | Ídem, en vertical |
+| `direccion_abierta` | ¿Qué tercio tiene más espacio libre a la altura del dron? | Ídem, como elección |
+| `scan_prod` / `scan_perm` | La pregunta de vuelo del barrido con las imágenes de un barrido real, en el orden de vuelo y en otro orden | Medir el barrido y su sesgo por orden |
+
+Cuatro pruebas derivadas usan las mismas muestras o la misma etiqueta para preguntas puntuales:
+
+| Prueba | Módulo | Pregunta |
+|---|---|---|
+| Mapa | `map_probe.py` | ¿El VLM reconoce qué hay en un parche del mapa cenital (calle o techo)? La etiqueta se obtiene mirando el parche desde 40 m con la profundidad. |
+| Rutas | `route_bench.py` | ¿El juicio del planificador de ruta (cap. 4, §4.3.1) separa rutas libres de bloqueadas? La etiqueta recorre la ruta cada 4 m a la altura de vuelo: la ruta es libre si en ningún punto hay un obstáculo a menos de 6 m en la ventana central. |
+| Regiones | `region_probe.py` | Si el VLM no juzga distancias en la cámara frontal, ¿reconoce al menos qué hay en cada sector? |
+| Profundidad y segmentación | `seg_depth_probe.py` | ¿Dos redes chicas que solo ven el RGB juzgan el espacio libre por sector mejor que el VLM, con la misma geometría y el mismo estadístico que la etiqueta? |
+
+### 10.13.3 Etiquetas de referencia
+
+Cada muestra es una foto o un cuadro de video de una corrida, con la pose del dron registrada en ese instante. Su etiqueta se calcula fuera de vuelo con `ground_truth.py`, una herramienta de laboratorio aislada del lazo, de la misma categoría que la calibración del TTC (cap. 7). El procedimiento tiene cinco pasos:
+
+1. **Reubicar el dron.** Se lleva el dron a la pose exacta (posición y actitud) con la cámara en el campo de visión de vuelo (90°; el cliente rechaza conectarse si el campo de visión fue alterado).
+2. **Esperar la carga de la escena.** Unreal carga la escena por zonas y, tras un salto largo, la primera captura puede salir sin edificios. Se repite la captura hasta que la profundidad de cada sector cambia menos de 0.5 m entre dos capturas seguidas.
+3. **Capturar y filtrar.** Se capturan la imagen y la profundidad planar. Se descartan las muestras con la cámara dentro de la geometría, con captura inestable o cuya imagen reproducida no coincide con la registrada en vuelo (correlación normalizada < 0.5: la pose no se reprodujo bien, por ejemplo con el dron atravesando una fachada).
+4. **Resumir por sector.** Sobre el recorte cuadrado central —el mismo que recibe la fuente en vuelo—, dividido en una grilla de 3×3, se toma el percentil 5 de la profundidad de cada sector: lo más cercano, sin píxeles sueltos.
+5. **Etiquetar.** Un sector es **libre** si ese percentil es ≥ 15 m, la misma distancia que se le pide juzgar a la fuente y a la que se fija la sub-meta.
+
+De ahí salen las etiquetas de cada pregunta:
+- *Centro libre*: el estado del sector central.
+- *Lado por donde termina el obstáculo*: el lado del hueco libre más cercano al centro en la franja a la altura del dron.
+- *Espacio libre por encima*: si al menos la mitad del sector superior central está libre.
+- *Dirección más abierta*: el tercio de la franja con mayor profundidad mediana, o «ninguna» si ninguno llega a 15 m.
+
+Estas etiquetas solo sirven para medir: nunca entran al lazo de vuelo (§10.3.0, punto 3).
+
+### 10.13.4 Cómo aportó a las decisiones de diseño
+
+El lazo de control de la versión final es, en buena parte, el resultado de lo que el banco midió. Las decisiones siguieron este orden:
+
+| Fecha | Medición | Resultado | Decisión |
+|---|---|---|---|
+| 2 oct | Juicio de rutas enteras dibujadas sobre el mapa (línea, pasillo, pregunta invertida) | Ningún modelo distinguió una ruta por la calle de una sobre un edificio: la respuesta dependía de la forma de la pregunta | Plan de ruta apagado |
+| 2 oct | `map_probe`: reconocimiento de parches del mapa con cinco clases | LFM2.5-VL-1.6B: AUC 0.80 para «calle»; Qwen2.5-VL-3B: 0.63 | Juicio **por parches** (cap. 4, §4.3.1) y LFM2.5-VL-1.6B también para el planificador |
+| 7 oct | Grilla con el modelo local (banco v1) y piloto en CitySim | Grilla al azar (AUC 0.54); las filas de arriba y de abajo «libres» siempre. El dron eligió 12 de 31 sub-metas en la fila de abajo y quedó apoyado en una autopista elevada | Desempate por fila con margen (`VLM_SUBGOAL_TIE_DEG`, cap. 5 §5.10.3) |
+| 8 oct | Banco v2 completo con el modelo a bordo (línea base) | Ninguna de las ocho preguntas pasa; el barrido declara todo transitable; rutas por parches AUC 0.81 | El VLM no responde la pregunta del lazo; el plan de ruta por parches se activa (`ROUTE_PLAN_MODE=vlm`) |
+| 8 oct | `region_probe`: reconocimiento por sector en la cámara frontal | No pasa (exactitud 48–49 %; AUC 0.53–0.62) | Se descarta preguntar «qué hay» en lugar de «a qué distancia» |
+| 8 oct | `seg_depth_probe`: profundidad monocular y segmentación | Profundidad: 75 % y AUC 0.83 por sector, AUC 0.87 en los barridos; segmentación: AUC 0.50 | La capa estratégica y el barrido pasan a la profundidad estimada (`STRATEGIC_SOURCE=depth`, `DEADLOCK_STRATEGY=depth`) y el VLM sale del vuelo |
+| 8–10 oct | Lotes de vuelo con regla pre-registrada (§11.6) | La capa no acelera la misión con ninguna fuente; con vegetación, la profundidad da más margen en las 5 semillas | Configuración final `depth`/`depth` |
+
+La secuencia muestra el uso previsto del instrumento. Cada pregunta que no pasó se descartó en lugar de compensarse con reglas. Cada fuente que pasó se llevó al vuelo y se juzgó con un lote. Tres componentes del loop de hoy salen de él: la fuente de la capa estratégica, el juicio del barrido y el plan de ruta. Las cifras completas están en el capítulo 11 (§11.0), y la descripción de la red de profundidad, en el capítulo 6 (§6.14).
+
+### 10.13.5 Alcance y límites
+
+- **Un solo entorno medido.** Las 6926 poses del banco v2 provienen de corridas de `citysim_pilot`; TownSim no tiene banco. El criterio exige pasar en todos los entornos medidos. Para el VLM la conclusión no cambia, porque no pasó ni siquiera en CitySim. Para la profundidad, la validación en TownSim fue solo en vuelo (§11.6.2). Un banco en TownSim es la extensión pendiente más directa.
+- **Muestras sesgadas hacia los lugares difíciles.** Las muestras estratégicas y de barrido se toman donde el sistema consultó, que suelen ser los tramos con obstáculos; la evaluación equilibra las clases verdaderas para que la exactitud balanceada no dependa de esa proporción.
+- **Render sintético.** La etiqueta sale del mismo render que ve la fuente. Una red entrenada en parte con imágenes sintéticas, como la de profundidad, puede rendir menos con una cámara real.
+- **Pocos barridos.** 14 y 22 barridos alcanzan para ver que el VLM responde siempre lo mismo, pero no para interpretar su AUC.

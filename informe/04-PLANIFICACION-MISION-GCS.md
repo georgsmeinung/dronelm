@@ -54,26 +54,24 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 - **`map`:** nombre de la imagen cenital del escenario. WebDCS la usa para ubicar y mostrar los waypoints, y el planificador de ruta (§4.3.1) para decidir por dónde va cada tramo. La escala (px/m) y el origen de cada imagen se declaran en `airsim-plan/missions/maps/map_scales.json`, con la convención: centro de la imagen = `ned_offset`, arriba = norte (+x), derecha = este (+y). Como el plan de ruta se deriva del mapa, un mapa mal registrado sí afecta al vuelo (§4.3.2).
 - **`start_pose`** (opcional): pose de partida; solo se usa con `--seed-jitter`, porque el runner devuelve el dron al *spawn* de `settings.json` (cap. 10 §10.4.3). Debe coincidir con ese *spawn*.
 
-**Separación entre manifiesto y prompts del VLM.** El manifiesto entrega únicamente metas geométricas; los prompts del VLM no forman parte de él porque no pueden ser textos estáticos: se construyen en vuelo a partir del fotograma, la pose y el waypoint activo de ese instante. Hay dos (cap. 5 §5.10, §5.12; cap. 8 §8.5):
+**Separación entre manifiesto y consultas en vuelo.** El manifiesto entrega únicamente metas geométricas. Las consultas del lazo lento no forman parte de él porque dependen del fotograma, la pose y el waypoint activo de ese instante. Hay dos (cap. 5 §5.10, §5.12):
 
-1. **Prompt estratégico** (`vlm_strategic.py`): el fotograma frontal con una grilla de 3×3 dibujada (tercios de la imagen) y la marca «GOAL» en la dirección del destino, más la distancia al destino y la altura del dron. El modelo responde, para cada uno de los nueve sectores, si se puede volar al menos 15 m en esa dirección.
-2. **Prompt del barrido** (`deep_scan.py`, solo en un deadlock): cuatro imágenes numeradas tomadas girando en el lugar, con la altura. El modelo describe cada imagen; el rumbo de cada una lo conoce el código.
+1. **Capa estratégica**: el recorte cuadrado central del fotograma frontal, dividido en una grilla de 3×3, con la dirección del destino. La respuesta dice, para cada uno de los nueve sectores, si se puede volar al menos 15 m en esa dirección.
+2. **Barrido** (solo en un deadlock): cuatro imágenes tomadas girando en el lugar. La respuesta dice, para cada una, si se puede volar recto 15 m; el rumbo de cada imagen lo conoce el código.
 
-Ambas respuestas se fuerzan con decodificación restringida (`json_schema`) a esquemas sin campo de acción; el código convierte la descripción en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.
-
-Este nivel de dinamismo hace inviable delegar el prompt al manifiesto: el contenido útil depende de percepciones que solo existen en vuelo.
+En la configuración final las dos preguntas las responde la red de profundidad estimada (cap. 5 §5.10.6, cap. 6 §6.14): el p5 de la profundidad de cada sector frente a 15 m. Con `STRATEGIC_SOURCE = vlm` o `DEADLOCK_STRATEGY = deep_vlm` las responde el VLM, con prompts que se arman en vuelo y decodificación restringida (`json_schema`) a esquemas sin campo de acción (cap. 8 §8.5). En los dos casos el código convierte la respuesta en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.
 
 ### 4.3.1 Plan de ruta con el VLM sobre el mapa cenital
 
-El manifiesto une los waypoints en línea recta, y en una ciudad la recta suele cruzar una manzana. En vuelo, el VLM ve solo lo que tiene delante a 10 m de altura y debe inferir por dónde rodear un edificio cuyo final no ve; desde arriba, la misma pregunta se vuelve de reconocimiento: si una línea dibujada sobre el mapa va por la calle o por encima de los edificios. Es el tipo de juicio que un VLM pequeño resuelve mejor, porque no exige estimar distancias en primera persona. Por eso la estación terrena agrega un paso de planificación con el VLM **antes del despegue** (`src/planning/route_planner.py`): corre una sola vez por misión, la misión espera su resultado y nada de esto ocurre dentro del lazo táctico.
+El manifiesto une los waypoints en línea recta, y en una ciudad la recta suele cruzar una manzana. En vuelo, la cámara ve solo lo que tiene delante a 10 m de altura y el sistema debe inferir por dónde rodear un edificio cuyo final no ve; desde arriba, la misma pregunta se vuelve de reconocimiento: si una línea dibujada sobre el mapa va por la calle o por encima de los edificios. Es el tipo de juicio que un VLM pequeño resuelve mejor, porque no exige estimar distancias en primera persona. Por eso la estación terrena agrega un paso de planificación con el VLM **antes del despegue** (`src/planning/route_planner.py`): corre una sola vez por misión, la misión espera su resultado y nada de esto ocurre dentro del lazo táctico.
 
 1. **Candidatas geométricas.** Para cada tramo A → B (incluido el tramo desde el *spawn* al primer waypoint) se generan rutas sin mirar el mapa: la recta, las dos rutas en L (primero norte-sur o primero este-oeste) y desvíos paralelos a ±25 y ±50 m a cada lado.
-2. **Juicio del VLM.** Cada candidata se dibuja como un **pasillo** del ancho que necesita el dron (`ROUTE_CORRIDOR_M`, 10 m), sobre su propio recorte del mapa. El recorte se rota para que la ruta vaya del inicio (abajo, verde) al destino (arriba, azul), se acerca a la candidata (672 × 672 px) y fuera del pasillo el mapa se oscurece. Así el modelo juzga qué hay debajo del pasillo y no si una línea fina roza un techo. Se le pregunta si todo el pasillo es calle o terreno abierto. El prompt de sistema completo es:
+2. **Juicio del VLM.** La versión final juzga cada candidata por parches (`ROUTE_JUDGE=patches`, ver más abajo). La primera versión (`ROUTE_JUDGE=corridor`), que se describe a continuación, dibujaba cada candidata como un **pasillo** del ancho que necesita el dron (`ROUTE_CORRIDOR_M`, 10 m), sobre su propio recorte del mapa. El recorte se rota para que la ruta vaya del inicio (abajo, verde) al destino (arriba, azul), se acerca a la candidata (672 × 672 px) y fuera del pasillo el mapa se oscurece. Así el modelo juzga qué hay debajo del pasillo y no si una línea fina roza un techo. Se le pregunta si todo el pasillo es calle o terreno abierto. El prompt de sistema completo es:
 
    > You see a top-down city map. The bright strip outlined in red is a drone path from the green dot (bottom) to the blue dot; the rest is darkened. Answer yes only if the whole strip covers street or open ground, with no building, trees or elevated road inside it. Reply with JSON only.
 
    y el mensaje, `Drone altitude 10 m. Is the whole bright strip street or open ground? yes or no.` La respuesta se fuerza con decodificación restringida a `yes`/`no` (temperatura 0), y la probabilidad de `yes` se lee de los *logprobs* del token de la respuesta. El modelo del planificador se configura con `ROUTE_LLM_MODEL_NAME` (anexo A6); en la versión final es el mismo modelo de vuelo.
-3. **Elección.** Entre las candidatas que el modelo aprobó se toma la de mayor probabilidad; a menos de 0.05 de la mejor, la más corta. Si no aprobó ninguna, queda la recta y el tramo se resuelve en vuelo como siempre. Los vértices intermedios de la elegida se insertan en el manifiesto como waypoints `VIA_<WP>_<k>` (con `planned_via: true` y la altura del waypoint de destino), delante del waypoint del tramo.
+3. **Elección.** Entre las candidatas que el modelo aprobó se toma la de mayor probabilidad (con parches, la de mayor puntuación); a menos de 0.05 de la mejor, la más corta. Si no aprobó ninguna, queda la recta y el tramo se resuelve en vuelo como siempre. Los vértices intermedios de la elegida se insertan en el manifiesto como waypoints `VIA_<WP>_<k>` (con `planned_via: true` y la altura del waypoint de destino), delante del waypoint del tramo.
 
 El modelo evalúa; el código solo genera las opciones y toma la mejor según el propio modelo. El plan completo —cada candidata con su imagen, respuesta y probabilidad, la elegida y el motivo— queda en `<out-dir>/<escenario>/route_plan/` junto al manifiesto planificado, y se cachea por contenido (waypoints, mapa, modelo y prompt): Con `--route-plan vlm`, `runner.py` y `batch_runner.py` planifican una vez por escenario antes de la primera corrida, de modo que todas las semillas y brazos de un lote vuelan el mismo plan, y cada `summary.json` registra el plan con el que voló (`route_plan`). `--route-plan off` vuela el manifiesto tal cual.
 
@@ -111,40 +109,81 @@ En el marco de la metodología experimental de esta tesis (capítulo 10), el uso
 
 ### Dataset de corridas: estructura de `airsim-runs/`
 
-Cada ejecución de una misión escribe una carpeta autocontenida en `airsim-runs/`. El nombre de la carpeta — y el prefijo común (`<stem>`) de todos los archivos dentro de ella — se construye concatenando el `mission_id` del manifiesto con la marca de tiempo de inicio de la ejecución en UTC, en formato ISO 8601 compacto sin separadores: `<MISSION_ID>-<YYYYMMDDTHHMMSSZ>`. Por ejemplo, lanzar la misión `CITYSIM_CLEAR` el 7 de septiembre de 2026 a las 19:12:26 UTC produce la carpeta y el stem `CITYSIM_CLEAR-20260907T191226Z`. Si la misma misión se lanza dos veces, cada ejecución queda en su propia carpeta gracias al timestamp — nunca se sobreescriben corridas anteriores. El ejecutor de experimentos (`experiments/runner.py`) usa la misma convención dentro de una jerarquía por celda experimental, `<escenario>/<brazo>/<estrategia>/seed_<N>_<timestamp>/`, de modo que cada corrida de una celda queda en su propio directorio con todos sus artefactos. La tabla siguiente describe los archivos que produce cada ejecución:
+Cada ejecución de una misión escribe una carpeta autocontenida en `airsim-runs/`. Desde `main.py` (WebDCS), el nombre de la carpeta y el prefijo común (`<stem>`) de sus archivos es `<MISSION_ID>-<YYYYMMDDTHHMMSSZ>`: el `mission_id` del manifiesto más la hora de inicio en UTC, en ISO 8601 compacto. Por ejemplo, lanzar `CITYSIM_CLEAR` el 7 de septiembre de 2026 a las 19:12:26 UTC produce `CITYSIM_CLEAR-20260907T191226Z`. El ejecutor de experimentos (`experiments/runner.py`) ubica cada corrida en una jerarquía por celda experimental, `<escenario>/<brazo>/<celda>/seed_<N>_<timestamp>/`, con `<stem>` = `seed_<N>_<timestamp>`; la celda es la estrategia de deadlock (`depth`, `deep_vlm`, `blind`) o, si el lote varía la fuente de la capa estratégica, `strat_<fuente>__<estrategia>` (cap. 10 §10.9.1). En ningún caso una corrida sobrescribe a otra.
 
-| Archivo | Descripción |
+#### Archivos de una corrida
+
+| Archivo | Lo escribe | Contenido |
+|---|---|---|
+| `<stem>.jsonl` | `FlightLogger`, ciclo a ciclo | Traza completa: un objeto JSON por ciclo, con el `DroneState` serializado |
+| `<stem>.csv` | `FlightLogger` | La misma traza en columnas, más el `DroneState` aplanado en columnas `state.<ruta>` |
+| `<stem>.summary.json` | `FlightLogger.close()` y `finalize_run` | Indicadores de la corrida: éxito, colisiones, DistMin, recorrido, consultas, deadlocks, plan de ruta, versión del código |
+| `<stem>.summary_by_wp.csv` | `FlightLogger.close()` | Ciclos, duración, ciclos de barrido y eventos de barrido por objetivo |
+| `<stem>.distmin.ndjson` | hilo de auditoría (`distmin_audit.py`) | Muestras de distancia mínima a obstáculo, una por segundo |
+| `<stem>.console.log` | runner | Copia de la salida de consola de la corrida (stdout y stderr) |
+| `<stem>.webm` | `FlightVideoRecorder` | Video de la cámara frontal, un cuadro por ciclo, con overlay |
+| `<stem>.follow.webm` | `follow_cam.py` | Video de la cámara externa `FollowCam` (si está definida en `settings.json`), un cuadro por ciclo |
+| `<stem>.viewer.html` | `flight_viewer.py` | Visor de auditoría autocontenido |
+| `photo-<ISO_UTC>.png` | `FlightLogger` | Fotogramas de cada consulta del lazo lento (capa estratégica y barrido), a resolución completa |
+
+Además, a nivel de escenario, el runner deja `route_plan/` con el plan de ruta y sus imágenes (cap. 4 §4.3.1), y `batch_runner.py` agrega en la raíz `RESULTS_SUMMARY.json` (una fila por corrida) y `RESULTS_SUMMARY.batch_version.txt`.
+
+**Traza por ciclo (`.jsonl`).** Cada línea es un ciclo del lazo y tiene estos campos:
+
+| Campo | Contenido |
 |---|---|
-| `<stem>.jsonl` | Traza completa: un objeto JSON por ciclo de control |
-| `<stem>.csv` | Traza plana, sin campos JSON: columnas fijas más una columna `state.<ruta>` por cada campo escalar del `DroneState`, para inspección directa en Excel / pandas (§5.18) |
-| `<stem>.summary.json` | Métricas agregadas de la corrida (éxito, colisiones, latencias, tasas del VLM) |
-| `<stem>.summary_by_wp.csv` | Stats por waypoint: ciclos, deliberaciones y eventos de atasco por tramo |
-| `<stem>.viewer.html` | Visor de auditoría HTML autocontenido, sincronizado con el video |
-| `<stem>.webm` | Video anotado del vuelo (un fotograma por ciclo, con overlay de acción y estado) |
-| `photo-<ISO_UTC>.png` | Fotogramas enviados al VLM, uno por deliberación, nombrados por timestamp UTC |
+| `t`, `cycle` | Segundos desde el inicio de la corrida y número de ciclo |
+| `arm`, `scenario`, `seed` | Celda de la corrida |
+| `pos`, `vel`, `yaw_deg`, `pitch_deg`, `roll_deg` | Posición NED, velocidad (`vx`, `vy`, `vz`) y actitud |
+| `route`, `action` | Ruta que decidió el ciclo y macro-acción emitida (cap. 5 §5.3) |
+| `obstacle_field` | `ObstacleField` completo: por sector, ocupación, TTC, confianza y bloqueo; fuente (`flow`, `holdover`, `degraded`) y confianza del FOE (cap. 6) |
+| `latency_ms` | Duración del ciclo del grafo (`graph`) y de la lectura de telemetría (`telemetry`) |
+| `slm` | Presente en los ciclos con una consulta del lazo lento: identificador, latencia, *fallback*, *timeout*, adherencia al esquema, prompt (vacío con la profundidad), respuesta cruda (con la profundidad, el p5 estimado por sector en metros) y rutas de los fotogramas (`frame_paths`) |
+| `collision` | Colisión y objeto contra el que ocurrió |
+| `wp_index`, `dist_to_wp_m` | Objetivo activo y distancia horizontal a él |
+| `degraded` | AirSim no respondió en el ciclo (cap. 5 §5.5) |
+| `deadlock_event` | Solo en el ciclo en que un deadlock se resuelve o cae al escape: estrategia, si lo resolvió el barrido, ciclos que llevó, si cayó al escape vertical, la macro, la respuesta cruda y la selección del rumbo de salida (`scan_selection`: candidatos, descartados con su motivo, rumbo que falló, modo y rumbo elegido; cap. 5 §5.12) |
+| `perception` | Señales del `StallDetector` (contacto por IMU, avance sin movimiento, nivel de vibración, ciclos detenido) |
+| `state` | El `DroneState` completo del ciclo |
+| `min_obstacle_dist_m` | Siempre vacío desde el 30 de septiembre: la distancia mínima la mide la auditoría aparte (`.distmin.ndjson`) |
 
-**Traza por ciclo (`.jsonl` / `.csv`):** cada entrada registra el instante, el ciclo, el brazo de control (`arm`: slm/fsm/reactive), el escenario, la ruta, la macro-acción, el waypoint activo y la distancia al mismo, la posición y velocidad 3D, la actitud, el estado de colisión y la distancia mínima al obstáculo. En los ciclos deliberativos se agregan el prompt enviado (`slm_prompt`), la respuesta cruda del modelo (`slm_raw_response`), la latencia de inferencia, indicadores de fallback y timeout, y las rutas a los fotogramas enviados (`slm_frame_paths`). El estado del `ObstacleField` se registra por sector (ocupación, TTC, confianza, bloqueado).
+El campo `state` hace que la traza no dependa de haber previsto qué registrar: guarda todas las claves del estado (cap. 5 §5.2) con reglas fijas (`state_serializer.py`). Las imágenes y los búferes de fotogramas se reemplazan por su forma (`<ndarray shape=(720, 1080, 3)>`); `deliberations` se resume en su cantidad y la última entrada, sin prompts (que ya están en el bloque `slm`); los textos se cortan a 600 caracteres, las listas a 40 elementos y el anidamiento a 6 niveles, y los valores no finitos se escriben como texto (`"inf"`, `"nan"`) para que cada línea sea JSON válido. La serialización nunca detiene el vuelo: si falla, el ciclo registra el error en lugar del estado.
 
-**Resumen de corrida (`.summary.json`):** es el archivo que consume `analyze.py` para el análisis comparativo entre brazos. Incluye éxito de misión, colisiones, distancia mínima al obstáculo, longitud de trayectoria, tasa de deliberación, y tasas de fallback y timeout del VLM.
+**Traza plana (`.csv`).** Durante el vuelo se escribe en *streaming* con un conjunto fijo de columnas, que sirve de respaldo si el proceso muere: identificación (`t`, `cycle`, `arm`, `scenario`, `seed`, `route`, `action`, `wp_index`, `dist_to_wp_m`, `degraded`), cinemática (`pos_*`, `vel_*`, actitud), colisión, latencias, la consulta del ciclo (`slm_invoked`, `slm_latency_ms`, `slm_fallback`, `slm_timeout`, `slm_adherent`, `slm_prompt`, `slm_raw_response`, `slm_delib_id`, `slm_frame_paths`), estado de control (`ctrl_*`: contador de atasco, maniobra comprometida y ciclos restantes, señales del `StallDetector`, ciclos sin progreso) y el campo de obstáculos por sector (`field_<sector>_occ`, `_ttc_s`, `_conf`, `_blocked`, `field_source`). Algunas columnas `ctrl_*` de versiones anteriores del grafo (`ctrl_depth_m`, `ctrl_traj_*`, `ctrl_stuck_invisible`) se conservan vacías para que los CSV de todas las épocas tengan las mismas columnas. Al cerrar la corrida, el CSV se reescribe agregando el `DroneState` aplanado: una columna `state.<ruta>` por cada valor escalar del árbol (por ejemplo `state._vlm_strategic.outcome`). El prompt y la respuesta completos están en el CSV, y no solo en el JSONL, para poder analizar las consultas sin cruzar archivos.
 
-**Resumen por waypoint (`.summary_by_wp.csv`):** permite identificar en qué tramo de la misión se concentra la dificultad sin necesidad de analizar el CSV completo — muestra ciclos consumidos, proporción de ciclos deliberativos y eventos de escalación de atasco por waypoint.
+**Resumen de corrida (`.summary.json`).** Lo consumen `analyze.py`, `analyze_tesis_results.py` y `analyze_strategic_batch.py`. Campos:
 
-**Fotogramas del VLM (`photo-<ISO>.png`):** cada imagen enviada al modelo se guarda con su timestamp real de captura en UTC (precisión de milisegundos), que sirve como clave para cruzar con la columna `slm_frame_paths` de la traza. La carpeta es autocontenida: toda la evidencia de una corrida reside en un único directorio.
+- **Identificación:** `scenario`, `seed`, `arm`, `code_version` (hash del commit, con sufijo `-dirty` si había cambios sin confirmar; cap. 10 §10.9.3), `deadlock_strategy`, `strategic_source` y `route_plan` (modo y plan con el que voló).
+- **Misión:** `success`, `cycles`, `duration_s`, `path_length_m` y, cuando corresponde, `termination_reason` (por ejemplo `physics_locked`) y `freeze_recoveries`.
+- **Seguridad:** `collisions` y DistMin (`min_obstacle_dist_m`, con `min_obstacle_dist_t`, `min_obstacle_dist_source` y `min_obstacle_dist_samples`).
+- **Lazo lento:** `slm_invocations` (consultas nuevas, contadas una vez por identificador), `deliberation_rate`, `slm_fallback_rate`, `slm_timeout_rate`.
+- **Rutas:** `route_histogram`, ciclos por ruta.
+- **Atascos:** `deadlock_events`, `deep_scan_events`, `deep_scan_resolution_rate`, `deep_scan_avg_cycles_to_resolve`, `deep_scan_fallback_rate`, `deep_scan_futile_rate`, `vertical_escapes`.
+
+**Resumen por objetivo (`.summary_by_wp.csv`).** Columnas `wp_index`, `wp_label`, `cycles`, `duration_s`, `deliberative_cycles`, `deliberative_rate` y `deep_scan_events`. El índice cuenta los objetivos tal como los recorrió el tracker, incluidas las sub-metas insertadas, y la etiqueta es la del waypoint de misión al que pertenecen: varias filas pueden tener la misma etiqueta. Sirve para ver en qué tramo se concentra la dificultad sin abrir la traza.
+
+**Auditoría de DistMin (`.distmin.ndjson`).** Una línea por muestra, cada `DISTMIN_TRACK_PERIOD_S` (1 s): `t` (hora epoch), `dist_m` (percentil 5 del tercio central de la profundidad de la cámara frontal) y la posición `x`, `y`, `z` en el instante de la muestra. La escribe un hilo aislado, con su propia conexión al simulador, que no comparte nada con el grafo (cap. 5 §5.16); `finalize_run` consolida el mínimo en el resumen. Como cada muestra lleva su posición, se puede calcular DistMin por tramo (cap. 11 §11.6.2); su `t` es hora epoch, distinta del `t` relativo de la traza.
+
+**Fotogramas (`photo-<ISO>.png`).** Cada consulta del lazo lento guarda el fotograma crudo que le dio origen, a resolución completa (no la versión reducida que viaja en el pedido), nombrado con su hora de captura en UTC con milisegundos; un barrido guarda sus cuatro imágenes. La columna `slm_frame_paths` de la traza enlaza cada consulta con sus archivos. Con la capa estratégica de profundidad hay del orden de un fotograma por segundo de vuelo.
+
+**Cierre y reparación (`finalize_run`).** Es el último paso de toda corrida del runner y es idempotente: consolida DistMin en el resumen y, si el proceso murió antes de cerrar, reconstruye el CSV con las columnas `state.*` a partir del JSONL (que se vacía a disco ciclo a ciclo), repara el índice de los videos y regenera el visor. Una corrida interrumpida se cierra a mano con `python experiments/finalize_run.py <carpeta>` (o `--all <raíz>` para todas las incompletas).
 
 ### Visor de auditoría (`.viewer.html`)
 
 <img src="informe-03-auditoria-de-vuelo.png"/>
 
-El archivo `<stem>.viewer.html` es un documento HTML autocontenido generado al cierre de cada corrida. Sincroniza en ambos sentidos la reproducción del video con la traza:
+El visor es un único archivo HTML que se genera al cerrar cada corrida. Lleva la traza embebida como JSON dentro de la página, de modo que se abre con doble clic, sin servidor: un navegador bloquea, desde `file://`, la lectura de otro archivo local con `fetch`, pero sí reproduce un video de la misma carpeta. Tiene cuatro partes:
 
-- Avanzar el video actualiza automáticamente el panel de detalle del ciclo correspondiente, mostrando el prompt enviado, la respuesta del modelo, la macro-acción resultante y el fotograma capturado en ese instante.
-- Seleccionar una fila de la tabla salta el video al instante correspondiente.
+1. **Videos sincronizados.** El video frontal (lo que ve el grafo) y, si existe, el de la cámara externa `FollowCam`, uno al lado del otro. El externo sigue al frontal en reproducción, pausa, velocidad y saltos. Los dos tienen un cuadro por ciclo, de modo que la correspondencia entre video y traza es por número de ciclo y no por tiempo: el período real del lazo varía y el tiempo derivaría.
+2. **Barra de ciclos.** Un control deslizante sobre todos los ciclos, sincronizado en ambos sentidos con el video, con el ciclo y el tiempo actuales.
+3. **Panel de detalle del ciclo.** Todas las columnas del CSV del ciclo; los tres sectores del `ObstacleField` como recuadros (ocupación, TTC, confianza, resaltados si están bloqueados); el prompt y la respuesta cruda si en ese ciclo llegó una consulta; las imágenes exactas de esa consulta, y el `DroneState` completo como árbol desplegable.
+4. **Tabla de ciclos.** Una fila por ciclo con ciclo, tiempo, ruta, acción, objetivo, distancia, TTC y bloqueo del sector central, colisión e identificador de consulta. La fila actual se resalta y se centra al avanzar el video; un clic en una fila lleva el video a ese ciclo.
 
-Para consultarlo: abrir el archivo directamente en Chrome desde `airsim-runs/<carpeta>/<stem>.viewer.html` — no requiere servidor.
+El uso típico es partir de un evento del resumen —un deadlock, una colisión, la muestra de DistMin más baja— y llevar el visor a ese ciclo: el video muestra la escena, el panel muestra qué percibió el sistema y qué decidió, y el árbol del estado muestra por qué (contadores de atasco, sub-meta activa, resultado de la capa estratégica). Así se auditaron los modos de falla del capítulo 9.
 
 #### Anotaciones del video
 
-El video (`.webm`) registra un fotograma por ciclo del lazo, a la misma cadencia de `LOOP_HZ`. Cada fotograma lleva un overlay de cuatro líneas superpuesto **sobre una copia del fotograma**; el original enviado al VLM y guardado como `.png` de auditoría queda sin modificar para no contaminar la evidencia perceptual.
+El video (`.webm`) registra un fotograma por ciclo del lazo, a la misma cadencia de `LOOP_HZ`. Cada fotograma lleva un overlay de cuatro líneas superpuesto **sobre una copia del fotograma**; el original, que usan la percepción y la capa estratégica y que se guarda como `.png` de auditoría, queda sin modificar para no contaminar la evidencia perceptual.
 
 **Línea 1 — ruta activa y macro-acción** (texto grande, color codificado):
 
@@ -152,10 +191,10 @@ El video (`.webm`) registra un fotograma por ciclo del lazo, a la misma cadencia
 [KEEP_GOING] ACT: MANTENER_RUMBO  WP 3/7 (42m)
 ```
 
-- El tag entre corchetes es la **ruta** (`route`) del comportamiento que resolvió el ciclo (§5.3): `REACTIVE` (crucero sin novedad), `EVASIVE` (evasión reactiva o continuación de una maniobra comprometida), `TACTICAL` (resolución de atasco: escape, retroceso o decisión del VLM), `GIRAR_90` (bypass de bloqueo severo), `FSM` (máquina de estados, brazo FSM) o `DEGRADED` (modo degradado, §5.5).
+- El tag entre corchetes es la **ruta** (`route`) del comportamiento que resolvió el ciclo (cap. 5 §5.3): `REACTIVE` (crucero sin novedad, vuelo bajo el piso óptico o descenso bajo un techo), `EVASIVE` (evasión reactiva o continuación de una maniobra comprometida), `GIRAR_90` (giro ante un frente bloqueado), `DELIBERATIVE` (barrido de resolución de atasco en curso o resuelto), `TACTICAL` (escape vertical cuando el barrido no resolvió o con `blind`), `FSM` (brazo FSM) o `DEGRADED` (modo degradado, cap. 5 §5.5).
 - `ACT:` es la **macro-acción** traducida a comando cinemático por el nodo `motor`.
-- `WP X/N (Ym)` indica el waypoint activo y la distancia restante según `WaypointTracker` (§5.15).
-- **Color:** verde para `MANTENER_RUMBO` (avance sin novedad), naranja para maniobras de evasión o giro, rosa/magenta para decisiones del VLM, `PARADA` o `FRENAR`.
+- `WP X/N (Ym)` indica el objetivo activo y la distancia restante según `WaypointTracker` (cap. 5 §5.15). `N` cuenta también las sub-metas insertadas en vuelo, de modo que crece durante la misión.
+- **Color:** verde para `MANTENER_RUMBO`, naranja para maniobras de evasión, giro o escape vertical, rosa para `FRENAR`.
 
 **Línea 2 — TTC frontal y estado de vuelo** (derecha del fotograma):
 
@@ -184,6 +223,6 @@ C occ=0.62 ttc=3.2s! | I occ=0.11 ttc=inf | D occ=0.08 ttc=inf
 
 - Los tres sectores son `C` (centro / frente), `I` (izquierda) y `D` (derecha).
 - `occ` es la fracción de ocupación estimada por flujo óptico monocular; `ttc` es el tiempo a colisión estimado del sector; `!` marca el sector como bloqueado según el umbral de `is_blocked()`.
-- Estos valores son los mismos que usa el lazo rápido de `navigate` (cap. 5 §5.3): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1. El VLM no los recibe: mira el fotograma directamente (cap. 5 §5.10).
+- Estos valores son los mismos que usa el lazo rápido de `navigate` (cap. 5 §5.3): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1. La capa estratégica no los recibe: mira el fotograma directamente (cap. 5 §5.10).
 
 La combinación de estas cuatro líneas permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema, por qué se activó el comportamiento que aparece en el tag, y qué orden cinemática emitió — sin necesidad de cruzar a mano el video con el CSV.

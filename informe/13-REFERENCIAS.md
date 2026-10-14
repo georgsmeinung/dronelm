@@ -244,7 +244,7 @@
 
 <a id="ref-xue-2021" class="ref-anchor"></a><a id="13-referencias-ref-xue-2021"></a>Xue, Z., & Gonsalves, T. (2021). Vision Based Drone Obstacle Avoidance by Deep Reinforcement Learning. *AI*, *2*(3), 366-380. <https://doi.org/10.3390/ai2030023>
 
-<a id="ref-yang-2024" class="ref-anchor"></a><a id="13-referencias-ref-yang-2024"></a>Yang, L., Kang, B., Huang, Z., Zhao, Z., Xu, X., Feng, J., & Zhao, H. (2024). Depth Anything V2. *Advances in Neural Information Processing Systems (NeurIPS)*, *37*. arXiv:2406.09414. <https://arxiv.org/abs/2406.09414>
+<a id="ref-yang-2024" class="ref-anchor"></a><a id="13-referencias-ref-yang-2024"></a>Yang, L., Kang, B., Huang, Z., Zhao, Z., Xu, X., Feng, J., & Zhao, H. (2024). Depth Anything V2. *Advances in Neural Information Processing Systems (NeurIPS)*, *37*. arXiv:2406.09414. <https://arxiv.org/abs/2406.09414>. Código y modelos: <https://github.com/DepthAnything/Depth-Anything-V2>
 
 <a id="ref-youden-1950" class="ref-anchor"></a><a id="13-referencias-ref-youden-1950"></a>Youden, W. J. (1950). Index for rating diagnostic tests. *Cancer*, *3*(1), 32-35. <https://doi.org/10.1002/1097-0142(1950)3:1%3C32::AID-CNCR2820030106%3E3.0.CO;2-3>
 

@@ -485,7 +485,8 @@ def main():
         "--deadlock-strategies", nargs="+", default=[os.getenv("DEADLOCK_STRATEGY", "depth")],
         choices=["depth", "deep_vlm", "blind"],
         help="H3.1/S6 (PLAN-SLAM): factorial AGENT_ARM x DEADLOCK_STRATEGY. "
-             "'deep_vlm' (default): barrido + VLM. 'blind': escape determinista sin VLM (ablacion).",
+             "'depth' (default de config/.env): barrido + profundidad estimada. 'deep_vlm': barrido + VLM. "
+             "'blind': escape determinista sin barrido (ablacion).",
     )
     parser.add_argument(
         "--strategic-sources", nargs="+", default=None, choices=["depth", "vlm", "off"],

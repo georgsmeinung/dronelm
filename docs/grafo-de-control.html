@@ -68,7 +68,7 @@
     <!-- Main Content Area -->
     <main>
       <header>
-        <p class="eyebrow">airsim-loop · lazo táctico · 2026-10-10</p>
+        <p class="eyebrow">airsim-loop · lazo táctico · 2026-10-14</p>
         <h1>Configuración del grafo de control</h1>
         <p class="lead-subtitle">
           Referencia técnica del lazo de navegación autónoma <strong>tal como está en el código</strong>: topología,
@@ -313,7 +313,7 @@
                 <td><code>navigate</code>, <code>motor</code></td>
               </tr>
               <tr>
-                <td>VLM: auditoría y canales al lazo externo</td>
+                <td>Lazo lento: auditoría y canales al lazo externo</td>
                 <td class="mono wrap">deliberations[], last_deliberation, slm_request_id, _deliberation_pending,
                   _pending_delib_prompt, _pending_delib_frames, _last_delib_frames, _vlm_strategic, inject_corner</td>
                 <td><code>navigate</code> + lazo</td>
@@ -340,9 +340,13 @@
           </table>
         </div>
 
-        <p>La auditoría de cada consulta al VLM queda en <code>deliberations[]</code>: brazo
-          (<code>vlm_strategic</code> o barrido), prompt, respuesta cruda, sub-meta resultante, motivo, latencia y si
-          adhirió al esquema JSON. El fotograma enviado se guarda como <code>photo-*.png</code>.</p>
+        <p>La auditoría de cada consulta del lazo lento queda en <code>deliberations[]</code>: brazo
+          (<code>depth_strategic</code>, <code>vlm_strategic</code> o barrido), prompt (vacío con la profundidad),
+          respuesta cruda (con la profundidad, el p5 por sector en metros), sub-meta resultante, motivo, latencia y si
+          adhirió al esquema. El fotograma de cada consulta se guarda como <code>photo-*.png</code>. El
+          <a href="informe/04-PLANIFICACION-MISION-GCS.html">capítulo 4 del informe</a> describe cada archivo de una
+          corrida (traza JSONL con el <code>DroneState</code> completo, CSV, resúmenes, DistMin, videos) y el visor HTML
+          que los sincroniza por ciclo.</p>
       </section>
 
       <!-- 4 -->
@@ -638,7 +642,7 @@
         <div class="note">
           <span class="tag">Fuente por defecto: profundidad</span>
           <p><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/depth_client.py"><code>depth_client.py</code></a>:
-            Depth Anything V2 Metric Outdoor Small (~25 M parámetros) estima la profundidad en metros desde el
+            <a href="https://arxiv.org/abs/2406.09414">Depth Anything V2</a> Metric Outdoor Small (~25 M parámetros) estima la profundidad en metros desde el
             fotograma RGB; un sector es libre si el percentil 5 de su profundidad es ≥ <code>DEPTH_FREE_M</code>
             (15 m). ~110 ms por consulta con la GPU compartida, período de 1 s. En el banco de prueba separó sectores
             libres de bloqueados con AUC 0.83–0.87; la grilla del VLM, con 0.53. En vuelo ninguna fuente aceleró la
@@ -1054,6 +1058,8 @@
             — barrido panorámico en marco mundo (sección 8).</li>
           <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/stall_detector.py"><code>src/agents/stall_detector.py</code></a>
             — señales de atasco (sección 6).</li>
+          <li><a href="https://arxiv.org/abs/2406.09414">Yang et al. (2024), Depth Anything V2</a> — red de profundidad
+            de la capa estratégica y del barrido; <a href="informe/06-PERCEPCION-MONOCULAR.html">capítulo 6 del informe</a>, §6.14.</li>
           <li><a href="informe/05-ARQUITECTURA-LAZO-TACTICO.html">Informe, capítulo 5</a> — arquitectura del lazo
             táctico; <a href="informe/09-MODOS-DE-FALLA-LLM.html">capítulo 9</a> — modos de falla y mecanismos de
             contención.</li>

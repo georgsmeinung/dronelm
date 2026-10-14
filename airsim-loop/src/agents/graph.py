@@ -3,8 +3,9 @@
 # Dos lazos desacoplados (ver vlm_strategic.py):
 #   - Lazo rapido (5 Hz): guiado al waypoint + evasion por flujo optico. Es el unico que comanda
 #     velocidades y el responsable de lo inminente.
-#   - Lazo lento (VLM, ~0.3 Hz, asincrono): propone sub-metas en coordenadas del mundo ancladas a la
-#     pose del frame que vio. Ante un deadlock, barrido panoramico + VLM (deep_scan.py).
+#   - Lazo lento (asincrono): propone sub-metas en coordenadas del mundo ancladas a la pose del frame
+#     que vio. Fuente STRATEGIC_SOURCE: profundidad estimada (default, ~1 Hz), VLM (~0.3 Hz) u off.
+#     Ante un deadlock, barrido panoramico juzgado por DEADLOCK_STRATEGY (depth | deep_vlm | blind).
 #
 # 2026-0930 -- simplificacion por evidencia (12 corridas citysim_pilot con este grafo):
 #   - navigate_node: de ~15 reglas a 8. Se quitaron la consulta tactica por sector, el escape

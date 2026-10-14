@@ -8,7 +8,7 @@ Este anexo consolida todos los parámetros operativos y el procedimiento de desp
 
 ## A6.1 Archivo de configuración de AirSim (`settings.json`) anotado
 
-El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `settings.json`, ubicado en Windows en `%USERPROFILE%\Documents\AirSim\settings.json`. La siguiente es la configuración formal utilizada durante los vuelos de calibración y experimentación de la tesis:
+El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `settings.json`, ubicado en Windows en la carpeta `Documents\AirSim` del usuario: `%USERPROFILE%\Documents\AirSim\settings.json`, o `%USERPROFILE%\OneDrive\Documents\AirSim\settings.json` si la carpeta Documentos está redirigida a OneDrive, como en la estación de esta tesis. La siguiente es la configuración vigente, utilizada en las corridas de octubre de 2026:
 
 ```json
 {
@@ -24,6 +24,32 @@ El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `setting
     "Latitude": 47.641468,
     "Longitude": -122.140165,
     "Altitude": 122
+  },
+  "Vehicles": {
+    "Drone1": {
+      "VehicleType": "SimpleFlight",
+      "Cameras": {
+        "FollowCam": {
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 1080,
+              "Height": 720,
+              "FOV_Degrees": 90
+            }
+          ],
+          "X": -4.0,
+          "Y": -2.5,
+          "Z": -1.5,
+          "Pitch": -15.0,
+          "Roll": 0.0,
+          "Yaw": 28.0,
+          "Gimbal": {
+            "Stabilization": 0.0
+          }
+        }
+      }
+    }
   },
   "CameraDefaults": {
     "CaptureSettings": [
@@ -51,8 +77,16 @@ El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `setting
   },
   "SubWindows": [
     {
+      "WindowID": 1,
+      "CameraName": "FollowCam",
+      "VehicleName": "Drone1",
+      "ImageType": 0,
+      "Visible": true
+    },
+    {
       "WindowID": 2,
-      "CameraName": "Front Camera",
+      "CameraName": "front_center",
+      "VehicleName": "Drone1",
       "ImageType": 0,
       "Visible": true
     }
@@ -65,11 +99,12 @@ El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `setting
 2. **`ClockType: "SteppableClock"`**: sincroniza el paso temporal de la simulación física con las consultas RPC de la API. A diferencia de `ScalableClock` o el reloj de pared del sistema, `SteppableClock` garantiza que cuando la GPU experimenta caídas momentáneas de tasa de cuadros por la inferencia del modelo multimodal, la física de vuelo no sufra aceleraciones destructivas ni inestabilidades de integración numérica en el estimador inercial.
 3. **`ApiServerPort: 41451`**: puerto TCP de enlace Msgpack-RPC por el que se comunican `AirSimClient` y el motor de Unreal Engine.
 4. **`CameraDefaults.CaptureSettings`**:
-   * `ImageType 0` (`Scene`): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (`FlowTTCEstimator`) y por el modelo deliberativo (`Qwen2.5-VL-3B`).
+   * `ImageType 0` (`Scene`): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (`FlowTTCEstimator`) y por la red de profundidad estimada de la capa estratégica (cap. 6, §6.14); con `STRATEGIC_SOURCE = vlm`, por el VLM. La cámara frontal no se declara: se usa la del vehículo por defecto (`AIRSIM_CAMERA_NAME = "0"`), con el campo visual horizontal por defecto de 90°.
    * `ImageType 3` (`DepthPlanar`) / `ImageType 1` (`DepthPerspective`): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, §10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).
    * `ImageType 5` (`Segmentation`): canal de segmentación semántica de mallas para auditoría visual.
    * `Width: 1080, Height: 720`: resolución nativa del render target frontal.
-5. **`SubWindows`**: habilita una ventana secundaria flotante en el visor de Unreal Engine mostrando la cámara frontal a bordo en tiempo real, facilitando la supervisión visual del operador durante las corridas experimentales.
+5. **`Vehicles.Drone1.Cameras.FollowCam`**: cámara externa de seguimiento, 4 m detrás, 2.5 m a la izquierda y 1.5 m arriba del dron, inclinada 15° hacia abajo, sin estabilización. Solo la usa la auditoría: produce el video `.follow.webm` que el visor sincroniza con el frontal (cap. 4, §4.4). Ningún componente del lazo la lee; si no está declarada, la corrida se graba sin ese video.
+6. **`SubWindows`**: dos ventanas secundarias en el visor de Unreal Engine, con la cámara de seguimiento y la frontal en tiempo real, para supervisar las corridas.
 
 ---
 
@@ -143,7 +178,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `DEPTH_MODEL` | `depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf` | Red de profundidad métrica (~25 M parámetros, ~110 ms con la GPU compartida, ~440 MiB de VRAM). Se descarga de Hugging Face la primera vez. |
 | `DEPTH_FREE_M` | `15.0` | Un sector (o un rumbo del barrido) es libre si el percentil 5 de su profundidad estimada es ≥ este valor; igual a `VLM_SUBGOAL_DIST_M`. |
 | `DEPTH_STRATEGIC_PERIOD_S` | `1.0` | Período mínimo entre consultas de la capa estratégica con la profundidad (con el VLM rige `VLM_STRATEGIC_PERIOD_S`, 3 s). |
-| `VLM_STRATEGIC_ENABLED` | `true` | Habilita la capa estratégica del VLM (cap. 5, §5.10). |
+| `VLM_STRATEGIC_ENABLED` | `true` | Habilita la capa estratégica cuando su fuente es el VLM; con `STRATEGIC_SOURCE = depth` no se consulta (para quitar la capa se usa `STRATEGIC_SOURCE = off`). |
 | `VLM_STRATEGIC_PERIOD_S` / `VLM_STRATEGIC_MAX_AGE_S` | `3.0` / `10.0` | Período mínimo entre consultas estratégicas y edad máxima de una respuesta para aplicarla. |
 | `CAMERA_HFOV_DEG` | `90.0` | Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, §5.10.3). |
 | `VLM_SUBGOAL_DIST_M` / `VLM_SUBGOAL_MIN_AHEAD_M` | `15.0` / `4.0` | Distancia máxima de la sub-meta desde el ancla (nunca más lejos que el waypoint real) y distancia mínima por delante del dron para aplicarla. |
@@ -175,7 +210,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
 | `FLOW_ALGORITHM` | `"dis"` | Backend de flujo óptico: `"dis"` (Dense Inverse Search, rápido) o `"farneback"`. |
-| `FLOW_DOWNSCALE_WIDTH`| `320` | Ancho al que se reduce el fotograma antes de calcular el flujo óptico ($320 \times 213\text{ px}$). |
+| `FLOW_DOWNSCALE_WIDTH`| `640` | Ancho al que se reduce el fotograma antes de calcular el flujo óptico ($640 \times 427\text{ px}$); el default del código es 320 (cap. 6, §6.3). |
 | `CAMERA_FX` / `CAMERA_FY`| `554.0` | Distancia focal calibrada de la cámara en píxeles. |
 | `FLOW_NOISE_FLOOR_PX` | `0.35` | Magnitud mínima en píxeles para considerar que un vector es señal física y no ruido numérico. |
 | `FOE_OUTLIER_ANGLE_RAD`| `0.35` | Umbral angular en radianes ($\approx 20^\circ$) para el filtro de consistencia *RANSAC-lite* del FOE. |
@@ -365,20 +400,17 @@ Para replicar de forma independiente los experimentos documentados en el capítu
 
 ### Paso 1: Verificación de software y dependencias
 1. Sistema operativo: Windows 10/11 (64-bit).
-2. Entorno virtual de Python 3.10+:
-   ```bash
+2. Entorno conda `airsimenv` (Python 3.10, PyTorch con CUDA y `transformers` para la red de profundidad; en la estación de la tesis, `D:\TesisMCD\Airsimenv`):
+   ```powershell
+   conda activate airsimenv
    cd airsim-loop
-   python -m venv .venv
-   .venv\Scripts\activate
    pip install -r requirements.txt
    ```
+   La red de profundidad (`DEPTH_MODEL`) se descarga de Hugging Face la primera vez que se compila el grafo.
 3. Verificar la disponibilidad del plugin binario de Cosys-AirSim en el proyecto de Unreal Engine 5.5 correspondiente (MiniSim, TownSim o CitySim).
 
 ### Paso 2: Instalación del archivo `settings.json`
-Copiar el archivo de configuración del Anexo 6 (§A6.1) en el directorio de usuario:
-```powershell
-Copy-Item "config/settings.json" "$HOME\Documents\AirSim\settings.json" -Force
-```
+Guardar el contenido de §A6.1 como `settings.json` en la carpeta `Documents\AirSim` del usuario (o en `OneDrive\Documents\AirSim` si Documentos está redirigida), antes de abrir el proyecto de Unreal Engine.
 
 ### Paso 3: Inicialización del servidor de modelos (Ollama, misma GPU)
 1. Ejecutar `startOllama.ps1` (raíz `D:\TesisMCD`, fuera del repositorio). El script lee el modelo de `config/.env`; reinicia Ollama con `OLLAMA_MODELS` apuntando a la carpeta de modelos de la aplicación, `OLLAMA_KEEP_ALIVE=-1` (el modelo no se descarga entre corridas) y `OLLAMA_CONTEXT_LENGTH=8192`; cierra los `llama-server` huérfanos (en Windows sobreviven al cierre de `ollama.exe` y retienen VRAM); descarga el GGUF base y crea el tag de 8 k si faltan, y precarga el modelo de vuelo:
@@ -402,9 +434,12 @@ Para correr una comparación experimental balanceada entre los tres brazos de co
 python experiments/runner.py \
     --scenarios ../airsim-plan/missions/flightplans/townsim_clear.json \
     --arms slm fsm reactive \
-    --seeds 1 2 3 \
-    --out-dir airsim-runs/
+    --deadlock-strategies depth \
+    --seeds 1 2 3 4 5 \
+    --route-plan off \
+    --out-dir ../airsim-runs/
 ```
+Sin `--deadlock-strategies` ni `--strategic-sources` se usan los valores de `config/.env` (`depth`/`depth`). `--route-plan vlm` (el default) planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (CitySim). Cada corrida se cierra con `finalize_run` (cap. 4, §4.4); una corrida interrumpida se cierra con `python experiments/finalize_run.py --all ../airsim-runs/`.
 
 ### Paso 6: Procesamiento de datos y consolidación estadística
 Una vez finalizadas las corridas, compilar los resultados y generar las tablas estadísticas comparativas:

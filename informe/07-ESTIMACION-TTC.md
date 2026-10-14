@@ -14,7 +14,7 @@ $$TTC_{\text{gt}}(\text{celda}) = \frac{\text{percentil}_{20}(Z_{\text{celda}})}
 
 donde $Z_{\text{celda}}$ es la distribución de profundidades de los píxeles de la celda (el percentil 20 actúa como estimado conservador resistente a píxeles de fondo), y $v_{\text{cierre}}$ es la componente de la velocidad del vehículo proyectada sobre el eje óptico (velocidad de cierre frontal positiva = aproximación), extraída de la telemetría del simulador. El término $\varepsilon = 0.01$ m/s evita la división por cero durante hover. Esta definición produce un TTC de referencia que es una función *observable y auditable* del estado físico del sistema en cada ciclo.
 
-**Una limitación de diseño de la etiqueta de referencia:** la profundidad planar mide la distancia perpendicular al plano focal, no la distancia euclidiana al obstáculo más cercano en cada dirección de la cámara. Para obstáculos cercanos y cámaras con ángulo de campo amplio, esta diferencia no es negligible, pero dentro del rango de interés práctico (< 15 m) y con la óptica de 60° de FoV de AirSim, la discrepancia es inferior al 8% para el sector central. Se acepta como buena aproximación para la validación.
+**Una limitación de diseño de la etiqueta de referencia:** la profundidad planar mide la distancia perpendicular al plano focal, no la distancia euclidiana al obstáculo más cercano en cada dirección de la cámara. Para obstáculos cercanos y cámaras con ángulo de campo amplio, esta diferencia no es negligible, pero dentro del rango de interés práctico (< 15 m) y con el campo visual horizontal de 90° de la cámara de AirSim, la discrepancia es inferior al 6 % dentro del tercio central (±15° del eje óptico, $1/\cos 15° \approx 1.035$ en el eje horizontal y algo más en las esquinas). Se acepta como buena aproximación para la validación.
 
 *(Para el desarrollo formal del TTC como observable óptico directo $\tau$, la formulación de divergencia y el cálculo por percentil 20 en la grilla $3 \times 3$, véase el [Anexo 5](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md), §A5.5–A5.6).*
 
@@ -35,7 +35,7 @@ donde $Z_{\text{celda}}$ es la distribución de profundidades de los píxeles de
 | `flow_algorithm` | Backend usado (`dis` o `farneback`) |
 | `foe_confidence` | Confianza del FOE estimado (antes de multiplicar por fracción válida) |
 
-El conjunto recolectado totaliza **3735 registros** de 9 celdas cada uno, cubriendo tres escenarios de vuelo scripteados diseñados para ejercitar aspectos específicos del estimador:
+El conjunto se recolectó con el ancho de flujo de entonces (`FLOW_DOWNSCALE_WIDTH` = 320 px); desde el 28 de agosto el lazo usa 640 px (cap. 6, §6.3) y los umbrales no se recalibraron a ese ancho. Totaliza **3735 registros** de 9 celdas cada uno, cubriendo tres escenarios de vuelo scripteados diseñados para ejercitar aspectos específicos del estimador:
 
 1. **Aproximación frontal a un edificio**: vuelo recto hacia una fachada a distintas velocidades (1–6 m/s); maximiza la señal de expansión en el sector central y verifica la correlación TTC estimado vs. TTC de referencia en condiciones ideales.
 
@@ -75,7 +75,7 @@ El índice de Youden ($J = \text{sensibilidad} + \text{especificidad} - 1$; [You
 
 El umbral para $\tau = 2$ s (3.18 s) es `TTC_EVASION_THRESHOLD` (redondeado a 3.2 s). El umbral para $\tau = 3$ s (4.58 s) es `TTC_SAFE_THRESHOLD` (redondeado a 4.6 s). Ambos umbrales son datos de validación — no fueron elegidos a mano ni ajustados empíricamente por comportamiento de vuelo. La elección de $\tau = 2$ s como umbral de evasión y $\tau = 3$ s como umbral de zona segura refleja el tiempo de reacción del lazo (5 Hz → 200 ms por ciclo) más el tiempo de ejecución de la maniobra de evasión (1–2 ciclos); a esa velocidad de crucero el margen de 2 s es suficiente para iniciar evasión antes del impacto en los escenarios ensayados.
 
-**Interpretación de la banda entre umbrales.** La zona $TTC \in (3.2,\ 4.6)$ s corresponde al estado "advertencia" de la capa reactiva de `navigate` (cap. 5, §5.3): no hay bloqueo activo pero el riesgo es elevado; el sistema corrige lateralmente con `evasive_node` sin consultar al VLM. La banda de histéresis entre evasión (3.2 s) y zona segura (4.6 s) previene el *chattering* — oscilación rápida entre maniobra de evasión y crucero normal cuando el TTC estimado flota alrededor del umbral de evasión.
+**Interpretación de la banda entre umbrales.** La zona $TTC \in (3.2,\ 4.6)$ s corresponde al estado "advertencia" de la capa reactiva de `navigate` (cap. 5, §5.3): no hay bloqueo activo pero el riesgo es elevado; el sistema corrige lateralmente con `evasive_node`, sin esperar al lazo lento. La banda de histéresis entre evasión (3.2 s) y zona segura (4.6 s) previene el *chattering* — oscilación rápida entre maniobra de evasión y crucero normal cuando el TTC estimado flota alrededor del umbral de evasión.
 
 ## 7.5 Calibración del canal de ocupación (D2)
 
@@ -108,8 +108,8 @@ El guard `FLOW_MAX_ROTATION_DEG = 2°` descarta todos los ciclos donde la rotaci
 
 Los resultados de validación tienen consecuencias directas sobre el diseño del lazo de control:
 
-**El AUC de 0.96–0.97 justifica usar TTC como señal primaria de evasión.** Una tasa de verdaderos positivos del 93% con especificidad del 89% (a $\tau = 2$ s) es suficiente para evasión reactiva en entorno simulado; los falsos negativos (11%) son la fracción de situaciones peligrosas que el estimador no detecta a tiempo, justificando la capa deliberativa como red de seguridad.
+**El AUC de 0.96–0.97 justifica usar TTC como señal primaria de evasión.** Una tasa de verdaderos positivos del 93% con especificidad del 89% (a $\tau = 2$ s) es suficiente para evasión reactiva en entorno simulado; los falsos negativos (11%) son la fracción de situaciones peligrosas que el estimador no detecta a tiempo; la cubren en parte la detección de contacto (IMU y avance sin movimiento) y la capa estratégica con profundidad estimada, que no depende de la traslación (cap. 6, §6.15).
 
-**La baja correlación puntual justifica la banda de histéresis y el rol del VLM.** Si el TTC fuera un cronómetro confiable, bastaría un solo umbral. La incertidumbre de escala hace necesaria la zona de advertencia (3.2–4.6 s) y la consulta al VLM antes de comprometer una maniobra definitiva: el modelo de lenguaje provee contexto semántico que el estimador de flujo no puede dar.
+**La baja correlación puntual justifica la banda de histéresis.** Si el TTC fuera un cronómetro confiable, bastaría un solo umbral. La incertidumbre de escala hace necesaria la zona de advertencia (3.2–4.6 s), en la que el lazo rápido corrige sin comprometer una maniobra definitiva. La distancia en metros, que el TTC no da, la aporta en el lazo lento la profundidad estimada (cap. 6, §6.14).
 
 **La validación del canal de ocupación es parcial, y esa deuda es controlada pero no nula.** Con la calibración D2 el canal de ocupación dejó de estar inactivo y actúa como detector temprano independiente del TTC, pero se calibró con una escena y 29 positivos (§7.5). Antes de despliegue en entornos más exigentes (o en hardware real), la validación cruzada del umbral en escenas distintas debería completarse. Nótese además que el lote base del capítulo 11 se ejecutó antes de esta calibración, con el canal de ocupación efectivamente inactivo.

@@ -89,11 +89,19 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-10-10)</h2>
+        <h2>Actualizaciones Recientes (2026-10-14)</h2>
         <div class="card-grid">
           <div class="card">
+            <h4>Informe Alineado con el Código</h4>
+            <p>Barrida completa del informe contra el código y <code>config/.env</code> vigentes: el modelo de visión-lenguaje es LFM2.5-VL-1.6B (tag local <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>), el flujo óptico trabaja a 640 px y el capítulo 6 incorpora la sección de profundidad monocular estimada con Depth Anything V2 (<a href="https://arxiv.org/abs/2406.09414">Yang et al., 2024</a>).</p>
+          </div>
+          <div class="card">
+            <h4>Registro de Corrida y Visor de Auditoría</h4>
+            <p>El capítulo 4 describe cada archivo de una corrida (traza JSONL con el <code>DroneState</code> completo, CSV plano, resumen, resumen por objetivo, muestras de DistMin, consola, videos frontal y externo, fotogramas de cada consulta) y el uso del visor HTML: dos videos sincronizados por ciclo, panel de detalle con el campo de obstáculos, la consulta y el árbol del estado, y tabla de ciclos navegable.</p>
+          </div>
+          <div class="card">
             <h4>Profundidad Monocular Estimada en el Lazo Lento</h4>
-            <p>La capa estratégica y el barrido de deadlock juzgan qué direcciones son volables con una red de profundidad monocular (Depth Anything V2 Metric Outdoor Small, ~25 M parámetros) que estima metros desde el mismo RGB de la cámara: un sector es libre si el percentil 5 de su profundidad es ≥ 15 m. ~110 ms por consulta en su propio hilo. No es el sensor de profundidad del simulador, que sigue fuera del lazo.</p>
+            <p>La capa estratégica y el barrido de deadlock juzgan qué direcciones son volables con una red de profundidad monocular (<a href="https://arxiv.org/abs/2406.09414">Depth Anything V2</a> Metric Outdoor Small, ~25 M parámetros) que estima metros desde el mismo RGB de la cámara: un sector es libre si el percentil 5 de su profundidad es ≥ 15 m. ~110 ms por consulta en su propio hilo. No es el sensor de profundidad del simulador, que sigue fuera del lazo.</p>
           </div>
           <div class="card">
             <h4>Banco de Prueba con el VLM a Bordo</h4>
@@ -271,8 +279,12 @@
       <section id="percepcion">
         <h2>Percepción Monocular y Estimación de Tiempo-a-Colisión (TTC)</h2>
         <p>
-          El pipeline de percepción prescinde de detectores de objetos neuronales pesados y fundamenta su robustez en la
-          física del campo de movimiento visual:
+          El pipeline de percepción del lazo rápido prescinde de detectores de objetos neuronales pesados y fundamenta su robustez en la
+          física del campo de movimiento visual. El lazo lento agrega un segundo canal: profundidad monocular estimada desde el
+          mismo RGB con <a href="https://arxiv.org/abs/2406.09414">Depth Anything V2</a> (Metric Outdoor Small, ~25 M parámetros,
+          ~110 ms en su propio hilo), que no necesita traslación entre fotogramas y por eso cubre los puntos ciegos del flujo
+          (hover, giro puro, obstáculo centrado en el foco de expansión). Cada sector de una grilla 3×3 es libre si el percentil 5
+          de su profundidad estimada es ≥ 15 m: AUC 0.83 contra la etiqueta de referencia, frente a 0.53 del VLM.
         </p>
 
         <figure style="margin: 28px 0; background-color: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;">
@@ -459,7 +471,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-10-10):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). VLM local (LFM2.5-VL-1.6B Q4_K_M en Ollama, misma GPU que Unreal) con banco de prueba a bordo: sin señal en primera persona (AUC 0.53), señal útil en el plan de ruta sobre el mapa (AUC 0.81). Capa estratégica y barrido con profundidad monocular estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>); dos lotes de la capa estratégica (CitySim, 15 corridas; corredor arbolado de TownSim, 10 corridas, 10/10 misiones completas). 299 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad del simulador. Pendiente: comparación entre brazos con el sistema final (lotes D, E y F).</p>
+          <p><strong>Estado actual (2026-10-14):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). VLM local (LFM2.5-VL-1.6B Q4_K_M, tag <code>lfm2.5-vl-1.6b:q4km-ctx8k</code> en Ollama, misma GPU que Unreal) con banco de prueba a bordo: sin señal en primera persona (AUC 0.53), señal útil en el plan de ruta sobre el mapa (AUC 0.81). Capa estratégica y barrido con profundidad monocular estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>); dos lotes de la capa estratégica (CitySim, 15 corridas; corredor arbolado de TownSim, 10 corridas, 10/10 misiones completas). 299 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad del simulador. Pendiente: comparación entre brazos con el sistema final (lotes D, E y F).</p>
         </div>
       </section>
 
@@ -665,7 +677,7 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>Repositorio: georgsmeinung/dronelm</p>
-        <p>Fecha de actualización: 2026-09-30</p>
+        <p>Fecha de actualización: 2026-10-14</p>
       </footer>
     </main>
   </div>

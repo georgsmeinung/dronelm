@@ -1711,7 +1711,7 @@
 <p>Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (§10.3).</p>
 <hr />
 <h2 id="a61-archivo-de-configuracion-de-airsim-settingsjson-anotado">A6.1 Archivo de configuración de AirSim (<code>settings.json</code>) anotado<a class="headerlink" href="#a61-archivo-de-configuracion-de-airsim-settingsjson-anotado" title="Permanent link">&para;</a></h2>
-<p>El plugin Cosys-AirSim lee su configuración al inicio desde el archivo <code>settings.json</code>, ubicado en Windows en <code>%USERPROFILE%\Documents\AirSim\settings.json</code>. La siguiente es la configuración formal utilizada durante los vuelos de calibración y experimentación de la tesis:</p>
+<p>El plugin Cosys-AirSim lee su configuración al inicio desde el archivo <code>settings.json</code>, ubicado en Windows en la carpeta <code>Documents\AirSim</code> del usuario: <code>%USERPROFILE%\Documents\AirSim\settings.json</code>, o <code>%USERPROFILE%\OneDrive\Documents\AirSim\settings.json</code> si la carpeta Documentos está redirigida a OneDrive, como en la estación de esta tesis. La siguiente es la configuración vigente, utilizada en las corridas de octubre de 2026:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;SeeDocsAt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docs/settings.md&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;SettingsVersion&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span>
@@ -1725,6 +1725,32 @@
 <span class="w">    </span><span class="nt">&quot;Latitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">47.641468</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;Longitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-122.140165</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;Altitude&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">122</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;Vehicles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;Drone1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;VehicleType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SimpleFlight&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;Cameras&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;FollowCam&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;CaptureSettings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;Width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1080</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;Height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">720</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;FOV_Degrees&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">],</span>
+<span class="w">          </span><span class="nt">&quot;X&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-4.0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;Y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-2.5</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;Z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-1.5</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;Pitch&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-15.0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;Roll&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;Yaw&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">28.0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;Gimbal&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;Stabilization&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;CameraDefaults&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;CaptureSettings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
@@ -1752,8 +1778,16 @@
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;SubWindows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;WindowID&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;CameraName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;FollowCam&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;VehicleName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Drone1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;Visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;WindowID&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;CameraName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Front Camera&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;CameraName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;front_center&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;VehicleName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Drone1&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;ImageType&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;Visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">    </span><span class="p">}</span>
@@ -1766,11 +1800,12 @@
 <li><strong><code>ClockType: "SteppableClock"</code></strong>: sincroniza el paso temporal de la simulación física con las consultas RPC de la API. A diferencia de <code>ScalableClock</code> o el reloj de pared del sistema, <code>SteppableClock</code> garantiza que cuando la GPU experimenta caídas momentáneas de tasa de cuadros por la inferencia del modelo multimodal, la física de vuelo no sufra aceleraciones destructivas ni inestabilidades de integración numérica en el estimador inercial.</li>
 <li><strong><code>ApiServerPort: 41451</code></strong>: puerto TCP de enlace Msgpack-RPC por el que se comunican <code>AirSimClient</code> y el motor de Unreal Engine.</li>
 <li><strong><code>CameraDefaults.CaptureSettings</code></strong>:</li>
-<li><code>ImageType 0</code> (<code>Scene</code>): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (<code>FlowTTCEstimator</code>) y por el modelo deliberativo (<code>Qwen2.5-VL-3B</code>).</li>
+<li><code>ImageType 0</code> (<code>Scene</code>): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (<code>FlowTTCEstimator</code>) y por la red de profundidad estimada de la capa estratégica (cap. 6, §6.14); con <code>STRATEGIC_SOURCE = vlm</code>, por el VLM. La cámara frontal no se declara: se usa la del vehículo por defecto (<code>AIRSIM_CAMERA_NAME = "0"</code>), con el campo visual horizontal por defecto de 90°.</li>
 <li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, §10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).</li>
 <li><code>ImageType 5</code> (<code>Segmentation</code>): canal de segmentación semántica de mallas para auditoría visual.</li>
 <li><code>Width: 1080, Height: 720</code>: resolución nativa del render target frontal.</li>
-<li><strong><code>SubWindows</code></strong>: habilita una ventana secundaria flotante en el visor de Unreal Engine mostrando la cámara frontal a bordo en tiempo real, facilitando la supervisión visual del operador durante las corridas experimentales.</li>
+<li><strong><code>Vehicles.Drone1.Cameras.FollowCam</code></strong>: cámara externa de seguimiento, 4 m detrás, 2.5 m a la izquierda y 1.5 m arriba del dron, inclinada 15° hacia abajo, sin estabilización. Solo la usa la auditoría: produce el video <code>.follow.webm</code> que el visor sincroniza con el frontal (cap. 4, §4.4). Ningún componente del lazo la lee; si no está declarada, la corrida se graba sin ese video.</li>
+<li><strong><code>SubWindows</code></strong>: dos ventanas secundarias en el visor de Unreal Engine, con la cámara de seguimiento y la frontal en tiempo real, para supervisar las corridas.</li>
 </ol>
 <hr />
 <h2 id="a62-perfil-de-escalabilidad-grafica-de-unreal-engine-55-y-preservacion-de-gradientes">A6.2 Perfil de escalabilidad gráfica de Unreal Engine 5.5 y preservación de gradientes<a class="headerlink" href="#a62-perfil-de-escalabilidad-grafica-de-unreal-engine-55-y-preservacion-de-gradientes" title="Permanent link">&para;</a></h2>
@@ -1929,7 +1964,7 @@
 <tr>
 <td><code>VLM_STRATEGIC_ENABLED</code></td>
 <td><code>true</code></td>
-<td>Habilita la capa estratégica del VLM (cap. 5, §5.10).</td>
+<td>Habilita la capa estratégica cuando su fuente es el VLM; con <code>STRATEGIC_SOURCE = depth</code> no se consulta (para quitar la capa se usa <code>STRATEGIC_SOURCE = off</code>).</td>
 </tr>
 <tr>
 <td><code>VLM_STRATEGIC_PERIOD_S</code> / <code>VLM_STRATEGIC_MAX_AGE_S</code></td>
@@ -2072,8 +2107,8 @@
 </tr>
 <tr>
 <td><code>FLOW_DOWNSCALE_WIDTH</code></td>
-<td><code>320</code></td>
-<td>Ancho al que se reduce el fotograma antes de calcular el flujo óptico (<span class="arithmatex">\(320 \times 213\text{ px}\)</span>).</td>
+<td><code>640</code></td>
+<td>Ancho al que se reduce el fotograma antes de calcular el flujo óptico (<span class="arithmatex">\(640 \times 427\text{ px}\)</span>); el default del código es 320 (cap. 6, §6.3).</td>
 </tr>
 <tr>
 <td><code>CAMERA_FX</code> / <code>CAMERA_FY</code></td>
@@ -2391,18 +2426,16 @@
 <h3 id="paso-1-verificacion-de-software-y-dependencias">Paso 1: Verificación de software y dependencias<a class="headerlink" href="#paso-1-verificacion-de-software-y-dependencias" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Sistema operativo: Windows 10/11 (64-bit).</li>
-<li>Entorno virtual de Python 3.10+:
-   <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>airsim-loop
-python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
-.venv<span class="se">\S</span>cripts<span class="se">\a</span>ctivate
-pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-</code></pre></div></li>
+<li>Entorno conda <code>airsimenv</code> (Python 3.10, PyTorch con CUDA y <code>transformers</code> para la red de profundidad; en la estación de la tesis, <code>D:\TesisMCD\Airsimenv</code>):
+   <div class="highlight"><pre><span></span><code><span class="n">conda</span> <span class="n">activate</span> <span class="n">airsimenv</span>
+<span class="nb">cd </span><span class="n">airsim-loop</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">-r</span> <span class="n">requirements</span><span class="p">.</span><span class="n">txt</span>
+</code></pre></div>
+   La red de profundidad (<code>DEPTH_MODEL</code>) se descarga de Hugging Face la primera vez que se compila el grafo.</li>
 <li>Verificar la disponibilidad del plugin binario de Cosys-AirSim en el proyecto de Unreal Engine 5.5 correspondiente (MiniSim, TownSim o CitySim).</li>
 </ol>
 <h3 id="paso-2-instalacion-del-archivo-settingsjson">Paso 2: Instalación del archivo <code>settings.json</code><a class="headerlink" href="#paso-2-instalacion-del-archivo-settingsjson" title="Permanent link">&para;</a></h3>
-<p>Copiar el archivo de configuración del Anexo 6 (§A6.1) en el directorio de usuario:
-<div class="highlight"><pre><span></span><code><span class="nb">Copy-Item</span> <span class="s2">&quot;config/settings.json&quot;</span> <span class="s2">&quot;$HOME\Documents\AirSim\settings.json&quot;</span> <span class="n">-Force</span>
-</code></pre></div></p>
+<p>Guardar el contenido de §A6.1 como <code>settings.json</code> en la carpeta <code>Documents\AirSim</code> del usuario (o en <code>OneDrive\Documents\AirSim</code> si Documentos está redirigida), antes de abrir el proyecto de Unreal Engine.</p>
 <h3 id="paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu">Paso 3: Inicialización del servidor de modelos (Ollama, misma GPU)<a class="headerlink" href="#paso-3-inicializacion-del-servidor-de-modelos-ollama-misma-gpu" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Ejecutar <code>startOllama.ps1</code> (raíz <code>D:\TesisMCD</code>, fuera del repositorio). El script lee el modelo de <code>config/.env</code>; reinicia Ollama con <code>OLLAMA_MODELS</code> apuntando a la carpeta de modelos de la aplicación, <code>OLLAMA_KEEP_ALIVE=-1</code> (el modelo no se descarga entre corridas) y <code>OLLAMA_CONTEXT_LENGTH=8192</code>; cierra los <code>llama-server</code> huérfanos (en Windows sobreviven al cierre de <code>ollama.exe</code> y retienen VRAM); descarga el GGUF base y crea el tag de 8 k si faltan, y precarga el modelo de vuelo:
@@ -2424,9 +2457,12 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--scenarios<span class="w"> </span>../airsim-plan/missions/flightplans/townsim_clear.json<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--arms<span class="w"> </span>slm<span class="w"> </span>fsm<span class="w"> </span>reactive<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--seeds<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--out-dir<span class="w"> </span>airsim-runs/
-</code></pre></div></p>
+<span class="w">    </span>--deadlock-strategies<span class="w"> </span>depth<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--seeds<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--route-plan<span class="w"> </span>off<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out-dir<span class="w"> </span>../airsim-runs/
+</code></pre></div>
+Sin <code>--deadlock-strategies</code> ni <code>--strategic-sources</code> se usan los valores de <code>config/.env</code> (<code>depth</code>/<code>depth</code>). <code>--route-plan vlm</code> (el default) planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (CitySim). Cada corrida se cierra con <code>finalize_run</code> (cap. 4, §4.4); una corrida interrumpida se cierra con <code>python experiments/finalize_run.py --all ../airsim-runs/</code>.</p>
 <h3 id="paso-6-procesamiento-de-datos-y-consolidacion-estadistica">Paso 6: Procesamiento de datos y consolidación estadística<a class="headerlink" href="#paso-6-procesamiento-de-datos-y-consolidacion-estadistica" title="Permanent link">&para;</a></h3>
 <p>Una vez finalizadas las corridas, compilar los resultados y generar las tablas estadísticas comparativas:
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>experiments/analyze.py<span class="w"> </span>--runs-dir<span class="w"> </span>airsim-runs/

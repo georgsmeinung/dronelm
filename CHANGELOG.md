@@ -1,3 +1,49 @@
+# 2026-10-14 (b) - Cap. 10 §10.13: banco de prueba a bordo (que es, como se construyo, como decidio el diseno)
+
+- **Informe, cap. 10 §10.13** (nuevo): para que sirve el banco (medir fuera de vuelo si la fuente responde la
+  pregunta del lazo lento, antes de un lote) y sus tres reglas generalistas; la tuberia de
+  `experiments/vlm_bench/` (dataset, ground_truth/labels, questions, evaluate, report, run_all.sh) y las
+  pruebas derivadas (map_probe, route_bench, region_probe, seg_depth_probe); las etiquetas de referencia
+  paso a paso; la secuencia de decisiones del 2 al 10 de octubre (plan por parches, desempate por fila,
+  VLM fuera del vuelo, profundidad en capa y barrido); alcance y limites.
+- **Brecha declarada**: las 6926 poses del banco v2 son todas de `citysim_pilot`; TownSim no tiene banco. Al
+  VLM no le cambia nada (no paso en CitySim); la profundidad, la fuente elegida, solo se valido en TownSim en
+  vuelo. Pendiente: banco en TownSim con las 10 corridas del lote de octubre, antes del lote D.
+- §10.12.2 reducido a una remision a §10.13; cap. 11 §11.0 y README apuntan a §10.13. Informe regenerado.
+
+# 2026-10-14 - Barrida completa del informe contra el codigo; registro de corrida, visor y Depth Anything documentados
+
+Revision capitulo por capitulo del informe (00-13 y anexos) contra `config/.env` y el codigo de hoy. Sin
+cambios de logica; tests: 299.
+
+- **Modelo vigente**: el informe nombra como modelo de vuelo y de plan de ruta a LFM2.5-VL-1.6B, tag local
+  `lfm2.5-vl-1.6b:q4km-ctx8k`; Qwen2.5-VL-3B queda solo como modelo historico (corridas de diagnostico).
+  Corregidos: resumen de la portada, cap. 8, cap. 9 (riesgo D, materializado), cap. 12, README, A1, A3, A4, A9.
+- **Profundidad estimada**: nueva seccion cap. 6 §6.14 (Depth Anything V2: que es, receta de entrenamiento,
+  banco frente al VLM y a la segmentacion, del fotograma a la decision, costo, exclusion del sensor del
+  simulador, limitaciones) y §6.15 (complementariedad flujo/profundidad). Cita y enlace al paper
+  (arXiv:2406.09414) en caps. 2, 6 y 12 y en la referencia del cap. 13 (con enlace al codigo). Resultado del
+  banco de profundidad agregado en cap. 11 §11.0.
+- **Registro de corrida y visor** (cap. 4 §4.4, reescrito): tabla de archivos (`.jsonl`, `.csv`,
+  `.summary.json`, `.summary_by_wp.csv`, `.distmin.ndjson`, `.console.log`, `.webm`, `.follow.webm`,
+  `.viewer.html`, `photo-*.png`), campos de la traza, reglas de `state_serializer`, columnas del CSV,
+  campos del resumen, `finalize_run` y las cuatro partes del visor. Tags y colores del overlay corregidos.
+- **Desactualizaciones corregidas**: `FLOW_DOWNSCALE_WIDTH` = 640 (no 320) en cap. 6, cap. 7 y A6; FOV de 90
+  (no 60) en cap. 7; cap. 10 (factores `DEADLOCK_STRATEGY` con `depth` por defecto y `STRATEGIC_SOURCE`,
+  comandos con `--deadlock-strategies depth`, healthcheck condicional, celdas y estado de los lotes D/E/F,
+  plan de ruta activado); `settings.json` real en A6 (con `FollowCam`, ruta en OneDrive), entorno conda y
+  comandos vigentes; cap. 5 (regla 3, auditoria del lazo lento, latencia del modelo local); cap. 1-3 (lazo
+  lento con profundidad); cap. 12 (limitacion del sensor monocular: la profundidad estimada ya es parte del
+  sistema).
+- **Codigo (solo comentarios)**: cabeceras de `graph.py` y `deep_scan.py` y ayuda de `--deadlock-strategies`
+  en `runner.py` decian que el VLM / `deep_vlm` era el default.
+- **docs/**: `index.html` (actualizaciones 2026-10-14, Depth Anything con enlace, estado actual con el tag del
+  modelo) y `grafo-de-control.html` (auditoria del lazo lento, enlaces a Depth Anything y al cap. 4).
+- Informe regenerado (HTML + PDF, 36.9 MB).
+- **`airsim-loop/GRAFO-DE-CONTROL.md`** sincronizado (estaba al 2026-09-30): fuente configurable del lazo lento
+  con profundidad por defecto, servicios segun fuente, barrido `depth`, VLM fuera del vuelo y en el plan de ruta,
+  tabla de eliminados con el VLM en vuelo, tests (299).
+
 # 2026-10-10 (c) - STRATEGIC_SOURCE=depth por defecto otra vez; informe y docs/ actualizados
 
 - **`config/.env`**: `STRATEGIC_SOURCE=depth` (vuelve de `off`, decidido con el lote de TownSim: margen en

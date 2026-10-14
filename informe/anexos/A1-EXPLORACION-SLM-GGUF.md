@@ -19,7 +19,7 @@ Una instancia activa del simulador AirSim sobre Unreal Engine 5.5 demanda, en co
 * **Sobrecarga de contexto (KV Cache)**: la inferencia no solo consume la memoria estática de los pesos de la red, sino también la memoria dinámica requerida por el caché de claves y valores (*Key-Value Cache*), la cual escala linealmente con la longitud de la ventana de contexto y el tamaño del lote.
 * **Exclusión de arquitecturas de frontera**: modelos superiores a 13B parámetros o modelos fundacionales no cuantizados (FP16/BF16) son inviables en esta configuración sin incurrir en transferencias masivas hacia la memoria RAM del sistema (*paging / offloading* excesivo a CPU), lo cual degrada la latencia de inferencia en órdenes de magnitud incompatibles con el control de vuelo.
 
-Bajo este marco, la única alternativa viable radica en el uso de *Small Language Models* (SLMs) y *Small Vision-Language Models* (sVLMs) de escala **3B a 8B parámetros**, sometidos a técnicas de cuantización post-entrenamiento (*Post-Training Quantization*, PTQ) y optimizados para ejecución local ([Abdin et al., 2024](../13-REFERENCIAS.md#ref-abdin-2024); [Frantar et al., 2022](../13-REFERENCIAS.md#ref-frantar-gptq-2022); [Nguyen et al., 2024](../13-REFERENCIAS.md#ref-nguyen-2024); [Zhang et al., 2024](../13-REFERENCIAS.md#ref-zhang-tinyllama-2024)).
+Bajo este marco, la única alternativa viable radica en el uso de *Small Language Models* (SLMs) y *Small Vision-Language Models* (sVLMs) de escala **1.5B a 8B parámetros**, sometidos a técnicas de cuantización post-entrenamiento (*Post-Training Quantization*, PTQ) y optimizados para ejecución local ([Abdin et al., 2024](../13-REFERENCIAS.md#ref-abdin-2024); [Frantar et al., 2022](../13-REFERENCIAS.md#ref-frantar-gptq-2022); [Nguyen et al., 2024](../13-REFERENCIAS.md#ref-nguyen-2024); [Zhang et al., 2024](../13-REFERENCIAS.md#ref-zhang-tinyllama-2024)).
 
 ---
 
@@ -45,7 +45,7 @@ Aunque los modelos textuales analizados exhibieron un rendimiento adecuado para 
 
 Bajo dichas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Esto motivó la sustitución de un SLM exclusivamente textual por un modelo con **capacidad de visión nativa** (*Small Vision-Language Model*, sVLM), permitiendo al agente inspeccionar directamente el fotograma capturado por la cámara frontal del UAV.
 
-Tal como se formaliza en el capítulo 8 (§8.1.2), la elección convergió en **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)) bajo cuantización *Q4_K_M*:
+En la fase exploratoria la elección convergió en **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)) bajo cuantización *Q4_K_M*, con el que se hicieron las corridas de diagnóstico del capítulo 9. El modelo de la versión final es **LFM2.5-VL-1.6B** (Q4_K_M, tag local de Ollama `lfm2.5-vl-1.6b:q4km-ctx8k`, ~1.6 GB de VRAM), elegido por latencia (cap. 8, §8.1.2). Las propiedades que motivaron la primera elección fueron:
 * **Huella de memoria**: consume ~2.0 GB de VRAM, situándose holgadamente dentro del presupuesto operativo restante de la GPU.
 * **Inspección visual directa**: procesa secuencias de dos fotogramas temporales ($t$ y $t-1$) para inferir dinámica de aproximación y discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
 * **Compatibilidad de decodificación**: ofrece soporte completo para esquemas de decodificación restringida (`json_schema`).

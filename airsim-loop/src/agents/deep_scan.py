@@ -1,4 +1,4 @@
-# Barrido panoramico + VLM ante un deadlock (DEADLOCK_STRATEGY=deep_vlm, default).
+# Barrido panoramico ante un deadlock (DEADLOCK_STRATEGY=depth, default; deep_vlm: lo juzga el VLM).
 #
 # El dron gira en el lugar a SCAN_HEADING_COUNT_DEEP rumbos, captura un frame por rumbo (el que
 # capture_node ya produjo; nunca vuelve a capturar ni pide profundidad) y hace UNA consulta al VLM.

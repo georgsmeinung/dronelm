@@ -4,7 +4,7 @@
 
 Antes de entrar al lazo, `main.py` llama de forma bloqueante a `run_initial_scan()` (`src/agents/spatial_scan.py`). No es un nodo del `StateGraph`: se ejecuta una sola vez, entre la conexión con AirSim y la compilación del grafo. Realiza un barrido de yaw en el lugar hacia `SCAN_HEADING_COUNT` (6) rumbos equiespaciados, captura un fotograma por rumbo y envía todas las imágenes en una única consulta al VLM, que devuelve un contexto cualitativo de la escena y un rumbo recomendado.
 
-El resultado es **solo un chequeo de cordura del plan de misión**: si el rumbo recomendado difiere más de 90° del rumbo al primer waypoint, `main.py` emite un aviso por consola. No se transfiere al grafo ni modifica el vuelo. El ejecutor de experimentos (`experiments/runner.py`) **no** lo ejecuta, de modo que no interviene en ninguna corrida experimental. Si el VLM no responde, la misión arranca igual.
+Es la única consulta al VLM que hace `main.py` con la configuración final, y el resultado es **solo un chequeo de cordura del plan de misión**: si el rumbo recomendado difiere más de 90° del rumbo al primer waypoint, `main.py` emite un aviso por consola. No se transfiere al grafo ni modifica el vuelo. El ejecutor de experimentos (`experiments/runner.py`) **no** lo ejecuta, de modo que no interviene en ninguna corrida experimental. Si el VLM no responde, la misión arranca igual.
 
 ## 5.1 Visión general del lazo
 
@@ -28,7 +28,7 @@ capture ──(ok)──────────► perception ──► navigat
 
 ### 5.1.2 Dos lazos desacoplados
 
-La organización responde a un hecho medido: la inferencia del VLM tarda entre 3 y 6 s (mediana de 3.8 s sobre 185 consultas, §8.6), es decir, entre 15 y 30 ciclos del lazo. Cualquier respuesta expresada **en el marco del cuerpo** del dron («el frente está libre», «evadir a la izquierda») describe un fotograma que ya no existe cuando la respuesta llega: el dron giró y avanzó varios metros. El capítulo 9 (§9.8) documenta las fallas que produce usar una respuesta así: maniobras hacia el lado equivocado y respuestas que llegan tarde y se descartan.
+La organización responde a un hecho medido: con el servidor de inferencia de las corridas de diagnóstico, la consulta al VLM tardaba entre 3 y 6 s (mediana de 3.8 s sobre 185 consultas, §8.6), es decir, entre 15 y 30 ciclos del lazo; con el modelo local de la versión final, ~0.8 s, todavía cuatro ciclos. Cualquier respuesta expresada **en el marco del cuerpo** del dron («el frente está libre», «evadir a la izquierda») describe un fotograma que ya no existe cuando la respuesta llega: el dron giró y avanzó varios metros. El capítulo 9 (§9.8) documenta las fallas que produce usar una respuesta así: maniobras hacia el lado equivocado y respuestas que llegan tarde y se descartan.
 
 El sistema separa entonces dos escalas de tiempo:
 
@@ -71,11 +71,11 @@ Tres principios de diseño acompañan esta separación:
 | `active_maneuver` / `maneuver_cycles_left` / `maneuver_command` | — | Maniobra comprometida (anti flip-flop) |
 | `_hover_alt_anchor` / `_speed_cap` | `float\|None` | Ancla de altitud en `FRENAR` y tope del gobernador de velocidad (§5.13) |
 
-**VLM y canales hacia el bucle externo:**
+**Lazo lento y canales hacia el bucle externo:**
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| `deliberations` | `List[Dict]` | Registro de solo agregado de todas las consultas al VLM (estratégicas, de barrido y fallidas) |
+| `deliberations` | `List[Dict]` | Registro de solo agregado de todas las consultas del lazo lento, a la profundidad o al VLM (estratégicas, de barrido y fallidas) |
 | `last_deliberation` | `Dict\|None` | Última entrada, actualizada por `motor_node` |
 | `_vlm_strategic` | `Dict\|None` | Último resultado de la capa estratégica: `outcome`, motivo, latencia, sector de la meta, ancla y sub-meta (§5.10) |
 | `_clear_subgoals` | `bool` | La capa estratégica vio libre el camino directo al waypoint real: el bucle externo descarta la sub-meta pendiente (§5.15.4) |
@@ -139,9 +139,9 @@ Tres decisiones de diseño:
 
 Los umbrales de TTC provienen de la calibración del capítulo 7. El orden tiene tres justificaciones: el barrido (1) precede a todo porque, una vez iniciado, es dueño del dron hasta resolver; el deadlock (2) precede a toda otra regla porque cualquier acción que se repita sin mover al dron —una maniobra comprometida, una evasión por contacto, un descenso hacia un techo— taparía al detector de atasco indefinidamente (cap. 9, §9.8.8), y una maniobra que no mueve al dron en 2 s no es una decisión en curso sino un atasco; y el contacto físico (4) precede al piso óptico y al TTC porque no depende del sensado visual.
 
-### 5.3.3 Lazo rápido: reacción sin VLM
+### 5.3.3 Lazo rápido: reacción sin el lazo lento
 
-Las reglas 3, 4, 5, 7 y 8 forman el lazo rápido: actúan en el mismo ciclo, sin depender del modelo. Son compartidas en espíritu con los otros brazos —misma percepción, mismo `action_to_command()` (§5.14)— de modo que la comparación entre brazos mide quién decide los rodeos y los deadlocks, no quién reacciona mejor a un muro inminente.
+Las reglas 3, 4, 5, 7 y 8 forman el lazo rápido: actúan en el mismo ciclo, sin esperar al lazo lento. Son compartidas en espíritu con los otros brazos —misma percepción, mismo `action_to_command()` (§5.14)— de modo que la comparación entre brazos mide quién decide los rodeos y los deadlocks, no quién reacciona mejor a un muro inminente.
 
 ### 5.3.4 Resolución de deadlock (`_deadlock_resolve`)
 
@@ -156,7 +156,7 @@ Al entrar, `_deadlock_resolve` cancela cualquier consulta estratégica en vuelo 
 
 **Salidas:** `rgb_image`, `telemetry`, `degraded`, `frame_history`, `frame_history_ts`, `prev_image`, `prev_telemetry`.
 
-Copia el par imagen–telemetría del ciclo anterior a `prev_*`, llama a `airsim_client.capture()` y, si la imagen es `None` o `telemetry["source"] != "airsim"`, marca `degraded = True` sin tocar el ring buffer. En modo normal agrega el fotograma y su timestamp a `frame_history` (tamaño `VLM_FRAME_HISTORY_SIZE` = 1). Las consultas al VLM no usan historial temporal: la capa estratégica toma el fotograma del ciclo y el barrido, uno por rumbo.
+Copia el par imagen–telemetría del ciclo anterior a `prev_*`, llama a `airsim_client.capture()` y, si la imagen es `None` o `telemetry["source"] != "airsim"`, marca `degraded = True` sin tocar el ring buffer. En modo normal agrega el fotograma y su timestamp a `frame_history` (tamaño `VLM_FRAME_HISTORY_SIZE` = 1). Las consultas del lazo lento no usan historial temporal: la capa estratégica toma el fotograma del ciclo y el barrido, uno por rumbo.
 
 ## 5.5 Nodo `degraded_hover`
 
@@ -180,7 +180,7 @@ Invoca `FlowTTCEstimator.estimate()` con el par de fotogramas y la telemetría d
 
 **Función:** `evasive_node` en `src/agents/evasive.py`. **Activación:** contacto (`imu_contact` / `blind_wall`) o peligro frontal sin FOV mayormente bloqueado (reglas 3, 7 y 7b).
 
-Compara la ocupación de los sectores laterales del `ObstacleField` y elige `EVADIR_IZQUIERDA` o `EVADIR_DERECHA` hacia el menos ocupado (a igualdad, el de mayor TTC), con velocidad de evasión agresiva (`vx` = 1.2 m/s). `action_to_command()` fija un `target_yaw` redondeado al múltiplo de 90° más cercano (`_manhattan_snap_yaw`), adecuado a la cuadrícula urbana. La maniobra se compromete en `active_maneuver` y `navigate` la continúa (regla 2).
+Compara la ocupación de los sectores laterales del `ObstacleField` y elige `EVADIR_IZQUIERDA` o `EVADIR_DERECHA` hacia el menos ocupado (a igualdad, el de mayor TTC), con velocidad de evasión agresiva (`vx` = 1.2 m/s). `action_to_command()` fija un `target_yaw` redondeado al múltiplo de 90° más cercano (`_manhattan_snap_yaw`), adecuado a la cuadrícula urbana. La maniobra se compromete en `active_maneuver` y `navigate` la continúa (regla 3).
 
 ## 5.9 Giro de 90° (`GIRAR_90`)
 
@@ -247,7 +247,7 @@ Un hilo daemon con cola de entrada de tamaño 1: `request(payload)` vacía la co
 
 ### 5.10.6 Fuente por defecto: profundidad monocular estimada (`depth_client.py`)
 
-La red es Depth Anything V2 Metric Outdoor Small ([Yang et al., 2024](13-REFERENCIAS.md#ref-yang-2024)), de ~25 M de parámetros, que estima la profundidad **en metros** a partir del fotograma RGB del ciclo. No es el sensor de profundidad de AirSim, que sigue fuera del lazo (§5.16): es lo que haría una red a bordo de un dron que solo tiene la cámara.
+El capítulo 6 (§6.14) describe la red, su evaluación y sus limitaciones; aquí se resume su integración en la capa. La red es Depth Anything V2 Metric Outdoor Small ([Yang et al., 2024](13-REFERENCIAS.md#ref-yang-2024)), de ~25 M de parámetros, que estima la profundidad **en metros** a partir del fotograma RGB del ciclo. No es el sensor de profundidad de AirSim, que sigue fuera del lazo (§5.16): es lo que haría una red a bordo de un dron que solo tiene la cámara.
 
 **Del mapa de profundidad a la grilla.** Sobre el mismo recorte cuadrado central y los mismos tercios que la grilla del VLM (§5.10.2), se toma el **percentil 5** de la profundidad estimada de cada sector —lo más cercano, sin píxeles sueltos— y el sector es `libre` si ese valor es ≥ `DEPTH_FREE_M` (15 m, la misma distancia que la sub-meta). Es el mismo estadístico con el que se construyeron las etiquetas de referencia del banco de prueba (cap. 11, §11.0), de modo que la exactitud medida allí es la del juicio que usa el vuelo.
 
@@ -371,15 +371,15 @@ Cuando `degraded = True`, el ciclo va directo a `degraded_hover`: hover explíci
 
 ## 5.18 Registro de vuelo y auditoría post-vuelo
 
-Cada ejecución —de `main.py` o de cada celda del runner— genera una carpeta `<escenario>/<brazo>/<estrategia>/seed_N_<timestamp>/` con traza JSONL y CSV, resumen por waypoint, fotogramas de auditoría del VLM, video anotado de la cámara frontal (`.webm`), video de la cámara de seguimiento externa (`.follow.webm`, solo auditoría) y visor HTML. El runner graba video por defecto (`--no-video` lo desactiva).
+Cada ejecución —de `main.py` o de cada celda del runner— genera una carpeta autocontenida con traza JSONL y CSV, resumen de la corrida y por objetivo, muestras de DistMin, copia de la consola, fotogramas de cada consulta del lazo lento, video anotado de la cámara frontal (`.webm`), video de la cámara de seguimiento externa (`.follow.webm`, solo auditoría) y visor HTML. El capítulo 4 (§4.4) describe cada archivo, cada campo y el uso del visor. El runner graba video por defecto (`--no-video` lo desactiva).
 
 **Traza completa del `DroneState`.** El JSONL conserva por ciclo el estado completo sin imágenes (`src/logging/state_serializer.py`); el CSV lo aplana en columnas `state.<ruta>`. La telemetría incluye `landed_state`.
 
-**Auditoría del VLM.** Cada consulta resuelta —estratégica o de barrido— deja una entrada en `deliberations[]` y sus fotogramas RAW se asocian a la fila del ciclo en que la respuesta llegó (`_last_delib_frames`). Cada deliberación nueva se cuenta en `slm_invocations` en el ciclo en que aparece, cualquiera sea la ruta del ciclo (la capa estratégica resuelve mientras el dron vuela por la ruta reactiva o evasiva). Los barridos fallidos también se registran.
+**Auditoría del lazo lento.** Cada consulta resuelta —estratégica o de barrido, a la profundidad o al VLM— deja una entrada en `deliberations[]` y sus fotogramas RAW se asocian a la fila del ciclo en que la respuesta llegó (`_last_delib_frames`). Cada deliberación nueva se cuenta en `slm_invocations` en el ciclo en que aparece, cualquiera sea la ruta del ciclo (la capa estratégica resuelve mientras el dron vuela por la ruta reactiva o evasiva). Los barridos fallidos también se registran.
 
 **Video en un hilo aparte.** La codificación VP8 ([Bankoski et al., 2011](13-REFERENCIAS.md#ref-bankoski-2011)) corre en un hilo con cola acotada y el cuadro se reduce a 0.6: codificar a 1080×720 dentro del lazo costaba ~275 ms por cuadro, llevaba el período de 0.21 a 0.45 s y degradaba el flujo óptico en el 64–82 % de los ciclos.
 
-**Visor HTML.** Sincroniza video y traza por índice de ciclo y muestra el árbol del `DroneState` de cada ciclo.
+**Visor HTML.** Sincroniza los dos videos y la traza por índice de ciclo y muestra, para cada ciclo, el campo de obstáculos, la consulta del lazo lento con sus fotogramas y el árbol del `DroneState` (cap. 4 §4.4).
 
 ## 5.19 Cierre de misión y vigilancia de congelamiento
 

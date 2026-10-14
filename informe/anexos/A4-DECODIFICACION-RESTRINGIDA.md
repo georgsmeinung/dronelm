@@ -14,7 +14,7 @@ En la generación autorregresiva convencional, un modelo autoregresivo produce u
 
 $$y_t \sim P(y_t \mid y_{<t}, x)$$
 
-donde $x$ representa la secuencia del prompt de entrada e $y_{<t} = (y_1, \dots, y_{t-1})$ los tokens generados previamente. Para un modelo contemporáneo como **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)), el tamaño del vocabulario asciende a $|V| = 152\,064$ tokens.
+donde $x$ representa la secuencia del prompt de entrada e $y_{<t} = (y_1, \dots, y_{t-1})$ los tokens generados previamente. Para **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)), el modelo de las corridas de diagnóstico, el tamaño del vocabulario asciende a $|V| = 152\,064$ tokens; el modelo vigente, LFM2.5-VL-1.6B, tiene un vocabulario menor, y el argumento no cambia.
 
 ### A4.1.1 Modos de falla de la decodificación libre en DroneLM
 Cuando se solicita una salida JSON únicamente mediante instrucciones en el *system prompt* (*prompt engineering* puro), los modelos de 3B parámetros exhiben una tasa de incumplimiento sintáctico de entre el 20% y el 35% en condiciones de vuelo continuo ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025)). Los modos de falla documentados en DroneLM incluyen:
