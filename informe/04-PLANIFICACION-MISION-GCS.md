@@ -77,13 +77,15 @@ El manifiesto une los waypoints en línea recta, y en una ciudad la recta suele 
 
 El modelo evalúa; el código solo genera las opciones y toma la mejor según el propio modelo. El plan completo —cada candidata con su imagen, respuesta y probabilidad, la elegida y el motivo— queda en `<out-dir>/<escenario>/route_plan/` junto al manifiesto planificado, y se cachea por contenido (waypoints, mapa, modelo y prompt): Con `--route-plan vlm`, `runner.py` y `batch_runner.py` planifican una vez por escenario antes de la primera corrida, de modo que todas las semillas y brazos de un lote vuelan el mismo plan, y cada `summary.json` registra el plan con el que voló (`route_plan`). `--route-plan off` vuela el manifiesto tal cual.
 
-**Estado en la versión final: desactivado** (`ROUTE_PLAN_MODE=off`). En las pruebas sobre `citysim_pilot`, ninguno de los dos modelos evaluados distinguió una candidata que va por la calle de una que cruza el techo de un edificio:
+**Juicio por parches (versión final).** Las dos primeras formas de preguntar fallaron. En las pruebas sobre `citysim_pilot`, ninguno de los dos modelos evaluados distinguió una candidata que va por la calle de una que cruza el techo de un edificio:
 
 - **Con la línea sobre el mapa:** Qwen2.5-VL-3B rechazó las 37 candidatas, y LFM2.5-VL-1.6B aprobó todas.
 - **Con el pasillo:** ambos aprobaron todas.
 - **Con la pregunta invertida** («¿el pasillo cruza algún techo?»): ambos respondieron «sí» a todas, incluida la recta que va por la calle.
 
-La respuesta depende de la forma de la pregunta y no de la imagen. Con un juicio así, el plan nunca cambia la ruta y solo agrega una variable al experimento. El procedimiento queda implementado y su validez se mide en el banco de prueba contra la geometría del simulador (cap. 11 §11.0), como resultado negativo.
+La respuesta dependía de la forma de la pregunta y no de la imagen. La versión final (`ROUTE_JUDGE=patches`) le pide al modelo lo que sí hace bien, reconocer qué hay en una imagen, en lugar de juzgar una ruta entera: cada candidata se muestrea cada `ROUTE_PATCH_STEP_M` (8 m); en cada punto se recorta un parche de `ROUTE_PATCH_M` (16 m) con `ROUTE_PATCH_CONTEXT_M` (48 m) de contexto, y el modelo lo clasifica en una de cinco clases (calle, edificio, árboles, estacionamiento, autopista elevada) con decodificación restringida. La puntuación de la candidata es la probabilidad media de «calle» leída de los *logprobs*; gana la de mayor puntuación (a menos de 0.05, la más corta).
+
+**Estado en la versión final: activado** (`ROUTE_PLAN_MODE=vlm`, `ROUTE_JUDGE=patches`) sobre el mapa registrado de CitySim (§4.3.2). En el banco de prueba la puntuación separa las rutas libres de las bloqueadas con AUC 0.81, y en el único tramo de `citysim_pilot` con la recta bloqueada el plan elige un desvío libre (cap. 11 §11.0). Es la única tarea del sistema en la que el VLM aporta una señal medible. El lote de TownSim (cap. 11 §11.6) se voló con `--route-plan off`: el mapa `townsim_calib.png` no está verificado como registrado con el mundo de AirSim, y el plan podría sacar la ruta del corredor que se quería probar.
 
 ### 4.3.2 Mapa cenital registrado
 

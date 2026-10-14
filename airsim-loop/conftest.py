@@ -27,3 +27,9 @@ def _default_deadlock_strategy_blind(monkeypatch):
     import src.agents.deep_scan as deep_scan_mod
 
     monkeypatch.setattr(deep_scan_mod, "DEADLOCK_STRATEGY", "blind")
+    # Idem STRATEGIC_SOURCE (2026-10-10): los tests del grafo se escriben con una capa estrategica activa
+    # (la red de profundidad la stubea tests/conftest.py), sin importar el .env. Quien prueba off lo pisa.
+    monkeypatch.setenv("STRATEGIC_SOURCE", "depth")
+    import src.agents.vlm_strategic as vlm_strategic_mod
+
+    monkeypatch.setattr(vlm_strategic_mod, "STRATEGIC_SOURCE", "depth")

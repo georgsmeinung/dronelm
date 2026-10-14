@@ -1,6 +1,6 @@
 # 11. Resultados comparativos SLM vs. FSM
 
-> **Alcance de este capítulo.** Salvo el banco de prueba del VLM (§11.0), que usa la configuración vigente, todos los resultados que siguen corresponden al **lote base** (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo `slm` distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:
+> **Alcance de este capítulo.** Salvo el banco de prueba del VLM (§11.0) y los lotes de la capa estratégica (§11.6), que usan la configuración vigente, los resultados corresponden al **lote base** (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo `slm` distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:
 >
 > 1. **Escenarios de control** (§11.1, §11.4.1, §11.4.2, §11.4.3): no ejercen la capa táctica de atasco y son válidos como medida del costo del brazo `slm` (H2).
 > 2. **Escenarios con obstrucción** (`townsim_ini`, `townsim_calib_cruce_frontal`, `citymap_pilot`; §11.4.2b, §11.4.2c, §11.4.3b y §11.5.2–§11.5.4): se ejecutaron sin los waypoints WP_0b y WP_1b de `townsim_ini` ni `WP_0_SUR` de `citymap_pilot` (cap. 10 §10.3.3), con más de un `code_version` por escenario y con el umbral de ocupación en 0.35 (canal efectivamente inactivo, cap. 7 §7.5). **No describen el desempeño del sistema de los capítulos 5–8**, que se evaluará con los lotes D, E y F (§10.12).
@@ -497,7 +497,10 @@ deadlock crónico en los tres brazos porque la señal de flujo óptico se degrad
 de avance (flujo traslacional nulo cerca del FOE) y las texturas repetitivas del follaje generan
 vectores espurios. Ningún mecanismo de decisión puede compensar la ausencia de señal geométrica
 confiable en la dirección de interés. Este es un límite físico del sensor monocular, no del
-algoritmo de control.
+algoritmo de control. Con la configuración final —profundidad monocular estimada en la capa
+estratégica y en el barrido (cap. 5 §5.10.6)— las diez corridas de `townsim_ini` del lote de
+octubre completan la misión (§11.6.2). La comparación no es controlada (otro manifiesto, otro
+código), pero indica que el límite era del canal de flujo solo, no del sensor monocular.
 
 **Límite de escape geométrico (`citymap_pilot`, `reactive`):** cuando la geometría cierra todas
 las salidas locales — el dron queda atrapado bajo una autopista elevada con el techo arriba, el
@@ -525,3 +528,48 @@ Los 75 runs del lote completo establecen que:
    profundidad del simulador, como auditoría externa) es similar o mejor que la del `reactive` en los
    escenarios donde todos los brazos operan, y las 45 corridas de control producen 0 colisiones
    en todos los brazos.
+
+## 11.6 Lotes de la capa estratégica (octubre, configuración vigente)
+
+Dos lotes con el sistema de los capítulos 5–8 responden si la capa estratégica aporta y con qué fuente. Diseño común: brazo `slm`, barrido de deadlock con profundidad estimada (`DEADLOCK_STRATEGY = depth`) igual en todas las celdas —así se aísla la capa estratégica—, semillas 1–5 con jitter de la pose inicial, mismo plan de vuelo para todas las corridas de un escenario y el modelo de inferencia en la misma GPU que Unreal. El avance se mide en **waypoints del plan completados** (no con el índice del registro, que cuenta también las sub-metas insertadas). La regla de decisión se fijó antes de correr cada lote: una fuente aporta más que otra si la mediana del avance a un tiempo de referencia la supera en un umbral **y** gana en al menos 4 de las 5 semillas emparejadas; si ningún par lo cumple, las fuentes son equivalentes en avance y se decide por costo y seguridad. El p-valor se informa como diagnóstico: con 5 pares el mínimo del Wilcoxon exacto es 0.0625. Análisis: `experiments/analyze_strategic_batch.py`.
+
+### 11.6.1 CitySim (`citysim_pilot`): sin diferencia en avance
+
+15 corridas (fuentes `depth`, `vlm` y `off`), tope de 480 s, plan de ruta del VLM (cap. 4 §4.3.1; 15 waypoints con los desvíos). Regla: diferencia de medianas ≥ 2 waypoints a 400 s.
+
+| Fuente | Plan a 150 / 300 / 400 s (mediana) | Éxito | Colisiones | DistMin mediana (peor) | Deadlocks (total) | Latencia de la capa |
+|---|---|---:|---:|---:|---:|---:|
+| `depth` | 5 / 10 / 13 | 3/5 | 0 | 5.83 m (0.10) | 4 | 108 ms |
+| `vlm` | 6 / 10 / 13 | 4/5 | 0 | 3.29 m (0.13) | 2 | 788 ms |
+| `off` | 6 / 11 / 13 | 5/5 | 0 | 4.95 m (1.89) | 0 | — |
+
+Ningún par cumple la regla: las tres fuentes son **equivalentes en avance**. Por costo y seguridad, `off` es la mejor celda (todas las misiones completas, sin deadlocks, el mejor peor caso de distancia). Las fallas de las otras dos: `depth` semilla 1 llegó a 14 de 15 waypoints al tope de tiempo; `depth` semilla 5 tuvo tres deadlocks y se acercó a 0.10 m; `vlm` semilla 2 terminó por congelamiento físico, con el dron incrustado en la malla tras sub-metas repetidas hacia la fila de abajo de la grilla. Con 5 semillas, 5/5 frente a 3/5 no es significativo (Fisher p ≈ 0.44): la lectura es que la capa no aporta en este escenario, no que empeore. En `off` no hubo deadlocks, de modo que el barrido no se ejerció.
+
+### 11.6.2 TownSim (`townsim_ini`): mismo avance, más margen con la profundidad
+
+10 corridas (fuentes `depth` y `off`; el VLM quedó fuera por su AUC de 0.53 en el banco y su equivalencia en CitySim), tope de 900 s, manifiesto validado a mano sin plan de ruta (el mapa de TownSim no está verificado como registrado y el plan podría sacar la ruta del corredor). El escenario cruza el corredor peatonal arbolado a 10 m de altura, bajo las copas. Regla: diferencia de medianas ≥ 1 waypoint (de 8) a 900 s.
+
+| Fuente | Éxito | Duración (mediana) | Recorrido (mediana) | DistMin en el corredor, mediana (peor) | Segundos a < 1 m en el corredor (mediana) | Deadlocks resueltos por el barrido | Latencia de la capa |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `off` | 5/5 | 286 s | 362 m | 0.11 m (0.10) | 29 | 15/16 | — |
+| `depth` | 5/5 | 307 s | 428 m | 0.41 m (0.10) | 10 | 4/14 | 114 ms |
+
+Las diez corridas completan los ocho waypoints sin colisiones: **equivalentes en avance**. Costo y seguridad tiran en sentidos opuestos:
+
+- **`off` es más barato:** 21 s menos de mediana (más rápido en 4 de 5 semillas) y 66 m menos de recorrido, sin servicio de capa.
+- **`depth` mantiene más distancia del follaje:** pasa menos segundos a menos de 1 m en **las 5 semillas emparejadas** (0 frente a 21, 10/33, 3/43, 10/27, 11/29; Wilcoxon exacto p = 0.0625, el mínimo posible con 5 pares).
+
+DistMin se calculó por tramo con la pose de cada muestra de la auditoría: los acercamientos ocurren en la plaza y el corredor (x < −40 m); en el resto de la misión la distancia mínima supera los 10 m. El valor de ~0.10 m que se repite es, probablemente, el plano cercano de la cámara dentro del follaje —sin colisión física—; no se verificó en video. La primera muestra de cada corrida se excluye: en `off` semilla 1 marcó 0.012 m a 30 m de altura y la siguiente, 98 m. Con `off` los deadlocks son deterministas —los tres en el paso de la moldura (WP_1b), con escape vertical de −10 a −16 m— y el barrido con profundidad los resuelve (15 de 16). Con `depth` ocurren en otros puntos y el barrido resuelve menos (4 de 14), sin abortos: los no resueltos salen por el escape vertical.
+
+**Referencia histórica, no comparable.** En el lote base (§11.4.2b) las 15 corridas de `townsim_ini` llegaron al tope de 900 s sin completar. Aquel lote voló otro manifiesto (sin WP_0b ni WP_1b), otro código y el barrido con el VLM; la diferencia no se puede atribuir a un solo cambio.
+
+### 11.6.3 Lectura conjunta y decisión de configuración
+
+- **La capa estratégica no acelera la misión** con ninguna fuente, en ninguno de los dos escenarios: el avance lo dan el plan de vuelo y el lazo rápido.
+- **Con obstáculos orgánicos, la capa con profundidad aporta margen** de manera consistente; en CitySim ese efecto no se vio.
+- **Ninguna señal favorece al VLM en el lazo.** En la capa estratégica fue equivalente a no tener capa, con una latencia siete veces mayor que la de la profundidad.
+- **El barrido con profundidad se ejerció en vuelo** en TownSim y resolvió 19 de 30 deadlocks; todas las misiones terminaron.
+
+Por el margen en vegetación, y con un costo moderado (~114 ms en su propio hilo, ~440 MiB de VRAM, 7 % más de tiempo de misión), la configuración final es `STRATEGIC_SOURCE = depth` y `DEADLOCK_STRATEGY = depth` (cap. 5 §5.10.7). Es una decisión de criterio sobre resultados con 5 semillas por escenario, no un efecto significativo.
+
+**Límites.** Un escenario por tipo y 5 semillas por celda; DistMin solo mira el tercio central de la cámara frontal (los roces laterales no cuentan); en TownSim la captura de imágenes tarda el doble que en CitySim (mediana 209 ms frente a 110 ms), igual para las dos celdas.

@@ -1,3 +1,91 @@
+# 2026-10-10 (c) - STRATEGIC_SOURCE=depth por defecto otra vez; informe y docs/ actualizados
+
+- **`config/.env`**: `STRATEGIC_SOURCE=depth` (vuelve de `off`, decidido con el lote de TownSim: margen en
+  vegetacion densa a cambio de ~114 ms en su hilo, ~440 MiB de VRAM y +7 % de tiempo de mision). Defaults
+  del codigo alineados (`vlm_strategic.py`, `flight_logger.py`, comentario de `graph.py`).
+- **`experiments/runner.py`**: el healthcheck del SLM solo corre si alguna capa del vuelo usa el VLM
+  (`STRATEGIC_SOURCE=vlm` o `DEADLOCK_STRATEGY=deep_vlm`). Con depth/depth el VLM no corre en vuelo (las
+  entradas `"arm": "slm"` del registro son el nombre del brazo, no consultas al modelo); antes el lote no
+  arrancaba con Ollama cerrado. Ollama sigue haciendo falta para `--route-plan vlm`.
+- Tests: 299 (`test_off_source_keeps_only_the_depth_scan_service` renombrado; el conftest raiz sigue
+  fijando `STRATEGIC_SOURCE=depth` para el suite).
+- **Informe**:
+  - Cap. 5: la capa estrategica y el barrido con fuente configurable; §5.10.6 (profundidad estimada: red,
+    p5 por sector, servicio) y §5.10.7 (por que la profundidad); defaults `depth`/`depth`; principios del
+    lazo lento sin "el VLM decide".
+  - Cap. 4: el plan de ruta esta ACTIVADO con el juez por parches (antes decia desactivado; se arrastraba
+    la inconsistencia con `.env`), AUC 0.81; TownSim volado sin plan.
+  - Cap. 11: §11.6 con los dos lotes (CitySim y TownSim), lectura conjunta y decision de configuracion;
+    nota en §11.5.3 (el corredor que era 0/15 en el lote base completa 10/10, comparacion no controlada).
+  - Cap. 12: alcance, regimen 1, sintesis (evidencia de octubre) y limitaciones.
+  - Anexos: A6 (`STRATEGIC_SOURCE`, `DEADLOCK_STRATEGY=depth`, `DEPTH_*`, `ROUTE_PLAN_MODE=vlm`,
+    `ROUTE_JUDGE`; Ollama opcional sin plan de ruta), A1 (el VLM fuera del lazo desde el 10/10).
+  - HTML y PDF regenerados (`build.ps1`, PDF 36.7 MB).
+- **`docs/index.html`** y **`docs/grafo-de-control.html`**: actualizaciones de octubre, resumen ejecutivo
+  (LFM2.5-VL-1.6B, profundidad estimada; ya no Qwen2.5-VL-3B), arquitectura, estado actual, stack, capa
+  estrategica y barrido con profundidad, umbrales y limitaciones. `airsim-loop/GRAFO-DE-CONTROL.md` (fuente
+  declarada de la pagina del grafo) no se actualizo.
+
+# 2026-10-10 (b) - Lote TownSim (corredor arbolado): avance igual; la capa con profundidad da mas margen
+
+`airsim-runs/lote_townsim/` (10 corridas, 20:52-21:45; `strategic_batch_report.md`). Diseno y regla en
+(a). Un primer lanzamiento fallo en el healthcheck del SLM (Ollama apagado: el brazo `slm` usa el modelo
+en vuelo aunque no haya plan de ruta ni capa con VLM); esas corridas quedaron en `_abortadas_sin_ollama/`.
+
+| Fuente | Exito | Duracion (mediana) | Recorrido (mediana) | DistMin corredor mediana (min) | Seg. a < 1 m en el corredor (mediana) | Deadlocks | Resueltos por barrido | Latencia capa |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| off | 5/5 | 286 s | 362 m | 0.11 m (0.10) | 29 | 16 | 15/16 | - |
+| depth | 5/5 | 307 s | 428 m | 0.41 m (0.10) | 10 | 14 | 4/14 | 114 ms |
+
+- **Regla de decision**: todas las corridas completan los 8 WP -> **equivalentes en avance**; se decide por
+  costo y seguridad, y aca tiran en sentidos opuestos:
+  - `off` es mas barato: -21 s de mediana (mas rapido en 4 de 5 semillas), -66 m de recorrido, sin capa.
+  - `depth` da mas margen en el corredor: menos segundos a < 1 m en **5 de 5 semillas emparejadas**
+    (0/21, 10/33, 3/43, 10/27, 11/29; Wilcoxon exacto p = 0.0625, el minimo posible con 5 pares).
+- **DistMin por tramo** (las muestras de `.distmin.ndjson` traen su propia pose): los acercamientos
+  ocurren en la plaza y el corredor (x < -40), no en el resto de la mision (DistMin > 10 m). El valor de
+  ~0.10 m repetido es probablemente el plano cercano de la camara: la camara dentro del follaje (sin verificar en video; sin colision fisica:
+  0 colisiones). El 0.012 m del summary de off s1 es la primera muestra (a 30 m, la siguiente marca 98 m):
+  artefacto; se excluye la primera muestra en este analisis.
+- **Deadlocks**: con `off` son deterministas: los tres en (-70, -3), WP_1b_PASO_MOLDURA, con escape
+  vertical -10 -> -14 -> -16 m; el barrido los resuelve (15/16). Con `depth` ocurren en otros lugares
+  (entrada norte a -77, 14; moldura; llegada) y el barrido resuelve menos (4/14), sin abortos.
+- **Conclusion**: con obstaculos organicos la capa estrategica con profundidad no acelera la mision pero
+  aleja al dron del follaje de manera consistente; en citysim_pilot no se vio ese efecto (DistMin peor caso
+  0.10 m con depth, 1.89 m con off). Ninguna senal favorece al VLM. El default `off` es defendible por
+  costo; `depth` por margen en vegetacion densa. Medida limitada: DistMin solo ve el tercio central de la
+  camara frontal (los roces laterales no cuentan).
+
+# 2026-10-10 (a) - STRATEGIC_SOURCE=off por defecto; lote en TownSim (corredor arbolado) preparado
+
+- **`config/.env`**: `STRATEGIC_SOURCE=off` (antes `depth`); `DEADLOCK_STRATEGY=depth` se mantiene. Default
+  del codigo alineado (`vlm_strategic.py`, `flight_logger.py`). Fundamento (2026-10-08 g): avance
+  equivalente en las tres fuentes y `off` sin costo de capa ni regresiones de seguridad observadas (n = 5).
+  No es una mejora demostrada: 5/5 contra 3/5 no es significativo. El barrido con profundidad queda como
+  respaldo, sin evaluar todavia en vuelo con `off` (0 deadlocks en citysim_pilot).
+- **Tests**: el `conftest.py` raiz fija `STRATEGIC_SOURCE=depth` para el suite (mismo criterio que con
+  `DEADLOCK_STRATEGY=blind`: los tests no dependen del `.env`); test nuevo de la configuracion por defecto
+  (off + depth: solo el servicio de profundidad, sin VLM; off + blind: ningun servicio). 299 tests.
+- **`experiments/analyze_strategic_batch.py`**: `--t-ref`, `--marks`, `--min-diff-wp`; sin `route_plan/`
+  en el lote, el plan es el manifiesto.
+- **Lote `lote_townsim` (preparado)**: pregunta: en un escenario con obstaculos organicos, la capa
+  estrategica con profundidad aporta frente a `off`, y el barrido con profundidad resuelve los deadlocks?
+  - `townsim_ini` (8 WP; corredor peatonal arbolado a z=-10, bajo las copas), brazo `slm`, barrido
+    `depth` fijo, fuentes `off` y `depth` (vlm fuera: grilla AUC 0.53 y equivalente en citysim), semillas
+    1-5 con `--seed-jitter` (sin `start_pose`: jitter de +-1.5 m sobre WP_0, a 30 m), `--max-seconds 900
+    --max-cycles 5000` (el tiempo es el tope). 10 corridas, ~2.6 h.
+  - `--route-plan off`: se vuela el manifiesto validado a mano. El plan del VLM podria desviar la ruta
+    fuera del corredor (y anular la obstruccion que se quiere probar), y `townsim_calib.png` (6.5 px/m)
+    no se verifico registrado contra el mundo de AirSim como `citysim_ortho.png`.
+  - Referencia historica: produccion tier1 (`fd96bca4`, deep_vlm) 15/15 corridas al tope de 900 s, sin
+    completar; DistMin 0.001-0.80 m.
+  - **Regla de decision (fijada antes de correr)**: `depth` aporta frente a `off` (o al reves) si la mediana
+    del avance del plan a 900 s difiere en >= 1 WP (de 8) Y gana en >= 4 de 5 semillas emparejadas. Si no,
+    equivalentes en avance y se decide por costo y seguridad (colisiones, DistMin, deadlocks). El barrido se
+    juzga por su tasa de resolucion (`deep_scan_resolution_rate`) y si los deadlocks terminan en abort.
+  - Analisis: `python experiments/analyze_strategic_batch.py --out-dir ../airsim-runs/lote_townsim
+    --t-ref 900 --marks 300 600 900 --min-diff-wp 1`.
+
 # 2026-10-08 (g) - Lote de fuentes estrategicas: equivalentes en avance; sin capa estrategica, mas exito
 
 `airsim-runs/lote_estrategico/` (15 corridas, 21:23-23:21; `strategic_batch_report.md`,

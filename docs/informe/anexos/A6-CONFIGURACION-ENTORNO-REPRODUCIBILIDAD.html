@@ -1903,8 +1903,28 @@
 </tr>
 <tr>
 <td><code>DEADLOCK_STRATEGY</code></td>
-<td><code>"deep_vlm"</code></td>
-<td>Resolución de atascos: <code>"deep_vlm"</code> (barrido + VLM, cap. 5 §5.12) o <code>"blind"</code> (escape vertical sin VLM). Cualquier otro valor aborta el arranque.</td>
+<td><code>"depth"</code></td>
+<td>Resolución de atascos: <code>"depth"</code> (barrido juzgado por la profundidad estimada, cap. 5 §5.12), <code>"deep_vlm"</code> (barrido + VLM; ablación) o <code>"blind"</code> (escape vertical sin barrido). Cualquier otro valor aborta el arranque.</td>
+</tr>
+<tr>
+<td><code>STRATEGIC_SOURCE</code></td>
+<td><code>"depth"</code></td>
+<td>Fuente de la capa estratégica: <code>"depth"</code> (profundidad monocular estimada, cap. 5 §5.10.6), <code>"vlm"</code> (grilla del VLM) u <code>"off"</code> (sin capa). Con <code>depth</code>/<code>depth</code> el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 11 §11.6).</td>
+</tr>
+<tr>
+<td><code>DEPTH_MODEL</code></td>
+<td><code>depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf</code></td>
+<td>Red de profundidad métrica (~25 M parámetros, ~110 ms con la GPU compartida, ~440 MiB de VRAM). Se descarga de Hugging Face la primera vez.</td>
+</tr>
+<tr>
+<td><code>DEPTH_FREE_M</code></td>
+<td><code>15.0</code></td>
+<td>Un sector (o un rumbo del barrido) es libre si el percentil 5 de su profundidad estimada es ≥ este valor; igual a <code>VLM_SUBGOAL_DIST_M</code>.</td>
+</tr>
+<tr>
+<td><code>DEPTH_STRATEGIC_PERIOD_S</code></td>
+<td><code>1.0</code></td>
+<td>Período mínimo entre consultas de la capa estratégica con la profundidad (con el VLM rige <code>VLM_STRATEGIC_PERIOD_S</code>, 3 s).</td>
 </tr>
 <tr>
 <td><code>VLM_STRATEGIC_ENABLED</code></td>
@@ -1948,8 +1968,13 @@
 </tr>
 <tr>
 <td><code>ROUTE_PLAN_MODE</code></td>
-<td><code>off</code></td>
-<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>vlm</code>) o manifiesto tal cual (<code>off</code>). Desactivado en la versión final: los modelos evaluados no distinguen en el mapa una ruta por la calle de una sobre un edificio (cap. 4 §4.3.1).</td>
+<td><code>vlm</code></td>
+<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>vlm</code>) o manifiesto tal cual (<code>off</code>). Activado en la versión final con el juez por parches (AUC 0.81 en el banco, cap. 4 §4.3.1); requiere un mapa registrado con el mundo (CitySim). El lote de TownSim se voló con <code>--route-plan off</code>.</td>
+</tr>
+<tr>
+<td><code>ROUTE_JUDGE</code> / <code>ROUTE_PATCH_STEP_M</code> / <code>ROUTE_PATCH_M</code> / <code>ROUTE_PATCH_CONTEXT_M</code></td>
+<td><code>patches</code> / <code>8.0</code> / <code>16.0</code> / <code>48.0</code></td>
+<td>Juicio de cada candidata: parches cada 8 m, de 16 m con 48 m de contexto, clasificados por el VLM; la candidata se puntúa con la probabilidad media de «calle» (cap. 4 §4.3.1).</td>
 </tr>
 <tr>
 <td><code>ROUTE_RENDER</code></td>
@@ -2382,7 +2407,8 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <ol>
 <li>Ejecutar <code>startOllama.ps1</code> (raíz <code>D:\TesisMCD</code>, fuera del repositorio). El script lee el modelo de <code>config/.env</code>; reinicia Ollama con <code>OLLAMA_MODELS</code> apuntando a la carpeta de modelos de la aplicación, <code>OLLAMA_KEEP_ALIVE=-1</code> (el modelo no se descarga entre corridas) y <code>OLLAMA_CONTEXT_LENGTH=8192</code>; cierra los <code>llama-server</code> huérfanos (en Windows sobreviven al cierre de <code>ollama.exe</code> y retienen VRAM); descarga el GGUF base y crea el tag de 8 k si faltan, y precarga el modelo de vuelo:
    <div class="highlight"><pre><span></span><code><span class="n">powershell</span> <span class="n">-ExecutionPolicy</span> <span class="n">Bypass</span> <span class="o">-File</span> <span class="n">D</span><span class="p">:\</span><span class="n">TesisMCD</span><span class="p">\</span><span class="n">startOllama</span><span class="p">.</span><span class="n">ps1</span>
-</code></pre></div></li>
+</code></pre></div>
+   Con la configuración final (<code>STRATEGIC_SOURCE = depth</code>, <code>DEADLOCK_STRATEGY = depth</code>) el modelo solo se usa para el plan de ruta previo; si el lote corre con <code>--route-plan off</code>, Ollama puede quedar cerrado y su VRAM queda para Unreal.</li>
 <li>Verificar que el modelo quedó residente:
    <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:11434/api/ps
 </code></pre></div></li>

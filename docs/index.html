@@ -89,11 +89,23 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-10-02)</h2>
+        <h2>Actualizaciones Recientes (2026-10-10)</h2>
         <div class="card-grid">
           <div class="card">
+            <h4>Profundidad Monocular Estimada en el Lazo Lento</h4>
+            <p>La capa estratégica y el barrido de deadlock juzgan qué direcciones son volables con una red de profundidad monocular (Depth Anything V2 Metric Outdoor Small, ~25 M parámetros) que estima metros desde el mismo RGB de la cámara: un sector es libre si el percentil 5 de su profundidad es ≥ 15 m. ~110 ms por consulta en su propio hilo. No es el sensor de profundidad del simulador, que sigue fuera del lazo.</p>
+          </div>
+          <div class="card">
+            <h4>Banco de Prueba con el VLM a Bordo</h4>
+            <p>Con LFM2.5-VL-1.6B (Q4_K_M) en Ollama sobre la misma GPU que Unreal, el VLM no separa sectores volables de bloqueados (AUC 0.53) y declara transitables todos los rumbos del barrido; la profundidad estimada lo hace con AUC 0.83–0.87. La única señal útil del VLM está en el plan de ruta sobre el mapa cenital (AUC 0.81 con el juicio por parches).</p>
+          </div>
+          <div class="card">
+            <h4>Lotes de la Capa Estratégica</h4>
+            <p>CitySim (15 corridas) y el corredor arbolado de TownSim (10 corridas), regla de decisión fijada antes de correr: ninguna fuente (profundidad, VLM o sin capa) acelera la misión. En TownSim las 10 misiones se completan y la capa con profundidad mantiene al dron más lejos del follaje en las 5 semillas (10 s frente a 29 s a menos de 1 m). Configuración final: <code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>; el VLM no corre durante el vuelo.</p>
+          </div>
+          <div class="card">
             <h4>Plan de Ruta con el VLM sobre el Mapa</h4>
-            <p>Antes del despegue, y una sola vez por misión, cada tramo se compara contra rutas alternativas (la recta, dos en L y desvíos paralelos). Cada una se dibuja sobre el mapa cenital y el VLM juzga si va por la calle o por encima de los edificios. Se elige la aprobada de mayor probabilidad (leída de los <em>logprobs</em>) y sus vértices se insertan como waypoints <code>VIA_*</code>. Todas las corridas de un lote vuelan el mismo plan.</p>
+            <p>Antes del despegue, y una sola vez por misión, cada tramo se compara contra rutas alternativas (la recta, dos en L y desvíos paralelos). El VLM clasifica parches del mapa cenital a lo largo de cada candidata (calle, edificio, árboles, estacionamiento, autopista elevada) y gana la de mayor probabilidad media de «calle», leída de los <em>logprobs</em>; sus vértices se insertan como waypoints <code>VIA_*</code>. Todas las corridas de un lote vuelan el mismo plan.</p>
           </div>
           <div class="card">
             <h4>Mapa Cenital Registrado con el Simulador</h4>
@@ -105,27 +117,27 @@
           </div>
           <div class="card">
             <h4>Dos Lazos Desacoplados</h4>
-            <p>El lazo rápido (5 Hz: guiado, evasión por flujo óptico, <code>GIRAR_90</code>, detección de atasco) es el único que comanda velocidades. El VLM opera en un lazo lento y asíncrono: su inferencia (3–6 s, 15–30 ciclos) nunca detiene al dron en vuelo normal.</p>
+            <p>El lazo rápido (5 Hz: guiado, evasión por flujo óptico, <code>GIRAR_90</code>, detección de atasco) es el único que comanda velocidades. La capa estratégica opera en un lazo lento y asíncrono que nunca detiene al dron en vuelo normal.</p>
           </div>
           <div class="card">
-            <h4>Capa Estratégica del VLM Anclada a la Pose</h4>
-            <p>Cada 3 s (o de inmediato ante un muro), el VLM ve el fotograma frontal dividido en una grilla de 3×3 (los tercios de la foto) e indica qué sectores son volables: hacia los costados, por arriba o por abajo. La respuesta se convierte en una <strong>sub-meta en coordenadas del mundo</strong> anclada a la pose del fotograma: sigue siendo válida aunque el dron haya girado mientras el modelo pensaba. Se descarta si tiene más de 10 s, si cambió el waypoint o si ya quedó atrás.</p>
+            <h4>Capa Estratégica Anclada a la Pose</h4>
+            <p>Periódicamente (o de inmediato ante un muro), la fuente —profundidad estimada por defecto, o el VLM— juzga el fotograma frontal dividido en una grilla de 3×3 (los tercios de la foto) e indica qué sectores son volables: hacia los costados, por arriba o por abajo. La respuesta se convierte en una <strong>sub-meta en coordenadas del mundo</strong> anclada a la pose del fotograma: sigue siendo válida aunque el dron haya girado mientras se procesaba. Se descarta si tiene más de 10 s, si cambió el waypoint o si ya quedó atrás.</p>
           </div>
           <div class="card">
-            <h4>Barrido <code>deep_vlm</code> en Marco Mundo</h4>
-            <p>Ante un deadlock, el dron captura 4 rumbos; el VLM elige imágenes por número y el código asigna a cada una el yaw <strong>medido</strong> al capturarla. La salida es una sub-meta a 15 m hacia el rumbo transitable más cercano a la meta. Ante falla del modelo, escape determinista <code>GANAR_ALTURA</code> (o <code>GIRAR_90</code> sobre 30 m).</p>
+            <h4>Barrido de Deadlock en Marco Mundo</h4>
+            <p>Ante un deadlock, el dron captura 4 rumbos; la profundidad estimada (o el VLM, con <code>deep_vlm</code>) juzga cada imagen y el código asigna a cada una el yaw <strong>medido</strong> al capturarla. La salida es una sub-meta a 15 m hacia el rumbo transitable más cercano a la meta. Sin rumbo transitable o ante una falla, escape determinista <code>GANAR_ALTURA</code> (o <code>GIRAR_90</code> sobre 30 m).</p>
           </div>
           <div class="card">
-            <h4>El VLM Decide, las Reglas No lo Reescriben</h4>
-            <p>La respuesta del modelo se traduce a geometría y se aplica sin reglas deterministas encima; solo se descartan respuestas obsoletas o no parseables. Así, la comparación entre brazos mide al modelo y no a una capa de correcciones.</p>
+            <h4>La Fuente Decide, las Reglas No la Reescriben</h4>
+            <p>La respuesta de la red o del modelo se traduce a geometría y se aplica sin reglas deterministas encima; solo se descartan respuestas obsoletas o no parseables. Así, la comparación mide a la fuente y no a una capa de correcciones.</p>
           </div>
           <div class="card">
             <h4>Detección de Atasco de Dos Señales</h4>
             <p><code>StallDetector</code>: <em>dron trabado</em> (se ordenó avanzar ≥ 0.3 m/s y el dron no se movió durante 10 ciclos, nunca bajo el piso óptico de 4.5 m) y <em>sin progreso</em> (10 s sin acercarse 2 m al objetivo actual). El despegue no es un atasco.</p>
           </div>
           <div class="card">
-            <h4>Sin Canal de Profundidad en el Lazo</h4>
-            <p>Ni el grafo, ni <code>main.py</code>, ni <code>experiments/runner.py</code> leen la profundidad del simulador. La distancia mínima a obstáculo la mide un hilo de auditoría aislado, con su propia conexión al simulador, que no comparte nada con el grafo. Un test estático verifica ambas cosas: el sistema de control es estrictamente monocular.</p>
+            <h4>Sin Profundidad del Simulador en el Lazo</h4>
+            <p>Ni el grafo, ni <code>main.py</code>, ni <code>experiments/runner.py</code> leen la profundidad del simulador; la única profundidad del lazo es la estimada desde el RGB. La distancia mínima a obstáculo la mide un hilo de auditoría aislado, con su propia conexión al simulador, que no comparte nada con el grafo. Un test estático verifica ambas cosas: el sistema de control es estrictamente monocular.</p>
           </div>
         </div>
       </section>
@@ -149,10 +161,13 @@
           (<code>ObstacleField</code>) y estimación de <strong>Tiempo-a-Colisión (TTC)</strong> a partir de la
           divergencia del campo de flujo, alcanzando un área bajo la curva ROC de <strong>0.96–0.97</strong> en su
           validación frente a canales de profundidad de referencia. En la capa de decisión a bordo, un grafo de estados
-          (LangGraph) separa un lazo reactivo rápido de una capa estratégica asíncrona en la que un modelo de
-          visión-lenguaje pequeño (<strong>Qwen2.5-VL-3B</strong>, ejecutado localmente con decodificación estructurada
-          <code>json_schema</code>) propone sub-metas en coordenadas del mundo, ancladas a la pose del fotograma que
-          analizó, para tolerar la latencia de inferencia.
+          (LangGraph) separa un lazo reactivo rápido de una capa estratégica asíncrona que propone sub-metas en
+          coordenadas del mundo, ancladas a la pose del fotograma que analizó, para tolerar la latencia. La capa se
+          diseñó para un modelo de visión-lenguaje pequeño; medido contra etiquetas de referencia, el modelo a bordo
+          (<strong>LFM2.5-VL-1.6B</strong>, local, con decodificación estructurada <code>json_schema</code>) no
+          distingue direcciones volables de bloqueadas, y la configuración final usa una red de
+          <strong>profundidad monocular estimada</strong> desde el mismo RGB. El VLM queda en la planificación de
+          ruta sobre el mapa cenital, la única tarea en la que aporta una señal medible.
         </p>
         <div class="alert-box">
           <p>
@@ -196,8 +211,8 @@
         </p>
         <p>
           Antes del vuelo, la estación terrena también <strong>planifica la ruta con el VLM sobre el mapa cenital</strong>:
-          propone rutas alternativas para cada tramo, el modelo juzga cuáles van por la calle y los vértices de la elegida
-          se agregan al manifiesto. El mapa de CitySim se construye con capturas del propio simulador, de modo que coincide
+          propone rutas alternativas para cada tramo, el modelo clasifica parches del mapa a lo largo de cada una y los
+          vértices de la más «calle» se agregan al manifiesto. El mapa de CitySim se construye con capturas del propio simulador, de modo que coincide
           con el mundo de vuelo.
         </p>
 
@@ -216,20 +231,21 @@
             de barridos y maniobras comprometidas, el contacto no visible al flujo (<code>imu_contact</code>,
             <code>blind_wall</code>), el piso óptico, el atasco (<code>StallDetector</code>) y el TTC: guiado nominal,
             evasión lateral o <code>GIRAR_90</code> ante un muro que ocupa el campo visual.</li>
-          <li><strong>Capa estratégica asíncrona del VLM:</strong> Consulta periódica (3 s) e inmediata tras un
-            <code>GIRAR_90</code>. El modelo indica qué sectores de una grilla de 3×3 del fotograma son volables; la
-            respuesta se convierte en una sub-meta en el mundo que el <code>WaypointTracker</code> persigue con el guiado
-            normal. El dron nunca frena a esperarla.</li>
-          <li><strong>Resolución de deadlock (<code>deep_vlm</code>):</strong> Barrido panorámico de 4 rumbos con yaw
-            medido por imagen y una sola consulta al VLM; si el modelo falla (timeout, formato inválido, rotación
-            imposible), escape vertical determinista.</li>
+          <li><strong>Capa estratégica asíncrona:</strong> Consulta periódica e inmediata tras un
+            <code>GIRAR_90</code>. La fuente (<code>STRATEGIC_SOURCE</code>: profundidad estimada por defecto, VLM u
+            <code>off</code>) indica qué sectores de una grilla de 3×3 del fotograma son volables; la respuesta se
+            convierte en una sub-meta en el mundo que el <code>WaypointTracker</code> persigue con el guiado normal. El
+            dron nunca frena a esperarla.</li>
+          <li><strong>Resolución de deadlock (<code>depth</code>):</strong> Barrido panorámico de 4 rumbos con yaw
+            medido por imagen, juzgados por la profundidad estimada (o por el VLM con <code>deep_vlm</code>); sin rumbo
+            transitable o ante una falla (timeout, formato inválido, rotación imposible), escape vertical determinista.</li>
           <li><strong>Decodificación Estructurada y Parser Estricto:</strong> Cada modo de consulta tiene su esquema
             <code>json_schema</code>; una respuesta que no lo cumple no produce ninguna acción ni un valor por defecto.</li>
           <li><strong>Fuente Única de Verdad Cinemática (<code>action_to_command</code>):</strong> Centraliza la
             conversión de macro-acciones simbólicas a velocidades lineales y tasa de guiñada, asegurando simetría e
             invariancia física en todos los brazos de control.</li>
           <li><strong>Tres Brazos Experimentales Comparables:</strong> Evaluación estandarizada entre el brazo
-            <code>slm</code> (lazo rápido + VLM), la máquina de estados <code>fsm</code> y el control reactivo
+            <code>slm</code> (lazo rápido + lazo lento), la máquina de estados <code>fsm</code> y el control reactivo
             <code>reactive</code> bajo idéntico espacio de acciones y percepción; la estrategia <code>blind</code>
             ofrece el contraste sin VLM en ningún punto.</li>
         </ul>
@@ -237,7 +253,7 @@
         <figure style="margin: 28px 0; background-color: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;">
           <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-0930 grafo_control.png" alt="Grafo de control" style="width: 100%; height: auto; display: block; max-height: 600px; object-fit: contain;">
           <figcaption style="padding: 16px; border-top: 1px solid var(--rule); text-align: left; color: var(--muted); font-size: 13px;">
-            <strong>Grafo de control:</strong> el lazo rápido es el único que comanda velocidades; el lazo lento consulta al VLM de forma asíncrona y devuelve sub-metas en coordenadas del mundo, que el bucle externo inserta en el <code>WaypointTracker</code>.
+            <strong>Grafo de control:</strong> el lazo rápido es el único que comanda velocidades; el lazo lento consulta a su fuente (hoy, la profundidad estimada) de forma asíncrona y devuelve sub-metas en coordenadas del mundo, que el bucle externo inserta en el <code>WaypointTracker</code>.
           </figcaption>
         </figure>
 
@@ -432,18 +448,18 @@
           <div class="timeline-item current">
             <div class="timeline-badge"></div>
             <div class="timeline-date">
-              <span>Julio - Septiembre 2026</span>
+              <span>Julio - Octubre 2026</span>
               <span class="tag">Finalización</span>
             </div>
             <div class="timeline-content">
               <h4>Documentación Final y Validación (Actual)</h4>
-              <p>Redacción de informe, documentación técnica completa, publicación de resultados y preparación para defensa. Capa estratégica del VLM anclada a la pose, resolución de deadlocks en marco mundo, herramientas de auditoría post-vuelo y saneamiento de la estación de control en tierra.</p>
+              <p>Redacción de informe, documentación técnica completa, publicación de resultados y preparación para defensa. Capa estratégica anclada a la pose, resolución de deadlocks en marco mundo, herramientas de auditoría post-vuelo, saneamiento de la estación de control en tierra, banco de prueba del VLM a bordo y profundidad monocular estimada en el lazo lento.</p>
             </div>
           </div>
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-09-30):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). Grafo de control con dos lazos desacoplados, capa estratégica del VLM anclada a la pose y <code>DEADLOCK_STRATEGY=deep_vlm</code> por defecto; 272 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad. Manifiesto <code>citysim_pilot</code> con <code>WP_0_SUR</code> para evitar la autopista elevada. Informe actualizado (caps. 00–13) con seis modos de falla documentados y nueve anexos (A1–A9). Pendiente: re-ejecución de las pruebas del capítulo 11 y lotes con obstrucción D, E y F (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citysim_pilot</code>; 4 celdas × 5 semillas cada uno).</p>
+          <p><strong>Estado actual (2026-10-10):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). VLM local (LFM2.5-VL-1.6B Q4_K_M en Ollama, misma GPU que Unreal) con banco de prueba a bordo: sin señal en primera persona (AUC 0.53), señal útil en el plan de ruta sobre el mapa (AUC 0.81). Capa estratégica y barrido con profundidad monocular estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>); dos lotes de la capa estratégica (CitySim, 15 corridas; corredor arbolado de TownSim, 10 corridas, 10/10 misiones completas). 299 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad del simulador. Pendiente: comparación entre brazos con el sistema final (lotes D, E y F).</p>
         </div>
       </section>
 
@@ -480,10 +496,16 @@
                 <td>Evaluación de colisión calibrada por curvas ROC y ordenamiento monótono de riesgo.</td>
               </tr>
               <tr>
-                <td><strong>Capa Estratégica (VLM)</strong></td>
-                <td>Qwen2.5-VL-3B-Instruct (GGUF Q4_K_M)</td>
-                <td>Modelo de visión-lenguaje local ejecutado en LM Studio con salida restringida
-                  <code>json_schema</code>; propone sub-metas en el mundo y resuelve deadlocks por barrido.</td>
+                <td><strong>Capa Estratégica y Barrido</strong></td>
+                <td>Depth Anything V2 Metric Outdoor Small (~25 M)</td>
+                <td>Profundidad monocular estimada desde el RGB, en su propio hilo (~110 ms con la GPU compartida);
+                  decide qué sectores y rumbos son volables y propone sub-metas en el mundo.</td>
+              </tr>
+              <tr>
+                <td><strong>Plan de Ruta (VLM)</strong></td>
+                <td>LFM2.5-VL-1.6B (GGUF Q4_K_M, contexto 8k)</td>
+                <td>Modelo de visión-lenguaje local en Ollama, en la misma GPU que Unreal, con salida restringida
+                  <code>json_schema</code>; clasifica parches del mapa cenital antes del vuelo.</td>
               </tr>
               <tr>
                 <td><strong>Ground Control Station</strong></td>

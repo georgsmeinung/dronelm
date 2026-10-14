@@ -39,7 +39,8 @@ VLM_STRATEGIC_ENABLED = os.getenv("VLM_STRATEGIC_ENABLED", "true").lower() == "t
 VLM_STRATEGIC_PERIOD_S = float(os.getenv("VLM_STRATEGIC_PERIOD_S", "3.0"))
 # 2026-10-08: fuente de "libre/bloqueado" por sector. "depth" (default): profundidad estimada desde el RGB
 # (src/agents/depth_client.py); "vlm": la grilla del VLM; "off": sin capa estrategica. En el banco v2 la
-# profundidad separa sectores libres de bloqueados (AUC 0.83) y el VLM no (0.53).
+# profundidad separa sectores libres de bloqueados (AUC 0.83) y el VLM no (0.53). En vuelo ninguna fuente
+# mejora el avance frente a off; depth da mas margen en vegetacion densa (lote_townsim, 2026-10-10).
 STRATEGIC_SOURCE = os.getenv("STRATEGIC_SOURCE", "depth").lower()
 if STRATEGIC_SOURCE not in ("depth", "vlm", "off"):
     raise ValueError(f"STRATEGIC_SOURCE={STRATEGIC_SOURCE!r} no soportada: usar depth, vlm u off.")

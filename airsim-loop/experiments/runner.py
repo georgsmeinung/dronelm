@@ -225,8 +225,12 @@ def run_one(
             print(f"[runner] FollowCam deshabilitada: {exc}")
             follow_recorder = None
 
-    # Healthcheck del SLM antes de empezar (G1.2).
-    if arm == "slm":
+    # Healthcheck del SLM antes de empezar (G1.2). Solo si alguna capa del vuelo usa el VLM (2026-10-10): con
+    # STRATEGIC_SOURCE y DEADLOCK_STRATEGY en depth/off/blind el VLM no corre en vuelo y Ollama puede estar
+    # cerrado (libera ~1 GB de VRAM para Unreal).
+    vlm_in_flight = (os.getenv("STRATEGIC_SOURCE", "depth") == "vlm"
+                     or os.getenv("DEADLOCK_STRATEGY", "depth") == "deep_vlm")
+    if arm == "slm" and vlm_in_flight:
         local_llm_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434/v1")
         try:
             import httpx

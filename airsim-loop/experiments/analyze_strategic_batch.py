@@ -20,6 +20,7 @@ Regla de decision (fijada antes de correr el lote; ver CHANGELOG 2026-10-08 f):
 
 Uso:
     python experiments/analyze_strategic_batch.py --out-dir ../airsim-runs/lote_estrategico
+    python experiments/analyze_strategic_batch.py --out-dir ../airsim-runs/lote_townsim         --t-ref 900 --marks 300 600 900 --min-diff-wp 1
 """
 from __future__ import annotations
 
@@ -40,8 +41,14 @@ MIN_SEEDS_WIN = 4
 CELL_RE = re.compile(r"strat_(?P<src>[a-z]+)__(?P<dl>[a-z_]+)$")
 
 
+FLIGHTPLANS_DIR = Path(__file__).resolve().parents[2] / "airsim-plan" / "missions" / "flightplans"
+
+
 def plan_labels(out_dir: Path, scenario: str) -> List[str]:
+    """Plan volado: el del VLM si el lote lo calculo (route_plan/), si no el manifiesto (--route-plan off)."""
     p = out_dir / scenario / "route_plan" / f"{scenario}.json"
+    if not p.exists():
+        p = FLIGHTPLANS_DIR / f"{scenario}.json"
     return [w["label"] for w in json.loads(p.read_text(encoding="utf-8"))["waypoints"]]
 
 
@@ -91,7 +98,7 @@ def collect(out_dir: Path) -> List[Dict[str, Any]]:
             "duration_s": s.get("duration_s"), "success": bool(s.get("success")), "collisions": s.get("collisions"),
             "dist_min_m": s.get("min_obstacle_dist_m"), "deadlocks": s.get("deadlock_events"),
             "path_m": s.get("path_length_m"), "lat_ms": strategic_latency_ms(run_dir),
-            **{f"wp@{int(t)}": reached_at(prog, t) for t in T_MARKS_S},
+            **{f"wp@{int(t)}": reached_at(prog, t) for t in sorted(set(T_MARKS_S) | {T_REF_S})},
             "wp_final": max(prog.values(), default=0),
         })
     return runs
@@ -125,7 +132,7 @@ def report(runs: List[Dict[str, Any]]) -> str:
         for r in rs:
             by[r["source"]].append(r)
         lines += [f"## {scenario} (plan de {plan_len} waypoints)", "",
-                  "| Fuente | n | Plan a 150 / 300 / 400 s (mediana) | Final (mediana) | Exito | Colisiones | "
+                  f"| Fuente | n | Plan a {' / '.join(str(int(t)) for t in T_MARKS_S)} s (mediana) | Final (mediana) | Exito | Colisiones | "
                   "DistMin mediana | Deadlocks (mediana) | Latencia capa |", "|---|---:|---|---:|---:|---:|---:|---:|---:|"]
         for src in sorted(by):
             g = by[src]
@@ -157,19 +164,24 @@ def report(runs: List[Dict[str, Any]]) -> str:
                 pv = _pvalues([sa[s] for s in common], [sb[s] for s in common], paired=True)
                 lines.append(f"- {a} vs {b}: diferencia de medianas {diff:+.1f} WP; gana {a} en {wins_a}, {b} en {wins_b} "
                              f"de {len(common)} semillas -> {v} ({pv})")
-        lines += ["", "| Fuente | Semilla | Plan a 150/300/400 s | Final | Exito | Colisiones | DistMin | Deadlocks | Corrida |",
+        lines += ["", f"| Fuente | Semilla | Plan a {'/'.join(str(int(t)) for t in T_MARKS_S)} s | Final | Exito | Colisiones | DistMin | Deadlocks | Corrida |",
                   "|---|---:|---|---:|---|---:|---:|---:|---|"]
         for r in sorted(rs, key=lambda r: (r["source"], r["seed"])):
-            lines.append(f"| {r['source']} | {r['seed']} | {r['wp@150']}/{r['wp@300']}/{r['wp@400']} | {r['wp_final']} | "
+            lines.append(f"| {r['source']} | {r['seed']} | {'/'.join(str(r[f'wp@{int(t)}']) for t in T_MARKS_S)} | {r['wp_final']} | "
                          f"{'si' if r['success'] else 'no'} | {r['collisions']} | {r['dist_min_m']} | {r['deadlocks']} | {r['run']} |")
         lines.append("")
     return "\n".join(lines)
 
 
 def main() -> None:
+    global T_REF_S, T_MARKS_S, MIN_DIFF_WP
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--t-ref", type=float, default=T_REF_S, help="Tiempo de referencia de la regla (s).")
+    ap.add_argument("--marks", type=float, nargs=3, default=list(T_MARKS_S), help="Tres cortes de avance (s).")
+    ap.add_argument("--min-diff-wp", type=int, default=MIN_DIFF_WP)
     args = ap.parse_args()
+    T_REF_S, T_MARKS_S, MIN_DIFF_WP = args.t_ref, tuple(args.marks), args.min_diff_wp
     out_dir = Path(args.out_dir)
     runs = collect(out_dir)
     if not runs:

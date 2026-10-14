@@ -627,15 +627,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#510-capa-estrategica-del-vlm-vlm_strategicpy" class="md-nav__link">
+  <a href="#510-capa-estrategica-vlm_strategicpy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.10 Capa estratégica del VLM (vlm_strategic.py)
+        5.10 Capa estratégica (vlm_strategic.py)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="5.10 Capa estratégica del VLM (vlm_strategic.py)">
+    <nav class="md-nav" aria-label="5.10 Capa estratégica (vlm_strategic.py)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -687,6 +687,28 @@
     <span class="md-ellipsis">
       
         5.10.5 DeliberationService
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5106-fuente-por-defecto-profundidad-monocular-estimada-depth_clientpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.10.6 Fuente por defecto: profundidad monocular estimada (depth_client.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5107-por-que-la-profundidad-y-no-el-vlm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.10.7 Por qué la profundidad y no el VLM
       
     </span>
   </a>
@@ -788,10 +810,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5154-sub-metas-del-vlm" class="md-nav__link">
+  <a href="#5154-sub-metas-del-lazo-lento" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.15.4 Sub-metas del VLM
+        5.15.4 Sub-metas del lazo lento
       
     </span>
   </a>
@@ -1599,15 +1621,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#510-capa-estrategica-del-vlm-vlm_strategicpy" class="md-nav__link">
+  <a href="#510-capa-estrategica-vlm_strategicpy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.10 Capa estratégica del VLM (vlm_strategic.py)
+        5.10 Capa estratégica (vlm_strategic.py)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="5.10 Capa estratégica del VLM (vlm_strategic.py)">
+    <nav class="md-nav" aria-label="5.10 Capa estratégica (vlm_strategic.py)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1659,6 +1681,28 @@
     <span class="md-ellipsis">
       
         5.10.5 DeliberationService
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5106-fuente-por-defecto-profundidad-monocular-estimada-depth_clientpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.10.6 Fuente por defecto: profundidad monocular estimada (depth_client.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5107-por-que-la-profundidad-y-no-el-vlm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.10.7 Por qué la profundidad y no el VLM
       
     </span>
   </a>
@@ -1760,10 +1804,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5154-sub-metas-del-vlm" class="md-nav__link">
+  <a href="#5154-sub-metas-del-lazo-lento" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5.15.4 Sub-metas del VLM
+        5.15.4 Sub-metas del lazo lento
       
     </span>
   </a>
@@ -1850,20 +1894,20 @@
 </code></pre></div>
 <p><code>navigate</code> es un <strong>único nodo</strong> que contiene la política. Los comportamientos concretos (guiado, evasión lateral, giro de 90°, escape vertical, barrido panorámico) son funciones que <code>navigate</code> invoca, no nodos del grafo.</p>
 <p><img src="2026-0930 grafo_control.png"/></p>
-<p><em>Figura 5.1. Grafo de control. El lazo rápido (izquierda) es el único que comanda velocidades; el lazo lento (derecha) consulta al VLM de forma asíncrona y devuelve sub-metas en coordenadas del mundo, que el bucle externo inserta en el <code>WaypointTracker</code>.</em></p>
+<p><em>Figura 5.1. Grafo de control. El lazo rápido (izquierda) es el único que comanda velocidades; el lazo lento (derecha) consulta de forma asíncrona a su fuente —en la configuración final, la red de profundidad estimada (§5.10.6); en la versión de la figura, el VLM— y devuelve sub-metas en coordenadas del mundo, que el bucle externo inserta en el <code>WaypointTracker</code>.</em></p>
 <h3 id="512-dos-lazos-desacoplados">5.1.2 Dos lazos desacoplados<a class="headerlink" href="#512-dos-lazos-desacoplados" title="Permanent link">&para;</a></h3>
 <p>La organización responde a un hecho medido: la inferencia del VLM tarda entre 3 y 6 s (mediana de 3.8 s sobre 185 consultas, §8.6), es decir, entre 15 y 30 ciclos del lazo. Cualquier respuesta expresada <strong>en el marco del cuerpo</strong> del dron («el frente está libre», «evadir a la izquierda») describe un fotograma que ya no existe cuando la respuesta llega: el dron giró y avanzó varios metros. El capítulo 9 (§9.8) documenta las fallas que produce usar una respuesta así: maniobras hacia el lado equivocado y respuestas que llegan tarde y se descartan.</p>
 <p>El sistema separa entonces dos escalas de tiempo:</p>
 <ol>
 <li><strong>Lazo rápido (5 Hz).</strong> Guiado al waypoint, evasión por flujo óptico, reacción a contacto y detección de atasco. Es el <strong>único</strong> que comanda velocidades y el responsable de todo lo inminente.</li>
-<li><strong>Lazo lento (VLM, asíncrono).</strong> El modelo mira un fotograma y responde una pregunta cuya respuesta es <strong>válida en el mundo</strong>, no en el cuerpo: por cuál dirección se puede volar hacia la meta. Cada pedido guarda la pose del fotograma (ancla); la respuesta se traduce a una <strong>sub-meta en coordenadas del mundo</strong> con esa pose, de modo que sigue siendo correcta aunque el dron haya girado mientras el modelo pensaba (§5.10).</li>
+<li><strong>Lazo lento (asíncrono).</strong> Una fuente de percepción mira un fotograma y responde una pregunta cuya respuesta es <strong>válida en el mundo</strong>, no en el cuerpo: por cuál dirección se puede volar hacia la meta. Cada pedido guarda la pose del fotograma (ancla); la respuesta se traduce a una <strong>sub-meta en coordenadas del mundo</strong> con esa pose, de modo que sigue siendo correcta aunque el dron haya girado mientras la fuente procesaba (§5.10). La fuente es configurable (<code>STRATEGIC_SOURCE</code>): el diseño se pensó para el VLM, y la configuración final usa una red de profundidad monocular estimada desde el mismo RGB (§5.10.6), porque en el banco de prueba el VLM no separó sectores libres de bloqueados (cap. 11, §11.0).</li>
 </ol>
 <p>El patrón es el de las arquitecturas de capas para robots móviles, con un controlador reactivo de respuesta inmediata y una capa deliberativa que opera a otra escala temporal (<a href="13-REFERENCIAS.html#ref-gat-1998">Gat, 1998</a>), en la que las capas inferiores conservan siempre la capacidad de actuar (<a href="13-REFERENCIAS.html#ref-brooks-1986">Brooks, 1986</a>). La particularidad es la interfaz entre ambas: la capa lenta no emite acciones sino <strong>metas geométricas ancladas</strong>, que la capa rápida persigue con su guiado normal.</p>
 <p>Tres principios de diseño acompañan esta separación:</p>
 <ul>
-<li><strong>El VLM decide; las reglas no lo reescriben.</strong> No hay reglas deterministas que corrijan la respuesta del modelo: una capa de reglas sobre la decisión del modelo haría que la comparación entre brazos midiera esas reglas y no al modelo (cap. 9, §9.8.6). El fallback determinista existe solo ante <strong>falla</strong> del modelo: timeout, formato inválido o rotación imposible durante un barrido.</li>
-<li><strong>El dron nunca espera al VLM en vuelo normal.</strong> La capa estratégica no frena al vehículo; solo el barrido de resolución de atasco (§5.12) mantiene al dron en el lugar, porque ese es justamente el momento en que avanzar ya no es posible.</li>
-<li><strong>Sin profundidad del simulador.</strong> Ni el grafo, ni <code>main.py</code>, ni <code>experiments/runner.py</code> leen el canal de profundidad de AirSim, ni para control ni como métrica (§5.16).</li>
+<li><strong>La fuente decide; las reglas no la reescriben.</strong> No hay reglas deterministas que corrijan la respuesta de la fuente: una capa de reglas sobre su decisión haría que la comparación entre brazos midiera esas reglas y no a la fuente (cap. 9, §9.8.6). El fallback determinista existe solo ante <strong>falla</strong>: timeout, formato inválido o rotación imposible durante un barrido.</li>
+<li><strong>El dron nunca espera al lazo lento en vuelo normal.</strong> La capa estratégica no frena al vehículo; solo el barrido de resolución de atasco (§5.12) mantiene al dron en el lugar, porque ese es justamente el momento en que avanzar ya no es posible.</li>
+<li><strong>Sin profundidad del simulador.</strong> Ni el grafo, ni <code>main.py</code>, ni <code>experiments/runner.py</code> leen el canal de profundidad de AirSim, ni para control ni como métrica (§5.16). La profundidad <strong>estimada</strong> desde el RGB de la cámara (§5.10.6) sí se usa: equivale a una red a bordo de un dron sin sensor de profundidad.</li>
 </ul>
 <h2 id="52-el-estado-compartido-dronestate">5.2 El estado compartido: <code>DroneState</code><a class="headerlink" href="#52-el-estado-compartido-dronestate" title="Permanent link">&para;</a></h2>
 <p><code>DroneState</code> (<code>graph.py</code>) es el único canal de comunicación entre nodos y entre el grafo y el bucle externo.</p>
@@ -2095,7 +2139,7 @@
 <li><strong>El objetivo se identifica por su etiqueta y posición, no por su índice.</strong> Una sub-meta del VLM se inserta en el mismo índice que el waypoint al que precede (§5.15.4); identificar el objetivo por índice heredaría la «mejor distancia» del objetivo anterior y dispararía un deadlock falso 10 s después de cada sub-meta.</li>
 </ul>
 <h3 id="532-pasos-previos-y-orden-de-evaluacion">5.3.2 Pasos previos y orden de evaluación<a class="headerlink" href="#532-pasos-previos-y-orden-de-evaluacion" title="Permanent link">&para;</a></h3>
-<p><strong>Pasos previos (cada ciclo):</strong> <code>StallDetector.update()</code> y <code>StrategicLayer.tick()</code> (capa estratégica del VLM, §5.10). El segundo nunca comanda velocidades: envía un pedido si corresponde, o procesa una respuesta y deposita una sub-meta en <code>inject_corner</code>.</p>
+<p><strong>Pasos previos (cada ciclo):</strong> <code>StallDetector.update()</code> y <code>StrategicLayer.tick()</code> (capa estratégica, §5.10; no se ejecuta con <code>STRATEGIC_SOURCE = off</code>). El segundo nunca comanda velocidades: envía un pedido si corresponde, o procesa una respuesta y deposita una sub-meta en <code>inject_corner</code>.</p>
 <table>
 <thead>
 <tr>
@@ -2152,7 +2196,7 @@
 <td>7</td>
 <td>TTC central ≤ <code>TTC_EVASION_THRESHOLD</code> (3.2 s), o centro bloqueado con TTC ≤ <code>TTC_SAFE_THRESHOLD</code> (4.6 s)</td>
 <td>Si <code>blocked_fraction &gt; FOV_BLOCKED_THRESHOLD</code> (0.6): <code>GIRAR_90</code> hacia el lado del waypoint <strong>y</strong> consulta inmediata a la capa estratégica (§5.9); si no: <code>evasive_node</code></td>
-<td>Peligro frontal: el lazo rápido esquiva; el rodeo lo decide el VLM.</td>
+<td>Peligro frontal: el lazo rápido esquiva; el rodeo lo decide la capa estratégica.</td>
 </tr>
 <tr>
 <td>7b</td>
@@ -2174,8 +2218,8 @@
 <h3 id="534-resolucion-de-deadlock-_deadlock_resolve">5.3.4 Resolución de deadlock (<code>_deadlock_resolve</code>)<a class="headerlink" href="#534-resolucion-de-deadlock-_deadlock_resolve" title="Permanent link">&para;</a></h3>
 <p>Al entrar, <code>_deadlock_resolve</code> cancela cualquier consulta estratégica en vuelo (el barrido es más reciente y su sub-meta no debe ser pisada por una respuesta más vieja) e incrementa <code>_deadlock_cycles</code>. Luego:</p>
 <ol>
-<li><strong><code>DEADLOCK_STRATEGY = deep_vlm</code> (default):</strong> ejecuta un paso de <code>deep_scan_cycle()</code> (§5.12). Mientras el barrido gira, se asienta o espera al VLM, retorna sin más. Cuando el barrido se resuelve, reinicia el <code>StallDetector</code> y el bucle externo reinicia el contador del tracker (<code>_escape_reset</code>).</li>
-<li><strong>Sin resolución del VLM</strong> (estrategia <code>blind</code>, o el barrido falló por watchdog, formato inválido o rotación imposible): escape determinista <code>GANAR_ALTURA</code> durante <code>ESCAPE_MANEUVER_DURATION_S</code> (1.6 s); si la altitud ya supera <code>MAX_ESCAPE_ALT_M</code> (30 m), <code>GIRAR_90</code> hacia el waypoint. Se registra un <code>_deadlock_event</code> con <code>fell_back_to_blind = True</code>.</li>
+<li><strong><code>DEADLOCK_STRATEGY = depth</code> (default) o <code>deep_vlm</code>:</strong> ejecuta un paso de <code>deep_scan_cycle()</code> (§5.12). Mientras el barrido gira, se asienta o espera el juicio de los rumbos (red de profundidad o VLM), retorna sin más. Cuando el barrido se resuelve, reinicia el <code>StallDetector</code> y el bucle externo reinicia el contador del tracker (<code>_escape_reset</code>).</li>
+<li><strong>Sin resolución del barrido</strong> (estrategia <code>blind</code>, el barrido no encontró un rumbo transitable, o falló por watchdog, formato inválido o rotación imposible): escape determinista <code>GANAR_ALTURA</code> durante <code>ESCAPE_MANEUVER_DURATION_S</code> (1.6 s); si la altitud ya supera <code>MAX_ESCAPE_ALT_M</code> (30 m), <code>GIRAR_90</code> hacia el waypoint. Se registra un <code>_deadlock_event</code> con <code>fell_back_to_blind = True</code>.</li>
 </ol>
 <p><code>GANAR_ALTURA</code> es el escape determinista porque, en las corridas de diagnóstico sobre <code>citysim_pilot</code>, fue la única maniobra que liberó al dron de una estructura en la que había quedado apoyado (una cornisa); un retroceso (<code>RETROCEDER</code>), en cambio, tuvo un avance mediano negativo hacia el waypoint (cap. 9, §9.8.6). Por eso el lazo no emite <code>RETROCEDER</code>.</p>
 <h2 id="54-nodo-capture">5.4 Nodo <code>capture</code><a class="headerlink" href="#54-nodo-capture" title="Permanent link">&para;</a></h2>
@@ -2198,13 +2242,14 @@
 <p>Compara la ocupación de los sectores laterales del <code>ObstacleField</code> y elige <code>EVADIR_IZQUIERDA</code> o <code>EVADIR_DERECHA</code> hacia el menos ocupado (a igualdad, el de mayor TTC), con velocidad de evasión agresiva (<code>vx</code> = 1.2 m/s). <code>action_to_command()</code> fija un <code>target_yaw</code> redondeado al múltiplo de 90° más cercano (<code>_manhattan_snap_yaw</code>), adecuado a la cuadrícula urbana. La maniobra se compromete en <code>active_maneuver</code> y <code>navigate</code> la continúa (regla 2).</p>
 <h2 id="59-giro-de-90-girar_90">5.9 Giro de 90° (<code>GIRAR_90</code>)<a class="headerlink" href="#59-giro-de-90-girar_90" title="Permanent link">&para;</a></h2>
 <p><strong>Activación:</strong> regla 7, cuando <code>blocked_fraction &gt; FOV_BLOCKED_THRESHOLD</code> (0.6): el campo de visión está tan obstruido que una corrección lateral no tiene sentido.</p>
-<p>Gira 90° sin traslación (<code>yaw_rate</code> ±20°/s, <code>target_yaw</code> redondeado a la cuadrícula) <strong>hacia el lado del waypoint</strong>, durante <code>GIRAR90_DURATION_S</code> (1 s). En el mismo ciclo, <code>navigate</code> llama a <code>StrategicLayer.expedite()</code> y vuelve a ejecutar <code>tick()</code>: si la capa estratégica no tiene un pedido en vuelo y la meta está dentro del campo visual, el fotograma que ve el muro se envía de inmediato al VLM, sin esperar el período de 3 s. Así el rodeo del edificio lo decide el modelo con la imagen que justamente lo motiva.</p>
-<h2 id="510-capa-estrategica-del-vlm-vlm_strategicpy">5.10 Capa estratégica del VLM (<code>vlm_strategic.py</code>)<a class="headerlink" href="#510-capa-estrategica-del-vlm-vlm_strategicpy" title="Permanent link">&para;</a></h2>
-<p><strong>Archivos:</strong> <code>src/agents/vlm_strategic.py</code> (<code>StrategicLayer</code>), <code>src/agents/vlm_client.py</code> (consulta), <code>src/agents/deliberation_service.py</code> (hilo worker). La capa no es un nodo del grafo: <code>navigate</code> llama a <code>StrategicLayer.tick(state)</code> una vez por ciclo.</p>
+<p>Gira 90° sin traslación (<code>yaw_rate</code> ±20°/s, <code>target_yaw</code> redondeado a la cuadrícula) <strong>hacia el lado del waypoint</strong>, durante <code>GIRAR90_DURATION_S</code> (1 s). En el mismo ciclo, <code>navigate</code> llama a <code>StrategicLayer.expedite()</code> y vuelve a ejecutar <code>tick()</code>: si la capa estratégica no tiene un pedido en vuelo y la meta está dentro del campo visual, el fotograma que ve el muro se envía de inmediato a la fuente, sin esperar el período. Así el rodeo del edificio se decide con la imagen que justamente lo motiva.</p>
+<h2 id="510-capa-estrategica-vlm_strategicpy">5.10 Capa estratégica (<code>vlm_strategic.py</code>)<a class="headerlink" href="#510-capa-estrategica-vlm_strategicpy" title="Permanent link">&para;</a></h2>
+<p><strong>Archivos:</strong> <code>src/agents/vlm_strategic.py</code> (<code>StrategicLayer</code>), <code>src/agents/vlm_client.py</code> (consulta al VLM), <code>src/agents/depth_client.py</code> y <code>src/perception/depth_estimator.py</code> (consulta a la red de profundidad), <code>src/agents/deliberation_service.py</code> (hilo worker). La capa no es un nodo del grafo: <code>navigate</code> llama a <code>StrategicLayer.tick(state)</code> una vez por ciclo.</p>
+<p><strong>Fuente (<code>STRATEGIC_SOURCE</code>).</strong> La pregunta de la capa —qué sectores de una grilla 3×3 están libres— la puede responder el VLM (<code>vlm</code>) o la red de profundidad estimada (<code>depth</code>, default); con <code>off</code> la capa no se crea. Las dos fuentes devuelven la misma estructura (<code>{"sectores": {celda: libre|bloqueado}}</code>), de modo que el ancla, la traducción a sub-metas y las validaciones de §5.10.3 son las mismas. Las subsecciones §5.10.1–§5.10.5 describen el diseño original con el VLM; §5.10.6, la fuente por defecto, y §5.10.7, la evidencia que llevó a elegirla.</p>
 <h3 id="5101-cuando-se-consulta">5.10.1 Cuándo se consulta<a class="headerlink" href="#5101-cuando-se-consulta" title="Permanent link">&para;</a></h3>
 <p><code>tick()</code> envía un pedido solo si se cumplen todas las condiciones:</p>
 <ul>
-<li>pasó <code>VLM_STRATEGIC_PERIOD_S</code> (3 s) desde el último pedido, o la regla 7 llamó a <code>expedite()</code>;</li>
+<li>pasó el período desde el último pedido —<code>VLM_STRATEGIC_PERIOD_S</code> (3 s) con el VLM, <code>DEPTH_STRATEGIC_PERIOD_S</code> (1 s) con la profundidad, que tarda ~0.1 s—, o la regla 7 llamó a <code>expedite()</code>;</li>
 <li>no hay barrido en curso ni pedido de barrido pendiente (comparten la cola del servicio);</li>
 <li>altitud ≥ <code>VLM_STRATEGIC_MIN_ALT_M</code> (8 m);</li>
 <li>el waypoint real está a más de <code>VLM_NEAR_WP_M</code> (8 m) en horizontal: más cerca, el guiado directo alcanza, y una sub-meta lo saltearía;</li>
@@ -2231,10 +2276,16 @@
 <p>La sub-meta se deposita en <code>inject_corner</code>; el bucle externo la inserta en el tracker (§5.15.4) y el guiado normal la persigue. <strong>El dron nunca se detiene a esperar.</strong> Como la geometría está anclada al fotograma, girar mientras el modelo piensa no invalida la respuesta; solo la invalida el paso del tiempo o haberla superado, y ambos casos se verifican.</p>
 <p>Si el servicio no tiene el resultado y no hay pedido pendiente durante más de <code>VLM_STRATEGIC_LOST_GRACE_S</code> (3 s) —porque un pedido de barrido lo reemplazó en la cola—, la capa lo da por perdido.</p>
 <h3 id="5104-auditoria">5.10.4 Auditoría<a class="headerlink" href="#5104-auditoria" title="Permanent link">&para;</a></h3>
-<p>Cada respuesta deja una entrada en <code>deliberations[]</code> con <code>arm = "vlm_strategic"</code>, el prompt, la respuesta cruda, el motivo de la decisión (<code>directo_libre</code>, <code>sector C2 (+34 deg, +0 deg, 15 m)</code>, <code>vencida</code>, <code>wp_cambio</code>, <code>superada</code>, <code>sin_sector_libre</code>, <code>no_parseable</code>) y la latencia; el fotograma exacto que vio el modelo se guarda como <code>photo-*.png</code> vía <code>_last_delib_frames</code>. El último resultado queda en <code>_vlm_strategic</code>. Esto permite medir, por corrida, con qué frecuencia la capa propone un rodeo, hacia qué fila, y con qué frecuencia el modelo declara «todo libre».</p>
+<p>Cada respuesta deja una entrada en <code>deliberations[]</code> con <code>arm = "{fuente}_strategic"</code> (<code>vlm_strategic</code> o <code>depth_strategic</code>), el prompt (vacío con la profundidad), la respuesta cruda (con la profundidad, el p5 estimado por sector, en metros), el motivo de la decisión (<code>directo_libre</code>, <code>sector C2 (+34 deg, +0 deg, 15 m)</code>, <code>vencida</code>, <code>wp_cambio</code>, <code>superada</code>, <code>sin_sector_libre</code>, <code>no_parseable</code>) y la latencia; el fotograma exacto que vio el modelo se guarda como <code>photo-*.png</code> vía <code>_last_delib_frames</code>. El último resultado queda en <code>_vlm_strategic</code>. Esto permite medir, por corrida, con qué frecuencia la capa propone un rodeo, hacia qué fila, y con qué frecuencia el modelo declara «todo libre».</p>
 <h3 id="5105-deliberationservice">5.10.5 <code>DeliberationService</code><a class="headerlink" href="#5105-deliberationservice" title="Permanent link">&para;</a></h3>
-<p>Un hilo daemon con cola de entrada de tamaño 1: <code>request(payload)</code> vacía la cola antes de encolar, de modo que el worker procese siempre el pedido más reciente. Los resultados se guardan por identificador (últimos 16), y cada consumidor recupera el suyo con <code>get_result(request_id)</code>, de modo que un pedido posterior no pisa un resultado ya producido. El servicio es único por misión y lo comparten la capa estratégica, el barrido y el brazo FSM.</p>
+<p>Un hilo daemon con cola de entrada de tamaño 1: <code>request(payload)</code> vacía la cola antes de encolar, de modo que el worker procese siempre el pedido más reciente. Los resultados se guardan por identificador (últimos 16), y cada consumidor recupera el suyo con <code>get_result(request_id)</code>, de modo que un pedido posterior no pisa un resultado ya producido. Hay a lo sumo dos servicios por misión, cada uno con su hilo, y cada uno se crea solo si alguna capa lo usa: el del VLM (capa estratégica <code>vlm</code> o barrido <code>deep_vlm</code>) y el de la profundidad (capa <code>depth</code> o barrido <code>depth</code>). Con la configuración final (<code>depth</code>/<code>depth</code>) el VLM no corre durante el vuelo: queda en la planificación de ruta previa (cap. 4), y el ejecutor de experimentos solo verifica que el servidor de inferencia responda si alguna capa lo va a usar. El barrido y el brazo FSM usan el servicio de su estrategia.</p>
 <p><code>vlm_client._query_slm_impl()</code> atiende dos modos, cada uno con su system prompt, esquema JSON y parser: <code>strategic</code> (una imagen, tope <code>VLM_MAX_TOKENS_STRATEGIC</code> = 384 tokens, timeout HTTP <code>SLM_HTTP_TIMEOUT_S</code> = 15 s) y <code>deep_scan</code> (N imágenes, tope <code>VLM_MAX_TOKENS_DEEP</code> = 512, timeout <code>SLM_DEEP_HTTP_TIMEOUT_S</code> = 20 s). Con decodificación restringida la generación termina sola al cerrar el esquema; el tope solo protege de una generación desbocada en modo libre, y tiene que sobrar. Si el servidor informa que la respuesta se cortó por el tope (<code>finish_reason = length</code>), la consulta devuelve el error <code>respuesta_truncada</code> y no se interpreta (cap. 9, §9.8.10). Intenta primero con <code>response_format = json_schema</code> y, si el servidor no lo soporta, reintenta en modo libre; el parser extrae el primer objeto JSON del texto y lo valida contra el formato del modo.</p>
+<h3 id="5106-fuente-por-defecto-profundidad-monocular-estimada-depth_clientpy">5.10.6 Fuente por defecto: profundidad monocular estimada (<code>depth_client.py</code>)<a class="headerlink" href="#5106-fuente-por-defecto-profundidad-monocular-estimada-depth_clientpy" title="Permanent link">&para;</a></h3>
+<p>La red es Depth Anything V2 Metric Outdoor Small (<a href="13-REFERENCIAS.html#ref-yang-2024">Yang et al., 2024</a>), de ~25 M de parámetros, que estima la profundidad <strong>en metros</strong> a partir del fotograma RGB del ciclo. No es el sensor de profundidad de AirSim, que sigue fuera del lazo (§5.16): es lo que haría una red a bordo de un dron que solo tiene la cámara.</p>
+<p><strong>Del mapa de profundidad a la grilla.</strong> Sobre el mismo recorte cuadrado central y los mismos tercios que la grilla del VLM (§5.10.2), se toma el <strong>percentil 5</strong> de la profundidad estimada de cada sector —lo más cercano, sin píxeles sueltos— y el sector es <code>libre</code> si ese valor es ≥ <code>DEPTH_FREE_M</code> (15 m, la misma distancia que la sub-meta). Es el mismo estadístico con el que se construyeron las etiquetas de referencia del banco de prueba (cap. 11, §11.0), de modo que la exactitud medida allí es la del juicio que usa el vuelo.</p>
+<p><strong>Servicio.</strong> <code>make_depth_service()</code> envuelve la red en un <code>DeliberationService</code> con la misma interfaz que el del VLM (§5.10.5); los pedidos llevan el fotograma crudo, no JPEG en base64. La red corre en el hilo del servicio, nunca en el lazo: ~110 ms por consulta con la GPU compartida con Unreal, frente a ~790 ms del VLM local, y ~440 MiB de VRAM adicionales. Al crearse, el servicio carga la red con un fotograma vacío, para que la primera consulta en vuelo no pague la carga. Una falla de la red se reporta como error y el llamador cae a su camino de falla, como ante un timeout del VLM.</p>
+<h3 id="5107-por-que-la-profundidad-y-no-el-vlm">5.10.7 Por qué la profundidad y no el VLM<a class="headerlink" href="#5107-por-que-la-profundidad-y-no-el-vlm" title="Permanent link">&para;</a></h3>
+<p>En el banco de prueba a bordo (cap. 11, §11.0) la grilla del VLM separó sectores libres de bloqueados con AUC 0.53 —azar— y el p5 de la profundidad estimada, con AUC 0.83–0.87 y exactitud balanceada del 75 %; sus errores fueron conservadores (2 % de sectores marcados libres con un obstáculo a menos de 5 m). En vuelo, ninguna fuente mejoró el avance de la misión frente a no tener capa estratégica; en el corredor arbolado de TownSim la capa con profundidad mantuvo al dron más lejos del follaje en las cinco semillas (cap. 11, §11.6). Por ese margen la configuración final es <code>STRATEGIC_SOURCE = depth</code>.</p>
 <h2 id="511-nodo-fsm">5.11 Nodo <code>fsm</code><a class="headerlink" href="#511-nodo-fsm" title="Permanent link">&para;</a></h2>
 <p><strong>Función:</strong> <code>fsm_node(state, service)</code> en <code>src/agents/fsm.py</code>. <strong>Activación:</strong> <code>AGENT_ARM = "fsm"</code>.</p>
 <p>La FSM usa el mismo <code>ObstacleField</code>, el mismo vocabulario de macro-acciones y el mismo <code>action_to_command()</code> que el brazo <code>slm</code>; lo que cambia es quién elige la acción: umbrales deterministas.</p>
@@ -2269,10 +2320,10 @@
 </tr>
 </tbody>
 </table>
-<p>Su detección de atasco usa el contador de progreso del tracker (<code>evasion_stuck_cycles</code>) con los umbrales efectivo y duro (§5.15.2). Ante un atasco, si <code>DEADLOCK_STRATEGY = deep_vlm</code>, delega en el mismo barrido panorámico del brazo <code>slm</code> (§5.12); si no, alterna <code>CLIMB</code>/<code>DESCEND</code> hasta <code>MAX_CONSECUTIVE_ESCAPES</code> (2) y luego cambia de estrategia con <code>GIRAR_90</code> y una esquina de desvío propia.</p>
-<p><strong>Dos asimetrías con el brazo <code>slm</code> que deben tenerse en cuenta al comparar.</strong> Primero, con <code>deep_vlm</code> el brazo <code>fsm</code> <strong>también consulta al VLM</strong> en los deadlocks: la comparación <code>slm</code> vs. <code>fsm</code> aísla la capa estratégica y la política del lazo rápido, no la presencia del VLM en la resolución de atascos; para un brazo sin VLM en ningún punto se usa <code>fsm</code> con <code>--deadlock-strategies blind</code>. Segundo, la FSM tiene su propia lógica de atasco y escape (con esquinas de desvío deterministas), distinta de la del brazo <code>slm</code>.</p>
+<p>Su detección de atasco usa el contador de progreso del tracker (<code>evasion_stuck_cycles</code>) con los umbrales efectivo y duro (§5.15.2). Ante un atasco, si <code>DEADLOCK_STRATEGY</code> es <code>depth</code> o <code>deep_vlm</code>, delega en el mismo barrido panorámico del brazo <code>slm</code> (§5.12); si no, alterna <code>CLIMB</code>/<code>DESCEND</code> hasta <code>MAX_CONSECUTIVE_ESCAPES</code> (2) y luego cambia de estrategia con <code>GIRAR_90</code> y una esquina de desvío propia.</p>
+<p><strong>Dos asimetrías con el brazo <code>slm</code> que deben tenerse en cuenta al comparar.</strong> Primero, con <code>deep_vlm</code> el brazo <code>fsm</code> <strong>también consulta al VLM</strong> en los deadlocks (con <code>depth</code>, a la red de profundidad): la comparación <code>slm</code> vs. <code>fsm</code> aísla la capa estratégica y la política del lazo rápido, no la presencia del VLM en la resolución de atascos; para un brazo sin VLM en ningún punto se usa <code>fsm</code> con <code>--deadlock-strategies blind</code>. Segundo, la FSM tiene su propia lógica de atasco y escape (con esquinas de desvío deterministas), distinta de la del brazo <code>slm</code>.</p>
 <h2 id="512-barrido-panoramico-en-deadlock-deep_scan">5.12 Barrido panorámico en deadlock (<code>deep_scan</code>)<a class="headerlink" href="#512-barrido-panoramico-en-deadlock-deep_scan" title="Permanent link">&para;</a></h2>
-<p><strong>Archivo:</strong> <code>src/agents/deep_scan.py</code>. <strong>Activación:</strong> regla 2 (o el atasco de la FSM) con <code>DEADLOCK_STRATEGY = deep_vlm</code>. La estrategia <code>blind</code> no ejecuta barrido (§5.3.4). Valores admitidos: <code>deep_vlm</code> (default en <code>config/.env</code> y en el runner) y <code>blind</code>; cualquier otro valor aborta el arranque.</p>
+<p><strong>Archivo:</strong> <code>src/agents/deep_scan.py</code>. <strong>Activación:</strong> regla 2 (o el atasco de la FSM) con <code>DEADLOCK_STRATEGY</code> en <code>depth</code> o <code>deep_vlm</code>. La estrategia <code>blind</code> no ejecuta barrido (§5.3.4). Valores admitidos: <code>depth</code> (default en <code>config/.env</code> y en el runner: los rumbos los juzga la red de profundidad), <code>deep_vlm</code> (los juzga el VLM; ablación) y <code>blind</code>; cualquier otro valor aborta el arranque. La máquina de estados es la misma para las dos fuentes; solo cambia quién juzga cada imagen en la fase <code>capturado</code>.</p>
 <p>Máquina de estados sostenida entre ciclos por los campos <code>_scan_*</code>:</p>
 <p><strong>Inicio.</strong> Si el waypoint real está a menos de <code>VLM_NEAR_WP_M</code> (8 m) en horizontal, no barre: desde tan cerca el rumbo a la meta es casi ruido y una sub-meta la saltearía; devuelve <code>False</code> (escape de §5.3.4). Si no, <code>_scan_phase = "rotando"</code>, <code>_scan_start_yaw_deg = yaw actual</code>, cancela cualquier maniobra activa. Durante todo el barrido, <code>_deliberation_pending = True</code> evita que el bucle externo cuente el giro en el lugar como falta de progreso.</p>
 <p><strong><code>rotando</code>.</strong> Comanda <code>target_yaw = yaw_inicial + i × 360° / SCAN_HEADING_COUNT_DEEP</code> (4 rumbos: 0°, +90°, +180°, +270°), sin traslación. Al llegar a <code>SCAN_YAW_TOLERANCE_DEG</code> (5°) pasa a <code>asentando</code>. Si en <code>SCAN_ROT_TIMEOUT_CYCLES</code> (10) ciclos no alcanza el rumbo —dron trabado en una malla—, abandona el barrido y devuelve <code>False</code> (escape de §5.3.4).</p>
@@ -2281,7 +2332,8 @@
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">&quot;views&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;img&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;view&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;facade&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">},</span>
 <span class="w">           </span><span class="p">{</span><span class="nt">&quot;img&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;view&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open&quot;</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">},</span><span class="w"> </span><span class="err">...</span><span class="p">]}</span>
 </code></pre></div>
-<p><strong>Interpretación en marco mundo (<code>panorama_to_subgoal</code>).</strong> Las entradas se asignan a las imágenes por el campo <code>img</code> (o por orden si falta); las entradas sobrantes que el modelo inventa se descartan. Una imagen es transitable si el modelo la marcó <code>free: true</code> <strong>y</strong> con vista <code>open</code>: una entrada <code>free: true</code> con otra vista (<code>inside</code>, <code>facade</code>) se contradice a sí misma y no se usa. Entre las imágenes transitables se elige la de <strong>rumbo absoluto</strong> más cercano al rumbo absoluto hacia el waypoint real (calculado con posiciones, no con el yaw), y se fija una sub-meta en ese rumbo con la misma función y las mismas reglas que la capa estratégica (<code>subgoal.build_subgoal</code>, §5.10.3): <code>VLM_SUBGOAL_DIST_M</code> (15 m) como máximo, nunca más lejos que el waypoint real, a la altitud actual del dron —las imágenes del barrido no describen filas, de modo que la elevación es cero—, con macro <code>MANTENER_RUMBO</code>: el guiado la persigue. Sin imágenes transitables: <code>GANAR_ALTURA</code> (<code>PERDER_ALTURA</code> si todo es vegetación). La resolución se registra en <code>deliberations[]</code> (<code>arm = "{brazo}_deep_scan"</code>), escribe <code>_deadlock_event</code> con la sub-meta y pide <code>_escape_reset</code>.</p>
+<p><strong>Con la profundidad (<code>depth</code>).</strong> El pedido lleva los fotogramas crudos de los rumbos; la red estima la profundidad de cada uno y un rumbo es transitable si el p5 del sector central (<code>B2</code>, hacia donde volaría el dron en línea recta) es ≥ <code>DEPTH_FREE_M</code> (15 m). La respuesta tiene la misma forma que la del VLM (<code>view</code> = <code>open</code> o <code>wall</code>), de modo que la interpretación y la selección de salida que siguen son las mismas. En el banco, el VLM marcaba transitables todos los rumbos de un barrido; la profundidad separó rumbos abiertos de cerrados con AUC 0.87 (cap. 11, §11.0).</p>
+<p><strong>Interpretación en marco mundo (<code>panorama_to_subgoal</code>).</strong> Las entradas se asignan a las imágenes por el campo <code>img</code> (o por orden si falta); las entradas sobrantes que el modelo inventa se descartan. Una imagen es transitable si el modelo la marcó <code>free: true</code> <strong>y</strong> con vista <code>open</code>: una entrada <code>free: true</code> con otra vista (<code>inside</code>, <code>facade</code>) se contradice a sí misma y no se usa. Entre las imágenes transitables se elige la de <strong>rumbo absoluto</strong> más cercano al rumbo absoluto hacia el waypoint real (calculado con posiciones, no con el yaw), y se fija una sub-meta en ese rumbo con la misma función y las mismas reglas que la capa estratégica (<code>subgoal.build_subgoal</code>, §5.10.3): <code>VLM_SUBGOAL_DIST_M</code> (15 m) como máximo, nunca más lejos que el waypoint real, a la altitud actual del dron —las imágenes del barrido no describen filas, de modo que la elevación es cero—, con macro <code>MANTENER_RUMBO</code>: el guiado la persigue. Sin imágenes transitables: <code>GANAR_ALTURA</code> (con el VLM, <code>PERDER_ALTURA</code> si todo es vegetación). La resolución se registra en <code>deliberations[]</code> (<code>arm = "{brazo}_deep_scan"</code>), escribe <code>_deadlock_event</code> con la sub-meta y pide <code>_escape_reset</code>.</p>
 <p><strong>Selección de salida.</strong> Un deadlock es evidencia de que el rumbo que el dron intentaba no funciona, y elegir el transitable más cercano a la meta suele devolverlo contra el mismo obstáculo. Por eso, entre los rumbos que el modelo marcó transitables, el código descarta: (1) los que caen a menos de <code>SCAN_FAILED_SECTOR_DEG</code> (45°) del <strong>rumbo que falló</strong> —la dirección hacia el objetivo activo al iniciar el barrido—; y (2) los que caen a menos de 45° de un rumbo <strong>ya probado</strong> —fallado o elegido— en un deadlock anterior a menos de <code>SCAN_REPEAT_RADIUS_M</code> (10 m), para el mismo waypoint. Entre los que quedan, sin historia en la zona se elige el más cercano a la meta (<code>hacia_meta</code>); con historia, el más distinto de los ya probados (<code>exploracion</code>). Si todos los transitables estaban descartados: <code>GANAR_ALTURA</code> (<code>sin_rumbo_nuevo</code>). El modelo sigue decidiendo qué está libre: el código solo elige entre sus opciones usando lo que el dron ya comprobó al quedar trabado. La historia (<code>_deadlock_history</code>, últimos 12 deadlocks, incluidos los barridos que fallaron) y la selección completa —candidatos, descartados con su motivo, rumbo que falló, rumbos probados, modo y rumbo elegido— quedan en <code>_deadlock_event["scan_selection"]</code> para medir si la selección ayuda.</p>
 <p>Este diseño evita dos errores de marco de referencia que convierten una respuesta correcta en una maniobra en sentido contrario (cap. 9, §9.8.1): etiquetar las imágenes con el rumbo absoluto y pedir al modelo un ángulo relativo, y medir el error de rumbo a la meta desde el yaw final del barrido en lugar del de cada imagen. Por eso el modelo nunca reporta ángulos: identifica imágenes por número y el código usa el yaw medido.</p>
 <p><strong>Fallas.</strong> Watchdog <code>SLM_DEEP_WATCHDOG_MS</code> (18 s en producción) vencido, pedido perdido (<code>SCAN_LOST_GRACE_MS</code>, 3 s), respuesta sin el formato del modo o respuesta cortada por el tope de tokens: el barrido deja una entrada <code>arm = "deep_scan_failed"</code> con sus fotogramas y devuelve <code>False</code>.</p>
@@ -2373,12 +2425,12 @@
 <p><code>effective_stall_threshold()</code> es el mínimo de ciclos sin progreso físicamente demostrable: con <code>eps = 0.5 m</code>, velocidad mínima 0.25 m/s y 5 Hz, 10 ciclos. <code>hard_stall_threshold()</code> lo multiplica por <code>STUCK_HARD_FACTOR</code> (1.5 en producción: 15 ciclos). Ambos los usa la FSM.</p>
 <h3 id="5153-deteccion-de-techo">5.15.3 Detección de techo<a class="headerlink" href="#5153-deteccion-de-techo" title="Permanent link">&para;</a></h3>
 <p>Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja al dron contra la losa. El tracker lo detecta: si durante 10 ciclos, con el dron libre en horizontal, se <strong>ordena</strong> ascenso (<code>vz &lt; −0.3 m/s</code> en el comando efectivamente ejecutado, que el bucle externo le informa con <code>note_executed_command()</code>; altitud ≥ 3 m) sin que la cota varíe más de 0.15 m, declara un techo (<code>ceiling_z</code>), liberado al alejarse 15 m o al cambiar de waypoint. Con techo, <code>compute_guidance()</code> limita la altitud objetivo a <code>ceiling_z + CEILING_MARGIN_M</code> (0.8 m) y, si el waypoint cae dentro de <code>CEILING_SAFE_GAP_M</code> (3 m) del techo, lo baja a esa banda y exporta <code>z_path_blocked = True</code>, que <code>navigate</code> resuelve con <code>PERDER_ALTURA</code> (regla 6). Usar el comando ejecutado y no la demanda del guiado importa: durante un <code>GIRAR_90</code> o un <code>FRENAR</code> el comando vertical es cero aunque el guiado pida subir, y esos ciclos no prueban que haya una losa encima. Por la misma razón no cuentan los ciclos en que el dron está trabado de costado —se ordenó avanzar y no se desplazó más de <code>CEILING_SIDEWAYS_STUCK_M</code> (3 cm por ciclo)—: el roce contra una pared también impide subir, y ese caso lo resuelve el deadlock.</p>
-<h3 id="5154-sub-metas-del-vlm">5.15.4 Sub-metas del VLM<a class="headerlink" href="#5154-sub-metas-del-vlm" title="Permanent link">&para;</a></h3>
-<p><code>inject_corner_waypoint(x, y, z, label)</code> inserta una sub-meta temporal delante del waypoint activo. Todas las sub-metas del brazo <code>slm</code> provienen del VLM (capa estratégica o barrido) y se insertan <strong>tal cual</strong>: una sub-meta nueva reemplaza a las temporales pendientes y reinicia el contador de progreso. La única condición es la deduplicación: si la sub-meta pendiente está a menos de <code>SUBGOAL_DEDUP_M</code> (10 m) de la nueva, la nueva se ignora; reemplazarla por otra casi igual reiniciaría el contador de progreso y un dron atascado nunca declararía el deadlock.</p>
+<h3 id="5154-sub-metas-del-lazo-lento">5.15.4 Sub-metas del lazo lento<a class="headerlink" href="#5154-sub-metas-del-lazo-lento" title="Permanent link">&para;</a></h3>
+<p><code>inject_corner_waypoint(x, y, z, label)</code> inserta una sub-meta temporal delante del waypoint activo. Todas las sub-metas del brazo <code>slm</code> provienen del lazo lento (capa estratégica o barrido, con la red de profundidad o con el VLM) y se insertan <strong>tal cual</strong>: una sub-meta nueva reemplaza a las temporales pendientes y reinicia el contador de progreso. La única condición es la deduplicación: si la sub-meta pendiente está a menos de <code>SUBGOAL_DEDUP_M</code> (10 m) de la nueva, la nueva se ignora; reemplazarla por otra casi igual reiniciaría el contador de progreso y un dron atascado nunca declararía el deadlock.</p>
 <p><strong>Una sub-meta es un medio, no una condición.</strong> <code>update()</code> mide en cada ciclo la distancia al waypoint <strong>real</strong> aunque el objetivo activo sea una sub-meta: si el dron entra en el radio de aceptación del waypoint real, descarta las sub-metas pendientes (<code>drop_temporary()</code>) y lo acepta. El bucle externo también las descarta cuando la capa estratégica marca <code>_clear_subgoals</code> (§5.10.3).</p>
 <h2 id="516-salvaguardas-y-contratos-de-diseno">5.16 Salvaguardas y contratos de diseño<a class="headerlink" href="#516-salvaguardas-y-contratos-de-diseno" title="Permanent link">&para;</a></h2>
-<p><strong>Exclusión total de profundidad.</strong> Ningún componente del lazo de vuelo —nodos del grafo, <code>main.py</code>, <code>experiments/runner.py</code>, módulos de navegación— lee el canal de profundidad del simulador. El test estático <code>tests/test_no_depth_in_flight_path.py</code> lo verifica sobre todos los módulos de <code>src/agents</code>, <code>src/perception</code> y <code>src/navigation</code> y sobre ambos puntos de entrada, buscando también canales indirectos, como un tope de velocidad armado desde el runner con la cámara de profundidad (<code>_depth_brake_left</code>), que daría al brazo evaluado acceso a la profundidad del simulador, de la que salen las etiquetas de referencia (cap. 9, §9.8.5). Solo los scripts de calibración offline (cap. 7) y la auditoría de la distancia mínima a obstáculo (<code>src/logging/distmin_audit.py</code>, cap. 10 §10.6.1) usan el canal de profundidad. La auditoría es un hilo aislado con su propia conexión al simulador, que solo escribe un archivo de muestras; la guardia verifica que no importe ningún módulo del grafo, que el runner se limite a arrancarlo y detenerlo, y que ningún otro módulo de vuelo lo referencie.</p>
-<p><strong>El VLM sin overrides.</strong> La respuesta del modelo se traduce a geometría y se aplica; no pasa por reglas deterministas que la reemplacen. Las validaciones que sí existen (edad, cambio de waypoint, sub-meta superada, deduplicación) descartan respuestas <strong>obsoletas</strong>, no respuestas que una regla considere equivocadas.</p>
+<p><strong>Exclusión total de profundidad.</strong> Ningún componente del lazo de vuelo —nodos del grafo, <code>main.py</code>, <code>experiments/runner.py</code>, módulos de navegación— lee el canal de profundidad del simulador. El test estático <code>tests/test_no_depth_in_flight_path.py</code> lo verifica sobre todos los módulos de <code>src/agents</code>, <code>src/perception</code> y <code>src/navigation</code> y sobre ambos puntos de entrada, buscando también canales indirectos, como un tope de velocidad armado desde el runner con la cámara de profundidad (<code>_depth_brake_left</code>), que daría al brazo evaluado acceso a la profundidad del simulador, de la que salen las etiquetas de referencia (cap. 9, §9.8.5). La red de profundidad <strong>estimada</strong> desde el RGB (§5.10.6) no lee ese canal: recibe el mismo fotograma que el flujo óptico, y sus dos módulos están en la lista de la guardia como consumidores legítimos del RGB. Solo los scripts de calibración offline (cap. 7) y la auditoría de la distancia mínima a obstáculo (<code>src/logging/distmin_audit.py</code>, cap. 10 §10.6.1) usan el canal de profundidad. La auditoría es un hilo aislado con su propia conexión al simulador, que solo escribe un archivo de muestras; la guardia verifica que no importe ningún módulo del grafo, que el runner se limite a arrancarlo y detenerlo, y que ningún otro módulo de vuelo lo referencie.</p>
+<p><strong>La fuente sin overrides.</strong> La respuesta del VLM o de la red de profundidad se traduce a geometría y se aplica; no pasa por reglas deterministas que la reemplacen. Las validaciones que sí existen (edad, cambio de waypoint, sub-meta superada, deduplicación) descartan respuestas <strong>obsoletas</strong>, no respuestas que una regla considere equivocadas.</p>
 <p><strong>Contrato de <code>deliberations[]</code>.</strong> Solo agregado: se suman entradas, nunca se borran campos. Los análisis de los capítulos 9 a 11 se derivan de este registro.</p>
 <p><strong>Cliente AirSim como singleton.</strong> <code>compile_workflow(airsim_client)</code> recibe un cliente ya conectado; un segundo cliente tendría su propio <code>takeoffAsync</code>, desconectado del grafo.</p>
 <h2 id="517-modo-degradado">5.17 Modo degradado<a class="headerlink" href="#517-modo-degradado" title="Permanent link">&para;</a></h2>

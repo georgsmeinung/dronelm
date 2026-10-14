@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Configuración del grafo de control táctico de airsim-loop: topología LangGraph de cuatro nodos, lazo rápido a 5 Hz, capa estratégica asíncrona del VLM con sub-metas ancladas a la pose, detección de atasco, barrido panorámico deep_vlm, cinemática y umbrales." />
+    content="Configuración del grafo de control táctico de airsim-loop: topología LangGraph de cuatro nodos, lazo rápido a 5 Hz, capa estratégica asíncrona con sub-metas ancladas a la pose (profundidad monocular estimada por defecto), detección de atasco, barrido panorámico, cinemática y umbrales." />
   <title>Grafo de Control Táctico — Navegación Autónoma de Drones con SLM/VLM</title>
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -68,23 +68,23 @@
     <!-- Main Content Area -->
     <main>
       <header>
-        <p class="eyebrow">airsim-loop · lazo táctico · 2026-09-30</p>
+        <p class="eyebrow">airsim-loop · lazo táctico · 2026-10-10</p>
         <h1>Configuración del grafo de control</h1>
         <p class="lead-subtitle">
           Referencia técnica del lazo de navegación autónoma <strong>tal como está en el código</strong>: topología,
-          esquema de estado, lazo rápido de 8 reglas, capa estratégica asíncrona del VLM con sub-metas ancladas a la
-          pose del fotograma, detección de atasco, barrido panorámico <code>deep_vlm</code>, cinemática por
-          macro-acción y la tabla de umbrales.
+          esquema de estado, lazo rápido de 8 reglas, capa estratégica asíncrona con sub-metas ancladas a la
+          pose del fotograma (fuente por defecto: profundidad monocular estimada), detección de atasco, barrido
+          panorámico juzgado por la misma red, cinemática por macro-acción y la tabla de umbrales.
         </p>
         <dl class="readout">
           <div><dt>Frecuencia</dt><dd>5.0 <span>Hz</span></dd></div>
           <div><dt>Brazo activo</dt><dd>slm</dd></div>
           <div><dt>TTC evasión</dt><dd>3.2 <span>s</span></dd></div>
           <div><dt>TTC seguro</dt><dd>4.6 <span>s</span></dd></div>
-          <div><dt>Consulta VLM</dt><dd>3 <span>s</span></dd></div>
+          <div><dt>Capa estratégica</dt><dd>depth · 1 <span>s</span></dd></div>
           <div><dt>Edad máx.</dt><dd>10 <span>s</span></dd></div>
-          <div><dt>Deadlock</dt><dd>deep_vlm</dd></div>
-          <div><dt>Tests</dt><dd>246</dd></div>
+          <div><dt>Deadlock</dt><dd>depth</dd></div>
+          <div><dt>Tests</dt><dd>299</dd></div>
         </dl>
         <div class="badges-row">
           <a class="badge-pill badge-blue"
@@ -92,7 +92,7 @@
             GRAFO-DE-CONTROL.md</a>
           <a class="badge-pill badge-gray"
             href="https://github.com/georgsmeinung/dronelm/tree/main/airsim-loop">Módulo: airsim-loop</a>
-          <span class="badge-pill badge-teal">LangGraph · Qwen2.5-VL-3B · Cosys-AirSim · UE 5.5</span>
+          <span class="badge-pill badge-teal">LangGraph · Depth Anything V2 · LFM2.5-VL-1.6B (plan de ruta) · Cosys-AirSim · UE 5.5</span>
         </div>
       </header>
 
@@ -103,31 +103,37 @@
           El grafo es un lazo de control compilado con LangGraph que corre a <code>LOOP_HZ = 5.0</code> (período nominal
           200 ms). Cada ciclo captura un fotograma y telemetría, estima el campo de obstáculos por flujo óptico, elige
           <strong>una</strong> macro-acción y la traduce a un comando de velocidad en <em>body frame</em>. En paralelo,
-          un modelo de visión-lenguaje propone rodeos como sub-metas en coordenadas del mundo.
+          una capa estratégica propone rodeos como sub-metas en coordenadas del mundo. Su fuente es configurable
+          (<code>STRATEGIC_SOURCE</code>): en la configuración final es una red de profundidad monocular estimada
+          desde el mismo RGB; el VLM queda en la planificación de ruta previa al vuelo.
         </p>
 
         <p>Cuatro principios estructuran la configuración:</p>
         <ol>
           <li><strong>Dos lazos desacoplados.</strong> El lazo rápido (guiado, evasión por flujo óptico,
-            <code>GIRAR_90</code>, detección de atasco) es el <strong>único</strong> que comanda velocidades. El VLM
-            corre en un lazo lento y asíncrono: su inferencia tarda 3–6 s (15–30 ciclos) y nunca detiene al dron en
-            vuelo normal.</li>
-          <li><strong>Lo que el VLM dice es válido cuando llega.</strong> Cada pedido guarda la pose del fotograma
+            <code>GIRAR_90</code>, detección de atasco) es el <strong>único</strong> que comanda velocidades. La capa
+            estratégica corre en un lazo lento y asíncrono (~110 ms con la profundidad, ~0.8 s con el VLM local) y
+            nunca detiene al dron en vuelo normal.</li>
+          <li><strong>La respuesta es válida cuando llega.</strong> Cada pedido guarda la pose del fotograma
             (ancla); la respuesta se traduce con esa pose, no con la actual, y se expresa en rumbos absolutos, no en
             «izquierda/derecha» del cuerpo. El resultado es una sub-meta en el mundo que el guiado normal persigue.</li>
-          <li><strong>El VLM decide; las reglas no lo reescriben.</strong> No hay reglas deterministas sobre la
-            respuesta del modelo. El fallback determinista existe solo ante <strong>falla</strong> del modelo
+          <li><strong>La fuente decide; las reglas no la reescriben.</strong> No hay reglas deterministas sobre la
+            respuesta de la red o del modelo. El fallback determinista existe solo ante <strong>falla</strong>
             (timeout, formato inválido, rotación imposible durante un barrido).</li>
           <li><strong>Sin profundidad del simulador.</strong> Ni el grafo, ni <code>main.py</code>, ni
             <code>experiments/runner.py</code> leen el canal de profundidad de AirSim, ni para control ni como métrica.
-            Toda la percepción del lazo rápido sale de <code>ObstacleField</code> (flujo óptico monocular).</li>
+            Toda la percepción del lazo rápido sale de <code>ObstacleField</code> (flujo óptico monocular). La
+            profundidad <strong>estimada</strong> desde el RGB sí se usa en el lazo lento: es lo que haría una red a
+            bordo de un dron sin sensor de profundidad.</li>
         </ol>
 
         <p>
           El brazo se selecciona con <code>AGENT_ARM</code> (<code>slm</code> · <code>fsm</code> ·
           <code>reactive</code>) sobre <strong>el mismo pipeline de percepción y la misma cinemática</strong>; la
-          estrategia de resolución de atascos, con <code>DEADLOCK_STRATEGY</code> (<code>deep_vlm</code> ·
-          <code>blind</code>). La combinación <code>fsm × blind</code> es el contraste sin VLM en ningún punto.
+          estrategia de resolución de atascos, con <code>DEADLOCK_STRATEGY</code> (<code>depth</code> ·
+          <code>deep_vlm</code> · <code>blind</code>); la fuente de la capa estratégica, con
+          <code>STRATEGIC_SOURCE</code> (<code>depth</code> · <code>vlm</code> · <code>off</code>). Con
+          <code>depth</code>/<code>depth</code> el VLM no corre durante el vuelo.
         </p>
       </section>
 
@@ -465,7 +471,7 @@
         <h3><code>navigate_node</code></h3>
         <p>Contiene la política de los tres brazos. Para <code>reactive</code> delega en <code>reactive_node</code>;
           para <code>fsm</code>, en <code>fsm_node</code> (máquina de estados determinista que comparte el barrido de la
-          sección 8 si <code>DEADLOCK_STRATEGY=deep_vlm</code>); para <code>slm</code>, ejecuta las 8 reglas de la
+          sección 8 si <code>DEADLOCK_STRATEGY</code> es <code>depth</code> o <code>deep_vlm</code>); para <code>slm</code>, ejecuta las 8 reglas de la
           sección 6.</p>
         <ul>
           <li><strong><code>reactive_node</code>:</strong> guiado nominal hacia el objetivo activo
@@ -622,9 +628,24 @@
 
       <!-- 7 -->
       <section id="estrategica">
-        <h2 class="numbered"><span class="sec-n">07</span><span>Capa estratégica del VLM</span></h2>
+        <h2 class="numbered"><span class="sec-n">07</span><span>Capa estratégica</span></h2>
         <p>Implementada en <a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/vlm_strategic.py"><code>vlm_strategic.py</code></a>.
-          Corre en un hilo aparte a través de <code>DeliberationService</code>; el lazo nunca espera su respuesta.</p>
+          Corre en un hilo aparte a través de <code>DeliberationService</code>; el lazo nunca espera su respuesta.
+          La pregunta —qué sectores de una grilla 3×3 están libres— la responde la fuente de
+          <code>STRATEGIC_SOURCE</code>; las dos fuentes devuelven la misma estructura, de modo que el ancla y la
+          traducción a sub-metas son las mismas.</p>
+
+        <div class="note">
+          <span class="tag">Fuente por defecto: profundidad</span>
+          <p><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/depth_client.py"><code>depth_client.py</code></a>:
+            Depth Anything V2 Metric Outdoor Small (~25 M parámetros) estima la profundidad en metros desde el
+            fotograma RGB; un sector es libre si el percentil 5 de su profundidad es ≥ <code>DEPTH_FREE_M</code>
+            (15 m). ~110 ms por consulta con la GPU compartida, período de 1 s. En el banco de prueba separó sectores
+            libres de bloqueados con AUC 0.83–0.87; la grilla del VLM, con 0.53. En vuelo ninguna fuente aceleró la
+            misión; en el corredor arbolado de TownSim la profundidad mantuvo al dron más lejos del follaje en las
+            5 semillas (informe, cap. 11 §11.6). Las tarjetas que siguen describen el diseño con el VLM
+            (<code>STRATEGIC_SOURCE=vlm</code>).</p>
+        </div>
 
         <div class="card-grid">
           <div class="card">
@@ -677,12 +698,14 @@
       <section id="deadlock">
         <h2 class="numbered"><span class="sec-n">08</span><span>Resolución de deadlock</span></h2>
 
-        <h3>Barrido panorámico (<code>DEADLOCK_STRATEGY=deep_vlm</code>, default) — <a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/deep_scan.py"><code>deep_scan.py</code></a></h3>
+        <h3>Barrido panorámico (<code>DEADLOCK_STRATEGY=depth</code>, default, o <code>deep_vlm</code>) — <a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/deep_scan.py"><code>deep_scan.py</code></a></h3>
         <ol>
           <li><strong>Rotación:</strong> el dron gira en el lugar a <code>SCAN_HEADING_COUNT_DEEP</code> = 4 rumbos
             (frente, derecha, atrás, izquierda), se asienta 2 ciclos en cada uno y captura un fotograma. Si no alcanza
             el rumbo en 10 ciclos (2 s), el barrido se abandona.</li>
-          <li><strong>Consulta:</strong> una sola consulta con las imágenes <strong>numeradas</strong> (≤ 256 px).
+          <li><strong>Juicio de cada rumbo:</strong> con <code>depth</code>, la red estima la profundidad de cada
+            fotograma y el rumbo es transitable si el p5 del sector central (B2) es ≥ 15 m (AUC 0.87 en el banco;
+            en TownSim resolvió 19 de 30 deadlocks). Con <code>deep_vlm</code>, una sola consulta con las imágenes <strong>numeradas</strong> (≤ 256 px).
             Para cada una, el modelo indica <code>tipo</code> (libre, fachada, muro, vegetación, interior,
             indeterminado), <code>ok</code> (se puede volar recto 15 m) y <code>conf</code>. El modelo nunca reporta
             ángulos.</li>
@@ -694,13 +717,13 @@
             objetivo activo) o de uno ya probado en un deadlock a menos de 10 m; con deadlocks repetidos se elige el
             rumbo libre más distinto de lo ya probado; si no queda ninguno, <code>GANAR_ALTURA</code>. La selección
             completa queda en <code>_deadlock_event.scan_selection</code>.</li>
-          <li><strong>Sin rumbo transitable:</strong> <code>GANAR_ALTURA</code> (o <code>PERDER_ALTURA</code> si todo
+          <li><strong>Sin rumbo transitable:</strong> <code>GANAR_ALTURA</code> (con el VLM, <code>PERDER_ALTURA</code> si todo
             es vegetación).</li>
         </ol>
         <p>Al resolverse, se reinician el <code>StallDetector</code> y el contador de progreso del tracker
           (<code>_escape_reset</code>).</p>
 
-        <h3>Falla del VLM o estrategia <code>blind</code></h3>
+        <h3>Falla del barrido o estrategia <code>blind</code></h3>
         <p>Watchdog del barrido (<code>SLM_DEEP_WATCHDOG_MS</code> = 18 000 ms, menor que el timeout HTTP de 20 s),
           formato inválido o rotación imposible: escape determinista <code>GANAR_ALTURA</code> durante 1.6 s; por
           encima de <code>MAX_ESCAPE_ALT_M</code> (30 m), <code>GIRAR_90</code> hacia el waypoint. Se registra un
@@ -837,7 +860,7 @@
             <tbody>
               <tr><td class="mono">STOPPED_DELIBERATIVE_CYCLES / STOPPED_MIN_CMD_MPS</td><td class="num">10 / 0.30</td><td>Dron trabado: ciclos con avance ordenado sin movimiento real.</td></tr>
               <tr><td class="mono">WP_NO_PROGRESS_THRESHOLD / WP_NO_PROGRESS_MIN_M</td><td class="num">50 / 2.0 m</td><td>Sin progreso: ciclos sin mejorar la distancia al objetivo actual.</td></tr>
-              <tr><td class="mono">DEADLOCK_STRATEGY</td><td class="num">deep_vlm</td><td><code>deep_vlm</code> o <code>blind</code>; cualquier otro valor aborta el arranque.</td></tr>
+              <tr><td class="mono">DEADLOCK_STRATEGY</td><td class="num">depth</td><td><code>depth</code>, <code>deep_vlm</code> o <code>blind</code>; cualquier otro valor aborta el arranque.</td></tr>
               <tr><td class="mono">SCAN_HEADING_COUNT_DEEP / SCAN_SETTLE_CYCLES_DEEP</td><td class="num">4 / 2</td><td>Rumbos del barrido y ciclos de asentamiento por rumbo.</td></tr>
               <tr><td class="mono">SCAN_ROT_TIMEOUT_CYCLES</td><td class="num">10</td><td>Rotación imposible: el barrido se abandona.</td></tr>
               <tr><td class="mono">SLM_DEEP_WATCHDOG_MS / SLM_DEEP_HTTP_TIMEOUT_S</td><td class="num">18 000 / 20 s</td><td>Watchdog del barrido; siempre menor que el corte HTTP.</td></tr>
@@ -855,9 +878,12 @@
               <tr><th>Variable</th><th>Valor</th><th>Efecto</th></tr>
             </thead>
             <tbody>
-              <tr><td class="mono">LOCAL_LLM_MODEL_NAME</td><td class="num">qwen2.5-vl-3b</td><td>Modelo servido por LM Studio (OpenAI-compatible).</td></tr>
+              <tr><td class="mono">STRATEGIC_SOURCE</td><td class="num">depth</td><td>Fuente de la capa estratégica: <code>depth</code>, <code>vlm</code> u <code>off</code>.</td></tr>
+              <tr><td class="mono">DEPTH_MODEL</td><td class="num">DA-V2 Metric Outdoor S</td><td>Red de profundidad métrica (~25 M parámetros, ~440 MiB de VRAM).</td></tr>
+              <tr><td class="mono">DEPTH_FREE_M / DEPTH_STRATEGIC_PERIOD_S</td><td class="num">15 m / 1.0 s</td><td>Umbral de sector libre (p5 de la profundidad) y período de la capa con la profundidad.</td></tr>
+              <tr><td class="mono">LOCAL_LLM_MODEL_NAME</td><td class="num">lfm2.5-vl-1.6b:q4km-ctx8k</td><td>Modelo servido por Ollama local en la misma GPU (plan de ruta; capa y barrido si se eligen <code>vlm</code>/<code>deep_vlm</code>).</td></tr>
               <tr><td class="mono">VLM_STRATEGIC_ENABLED</td><td class="num">true</td><td>Habilita la capa estratégica.</td></tr>
-              <tr><td class="mono">VLM_STRATEGIC_PERIOD_S</td><td class="num">3.0 s</td><td>Período mínimo entre consultas.</td></tr>
+              <tr><td class="mono">VLM_STRATEGIC_PERIOD_S</td><td class="num">3.0 s</td><td>Período mínimo entre consultas con el VLM.</td></tr>
               <tr><td class="mono">VLM_STRATEGIC_MAX_AGE_S</td><td class="num">10 s</td><td>Edad máxima de una respuesta para aplicarla.</td></tr>
               <tr><td class="mono">CAMERA_HFOV_DEG</td><td class="num">90°</td><td>Campo visual con el que se calculan las direcciones de los sectores de la grilla 3×3.</td></tr>
               <tr><td class="mono">VLM_SUBGOAL_DIST_M / VLM_SUBGOAL_MIN_AHEAD_M</td><td class="num">15 / 4 m</td><td>Distancia de la sub-meta desde el ancla y mínima por delante del dron.</td></tr>
@@ -991,17 +1017,18 @@
       <section id="limitaciones">
         <h2 class="numbered"><span class="sec-n">12</span><span>Limitaciones conocidas</span></h2>
         <ul>
-          <li><strong>Sin validación en vuelo de la capa estratégica.</strong> La capa estratégica, el barrido en marco
-            mundo y la detección de atasco de dos señales están cubiertos por tests (incluido el grafo compilado), pero
-            sus umbrales no están calibrados con corridas en el simulador; los lotes con obstrucción D, E y F están
-            pendientes.</li>
-          <li><strong>Capacidad de discriminación del VLM no demostrada.</strong> No hay evidencia todavía de que
-            Qwen2.5-VL-3B distinga sectores volables de bloqueados en el render de CitySim; en el piloto de validación sus respuestas fueron casi constantes. Si no lo hace, el brazo
-            <code>slm</code> se reduce, en la práctica, al lazo rápido más escapes verticales; la distribución de
-            respuestas de la capa estratégica es una métrica de los lotes.</li>
+          <li><strong>Validación en vuelo limitada.</strong> La capa estratégica y el barrido tienen dos lotes de vuelo
+            (CitySim y el corredor arbolado de TownSim, 25 corridas, 5 semillas por celda); sus umbrales son
+            decisiones de diseño, no valores calibrados, y la comparación entre brazos con el sistema final (lotes
+            D, E y F) está pendiente.</li>
+          <li><strong>El VLM no discrimina en primera persona.</strong> En el banco de prueba a bordo,
+            LFM2.5-VL-1.6B no distinguió sectores volables de bloqueados (AUC 0.53) y declaró transitables todos los
+            rumbos del barrido. Por eso la capa y el barrido usan la profundidad estimada; el VLM aporta solo en el
+            plan de ruta sobre el mapa cenital (AUC 0.81).</li>
           <li><strong>Punto ciego del foco de expansión.</strong> El flujo óptico traslacional se anula en los
-            obstáculos centrados en la trayectoria. Las señales de contacto y la detección de atasco lo mitigan
-            parcialmente; los rodeos solo los aborda el VLM. La solución estructural es estéreo (Anexo 7).</li>
+            obstáculos centrados en la trayectoria. Las señales de contacto, la detección de atasco y la
+            profundidad estimada del lazo lento lo mitigan; la solución estructural sigue siendo un canal de
+            profundidad instantánea (Anexo 7).</li>
           <li><strong>El TTC no es confiable durante el propio escape.</strong> <code>FRENAR</code> no produce
             traslación (sin flujo → sin FOE → sin evidencia) y el ascenso puro produce flujo vertical con FOE espurio.
             Por eso las maniobras de escape se comprometen por duración y no se re-evalúan con el TTC.</li>
@@ -1009,9 +1036,10 @@
             en el bin <code>|yaw_rate| ∈ [0, 0.05)</code> rad/s.</li>
           <li><strong><code>vy</code> es siempre 0 en el guiado nominal.</strong> El desplazamiento es puramente frontal
             + yaw (estrategia <em>car-like</em>); no hay vuelo lateral coordinado.</li>
-          <li><strong>El barrido depende de una única consulta, sin verificación cruzada.</strong> El watchdog y el
-            esquema estricto cubren timeout y formato inválido, pero una respuesta válida y semánticamente errónea se
-            ejecuta igual: la red de seguridad es el resto del lazo, no una segunda opinión.</li>
+          <li><strong>El barrido depende de un único juicio, sin verificación cruzada.</strong> El watchdog y el
+            esquema estricto cubren timeout y formato inválido, pero un juicio válido y erróneo se ejecuta igual: la
+            red de seguridad es el resto del lazo, no una segunda opinión. Los errores de la profundidad estimada
+            fueron conservadores en el banco (2 % de libres con un obstáculo a menos de 5 m).</li>
         </ul>
 
         <h3>Referencias</h3>

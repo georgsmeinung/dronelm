@@ -138,7 +138,11 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_USE_JSON_SCHEMA` | `true` | Decodificación restringida por esquema JSON (Anexo 4; cap. 8, §8.2). |
 | `SLM_HTTP_TIMEOUT_S` / `SLM_DEEP_HTTP_TIMEOUT_S` | `15.0` / `20.0` | Timeout del cliente HTTP en la consulta estratégica y en el barrido. |
 | `SLM_DEEP_WATCHDOG_MS` | `18000` | Watchdog del barrido panorámico; debe ser menor que `SLM_DEEP_HTTP_TIMEOUT_S` para que gane siempre al corte HTTP. |
-| `DEADLOCK_STRATEGY` | `"deep_vlm"` | Resolución de atascos: `"deep_vlm"` (barrido + VLM, cap. 5 §5.12) o `"blind"` (escape vertical sin VLM). Cualquier otro valor aborta el arranque. |
+| `DEADLOCK_STRATEGY` | `"depth"` | Resolución de atascos: `"depth"` (barrido juzgado por la profundidad estimada, cap. 5 §5.12), `"deep_vlm"` (barrido + VLM; ablación) o `"blind"` (escape vertical sin barrido). Cualquier otro valor aborta el arranque. |
+| `STRATEGIC_SOURCE` | `"depth"` | Fuente de la capa estratégica: `"depth"` (profundidad monocular estimada, cap. 5 §5.10.6), `"vlm"` (grilla del VLM) u `"off"` (sin capa). Con `depth`/`depth` el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 11 §11.6). |
+| `DEPTH_MODEL` | `depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf` | Red de profundidad métrica (~25 M parámetros, ~110 ms con la GPU compartida, ~440 MiB de VRAM). Se descarga de Hugging Face la primera vez. |
+| `DEPTH_FREE_M` | `15.0` | Un sector (o un rumbo del barrido) es libre si el percentil 5 de su profundidad estimada es ≥ este valor; igual a `VLM_SUBGOAL_DIST_M`. |
+| `DEPTH_STRATEGIC_PERIOD_S` | `1.0` | Período mínimo entre consultas de la capa estratégica con la profundidad (con el VLM rige `VLM_STRATEGIC_PERIOD_S`, 3 s). |
 | `VLM_STRATEGIC_ENABLED` | `true` | Habilita la capa estratégica del VLM (cap. 5, §5.10). |
 | `VLM_STRATEGIC_PERIOD_S` / `VLM_STRATEGIC_MAX_AGE_S` | `3.0` / `10.0` | Período mínimo entre consultas estratégicas y edad máxima de una respuesta para aplicarla. |
 | `CAMERA_HFOV_DEG` | `90.0` | Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, §5.10.3). |
@@ -147,7 +151,8 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_SUBGOAL_TIE_DEG` | `10.0` | Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio > arriba > abajo) (cap. 5, §5.10.3). |
 | `VLM_NEAR_WP_M` | `8.0` | A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre. |
 | `SCAN_FAILED_SECTOR_DEG` / `SCAN_REPEAT_RADIUS_M` / `SCAN_HISTORY_MAX` | `45.0` / `10.0` / `12` | Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, §5.12). |
-| `ROUTE_PLAN_MODE` | `off` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`vlm`) o manifiesto tal cual (`off`). Desactivado en la versión final: los modelos evaluados no distinguen en el mapa una ruta por la calle de una sobre un edificio (cap. 4 §4.3.1). |
+| `ROUTE_PLAN_MODE` | `vlm` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`vlm`) o manifiesto tal cual (`off`). Activado en la versión final con el juez por parches (AUC 0.81 en el banco, cap. 4 §4.3.1); requiere un mapa registrado con el mundo (CitySim). El lote de TownSim se voló con `--route-plan off`. |
+| `ROUTE_JUDGE` / `ROUTE_PATCH_STEP_M` / `ROUTE_PATCH_M` / `ROUTE_PATCH_CONTEXT_M` | `patches` / `8.0` / `16.0` / `48.0` | Juicio de cada candidata: parches cada 8 m, de 16 m con 48 m de contexto, clasificados por el VLM; la candidata se puntúa con la probabilidad media de «calle» (cap. 4 §4.3.1). |
 | `ROUTE_RENDER` | `corridor` | Dibujo de cada candidata para el planificador: `corridor` (pasillo con recorte propio, rotado y con el resto oscurecido) o `line` (línea roja sobre el recorte común del tramo, norte arriba). Cada uno tiene su prompt (cap. 4 §4.3.1). |
 | `ROUTE_CORRIDOR_M` | `10.0` | Ancho del pasillo dibujado (m). |
 | `ROUTE_LLM_MODEL_NAME` | `"lfm2.5-vl-1.6b:q4km-ctx8k"` | Modelo del planificador de ruta, en el mismo servidor que el de vuelo; si falta, se usa `LOCAL_LLM_MODEL_NAME`. Necesita JSON forzado y *logprobs* en la misma consulta (la versión GGUF de LFM los da; la MLX no). |
@@ -380,6 +385,7 @@ Copy-Item "config/settings.json" "$HOME\Documents\AirSim\settings.json" -Force
    ```powershell
    powershell -ExecutionPolicy Bypass -File D:\TesisMCD\startOllama.ps1
    ```
+   Con la configuración final (`STRATEGIC_SOURCE = depth`, `DEADLOCK_STRATEGY = depth`) el modelo solo se usa para el plan de ruta previo; si el lote corre con `--route-plan off`, Ollama puede quedar cerrado y su VRAM queda para Unreal.
 2. Verificar que el modelo quedó residente:
    ```bash
    curl http://127.0.0.1:11434/api/ps

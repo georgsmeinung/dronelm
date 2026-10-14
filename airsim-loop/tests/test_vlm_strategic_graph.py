@@ -121,3 +121,26 @@ def test_depth_source_runs_without_any_vlm_service(monkeypatch):
         assert any(d.get("arm") == "depth_strategic" for d in state.get("deliberations") or [])
     finally:
         service.stop()
+
+
+def test_off_source_keeps_only_the_depth_scan_service(monkeypatch):
+    """Sin capa estrategica: queda solo el servicio de profundidad del barrido de deadlock, y el VLM no se
+    crea. Con off + blind no hay ningun servicio (main.py lo tolera)."""
+    monkeypatch.setattr("src.agents.graph.AGENT_ARM", "slm")
+    monkeypatch.setattr(vs, "STRATEGIC_SOURCE", "off")
+
+    def _no_vlm():
+        raise AssertionError("con off/depth no debe crearse el servicio del VLM")
+
+    monkeypatch.setattr(deliberative_mod, "make_deliberation_service", _no_vlm)
+    from src.agents.graph import _build_nodes
+
+    monkeypatch.setattr("src.agents.deep_scan.DEADLOCK_STRATEGY", "depth")
+    nodes = _build_nodes(object())
+    try:
+        assert getattr(nodes["_deliberation_service"], "kind", None) == "depth"
+    finally:
+        nodes["_deliberation_service"].stop()
+
+    monkeypatch.setattr("src.agents.deep_scan.DEADLOCK_STRATEGY", "blind")
+    assert _build_nodes(object())["_deliberation_service"] is None
