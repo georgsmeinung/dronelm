@@ -4,7 +4,7 @@ La integración de modelos de lenguaje en plataformas robóticas autónomas exig
 
 Un **Modelo de Lenguaje Pequeño** (*Small Language Model*, SLM) —y su extensión multimodal, *Small Vision-Language Model* (sVLM)— se define operativamente por tres criterios: **(1)** un conteo de parámetros en el rango de 1B a 10B ([Abdin et al., 2024](../13-REFERENCIAS.md#ref-abdin-2024); [Zhang et al., 2024](../13-REFERENCIAS.md#ref-zhang-tinyllama-2024)), que conserva competencia notable para razonamiento simbólico, comprensión sintáctica y extracción de relaciones complejas a pesar de su escala relativa ([Nguyen et al., 2024](../13-REFERENCIAS.md#ref-nguyen-2024)); **(2)** la factibilidad de despliegue local (*on-device*) en hardware de consumo común (tarjetas gráficas de gama media como la NVIDIA RTX 5060 de 8 GB) o procesadores embebidos (NVIDIA Jetson; [NVIDIA, 2025](../13-REFERENCIAS.md#ref-nvidia-2025)); y **(3)** una latencia de inferencia determinista de subsegundos a pocos segundos, compatible con los márgenes de los lazos de control en robótica móvil ([Tian et al., 2025](../13-REFERENCIAS.md#ref-tian-2025); [Vemprala et al., 2023](../13-REFERENCIAS.md#ref-vemprala-2023)). Frente a los LLMs de frontera (GPT-4o, Claude 3.5, Gemini 1.5 — decenas a cientos de miles de millones de parámetros, 24–80 GB de VRAM), los SLMs ofrecen ventajas determinantes para sistemas embarcados: autonomía operativa sin conexión a la nube, supresión de la variabilidad de red, eficiencia energética en plataformas alimentadas por batería ([Goel et al., 2021](../13-REFERENCIAS.md#ref-goel-2021)) y compatibilidad con decodificación restringida por gramáticas en motores locales como `llama.cpp` ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)).
 
-Este anexo documenta el estudio exploratorio previo a las decisiones finales de implementación: delimita las restricciones físicas de memoria de video (VRAM), evalúa de forma comparativa los modelos compactos candidatos en formato GGUF, analiza los mecanismos para garantizar salidas estructuradas deterministas, y examina críticamente el nivel de novedad de la arquitectura frente al estado del arte reciente (2024–2026), identificando los ejes de ingeniería que aportan valor genuino al control autónomo.
+Este anexo documenta el estudio de selección del modelo: delimita las restricciones físicas de memoria de video (VRAM), evalúa de forma comparativa los modelos compactos candidatos en formato GGUF, analiza los mecanismos para garantizar salidas estructuradas deterministas, y examina críticamente el nivel de novedad de la arquitectura frente al estado del arte reciente (2024–2026), identificando los ejes de ingeniería que aportan valor genuino al control autónomo.
 
 ---
 
@@ -29,7 +29,7 @@ El formato binario **GGUF** (*GPT-Generated Unified Format*), desarrollado por l
 
 Las variantes *Q4_K_M* (cuantización a 4 bits con ponderación mixta en bloques de atención) y *Q5_K_M* (5 bits) permiten comprimir modelos de 3B–7B parámetros a tamaños de archivo de entre 1.8 y 4.5 GB, preservando la perplejidad y capacidad de razonamiento de los modelos originales con pérdidas marginales ([Frantar et al., 2022](../13-REFERENCIAS.md#ref-frantar-gptq-2022)).
 
-Durante la fase exploratoria de diseño se evaluaron los siguientes modelos instruccionales (*instruct-tuned*) en formato GGUF para su ejecución bajo motores locales como `llama.cpp` y LM Studio:
+Se evaluaron los siguientes modelos instruccionales (*instruct-tuned*) en formato GGUF para su ejecución bajo motores locales como `llama.cpp` y LM Studio:
 
 | Modelo | Parámetros | Tamaño GGUF (quant) | VRAM estimada (full offload) | Fortalezas operativas | Comportamiento con salida estructurada | Disponibilidad de referencia |
 |---|---|---|---|---|---|---|
@@ -39,16 +39,14 @@ Durante la fase exploratoria de diseño se evaluaron los siguientes modelos inst
 | **Gemma-3-4B-IT** | 4B | ~2.8–3.4 GB (Q4_K_M) | ~2.5–3.2 GB | Arquitectura optimizada por Google; notable coherencia lingüística y comprensión contextual. | Buen desempeño estructurado, pero mayor demanda de KV cache en secuencias largas. | `google/gemma-3-4b-it-GGUF` |
 | **Ministral-3-3B-Instruct** | 3B | ~2.2–2.7 GB (Q4_K_M) | ~2.0–2.6 GB | Diseñado específicamente por Mistral AI para despliegues de borde (*edge inference*); atención deslizante. | Rápido y estable en la emisión de respuestas compactas delimitadas. | `mistralai/Ministral-3-3B-Instruct-GGUF` |
 
-### Transición hacia el modelo multimodal definitivo (§8.1.1 y §8.1.2)
+### Por qué un modelo multimodal (§8.1.1 y §8.1.2)
 
-Aunque los modelos textuales analizados exhibieron un rendimiento adecuado para el procesamiento de telemetría pura, el análisis teórico y empírico de la percepción monocular demostró la existencia de **puntos ciegos estructurales en la estimación de flujo óptico** (maniobras de sustentación estática *hover*, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse §6.1 y §6.12). 
+Los modelos textuales analizados son adecuados para procesar telemetría pura, pero la percepción monocular tiene **puntos ciegos estructurales en la estimación de flujo óptico** (maniobras de sustentación estática *hover*, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse §6.1 y §6.12). Bajo esas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Por eso el sistema usa un modelo con **capacidad de visión nativa** (*Small Vision-Language Model*, sVLM), que inspecciona directamente el fotograma de la cámara frontal o el mapa cenital.
 
-Bajo dichas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Esto motivó la sustitución de un SLM exclusivamente textual por un modelo con **capacidad de visión nativa** (*Small Vision-Language Model*, sVLM), permitiendo al agente inspeccionar directamente el fotograma capturado por la cámara frontal del UAV.
-
-En la fase exploratoria la elección convergió en **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)) bajo cuantización *Q4_K_M*, con el que se hicieron las corridas de diagnóstico del capítulo 9. El modelo de la versión final es **LFM2.5-VL-1.6B** (Q4_K_M, tag local de Ollama `lfm2.5-vl-1.6b:q4km-ctx8k`, ~1.6 GB de VRAM), elegido por latencia (cap. 8, §8.1.2). Las propiedades que motivaron la primera elección fueron:
-* **Huella de memoria**: consume ~2.0 GB de VRAM, situándose holgadamente dentro del presupuesto operativo restante de la GPU.
-* **Inspección visual directa**: procesa secuencias de dos fotogramas temporales ($t$ y $t-1$) para inferir dinámica de aproximación y discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
-* **Compatibilidad de decodificación**: ofrece soporte completo para esquemas de decodificación restringida (`json_schema`).
+Los dos sVLM candidatos que caben en el presupuesto son **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025); Q4_K_M, ~2.0 GB de VRAM) y **LFM2.5-VL-1.6B** (Q4_K_M, tag local de Ollama `lfm2.5-vl-1.6b:q4km-ctx8k`, ~1.6 GB de VRAM). El adoptado es LFM2.5-VL-1.6B, por latencia y por su mejor reconocimiento de parches del mapa (cap. 8, §8.1.2; cap. 10, §10.13.4). Ambos cumplen los requisitos:
+* **Huella de memoria** dentro del presupuesto operativo restante de la GPU.
+* **Inspección visual directa** del fotograma, para discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
+* **Compatibilidad de decodificación**: soporte de decodificación restringida (`json_schema`) y *logprobs* en la misma consulta (en formato GGUF).
 
 ---
 
@@ -85,23 +83,18 @@ En arquitecturas modulares, la interacción entre el modelo deliberativo y las h
 
 ## A1.4 Procedimiento práctico de configuración e integración local
 
-La puesta en marcha del lazo deliberativo bajo las restricciones de cómputo descritas siguió, durante la fase exploratoria, un flujo de tres fases con la inferencia en un nodo separado:
+El modelo corre en la misma estación y la misma GPU que la simulación, porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo; esa es la condición que se toma como representativa y como línea base del banco de prueba (cap. 11, §11.0). La integración tiene tres partes:
 
-> **Configuración vigente (desde el 7 de octubre de 2026).** La inferencia ya no está desacoplada: LFM2.5-VL-1.6B (Q4_K_M, contexto de 8192 tokens) corre en Ollama sobre la misma RTX 5060 que Unreal Engine 5.5 y el grafo de control (`http://127.0.0.1:11434/v1`), con ~1.6 GB de VRAM. Un VLM a bordo comparte el cómputo con el resto del sistema de vuelo; esa es la condición que se toma como representativa y como línea base del banco de prueba (cap. 11, §11.0). Desde el 10 de octubre el VLM ya no interviene en el lazo de vuelo —la capa estratégica y el barrido usan una red de profundidad monocular estimada (cap. 5, §5.10.6)— y queda en la planificación de ruta previa al vuelo. Lo que sigue describe la configuración anterior de dos nodos.
+1. **Servidor local en la GPU de la simulación**:
+   * Ollama sirve LFM2.5-VL-1.6B (Q4_K_M, GGUF) sobre la misma RTX 5060 que Unreal Engine 5.5 y el grafo de control, con un contexto limitado a 8192 tokens: ~1.6 GB de VRAM, frente a 3.1 GB con el contexto por defecto (casi todo caché de atención). El script `startOllama.ps1` levanta el servidor (Anexo 6).
+   * La red de profundidad del lazo lento (~440 MiB) comparte la misma GPU; con la configuración por defecto el VLM no corre durante el vuelo, solo en la planificación de ruta previa (cap. 4, §4.3.1).
 
-<img src="a1-integracion-local.jpg"/>
+2. **API HTTP compatible con OpenAI**:
+   * El servidor expone `http://127.0.0.1:11434/v1` (variable `LOCAL_LLM_URL`; `127.0.0.1` y no `localhost`, que en Windows resuelve primero a IPv6 y demora cada conexión).
+   * El cliente envía el fotograma (o los parches del mapa) codificado en base64, y pide la respuesta con `response_format` en modo `json_schema` y, en el planificador, los *logprobs* de la respuesta.
 
-1. **Gestión de capas y memoria en Apple Silicon (*Metal Offloading* en Mac mini M4)**:
-   * En el servidor dedicado de inferencia (Apple Mac mini M4 con 16 GB de memoria unificada), LM Studio ejecuta el núcleo de `llama.cpp` compilado con aceleración por hardware sobre Apple Metal (MPS). El modelo multimodal Qwen2.5-VL-3B en cuantización Q4_K_M se aloja configurando el traspaso completo (*full offload*) de sus 36 bloques de capas Transformer y su codificador visual ViT directamente en la memoria unificada accesible por la GPU integrada de 10 núcleos, con una huella de ~2.0 a 2.5 GB.
-   * La arquitectura desacoplada en dos nodos físicos (la estación de simulación con GPU NVIDIA RTX 5060 de 8 GB dedicada exclusivamente a Unreal Engine 5.5 / AirSim, y el Mac mini M4 dedicado a la inferencia) elimina por completo la contienda de recursos de VRAM entre el renderizado 3D y el modelo de lenguaje. En el Mac mini, la memoria se administra mediante la arquitectura de memoria unificada (*Unified Memory Architecture*, UMA) de macOS, manteniendo un margen libre (*headroom*) superior a 10 GB y suprimiendo de raíz contingencias de falta de memoria (*Out of Memory*, OOM) provocadas por picos de carga poligonal en el simulador.
-
-2. **Inferencia desacoplada mediante API HTTP en red local**:
-   * El motor de inferencia expone un punto de conexión compatible con OpenAI en el puerto 1234 (`http://<ip-servidor>:1234/v1/chat/completions`, configurado en la variable `LOCAL_LLM_URL`, e.g., `http://192.168.110.101:1234/v1` a través de un enlace Ethernet directo).
-   * El cliente de navegación serializa el estado perceptual y el fotograma codificado en base64, solicitando la respuesta con el parámetro `response_format` en modo `json_schema`.
-
-3. **Puente bidireccional con AirSim**:
-   * Las lecturas de posición, velocidad y odometría generadas por el modelo de dinámica de AirSim se transforman en representaciones simbólicas y vectores de ocupación.
-   * La respuesta estructurada del modelo se valida mediante el analizador tolerante (`_parse_decision()`; §8.2.2) y se convierte en comandos cinemáticos continuos a través de `action_to_command()` (§8.4).
+3. **Puente con el grafo de control**:
+   * La respuesta estructurada se valida con el parser de su modo (`parse_strategic`, `parse_panorama_description`; §8.2.2) y el código la traduce a geometría: una sub-meta en coordenadas del mundo anclada a la pose del fotograma (cap. 5, §5.10.3) o, en el planificador, una puntuación por ruta candidata (cap. 4, §4.3.1). El modelo nunca elige una macro-acción.
 
 ---
 

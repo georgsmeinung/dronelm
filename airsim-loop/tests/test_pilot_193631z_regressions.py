@@ -94,7 +94,8 @@ def test_code_version_marks_uncommitted_code(monkeypatch):
 
     monkeypatch.setattr(cv, "_git", fake_git)
     assert cv.get_code_version() == "abc1234-dirty"
-    assert calls[1][-3:] == cv.CODE_PATHS
+    assert calls[1][-len(cv.CODE_PATHS):] == cv.CODE_PATHS
+    assert "experiments" in cv.CODE_PATHS  # lanzadores de los lotes (2026-10-15)
 
 
 def test_code_version_clean_tree(monkeypatch):

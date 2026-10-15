@@ -495,7 +495,23 @@ def main():
              "argumento, las celdas son strat_<fuente>__<deadlock_strategy>. Dentro de cada semilla las "
              "fuentes se alternan, para repartir entre ellas la deriva en el tiempo.",
     )
+    parser.add_argument(
+        "--cells", nargs="+", default=None,
+        help="2026-10-15 (lotes D/E/F, cap. 10 §10.12.2): celdas brazo:estrategia a correr, p. ej. "
+             "'slm:depth fsm:depth fsm:blind reactive'. Reemplaza el producto --arms x --deadlock-strategies: "
+             "solo se corren esas celdas y se ALTERNAN dentro de cada semilla (con el orden rotado por "
+             "semilla), para repartir entre ellas la deriva del simulador en el tiempo.",
+    )
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
+    parser.add_argument("--allow-dirty", action="store_true",
+                         help="Correr aunque el arbol tenga cambios sin commitear (code_version '-dirty'). "
+                              "Por defecto el lote no arranca: esas corridas se descartan (cap. 10 §10.12.2).")
+    parser.add_argument("--allow-any-python", action="store_true",
+                         help="Correr aunque el interprete no sea el de AIRSIM_ENV_DIR (config/.env). Por defecto "
+                              "el lote no arranca: todas las corridas deben salir del mismo entorno.")
+    parser.add_argument("--skip-existing", action="store_true",
+                         help="Saltear las corridas (escenario, brazo, celda, semilla) que ya tienen un summary.json "
+                              "valido con el code_version actual: permite reanudar un lote cortado.")
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-runs"))
     parser.add_argument("--max-cycles", type=int, default=2000)
     parser.add_argument("--max-seconds", type=float, default=300.0)
@@ -516,6 +532,26 @@ def main():
                               "por defecto (2026-0828, ver CHANGELOG.md) -- solo para corridas "
                               "estadisticas multi-semilla que necesiten variacion real entre seeds.")
     args = parser.parse_args()
+    try:
+        cells = _parse_cells(args.cells) if args.cells else None
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    from src.logging.code_version import get_code_version
+    from src.logging.python_env import check_python_env
+
+    env_ok, env_msg = check_python_env()
+    if not env_ok and not args.allow_any_python:
+        print(f"[{_ts()}][runner] ABORTADO: {env_msg}")
+        sys.exit(3)
+    print(f"[{_ts()}][runner] python={sys.executable} ({env_msg})")
+
+    code_version = get_code_version()
+    if not _version_ok_for_batch(code_version) and not args.allow_dirty:
+        print(f"[{_ts()}][runner] ABORTADO: code_version={code_version}. Commitear los cambios en airsim-loop/, experiments/, "
+              f"config/ y airsim-plan/ antes del lote (o usar --allow-dirty para una prueba que no entra al analisis).")
+        sys.exit(2)
+    print(f"[{_ts()}][runner] code_version={code_version}")
 
     # Cada combinacion corre en un subproceso propio: AGENT_ARM se lee a
     # nivel de modulo en graph.py al importar, asi que reusar el mismo
@@ -536,67 +572,73 @@ def main():
 
     results = []
     for scenario in args.scenarios:
-        for arm in args.arms:
-            for deadlock_strategy in args.deadlock_strategies:
-                for seed, strategic_source in [(sd, src) for sd in args.seeds for src in (args.strategic_sources or [None])]:
-                    cell = _cell(deadlock_strategy, strategic_source)
-                    print(f"[{_ts()}][runner] scenario={scenario} arm={arm} cell={cell} seed={seed}")
-                    cmd = [
-                        sys.executable, __file__, "--_single",
-                        "--scenario", flown[scenario], "--arm", arm, "--seed", str(seed),
-                        "--out-dir", args.out_dir, "--max-cycles", str(args.max_cycles),
-                        "--max-seconds", str(args.max_seconds),
-                        "--deadlock-strategy", deadlock_strategy,
-                    ]
-                    if strategic_source is not None:
-                        cmd += ["--strategic-source", strategic_source]
-                    if args.seed_jitter:
-                        cmd.append("--seed-jitter")
-                    if args.no_video:
-                        cmd.append("--no-video")
-                    if args.viewport:
-                        cmd.append("--viewport")
-                    if args.no_follow_cam:
-                        cmd.append("--no-follow-cam")
-                    # Popen en vez de subprocess.run: ante Ctrl+C, run() hace kill() al
-                    # hijo a los 0.25 s y lo corta a mitad de close() (cola de video,
-                    # CSV aplanado, visor). Aca se espera su cierre ordenado.
-                    run_started = time.time()
-                    # utf-8 + replace: con la codificacion de la consola de Windows (cp1252) un caracter no ASCII en la
-                    # salida del hijo mataba el hilo lector del padre (lote 2026-10-08, 5 tracebacks; los datos
-                    # de cada corrida no se afectaban).
-                    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                             encoding="utf-8", errors="replace")
-                    interrupted = False
-                    try:
-                        out_txt, err_txt = popen.communicate()
-                    except KeyboardInterrupt:
-                        interrupted = True
-                        print(f"[{_ts()}][runner] Ctrl+C: esperando el cierre de la corrida "
-                              f"(video/CSV/visor, hasta {CLOSE_WAIT_S:.0f} s)...")
-                        try:
-                            out_txt, err_txt = popen.communicate(timeout=CLOSE_WAIT_S)
-                        except (KeyboardInterrupt, subprocess.TimeoutExpired):
-                            popen.kill()
-                            out_txt, err_txt = popen.communicate()
-                    proc = subprocess.CompletedProcess(cmd, popen.returncode, out_txt, err_txt)
-                    # Red de seguridad: si el hijo murio antes de cerrar (kill, 2do Ctrl+C,
-                    # crash), reconstruir CSV aplanado / video / visor desde el JSONL.
-                    _finalize_if_incomplete(args.out_dir, scenario, arm, cell, run_started)
-                    if proc.returncode != 0:
-                        print(f"[{_ts()}][runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
-                    else:
-                        last = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[runner] ok"
-                        print(f"[{_ts()}] {last}")
-                    results.append({
-                        "scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
-                        "strategic_source": strategic_source,
-                        "seed": seed, "returncode": proc.returncode,
-                    })
-                    if interrupted:
-                        print(f"[{_ts()}][runner] Interrumpido: no se lanzan las corridas restantes.")
-                        print(f"\n[{_ts()}][runner] {len(results)} corrida(s) (interrumpido). Ver {args.out_dir}/.")
-                        return
+        for arm, deadlock_strategy, seed, strategic_source in _build_jobs(
+                args.arms, args.deadlock_strategies, args.seeds, args.strategic_sources, cells):
+            cell = _cell(deadlock_strategy, strategic_source)
+            if args.skip_existing and _has_valid_summary(
+                    args.out_dir, flown[scenario], arm, cell, seed, code_version):
+                print(f"[{_ts()}][runner] ya existe: scenario={scenario} arm={arm} cell={cell} seed={seed} (se saltea)")
+                results.append({"scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
+                                "strategic_source": strategic_source, "seed": seed, "returncode": None,
+                                "skipped": True})
+                continue
+            print(f"[{_ts()}][runner] scenario={scenario} arm={arm} cell={cell} seed={seed}")
+            cmd = [
+                sys.executable, __file__, "--_single",
+                "--scenario", flown[scenario], "--arm", arm, "--seed", str(seed),
+                "--out-dir", args.out_dir, "--max-cycles", str(args.max_cycles),
+                "--max-seconds", str(args.max_seconds),
+                "--deadlock-strategy", deadlock_strategy,
+            ]
+            if strategic_source is not None:
+                cmd += ["--strategic-source", strategic_source]
+            if args.seed_jitter:
+                cmd.append("--seed-jitter")
+            if args.no_video:
+                cmd.append("--no-video")
+            if args.viewport:
+                cmd.append("--viewport")
+            if args.no_follow_cam:
+                cmd.append("--no-follow-cam")
+            # Popen en vez de subprocess.run: ante Ctrl+C, run() hace kill() al
+            # hijo a los 0.25 s y lo corta a mitad de close() (cola de video,
+            # CSV aplanado, visor). Aca se espera su cierre ordenado.
+            run_started = time.time()
+            # utf-8 + replace: con la codificacion de la consola de Windows (cp1252) un caracter no ASCII en la
+            # salida del hijo mataba el hilo lector del padre (lote 2026-10-08, 5 tracebacks; los datos
+            # de cada corrida no se afectaban).
+            popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                     encoding="utf-8", errors="replace")
+            interrupted = False
+            try:
+                out_txt, err_txt = popen.communicate()
+            except KeyboardInterrupt:
+                interrupted = True
+                print(f"[{_ts()}][runner] Ctrl+C: esperando el cierre de la corrida "
+                      f"(video/CSV/visor, hasta {CLOSE_WAIT_S:.0f} s)...")
+                try:
+                    out_txt, err_txt = popen.communicate(timeout=CLOSE_WAIT_S)
+                except (KeyboardInterrupt, subprocess.TimeoutExpired):
+                    popen.kill()
+                    out_txt, err_txt = popen.communicate()
+            proc = subprocess.CompletedProcess(cmd, popen.returncode, out_txt, err_txt)
+            # Red de seguridad: si el hijo murio antes de cerrar (kill, 2do Ctrl+C,
+            # crash), reconstruir CSV aplanado / video / visor desde el JSONL.
+            _finalize_if_incomplete(args.out_dir, scenario, arm, cell, run_started)
+            if proc.returncode != 0:
+                print(f"[{_ts()}][runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
+            else:
+                last = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[runner] ok"
+                print(f"[{_ts()}] {last}")
+            results.append({
+                "scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
+                "strategic_source": strategic_source,
+                "seed": seed, "returncode": proc.returncode,
+            })
+            if interrupted:
+                print(f"[{_ts()}][runner] Interrumpido: no se lanzan las corridas restantes.")
+                print(f"\n[{_ts()}][runner] {len(results)} corrida(s) (interrumpido). Ver {args.out_dir}/.")
+                return
 
     print(f"\n[{_ts()}][runner] {len(results)} corridas completadas. Ver {args.out_dir}/ para los JSONL y usar experiments/analyze.py.")
 
@@ -611,6 +653,70 @@ def _read_summary_field(jsonl_path: Path, key: str):
 def _cell(deadlock_strategy: str, strategic_source: Optional[str]) -> str:
     """Directorio de la celda del factorial: la estrategia de deadlock y, si se fijo, la fuente estrategica."""
     return deadlock_strategy if strategic_source is None else f"strat_{strategic_source}__{deadlock_strategy}"
+
+
+ARMS = ("slm", "fsm", "reactive")
+DEADLOCK_STRATEGIES = ("depth", "deep_vlm", "blind")
+# Corridas con menos ciclos son fallas de infraestructura, no del dron (cap. 10 §10.12.2).
+MIN_VALID_CYCLES = 50
+
+
+def _parse_cells(specs: list[str]) -> list[tuple[str, str]]:
+    """'slm:depth fsm:blind reactive' -> [(brazo, estrategia)]. Sin estrategia, la de config/.env.
+
+    `reactive` no ejecuta barrido; con la estrategia por defecto su celda queda en el mismo directorio
+    que en los lotes anteriores.
+    """
+    default = os.getenv("DEADLOCK_STRATEGY", "depth")
+    cells = []
+    for spec in specs:
+        arm, _, strategy = spec.partition(":")
+        strategy = strategy or default
+        if arm not in ARMS or strategy not in DEADLOCK_STRATEGIES:
+            raise ValueError(f"celda invalida '{spec}': brazo en {ARMS}, estrategia en {DEADLOCK_STRATEGIES}")
+        if (arm, strategy) in cells:
+            raise ValueError(f"celda repetida '{spec}'")
+        cells.append((arm, strategy))
+    return cells
+
+
+def _build_jobs(arms, deadlock_strategies, seeds, strategic_sources, cells=None):
+    """Orden de las corridas de un escenario: [(brazo, estrategia, semilla, fuente estrategica)].
+
+    Sin `cells`, el orden historico: brazo -> estrategia -> semilla (fuentes alternadas por semilla).
+    Con `cells`, semilla -> celda: todas las celdas se corren en cada semilla antes de pasar a la
+    siguiente, y el orden de las celdas rota con la semilla (la celda que va primera cambia), de modo
+    que ninguna celda queda siempre al principio o al final de la sesion del simulador.
+    """
+    sources = strategic_sources or [None]
+    if cells is None:
+        return [(arm, dl, seed, src) for arm in arms for dl in deadlock_strategies
+                for seed in seeds for src in sources]
+    jobs = []
+    for i, seed in enumerate(seeds):
+        k = i % len(cells)
+        for arm, dl in cells[k:] + cells[:k]:
+            for src in sources:
+                jobs.append((arm, dl, seed, src))
+    return jobs
+
+
+def _version_ok_for_batch(code_version: str) -> bool:
+    """Un lote solo arranca con el arbol confirmado: con '-dirty' o sin git las corridas se descartan."""
+    return bool(code_version) and code_version != "unknown" and not code_version.endswith("-dirty")
+
+
+def _has_valid_summary(out_dir: str, scenario: str, arm: str, cell: str, seed: int, code_version: str) -> bool:
+    """True si la celda ya tiene una corrida valida de esta semilla con este code_version (--skip-existing)."""
+    cell_dir = Path(out_dir) / Path(scenario).stem / arm / cell
+    for path in cell_dir.glob(f"seed_{seed}_*/seed_{seed}_*.summary.json"):
+        try:
+            summary = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if summary.get("code_version") == code_version and int(summary.get("cycles") or 0) >= MIN_VALID_CYCLES:
+            return True
+    return False
 
 
 def _finalize_if_incomplete(out_dir: str, scenario: str, arm: str, strategy: str, since: float) -> None:

@@ -1,10 +1,10 @@
 # Anexo 3: Optimización y especialización de modelos de visión-lenguaje mediante LoRA/QLoRA para navegación aérea autónoma
 
-La arquitectura deliberativa desarrollada en esta tesis adoptó primero un modelo multimodal de pesos abiertos de 3 mil millones de parámetros (**Qwen2.5-VL-3B-Instruct**; Qwen Team, 2025) y, en la versión final, **LFM2.5-VL-1.6B** (tag `lfm2.5-vl-1.6b:q4km-ctx8k`), ambos ejecutados localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (§8.1). Las cifras de memoria de este anexo se calcularon para el modelo de 3 B y son una cota superior para el de 1.6 B. Con la configuración final el VLM ya no decide en vuelo (cap. 8): una adaptación LoRA sería la vía para que vuelva a hacerlo, si el banco de prueba (cap. 11, §11.0) muestra que el modelo adaptado distingue sectores libres de bloqueados en un entorno que no vio durante el entrenamiento. En la versión evaluada en el lazo táctico de control, dicho modelo opera en régimen *zero-shot / in-context learning*, guiado por un prompt estructurado de cinco componentes (§8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (§8.2, Anexo 4; Willard & Louf, 2023).
+El modelo multimodal del sistema es **LFM2.5-VL-1.6B** (tag `lfm2.5-vl-1.6b:q4km-ctx8k`), ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (§8.1); el otro candidato evaluado es **Qwen2.5-VL-3B-Instruct** (Qwen Team, 2025). Las cifras de memoria de este anexo se calcularon para el modelo de 3 B y son una cota superior para el de 1.6 B. Con la configuración por defecto el VLM no decide en vuelo, porque en el banco de prueba no distingue sectores libres de bloqueados (cap. 8; cap. 11, §11.0): una adaptación LoRA sería la vía para que lo haga, si el banco muestra que el modelo adaptado distingue sectores libres de bloqueados en un entorno que no vio durante el entrenamiento. Sin adaptar, el modelo opera en régimen *zero-shot / in-context learning*, guiado por prompts breves (§8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (§8.2, Anexo 4; Willard & Louf, 2023).
 
-Si bien esta configuración resuelve con éxito la extracción de semántica visual y el rescate ante fallas del estimador de flujo óptico (§6.12), introduce dos limitaciones operativas para el vuelo reactivo:
-1. **Sobrecarga de latencia por longitud de contexto (*prompt overhead*):** verbalizar la telemetría, el resumen del campo de obstáculos (`ObstacleField`), el historial de maniobras y las instrucciones sintácticas insume entre 400 y 600 tokens de entrada por ciclo. Esto eleva la fase de pre-llenado (*pre-fill*), empujando la latencia de inferencia hacia la frontera del perro guardián del sistema (`SLM_WATCHDOG_MS` (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)).
-2. **Dependencia de restricciones externas de muestreo:** el modelo preentrenado retiene sesgos conversacionales y un amplio espacio léxico generalista, lo que exige filtrar activamente sus *logits* en cada token mediante gramáticas para asegurar el cumplimiento de la lista blanca de macro-acciones (§8.3).
+Esta configuración tiene dos limitaciones operativas para el vuelo reactivo:
+1. **Capacidad de discriminación:** el modelo generalista no separa sectores volables de bloqueados en la imagen de a bordo (AUC 0.53 en el banco) y responde con sesgos por posición en la grilla (cap. 9, §9.8.10).
+2. **Latencia:** ~0.8 s por consulta con imagen en la GPU compartida con la simulación (cap. 8, §8.6), cuatro ciclos del lazo, frente a ~0.1 s de la red de profundidad.
 
 Este anexo desarrolla los fundamentos matemáticos y metodológicos de **Adaptación de Bajo Rango (LoRA; [Hu et al., 2022](../13-REFERENCIAS.md#ref-hu-2022))** y sus extensiones contemporáneas (**QLoRA; Dettmers et al., 2024** y **DoRA; Liu et al., 2024**) como línea de trabajo futuro (§12.4): internalizar el dominio físico-espacial y el formato estricto directamente en los tensores de ponderación de la red, habilitando respuestas en tiempo real (< 500 ms) sin alterar la arquitectura base ni requerir hardware de nivel servidor.
 
@@ -77,10 +77,10 @@ La integración de un adaptador LoRA en la consulta al VLM transforma la interfa
 <img src="a3-impacto-lora.jpg"/>
 
 ### A3.2.1 Reducción del presupuesto de tokens y compresión de latencia
-En la implementación *zero-shot* de referencia (§8.5), el prompt de usuario debe reiterar en cada invocación:
-* Las definiciones semánticas de los sectores del sensor (`SECTOR_FRONTAL`, `SECTOR_LATERAL`).
+En una implementación *zero-shot* (§8.5), el prompt debe reiterar en cada invocación:
+* La definición de la grilla de sectores y del criterio «libre a 15 m».
 * La sintaxis exacta y el orden de los campos del esquema JSON.
-* La lista cerrada de macro-acciones admisibles (`keep_going`, `evasive`, `girar_90`, `fsm`, `degraded`).
+* Los valores admisibles de cada campo.
 
 Este contexto insume cientos de tokens de procesamiento previo (*prefill*). Al especializar el modelo con LoRA, **la gramática de salida y las reglas de dominio quedan cristalizadas en los tensores de ponderación**. El prompt de entrada puede simplificarse a una codificación tabular mínima:
 
@@ -88,7 +88,7 @@ Este contexto insume cientos de tokens de procesamiento previo (*prefill*). Al e
 [ESTADO: Vz=-0.1, Vh=3.2 | TTC: F=1.4s, L=inf, R=4.1s | HIST: keep_going(x3) | REASON: TTC_CRITICO]
 ```
 
-Esta reducción comprime la ventana de entrada de ~500 a menos de 100 tokens, acelerando el tiempo de respuesta del modelo en un 60%, garantizando que la inferencia opere de forma consistente entre 300 ms y 550 ms, muy por debajo del perro guardián original de 1500 ms.
+Esta reducción comprime la ventana de entrada de ~500 a menos de 100 tokens, acelerando el tiempo de respuesta del modelo en un 60%, con la inferencia por debajo del período de consulta de la capa estratégica.
 
 ### A3.2.2 Alineación causal directa: de la imagen a la maniobra
 Un modelo generalista tiende a verbalizar descripciones visuales pasivas (*«Veo un muro con sombras proyectadas»*). LoRA permite reentrenar la distribución de probabilidad condicional $P(y \mid X)$ para que el modelo efectúe una **asociación sensoriomotora directa**:
@@ -156,8 +156,8 @@ El ajuste fino no reemplaza la decodificación restringida por gramáticas (§8.
 
 ### A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia
 Un principio fundacional de DroneLM es que los modelos de lenguaje son aproximadores estocásticos y **bajo ninguna circunstancia deben gobernar de forma directa los actuadores físicos sin arbitraje determinista** (Gat, 1998; cap. 5 y 8). La incorporación de adaptadores LoRA preserva íntegramente las tres salvaguardas del sistema:
-1. **Supervisión Jerárquica por FSM:** la máquina de estados retiene la potestad para anular cualquier macro-acción deliberativa ante condiciones de riesgo inminente ($TTC < 1.0\text{ s}$).
-2. **Parser Tolerante de Tres Etapas:** permanece activo en `_parse_decision()` como red de contención frente a anomalías de serialización.
-3. **Perro Guardián Temporal (`SLM_WATCHDOG_MS` (1 500 ms en el diseño original; 13 000 ms en la configuración vigente, cap. 8, §8.6)):** cualquier sobrepaso temporal fuerza el retorno inmediato al régimen conservador de sustentación.
+1. **Lazo rápido único que comanda velocidades:** la capa deliberativa solo propone sub-metas ancladas al mundo; la evasión por flujo óptico y TTC sigue actuando en el mismo ciclo ante cualquier riesgo inminente (cap. 5, §5.3.3).
+2. **Parser por modo:** valida cada respuesta contra su esquema y rechaza la que no coincide, sin sustituirla por un valor por defecto (§8.2.2).
+3. **Perro guardián temporal** (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido; edad máxima de 10 s en la capa estratégica, cap. 8, §8.6): una respuesta tardía se descarta y el barrido cae al escape vertical.
 
 Como línea de extensión formulada en el trabajo futuro (§12.4), esta especialización posibilitará la transferencia de la capa deliberativa a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.

@@ -12,7 +12,7 @@ La percepción del lazo rápido prescinde deliberadamente de redes neuronales pr
 
 **3. Modelado físico del Tiempo-a-Colisión (TTC).** Una caja delimitadora 2D no provee información cinemática de cierre ni distancia métrica directa. La divergencia del campo de flujo traslacional permite derivar matemáticamente el TTC ($TTC \approx d / v_{\text{cierre}}$) de forma continua a lo largo del plano de la imagen, entregando una señal temporal interpretable y calibrable para las decisiones de maniobra reactiva. El principio no es una invención de la robótica aérea: es la teoría del *tau* ($\tau$) de [Lee (1976)](13-REFERENCIAS.md#ref-lee-1976), que demostró que el tiempo-a-colisión puede leerse directamente de la tasa de expansión óptica de una superficie en el plano de la imagen, sin necesidad de recuperar distancia ni velocidad absolutas por separado. Esta derivación es una consecuencia directa de la ecuación del flujo óptico bajo traslación pura, instanciada en visión artificial aplicada a UAVs por [Al-Kaff et al. (2017)](13-REFERENCIAS.md#ref-al-kaff-2017) y [Vera-Yanez et al. (2024)](13-REFERENCIAS.md#ref-vera-yanez-2024).
 
-**Limitación estructural y rol del lazo lento.** La elección de percepción clásica tiene un costo explícito: el flujo óptico requiere **traslación entre frames** para generar evidencia válida. En hover puro, giro puro o crucero muy lento, la señal traslacional colapsa a cero y el campo de obstáculos pierde toda confianza; lo mismo ocurre con un obstáculo centrado en el foco de expansión. El lazo lento mira un único fotograma y no necesita traslación. Se diseñó para un VLM; en la configuración final lo resuelve una red de profundidad monocular (§6.14), porque el VLM no distinguió sectores libres de bloqueados en el banco de prueba (cap. 11, §11.0). La arquitectura de dos canales —flujo rápido para lo inminente, profundidad estimada de un fotograma para decidir el rodeo— es el mecanismo con el que este trabajo aborda esa limitación.
+**Limitación estructural y rol del lazo lento.** La elección de percepción clásica tiene un costo explícito: el flujo óptico requiere **traslación entre frames** para generar evidencia válida. En hover puro, giro puro o crucero muy lento, la señal traslacional colapsa a cero y el campo de obstáculos pierde toda confianza; lo mismo ocurre con un obstáculo centrado en el foco de expansión. El lazo lento mira un único fotograma y no necesita traslación. Por defecto lo resuelve una red de profundidad monocular (§6.14); la alternativa, el VLM, no distingue sectores libres de bloqueados en el banco de prueba (cap. 11, §11.0). La arquitectura de dos canales —flujo rápido para lo inminente, profundidad estimada de un fotograma para decidir el rodeo— es el mecanismo con el que este trabajo aborda esa limitación.
 
 *(Para el desarrollo matemático riguroso de la cámara pin-hole, las ecuaciones continuas de Longuet-Higgins, la deducción del FOE por mínimos cuadrados y la teoría de $\tau$ de Lee, véase el [Anexo 5](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md)).*
 
@@ -38,7 +38,7 @@ Si en cualquier etapa no hay evidencia suficiente (primer ciclo, modo degradado,
 
 ## 6.3 Etapa 1: escala y parámetros intrínsecos
 
-Los fotogramas BGR de AirSim se convierten a escala de grises y se escalan a un ancho normalizado `FLOW_DOWNSCALE_WIDTH`: 640 px en `config/.env` (320 px es el valor por defecto del código y el que se usó en la validación de TTC del capítulo 7). El ancho se subió a 640 px el 28 de agosto de 2026 porque a 320 px los objetos finos, como las ramas, quedaban bajo el piso de ruido y el estimador devolvía confianza cercana a cero frente a un acercamiento real. Esta reducción sirve dos propósitos: reducir el costo de cómputo del estimador de flujo y suavizar el ruido de alta frecuencia que genera falsos vectores de flujo. La distancia focal se escala proporcionalmente:
+Los fotogramas BGR de AirSim se convierten a escala de grises y se escalan a un ancho normalizado `FLOW_DOWNSCALE_WIDTH`: 640 px en `config/.env` (320 px es el valor por defecto del código y el que se usó en la validación de TTC del capítulo 7). El vuelo usa 640 px porque a 320 px los objetos finos, como las ramas, quedan bajo el piso de ruido y el estimador devuelve confianza cercana a cero frente a un acercamiento real. Esta reducción sirve dos propósitos: reducir el costo de cómputo del estimador de flujo y suavizar el ruido de alta frecuencia que genera falsos vectores de flujo. La distancia focal se escala proporcionalmente:
 
 $$f_x' = f_x \cdot \frac{W'}{W}, \quad f_y' = f_y \cdot \frac{W'}{W}$$
 
@@ -140,9 +140,9 @@ def is_blocked(self) -> bool:
 
 La lógica es: una celda está bloqueada si tiene evidencia mínima de percepción **y** (la ocupación es alta, **o** el TTC es bajo con suficiente confianza).
 
-**Calibración del umbral de ocupación (D2).** Un valor de umbral fijado a ojo (0.35) supone que la ocupación toma valores comparables a los del canal de TTC, y no es así. Un dataset de calibración (196 frames capturados en TownSim frente a una pared sólida, a cuatro velocidades de aproximación de 0.5 a 3 m/s; etiqueta de referencia binaria `gt_depth_centro < 5 m`, cap. 7 §7.1) muestra que la ocupación central nunca supera 0.082 en ese conjunto, de modo que con 0.35 la tasa de verdaderos positivos sería 0: el canal de ocupación quedaría, en la práctica, **desactivado** y el TTC cargaría solo con la detección. La curva ROC sobre `occ_centro` dio AUC = 0.87 y un umbral óptimo por [índice de Youden](13-REFERENCIAS.md#ref-youden-1950) de **0.011** (TPR = 0.93, FPR = 0.22), valor que adoptan `config/.env` y el default del código. Los números se recalcularon a partir del archivo del dataset; el detalle metodológico y sus límites se discuten en §7.5. Para atenuar la dependencia de la escena, `main.py` incorpora un `OccupancyCalibrator` que mide el ruido de ocupación del entorno actual en los primeros 25 ciclos válidos (`mean + 3σ`, acotado a [0.005, 0.05]) y reemplaza el umbral global; **el ejecutor de experimentos no lo usa**, de modo que las corridas en lote operan con el valor fijo de `config/.env`.
+**Calibración del umbral de ocupación (D2).** Un umbral fijado a ojo (por ejemplo, 0.35) supondría que la ocupación toma valores comparables a los del canal de TTC, y no es así. Un dataset de calibración (196 frames capturados en TownSim frente a una pared sólida, a cuatro velocidades de aproximación de 0.5 a 3 m/s; etiqueta de referencia binaria `gt_depth_centro < 5 m`, cap. 7 §7.1) muestra que la ocupación central nunca supera 0.082 en ese conjunto, de modo que con 0.35 la tasa de verdaderos positivos sería 0: el canal de ocupación quedaría, en la práctica, **desactivado** y el TTC cargaría solo con la detección. La curva ROC sobre `occ_centro` dio AUC = 0.87 y un umbral óptimo por [índice de Youden](13-REFERENCIAS.md#ref-youden-1950) de **0.011** (TPR = 0.93, FPR = 0.22), valor que adoptan `config/.env` y el default del código. El detalle metodológico y sus límites se discuten en §7.5. Para atenuar la dependencia de la escena, `main.py` incorpora un `OccupancyCalibrator` que mide el ruido de ocupación del entorno actual en los primeros 25 ciclos válidos (`mean + 3σ`, acotado a [0.005, 0.05]) y reemplaza el umbral global; **el ejecutor de experimentos no lo usa**, de modo que las corridas en lote operan con el valor fijo de `config/.env`.
 
-**Umbrales diferenciados de confianza.** La confianza mínima para que la ocupación vote bloqueo es `MIN_CONFIDENCE_FOR_BLOCKED = 0.15`, pero para que el TTC vote bloqueo por sí solo (sin apoyo de ocupación) se requiere `MIN_CONFIDENCE_FOR_TTC_BLOCKED = 0.35`. La razón es que el camino de "pocos inliers" en la estimación del FOE (§6.6) produce `foe_confidence = 0.3` como señal de evidencia degradada. Sin el umbral diferenciado, ese 0.3 superaba el piso general (0.15) y el TTC degradado votaba bloqueo con la misma autoridad que un FOE robusto. Con un único umbral, el TTC degradado votaría bloqueo con la misma autoridad que un FOE robusto y produciría falsos positivos.
+**Umbrales diferenciados de confianza.** La confianza mínima para que la ocupación vote bloqueo es `MIN_CONFIDENCE_FOR_BLOCKED = 0.15`, pero para que el TTC vote bloqueo por sí solo (sin apoyo de ocupación) se requiere `MIN_CONFIDENCE_FOR_TTC_BLOCKED = 0.35`. La razón es que el camino de "pocos inliers" en la estimación del FOE (§6.6) produce `foe_confidence = 0.3` como señal de evidencia degradada, que supera el piso general (0.15). Con un único umbral, el TTC degradado votaría bloqueo con la misma autoridad que un FOE robusto y produciría falsos positivos.
 
 ## 6.10 La API pública de `ObstacleField`
 
@@ -186,7 +186,7 @@ for sector in (target, otros_sectores):
 return False
 ```
 
-La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Esta función fue introducida después de documentar un vuelo donde el dron subió 12 m consecutivos mientras el `ObstacleField` reportaba `DERECHA: DESPEJADO` ciclo tras ciclo: tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual.
+La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual: un dron en hover puede subir 12 m seguidos mientras el `ObstacleField` reporta `DERECHA: DESPEJADO` ciclo tras ciclo.
 
 ## 6.12 Comportamiento bajo condiciones extremas
 
@@ -225,11 +225,11 @@ El estimador expone todos sus parámetros clave a través de variables de entorn
 
 ## 6.14 Profundidad monocular estimada: Depth Anything V2
 
-### 6.14.1 Qué es y por qué se incorporó
+### 6.14.1 Qué es y por qué se usa
 
 **Depth Anything V2** ([Yang et al., 2024](13-REFERENCIAS.md#ref-yang-2024); artículo: <https://arxiv.org/abs/2406.09414>; código y modelos: <https://github.com/DepthAnything/Depth-Anything-V2>) es una familia de modelos fundacionales de estimación de profundidad monocular: a partir de **una sola imagen RGB** predicen la profundidad de cada píxel. Su receta de entrenamiento tiene tres pasos: un modelo maestro grande se entrena solo con imágenes sintéticas, cuya profundidad es exacta; ese maestro etiqueta un conjunto grande de imágenes reales sin anotar (pseudo-etiquetas), y los modelos de producción, más chicos, se entrenan sobre esas pseudo-etiquetas. El codificador de todas las variantes es un Vision Transformer de DINOv2 con una cabeza de predicción densa (DPT). Las variantes **métricas** se ajustan sobre datos sintéticos con escala conocida y devuelven la profundidad **en metros**, no en una escala relativa. Este trabajo usa `Depth-Anything-V2-Metric-Outdoor-Small` (`DEPTH_MODEL`): la variante para exteriores con el codificador más chico, de ~25 M de parámetros, distribuida en Hugging Face y cargada con la biblioteca `transformers`.
 
-La incorporación respondió a una medición, no a una preferencia. El lazo lento hace una pregunta de **distancia**: si se puede volar 15 m en la dirección de cada sector. En el banco de prueba a bordo (cap. 11, §11.0) se midieron, contra la misma etiqueta de referencia, tres formas de responderla con el mismo fotograma (`experiments/vlm_bench/seg_depth_probe.py`; 625 muestras × 9 sectores, 61 % de sectores abiertos):
+La elección responde a una medición, no a una preferencia. El lazo lento hace una pregunta de **distancia**: si se puede volar 15 m en la dirección de cada sector. En el banco de prueba a bordo (cap. 11, §11.0) se midieron, contra la misma etiqueta de referencia, tres formas de responderla con el mismo fotograma (`experiments/vlm_bench/seg_depth_probe.py`; 625 muestras × 9 sectores, 61 % de sectores abiertos):
 
 | Señal | Exactitud balanceada [IC 95 %] | AUC | Latencia |
 |---|---|---:|---:|
@@ -246,11 +246,11 @@ La lectura es que el espacio libre es una pregunta de geometría, que resuelve u
 `DepthEstimator` (`src/perception/depth_estimator.py`) procesa el fotograma crudo del ciclo, el mismo que usa el flujo óptico:
 
 1. **Estimación.** Convierte el fotograma de BGR a RGB, lo pasa por el procesador de la red (que lo reescala a su resolución de trabajo), corre la red en la GPU sin gradientes e interpola la salida al tamaño original: una matriz de profundidades en metros, una por píxel.
-2. **Recorte y grilla.** Toma el recorte cuadrado central —el mismo que recibía el VLM, ±33.7° en un fotograma de 3:2 con 90° de campo horizontal— y lo divide en una grilla de 3×3 por tercios: columnas A, B, C y filas 1 (arriba), 2 (altura del dron) y 3 (abajo).
+2. **Recorte y grilla.** Toma el recorte cuadrado central —el mismo que recibe el VLM con `STRATEGIC_SOURCE = vlm`, ±33.7° en un fotograma de 3:2 con 90° de campo horizontal— y lo divide en una grilla de 3×3 por tercios: columnas A, B, C y filas 1 (arriba), 2 (altura del dron) y 3 (abajo).
 3. **Resumen por sector.** Calcula el **percentil 5** de la profundidad de cada sector (`sector_p5`): lo más cercano del sector sin que lo decidan píxeles sueltos. Es exactamente el estadístico con el que se construyen las etiquetas de referencia del banco (cap. 7, §7.1), de modo que la exactitud medida allí es la del juicio que usa el vuelo.
 4. **Umbral.** Un sector es `libre` si su p5 es ≥ `DEPTH_FREE_M` (15 m, la misma distancia a la que se fija la sub-meta) y `bloqueado` si no.
 
-El servicio (`src/agents/depth_client.py`) devuelve **la misma estructura que devolvía el VLM**, de modo que el resto del sistema no distingue la fuente:
+El servicio (`src/agents/depth_client.py`) devuelve **la misma estructura que el VLM**, de modo que el resto del sistema no distingue la fuente:
 
 - **Capa estratégica:** `{"sectores": {"A1": "libre", …, "C3": "bloqueado"}}`. La traducción a una sub-meta en coordenadas del mundo, anclada a la pose del fotograma, es la de cap. 5 §5.10.3.
 - **Barrido de resolución de atascos:** por cada uno de los cuatro rumbos, `{"img": i, "view": "open" | "wall", "free": …}`, transitable si el p5 del sector central `B2` —hacia donde volaría el dron en línea recta— es ≥ 15 m (cap. 5 §5.12).
@@ -263,10 +263,10 @@ La red **nunca corre dentro del lazo de 5 Hz**: corre en el hilo de un `Delibera
 
 | Recurso | Valor |
 |---|---|
-| Latencia por fotograma | 82–94 ms en el banco; mediana 108–114 ms en vuelo (cap. 11 §11.6) |
+| Latencia por fotograma | 82–94 ms en el banco; ~110 ms en vuelo, con la simulación renderizando |
 | VRAM adicional | ~440 MiB |
 | Carga inicial | ~19 s al compilar el grafo; el servicio precarga la red con un fotograma vacío para que la primera consulta en vuelo no la pague |
-| Período de consulta | `DEPTH_STRATEGIC_PERIOD_S` = 1 s en la capa estratégica (con el VLM era 3 s); un pedido con cuatro imágenes por barrido |
+| Período de consulta | `DEPTH_STRATEGIC_PERIOD_S` = 1 s en la capa estratégica (con el VLM, `VLM_STRATEGIC_PERIOD_S` = 3 s); un pedido con cuatro imágenes por barrido |
 
 Una consulta de profundidad tarda la mitad de un ciclo del lazo, y el VLM local, ~0.8 s. Por eso la profundidad no reemplaza al flujo en el lazo rápido: el flujo detecta un cierre en milisegundos y en CPU, y la profundidad decide, cada segundo, hacia dónde está el espacio libre.
 
@@ -278,10 +278,9 @@ La red **no lee el canal de profundidad del simulador**: recibe el mismo fotogra
 
 - **Dominio.** Depth Anything V2 se entrenó en parte con imágenes sintéticas, y la etiqueta del banco sale del mismo render que la red ve. En una cámara real el desempeño puede ser menor; la validación en imágenes reales está pendiente.
 - **Escala métrica.** La variante para exteriores se ajustó con datos de conducción, a la altura de un auto. Las distancias absolutas a 10–30 m de altura no están calibradas: el umbral de 15 m funciona como corte de clasificación validado en el banco, no como una medición en metros.
-- **Objetos finos y follaje.** Ramas, cables y copas semitransparentes son el caso más difícil para cualquier estimador denso. En el corredor arbolado de TownSim la capa con profundidad mantuvo al dron más lejos del follaje (cap. 11, §11.6.2), pero no eliminó los acercamientos.
+- **Objetos finos y follaje.** Ramas, cables y copas semitransparentes son el caso más difícil para cualquier estimador denso; el lote del corredor arbolado de TownSim (cap. 10 §10.3.2) lo pone a prueba.
 - **Sin memoria.** Cada consulta juzga un fotograma aislado, sin fusión temporal ni mapa.
 - **Campo de visión.** Solo se analiza el recorte central; lo que queda a los costados del fotograma no participa del juicio.
-- **Un primer intento descartado.** En septiembre una integración anterior de la misma red se usó como freno del lazo rápido, con otro estadístico; quedó desactivada (`legacy/depth_estimator_v2.py`). La versión actual se adoptó recién cuando la pregunta, el estadístico y el umbral se validaron contra etiquetas de referencia.
 
 ## 6.15 Complementariedad entre flujo óptico y profundidad estimada
 

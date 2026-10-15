@@ -5,7 +5,7 @@
       "x": 0,
       "y": 0
     },
-    "notes": "MiniSim / Tier 0 — crater ~200m de diámetro"
+    "notes": "MiniSim / Tier 0 — NO CORRESPONDE al mundo de AirSim: el nivel MiniSim es un plano liso con textura de tablero (profundidad cenital = altura en toda la toma, 2026-10-15, x/y +-130 m alrededor del origen), sin relieve ni objetos; la imagen muestra un crater que no existe. Sirve solo de fondo en WebDCS; el plan de ruta no se usa en MiniSim."
   },
   "townsim.png": {
     "scale": 4.5,
@@ -13,7 +13,7 @@
       "x": 0,
       "y": 0
     },
-    "notes": "TownSim / Tier 1 — pueblo, ~400m de extensión"
+    "notes": "TownSim / Tier 1 — NO REGISTRADO con el mundo de AirSim (escala sin medir). Usar townsim_ortho.png."
   },
   "townsim_calib.png": {
     "scale": 6.5,
@@ -21,7 +21,7 @@
       "x": 0,
       "y": 0
     },
-    "notes": "TownSim calib / Tier 1 — misma escena, imagen de calibración 2000×2000"
+    "notes": "TownSim / Tier 1 — NO REGISTRADO con el mundo de AirSim: la escala 6.5 px/m no coincide (el 11 % de los casi-contactos de las corridas caen sobre pasto sin obstaculo). Reemplazado por townsim_ortho.png (2026-10-15)."
   },
   "citymap.png": {
     "scale": 3.8,
@@ -46,5 +46,13 @@
       "y": 0
     },
     "notes": "CitySim / Tier 2 — mosaico cenital capturado con AirSim (airsim-plan/scripts/capture_ortho_map.py, 2026-10-02): 1000 m de altura, FOV 15, 286 tomas; registrado en NED por construccion (centro = origen, norte arriba, este a la derecha). Ciudad completa: x [-960, 960], y [-820, 820] m."
+  },
+  "townsim_ortho.png": {
+    "scale": 4.0,
+    "ned_offset": {
+      "x": 0,
+      "y": 0
+    },
+    "notes": "TownSim / Tier 1 — mosaico cenital capturado con AirSim (airsim-plan/scripts/capture_ortho_map.py, 2026-10-15): 1000 m de altura, FOV 15, 24 tomas; registrado en NED por construccion (centro = origen, norte arriba, este a la derecha). x [-250, 250], y [-250, 250] m. Verificado con las corridas: 0 % de casi-contactos sobre pasto sin obstaculo."
   }
 }

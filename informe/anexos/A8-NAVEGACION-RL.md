@@ -206,11 +206,11 @@ El brazo `rl`, una vez entrenado, debe evaluarse bajo exactamente el mismo proto
 los brazos `slm`, `fsm` y `reactive` (cap. 10, §10.2), para que la comparación sea válida:
 
 ```
-K=5 semillas × 3 escenarios × 4 brazos = 60 corridas
+K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
 ```
 
-Los escenarios propuestos para la evaluación del brazo `rl` son los mismos cinco de la
-tesis (§10.1):
+Los escenarios propuestos para la evaluación del brazo `rl` son los seis de la
+tesis (cap. 10, §10.3.4):
 
 | Escenario | Tier | Tipo |
 |---|---|---|
@@ -218,10 +218,11 @@ tesis (§10.1):
 | `townsim_clear` | 1 | Tránsito libre |
 | `citysim_clear` | 2 | Tránsito libre |
 | `townsim_ini` | 1 | Obstrucción densa (corredor arbolado) |
-| `citymap_pilot` | 2 | Obstrucción estructural (autopista elevada) |
+| `townsim_calib_cruce_frontal` | 1 | Bloqueo frontal masivo |
+| `citysim_pilot` | 2 | Obstrucción estructural (rodeo de manzanas) |
 
-Las métricas son las mismas que §10.3 (`success_rate`, `mission_time_s`, `collision_rate`,
-`waypoints_reached`, `deliberative_rate`) más dos métricas específicas del brazo `rl`:
+Las métricas son las mismas que §10.6 (éxito, SPL, tiempo de misión, colisiones,
+distancia mínima, tasa de consulta) más dos métricas específicas del brazo `rl`:
 
 - `policy_latency_ms`: tiempo de inferencia de la política neuronal (objetivo < 5 ms en
   CPU, < 1 ms en GPU dedicada).
@@ -234,18 +235,19 @@ La tabla de comparación propuesta para el capítulo 11 sería:
 |---|---|---|---|---|
 | Tasa de éxito — tránsito libre | ref | ref | ref | ? |
 | Tasa de éxito — obstrucción densa | ref | ref | ref | ? |
-| Ratio tiempo vs. `reactive` | 1.0× | ? | 1.06–2.20× | ? |
-| Latencia de decisión | ~0.1 ms | ~0.2 ms | 1,2–4,6 s (piloto; cap. 8, §8.6) | < 5 ms (estimado) |
-| Consumo adicional de VRAM | — | — | ~2 GB | < 50 MB (CNN pequeña) |
+| Ratio tiempo vs. `reactive` | 1.0× | ? | ? | ? |
+| Latencia de decisión | ~0.1 ms | ~0.2 ms | ~0.1 s por consulta del lazo lento (profundidad; cap. 6, §6.14.3) | < 5 ms (estimado) |
+| Consumo adicional de VRAM | — | — | ~440 MiB (red de profundidad) | < 50 MB (CNN pequeña) |
 
 La hipótesis de trabajo es que el brazo `rl` superará al brazo `reactive` en escenarios de
 obstrucción densa (`townsim_ini`) donde el flujo óptico colapsa — porque la política
 neuronal puede aprender a actuar con observación visual directa, sin depender de la
 divergencia del flujo — y competirá con `fsm` en tránsito libre, donde la política debería
 aprender a elegir `MANTENER_RUMBO` de forma casi perfecta. Su comparación más relevante
-para la tesis es contra el brazo `slm`: ambos usan visión directa, pero `slm` es una
-inferencia de VLM pre-entrenado de propósito general mientras que `rl` es una política
-especializada en el espacio de maniobras de este sistema.
+para la tesis es contra el brazo `slm`: ambos usan visión directa, pero `slm` juzga el espacio
+libre con una red de profundidad pre-entrenada de propósito general y traduce ese juicio a
+sub-metas, mientras que `rl` es una política especializada en el espacio de maniobras de este
+sistema.
 
 ---
 
@@ -254,10 +256,10 @@ especializada en el espacio de maniobras de este sistema.
 La implementación del brazo `rl` tiene las siguientes dependencias sobre el trabajo ya
 realizado:
 
-- **Lotes D, E y F completados** (cap. 10, §10.12): la corrida comparativa `slm` vs. `fsm` vs. `reactive`
+- **Seis lotes completados** (cap. 10, §10.5.3): la comparación `slm` vs. `fsm` vs. `reactive`
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.
-- **Brazo `slm` validado** con `DEADLOCK_STRATEGY=deep_vlm`: la política RL se entrenará
+- **Brazo `slm` validado** con `DEADLOCK_STRATEGY=depth`: la política RL se entrenará
   en el mismo entorno de simulación en el que se midió el `slm`; si ese entorno cambia
   durante el entrenamiento, los resultados no son comparables.
 

@@ -1460,10 +1460,10 @@ una de las incógnitas clave del protocolo de evaluación de §A8.6.</p>
 <h2 id="a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
 <p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
 los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, §10.2), para que la comparación sea válida:</p>
-<div class="highlight"><pre><span></span><code>K=5 semillas × 3 escenarios × 4 brazos = 60 corridas
+<div class="highlight"><pre><span></span><code>K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
 </code></pre></div>
-<p>Los escenarios propuestos para la evaluación del brazo <code>rl</code> son los mismos cinco de la
-tesis (§10.1):</p>
+<p>Los escenarios propuestos para la evaluación del brazo <code>rl</code> son los seis de la
+tesis (cap. 10, §10.3.4):</p>
 <table>
 <thead>
 <tr>
@@ -1494,14 +1494,19 @@ tesis (§10.1):</p>
 <td>Obstrucción densa (corredor arbolado)</td>
 </tr>
 <tr>
-<td><code>citymap_pilot</code></td>
+<td><code>townsim_calib_cruce_frontal</code></td>
+<td>1</td>
+<td>Bloqueo frontal masivo</td>
+</tr>
+<tr>
+<td><code>citysim_pilot</code></td>
 <td>2</td>
-<td>Obstrucción estructural (autopista elevada)</td>
+<td>Obstrucción estructural (rodeo de manzanas)</td>
 </tr>
 </tbody>
 </table>
-<p>Las métricas son las mismas que §10.3 (<code>success_rate</code>, <code>mission_time_s</code>, <code>collision_rate</code>,
-<code>waypoints_reached</code>, <code>deliberative_rate</code>) más dos métricas específicas del brazo <code>rl</code>:</p>
+<p>Las métricas son las mismas que §10.6 (éxito, SPL, tiempo de misión, colisiones,
+distancia mínima, tasa de consulta) más dos métricas específicas del brazo <code>rl</code>:</p>
 <ul>
 <li><code>policy_latency_ms</code>: tiempo de inferencia de la política neuronal (objetivo &lt; 5 ms en
   CPU, &lt; 1 ms en GPU dedicada).</li>
@@ -1538,21 +1543,21 @@ tesis (§10.1):</p>
 <td>Ratio tiempo vs. <code>reactive</code></td>
 <td>1.0×</td>
 <td>?</td>
-<td>1.06–2.20×</td>
+<td>?</td>
 <td>?</td>
 </tr>
 <tr>
 <td>Latencia de decisión</td>
 <td>~0.1 ms</td>
 <td>~0.2 ms</td>
-<td>1,2–4,6 s (piloto; cap. 8, §8.6)</td>
+<td>~0.1 s por consulta del lazo lento (profundidad; cap. 6, §6.14.3)</td>
 <td>&lt; 5 ms (estimado)</td>
 </tr>
 <tr>
 <td>Consumo adicional de VRAM</td>
 <td>—</td>
 <td>—</td>
-<td>~2 GB</td>
+<td>~440 MiB (red de profundidad)</td>
 <td>&lt; 50 MB (CNN pequeña)</td>
 </tr>
 </tbody>
@@ -1562,18 +1567,19 @@ obstrucción densa (<code>townsim_ini</code>) donde el flujo óptico colapsa —
 neuronal puede aprender a actuar con observación visual directa, sin depender de la
 divergencia del flujo — y competirá con <code>fsm</code> en tránsito libre, donde la política debería
 aprender a elegir <code>MANTENER_RUMBO</code> de forma casi perfecta. Su comparación más relevante
-para la tesis es contra el brazo <code>slm</code>: ambos usan visión directa, pero <code>slm</code> es una
-inferencia de VLM pre-entrenado de propósito general mientras que <code>rl</code> es una política
-especializada en el espacio de maniobras de este sistema.</p>
+para la tesis es contra el brazo <code>slm</code>: ambos usan visión directa, pero <code>slm</code> juzga el espacio
+libre con una red de profundidad pre-entrenada de propósito general y traduce ese juicio a
+sub-metas, mientras que <code>rl</code> es una política especializada en el espacio de maniobras de este
+sistema.</p>
 <hr />
 <h2 id="a87-dependencias-y-prerrequisitos">A8.7 Dependencias y prerrequisitos<a class="headerlink" href="#a87-dependencias-y-prerrequisitos" title="Permanent link">&para;</a></h2>
 <p>La implementación del brazo <code>rl</code> tiene las siguientes dependencias sobre el trabajo ya
 realizado:</p>
 <ul>
-<li><strong>Lotes D, E y F completados</strong> (cap. 10, §10.12): la corrida comparativa <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
+<li><strong>Seis lotes completados</strong> (cap. 10, §10.5.3): la comparación <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.</li>
-<li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=deep_vlm</code>: la política RL se entrenará
+<li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=depth</code>: la política RL se entrenará
   en el mismo entorno de simulación en el que se midió el <code>slm</code>; si ese entorno cambia
   durante el entrenamiento, los resultados no son comparables.</li>
 </ul>

@@ -1,5 +1,6 @@
 # 11. Resultados comparativos SLM vs. FSM
 
+<!-- PENDIENTE v4 -->
 > **Alcance de este capítulo.** Salvo el banco de prueba del VLM (§11.0) y los lotes de la capa estratégica (§11.6), que usan la configuración vigente, los resultados corresponden al **lote base** (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo `slm` distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:
 >
 > 1. **Escenarios de control** (§11.1, §11.4.1, §11.4.2, §11.4.3): no ejercen la capa táctica de atasco y son válidos como medida del costo del brazo `slm` (H2).
@@ -31,15 +32,18 @@ El banco (`airsim-loop/experiments/vlm_bench/`; qué es, cómo se construyó y c
 
 **Ninguna pregunta pasa.** Tres son constantes y el resto queda a pocos puntos del azar. En la pregunta de vuelo, las filas 1 y 3 de la grilla salen «libre» en el 100 % de las muestras (realmente libres: 72–78 % arriba, 38–47 % abajo), y en la fila del medio la respuesta depende de la posición del sector más que de la escena (A2 libre 14 %, B2 70 %, C2 52 %, con ~50–57 % reales). Con las etiquetas permutadas la respuesta coincide con la del orden normal en el 75 % de los sectores: el modelo responde sobre todo a la posición en la imagen. Los *logprobs* no rescatan la grilla (AUC 0.53); la única señal latente apreciable está en `borde_superior` (AUC 0.69, frente a una respuesta casi constante).
 
+<!-- PENDIENTE v4 -->
 Dos consecuencias para el vuelo. La sub-meta de la capa estratégica sale de la posición de las celdas, no de la escena: en el piloto `seed_99_20261007T214055Z`, 12 de 31 sub-metas eligieron la fila de abajo —siempre «libre»— y el dron descendió hasta apoyarse en el tablero de una autopista elevada a ~7 m, del que no pudo girar para el barrido. El desempate por fila con margen (`VLM_SUBGOAL_TIE_DEG`, cap. 5 §5.10.3) evita ese descenso, pero no aporta información de la escena. Y el barrido declara transitables todos los rumbos, de modo que la salida del atasco la decide la exclusión de rumbos ya probados (cap. 5 §5.12), no el modelo.
 
 **Plan de ruta sobre el mapa** (juicio por parches, cap. 4 §4.3.1; 59 candidatas en 11 tramos de `citysim_pilot` y `citysim_clear`, 28 realmente libres). La probabilidad media de «calle» separa las rutas libres de las bloqueadas con AUC 0.81. La ruta elegida es libre en 10 de 11 tramos, igual que la recta: en el único tramo con la recta bloqueada (`citysim_pilot` WP_2 → WP_3, la recta cruza un edificio) el plan elige un desvío libre, y en un tramo de `citysim_clear` elige un desvío bloqueado con la recta libre. En la prueba de parches del mapa (60 parches etiquetados, cinco clases) el modelo local obtiene exactitud balanceada 0.65 y AUC 0.79; el planificador usa la probabilidad, no la respuesta.
 
 **La misma pregunta con profundidad estimada** (`experiments/vlm_bench/seg_depth_probe.py`; detalle en cap. 6 §6.14.1). Con el mismo fotograma, la misma geometría y la misma etiqueta, el p5 de la profundidad estimada por Depth Anything V2 Metric Outdoor Small separa sectores libres de bloqueados con exactitud balanceada del 75 % [72–77 %] y AUC 0.83 (625 muestras × 9 sectores; 76 % y 0.84 en las 120 muestras de las preguntas del VLM), en 82 ms. Es la única señal que pasa el criterio. En los barridos (290 imágenes, sector central) logra 75 % [68–82 %] y AUC 0.87. Una red de segmentación semántica chica (`yolo26n-sem`) queda en el azar (AUC 0.50): la clase de un píxel no dice a qué distancia está.
 
+<!-- PENDIENTE v4 -->
 **Latencia en vuelo con el modelo a bordo** (piloto `seed_99_20261007T214055Z`, 65 consultas estratégicas): mediana 0.77 s, p90 0.80 s, máximo 2.8 s, sin *timeouts*. La captura (`simGetImages`, mediana 103 ms) y el período del lazo (mediana 237 ms) quedan en el rango de los pilotos con el servidor dedicado (91–94 ms y 216–228 ms).
 
 ## 11.1 Resultados del lote base (5 semillas)
+<!-- PENDIENTE v4 -->
 
 Estrategia de desbloqueo: `deep_vlm` en todos los casos. Las celdas muestran media ± desviación
 estándar sobre las 5 semillas independientes. Tasa de éxito: 5/5 y 0 colisiones en los 45 runs.
@@ -92,7 +96,7 @@ registra deadlocks y tiene σ=3.1 s, su varianza residual proviene del jitter de
 ### Tier 2 — `citysim_clear` · CitySim (citysim_calib.png)
 
 Escenario: perímetro de una manzana del grid regular, 4 WPs, ~431 m, altitud de tránsito variable
-(climb desde −10 m hasta −50 m, patrón climb-first).
+(rampa desde −10 m hasta −50 m y retorno a −10 m).
 
 | Brazo | Éxito | Duración media (s) | σ (s) | Dist. media (m) | σ (m) | Colisiones | Invoc. SLM | Deliberación | Fallback SLM | Deadlocks | Res. atasco VLM |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -113,6 +117,7 @@ crucero está por encima de la línea de tejados en este escenario de control.
 ---
 
 ## 11.2 Tabla de resultados por brazo y escenario
+<!-- PENDIENTE v4 -->
 
 Media sobre 5 semillas. Col./km = 0 en los tres tiers (0 colisiones en 45 corridas).
 DistMin = media de la distancia mínima al obstáculo por corrida.
@@ -141,6 +146,7 @@ DistMin = media de la distancia mínima al obstáculo por corrida.
 ---
 
 ## 11.3 Análisis estadístico del lote base
+<!-- PENDIENTE v4 -->
 
 ### 11.3.1 Tabla de ratios de tiempo de misión (H2)
 
@@ -208,6 +214,7 @@ obstáculos reales.
 ---
 
 ## 11.4 Análisis por tipo de escenario
+<!-- PENDIENTE v4 -->
 
 ### 11.4.1 Tier 0 — Control sin obstáculos (`minisim_clear`)
 
@@ -433,7 +440,7 @@ Tres observaciones son relevantes para el análisis posterior:
    altitud máxima, sin obstáculos activos, el `reactive` ejecuta la ruta con variación nula.
 
 2. **`fsm` variable:** dos corridas con deadlock (seeds 4 y 5, 208 s y 212 s) vs. tres sin deadlock
-   (~170 s). La geometría del manifiesto (cambios de altitud en climb-first) genera ocasionalmente
+   (~170 s). La geometría del manifiesto (cambios de altitud en rampa) genera ocasionalmente
    atascos en la FSM que no se producen en el `reactive` ni en el `slm`. Con K = 5, δ = +0.04
    (`slm` vs `fsm`), no significativo.
 
@@ -449,6 +456,7 @@ diferencia esperada por diseño experimental.
 ---
 
 ## 11.5 Síntesis de hallazgos
+<!-- PENDIENTE v4 -->
 
 ### 11.5.1 Soporte a hipótesis H2 (overhead del VLM se diluye con la longitud de ruta)
 
@@ -532,6 +540,7 @@ Los 75 runs del lote completo establecen que:
    en todos los brazos.
 
 ## 11.6 Lotes de la capa estratégica (octubre, configuración vigente)
+<!-- PENDIENTE v4 -->
 
 Dos lotes con el sistema de los capítulos 5–8 responden si la capa estratégica aporta y con qué fuente. Diseño común: brazo `slm`, barrido de deadlock con profundidad estimada (`DEADLOCK_STRATEGY = depth`) igual en todas las celdas —así se aísla la capa estratégica—, semillas 1–5 con jitter de la pose inicial, mismo plan de vuelo para todas las corridas de un escenario y el modelo de inferencia en la misma GPU que Unreal. El avance se mide en **waypoints del plan completados** (no con el índice del registro, que cuenta también las sub-metas insertadas). La regla de decisión se fijó antes de correr cada lote: una fuente aporta más que otra si la mediana del avance a un tiempo de referencia la supera en un umbral **y** gana en al menos 4 de las 5 semillas emparejadas; si ningún par lo cumple, las fuentes son equivalentes en avance y se decide por costo y seguridad. El p-valor se informa como diagnóstico: con 5 pares el mínimo del Wilcoxon exacto es 0.0625. Análisis: `experiments/analyze_strategic_batch.py`.
 

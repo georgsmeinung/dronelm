@@ -57,23 +57,11 @@ Los escenarios con obstrucción real (`townsim_ini`, `townsim_calib_cruce_fronta
 - [ ] `code_version` anotada antes de empezar: `git rev-parse HEAD`.
 - [ ] Manifiesto de misión verificado visualmente en el viewport de UE con `scripts/plot_mission_route.py`.
 
-### 1.2 Manifiesto `citysim_clear.json` — acción requerida antes del Lote C
+### 1.2 Manifiesto `citysim_clear.json`
 
-> **BLOQUEANTE para Lote C.** El archivo `airsim-plan/missions/flightplans/citysim_clear.json` contiene actualmente una variante de 4 waypoints con altitud máxima de −50 m que ya falló por colisión. Debe restaurarse al manifiesto de 7 waypoints a −70 m con el que se obtuvieron los resultados piloto exitosos (2026-09-07).
-
-Las coordenadas no se derivan del mapa PNG — provienen de la corrida piloto ya volada. Dos vías para recuperarlas:
-
-```bash
-# Opción 1: recuperar desde git
-git log --oneline -- airsim-plan/missions/flightplans/citysim_clear.json
-git show <commit-hash>:airsim-plan/missions/flightplans/citysim_clear.json \
-  > airsim-plan/missions/flightplans/citysim_clear.json
-
-# Opción 2: extraer del summary.json del piloto exitoso (2026-09-07)
-# campo: waypoints o similar según el logger
-```
-
-Después de restaurar: `python scripts/plot_mission_route.py --plan citysim_clear.json` y confirmar en viewport que el ascenso es vertical puro y la altitud máxima es −70 m.
+> **Resuelto (2026-10-15).** Se vuela el manifiesto de 4 waypoints (~420 m, rampa −10/−30/−50 m y retorno a
+> −10 m, `citysim_ortho.png`). Es el que voló todas las corridas registradas de este escenario, incluido el
+> piloto del 2026-09-07: la variante de 7 waypoints a −70 m (`2d75ae56`) nunca llegó a volar en un lote.
 
 ### 1.3 Política de cuarentena de datos
 
@@ -219,7 +207,7 @@ python experiments/runner.py \
 ## 4. Lote C — Tier 2 (CitySim)
 
 **Proyecto UE:** CitySim (`citysim_calib.png`)  
-**Escenario:** `citysim_clear` — perímetro de manzana, 7 WPs, ~430 m, −70 m, climb-first.  
+**Escenario:** `citysim_clear` — perímetro de manzana, 4 WPs, ~420 m, rampa −10/−30/−50 m.  
 **Hipótesis:** H2 (ratio más bajo de los tres tiers, piloto: 1.09×), H3 (cota inferior Tier 2).
 
 ### 4.1 Celdas
@@ -267,8 +255,8 @@ python experiments/runner.py \
 
 | Condición | Acción |
 |---|---|
-| Cualquier colisión en cualquier brazo | **Detener el lote.** Manifiesto no restaurado o −70 m no despeja algún edificio. Re-validar en viewport. |
-| Tasa de éxito < 5/5 en `reactive` | La ruta cruza algo a −70 m. Re-validar manifiesto. |
+| Cualquier colisión en cualquier brazo | **Detener el lote.** La ruta en rampa no despeja algún edificio. Re-validar en viewport. |
+| Tasa de éxito < 5/5 en `reactive` | La ruta cruza algo. Re-validar manifiesto. |
 
 ---
 
@@ -474,8 +462,8 @@ python experiments/analyze_tesis_results.py \
 ```
 LOTE BASE (~3.7 h total)
 ────────────────────────────────────────────────────────────────────────────
-[1] Recuperar citysim_clear.json (7 WPs / −70 m) desde git o summary piloto
-    → Validar con plot_mission_route.py en viewport CitySim            [~15 min]
+[1] (resuelto) citysim_clear.json se vuela con 4 WPs; validar con plot_mission_route.py
+    en viewport CitySim                                                [~15 min]
 
 [2] MiniSim activo → piloto Lote A (seed=99, 1 corrida slm)           [~10 min]
 [3] Lote A completo (15 corridas)                                      [~1.2 h]

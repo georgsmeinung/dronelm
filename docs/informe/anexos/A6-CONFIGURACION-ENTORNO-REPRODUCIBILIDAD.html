@@ -1060,10 +1060,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl" class="md-nav__link">
+  <a href="#a642-estructura-de-la-traza-ciclo-a-ciclo-jsonl" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A6.4.2 Estructura del log de telemetría ciclo a ciclo (.jsonl)
+        A6.4.2 Estructura de la traza ciclo a ciclo (.jsonl)
       
     </span>
   </a>
@@ -1110,10 +1110,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson" class="md-nav__link">
+  <a href="#a653-manifiesto-tier-2-perimetro-de-manzana-en-rampa-citysim_clearjson" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (citysim_clear.json)
+        A6.5.3 Manifiesto Tier 2: perímetro de manzana en rampa (citysim_clear.json)
       
     </span>
   </a>
@@ -1193,10 +1193,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#paso-5-ejecucion-del-lote-de-pruebas-runner" class="md-nav__link">
+  <a href="#paso-5-ejecucion-de-los-lotes-runner" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Paso 5: Ejecución del lote de pruebas (Runner)
+        Paso 5: Ejecución de los lotes (Runner)
       
     </span>
   </a>
@@ -1530,10 +1530,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl" class="md-nav__link">
+  <a href="#a642-estructura-de-la-traza-ciclo-a-ciclo-jsonl" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A6.4.2 Estructura del log de telemetría ciclo a ciclo (.jsonl)
+        A6.4.2 Estructura de la traza ciclo a ciclo (.jsonl)
       
     </span>
   </a>
@@ -1580,10 +1580,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson" class="md-nav__link">
+  <a href="#a653-manifiesto-tier-2-perimetro-de-manzana-en-rampa-citysim_clearjson" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (citysim_clear.json)
+        A6.5.3 Manifiesto Tier 2: perímetro de manzana en rampa (citysim_clear.json)
       
     </span>
   </a>
@@ -1663,10 +1663,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#paso-5-ejecucion-del-lote-de-pruebas-runner" class="md-nav__link">
+  <a href="#paso-5-ejecucion-de-los-lotes-runner" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Paso 5: Ejecución del lote de pruebas (Runner)
+        Paso 5: Ejecución de los lotes (Runner)
       
     </span>
   </a>
@@ -2004,7 +2004,7 @@
 <tr>
 <td><code>ROUTE_PLAN_MODE</code></td>
 <td><code>vlm</code></td>
-<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>vlm</code>) o manifiesto tal cual (<code>off</code>). Activado en la versión final con el juez por parches (AUC 0.81 en el banco, cap. 4 §4.3.1); requiere un mapa registrado con el mundo (CitySim). El lote de TownSim se voló con <code>--route-plan off</code>.</td>
+<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>vlm</code>) o manifiesto tal cual (<code>off</code>). Activado con el juez por parches (AUC 0.81 en el banco, cap. 4 §4.3.1); requiere un mapa registrado con el mundo (<code>citysim_ortho.png</code>, <code>townsim_ortho.png</code>). El lote de MiniSim, sin obstáculos, vuela con <code>--route-plan off</code> (cap. 10, §10.5.3).</td>
 </tr>
 <tr>
 <td><code>ROUTE_JUDGE</code> / <code>ROUTE_PATCH_STEP_M</code> / <code>ROUTE_PATCH_M</code> / <code>ROUTE_PATCH_CONTEXT_M</code></td>
@@ -2311,52 +2311,51 @@
 </table>
 <hr />
 <h2 id="a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs">A6.4 Estructura del repositorio y artefactos de corrida (<code>airsim-runs/</code>)<a class="headerlink" href="#a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs" title="Permanent link">&para;</a></h2>
-<p>Cada vuelo ejecutado en simulación (sea manual o en batch mediante el runner experimental) genera un registro inmutable en el directorio <code>airsim-runs/&lt;MISSION_ID&gt;-&lt;TIMESTAMP&gt;/</code>.</p>
-<div class="highlight"><pre><span></span><code>airsim-runs/
-└── CITYSIM_CLEAR-20260907T191226Z/
-    ├── CITYSIM_CLEAR-20260907T191226Z.summary.json    &lt;- Métricas consolidadas
-    ├── CITYSIM_CLEAR-20260907T191226Z.jsonl           &lt;- Telemetría ciclo a ciclo
-    ├── CITYSIM_CLEAR-20260907T191226Z.csv             &lt;- Dataset con Telemetría 
-    └── CITYSIM_CLEAR-20260907T191226Z.webmp           &lt;- Video de auditoría con HUD 
+<p>Cada vuelo ejecutado en simulación genera una carpeta autocontenida que ninguna otra corrida sobrescribe. Desde WebDCS (<code>main.py</code>), la carpeta es <code>airsim-runs/&lt;MISSION_ID&gt;-&lt;TIMESTAMP&gt;/</code>; el runner experimental la ubica en la jerarquía del diseño, <code>&lt;lote&gt;/&lt;escenario&gt;/&lt;brazo&gt;/&lt;estrategia&gt;/seed_&lt;N&gt;_&lt;timestamp&gt;/</code> (cap. 10, §10.9.1). La lista completa de archivos y campos está en el capítulo 4 (§4.4); los principales son:</p>
+<div class="highlight"><pre><span></span><code>seed_&lt;N&gt;_&lt;ts&gt;/
+├── seed_&lt;N&gt;_&lt;ts&gt;.summary.json      &lt;- Indicadores consolidados de la corrida
+├── seed_&lt;N&gt;_&lt;ts&gt;.summary_by_wp.csv &lt;- Indicadores por objetivo
+├── seed_&lt;N&gt;_&lt;ts&gt;.jsonl             &lt;- Traza ciclo a ciclo con el DroneState completo
+├── seed_&lt;N&gt;_&lt;ts&gt;.csv               &lt;- La misma traza en columnas (state.*)
+├── seed_&lt;N&gt;_&lt;ts&gt;.distmin.ndjson    &lt;- Muestras de la auditoría de distancia mínima (1 Hz)
+├── seed_&lt;N&gt;_&lt;ts&gt;.webm              &lt;- Video de la cámara frontal con overlay
+└── seed_&lt;N&gt;_&lt;ts&gt;.viewer.html       &lt;- Visor de auditoría autocontenido
 </code></pre></div>
 <h3 id="a641-estructura-del-archivo-de-resumen-summaryjson">A6.4.1 Estructura del archivo de resumen (<code>.summary.json</code>)<a class="headerlink" href="#a641-estructura-del-archivo-de-resumen-summaryjson" title="Permanent link">&para;</a></h3>
-<p>Contiene los metadatos globales del experimento y los indicadores clave de rendimiento (KPIs):</p>
+<p>Contiene la identificación de la corrida y sus indicadores. Ejemplo de una corrida <code>slm:depth</code> en <code>citysim_pilot</code> (valores ilustrativos; <code>route_histogram</code> y <code>route_plan</code> abreviados):</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CITYSIM_CLEAR&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;arm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;slm&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scenario&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_pilot&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;seed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;code_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a37b7030&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;start_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-09-07T19:12:26.104Z&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;end_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-09-07T19:14:18.420Z&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;duration_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">112.316</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;total_cycles&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">561</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;collision_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;total_distance_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">312.45</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;average_speed_mps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.78</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;waypoints_reached&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;waypoints_total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;deliberations_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;deliberations_timeout_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;deadlock_escapes_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action_distribution&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;keep_going&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">482</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;evasive&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">61</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;girar_90&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;deliberative&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
-<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;arm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;slm&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;code_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;hash&gt;&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deadlock_strategy&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;depth&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;strategic_source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;depth&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;route_plan&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vlm&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;judge&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;patches&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lfm2.5-vl-1.6b:q4km-ctx8k&quot;</span><span class="p">,</span>
+<span class="w">                 </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_ortho.png&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;vias&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;legs_rerouted&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;cycles&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2014</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;duration_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">480.66</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;path_length_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">702.68</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;collisions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;min_obstacle_dist_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.562</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;min_obstacle_dist_source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;in_flight_thread&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;min_obstacle_dist_samples&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">477</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;slm_invocations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">255</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deliberation_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.127</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;slm_fallback_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;slm_timeout_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;route_histogram&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;reactive&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1585</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;evasive&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">419</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;girar_90&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;tactical&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;deadlock_events&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deep_scan_events&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deep_scan_resolution_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deep_scan_fallback_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;vertical_escapes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;freeze_recoveries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="p">}</span>
 </code></pre></div>
-<p><em>Nota sobre trazabilidad:</em> el campo <code>code_version</code> almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en <code>airsim-loop/</code>, <code>config/</code> o <code>airsim-plan/</code>, lleva el sufijo <code>-dirty</code> (<code>src/logging/code_version.py</code>): el hash solo identifica el código con el árbol limpio, y una corrida <code>-dirty</code> no entra a un lote (cap. 10, §10.12).</p>
-<h3 id="a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl">A6.4.2 Estructura del log de telemetría ciclo a ciclo (<code>.jsonl</code>)<a class="headerlink" href="#a642-estructura-del-log-de-telemetria-ciclo-a-ciclo-jsonl" title="Permanent link">&para;</a></h3>
-<p>Cada línea del archivo es un registro JSON generado a la frecuencia de 5 Hz por <code>FlightLogger</code>, capturando el estado completo del sistema:
-* <code>timestamp</code>: tiempo Unix en segundos con precisión de microsegundos.
-* <code>cycle</code>: índice secuencial del bucle.
-* <code>pose</code>: posición <span class="arithmatex">\((X, Y, Z)\)</span> en marco local NED y ángulos de Euler (pitch, roll, yaw).
-* <code>velocity</code>: velocidades lineales <span class="arithmatex">\((v_x, v_y, v_z)\)</span> en m/s.
-* <code>active_waypoint</code>: índice y distancia euclidiana hacia el waypoint objetivo.
-* <code>obstacle_field</code>: matriz de TTC, ocupación y confianza por celda sector <span class="arithmatex">\(\times\)</span> banda.
-* <code>policy_decision</code>: macro-acción seleccionada, justificación textual y tiempo de cómputo del ciclo.</p>
+<p><em>Nota sobre trazabilidad:</em> el campo <code>code_version</code> almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en <code>airsim-loop/</code>, <code>config/</code>, <code>airsim-plan/</code> o <code>experiments/</code>, lleva el sufijo <code>-dirty</code> (<code>src/logging/code_version.py</code>): el hash solo identifica el código con el árbol limpio. El runner no arranca un lote con el árbol sucio, y una corrida <code>-dirty</code> no entra al análisis (cap. 10, §10.9.3 y §10.12.2).</p>
+<h3 id="a642-estructura-de-la-traza-ciclo-a-ciclo-jsonl">A6.4.2 Estructura de la traza ciclo a ciclo (<code>.jsonl</code>)<a class="headerlink" href="#a642-estructura-de-la-traza-ciclo-a-ciclo-jsonl" title="Permanent link">&para;</a></h3>
+<p>Cada línea del archivo es un registro JSON por ciclo del lazo (5 Hz), escrito por <code>FlightLogger</code>. Los campos principales son <code>t</code> y <code>cycle</code>; <code>arm</code>, <code>scenario</code> y <code>seed</code>; posición NED, velocidad y actitud; <code>route</code> y <code>action</code>; el <code>obstacle_field</code> completo por sector; latencias del ciclo; el bloque <code>slm</code> en los ciclos con una consulta del lazo lento; colisión; objetivo activo y distancia; y <code>state</code>, el <code>DroneState</code> completo serializado (cap. 4, §4.4).</p>
 <hr />
 <h2 id="a65-manifiestos-de-mision-y-diseno-de-escenarios-evaluados-tiers-0-1-y-2">A6.5 Manifiestos de misión y diseño de escenarios evaluados (Tiers 0, 1 y 2)<a class="headerlink" href="#a65-manifiestos-de-mision-y-diseno-de-escenarios-evaluados-tiers-0-1-y-2" title="Permanent link">&para;</a></h2>
 <p>Los planes de vuelo se definen como manifiestos JSON ubicados en <code>airsim-plan/missions/flightplans/</code>. A continuación se especifican los escenarios representativos empleados en la tesis:</p>
@@ -2365,7 +2364,7 @@
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_CLEAR&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 1: perímetro completo de townsim_calib.png a altitud de tránsito (-30m), sin cruzar ninguna fachada. Rol análogo a minisim_clear para Tier 0: control/smoke-test de crucero largo sin obstáculos deliberativos.&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_ortho.png&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">    </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.4</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1&quot;</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.4</span><span class="p">,</span><span class="w">    </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-71.6</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2&quot;</span><span class="w"> </span><span class="p">},</span>
@@ -2381,7 +2380,7 @@
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_CALIB_CRUCE_FRONTAL&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 1: trayectoria ortogonal directa hacia la fachada principal de la manzana central. Obliga al lazo táctico a detectar TTC crítico, disparar giro o evasión de 90° o deliberar con el SLM para rodear la estructura.&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_ortho.png&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_START&quot;</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-72.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_OBSTACULO_FRONTAL&quot;</span><span class="w"> </span><span class="p">},</span>
@@ -2389,12 +2388,12 @@
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
-<h3 id="a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson">A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (<code>citysim_clear.json</code>)<a class="headerlink" href="#a653-manifiesto-tier-2-canon-urbano-denso-con-ascenso-inicial-citysim_clearjson" title="Permanent link">&para;</a></h3>
-<p>El mapa <code>CitySim</code> presenta rascacielos masivos. Para evitar atravesar estructuras en el despegue, la misión implementa un patrón <strong>climb-first</strong> (ascenso vertical puro en el mismo punto de coordenadas horizontales hasta <span class="arithmatex">\(-70\text{ m}\)</span> AGL antes de iniciar el crucero horizontal):</p>
+<h3 id="a653-manifiesto-tier-2-perimetro-de-manzana-en-rampa-citysim_clearjson">A6.5.3 Manifiesto Tier 2: perímetro de manzana en rampa (<code>citysim_clear.json</code>)<a class="headerlink" href="#a653-manifiesto-tier-2-perimetro-de-manzana-en-rampa-citysim_clearjson" title="Permanent link">&para;</a></h3>
+<p>Cuatro waypoints, ~420 m, sobre el perímetro de una manzana de <code>CitySim</code>. La altitud crece en rampa a lo largo del perímetro (−10, −30 y −50 m) y el último tramo vuelve a −10 m sobre el punto de partida; los cambios de altitud se hacen en diagonal, combinados con el avance horizontal:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CITYSIM_CLEAR&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 2: perímetro de una manzana del grid regular en citysim_calib.png. Altitud de tránsito -70m (70m AGL) para superar edificios altos de CitySim. Estructura climb-first: WP_2 sube vertical puro antes de mover en horizontal.&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tier 2 (escenario base): perimetro de una manzana del grid regular de CitySim, 4 waypoints. Altitud creciente en rampa (-10, -30, -50 m) y retorno a -10 m sobre el punto de partida.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_ortho.png&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">   </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-10.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_1&quot;</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">130.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">75.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_2&quot;</span><span class="w"> </span><span class="p">},</span>
@@ -2407,7 +2406,7 @@
 <p>Ocho waypoints, ~340 m. Incluye <code>WP_0b_SOBRE_PLAZA</code> (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y <code>WP_1b_PASO_MOLDURA</code> (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_INI&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_calib.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_ortho.png&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;waypoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-30.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_0_ASCENSO&quot;</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-60.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-22.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WP_0b_SOBRE_PLAZA&quot;</span><span class="w"> </span><span class="p">},</span>
@@ -2441,7 +2440,7 @@
 <li>Ejecutar <code>startOllama.ps1</code> (raíz <code>D:\TesisMCD</code>, fuera del repositorio). El script lee el modelo de <code>config/.env</code>; reinicia Ollama con <code>OLLAMA_MODELS</code> apuntando a la carpeta de modelos de la aplicación, <code>OLLAMA_KEEP_ALIVE=-1</code> (el modelo no se descarga entre corridas) y <code>OLLAMA_CONTEXT_LENGTH=8192</code>; cierra los <code>llama-server</code> huérfanos (en Windows sobreviven al cierre de <code>ollama.exe</code> y retienen VRAM); descarga el GGUF base y crea el tag de 8 k si faltan, y precarga el modelo de vuelo:
    <div class="highlight"><pre><span></span><code><span class="n">powershell</span> <span class="n">-ExecutionPolicy</span> <span class="n">Bypass</span> <span class="o">-File</span> <span class="n">D</span><span class="p">:\</span><span class="n">TesisMCD</span><span class="p">\</span><span class="n">startOllama</span><span class="p">.</span><span class="n">ps1</span>
 </code></pre></div>
-   Con la configuración final (<code>STRATEGIC_SOURCE = depth</code>, <code>DEADLOCK_STRATEGY = depth</code>) el modelo solo se usa para el plan de ruta previo; si el lote corre con <code>--route-plan off</code>, Ollama puede quedar cerrado y su VRAM queda para Unreal.</li>
+   Con la configuración por defecto (<code>STRATEGIC_SOURCE = depth</code>, <code>DEADLOCK_STRATEGY = depth</code>) el modelo solo se usa para el plan de ruta previo; si el lote corre con <code>--route-plan off</code>, Ollama puede quedar cerrado y su VRAM queda para Unreal.</li>
 <li>Verificar que el modelo quedó residente:
    <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://127.0.0.1:11434/api/ps
 </code></pre></div></li>
@@ -2452,23 +2451,28 @@
 <li>Presionar <strong>Play</strong> (PIE) o ejecutar el binario <em>standalone</em>.</li>
 <li>Constatar que en la esquina superior aparezca la notificación de conexión de AirSim en el puerto 41451.</li>
 </ol>
-<h3 id="paso-5-ejecucion-del-lote-de-pruebas-runner">Paso 5: Ejecución del lote de pruebas (<em>Runner</em>)<a class="headerlink" href="#paso-5-ejecucion-del-lote-de-pruebas-runner" title="Permanent link">&para;</a></h3>
-<p>Para correr una comparación experimental balanceada entre los tres brazos de control sobre un escenario:
+<h3 id="paso-5-ejecucion-de-los-lotes-runner">Paso 5: Ejecución de los lotes (<em>Runner</em>)<a class="headerlink" href="#paso-5-ejecucion-de-los-lotes-runner" title="Permanent link">&para;</a></h3>
+<p>Los seis lotes del diseño experimental (cap. 10, §10.5.3) se lanzan con los scripts versionados en <code>experiments/</code>, que fijan escenario, celdas, semillas, presupuesto (1200 s / 6000 ciclos) y modo del plan de ruta, y usan el intérprete de <code>AIRSIM_ENV_DIR</code>:
+<div class="highlight"><pre><span></span><code><span class="nb">cd </span><span class="n">experiments</span>
+<span class="p">.\</span><span class="n">run_lote3_townsim_ini</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Pilot</span>    <span class="c"># piloto de validación</span>
+<span class="p">.\</span><span class="n">run_lote3_townsim_ini</span><span class="p">.</span><span class="n">ps1</span>           <span class="c"># lote completo</span>
+<span class="p">.\</span><span class="n">run_lote3_townsim_ini</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Resume</span>   <span class="c"># reanudar un lote cortado</span>
+</code></pre></div>
+Cada script llama a <code>runner.py</code>, que también puede usarse directamente:
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>experiments/runner.py<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--scenarios<span class="w"> </span>../airsim-plan/missions/flightplans/townsim_clear.json<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--arms<span class="w"> </span>slm<span class="w"> </span>fsm<span class="w"> </span>reactive<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--deadlock-strategies<span class="w"> </span>depth<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--seeds<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--route-plan<span class="w"> </span>off<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--out-dir<span class="w"> </span>../airsim-runs/
+<span class="w">    </span>--scenarios<span class="w"> </span>../airsim-plan/missions/flightplans/townsim_ini.json<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cells<span class="w"> </span>slm:depth<span class="w"> </span>fsm:depth<span class="w"> </span>fsm:blind<span class="w"> </span>reactive<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--seeds<span class="w"> </span><span class="m">73</span><span class="w"> </span><span class="m">79</span><span class="w"> </span><span class="m">83</span><span class="w"> </span><span class="m">89</span><span class="w"> </span><span class="m">97</span><span class="w"> </span><span class="m">101</span><span class="w"> </span><span class="m">103</span><span class="w"> </span><span class="m">107</span><span class="w"> </span><span class="m">109</span><span class="w"> </span><span class="m">113</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-seconds<span class="w"> </span><span class="m">1200</span><span class="w"> </span>--max-cycles<span class="w"> </span><span class="m">6000</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--route-plan<span class="w"> </span>vlm<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out-dir<span class="w"> </span>../airsim-runs/produccion/v4/lote3_townsim_ini
 </code></pre></div>
-Sin <code>--deadlock-strategies</code> ni <code>--strategic-sources</code> se usan los valores de <code>config/.env</code> (<code>depth</code>/<code>depth</code>). <code>--route-plan vlm</code> (el default) planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (CitySim). Cada corrida se cierra con <code>finalize_run</code> (cap. 4, §4.4); una corrida interrumpida se cierra con <code>python experiments/finalize_run.py --all ../airsim-runs/</code>.</p>
+Las celdas se alternan dentro de cada semilla, con el orden rotado por semilla. Sin <code>--deadlock-strategies</code> ni <code>--strategic-sources</code> se usan los valores de <code>config/.env</code> (<code>depth</code>/<code>depth</code>). <code>--route-plan vlm</code> planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (TownSim o CitySim). Cada corrida se cierra con <code>finalize_run</code> (cap. 4, §4.4); una corrida interrumpida se cierra con <code>python experiments/finalize_run.py --all &lt;raíz&gt;</code>.</p>
 <h3 id="paso-6-procesamiento-de-datos-y-consolidacion-estadistica">Paso 6: Procesamiento de datos y consolidación estadística<a class="headerlink" href="#paso-6-procesamiento-de-datos-y-consolidacion-estadistica" title="Permanent link">&para;</a></h3>
-<p>Una vez finalizadas las corridas, compilar los resultados y generar las tablas estadísticas comparativas:
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>experiments/analyze.py<span class="w"> </span>--runs-dir<span class="w"> </span>airsim-runs/
-python<span class="w"> </span>experiments/analyze_tesis_results.py
+<p>Una vez finalizados los lotes, generar las tablas estadísticas:
+<div class="highlight"><pre><span></span><code><span class="n">D</span><span class="p">:\</span><span class="n">TesisMCD</span><span class="p">\</span><span class="n">airsimenv</span><span class="p">\</span><span class="n">python</span><span class="p">.</span><span class="n">exe</span> <span class="p">..\</span><span class="n">airsim-loop</span><span class="p">\</span><span class="n">experiments</span><span class="p">\</span><span class="n">analyze_lotes</span><span class="p">.</span><span class="n">py</span> <span class="p">..\</span><span class="n">airsim-runs</span><span class="p">\</span><span class="n">produccion</span><span class="p">\</span><span class="n">v4</span> <span class="p">-</span><span class="n">-family</span> <span class="n">18</span>
 </code></pre></div>
-Los reportes estadísticos consolidados (tests de Mann-Whitney U, frecuencias de acción y tasas de éxito) se volcarán automáticamente en formato Markdown y CSV listos para su contrastación con las tablas de los capítulos 10 y 11.</p>
+El script escribe <code>analisis_lotes.md</code> y dos CSV en la raíz de los lotes: por celda, éxito con IC de Wilson, SPL, tiempo de las misiones exitosas y distancia mínima; y las 18 comparaciones primarias con delta de Cliff, IC <em>bootstrap</em> y prueba de permutación exacta sobre rangos, con corrección de Bonferroni (cap. 10, §10.7).</p>
 
 
 

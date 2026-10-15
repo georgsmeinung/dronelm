@@ -245,7 +245,7 @@ def is_blocked(self) -> bool:
     if self.confidence < 0.15:
         return False
     # 2. Voto por ocupación de área
-    if self.occupancy >= 0.35:   # valor histórico; el operativo es 0.011 tras la calibración D2 (cap. 7, §7.5)
+    if self.occupancy >= 0.011:  # OBSTACLE_OCCUPANCY_BLOCKED, calibrado por ROC (cap. 7, §7.5)
         return True
     # 3. Voto directo por TTC bajo (con confianza estricta >= 0.35)
     return self.confidence >= 0.35 and self.ttc_s <= 2.5

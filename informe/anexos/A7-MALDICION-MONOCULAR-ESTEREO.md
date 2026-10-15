@@ -77,14 +77,13 @@ agravante propio de la vegetación:
    ninguna derotación por IMU (Anexo 5, §A5.3) puede compensar, porque esa derotación asume
    explícitamente una escena rígida y estacionaria.
 
-El resultado observado en §11.4.2b —0/5 en los tres brazos, deadlock crónico (`slm`: 20.2/corrida,
-`fsm`: 24.0/corrida), sin una sola colisión— es consistente con este mecanismo: el sistema no
-avanza porque no puede confiar en su propia percepción frontal, y no colisiona precisamente porque
-esa falta de confianza lo mantiene en modo cauteloso. El `deep_vlm` resuelve el 100% de los
-deadlocks individuales (repone evidencia puntual vía descripción semántica de la escena), pero la
-tasa de generación de nuevos deadlocks excede la capacidad de avance neto — un régimen de
-"deadlock crónico" que ningún ajuste de la capa deliberativa (Anexos 3 y 4) puede resolver, porque el
-cuello de botella está en la capa de percepción, no en la de decisión.
+La consecuencia esperable en el corredor arbolado de `townsim_ini` es un régimen de **deadlock
+crónico** sin colisiones: el sistema no avanza porque no puede confiar en su propia percepción
+frontal, y no colisiona precisamente porque esa falta de confianza lo mantiene en modo cauteloso. Un
+barrido puede resolver cada deadlock individual, pero si la tasa de generación de nuevos deadlocks
+excede la capacidad de avance neto, ningún ajuste de la capa deliberativa (Anexos 3 y 4) lo resuelve,
+porque el cuello de botella está en la capa de percepción, no en la de decisión. El lote 3 del diseño
+experimental (cap. 10, §10.5.3) mide si este régimen aparece y si la profundidad estimada lo atenúa.
 
 ### A7.2.1 ¿Ayudaría SLAM monocular disperso o semi-denso?
 

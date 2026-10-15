@@ -1,3 +1,88 @@
+# 2026-10-15 (b) - Informe: caps. 1-10 y anexos describen solo la version actual
+
+Primera version publicada del informe: los caps. 1-10 y los anexos describen el codigo de hoy, sin
+historia (sin "antes/pasa a/version final", fechas de decisiones, lote base de septiembre, lotes de
+octubre como evidencia ni Qwen2.5-VL-3B como modelo anterior). Las comparaciones de alternativas quedan
+como justificacion de la eleccion (modelos candidatos, juicio por parches vs. ruta entera). Sin cambios
+de codigo.
+
+- **Cap. 10 reescrito** con una sola descripcion del diseno, coherente con `experiments/README.md`:
+  6 lotes, celdas `slm:depth`/`fsm:depth`/`reactive` (+ `fsm:blind` en obstruccion), K = 10 semillas
+  primas, 1200 s / 6000 ciclos, plan de ruta vlm en TownSim y CitySim (off en MiniSim), protocolo
+  estadistico de `analyze_lotes.py` (permutacion exacta sobre rangos, Cliff + IC bootstrap, Wilson,
+  Fisher/Newcombe, Bonferroni 18). Fuera: los tres batches de K = 5, datos piloto del lote base, la
+  cuarentena por fechas, §10.12.3 "Estado" y la tabla cronologica de §10.13.4 (ahora "que decide el
+  banco"). Se conserva la numeracion que citan el README y los otros capitulos (§10.5.3, §10.12.2, §10.13).
+- **Cap. 9 reescrito en presente**: cada falla como mecanismo + evidencia de diagnostico + contencion
+  actual. Corregidas afirmaciones que no coincidian con el codigo (`LANGGRAPH_DEBUG_STATE_CLIPPING`,
+  `FRAME_HISTORY_MAX_STALENESS_MS` y el test de orden de canales no existen; degraded_hover no se activa
+  por falta de evidencia).
+- **Caps. 1, 3-8**: sin fechas ni relato (Cosys-AirSim, calibracion de telemetria, ancho de flujo,
+  calibracion D2, primer intento con Depth Anything, Mac mini/LM Studio, tabla de latencias de Qwen).
+  Cap. 3/4/10: mapa registrado de TownSim (`townsim_ortho.png`) y MiniSim como plano liso. Cap. 8: el VLM
+  como fuente alternativa y modelo del planificador.
+- **Anexos**: A1 (seleccion del modelo y configuracion local actual; se quita la figura
+  `a1-integracion-local.jpg`, que muestra la configuracion de dos nodos), A2 (salvaguardas actuales),
+  A3, A4 (codigo de A4.6 rotulado como ilustrativo), A5 (umbral 0.011), A6 (summary.json con los campos
+  reales, lotes y `analyze_lotes.py`), A7, A8, A9.
+- **Caps. 11 y 12**: sin reescribir; los pasajes con datos viejos quedan marcados `<!-- PENDIENTE v4 -->`
+  para reescribirlos con la corrida v4.
+- Pendiente: regenerar `docs/` con `informe/build.ps1`; rehacer la figura de A1 y la del grafo de control
+  (cap. 5, muestra el VLM como fuente).
+
+# 2026-10-15 - Runner y analisis para los lotes finales (A-F, cap. 10 §10.12.2)
+
+- **`experiments/runner.py`**: `--cells slm:depth fsm:depth fsm:blind reactive` corre solo esas celdas
+  (no el producto `--arms` x `--deadlock-strategies`) y las alterna dentro de cada semilla, con el orden
+  rotado por semilla, para repartir la deriva del simulador entre celdas. El lote no arranca con
+  `code_version` `-dirty` o `unknown` (los lotes de octubre quedaron `-dirty`); `--allow-dirty` para
+  pruebas. `--skip-existing` reanuda: saltea corridas con summary del mismo `code_version` y >= 50 ciclos.
+  Sin `--cells`, el orden de siempre.
+- **`experiments/` en la raiz** (nuevo, versionado): `run_lotes.ps1` define la corrida productiva v4 y los
+  `run_loteN_*.ps1` (antes en `airsim-runs/produccion/v4`, fuera de git) lo llaman con su lote; `README.md`
+  explica cada lote (que mide, piloto, presupuesto, tiempo). Los resultados siguen en
+  `airsim-runs/produccion/v4/` (gitignoreado: logs y videos muy pesados). Lotes 1, 2 y 5 (despejados):
+  3 brazos, `slm:depth fsm:depth reactive`. Lotes 3, 4 y 6 (obstruccion, D/E/F de §10.12.2): se suma
+  `fsm:blind`. 10 semillas primas por celda (210 corridas). Presupuesto unico de 1200 s / 6000 ciclos en
+  todos los lotes (antes 480-900 s segun escenario; slm:depth tardo 430-500 s en citysim_pilot en octubre),
+  para que un brazo lento falle por el obstaculo y no por el tiempo. Peor caso ~44 h. Plan de ruta vlm solo en CitySim (verifica Ollama). Python fijo de
+  `airsimenv`. `-Pilot` (slm:depth, semilla 99, a `pilotos/`), `-Resume`, `-SeedJitter`.
+- **`experiments/analyze_lotes.py`** (nuevo): por celda, exito con IC de Wilson, SPL/tiempo/dist. minima.
+  Tres comparaciones por lote: con `fsm x blind`, las de §10.12.2; en los lotes de 3 brazos, slm-fsm,
+  slm-reactive y fsm-reactive (`--design auto|cells4|arms3`). Metrica primaria SPL (obstruccion) o tiempo
+  de las exitosas (despejados); delta de Cliff + IC bootstrap y permutacion exacta sobre rangos
+  (Mann-Whitney exacto con empates); Bonferroni sobre la familia primaria (`--family 18`). Secundarias sin
+  correccion: Fisher + diferencia de tasas con IC de Newcombe, distancia minima. Descartes de §10.12.2
+  (version, `-dirty`, < 50 ciclos, pilotos).
+- **`src/logging/code_version.py`**: `experiments/` entra en `CODE_PATHS`: un lanzador modificado sin commitear
+  marca la version `-dirty` y el lote no arranca.
+- **Pendiente en el informe**: §10.5.3/§10.5.4/§10.12.2 al diseno v4 (celdas por lote, 1200 s en todos los lotes,
+  K = 10, 210 corridas).
+- **Entorno Python de los lotes**: `AIRSIM_ENV_DIR=D:/TesisMCD/airsimenv` en `config/.env` (con "/": entre
+  comillas dobles python-dotenv lee "\a" como escape). Nuevo `src/logging/python_env.py`; `runner.py` y
+  `batch_runner.py` no arrancan un lote con otro interprete (codigo 3; `--allow-any-python` para pruebas).
+  `run_lotes.ps1` y `vlm_bench/run_all.sh` toman el python de `AIRSIM_ENV_DIR`.
+- **`citysim_clear`**: se vuela el manifiesto de 4 waypoints (rampa -10/-30/-50 m y retorno a -10 m, ~420 m).
+  Corregidos cap. 3, cap. 10 (§10.3.3, tabla de escenarios, batch C, §10.8.3), cap. 11, anexo A6, el
+  `summary` del manifiesto (sin cambio de waypoints), `experiments/README.md`, `plan-tesis/PLAN-PRUEBAS-TESIS.md`
+  y `airsim-runs/PLAN-CORRIDAS-TESIS.md`, que decian 7 waypoints a -70 m: los registros de todas las corridas
+  de este escenario muestran WP_1-WP_4 y altitud maxima -50 m.
+- **Mapa de TownSim registrado** (`airsim-plan/missions/maps/townsim_ortho.png` + `.json`): capturado con
+  `capture_ortho_map.py` (1000 m, FOV 15, 24 tomas, 4 px/m, x/y [-250, 250] m, sin tomas inestables). El mapa
+  anterior `townsim_calib.png` (6.5 px/m) no estaba registrado: el 11.3 % de los 10 490 casi-contactos en
+  vuelo (DistMin < 1.5 m, z entre -3 y -16 m) caia sobre pasto sin obstaculo en 3 m; con el nuevo, 0.0 %.
+  Ningun waypoint de townsim_ini / townsim_clear / townsim_calib_cruce_frontal cae dentro de geometria (WP_2 de
+  townsim_ini queda sobre una superficie que las corridas cruzaron a ~-12 m sin contacto). Los tres manifiestos
+  apuntan a `townsim_ortho.png`; `map_scales.json` marca `townsim.png` y `townsim_calib.png` como no registrados.
+  Camara verificada tras la captura (FOV 90, pose nula).
+- **Plan de ruta con el VLM en los lotes 2-6** (`run_lotes.ps1`): TownSim pasa a `--route-plan vlm`. Lote 1
+  (MiniSim) queda en `off`: el nivel MiniSim es un plano liso con textura de tablero (profundidad cenital = altura
+  en toda la toma a 150-1000 m, x/y +-130 m alrededor del origen; 0 objetos de escena), sin obstaculos, de modo
+  que la recta ya es la ruta optima. `crater.png` no corresponde al mundo (muestra un crater que no existe):
+  marcado asi en `map_scales.json`. `capture_ortho_map.py` no puede capturarlo: la textura periodica anula la
+  calibracion por correlacion de fase (corrimiento 0 entre tomas a 20 m).
+- **Tests**: `tests/test_lotes_finales.py` (18 tests); suite 317 verdes.
+
 # 2026-10-14 (b) - Cap. 10 §10.13: banco de prueba a bordo (que es, como se construyo, como decidio el diseno)
 
 - **Informe, cap. 10 §10.13** (nuevo): para que sirve el banco (medir fuera de vuelo si la fuente responde la

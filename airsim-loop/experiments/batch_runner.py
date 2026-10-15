@@ -99,7 +99,16 @@ def main():
     parser.add_argument("--route-plan", choices=["vlm", "off"], default=os.getenv("ROUTE_PLAN_MODE", "vlm"),
                         help="Plan de ruta con el VLM sobre el mapa cenital, una vez por escenario antes de "
                              "las corridas (ver runner.py --route-plan).")
+    parser.add_argument("--allow-any-python", action="store_true",
+                        help="Correr aunque el interprete no sea el de AIRSIM_ENV_DIR (config/.env).")
     args = parser.parse_args()
+
+    from src.logging.python_env import check_python_env
+
+    env_ok, env_msg = check_python_env()
+    if not env_ok and not args.allow_any_python:
+        print(f"[G4] ABORTADO: {env_msg}")
+        sys.exit(3)
 
     out_dir_path = Path(args.out_dir)
     out_dir_path.mkdir(parents=True, exist_ok=True)

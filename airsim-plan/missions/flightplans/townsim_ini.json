@@ -11,5 +11,5 @@
     { "x":  0.0,  "y": -70.0, "z": -30.0, "label": "WP_4_CLIMB_ESTE" },
     { "x":  0.0,  "y":  0.0,  "z": -10.0, "label": "WP_5_RETORNO" }
   ],
-  "map": "townsim_calib.png"
+  "map": "townsim_ortho.png"
 }

@@ -12,7 +12,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 # Lo que define el comportamiento de una corrida. Cambios en el informe o en docs/ no ensucian.
-CODE_PATHS = ("airsim-loop", "config", "airsim-plan")
+# experiments/ (raiz): lanzadores de los lotes, que fijan celdas, semillas y presupuestos (2026-10-15).
+CODE_PATHS = ("airsim-loop", "config", "airsim-plan", "experiments")
 
 
 def _git(*args: str) -> str:

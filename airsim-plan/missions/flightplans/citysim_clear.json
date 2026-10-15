@@ -1,6 +1,6 @@
 {
   "mission_id": "CITYSIM_CLEAR",
-  "summary": "Tier 2 (escenario base): perímetro de una manzana del grid regular en citysim_calib.png. Altitud de tránsito -70m (70m AGL) para superar edificios altos de CitySim. Estructura climb-first: WP_2 sube vertical puro (mismo x,y que spawn, near_vertical fix 2026-09-07) antes de mover en horizontal. Descenso vertical final desde esquina NW (WP_6 -> WP_7). Análogo a TOWNSIM_CLEAR (Tier 1) y MINISIM_CLEAR (Tier 0).",
+  "summary": "Tier 2 (escenario base): perímetro de una manzana del grid regular de CitySim (citysim_ortho.png), 4 waypoints, ~420 m. Altitud creciente en rampa a lo largo del perímetro (WP_1 -10 m, WP_2 -30 m, WP_3 -50 m) y retorno a -10 m en WP_4, sobre el punto de partida. Análogo a TOWNSIM_CLEAR (Tier 1) y MINISIM_CLEAR (Tier 0).",
   "waypoints": [
     {
       "x": 0.0,

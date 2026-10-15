@@ -1,6 +1,6 @@
 # Anexo 9: Modelos de Mundo Latentes (LeWorldModel) como Alternativa al SLM — Trade-offs y Viabilidad en Hardware Edge
 
-Este anexo analiza, como línea de trabajo futuro (§12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, `lfm2.5-vl-1.6b:q4km-ctx8k`; antes Qwen2.5-VL-3B-Instruct, cap. 8) por un **modelo de mundo latente** del tipo *Joint-Embedding Predictive Architecture* (JEPA), tomando como caso de estudio **LeWorldModel** (LeWM; [Maes et al., 2026](../13-REFERENCIAS.md#ref-maes-2026)). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo `slm`, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una *companion computer* como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).
+Este anexo analiza, como línea de trabajo futuro (§12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, `lfm2.5-vl-1.6b:q4km-ctx8k`, cap. 8) por un **modelo de mundo latente** del tipo *Joint-Embedding Predictive Architecture* (JEPA), tomando como caso de estudio **LeWorldModel** (LeWM; [Maes et al., 2026](../13-REFERENCIAS.md#ref-maes-2026)). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo `slm`, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una *companion computer* como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).
 
 <img src="a9-alternativa-con-lewm.jpg"/>
 
@@ -37,12 +37,12 @@ El paper también reporta que el espacio latente codifica cantidades físicas re
 
 ## A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente
 
-El VLM del sistema es un **perceptor semántico de escala de segundos**: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, §5.10), con una latencia de 1,5 a 5,6 s de mediana con los servidores anteriores y de ~0,8 s con el modelo local vigente [T] (cap. 8, §8.6). En la configuración final esa pregunta la responde una red de profundidad estimada (cap. 6, §6.14) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
+El VLM del sistema es un **perceptor semántico de escala de segundos**: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, §5.10), con una latencia de ~0,8 s con el modelo local [T] (cap. 8, §8.6). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, §6.14) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
 
 | Dimensión | VLM (LFM2.5-VL-1.6B, §8) | LeWM-like (15 M) |
 |---|---|---|
-| Función | Clasifica la situación y elige macro-acción | Predice el embedding futuro dada una secuencia de acciones; el plan surge de optimizar |
-| Salida | JSON discreto (5 macro-acciones) | Secuencia continua de acciones (p. ej., `vx, vy, vz, yaw_rate`) |
+| Función | Clasifica sectores o imágenes en volable o bloqueado; el código fija la sub-meta | Predice el embedding futuro dada una secuencia de acciones; el plan surge de optimizar |
+| Salida | JSON discreto (enumeraciones cerradas por sector o imagen) | Secuencia continua de acciones (p. ej., `vx, vy, vz, yaw_rate`) |
 | Conocimiento previo | Preentrenamiento masivo (sentido común, semántica urbana) | Ninguno: aprende solo de los datos de dominio |
 | Especificación del objetivo | Lenguaje natural / waypoints en el prompt | Imagen objetivo (o función de costo sobre el latente) |
 | Datos requeridos | Ninguno (*zero-shot*) o dataset de maniobras para LoRA (Anexo 3) | Trayectorias (imagen, acción) offline con buena cobertura |
@@ -50,7 +50,7 @@ El VLM del sistema es un **perceptor semántico de escala de segundos**: recibe 
 | Huella de memoria | ~1,6 GB (Q4_K_M, contexto de 8 k) [T] | ~30 MB en FP16 [E] |
 | Interpretabilidad | Texto (`reason`) auditable; la auditoría de contratos del cap. 9 se apoya en ello | Latente opaco; requiere *probes* para inspeccionarlo |
 | Modo de falla característico | Alucinación, JSON inválido, *timeout* del watchdog (cap. 9) | Deriva de rollouts a horizonte largo, fuera de distribución, costo latente mal condicionado |
-| Latencia por decisión | mediana 0,77 s en la RTX 5060 compartida con Unreal (modelo local); 1,2–11 s con los servidores anteriores [T] | ~1 s en el paper con 300 × 10–30 iteraciones [P]; reducible (§A9.5) |
+| Latencia por decisión | mediana 0,77 s en la RTX 5060 compartida con Unreal (modelo local) [T] | ~1 s en el paper con 300 × 10–30 iteraciones [P]; reducible (§A9.5) |
 
 El SLM aporta exactamente aquello que el modelo de mundo no tiene (semántica y razonamiento global entre corredores ambiguos: régimen 2 del cap. 12, `citymap_pilot`), mientras que el modelo de mundo aporta lo que el SLM no tiene: **predicción explícita de consecuencias de acciones continuas a bajo costo**, útil justamente en el régimen 3 (obstrucción frontal con escape lateral accesible), donde el SLM perdía por latencia.
 
@@ -93,7 +93,7 @@ Las cifras en TOPS son de marketing (típicamente INT8 y con esparcidad estructu
 
 ### A9.5.2 Memoria
 
-Con ~15 M de parámetros, LeWM ocupa ≈ 30 MB en FP16 y ≈ 15 MB en INT8 [E], frente a ~2,0 GB del VLM cuantizado [T]: unas 65× menos en el formato desplegado. Incluso la Jetson Nano de 4 GB podría alojar el modelo de mundo con holgura; la restricción de memoria, que condicionó la elección del VLM (cap. 8), **deja de ser el factor limitante**. Lo que sí pesa es el lote de candidatos del CEM (300 secuencias × historial de 3 tokens × 192 dimensiones), del orden de unos pocos MB de activaciones [E].
+Con ~15 M de parámetros, LeWM ocupa ≈ 30 MB en FP16 y ≈ 15 MB en INT8 [E], frente a ~1,6 GB del VLM cuantizado [T]: unas 50× menos en el formato desplegado. Incluso la Jetson Nano de 4 GB podría alojar el modelo de mundo con holgura; la restricción de memoria, que condicionó la elección del VLM (cap. 8), **deja de ser el factor limitante**. Lo que sí pesa es el lote de candidatos del CEM (300 secuencias × historial de 3 tokens × 192 dimensiones), del orden de unos pocos MB de activaciones [E].
 
 ### A9.5.3 Cómputo por plan
 
@@ -148,7 +148,7 @@ En el escenario de las Opciones B/C ambos modelos coexisten. Como el modelo de m
 
 ## A9.7 Protocolo de evaluación propuesto
 
-1. **Recolección de datos.** Generar trayectorias (frame RGB, acción, telemetría) en AirSim para los tres tiers, incluyendo trayectorias de casi-colisión y maniobras de escape; las corridas ya registradas del lote de la tesis pueden reutilizarse como semilla, evaluando su cobertura antes de entrenar.
+1. **Recolección de datos.** Generar trayectorias (frame RGB, acción, telemetría) en AirSim para los tres tiers, incluyendo trayectorias de casi-colisión y maniobras de escape; las corridas ya registradas de los lotes de la tesis pueden reutilizarse como semilla, evaluando su cobertura antes de entrenar.
 2. **Entrenamiento y diagnóstico del latente.** Entrenar LeWM (código oficial del paper, [Maes et al., 2026](../13-REFERENCIAS.md#ref-maes-2026)); entrenar *probes* lineales para TTC/ocupación usando las etiquetas de referencia de profundidad ya disponibles (cap. 7) y medir su error; medir error de rollout vs. horizonte.
 3. **Medición en el borde.** Medir latencia real de `encoder`, `predictor` y plan CEM en la estación de desarrollo y en Jetson Orin Nano (FP16 y INT8/TensorRT), variando `N`, iteraciones y `H`; reportar p50/p95/p99 y potencia. Esto reemplaza las estimaciones [E] de §A9.5.3.
 4. **Evaluación en lazo cerrado.** Comparar, sobre los mismos escenarios y semillas del cap. 10, `slm` contra `slm + verificador latente` (Opción B), con las mismas métricas (éxito, colisiones, tiempo, distancia). Con K = 5 los resultados serían indicativos (cap. 12, §12.3); se recomienda K ≥ 10–15.

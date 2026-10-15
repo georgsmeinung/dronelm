@@ -74,22 +74,22 @@ En una misión de navegación aérea autónoma, los efectos de una alucinación 
 
 ## A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis
 
-Para hacer viable el despliegue de un modelo compacto (Qwen2.5-VL-3B-Instruct; [Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:
+Para hacer viable el despliegue de un modelo compacto (LFM2.5-VL-1.6B, cap. 8 §8.1.2) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:
 
 <img src="a2-estrategias-mitigacion.jpg">
 
 1. **Decodificación restringida a nivel de logits (`json_schema`)**:
    En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025); [Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (§8.2.1).
 
-2. **Espacio de acción discreto mediante lista blanca (§8.3)**:
-   El modelo no genera vectores numéricos de velocidad o aceleración libres, sino que selecciona exclusivamente una etiqueta de una lista fija de cinco macro-acciones seguras (`keep_going`, `evasive`, `girar_90`, `fsm`, `degraded`). Esta discretización suprime alucinaciones numéricas continuas y asegura que cada maniobra cuente con una función de traducción cinemática determinista y acotada.
+2. **El modelo describe; el código decide la geometría (§8.3)**:
+   El modelo no genera velocidades ni elige macro-acciones: clasifica sectores, imágenes o parches del mapa en enumeraciones cerradas (`free`/`blocked`, cinco clases de terreno), y el código traduce esa descripción a una sub-meta en coordenadas del mundo o a una puntuación de ruta. Esta discretización suprime alucinaciones numéricas continuas y deja toda la cinemática en una función de traducción determinista y acotada (`action_to_command()`, §8.4).
 
-3. **Arquitectura híbrida y red de seguridad determinista con FSM (§5.2 y §8.2.2)**:
-   La capa deliberativa no ejerce control directo de baja latencia sobre los actuadores. Toda macro-acción es supervisada por una máquina de estados finitos (FSM) que opera como árbitro de seguridad. Ante cualquier discrepancia, latencia excesiva o fallo residual del analizador, la FSM ejecuta de inmediato una maniobra conservadora (*hover* de sustentación o maniobra reactiva guiada por el flujo óptico).
+3. **Arquitectura de dos lazos con un lazo rápido determinista (§5.1.2 y §8.2.2)**:
+   La capa deliberativa no ejerce control directo sobre los actuadores. El lazo rápido de flujo óptico y TTC es el único que comanda velocidades y reacciona a lo inminente en el mismo ciclo; una respuesta inválida, tardía u obsoleta se descarta sin sustituirse por una decisión inventada, y un barrido sin respuesta válida cae a un escape vertical determinista.
 
-4. **Inspección visual multimodal complementaria (§6.12 y §8.1.1)**:
-   Para contrarrestar las alucinaciones inducidas por la pérdida de señal o los puntos ciegos del flujo óptico (como el vuelo estático o la rotación pura), el modelo recibe directamente el fotograma visual de la cámara junto con el resumen numérico. Esta redundancia perceptual asegura que el razonamiento simbólico esté anclado en evidencia física real y contemporánea.
+4. **Medición contra etiquetas de referencia antes del vuelo (§10.13)**:
+   Cada pregunta que se le hace al modelo se evalúa fuera de vuelo contra una etiqueta independiente; la que no supera el criterio no se lleva al lazo. Por eso, con la configuración por defecto, las preguntas del lazo lento las responde una red de profundidad estimada y el VLM queda en el plan de ruta, donde sí aporta señal.
 
 ### Conclusión sintética
 
-Los desafíos de capacidad limitada y susceptibilidad a alucinaciones propios de los SLMs no deben resolverse mediante el escalado indiscriminado de parámetros —inviable en hardware de borde—, sino a través de una **estricta disciplina de ingeniería de sistemas**: decodificación gramaticalmente guiada, discretización del espacio de decisión y acoplamiento jerárquico con supervisores deterministas en tiempo real.
+Los desafíos de capacidad limitada y susceptibilidad a alucinaciones propios de los SLMs no deben resolverse mediante el escalado indiscriminado de parámetros —inviable en hardware de borde—, sino a través de una **estricta disciplina de ingeniería de sistemas**: decodificación gramaticalmente guiada, discretización del espacio de respuesta, acoplamiento jerárquico con un lazo rápido determinista y medición de cada capacidad antes de confiarle una decisión.

@@ -1315,7 +1315,7 @@
 
 
 <h1 id="anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge">Anexo 9: Modelos de Mundo Latentes (LeWorldModel) como Alternativa al SLM — Trade-offs y Viabilidad en Hardware Edge<a class="headerlink" href="#anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge" title="Permanent link">&para;</a></h1>
-<p>Este anexo analiza, como línea de trabajo futuro (§12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>; antes Qwen2.5-VL-3B-Instruct, cap. 8) por un <strong>modelo de mundo latente</strong> del tipo <em>Joint-Embedding Predictive Architecture</em> (JEPA), tomando como caso de estudio <strong>LeWorldModel</strong> (LeWM; <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo <code>slm</code>, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una <em>companion computer</em> como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).</p>
+<p>Este anexo analiza, como línea de trabajo futuro (§12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, cap. 8) por un <strong>modelo de mundo latente</strong> del tipo <em>Joint-Embedding Predictive Architecture</em> (JEPA), tomando como caso de estudio <strong>LeWorldModel</strong> (LeWM; <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo <code>slm</code>, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una <em>companion computer</em> como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).</p>
 <p><img src="a9-alternativa-con-lewm.jpg"/></p>
 <p><strong>Alcance y convención de rigor.</strong> Nada de lo aquí descrito está implementado ni medido en el sistema evaluado en el capítulo 11. Las cifras se rotulan según su origen:</p>
 <ul>
@@ -1373,7 +1373,7 @@
 <p><strong>Trabajos de contexto aéreo.</strong> El antecedente más cercano al dominio de esta tesis es SkyJEPA (<a href="../13-REFERENCIAS.html#ref-rao-2026">Rao et al., 2026</a>), que aplica un modelo de dinámica latente de estilo JEPA al control de cuadrirrotores con transferencia <em>sim-to-real</em> y optimización por muestreo en hardware embebido; según su resumen opera sobre <strong>estado</strong>, no sobre imágenes, por lo que no valida el caso visual monocular. En navegación con imagen objetivo, <a href="../13-REFERENCIAS.html#ref-chahe-2026">Chahe et al. (2026)</a> muestran que el costo de planificación en el espacio latente requiere diseño explícito (monotonía respecto del progreso). No se realizó un relevamiento exhaustivo de esta literatura, muy activa en 2026.</p>
 <hr />
 <h2 id="a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente">A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente<a class="headerlink" href="#a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente" title="Permanent link">&para;</a></h2>
-<p>El VLM del sistema es un <strong>perceptor semántico de escala de segundos</strong>: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, §5.10), con una latencia de 1,5 a 5,6 s de mediana con los servidores anteriores y de ~0,8 s con el modelo local vigente [T] (cap. 8, §8.6). En la configuración final esa pregunta la responde una red de profundidad estimada (cap. 6, §6.14) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
+<p>El VLM del sistema es un <strong>perceptor semántico de escala de segundos</strong>: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, §5.10), con una latencia de ~0,8 s con el modelo local [T] (cap. 8, §8.6). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, §6.14) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
 <table>
 <thead>
 <tr>
@@ -1385,12 +1385,12 @@
 <tbody>
 <tr>
 <td>Función</td>
-<td>Clasifica la situación y elige macro-acción</td>
+<td>Clasifica sectores o imágenes en volable o bloqueado; el código fija la sub-meta</td>
 <td>Predice el embedding futuro dada una secuencia de acciones; el plan surge de optimizar</td>
 </tr>
 <tr>
 <td>Salida</td>
-<td>JSON discreto (5 macro-acciones)</td>
+<td>JSON discreto (enumeraciones cerradas por sector o imagen)</td>
 <td>Secuencia continua de acciones (p. ej., <code>vx, vy, vz, yaw_rate</code>)</td>
 </tr>
 <tr>
@@ -1430,7 +1430,7 @@
 </tr>
 <tr>
 <td>Latencia por decisión</td>
-<td>mediana 0,77 s en la RTX 5060 compartida con Unreal (modelo local); 1,2–11 s con los servidores anteriores [T]</td>
+<td>mediana 0,77 s en la RTX 5060 compartida con Unreal (modelo local) [T]</td>
 <td>~1 s en el paper con 300 × 10–30 iteraciones [P]; reducible (§A9.5)</td>
 </tr>
 </tbody>
@@ -1498,7 +1498,7 @@
 </table>
 <p>Las cifras en TOPS son de marketing (típicamente INT8 y con esparcidad estructurada); para inferencia FP16 densa de <em>matmuls</em> pequeños el rendimiento sostenible es una fracción de ese valor. Por eso la tabla siguiente parte de supuestos conservadores.</p>
 <h3 id="a952-memoria">A9.5.2 Memoria<a class="headerlink" href="#a952-memoria" title="Permanent link">&para;</a></h3>
-<p>Con ~15 M de parámetros, LeWM ocupa ≈ 30 MB en FP16 y ≈ 15 MB en INT8 [E], frente a ~2,0 GB del VLM cuantizado [T]: unas 65× menos en el formato desplegado. Incluso la Jetson Nano de 4 GB podría alojar el modelo de mundo con holgura; la restricción de memoria, que condicionó la elección del VLM (cap. 8), <strong>deja de ser el factor limitante</strong>. Lo que sí pesa es el lote de candidatos del CEM (300 secuencias × historial de 3 tokens × 192 dimensiones), del orden de unos pocos MB de activaciones [E].</p>
+<p>Con ~15 M de parámetros, LeWM ocupa ≈ 30 MB en FP16 y ≈ 15 MB en INT8 [E], frente a ~1,6 GB del VLM cuantizado [T]: unas 50× menos en el formato desplegado. Incluso la Jetson Nano de 4 GB podría alojar el modelo de mundo con holgura; la restricción de memoria, que condicionó la elección del VLM (cap. 8), <strong>deja de ser el factor limitante</strong>. Lo que sí pesa es el lote de candidatos del CEM (300 secuencias × historial de 3 tokens × 192 dimensiones), del orden de unos pocos MB de activaciones [E].</p>
 <h3 id="a953-computo-por-plan">A9.5.3 Cómputo por plan<a class="headerlink" href="#a953-computo-por-plan" title="Permanent link">&para;</a></h3>
 <p>Estimación analítica del costo por plan, con las dimensiones del paper [P] y contando solo multiplicaciones matriciales dominantes (2 FLOP por parámetro y token):</p>
 <ul>
@@ -1621,7 +1621,7 @@
 <hr />
 <h2 id="a97-protocolo-de-evaluacion-propuesto">A9.7 Protocolo de evaluación propuesto<a class="headerlink" href="#a97-protocolo-de-evaluacion-propuesto" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Recolección de datos.</strong> Generar trayectorias (frame RGB, acción, telemetría) en AirSim para los tres tiers, incluyendo trayectorias de casi-colisión y maniobras de escape; las corridas ya registradas del lote de la tesis pueden reutilizarse como semilla, evaluando su cobertura antes de entrenar.</li>
+<li><strong>Recolección de datos.</strong> Generar trayectorias (frame RGB, acción, telemetría) en AirSim para los tres tiers, incluyendo trayectorias de casi-colisión y maniobras de escape; las corridas ya registradas de los lotes de la tesis pueden reutilizarse como semilla, evaluando su cobertura antes de entrenar.</li>
 <li><strong>Entrenamiento y diagnóstico del latente.</strong> Entrenar LeWM (código oficial del paper, <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>); entrenar <em>probes</em> lineales para TTC/ocupación usando las etiquetas de referencia de profundidad ya disponibles (cap. 7) y medir su error; medir error de rollout vs. horizonte.</li>
 <li><strong>Medición en el borde.</strong> Medir latencia real de <code>encoder</code>, <code>predictor</code> y plan CEM en la estación de desarrollo y en Jetson Orin Nano (FP16 y INT8/TensorRT), variando <code>N</code>, iteraciones y <code>H</code>; reportar p50/p95/p99 y potencia. Esto reemplaza las estimaciones [E] de §A9.5.3.</li>
 <li><strong>Evaluación en lazo cerrado.</strong> Comparar, sobre los mismos escenarios y semillas del cap. 10, <code>slm</code> contra <code>slm + verificador latente</code> (Opción B), con las mismas métricas (éxito, colisiones, tiempo, distancia). Con K = 5 los resultados serían indicativos (cap. 12, §12.3); se recomienda K ≥ 10–15.</li>

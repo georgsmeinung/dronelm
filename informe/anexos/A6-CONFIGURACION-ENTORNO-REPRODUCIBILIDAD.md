@@ -186,7 +186,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_SUBGOAL_TIE_DEG` | `10.0` | Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio > arriba > abajo) (cap. 5, §5.10.3). |
 | `VLM_NEAR_WP_M` | `8.0` | A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre. |
 | `SCAN_FAILED_SECTOR_DEG` / `SCAN_REPEAT_RADIUS_M` / `SCAN_HISTORY_MAX` | `45.0` / `10.0` / `12` | Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, §5.12). |
-| `ROUTE_PLAN_MODE` | `vlm` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`vlm`) o manifiesto tal cual (`off`). Activado en la versión final con el juez por parches (AUC 0.81 en el banco, cap. 4 §4.3.1); requiere un mapa registrado con el mundo (CitySim). El lote de TownSim se voló con `--route-plan off`. |
+| `ROUTE_PLAN_MODE` | `vlm` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`vlm`) o manifiesto tal cual (`off`). Activado con el juez por parches (AUC 0.81 en el banco, cap. 4 §4.3.1); requiere un mapa registrado con el mundo (`citysim_ortho.png`, `townsim_ortho.png`). El lote de MiniSim, sin obstáculos, vuela con `--route-plan off` (cap. 10, §10.5.3). |
 | `ROUTE_JUDGE` / `ROUTE_PATCH_STEP_M` / `ROUTE_PATCH_M` / `ROUTE_PATCH_CONTEXT_M` | `patches` / `8.0` / `16.0` / `48.0` | Juicio de cada candidata: parches cada 8 m, de 16 m con 48 m de contexto, clasificados por el VLM; la candidata se puntúa con la probabilidad media de «calle» (cap. 4 §4.3.1). |
 | `ROUTE_RENDER` | `corridor` | Dibujo de cada candidata para el planificador: `corridor` (pasillo con recorte propio, rotado y con el resto oscurecido) o `line` (línea roja sobre el recorte común del tramo, norte arriba). Cada uno tiene su prompt (cap. 4 §4.3.1). |
 | `ROUTE_CORRIDOR_M` | `10.0` | Ancho del pasillo dibujado (m). |
@@ -259,59 +259,58 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 
 ## A6.4 Estructura del repositorio y artefactos de corrida (`airsim-runs/`)
 
-Cada vuelo ejecutado en simulación (sea manual o en batch mediante el runner experimental) genera un registro inmutable en el directorio `airsim-runs/<MISSION_ID>-<TIMESTAMP>/`.
+Cada vuelo ejecutado en simulación genera una carpeta autocontenida que ninguna otra corrida sobrescribe. Desde WebDCS (`main.py`), la carpeta es `airsim-runs/<MISSION_ID>-<TIMESTAMP>/`; el runner experimental la ubica en la jerarquía del diseño, `<lote>/<escenario>/<brazo>/<estrategia>/seed_<N>_<timestamp>/` (cap. 10, §10.9.1). La lista completa de archivos y campos está en el capítulo 4 (§4.4); los principales son:
 
 ```
-airsim-runs/
-└── CITYSIM_CLEAR-20260907T191226Z/
-    ├── CITYSIM_CLEAR-20260907T191226Z.summary.json    <- Métricas consolidadas
-    ├── CITYSIM_CLEAR-20260907T191226Z.jsonl           <- Telemetría ciclo a ciclo
-    ├── CITYSIM_CLEAR-20260907T191226Z.csv             <- Dataset con Telemetría 
-    └── CITYSIM_CLEAR-20260907T191226Z.webmp           <- Video de auditoría con HUD 
+seed_<N>_<ts>/
+├── seed_<N>_<ts>.summary.json      <- Indicadores consolidados de la corrida
+├── seed_<N>_<ts>.summary_by_wp.csv <- Indicadores por objetivo
+├── seed_<N>_<ts>.jsonl             <- Traza ciclo a ciclo con el DroneState completo
+├── seed_<N>_<ts>.csv               <- La misma traza en columnas (state.*)
+├── seed_<N>_<ts>.distmin.ndjson    <- Muestras de la auditoría de distancia mínima (1 Hz)
+├── seed_<N>_<ts>.webm              <- Video de la cámara frontal con overlay
+└── seed_<N>_<ts>.viewer.html       <- Visor de auditoría autocontenido
 ```
 
 ### A6.4.1 Estructura del archivo de resumen (`.summary.json`)
-Contiene los metadatos globales del experimento y los indicadores clave de rendimiento (KPIs):
+Contiene la identificación de la corrida y sus indicadores. Ejemplo de una corrida `slm:depth` en `citysim_pilot` (valores ilustrativos; `route_histogram` y `route_plan` abreviados):
 
 ```json
 {
-  "mission_id": "CITYSIM_CLEAR",
-  "arm": "slm",
+  "scenario": "citysim_pilot",
   "seed": 1,
-  "code_version": "a37b7030",
-  "start_time": "2026-09-07T19:12:26.104Z",
-  "end_time": "2026-09-07T19:14:18.420Z",
-  "duration_s": 112.316,
-  "total_cycles": 561,
-  "success": true,
-  "collision_count": 0,
-  "total_distance_m": 312.45,
-  "average_speed_mps": 2.78,
-  "waypoints_reached": 4,
-  "waypoints_total": 4,
-  "deliberations_count": 3,
-  "deliberations_timeout_count": 0,
-  "deadlock_escapes_count": 0,
-  "action_distribution": {
-    "keep_going": 482,
-    "evasive": 61,
-    "girar_90": 15,
-    "deliberative": 3
-  }
+  "arm": "slm",
+  "code_version": "<hash>",
+  "deadlock_strategy": "depth",
+  "strategic_source": "depth",
+  "route_plan": {"mode": "vlm", "judge": "patches", "model": "lfm2.5-vl-1.6b:q4km-ctx8k",
+                 "map": "citysim_ortho.png", "vias": 7, "legs_rerouted": 4},
+  "success": false,
+  "cycles": 2014,
+  "duration_s": 480.66,
+  "path_length_m": 702.68,
+  "collisions": 0,
+  "min_obstacle_dist_m": 6.562,
+  "min_obstacle_dist_source": "in_flight_thread",
+  "min_obstacle_dist_samples": 477,
+  "slm_invocations": 255,
+  "deliberation_rate": 0.127,
+  "slm_fallback_rate": 0.0,
+  "slm_timeout_rate": 0.0,
+  "route_histogram": {"reactive": 1585, "evasive": 419, "girar_90": 9, "tactical": 1},
+  "deadlock_events": 1,
+  "deep_scan_events": 1,
+  "deep_scan_resolution_rate": 0.0,
+  "deep_scan_fallback_rate": 1.0,
+  "vertical_escapes": 0,
+  "freeze_recoveries": 0
 }
 ```
 
-*Nota sobre trazabilidad:* el campo `code_version` almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en `airsim-loop/`, `config/` o `airsim-plan/`, lleva el sufijo `-dirty` (`src/logging/code_version.py`): el hash solo identifica el código con el árbol limpio, y una corrida `-dirty` no entra a un lote (cap. 10, §10.12).
+*Nota sobre trazabilidad:* el campo `code_version` almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en `airsim-loop/`, `config/`, `airsim-plan/` o `experiments/`, lleva el sufijo `-dirty` (`src/logging/code_version.py`): el hash solo identifica el código con el árbol limpio. El runner no arranca un lote con el árbol sucio, y una corrida `-dirty` no entra al análisis (cap. 10, §10.9.3 y §10.12.2).
 
-### A6.4.2 Estructura del log de telemetría ciclo a ciclo (`.jsonl`)
-Cada línea del archivo es un registro JSON generado a la frecuencia de 5 Hz por `FlightLogger`, capturando el estado completo del sistema:
-* `timestamp`: tiempo Unix en segundos con precisión de microsegundos.
-* `cycle`: índice secuencial del bucle.
-* `pose`: posición $(X, Y, Z)$ en marco local NED y ángulos de Euler (pitch, roll, yaw).
-* `velocity`: velocidades lineales $(v_x, v_y, v_z)$ en m/s.
-* `active_waypoint`: índice y distancia euclidiana hacia el waypoint objetivo.
-* `obstacle_field`: matriz de TTC, ocupación y confianza por celda sector $\times$ banda.
-* `policy_decision`: macro-acción seleccionada, justificación textual y tiempo de cómputo del ciclo.
+### A6.4.2 Estructura de la traza ciclo a ciclo (`.jsonl`)
+Cada línea del archivo es un registro JSON por ciclo del lazo (5 Hz), escrito por `FlightLogger`. Los campos principales son `t` y `cycle`; `arm`, `scenario` y `seed`; posición NED, velocidad y actitud; `route` y `action`; el `obstacle_field` completo por sector; latencias del ciclo; el bloque `slm` en los ciclos con una consulta del lazo lento; colisión; objetivo activo y distancia; y `state`, el `DroneState` completo serializado (cap. 4, §4.4).
 
 ---
 
@@ -326,7 +325,7 @@ Evalúa el crucero perimetral sobre el mapa `TownSim` (Downtown West Modular Pac
 {
   "mission_id": "TOWNSIM_CLEAR",
   "summary": "Tier 1: perímetro completo de townsim_calib.png a altitud de tránsito (-30m), sin cruzar ninguna fachada. Rol análogo a minisim_clear para Tier 0: control/smoke-test de crucero largo sin obstáculos deliberativos.",
-  "map": "townsim_calib.png",
+  "map": "townsim_ortho.png",
   "waypoints": [
     { "x": 0.0,    "y": 0.4,   "z": -10.0, "label": "WP_1" },
     { "x": 0.4,    "y": -71.6, "z": -30.0, "label": "WP_2" },
@@ -345,7 +344,7 @@ Diseñado para forzar una colisión inminente contra un edificio alto con aproxi
 {
   "mission_id": "TOWNSIM_CALIB_CRUCE_FRONTAL",
   "summary": "Tier 1: trayectoria ortogonal directa hacia la fachada principal de la manzana central. Obliga al lazo táctico a detectar TTC crítico, disparar giro o evasión de 90° o deliberar con el SLM para rodear la estructura.",
-  "map": "townsim_calib.png",
+  "map": "townsim_ortho.png",
   "waypoints": [
     { "x": 0.0,   "y": 0.0,   "z": -10.0, "label": "WP_START" },
     { "x": -72.0, "y": 0.0,   "z": -10.0, "label": "WP_OBSTACULO_FRONTAL" },
@@ -354,14 +353,14 @@ Diseñado para forzar una colisión inminente contra un edificio alto con aproxi
 }
 ```
 
-### A6.5.3 Manifiesto Tier 2: Cañón urbano denso con ascenso inicial (`citysim_clear.json`)
-El mapa `CitySim` presenta rascacielos masivos. Para evitar atravesar estructuras en el despegue, la misión implementa un patrón **climb-first** (ascenso vertical puro en el mismo punto de coordenadas horizontales hasta $-70\text{ m}$ AGL antes de iniciar el crucero horizontal):
+### A6.5.3 Manifiesto Tier 2: perímetro de manzana en rampa (`citysim_clear.json`)
+Cuatro waypoints, ~420 m, sobre el perímetro de una manzana de `CitySim`. La altitud crece en rampa a lo largo del perímetro (−10, −30 y −50 m) y el último tramo vuelve a −10 m sobre el punto de partida; los cambios de altitud se hacen en diagonal, combinados con el avance horizontal:
 
 ```json
 {
   "mission_id": "CITYSIM_CLEAR",
-  "summary": "Tier 2: perímetro de una manzana del grid regular en citysim_calib.png. Altitud de tránsito -70m (70m AGL) para superar edificios altos de CitySim. Estructura climb-first: WP_2 sube vertical puro antes de mover en horizontal.",
-  "map": "citysim_calib.png",
+  "summary": "Tier 2 (escenario base): perimetro de una manzana del grid regular de CitySim, 4 waypoints. Altitud creciente en rampa (-10, -30, -50 m) y retorno a -10 m sobre el punto de partida.",
+  "map": "citysim_ortho.png",
   "waypoints": [
     { "x": 0.0,   "y": 75.0, "z": -10.0, "label": "WP_1" },
     { "x": 130.0, "y": 75.0, "z": -30.0, "label": "WP_2" },
@@ -378,7 +377,7 @@ Ocho waypoints, ~340 m. Incluye `WP_0b_SOBRE_PLAZA` (cruza la plaza a −22 m pa
 ```json
 {
   "mission_id": "TOWNSIM_INI",
-  "map": "townsim_calib.png",
+  "map": "townsim_ortho.png",
   "waypoints": [
     { "x": 0.0, "y": 0.0, "z": -30.0, "label": "WP_0_ASCENSO" },
     { "x": -60.0, "y": 5.0, "z": -22.0, "label": "WP_0b_SOBRE_PLAZA" },
@@ -417,7 +416,7 @@ Guardar el contenido de §A6.1 como `settings.json` en la carpeta `Documents\Air
    ```powershell
    powershell -ExecutionPolicy Bypass -File D:\TesisMCD\startOllama.ps1
    ```
-   Con la configuración final (`STRATEGIC_SOURCE = depth`, `DEADLOCK_STRATEGY = depth`) el modelo solo se usa para el plan de ruta previo; si el lote corre con `--route-plan off`, Ollama puede quedar cerrado y su VRAM queda para Unreal.
+   Con la configuración por defecto (`STRATEGIC_SOURCE = depth`, `DEADLOCK_STRATEGY = depth`) el modelo solo se usa para el plan de ruta previo; si el lote corre con `--route-plan off`, Ollama puede quedar cerrado y su VRAM queda para Unreal.
 2. Verificar que el modelo quedó residente:
    ```bash
    curl http://127.0.0.1:11434/api/ps
@@ -428,23 +427,29 @@ Guardar el contenido de §A6.1 como `settings.json` en la carpeta `Documents\Air
 2. Presionar **Play** (PIE) o ejecutar el binario *standalone*.
 3. Constatar que en la esquina superior aparezca la notificación de conexión de AirSim en el puerto 41451.
 
-### Paso 5: Ejecución del lote de pruebas (*Runner*)
-Para correr una comparación experimental balanceada entre los tres brazos de control sobre un escenario:
+### Paso 5: Ejecución de los lotes (*Runner*)
+Los seis lotes del diseño experimental (cap. 10, §10.5.3) se lanzan con los scripts versionados en `experiments/`, que fijan escenario, celdas, semillas, presupuesto (1200 s / 6000 ciclos) y modo del plan de ruta, y usan el intérprete de `AIRSIM_ENV_DIR`:
+```powershell
+cd experiments
+.\run_lote3_townsim_ini.ps1 -Pilot    # piloto de validación
+.\run_lote3_townsim_ini.ps1           # lote completo
+.\run_lote3_townsim_ini.ps1 -Resume   # reanudar un lote cortado
+```
+Cada script llama a `runner.py`, que también puede usarse directamente:
 ```bash
 python experiments/runner.py \
-    --scenarios ../airsim-plan/missions/flightplans/townsim_clear.json \
-    --arms slm fsm reactive \
-    --deadlock-strategies depth \
-    --seeds 1 2 3 4 5 \
-    --route-plan off \
-    --out-dir ../airsim-runs/
+    --scenarios ../airsim-plan/missions/flightplans/townsim_ini.json \
+    --cells slm:depth fsm:depth fsm:blind reactive \
+    --seeds 73 79 83 89 97 101 103 107 109 113 \
+    --max-seconds 1200 --max-cycles 6000 \
+    --route-plan vlm \
+    --out-dir ../airsim-runs/produccion/v4/lote3_townsim_ini
 ```
-Sin `--deadlock-strategies` ni `--strategic-sources` se usan los valores de `config/.env` (`depth`/`depth`). `--route-plan vlm` (el default) planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (CitySim). Cada corrida se cierra con `finalize_run` (cap. 4, §4.4); una corrida interrumpida se cierra con `python experiments/finalize_run.py --all ../airsim-runs/`.
+Las celdas se alternan dentro de cada semilla, con el orden rotado por semilla. Sin `--deadlock-strategies` ni `--strategic-sources` se usan los valores de `config/.env` (`depth`/`depth`). `--route-plan vlm` planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (TownSim o CitySim). Cada corrida se cierra con `finalize_run` (cap. 4, §4.4); una corrida interrumpida se cierra con `python experiments/finalize_run.py --all <raíz>`.
 
 ### Paso 6: Procesamiento de datos y consolidación estadística
-Una vez finalizadas las corridas, compilar los resultados y generar las tablas estadísticas comparativas:
-```bash
-python experiments/analyze.py --runs-dir airsim-runs/
-python experiments/analyze_tesis_results.py
+Una vez finalizados los lotes, generar las tablas estadísticas:
+```powershell
+D:\TesisMCD\airsimenv\python.exe ..\airsim-loop\experiments\analyze_lotes.py ..\airsim-runs\produccion\v4 --family 18
 ```
-Los reportes estadísticos consolidados (tests de Mann-Whitney U, frecuencias de acción y tasas de éxito) se volcarán automáticamente en formato Markdown y CSV listos para su contrastación con las tablas de los capítulos 10 y 11.
+El script escribe `analisis_lotes.md` y dos CSV en la raíz de los lotes: por celda, éxito con IC de Wilson, SPL, tiempo de las misiones exitosas y distancia mínima; y las 18 comparaciones primarias con delta de Cliff, IC *bootstrap* y prueba de permutación exacta sobre rangos, con corrección de Bonferroni (cap. 10, §10.7).
