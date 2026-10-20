@@ -206,9 +206,13 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
     )
 
     max_escapes = int(os.getenv("MAX_CONSECUTIVE_ESCAPES", "3"))
+    # Techo de altitud del escape (2026-10-20): mismo MAX_ESCAPE_ALT_M que el deadlock del brazo SLM
+    # (graph.py). Por encima del techo no se sube mas: se trata como escape agotado (GIRAR_90).
+    alt_m = abs(float((telemetry.get("position") or {}).get("z", 0.0)))
+    above_ceiling = fsm_state == STATE_CLIMB and alt_m >= float(os.getenv("MAX_ESCAPE_ALT_M", "30.0"))
     if fsm_state in (STATE_CLIMB, STATE_DESCEND):
         consecutive_escapes += 1
-        if consecutive_escapes > max_escapes:
+        if consecutive_escapes > max_escapes or above_ceiling:
             # ESCAPE AGOTADO (2026-0827, ver CHANGELOG.md): antes esta rama
             # pasaba a STATE_BRAKE y enclavaba para siempre -- si el
             # obstaculo era horizontal (p. ej. trabado contra ramas), subir
@@ -230,9 +234,10 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
             escape_duration_s = float(os.getenv("ESCAPE_MANEUVER_DURATION_S", "1.6"))
             cmd = action_to_command("GIRAR_90", guidance=guidance, telemetry=telemetry)
             side = "izquierda" if cmd["yaw_rate"] < 0 else "derecha"
+            motivo = (f"techo de altitud ({alt_m:.0f} m)" if above_ceiling else
+                      f"{max_escapes} intentos verticales (CLIMB/DESCEND alternados) sin progreso horizontal")
             cmd["rationale"] = (
-                f"FSM: escape agotado tras {max_escapes} intentos verticales (CLIMB/DESCEND alternados) "
-                f"sin progreso horizontal. Girando 90° hacia la {side} para buscar corredor; escape "
+                f"FSM: escape agotado por {motivo}. Girando 90° hacia la {side} para buscar corredor; escape "
                 f"vertical descartado hasta que haya progreso."
             )
             state["next_action"] = "GIRAR_90"

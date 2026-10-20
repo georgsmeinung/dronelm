@@ -110,6 +110,10 @@ class DroneState(TypedDict, total=False):
     _scan_started_ts: Optional[float]
     _scan_failed_heading_deg: Optional[float]
     _deadlock_history: List[Dict[str, Any]]
+    # Tope de escapes verticales del brazo FSM (fsm.py). Sin declararlos, LangGraph los descarta entre
+    # ciclos, el contador vuelve a 0 y la FSM sube sin techo (lote 1 v4, fsm semilla 2, 2026-10-20).
+    _consecutive_escapes: int
+    _escape_locked: bool
     # StallDetector (publicado para logging)
     imu_jitter_level: str
     imu_contact_event: bool

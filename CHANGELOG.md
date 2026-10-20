@@ -1,3 +1,20 @@
+# 2026-10-20 - FSM: el tope de escapes verticales no persistia entre ciclos
+
+Lote 1 v4 (`minisim_clear`, `fsm:depth`, semilla 2): cerca de WP_1 la FSM entro en atasco y repitio
+GANAR_ALTURA en cada ciclo durante ~1500 ciclos (z = -500 m, sin techo hasta los 1200 s de la corrida).
+
+- **Causa**: `_consecutive_escapes` y `_escape_locked` (fsm.py) no estaban declarados en `DroneState`.
+  LangGraph descarta las claves que el esquema no declara, asi que el contador volvia a 0 en cada ciclo:
+  la FSM nunca alternaba CLIMB/DESCEND ni llegaba al tope de `MAX_CONSECUTIVE_ESCAPES` (GIRAR_90 +
+  enclavamiento). El test existente llamaba a `fsm_node` con un dict y no pasaba por el grafo.
+- **Arreglo**: las dos claves se declaran en `DroneState` (graph.py). Ademas la FSM respeta el mismo
+  techo `MAX_ESCAPE_ALT_M` (30 m) que el deadlock del brazo SLM: por encima no sube y trata el escape como
+  agotado (GIRAR_90).
+- **Tests**: `test_fsm_escape_counter_survives_langgraph` (pasa el estado por un `StateGraph(DroneState)`)
+  y `test_fsm_does_not_climb_above_escape_ceiling`; ambos fallan sin el arreglo. Suite: 319 tests.
+- Las dos corridas ya hechas del lote 1 (`ec561bcf`) quedan fuera: el lote se relanza con el nuevo
+  `code_version`.
+
 # 2026-10-15 (b) - Informe: caps. 1-10 y anexos describen solo la version actual
 
 Primera version publicada del informe: los caps. 1-10 y los anexos describen el codigo de hoy, sin

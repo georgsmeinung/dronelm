@@ -70,3 +70,54 @@ def test_fsm_max_consecutive_escapes_latches_and_changes_strategy(monkeypatch):
     # Una vez enclavado, la 5ta evaluacion ya no reintenta CLIMB/DESCEND: cae
     # a la evaluacion normal por TTC (aca sin obstaculos, cruce normal).
     assert actions[4] not in ("GANAR_ALTURA", "PERDER_ALTURA")
+
+
+def _run_through_graph(state):
+    """Un ciclo de fsm_node a traves de un StateGraph(DroneState), como en vuelo: LangGraph descarta
+    las claves que el esquema no declara."""
+    from langgraph.graph import END, StateGraph
+
+    from src.agents.graph import DroneState
+
+    wf = StateGraph(DroneState)
+    wf.add_node("fsm", fsm_mod.fsm_node)
+    wf.set_entry_point("fsm")
+    wf.add_edge("fsm", END)
+    return wf.compile().invoke(state)
+
+
+def test_fsm_escape_counter_survives_langgraph(monkeypatch):
+    """2026-10-20 (lote 1 v4, fsm semilla 2): _consecutive_escapes y _escape_locked no estaban en
+    DroneState; LangGraph los descartaba entre ciclos y la FSM subia sin techo (z = -500 m)."""
+    monkeypatch.setenv("MAX_CONSECUTIVE_ESCAPES", "3")
+    monkeypatch.setattr(deep_scan_mod, "DEADLOCK_STRATEGY", "blind")
+
+    state = _base_state()
+    state["obstacle_field"] = empty_field()
+    actions = []
+    for _ in range(5):
+        state["evasion_stuck_cycles"] = 999
+        state["active_maneuver"] = None
+        state["maneuver_cycles_left"] = 0
+        state = dict(_run_through_graph(state))
+        actions.append(state["next_action"])
+
+    assert actions[:4] == ["GANAR_ALTURA", "PERDER_ALTURA", "GANAR_ALTURA", "GIRAR_90"]
+    assert state["_escape_locked"] is True
+    assert actions[4] not in ("GANAR_ALTURA", "PERDER_ALTURA")
+
+
+def test_fsm_does_not_climb_above_escape_ceiling(monkeypatch):
+    """Por encima de MAX_ESCAPE_ALT_M la FSM no sube: escape agotado y GIRAR_90 (mismo techo que SLM)."""
+    monkeypatch.setenv("MAX_ESCAPE_ALT_M", "30")
+    monkeypatch.setattr(deep_scan_mod, "DEADLOCK_STRATEGY", "blind")
+
+    state = _base_state()
+    state["obstacle_field"] = empty_field()
+    state["telemetry"] = {"position": {"x": 0.0, "y": 0.0, "z": -31.0}}
+    state["evasion_stuck_cycles"] = 999
+    state = fsm_mod.fsm_node(state)
+
+    assert state["next_action"] == "GIRAR_90"
+    assert state["flight_status"] == "fsm_escape_agotado"
+    assert state["_escape_locked"] is True
