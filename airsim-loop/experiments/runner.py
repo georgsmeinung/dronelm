@@ -571,18 +571,24 @@ def main():
             flown[scenario] = scenario
 
     results = []
+    total = len(args.scenarios) * len(_build_jobs(
+        args.arms, args.deadlock_strategies, args.seeds, args.strategic_sources, cells))
+    print(f"[{_ts()}][runner] {total} corridas planificadas")
+    n = 0
     for scenario in args.scenarios:
         for arm, deadlock_strategy, seed, strategic_source in _build_jobs(
                 args.arms, args.deadlock_strategies, args.seeds, args.strategic_sources, cells):
             cell = _cell(deadlock_strategy, strategic_source)
+            n += 1
+            tag = f"[{n}/{total}]"
             if args.skip_existing and _has_valid_summary(
                     args.out_dir, flown[scenario], arm, cell, seed, code_version):
-                print(f"[{_ts()}][runner] ya existe: scenario={scenario} arm={arm} cell={cell} seed={seed} (se saltea)")
+                print(f"[{_ts()}][runner] {tag} ya existe: scenario={scenario} arm={arm} cell={cell} seed={seed} (se saltea)")
                 results.append({"scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
                                 "strategic_source": strategic_source, "seed": seed, "returncode": None,
                                 "skipped": True})
                 continue
-            print(f"[{_ts()}][runner] scenario={scenario} arm={arm} cell={cell} seed={seed}")
+            print(f"[{_ts()}][runner] {tag} inicio: scenario={scenario} arm={arm} cell={cell} seed={seed}")
             cmd = [
                 sys.executable, __file__, "--_single",
                 "--scenario", flown[scenario], "--arm", arm, "--seed", str(seed),
@@ -628,8 +634,8 @@ def main():
             if proc.returncode != 0:
                 print(f"[{_ts()}][runner] FALLO scenario={scenario} arm={arm} deadlock_strategy={deadlock_strategy} seed={seed}:\n{proc.stderr[-2000:]}")
             else:
-                last = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "[runner] ok"
-                print(f"[{_ts()}] {last}")
+                print(f"[{_ts()}][runner] {tag} fin: arm={arm} cell={cell} seed={seed} "
+                      f"{_run_result(args.out_dir, flown[scenario], arm, cell, seed, run_started)}")
             results.append({
                 "scenario": scenario, "arm": arm, "deadlock_strategy": deadlock_strategy,
                 "strategic_source": strategic_source,
@@ -717,6 +723,20 @@ def _has_valid_summary(out_dir: str, scenario: str, arm: str, cell: str, seed: i
         if summary.get("code_version") == code_version and int(summary.get("cycles") or 0) >= MIN_VALID_CYCLES:
             return True
     return False
+
+
+def _run_result(out_dir: str, scenario: str, arm: str, cell: str, seed: int, since: float) -> str:
+    """Resumen de una linea de la corrida recien terminada, para seguir el lote desde la consola."""
+    cell_dir = Path(out_dir) / Path(scenario).stem / arm / cell
+    paths = [p for p in cell_dir.glob(f"seed_{seed}_*/seed_{seed}_*.summary.json") if p.stat().st_mtime >= since - 1.0]
+    if not paths:
+        return "(sin summary.json)"
+    try:
+        s = json.loads(max(paths, key=lambda p: p.stat().st_mtime).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "(summary.json ilegible)"
+    return (f"success={s.get('success')} duracion={s.get('duration_s')} s ciclos={s.get('cycles')} "
+            f"colisiones={s.get('collisions')} deadlocks={s.get('deadlock_events')}")
 
 
 def _finalize_if_incomplete(out_dir: str, scenario: str, arm: str, strategy: str, since: float) -> None:

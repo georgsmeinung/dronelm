@@ -121,7 +121,8 @@ foreach ($lote in $Lotes) {
     Write-Host "[v4] $Python $($runArgs -join ' ')"
     # stderr del runner va al log; no debe cortar el script como si fuera un error de PowerShell.
     $ErrorActionPreference = "Continue"
-    & $Python @runArgs 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $log
+    # -u: sin buffer. Con la salida en un pipe Python la acumula y la consola no mostraba cada corrida.
+    & $Python -u @runArgs 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $log
     $ErrorActionPreference = "Stop"
     if ($LASTEXITCODE -ne 0) { throw "Lote ${lote}: runner.py termino con codigo $LASTEXITCODE (ver $log)." }
 }
