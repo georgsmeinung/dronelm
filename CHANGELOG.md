@@ -1,3 +1,27 @@
+# 2026-10-21 - Corrida productiva v4: lotes 1 y 2 completos
+
+Resultados en `airsim-runs/produccion/v4/` (fuera de git), lanzados con `experiments/run_loteN_*.ps1`.
+Tres celdas (`slm:depth`, `fsm:depth`, `reactive`), 10 semillas primas por lote, techo de 1200 s / 6000
+ciclos. Ambos lotes pasan la verificacion de integridad: 30 `summary.json`, un solo `code_version`, sin
+`-dirty`, sin FALLO/ABORTADA en el `batch_*.log`. Analisis estadistico pendiente (`analyze_lotes.py`).
+
+- **Lote 1 `minisim_clear`** (`b0332e1a`, 2026-10-20 20:21 -> 22:10, plan de ruta off): 30/30 exitos,
+  0 colisiones. Duracion mediana: `reactive` 84.8 s, `slm` 165.1 s, `fsm` 306.4 s (max 582.4 s).
+  Eventos de deadlock: `fsm` 75, `slm` 3, `reactive` 0; en un plano sin obstaculos la FSM frena, escanea
+  y evade sobre falsos positivos del flujo, y recorre mas (mediana 319.5 m vs. 223.4 m de `slm`).
+- **Lote 2 `townsim_clear`** (`1fa4c0e2`, 2026-10-20 22:57 -> 2026-10-21 03:48, plan de ruta vlm): plan
+  calculado una vez en 250 s (3 tramos desviados). 30/30 exitos, 0 colisiones. Duracion mediana:
+  `reactive` 372.5 s, `slm` 550.2 s, `fsm` 754.0 s (max 937.7 s). Deadlocks: `fsm` 103, `slm` 7,
+  `reactive` 0. DistMin mediana: `reactive` 14.6 m, `slm` 7.1 m, `fsm` 2.1 m.
+- **Descarte**: las 2 corridas del primer intento del lote 1 (`ec561bcf`) quedaron en
+  `v4/descarte/lote1_minisim_clear_ec561bcf/`, motivo en `v4/DESCARTE.md` (ciclo infinito de la FSM,
+  arreglado en `b0332e1a`, entrada 2026-10-20).
+- **Avance visible del lote** (`1fa4c0e2`): `run_lotes.ps1` llama a Python con `-u` (con la salida en un
+  pipe hacia `Tee-Object` Python la acumulaba y la consola no mostraba cada corrida), y `runner.py`
+  imprime el total planificado y lineas `[n/N] inicio` / `[n/N] fin` con success, duracion, ciclos,
+  colisiones y deadlocks de cada corrida. Aplicado entre el lote 1 y el 2: el lote 1 no tiene esas lineas.
+- Pendientes: lotes 3-4 (TownSim, 4 celdas con `fsm:blind`, 40 corridas cada uno) y 5-6 (CitySim).
+
 # 2026-10-20 - FSM: el tope de escapes verticales no persistia entre ciclos
 
 Lote 1 v4 (`minisim_clear`, `fsm:depth`, semilla 2): cerca de WP_1 la FSM entro en atasco y repitio
