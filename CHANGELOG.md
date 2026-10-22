@@ -1,3 +1,73 @@
+# 2026-10-22 (b) - Los escenarios de control (`*_clear`) vuelan sin plan de ruta; lotes 2 y 5 se relanzan
+
+Regla de diseno: los tres controles (lotes 1, 2 y 5) vuelan el manifiesto tal cual (`--route-plan off`); el
+plan de ruta con el VLM queda solo en los escenarios con obstruccion (lotes 3, 4 y 6), donde elegir el
+corredor es parte de lo que se evalua. Un control mide el costo de la arquitectura sobre una ruta fija de
+base; con el plan, la ruta la decide el VLM.
+
+- **Lote 5 `citysim_clear`** (primer intento, `835ae75f`, plan vlm): cortado tras 9 corridas. Las 8
+  terminadas fallaron por `physics_locked` en el mismo punto, en los tres brazos incluido `reactive`.
+  `route_planner.py` pone los puntos de paso de un desvio a la altitud del waypoint de destino; en el tramo
+  WP_3 (130, 0, -50) -> WP_4 (0, 0, -10) el VLM eligio `desvio_der_25m` (p = 0.68 contra 0.50 de la recta)
+  y `VIA_WP_4_1` quedo en (130, -25, -10): bajar 40 m a 25 m de WP_3, pegado a los edificios. El dron
+  quedaba apoyado a ~16 m de altura (x ~ 131, y ~ -27). Es el tramo que el banco ya registraba como desvio
+  bloqueado con la recta libre (cap. 11 §11.0).
+- **Lote 2 `townsim_clear`** (`1fa4c0e2`, plan vlm, 30/30 exitos): sin falla, se descarta por la regla. El
+  plan desvio 3 de 5 tramos con la recta libre y alargo la ruta de 578 a 778 m (+35 %). Sus resultados (entrada
+  2026-10-21) dejan de valer como control.
+- **Lotes 3, 4 y 6**: mantienen el plan. Los planes de 3 y 4 no tienen puntos de paso que hagan bajar al dron
+  antes de tiempo salvo uno en el lote 3 (WP_0_ASCENSO -30 m -> `VIA_WP_0b_SOBRE_PLAZA_*` a -22 m, sobre la
+  plaza y por encima de la copa de los arboles), que las 40 corridas pasaron: no se repiten.
+- **Cambios**: `experiments/run_lotes.ps1` (lotes 2 y 5 con `Route = "off"`, nota de diseno) y
+  `experiments/README.md` (fila "Plan de ruta" del diseno comun, lotes 1, 2, 5 "off (control)", Ollama solo
+  para 3, 4 y 6). Informe: cap. 10 §10.3.0 punto 5 (nuevo principio), §10.3.3, tabla de lotes, preparacion del
+  entorno, fuentes de varianza, arbol de resultados y §10.13; cap. 4 §4.3.1 (uso en los experimentos y
+  altitud de los puntos de paso).
+- **Descarte**: `airsim-runs/produccion/v4/descarte/lote2_townsim_clear_1fa4c0e2_route_vlm/` (30 corridas) y
+  `.../lote5_citysim_clear_835ae75f_route_vlm/` (9), motivos en `v4/DESCARTE.md`.
+- Pendiente: relanzar los lotes 2 (TownSim) y 5 (CitySim); ninguno necesita Ollama. Limitacion conocida del
+  planificador: los puntos de paso deberian conservar la altitud mas alta del tramo hasta llegar al destino
+  (corregir en `route_planner.py` si se usa en escenarios con descensos).
+
+# 2026-10-22 - Corrida productiva v4: lotes 3 y 4 completos (TownSim con obstruccion)
+
+Resultados en `airsim-runs/produccion/v4/` (fuera de git). Cuatro celdas (`slm:depth`, `fsm:depth`,
+`fsm:blind`, `reactive`), 10 semillas primas, techo de 1200 s / 6000 ciclos, plan de ruta vlm. Ambos lotes
+pasan la verificacion de integridad: 40 `summary.json`, un solo `code_version` (`835ae75f`), sin `-dirty`,
+0 colisiones. Analisis estadistico pendiente (`analyze_lotes.py`).
+
+- **Lote 3 `townsim_ini`** (2026-10-21 19:29 -> 2026-10-22 04:09): el primer `batch_20261021T191129.log`
+  se corto durante el plan de ruta, sin corridas; el lote completo es el de `batch_20261021T192705.log`
+  (plan en 133 s, 3 tramos desviados).
+
+  | Celda | Exitos | Duracion mediana de los exitos | DistMin mediana | Deadlocks |
+  |---|---|---|---|---|
+  | `slm:depth` | 9/10 | 519.9 s | 0.12 m | 23 |
+  | `fsm:depth` | 9/10 | 805.8 s | 0.23 m | 180 |
+  | `fsm:blind` | 9/10 | 625.1 s | 0.24 m | - |
+  | `reactive` | 0/10 | - (10 al tope de 1200 s) | 1.94 m | 0 |
+
+- **Lote 4 `townsim_calib_cruce_frontal`** (2026-10-22 04:10 -> 12:01; plan en 50 s, 2 tramos desviados):
+
+  | Celda | Exitos | Duracion mediana de los exitos | DistMin mediana | Deadlocks |
+  |---|---|---|---|---|
+  | `slm:depth` | 5/10 | 479.0 s | 0.14 m | 42 |
+  | `fsm:depth` | 8/10 | 608.2 s | 0.25 m | 134 |
+  | `fsm:blind` | 9/10 | 492.4 s | 0.14 m | - |
+  | `reactive` | 0/10 | - (10 al tope de 1200 s) | 0.11 m | 0 |
+
+- **Modos de falla**: todas las fallas de `slm`, `fsm:depth` y `fsm:blind` (1+1+1 en el lote 3; 5+2+1 en el
+  4) son abortos por `physics_locked` (`FREEZE_RECOVERY=abort`) entre 275 y 477 s, contados como falla de
+  mision (cap. 10 §10.12.2). Las 20 de `reactive` son timeouts sin colision: en el lote 3 las 10 quedan
+  trabadas en el corredor arbolado antes de WP_2_CENTRO_CORREDOR (x ~ -67, y ~ -5); en el lote 4, 8 de 10
+  frente al edificio en el punto de paso VIA_WP_3_2 (x ~ -107, y ~ -26) y 2 en x ~ -34.
+- **Lectura preliminar** (sin pruebas formales): en ambos lotes `reactive` no completa y los brazos con
+  evasion si; `slm:depth` es el mas rapido cuando completa, pero en el lote 4 pierde 5 corridas por
+  `physics_locked`, contra 1 de `fsm:blind`. La FSM con barrido (`fsm:depth`) es mas lenta que sin barrido
+  (`fsm:blind`) en los dos lotes, con igual o menor tasa de exito. DistMin cae a ~0.1-0.25 m en todas las
+  celdas con evasion: el dron roza obstaculos sin registrar colision.
+- Pendientes: lotes 5-6 (CitySim) y el analisis de los seis lotes.
+
 # 2026-10-21 - Corrida productiva v4: lotes 1 y 2 completos
 
 Resultados en `airsim-runs/produccion/v4/` (fuera de git), lanzados con `experiments/run_loteN_*.ps1`.
@@ -5,14 +75,27 @@ Tres celdas (`slm:depth`, `fsm:depth`, `reactive`), 10 semillas primas por lote,
 ciclos. Ambos lotes pasan la verificacion de integridad: 30 `summary.json`, un solo `code_version`, sin
 `-dirty`, sin FALLO/ABORTADA en el `batch_*.log`. Analisis estadistico pendiente (`analyze_lotes.py`).
 
-- **Lote 1 `minisim_clear`** (`b0332e1a`, 2026-10-20 20:21 -> 22:10, plan de ruta off): 30/30 exitos,
-  0 colisiones. Duracion mediana: `reactive` 84.8 s, `slm` 165.1 s, `fsm` 306.4 s (max 582.4 s).
-  Eventos de deadlock: `fsm` 75, `slm` 3, `reactive` 0; en un plano sin obstaculos la FSM frena, escanea
-  y evade sobre falsos positivos del flujo, y recorre mas (mediana 319.5 m vs. 223.4 m de `slm`).
-- **Lote 2 `townsim_clear`** (`1fa4c0e2`, 2026-10-20 22:57 -> 2026-10-21 03:48, plan de ruta vlm): plan
-  calculado una vez en 250 s (3 tramos desviados). 30/30 exitos, 0 colisiones. Duracion mediana:
-  `reactive` 372.5 s, `slm` 550.2 s, `fsm` 754.0 s (max 937.7 s). Deadlocks: `fsm` 103, `slm` 7,
-  `reactive` 0. DistMin mediana: `reactive` 14.6 m, `slm` 7.1 m, `fsm` 2.1 m.
+- **Lote 1 `minisim_clear`** (`b0332e1a`, 2026-10-20 20:21 -> 22:10, plan de ruta off):
+
+  | Celda | Exitos | Duracion mediana de los exitos | DistMin mediana | Deadlocks |
+  |---|---|---|---|---|
+  | `slm:depth` | 10/10 | 165.1 s | 12.69 m | 3 |
+  | `fsm:depth` | 10/10 | 306.4 s | 12.71 m | 75 |
+  | `reactive` | 10/10 | 84.8 s | 12.71 m | 0 |
+
+  En un plano sin obstaculos la FSM frena, escanea y evade sobre falsos positivos del flujo, y recorre
+  mas (mediana 319.5 m vs. 223.4 m de `slm`; max 582.4 s).
+- **Lote 2 `townsim_clear`** (`1fa4c0e2`, 2026-10-20 22:57 -> 2026-10-21 03:48, plan de ruta vlm; plan en
+  250 s, 3 tramos desviados):
+
+  | Celda | Exitos | Duracion mediana de los exitos | DistMin mediana | Deadlocks |
+  |---|---|---|---|---|
+  | `slm:depth` | 10/10 | 550.2 s | 7.09 m | 7 |
+  | `fsm:depth` | 10/10 | 754.0 s | 2.10 m | 103 |
+  | `reactive` | 10/10 | 372.5 s | 14.61 m | 0 |
+
+  La FSM pasa mas cerca de los obstaculos y es la mas lenta (max 937.7 s).
+- **Modos de falla**: ninguno; las 60 corridas completan sin colision ni `physics_locked`.
 - **Descarte**: las 2 corridas del primer intento del lote 1 (`ec561bcf`) quedaron en
   `v4/descarte/lote1_minisim_clear_ec561bcf/`, motivo en `v4/DESCARTE.md` (ciclo infinito de la FSM,
   arreglado en `b0332e1a`, entrada 2026-10-20).

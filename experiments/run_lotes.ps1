@@ -7,6 +7,7 @@ videos son muy pesados). Ver README.md de esta carpeta.
 
 Diseno (2026-10-15):
   - Escenarios despejados (lotes 1, 2, 5): 3 brazos, slm:depth fsm:depth reactive (cap. 10 Sec. 10.5.3).
+    Son controles sobre una ruta fija: vuelan el manifiesto tal cual, sin plan de ruta (2026-10-22).
   - Escenarios con obstruccion (lotes 3, 4, 6 = D, E, F de Sec. 10.12.2): se suma fsm:blind (FSM sin barrido),
     que aisla el aporte del barrido con profundidad.
   - Las celdas se alternan dentro de cada semilla, con el orden rotado por semilla (runner.py --cells).
@@ -16,20 +17,22 @@ Diseno (2026-10-15):
 | Lote | Escenario                   | Nivel UE | Celdas | Presupuesto           | Plan de ruta |
 |------|-----------------------------|----------|--------|-----------------------|--------------|
 | 1    | minisim_clear               | MiniSim  | 3      | 1200 s / 6000 ciclos  | off          |
-| 2    | townsim_clear               | TownSim  | 3      | 1200 s / 6000 ciclos  | vlm          |
+| 2    | townsim_clear               | TownSim  | 3      | 1200 s / 6000 ciclos  | off          |
 | 3    | townsim_ini                 | TownSim  | 4      | 1200 s / 6000 ciclos  | vlm          |
 | 4    | townsim_calib_cruce_frontal | TownSim  | 4      | 1200 s / 6000 ciclos  | vlm          |
-| 5    | citysim_clear               | CitySim  | 3      | 1200 s / 6000 ciclos  | vlm          |
+| 5    | citysim_clear               | CitySim  | 3      | 1200 s / 6000 ciclos  | off          |
 | 6    | citysim_pilot               | CitySim  | 4      | 1200 s / 6000 ciclos  | vlm          |
 
 Presupuesto unico de 1200 s / 6000 ciclos en todos los lotes (2026-10-15): el mismo techo en todos los
 escenarios, holgado para que un brazo lento falle por el obstaculo y no por el tiempo (en octubre slm:depth
 tardo 430-500 s en citysim_pilot). Las corridas que llegan terminan antes; el techo solo alarga las que se
 traban. 6000 ciclos para que, a 5 Hz, el limite que se agote primero sea el de tiempo (Sec. 10.5.4).
-El plan de ruta con el VLM (vlm) necesita Ollama en 127.0.0.1:11434 (startOllama.ps1); se usa sobre mapas
-registrados con el mundo (citysim_ortho.png, townsim_ortho.png). MiniSim queda en off: su nivel es un plano liso, sin
-obstaculos, y no hay mapa que juzgar (crater.png no corresponde al mundo). Correr juntos solo los
-lotes del mismo nivel de UE.
+Plan de ruta: solo en los escenarios con obstruccion (lotes 3, 4, 6), donde elegir el corredor es parte de
+lo que se evalua. Usa el VLM sobre mapas registrados con el mundo (citysim_ortho.png, townsim_ortho.png) y
+necesita Ollama en 127.0.0.1:11434 (startOllama.ps1). Los controles (*_clear, lotes 1, 2, 5) vuelan el
+manifiesto tal cual: con el plan la ruta la decidia el VLM (desvios sobre rectas libres; en citysim_clear un
+punto de paso bajaba 40 m pegado a los edificios). Ver CHANGELOG 2026-10-22 (b).
+Correr juntos solo los lotes del mismo nivel de UE.
 
 Uso (desde cualquier directorio):
   .\run_lotes.ps1 -Lotes 3 -Pilot           # piloto slm:depth semilla 99, a revisar antes del lote
@@ -68,13 +71,13 @@ $Obstructed = @("slm:depth", "fsm:depth", "fsm:blind", "reactive")
 $Def = @{
     1 = @{ Scenario = "minisim_clear";               Cells = $Clear;      Seconds = 1200; Cycles = 6000; Route = "off"
            Seeds = 2, 3, 5, 7, 11, 13, 17, 19, 23, 29 }
-    2 = @{ Scenario = "townsim_clear";               Cells = $Clear;      Seconds = 1200; Cycles = 6000; Route = "vlm"
+    2 = @{ Scenario = "townsim_clear";               Cells = $Clear;      Seconds = 1200; Cycles = 6000; Route = "off"
            Seeds = 31, 37, 41, 43, 47, 53, 59, 61, 67, 71 }
     3 = @{ Scenario = "townsim_ini";                 Cells = $Obstructed; Seconds = 1200; Cycles = 6000; Route = "vlm"
            Seeds = 73, 79, 83, 89, 97, 101, 103, 107, 109, 113 }
     4 = @{ Scenario = "townsim_calib_cruce_frontal"; Cells = $Obstructed; Seconds = 1200; Cycles = 6000; Route = "vlm"
            Seeds = 127, 131, 137, 139, 149, 151, 157, 163, 167, 173 }
-    5 = @{ Scenario = "citysim_clear";               Cells = $Clear;      Seconds = 1200; Cycles = 6000; Route = "vlm"
+    5 = @{ Scenario = "citysim_clear";               Cells = $Clear;      Seconds = 1200; Cycles = 6000; Route = "off"
            Seeds = 179, 181, 191, 193, 197, 199, 211, 223, 227, 229 }
     6 = @{ Scenario = "citysim_pilot";               Cells = $Obstructed; Seconds = 1200; Cycles = 6000; Route = "vlm"
            Seeds = 233, 239, 241, 251, 257, 263, 269, 271, 277, 281 }

@@ -2,7 +2,7 @@
 
 Seis lotes, uno por escenario, que evalúan el sistema descrito en los capítulos 5–8 del informe:
 capa estratégica y barrido de atascos con profundidad monocular estimada (`STRATEGIC_SOURCE=depth`,
-`DEADLOCK_STRATEGY=depth`); el VLM solo planifica la ruta en CitySim, antes del vuelo. Regeneran la
+`DEADLOCK_STRATEGY=depth`); el VLM solo planifica la ruta, antes del vuelo, en los escenarios con obstrucción. Regeneran la
 línea base completa, incluidos los tres escenarios despejados: los resultados de lotes anteriores (septiembre
 y octubre) no se usan, porque corrieron con otras configuraciones.
 
@@ -21,6 +21,7 @@ y octubre) no se usan, porque corrieron con otras configuraciones.
 | Semillas | 10 por celda; los primeros 60 primos, sin repetir entre lotes |
 | Orden | las celdas se alternan dentro de cada semilla, con el orden rotado por semilla (`runner.py --cells`), para repartir la deriva del simulador entre celdas |
 | Presupuesto | 1200 s / 6000 ciclos en todos los lotes: el mismo techo en todos los escenarios, holgado para que un brazo lento falle por el obstáculo y no por el tiempo (en octubre `slm:depth` tardó 430–500 s en `citysim_pilot`). Las corridas exitosas terminan antes; el techo solo alarga las que se traban. A 5 Hz, se agota antes el tiempo que los ciclos |
+| Plan de ruta | `vlm` solo en los escenarios con obstrucción (lotes 3, 4, 6), donde elegir el corredor es parte de lo que se evalúa. Los controles (`*_clear`, lotes 1, 2, 5) vuelan el manifiesto tal cual (`off`): son rutas fijas de base, y con el plan la ruta la decidía el VLM (desvíos sobre rectas libres; en `citysim_clear`, un punto de paso que bajaba 40 m pegado a los edificios) |
 | Arranque | spawn limpio de AirSim; la semilla identifica una réplica (§10.4.2). `-SeedJitter` usa `start_pose` con jitter |
 | Versión | el runner no arranca con cambios sin commitear en `airsim-loop/`, `config/`, `airsim-plan/` o `experiments/`; todas las corridas de un lote llevan el mismo `code_version` |
 | Python | el de `AIRSIM_ENV_DIR` en `config/.env` (`D:\TesisMCD\airsimenv\python.exe`); no hace falta activar el entorno. `runner.py` no arranca un lote con otro intérprete |
@@ -40,7 +41,7 @@ del lote base: en los despejados, la duración típica de una corrida; en los de
 
 ### Lote 1 — `minisim_clear` (Tier 0, control)
 
-- **Nivel UE:** MiniSim. **Celdas:** 3. **Corridas:** 30. **Presupuesto:** 1200 s / 6000 ciclos. **Plan de ruta:** off. Sin plan de ruta: el nivel MiniSim es un plano liso con textura de tablero, sin obstáculos, de modo que la recta entre waypoints ya es la ruta óptima y no hay mapa que juzgar (`crater.png` no corresponde al mundo).
+- **Nivel UE:** MiniSim. **Celdas:** 3. **Corridas:** 30. **Presupuesto:** 1200 s / 6000 ciclos. **Plan de ruta:** off (control). Además, el nivel MiniSim es un plano liso con textura de tablero, sin obstáculos, y no hay mapa que juzgar (`crater.png` no corresponde al mundo).
 - **Semillas:** 2 3 5 7 11 13 17 19 23 29. **Tiempo:** ~1.5 h (las corridas terminan en 1–4 min; el techo solo pesa si alguna se traba).
 - **Qué mide:** el costo de la arquitectura sin obstáculos (H2): tres waypoints en L a −10 m, campo despejado.
 - **Qué se espera:** tiempo `reactive` < `fsm` < `slm`; sin diferencias de seguridad.
@@ -49,7 +50,7 @@ del lote base: en los despejados, la duración típica de una corrida; en los de
 
 ### Lote 2 — `townsim_clear` (Tier 1, control)
 
-- **Nivel UE:** TownSim. **Celdas:** 3. **Corridas:** 30. **Presupuesto:** 1200 s / 6000 ciclos. **Plan de ruta:** vlm.
+- **Nivel UE:** TownSim. **Celdas:** 3. **Corridas:** 30. **Presupuesto:** 1200 s / 6000 ciclos. **Plan de ruta:** off (control).
 - **Semillas:** 31 37 41 43 47 53 59 61 67 71. **Tiempo:** ~3 h (corridas de 4–7 min).
 - **Qué mide:** el mismo costo (H2) en crucero largo por un perímetro urbano con vegetación y edificios bajos.
 
@@ -71,7 +72,7 @@ del lote base: en los despejados, la duración típica de una corrida; en los de
 
 ### Lote 5 — `citysim_clear` (Tier 2, control)
 
-- **Nivel UE:** CitySim. **Celdas:** 3. **Corridas:** 30. **Presupuesto:** 1200 s / 6000 ciclos. **Plan de ruta:** vlm.
+- **Nivel UE:** CitySim. **Celdas:** 3. **Corridas:** 30. **Presupuesto:** 1200 s / 6000 ciclos. **Plan de ruta:** off (control).
 - **Semillas:** 179 181 191 193 197 199 211 223 227 229. **Tiempo:** ~2 h (corridas de ~3 min).
 - **Qué mide:** el costo de la arquitectura (H2) entre edificios altos, con cambios de altitud en cada tramo.
 - **Ruta:** 4 waypoints, ~420 m, perímetro de una manzana con altitud creciente en rampa (−10, −30, −50 m) y
@@ -89,7 +90,7 @@ del lote base: en los despejados, la duración típica de una corrida; en los de
 1. Árbol commiteado (si no, el runner aborta con código 2).
 2. El nivel de UE del escenario abierto en Unreal. Correr juntos solo los lotes del mismo nivel:
    1 | 2, 3, 4 | 5, 6.
-3. Lotes 2 a 6: Ollama en `127.0.0.1:11434` para el plan de ruta con el VLM (`startOllama.ps1`); el script lo
+3. Lotes 3, 4 y 6: Ollama en `127.0.0.1:11434` para el plan de ruta con el VLM (`startOllama.ps1`); el script lo
    verifica. El plan se calcula una vez por escenario, antes de la primera corrida, sobre el mapa cenital
    registrado con el mundo (`citysim_ortho.png`, `townsim_ortho.png`); durante el vuelo el VLM no corre.
 4. Lotes 3, 4 y 6: correr y revisar el piloto antes del lote. Un piloto que no cumple su criterio indica una
