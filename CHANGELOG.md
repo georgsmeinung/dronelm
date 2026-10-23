@@ -1,3 +1,37 @@
+# 2026-10-22 (c) - Corrida productiva v4: lote 5 completo (`citysim_clear`, sin plan de ruta)
+
+Resultados en `airsim-runs/produccion/v4/lote5_citysim_clear/` (fuera de git). Tres celdas, 10 semillas,
+techo de 1200 s / 6000 ciclos, `--route-plan off` (control, entrada 2026-10-22 (b)). Pasa la verificacion de
+integridad: 30 `summary.json`, un solo `code_version` (`7053f405`), sin `-dirty`, sin FALLO en el
+`batch_20261022T171048.log`, 0 colisiones. 2026-10-22 17:10 -> 20:44. Analisis estadistico pendiente.
+
+| Celda | Exitos | Duracion mediana de los exitos | DistMin mediana | Deadlocks | Llegada a WP_1 (mediana) |
+|---|---|---|---|---|---|
+| `slm:depth` | 9/10 | 286.2 s | 11.45 m | 31 | 47 s |
+| `fsm:depth` | 6/10 | 705.9 s | 0.10 m | 83 | 112 s |
+| `reactive` | 10/10 | 192.3 s | 10.85 m | 0 | 39 s |
+
+- **Modos de falla**: las 5 fallas son abortos por `physics_locked` en el mismo lugar, el tramo WP_2 (130, 75,
+  -30) -> WP_3 (130, 0, -50): el dron queda incrustado a ~50 m de altura en (104-117, 52-66), unos 15-25 m al
+  oeste de la recta del manifiesto, que corre por x = 130. `reactive` sigue la recta y completa las 10.
+  - `fsm:depth` semillas 179, 193, 211 y 229 (563-904 s).
+  - `slm:depth` semilla 227 (346 s, en (112, 62, -55)).
+- **Dos defectos de la FSM pesan en este lote** (sin corregir por decision, hasta tener los 6 lotes):
+  - *Deadlock falso al despegar* en 10/10 corridas `fsm`: `runner.py` cuenta progreso durante el ascenso
+    vertical (`tracker.record_progress()` con `guidance["takeoff"]`), la distancia horizontal no cambia y
+    `evasion_stuck_cycles` llega a ~30-37; la FSM declara deadlock sin haberse movido y el barrido descarta el
+    rumbo al waypoint como `rumbo_fallido`. Llega a WP_1 en 112 s de mediana contra 47 s de `slm` (semilla 179:
+    379 s, en cascada contra una esquina en (15, 5)). `slm` usa su StallDetector y no lo sufre. Mismo defecto
+    en los lotes 1 (10/10), 3 (10/10 en `fsm:depth` y `fsm:blind`) y 4 (3/10 en `fsm:blind`).
+  - *Escape agotado por el techo de 30 m*: `fsm.py` (`b0332e1a`) no sube por encima de `MAX_ESCAPE_ALT_M` y
+    convierte cada CLIMB en GIRAR_90 + esquina inyectada. En los tramos a -30/-50 m hubo entre 17 y 53 por
+    corrida (todas las `fsm`); en las cuatro fallas, 26-53. Las esquinas aparecen como `VLM_SUBGOAL` porque
+    `runner.py:388` usa ese rotulo por defecto: no interviene el VLM.
+- **Lectura preliminar**: en el control de CitySim el brazo reactivo es el mas rapido y el unico sin fallas;
+  `slm` cuesta +49 % de tiempo y pierde 1 corrida; la FSM, con los dos defectos, es 3.7x mas lenta, pierde 4
+  y pasa a 0.10 m de las estructuras. La duracion de `fsm` no mide su politica sola.
+- Pendientes: lote 2 (relanzar sin plan de ruta), piloto y lote 6, analisis de los seis lotes.
+
 # 2026-10-22 (b) - Los escenarios de control (`*_clear`) vuelan sin plan de ruta; lotes 2 y 5 se relanzan
 
 Regla de diseno: los tres controles (lotes 1, 2 y 5) vuelan el manifiesto tal cual (`--route-plan off`); el
