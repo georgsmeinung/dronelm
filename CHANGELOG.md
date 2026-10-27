@@ -1,3 +1,34 @@
+# 2026-10-27 - Corrida productiva v4: lote 2 completo (`townsim_clear`, sin plan de ruta)
+
+Relanzamiento del lote 2 con `--route-plan off` (control, entrada 2026-10-22 (b)). Resultados en
+`airsim-runs/produccion/v4/lote2_townsim_clear/` (fuera de git). Tres celdas, 10 semillas, techo de 1200 s /
+6000 ciclos. Pasa la verificacion de integridad: 30 `summary.json`, un solo `code_version` (`12e90aab`), sin
+`-dirty`, sin FALLO ni lineas de `route_plan` en el `batch_20261026T190719.log`, 0 colisiones.
+2026-10-26 19:07 -> 22:27.
+
+| Celda | Exitos | Duracion mediana de los exitos | DistMin mediana | Deadlocks | Recorrido (mediana) |
+|---|---|---|---|---|---|
+| `slm:depth` | 10/10 | 379.8 s | 14.63 m | 7 | 660 m |
+| `fsm:depth` | 9/10 | 488.6 s | 1.55 m | 87 | 775 m |
+| `reactive` | 10/10 | 272.6 s | 13.89 m | 0 | 633 m |
+
+- **Modo de falla**: una sola, `fsm:depth` semilla 61, abortada por `physics_locked` a 520 s en (16, 25, -11),
+  en el ultimo tramo WP_5 (1, 85, -30) -> WP_6 (0, 27, 0), que baja hasta el suelo junto al spawn, tras un
+  barrido (`VLM_SCAN_GOAL`).
+- **Defectos de la FSM** (entradas 2026-10-22 (c) y memoria del proyecto): deadlock falso al despegar en
+  10/10 corridas `fsm`; aca WP_1 esta sobre el spawn y la FSM lo alcanza igual en ~7 s, de modo que el costo
+  es menor que en el lote 5. El escape agotado por el techo de 30 m tambien aparece (42 en total): la ruta de
+  crucero va justo a -30 m, en el limite del techo.
+- **DistMin**: el minimo de 0.003 m de `slm` semilla 31 es la primera muestra de la auditoria (la siguiente,
+  18.3 m), el mismo artefacto ya descrito en cap. 11 §11.6.2; el analisis debe excluir la primera muestra.
+- **Frente al lote descartado con plan de ruta** (`1fa4c0e2`, ruta 35 % mas larga): duraciones medianas de
+  550 -> 380 s (`slm`), 754 -> 489 s (`fsm`) y 373 -> 273 s (`reactive`). La relacion entre brazos se
+  mantiene: `reactive` < `slm` < `fsm`.
+- **Lectura preliminar**: en el control de TownSim `slm` cuesta +39 % de tiempo sobre `reactive`, sin perder
+  corridas y con el mismo margen a obstaculos; la FSM cuesta +79 %, pierde 1 y pasa mas cerca (1.55 m).
+- Pendientes: piloto y lote 6 (CitySim, Ollama), ajuste de `analyze_lotes.py` (un `code_version` de
+  referencia por lote: el codigo de vuelo es identico desde `b0332e1a`) y analisis de los seis lotes.
+
 # 2026-10-22 (c) - Corrida productiva v4: lote 5 completo (`citysim_clear`, sin plan de ruta)
 
 Resultados en `airsim-runs/produccion/v4/lote5_citysim_clear/` (fuera de git). Tres celdas, 10 semillas,
