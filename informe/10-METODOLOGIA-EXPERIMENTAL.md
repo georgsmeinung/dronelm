@@ -29,11 +29,11 @@ Esta última hipótesis es la que dicta la arquitectura de escenarios en tres ni
 
 ### 10.2.1 Factor principal: brazo de decisión (`AGENT_ARM`)
 
-La evaluación compara tres brazos de decisión sobre **el mismo `ObstacleField`** (cap. 6), **el mismo espacio de macro-acciones** y **el mismo traductor a comandos cinemáticos** (`action_to_command`, cap. 8). Esta invariancia es lo que hace legítima la comparación: la diferencia entre brazos es *quién elige la macro-acción y quién decide los rodeos*, no qué percibe el sistema ni cómo ejecuta la decisión.
+La evaluación compara tres brazos de decisión sobre **el mismo `ObstacleField`** (cap. 6), **el mismo espacio de macro-acciones** y **el mismo traductor a comandos cinemáticos** (`action_to_command`, cap. 8). Esta invariancia es lo que hace legítima la comparación: la diferencia entre brazos es *quién elige la macro-acción y quién decide los rodeos*, no qué percibe el sistema ni cómo ejecuta la decisión. Elegir la macro-acción incluye las reglas del lazo rápido, que no son las mismas en los tres brazos (cap. 5, §5.3.3): por eso cada comparación mide el brazo completo, no la capa deliberativa sola.
 
 - **`slm`** — el grafo de control con sus dos lazos (cap. 5). El lazo lento, cada ≥ 1 s o de inmediato cuando el lazo rápido ve un muro de frente, juzga qué sectores de una grilla de 3×3 del fotograma frontal son volables; la respuesta se traduce a una sub-meta en coordenadas del mundo anclada a la pose del fotograma, y el dron nunca se detiene a esperarla. En un deadlock, un barrido panorámico de 4 rumbos produce la sub-meta de salida; ante una falla, escape vertical. La fuente del juicio es `STRATEGIC_SOURCE` (§10.2.2): en los lotes, la red de profundidad estimada (cap. 6, §6.14). El nombre del brazo designa la arquitectura con capa deliberativa; con la configuración de los lotes el VLM no interviene en vuelo y solo planifica la ruta antes del despegue en TownSim y CitySim (cap. 4, §4.3.1). No hay reglas deterministas que reescriban la respuesta de la fuente.
 - **`fsm`** — una máquina de estados finitos explícita (`CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE`), con transiciones gobernadas por umbrales fijos sobre el mismo `ObstacleField`, y su propia lógica de atasco y escape (cap. 5, §5.11). Es la línea de base directa: alta predictibilidad y costo computacional mínimo, sin capa deliberativa.
-- **`reactive`** — navegación guiada al waypoint con flujo óptico y TTC, sin deliberación ni resolución de atascos: **cota inferior de rendimiento** que permite desacoplar qué porción del desempeño proviene de la capa táctica y cuánto del seguimiento cinemático de base. Su varianza entre semillas es además el control negativo del diseño (§10.4.1).
+- **`reactive`** — solo guiado al waypoint (`reactive_node`, cap. 5 §5.7): emite siempre `MANTENER_RUMBO`, **sin evasión**, sin deliberación y sin resolución de atascos. El `ObstacleField` solo le limita la tasa de guiñada con un obstáculo cercano al frente. Es la **cota inferior de rendimiento**: lo que separa a `reactive` de los otros dos brazos es, a la vez, la evasión del lazo rápido y la resolución de atascos, no solo la capa deliberativa. Su varianza entre semillas es además el control negativo del diseño (§10.4.1).
 
 El brazo se selecciona por variable de entorno `AGENT_ARM`, leída **a nivel de módulo** en `src/agents/graph.py`. Los tres brazos comparten el mismo bucle externo, el mismo `WaypointTracker` y el mismo nodo `motor` (ancla de altitud y gobernador de velocidad). Esta decisión de implementación tiene una consecuencia metodológica directa: **cada corrida debe correr en un intérprete propio**, porque reutilizar el proceso arrastraría el primer valor leído. El runner lanza por eso un subproceso por corrida, lo que además aísla el fallo de una corrida del resto del lote.
 
@@ -60,7 +60,7 @@ La celda elemental es la tupla (escenario × brazo × estrategia de atasco), que
 | `slm:depth` | El sistema completo: capa estratégica + política del lazo rápido del brazo `slm` + barrido | ✓ | ✓ |
 | `fsm:depth` | La misma resolución de atascos con profundidad, sin capa estratégica y con política FSM | ✓ | ✓ |
 | `fsm:blind` | La FSM sin barrido (escape determinista) | — | ✓ |
-| `reactive` | Flujo óptico + TTC, sin deliberación | ✓ | ✓ |
+| `reactive` | Solo guiado: sin evasión, sin deliberación y sin resolución de atascos | ✓ | ✓ |
 | **Corridas por escenario** | | **30** | **40** |
 
 ---
@@ -77,7 +77,7 @@ Cinco principios metodológicos gobiernan la construcción de cualquier escenari
 2. **Ninguna coordenada se inventa sobre el PNG del mapa.** Los mapas registrados de TownSim y CitySim (cap. 4, §4.3.2) sirven para planificar la ruta y ubicar waypoints candidatos, pero no reemplazan la verificación en vuelo. Toda coordenada nueva se deriva **por interpolación de coordenadas ya voladas y confirmadas**, o se verifica ubicando el dron en ella; la imagen se usa sólo cualitativamente (disposición relativa de plaza, bloques, corredor, avenida). Las coordenadas obtenidas por subdivisión geométrica —no por vuelo— se marcan explícitamente como **PROVISORIAS** y no entran a un lote sin pasar el protocolo de validación del punto 4.
 3. **Exclusión total de profundidad del lazo de vuelo.** Ni el grafo, ni `main.py`, ni el runner leen el canal de profundidad del simulador: ni como entrada de control, ni como freno, ni como criterio de aborto. Cualquier uso de esa señal dentro del lazo, aun «solo para observabilidad», abre un canal por el que la profundidad del simulador —de la que salen las etiquetas de referencia— puede terminar alimentando al brazo evaluado (cap. 9, §9.8.5). Una guardia automatizada (`tests/test_no_depth_in_flight_path.py`) cubre el runner, `main.py` y todos los módulos de vuelo. La única lectura de profundidad de una corrida es la **auditoría de la distancia mínima a obstáculo** (§10.6.1): un hilo aislado, con su propia conexión al simulador, que solo escribe un archivo de muestras; la misma guardia verifica que no importe ningún módulo del grafo y que el runner se limite a arrancarlo y detenerlo.
 4. **Protocolo de validación previo obligatorio.** Antes de que un escenario entre a un lote: (a) se redacta el manifiesto en `airsim-plan/missions/flightplans/`; (b) se dibuja la ruta con `scripts/plot_mission_route.py` y se confirma en el *viewport* de UE que la línea cruza donde el escenario pretende (fachada para los de obstrucción, calle abierta para los de control); (c) se corre una **misión piloto** (`slm:depth`, una semilla) y se exige el criterio de pase del escenario (§10.12.2) —o, si no completa, que el motivo sea instructivo (atasco genuino) y no un error de geometría; (d) recién entonces se lanza el lote completo. El criterio es explícito: *si ninguna celda puede tener éxito en el escenario, no tiene sentido gastar el presupuesto del lote*.
-5. **Los escenarios de control vuelan una ruta fija.** Los tres `*_clear` (lotes 1, 2 y 5) son la línea de base de cada tier: miden el costo de la arquitectura en tránsito libre, y para eso la ruta tiene que ser la misma que define el manifiesto. Vuelan sin plan de ruta (`--route-plan off`). El plan con el VLM (cap. 4, §4.3.1) se usa solo en los escenarios con obstrucción (lotes 3, 4 y 6), donde elegir el corredor es parte de lo que se evalúa. Sobre un control, el plan reemplaza la ruta de base por una que decide el modelo: en `townsim_clear` desvía 3 de los 5 tramos aunque la recta es libre y alarga la ruta un 35 %; en `citysim_clear` elige en el tramo WP_3 (−50 m) → WP_4 (−10 m) un desvío lateral cuyo primer punto de paso, con la altitud del destino, queda 40 m más abajo y pegado a los edificios, y los tres brazos, incluido `reactive`, quedan apoyados sobre la estructura en el mismo punto.
+5. **Los escenarios de control vuelan una ruta fija.** Los tres `*_clear` (lotes 1, 2 y 5) son la línea de base de cada tier: miden el costo de la arquitectura en tránsito libre, y para eso la ruta tiene que ser la misma que define el manifiesto. Vuelan sin plan de ruta (`--route-plan off`). El plan con el VLM (cap. 4, §4.3.1) se usa solo en los escenarios con obstrucción (lotes 3, 4 y 6), donde elegir el corredor es parte de lo que se evalúa. Sobre un control, el plan reemplaza la ruta de base por una que decide el modelo: en `townsim_clear` desvía 3 de los 5 tramos aunque la recta es libre y alarga la ruta un 35 %; en `citysim_clear` elige en el tramo WP_3 (−50 m) → WP_4 (−10 m) un desvío lateral cuyo primer punto de paso, con la altitud del destino, queda 40 m más abajo y pegado a los edificios, y los tres brazos, incluido `reactive`, quedan apoyados sobre la estructura en el mismo punto. En los escenarios con obstrucción el plan también cambia la ruta que se vuela, y lo hace igual para las cuatro celdas: en `townsim_ini` desvía 3 de 7 tramos (hacia WP_0b, WP_3 y WP_4), en `townsim_calib_cruce_frontal` 2 de 3 (hacia WP_1 y hacia WP_3, el tramo de cruce) y en `citysim_pilot` 4 de 8. El obstáculo que enfrenta cada brazo es, por lo tanto, el de la ruta planificada, no el de la recta del manifiesto.
 
 Una consecuencia práctica del punto 4 es la limpieza obligatoria de estado antes de cada corrida: el runner invoca `client.reset()` (que devuelve el vehículo a la pose de *spawn* de `settings.json` y limpia colisión/velocidad del controlador interno) y `client.clear_debug_markers()` (que descarta las primitivas persistentes dibujadas por `plot_mission_route.py`, las cuales de otro modo aparecen en el fotograma que recibe la capa estratégica, cap. 9 §9.6.2).
 
@@ -112,7 +112,7 @@ Recorrido nominal en "L": 120 m entre waypoints declarados, ~180 m contando el t
 
 **Entorno.** Entorno semiurbano construido sobre el *Downtown West Modular Pack* (PurePolygons). De norte a sur: una plaza con rotonda y jardín circular, y luego **tres bloques rectangulares de edificios en fila**, cada uno separado del siguiente por una calle transversal. Cada bloque tiene dos filas de edificios (oeste y este) con un **pasaje peatonal central** entre ambas. Una avenida ancha sale hacia el este, aproximadamente a la altura del límite entre la plaza y el primer bloque. Todo el complejo está rodeado de bosque denso; hay un cuerpo de agua al sur, fuera del complejo.
 
-La geometría métrica del complejo se deriva exclusivamente de una misión volada y confirmada (`TOWNSIM_CALIB_0`, 656 m, `success = True`, 0 colisiones):
+La geometría métrica del complejo se deriva exclusivamente de una misión volada y confirmada (`TOWNSIM_CALIB_0`, 656 m recorridos, `success = True`, 0 colisiones):
 
 - El complejo mide **≈156 m de norte a sur** ($y \in [-71, +84]$) y **≈146 m de ancho** desde el eje del corredor central ($x \approx 0$) hasta el borde oeste exterior ($x \approx -146$).
 - Centroide del complejo: $x \approx -73$, $y \approx 6.5$.
@@ -122,7 +122,7 @@ La geometría métrica del complejo se deriva exclusivamente de una misión vola
 
 #### Escenario 1.A — `townsim_clear` (control de crucero largo, lote 2)
 
-Perímetro completo del complejo, 6 waypoints, ~640 m, altitud de tránsito −30 m (por encima de la línea de tejados). Derivado directamente de `TOWNSIM_CALIB_0`: mismos 6 waypoints, misma geometría verificada por vuelo.
+Perímetro completo del complejo, 6 waypoints, ~600 m (598 m desde el *spawn*; 588 m entre waypoints declarados), altitud de tránsito −30 m (por encima de la línea de tejados). Derivado directamente de `TOWNSIM_CALIB_0`: mismos 6 waypoints, misma geometría verificada por vuelo.
 
 **Qué se quiere probar.** Rol análogo al de `minisim_clear` en Tier 0, pero con una diferencia crítica: **la ruta es 3.3× más larga**. Es el escenario que permite testear H2 de forma directa — si el costo del lazo lento es aditivo en el número de consultas y no multiplicativo en la distancia, el ratio $t_{\text{slm}}/t_{\text{reactive}}$ debe caer sustancialmente respecto de Tier 0.
 
@@ -184,14 +184,16 @@ Circuito en grilla urbana a −10 m de altitud constante, atravesando corredores
 
 ### 10.3.4 Síntesis de la batería
 
-| Lote | Tier | Entorno (proyecto UE) | Escenario | Rol | Long. óptima | Altitud | Dificultad esperada | Hipótesis que ejercita |
-|---|---|---|---|---|---|---|---|---|
-| 1 | 0 | MiniSim (plano sin obstáculos) | `minisim_clear` | Control / cota inferior | ~180 m | −10 m | Nula | H2, H3 (costo puro) |
-| 2 | 1 | TownSim (`townsim_ortho.png`) | `townsim_clear` | Control de crucero largo | ~640 m | −30 m | Baja | H2 (dilución del costo) |
-| 3 | 1 | TownSim | `townsim_ini` | Vegetación en ruta | ~340 m | −30/−22/−10 m | Media-alta | H1 |
-| 4 | 1 | TownSim | `townsim_calib_cruce_frontal` | Bloqueo frontal masivo | ~320 m | −30/−10 m | Alta | **H1** |
-| 5 | 2 | CitySim (`citysim_ortho.png`) | `citysim_clear` | Control en rampa sobre el perímetro de una manzana | ~420 m | −10/−30/−50 m | Baja | H2, H3 |
-| 6 | 2 | CitySim | `citysim_pilot` | Rodeo de manzanas y elección de corredor | ~336 m | −10 m | **Máxima** | **H1, H3** |
+| Lote | Tier | Entorno (proyecto UE) | Escenario | Rol | Ruta desde el *spawn* | $\ell_{\text{opt}}$ (SPL, §10.6.1) | Altitud | Dificultad esperada | Hipótesis que ejercita |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 0 | MiniSim (plano sin obstáculos) | `minisim_clear` | Control / cota inferior | 181 m | 120 m | −10 m | Nula | H2, H3 (costo puro) |
+| 2 | 1 | TownSim (`townsim_ortho.png`) | `townsim_clear` | Control de crucero largo | 598 m | 588 m | −30 m | Baja | H2 (dilución del costo) |
+| 3 | 1 | TownSim | `townsim_ini` | Vegetación en ruta | 343 m | 312 m | −30/−22/−10 m | Media-alta | H1 |
+| 4 | 1 | TownSim | `townsim_calib_cruce_frontal` | Bloqueo frontal masivo | 350 m | 320 m | −30/−10 m | Alta | **H1** |
+| 5 | 2 | CitySim (`citysim_ortho.png`) | `citysim_clear` | Control en rampa sobre el perímetro de una manzana | 421 m | 345 m | −10/−30/−50 m | Baja | H2, H3 |
+| 6 | 2 | CitySim | `citysim_pilot` | Rodeo de manzanas y elección de corredor | 391 m | 339 m | −10 m | **Máxima** | **H1, H3** |
+
+La ruta desde el *spawn* suma, en 3D, el ascenso y el tramo hasta el primer waypoint; $\ell_{\text{opt}}$ suma solo los tramos entre waypoints declarados, que es lo que usa el SPL (§10.6.1). Las dos son las del manifiesto: en los lotes 3, 4 y 6 el plan de ruta agrega puntos de paso (§10.3.0, punto 5).
 
 ---
 
@@ -301,7 +303,7 @@ Todas las métricas se derivan del registro por ciclo del `FlightLogger` y se co
 ### 10.6.1 Eficacia y seguridad de vuelo
 
 - **Tasa de éxito de misión** (`success`): arribo a todos los waypoints dentro del presupuesto de ciclos y segundos. Es un binario por corrida; sobre $K$ semillas se convierte en una proporción, que se informa con su intervalo de Wilson al 95 %.
-- **Colisiones** por misión y **normalizadas por kilómetro** recorrido. La normalización es necesaria porque los escenarios difieren en longitud por un factor de 3.3×.
+- **Colisiones** por misión y **normalizadas por kilómetro** recorrido. La normalización es necesaria porque los escenarios difieren en longitud por un factor de 3.3×. Una colisión es la bandera `has_collided` de AirSim (`runner.py` corta la corrida al verla). **Esa bandera no detecta todos los contactos:** en las corridas de desarrollo no se disparó con el dron dentro del follaje, ni con la cámara dentro de la geometría, ni con el dron apoyado sobre una cornisa. Cero colisiones registradas no equivale, por eso, a cero contactos: un dron incrustado en la malla termina como `physics_locked` (siguiente punto), no como colisión.
 - **Motivo de terminación** (`termination_reason`): éxito, tope de tiempo o de ciclos, colisión, o `physics_locked` (el vigilante de congelamiento detectó el estado físico idéntico durante 25 ciclos: dron incrustado en la malla, cap. 5 §5.19). `physics_locked` cuenta como falla de misión, igual que una colisión.
 - **Distancia mínima a obstáculo** (`min_obstacle_dist_m`, DistMin): la mide un **hilo de auditoría aislado** durante el vuelo. Con su propia conexión al simulador, cada `DISTMIN_TRACK_PERIOD_S` (1 s, una muestra cada 5 ciclos) captura la profundidad `DepthPlanar` de la cámara frontal y toma el percentil 5 del tercio central de la imagen; DistMin es el mínimo sobre la corrida. Las muestras se escriben en `<corrida>.distmin.ndjson` y `finalize_run` vuelca el mínimo en el `summary.json` al cerrar la corrida. El hilo no comparte ningún objeto con el grafo, de modo que la medición no puede influir en el control (§10.3.0, punto 3).
 - **SPL** (*Success weighted by Path Length*), en su definición estándar para agentes de navegación ([Anderson et al., 2018](13-REFERENCIAS.md#ref-anderson-2018)): $\text{SPL} = S \cdot \ell_{\text{opt}} / \max(\ell_{\text{real}}, \ell_{\text{opt}})$, con $S$ el indicador de éxito. La longitud óptima $\ell_{\text{opt}}$ se computa como la suma de distancias euclídeas entre waypoints consecutivos del manifiesto: no es un camino volable en presencia de obstáculos, pero es la referencia estándar y, sobre todo, es **idéntica para todas las celdas**, que es lo que la comparación requiere. El SPL es la única métrica que penaliza simultáneamente no llegar y llegar dando vueltas, y es por eso la métrica primaria de los escenarios con obstrucción.
@@ -311,6 +313,7 @@ Todas las métricas se derivan del registro por ciclo del `FlightLogger` y se co
 
 ### 10.6.2 Dinámica del lazo táctico y latencias
 
+- **Tiempo de reacción**: lo que tarda el sistema, desde que recibe un fotograma, en emitir el comando que responde a él. Como captura, percepción, decisión y comando ocurren en el mismo `graph.invoke()`, se mide como la **latencia del grafo por ciclo**; el período del lazo acota además cada cuánto se toma un fotograma nuevo. La capa estratégica no forma parte del tiempo de reacción: corre en su propio hilo y no bloquea el ciclo (cap. 5, §5.1.2).
 - **Latencia total por ciclo** ($p_{50}$ y $p_{95}$), desagregada por brazo y por **ruta activa del grafo de control** (`reactive`, `evasive`, `girar_90`, `deliberative` —barrido—, `tactical` —escape vertical—, `fsm`, `degraded`). El $p_{95}$ es la métrica relevante para la viabilidad en tiempo real: un $p_{50}$ aceptable con un $p_{95}$ que excede el presupuesto de ciclo describe un sistema que cumple "en promedio" y falla justo cuando importa.
 - **Histograma de rutas** por corrida: la distribución de ciclos entre nodos del grafo. Es la caracterización más informativa del comportamiento cualitativo de un brazo — una corrida mayormente `reactive` describe un vuelo que sobrevoló los obstáculos en lugar de negociarlos, independientemente de lo que digan sus métricas de éxito.
 - **`deliberation_rate`**: fracción de ciclos con una consulta nueva del lazo lento. Se contabiliza por **transición de identificador único de deliberación**, cualquiera sea la ruta del ciclo; sin esa distinción, una consulta que abarca varios ciclos de espera se contaría múltiples veces. Incluye las consultas de la capa estratégica, que se resuelven mientras el dron vuela por la ruta reactiva o evasiva.
@@ -391,7 +394,7 @@ Esta sección declara, **antes de tener los datos**, qué resultado se espera de
 El resultado esperado es **desfavorable al brazo `slm` y favorable a la hipótesis H2**:
 
 - Orden esperado de tiempo de misión: `reactive` < `fsm` < `slm`, con $\delta$ grande en la comparación `reactive` vs. `slm` en MiniSim.
-- Ratio $t_{\text{slm}}/t_{\text{reactive}}$ decreciente con la longitud de la ruta: mayor en `minisim_clear` (~180 m) que en `townsim_clear` (~640 m). **Ésta es la prueba directa de H2**, y su forma es una comparación de razones, no de valores absolutos.
+- Ratio $t_{\text{slm}}/t_{\text{reactive}}$ decreciente con la longitud de la ruta: mayor en `minisim_clear` (~180 m) que en `townsim_clear` (~600 m). **Ésta es la prueba directa de H2**, y su forma es una comparación de razones, no de valores absolutos.
 - Sin diferencias de seguridad: en un campo despejado, ningún brazo puede ser más seguro que otro.
 - En `citysim_clear`, cero atascos en las tres celdas confirma que la ruta en rampa (−10 a −50 m) no presenta obstrucciones y que las altitudes son adecuadas.
 

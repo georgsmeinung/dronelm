@@ -35,7 +35,7 @@ donde $Z_{\text{celda}}$ es la distribución de profundidades de los píxeles de
 | `flow_algorithm` | Backend usado (`dis` o `farneback`) |
 | `foe_confidence` | Confianza del FOE estimado (antes de multiplicar por fracción válida) |
 
-El conjunto se recolectó con `FLOW_DOWNSCALE_WIDTH` = 320 px, el valor por defecto del código; el vuelo usa 640 px (cap. 6, §6.3) y los umbrales de TTC no están recalibrados a ese ancho. Totaliza **3735 registros** de 9 celdas cada uno, cubriendo tres escenarios de vuelo scripteados diseñados para ejercitar aspectos específicos del estimador:
+El conjunto se recolectó con `FLOW_DOWNSCALE_WIDTH` = 320 px, el valor por defecto del código; el vuelo usa 640 px (cap. 6, §6.3) y los umbrales de TTC no están recalibrados a ese ancho. Totaliza **3735 registros de celda**, es decir, 415 fotogramas × 9 celdas, de tres escenarios de vuelo scripteados diseñados para ejercitar aspectos específicos del estimador:
 
 1. **Aproximación frontal a un edificio**: vuelo recto hacia una fachada a distintas velocidades (1–6 m/s); maximiza la señal de expansión en el sector central y verifica la correlación TTC estimado vs. TTC de referencia en condiciones ideales.
 
@@ -43,21 +43,23 @@ El conjunto se recolectó con `FLOW_DOWNSCALE_WIDTH` = 320 px, el valor por defe
 
 3. **Giros de guiñada sin traslación**: rotación pura sobre el eje vertical, diseñada para ejercitar el guard de rotación (`FLOW_MAX_ROTATION_DEG`) y la derotación de guiñada. La expectativa correcta es que, durante el giro, el estimador declare incertidumbre (`foe_confidence = 0`) en lugar de reportar obstáculos espurios.
 
-**Limitación documentada del conjunto de datos:** el escenario de giros de guiñada quedó concentrado en el rango $|\dot{\psi}| \in [0.0,\ 0.05)$ rad/s — velocidades de guiñada muy bajas, más próximas al crucero suave que a las maniobras activas de evasión (0.3–0.5 rad/s). Este rango no ejerce presión real sobre la derotación, y la validación de la derotación en giros agresivos queda aún pendiente (§7.5).
+**Limitación documentada del conjunto de datos:** el escenario de giros de guiñada quedó concentrado en el rango $|\dot{\psi}| \in [0.0,\ 0.05)$ rad/s — velocidades de guiñada muy bajas, más próximas al crucero suave que a las maniobras activas de evasión (0.3–0.5 rad/s). Este rango no ejerce presión real sobre la derotación; la validación en giros agresivos es el experimento D3 (§7.6). Además, sin traslación no hay ninguna celda con TTC de referencia por debajo de 3 s: este escenario aporta solo negativos, y los positivos de la curva ROC (§7.3) salen de la aproximación frontal y del cañón.
 
 ## 7.3 Resultados del canal de TTC: dos métricas, una interpretación correcta
 
 El análisis en `experiments/analyze_ttc.py` produce dos números que, leídos de forma independiente, parecen contradictorios:
 
-**Métrica 1 — Correlación puntual:** $r \approx -0.034$, error relativo mediano del 66%.
+**Métrica 1 — Correlación puntual:** Pearson $r \approx -0.034$ y error relativo mediano del 66 % (2359 celdas con confianza > 0.15); correlación de rangos de Spearman $\rho = 0.53$ sobre las mismas celdas.
 
-**Métrica 2 — AUC ROC para detección binaria:** 0.96–0.97 para el evento "colisión dentro de $\tau$ segundos" con $\tau \in \{1, 2, 3\}$.
+**Métrica 2 — AUC ROC para detección binaria:** 0.97, 0.97 y 0.96 para el evento "colisión dentro de $\tau$ segundos" con $\tau = 1, 2, 3$ s (3139 celdas con TTC estimado finito; 61, 171 y 252 positivos).
 
 La reconciliación entre estos dos números es el resultado estadístico central de este capítulo. Procede así:
 
-**¿Por qué la correlación puntual es baja?** La correlación de Pearson mide si existe una relación *lineal* entre dos variables. Un TTC estimado de 4.8 s cuando el TTC real es 3.1 s (error puntual de 55%) contribuye igual a la correlación que si ese par estuviera perfectamente alineado *o no*. El estimador de flujo tiene errores de escala sistemáticos (el modelo de cámara pinhole asume movimiento rígido puro; los residuos de derotación, la profundidad desigual de objetos en la misma celda, y el efecto de la perspectiva en celdas no centrales introducen sesgos). Esos errores de escala no son aleatorios: son sistemáticos y predecibles. En consecuencia, la correlación puntual es baja, pero el *ordenamiento relativo* de los TTC estimados sigue siendo correcto: una celda con TTC estimado de 2.0 s es consistentemente más peligrosa que una con 5.0 s.
+**¿Por qué la correlación puntual es baja?** La correlación de Pearson mide si existe una relación *lineal* y es muy sensible a los valores extremos. El TTC de referencia tiene una cola muy larga: en vuelo lento o en hover la velocidad de cierre es casi nula y el TTC de referencia llega a cientos de segundos (mediana 119 s, percentil 95 de 567 s), mientras que el estimado se mueve en otra escala (mediana 14 s). Esos pares extremos dominan el $r$ de Pearson y lo llevan a cero. Además, el estimador de flujo tiene errores de escala sistemáticos: el modelo de cámara pinhole asume movimiento rígido puro, y los residuos de derotación, la profundidad desigual de objetos en la misma celda y el efecto de la perspectiva en celdas no centrales introducen sesgos. La correlación de rangos, que no depende de la escala, es moderada ($\rho = 0.53$): el *ordenamiento relativo* de los TTC estimados se conserva en buena medida, aunque el valor en segundos no sea confiable.
 
 **¿Por qué el AUC es alto?** El AUC ROC mide exactamente la propiedad que la correlación no mide: la capacidad del estimador de *ordenar* los casos por riesgo. Un AUC de 0.96 significa que, si se escoge al azar una celda "peligrosa" (TTC real < $\tau$) y una celda "segura" (TTC real ≥ $\tau$), el estimador le asigna un TTC menor a la peligrosa con probabilidad 0.96 — la interpretación probabilística estándar del área bajo la curva ROC como estimador de la probabilidad de ordenamiento correcto entre un caso positivo y uno negativo elegidos al azar ([Fawcett, 2006](13-REFERENCIAS.md#ref-fawcett-2006)). Ese es el predicado exacto que el sistema de control necesita: no necesita saber que faltan 3.2 s para la colisión; necesita saber que *esta celda* es más peligrosa que *aquella*.
+
+**El AUC no es uniforme entre escenarios.** El valor conjunto lo empuja el cañón urbano, donde el obstáculo está a los costados (AUC 0.97, 0.98 y 0.98 para $\tau = 1, 2, 3$ s). En la aproximación frontal, el caso en que el obstáculo cae cerca del Foco de Expansión y el más crítico para evadir, el AUC baja a 0.93, 0.90 y 0.85 (4, 63 y 102 positivos). Restringido a celdas con el dron en movimiento (> 1 m/s), el AUC conjunto se mantiene (0.985 para $\tau = 2$ s): el valor alto no se debe a celdas de hover fáciles de separar. Los registros no son independientes —nueve celdas por fotograma, fotogramas consecutivos—, y no se estimó un intervalo de confianza del AUC.
 
 **Formulación defendible del estimador:** "El TTC estimado es un *puntaje de riesgo de cierre calibrado por curva ROC*, cuyo valor numérico tiene unidades de segundos por construcción matemática del modelo (§6.7) pero no interpretación métrica directa. Los umbrales operativos (`TTC_EVASION_THRESHOLD`, `TTC_SAFE_THRESHOLD`) son umbrales en esa escala de puntaje, derivados por criterio de Youden, no parámetros físicos independientes."
 
@@ -91,8 +93,8 @@ El canal de ocupación (divergencia escalada → `occupancy`) se valida contra p
 |---|---|---|
 | Protocolo de validación ROC | ✓ Completo | ✓ Realizado (dataset reducido) |
 | Umbral derivado por Youden | ✓ (`TTC_EVASION_THRESHOLD = 3.2 s`) | ✓ (`OBSTACLE_OCCUPANCY_BLOCKED = 0.011`) |
-| AUC reportada | 0.96–0.97 | 0.87 |
-| Conjunto de datos | 3735 registros | 196 frames, una escena |
+| AUC reportada | 0.96–0.97 (frontal: 0.85–0.93) | 0.87 |
+| Conjunto de datos | 415 fotogramas (3735 celdas) | 196 frames, una escena |
 
 ## 7.6 Validación de la derotación en giros agresivos (D3)
 
@@ -106,7 +108,7 @@ El guard `FLOW_MAX_ROTATION_DEG = 2°` descarta todos los ciclos donde la rotaci
 
 Los resultados de validación tienen consecuencias directas sobre el diseño del lazo de control:
 
-**El AUC de 0.96–0.97 justifica usar TTC como señal primaria de evasión.** Una tasa de verdaderos positivos del 93% con especificidad del 89% (a $\tau = 2$ s) es suficiente para evasión reactiva en entorno simulado; los falsos negativos (11%) son la fracción de situaciones peligrosas que el estimador no detecta a tiempo; la cubren en parte la detección de contacto (IMU y avance sin movimiento) y la capa estratégica con profundidad estimada, que no depende de la traslación (cap. 6, §6.15).
+**El AUC de 0.96–0.97 justifica usar TTC como señal primaria de evasión.** Una tasa de verdaderos positivos del 93 % con especificidad del 89 % (a $\tau = 2$ s) es suficiente para evasión reactiva en entorno simulado. Los falsos negativos (7 %) son la fracción de situaciones peligrosas que el estimador no detecta a tiempo, y son más frecuentes de frente (AUC 0.90 en la aproximación frontal); los cubren en parte la detección de contacto (IMU y avance sin movimiento) y la capa estratégica con profundidad estimada, que no depende de la traslación (cap. 6, §6.15). Los falsos positivos (11 % de las celdas sin peligro) disparan evasiones innecesarias. Los umbrales se derivaron con el flujo a 320 px y el vuelo usa 640 px (§7.2): no están recalibrados para el ancho de vuelo.
 
 **La baja correlación puntual justifica la banda de histéresis.** Si el TTC fuera un cronómetro confiable, bastaría un solo umbral. La incertidumbre de escala hace necesaria la zona de advertencia (3.2–4.6 s), en la que el lazo rápido corrige sin comprometer una maniobra definitiva. La distancia en metros, que el TTC no da, la aporta en el lazo lento la profundidad estimada (cap. 6, §6.14).
 

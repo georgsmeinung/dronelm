@@ -141,7 +141,7 @@ Los umbrales de TTC provienen de la calibración del capítulo 7. El orden tiene
 
 ### 5.3.3 Lazo rápido: reacción sin el lazo lento
 
-Las reglas 3, 4, 5, 7 y 8 forman el lazo rápido: actúan en el mismo ciclo, sin esperar al lazo lento. Son compartidas en espíritu con los otros brazos —misma percepción, mismo `action_to_command()` (§5.14)— de modo que la comparación entre brazos mide quién decide los rodeos y los deadlocks, no quién reacciona mejor a un muro inminente.
+Las reglas 3, 4, 5, 7 y 8 forman el lazo rápido: actúan en el mismo ciclo, sin esperar al lazo lento. Los otros brazos usan la misma percepción y el mismo `action_to_command()` (§5.14), pero no las mismas reglas: la FSM evade con sus propios umbrales (§5.11) y no tiene la reacción a contacto (regla 4), el descenso bajo un techo (regla 6) ni el `GIRAR_90` ante un frente bloqueado (regla 7); el brazo `reactive` no evade (§5.7). La comparación entre brazos mide, por eso, el lazo rápido de cada uno junto con quién decide los rodeos y los deadlocks.
 
 ### 5.3.4 Resolución de deadlock (`_deadlock_resolve`)
 
