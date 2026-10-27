@@ -1473,7 +1473,7 @@ r.DetailMode=2
 <li><strong>Con la pregunta invertida</strong> («¿el pasillo cruza algún techo?»): ambos respondieron «sí» a todas, incluida la recta que va por la calle.</li>
 </ul>
 <p>La respuesta depende de la forma de la pregunta y no de la imagen. Los parches le piden al modelo lo que sí hace bien, reconocer qué hay en una imagen, en lugar de juzgar una ruta entera.</p>
-<p><strong>Uso en los experimentos.</strong> El plan está activado (<code>ROUTE_PLAN_MODE=vlm</code>, <code>ROUTE_JUDGE=patches</code>) en TownSim y CitySim, sobre sus mapas registrados (§4.3.2). En el banco de prueba la puntuación separa las rutas libres de las bloqueadas con AUC 0.81, y en el único tramo de <code>citysim_pilot</code> con la recta bloqueada el plan elige un desvío libre (cap. 11 §11.0). Es la única tarea del sistema en la que el VLM aporta una señal medible. MiniSim vuela con <code>--route-plan off</code> (cap. 10 §10.5.3): su nivel es un plano sin obstáculos, de modo que la recta entre waypoints ya es la ruta óptima y no hay mapa que juzgar.</p>
+<p><strong>Uso en los experimentos.</strong> El plan está activado (<code>ROUTE_PLAN_MODE=vlm</code>, <code>ROUTE_JUDGE=patches</code>) en los escenarios con obstrucción de TownSim y CitySim (lotes 3, 4 y 6), sobre sus mapas registrados (§4.3.2). Los escenarios de control (<code>*_clear</code>) vuelan el manifiesto tal cual, porque son la ruta fija de base de cada tier (cap. 10 §10.3.0, punto 5). Los puntos de paso de un desvío toman la altitud del waypoint de destino: en un tramo que desciende, el desvío baja al comienzo y no a lo largo del tramo. En el banco de prueba la puntuación separa las rutas libres de las bloqueadas con AUC 0.81, y en el único tramo de <code>citysim_pilot</code> con la recta bloqueada el plan elige un desvío libre (cap. 11 §11.0). Es la única tarea del sistema en la que el VLM aporta una señal medible. En MiniSim, además, no hay mapa que juzgar: su nivel es un plano sin obstáculos y la recta entre waypoints ya es la ruta óptima.</p>
 <h3 id="04-planificacion-mision-gcs-432-mapa-cenital-registrado">4.3.2 Mapa cenital registrado<a class="headerlink" href="#04-planificacion-mision-gcs-432-mapa-cenital-registrado" title="Permanent link">&para;</a></h3>
 <p>El plan de ruta solo tiene sentido si el mapa coincide con el mundo de vuelo. Los mapas de CitySim y TownSim se construyen con el propio simulador (<code>airsim-plan/scripts/capture_ortho_map.py</code>): el dron se reubica sobre una grilla de puntos a 1000 m de altura con la cámara frontal apuntando 90° hacia abajo y un campo visual de 15°, de modo que la vista es casi ortográfica. De cada toma se usa la mitad central y se la pega en el lienzo a 2 px/m en CitySim y 4 px/m en TownSim, con el origen NED en el centro de la imagen, el norte arriba y el este a la derecha. La orientación y la escala se verifican en el arranque desplazando el dron 20 m al norte y 20 m al este y midiendo el corrimiento de la imagen por correlación de fase.</p>
 <p>Unreal Engine carga el escenario por zonas alrededor del punto de vista, y desde 1000 m no carga la zona de abajo: la imagen muestra solo calles y bases vacías. Por eso, antes de cada toma el dron baja a 40 m sobre el punto (la carga se completa en unos 3 s), vuelve a subir y captura enseguida. La toma se acepta cuando la fracción de píxeles de edificio, medida con la profundidad, deja de crecer entre dos capturas; un criterio por color no sirve, porque el agua animada nunca se estabiliza y una zona sin cargar está quieta. El resultado, <code>citysim_ortho.png</code>, cubre la ciudad completa (1920 m norte-sur por 1640 m este-oeste) y es el mapa de todas las misiones de CitySim. El de TownSim, <code>townsim_ortho.png</code> (24 tomas, 4 px/m), cubre 500 × 500 m alrededor del origen; superpuestas las trayectorias voladas, ninguna muestra de casi-contacto cae sobre pasto sin obstáculo. Las demás imágenes de esos niveles (<code>citymap.png</code>, <code>citysim_calib.png</code>, <code>townsim.png</code>, <code>townsim_calib.png</code>) no están registradas con el mundo y <code>airsim-plan/missions/maps/map_scales.json</code> las marca así.</p>
@@ -3279,12 +3279,13 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <h2 id="10-metodologia-experimental-103-escenarios-contenido-particularidad-y-dificultad">10.3 Escenarios: contenido, particularidad y dificultad<a class="headerlink" href="#10-metodologia-experimental-103-escenarios-contenido-particularidad-y-dificultad" title="Permanent link">&para;</a></h2>
 <p>El protocolo define una jerarquía en tres niveles crecientes de dificultad ambiental, cada uno sobre un <strong>proyecto de Unreal Engine distinto</strong> (cap. 3), con un escenario de control despejado por nivel y uno o dos escenarios con obstrucción en los niveles 1 y 2.</p>
 <h3 id="10-metodologia-experimental-1030-principios-de-diseno-comunes-a-todos-los-escenarios">10.3.0 Principios de diseño comunes a todos los escenarios<a class="headerlink" href="#10-metodologia-experimental-1030-principios-de-diseno-comunes-a-todos-los-escenarios" title="Permanent link">&para;</a></h3>
-<p>Cuatro principios metodológicos gobiernan la construcción de cualquier escenario, y explican por qué los manifiestos tienen la forma que tienen:</p>
+<p>Cinco principios metodológicos gobiernan la construcción de cualquier escenario, y explican por qué los manifiestos tienen la forma que tienen:</p>
 <ol>
 <li><strong>Prohibición de teletransporte cinemático.</strong> El campo <code>start_pose</code> está inhabilitado en la ruta de producción: todas las misiones despegan desde el <em>PlayerStart</em> nativo del nivel de Unreal Engine y ejecutan un ascenso vertical controlado previo a la navegación horizontal. La razón es que <code>simSetVehiclePose(ignore_collision=True)</code> es un reposicionamiento instantáneo que <strong>no verifica colisión</strong>, con lo que un escenario podría materializar el dron dentro de un edificio o a centímetros de un tronco, generando variación entre corridas que nada tiene que ver con la política de control evaluada. La consecuencia de diseño es que un escenario que necesita empezar lejos del <em>spawn</em> se arma como <strong>misión de varios tramos</strong>: un tramo de tránsito a altitud validada hasta el punto de interés, y recién allí el tramo de prueba a nivel de calle.</li>
 <li><strong>Ninguna coordenada se inventa sobre el PNG del mapa.</strong> Los mapas registrados de TownSim y CitySim (cap. 4, §4.3.2) sirven para planificar la ruta y ubicar waypoints candidatos, pero no reemplazan la verificación en vuelo. Toda coordenada nueva se deriva <strong>por interpolación de coordenadas ya voladas y confirmadas</strong>, o se verifica ubicando el dron en ella; la imagen se usa sólo cualitativamente (disposición relativa de plaza, bloques, corredor, avenida). Las coordenadas obtenidas por subdivisión geométrica —no por vuelo— se marcan explícitamente como <strong>PROVISORIAS</strong> y no entran a un lote sin pasar el protocolo de validación del punto 4.</li>
 <li><strong>Exclusión total de profundidad del lazo de vuelo.</strong> Ni el grafo, ni <code>main.py</code>, ni el runner leen el canal de profundidad del simulador: ni como entrada de control, ni como freno, ni como criterio de aborto. Cualquier uso de esa señal dentro del lazo, aun «solo para observabilidad», abre un canal por el que la profundidad del simulador —de la que salen las etiquetas de referencia— puede terminar alimentando al brazo evaluado (cap. 9, §9.8.5). Una guardia automatizada (<code>tests/test_no_depth_in_flight_path.py</code>) cubre el runner, <code>main.py</code> y todos los módulos de vuelo. La única lectura de profundidad de una corrida es la <strong>auditoría de la distancia mínima a obstáculo</strong> (§10.6.1): un hilo aislado, con su propia conexión al simulador, que solo escribe un archivo de muestras; la misma guardia verifica que no importe ningún módulo del grafo y que el runner se limite a arrancarlo y detenerlo.</li>
 <li><strong>Protocolo de validación previo obligatorio.</strong> Antes de que un escenario entre a un lote: (a) se redacta el manifiesto en <code>airsim-plan/missions/flightplans/</code>; (b) se dibuja la ruta con <code>scripts/plot_mission_route.py</code> y se confirma en el <em>viewport</em> de UE que la línea cruza donde el escenario pretende (fachada para los de obstrucción, calle abierta para los de control); (c) se corre una <strong>misión piloto</strong> (<code>slm:depth</code>, una semilla) y se exige el criterio de pase del escenario (§10.12.2) —o, si no completa, que el motivo sea instructivo (atasco genuino) y no un error de geometría; (d) recién entonces se lanza el lote completo. El criterio es explícito: <em>si ninguna celda puede tener éxito en el escenario, no tiene sentido gastar el presupuesto del lote</em>.</li>
+<li><strong>Los escenarios de control vuelan una ruta fija.</strong> Los tres <code>*_clear</code> (lotes 1, 2 y 5) son la línea de base de cada tier: miden el costo de la arquitectura en tránsito libre, y para eso la ruta tiene que ser la misma que define el manifiesto. Vuelan sin plan de ruta (<code>--route-plan off</code>). El plan con el VLM (cap. 4, §4.3.1) se usa solo en los escenarios con obstrucción (lotes 3, 4 y 6), donde elegir el corredor es parte de lo que se evalúa. Sobre un control, el plan reemplaza la ruta de base por una que decide el modelo: en <code>townsim_clear</code> desvía 3 de los 5 tramos aunque la recta es libre y alarga la ruta un 35 %; en <code>citysim_clear</code> elige en el tramo WP_3 (−50 m) → WP_4 (−10 m) un desvío lateral cuyo primer punto de paso, con la altitud del destino, queda 40 m más abajo y pegado a los edificios, y los tres brazos, incluido <code>reactive</code>, quedan apoyados sobre la estructura en el mismo punto.</li>
 </ol>
 <p>Una consecuencia práctica del punto 4 es la limpieza obligatoria de estado antes de cada corrida: el runner invoca <code>client.reset()</code> (que devuelve el vehículo a la pose de <em>spawn</em> de <code>settings.json</code> y limpia colisión/velocidad del controlador interno) y <code>client.clear_debug_markers()</code> (que descarta las primitivas persistentes dibujadas por <code>plot_mission_route.py</code>, las cuales de otro modo aparecen en el fotograma que recibe la capa estratégica, cap. 9 §9.6.2).</p>
 <hr />
@@ -3393,9 +3394,10 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <hr />
 <h3 id="10-metodologia-experimental-1033-tier-2-citysim-citysim_orthopng-canones-urbanos">10.3.3 Tier 2 — CitySim (<code>citysim_ortho.png</code>): cañones urbanos<a class="headerlink" href="#10-metodologia-experimental-1033-tier-2-citysim-citysim_orthopng-canones-urbanos" title="Permanent link">&para;</a></h3>
 <p><strong>Entorno.</strong> Proyecto de Unreal Engine 5.5 basado en el <em>Sample City</em> de Epic Games: tejido edilicio masivo en cuadrícula ortogonal regular, con edificios de <strong>50 a 100 m de altura</strong>, pasos restringidos y cañones urbanos angostos.</p>
-<p><strong>La particularidad que define a este tier</strong> es doble. Primero, la <strong>altura de los obstáculos convierte a la altitud en variable de diseño de primer orden</strong>: a diferencia de TownSim, donde −30 m basta para sobrevolar todo, en CitySim la maniobra <code>GANAR_ALTURA</code> deja de ser una salida universal — un escape por altura desde −20 m no despeja un edificio de 80 m. Segundo, la <strong>regularidad y uniformidad de la textura urbana</strong> es adversa para la percepción monocular: dos calles paralelas de ancho idéntico producen campos de flujo casi indistinguibles, y las fachadas repetitivas degradan el emparejamiento denso de DIS. Como en TownSim, el VLM planifica la ruta sobre el mapa cenital registrado antes del vuelo (<code>--route-plan vlm</code>, cap. 4, §4.3.1).</p>
+<p><strong>La particularidad que define a este tier</strong> es doble. Primero, la <strong>altura de los obstáculos convierte a la altitud en variable de diseño de primer orden</strong>: a diferencia de TownSim, donde −30 m basta para sobrevolar todo, en CitySim la maniobra <code>GANAR_ALTURA</code> deja de ser una salida universal — un escape por altura desde −20 m no despeja un edificio de 80 m. Segundo, la <strong>regularidad y uniformidad de la textura urbana</strong> es adversa para la percepción monocular: dos calles paralelas de ancho idéntico producen campos de flujo casi indistinguibles, y las fachadas repetitivas degradan el emparejamiento denso de DIS. Como en TownSim, en el escenario con obstrucción el VLM planifica la ruta sobre el mapa cenital registrado antes del vuelo (<code>--route-plan vlm</code>, cap. 4, §4.3.1); el control vuela el manifiesto (§10.3.0, punto 5).</p>
 <h4 id="10-metodologia-experimental-escenario-2a-citysim_clear-control-perimetro-de-manzana-en-rampa-lote-5">Escenario 2.A — <code>citysim_clear</code> (control: perímetro de manzana en rampa, lote 5)<a class="headerlink" href="#10-metodologia-experimental-escenario-2a-citysim_clear-control-perimetro-de-manzana-en-rampa-lote-5" title="Permanent link">&para;</a></h4>
 <p>Perímetro de una manzana del grid regular, <strong>4 waypoints</strong>, ~420 m. La altitud crece en rampa a lo largo del perímetro —WP_1 a −10 m, WP_2 a −30 m, WP_3 a −50 m— y el último tramo vuelve a −10 m en WP_4, sobre el punto de partida. Los cambios de altitud se hacen en diagonal, combinados con el avance horizontal.</p>
+<p>Como todo control, vuela el manifiesto sin plan de ruta (§10.3.0, punto 5). El desvío que el plan elige en el tramo WP_3 → WP_4 es el que el banco registra como bloqueado con la recta libre (cap. 11, §11.0).</p>
 <p><strong>Qué se quiere probar.</strong> Rol de control del tier, análogo a <code>minisim_clear</code> y <code>townsim_clear</code>: el costo de la arquitectura en tránsito libre, ahora entre edificios altos y con cambios de altitud en cada tramo. Si los tres brazos lo completan sin colisiones, la ruta no presenta obstrucciones a esas altitudes y cualquier atasco en el escenario de corredores de este tier es atribuible a la geometría del corredor.</p>
 <h4 id="10-metodologia-experimental-escenario-2b-citysim_pilot-circuito-de-corredores-lote-6">Escenario 2.B — <code>citysim_pilot</code> (circuito de corredores, lote 6)<a class="headerlink" href="#10-metodologia-experimental-escenario-2b-citysim_pilot-circuito-de-corredores-lote-6" title="Permanent link">&para;</a></h4>
 <p>Circuito en grilla urbana a −10 m de altitud constante, atravesando corredores entre edificios en lugar de sobrevolarlos (manifiesto <code>citysim_pilot.json</code>, cap. 4 §4.3). Tres elementos del manifiesto merecen explicación:</p>
@@ -3509,7 +3511,7 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <li><strong>Jitter temporal del lazo de control.</strong> El lazo corre a <code>LOOP_HZ = 5.0</code> con temporización de reloj de pared (<code>time.sleep(max(0, 1/f - t_ciclo))</code>). El tiempo de cada ciclo depende de la latencia RPC a AirSim, de la carga de GPU y del planificador del sistema operativo. Un ciclo que se pasa del presupuesto desplaza todos los siguientes: dos corridas idénticas divergen en <strong>qué instante exacto de la trayectoria</strong> se toma cada decisión. Con <code>REACTIVE_FORWARD_SPEED = 3.0 m/s</code>, 20 ms de desfase equivalen a 6 cm de desplazamiento por ciclo, que se acumulan.</li>
 <li><strong>Renderizado y física no reproducibles cuadro a cuadro.</strong> Unreal Engine no garantiza determinismo cuadro a cuadro bajo carga variable de GPU; la física de AirSim avanza en tiempo real, no en pasos fijos sincronizados con el cliente. El fotograma capturado en el ciclo <span class="arithmatex">\(n\)</span> no es bit a bit el mismo entre corridas, y el estimador de flujo óptico —que opera sobre diferencias de intensidad a nivel de píxel— amplifica esas diferencias.</li>
 <li><strong>Sensibilidad del estimador de flujo a condiciones iniciales.</strong> El cálculo de FOE por mínimos cuadrados ponderados con rechazo de <em>outliers</em> (RANSAC-lite, <code>FOE_OUTLIER_ANGLE_RAD = 0.35</code>) es una función no lineal del campo de flujo. Pequeñas diferencias en el conteo de inliers cruzan el umbral de confianza diferenciada (&lt; 30 vs. ≥ 30 inliers), lo que cambia el estado epistémico reportado por <code>ObstacleField</code> y, con él, qué regla de <code>navigate_node</code> decide el ciclo. Es un sistema con <strong>realimentación</strong>: una decisión distinta cambia la pose, que cambia el fotograma siguiente, que cambia la decisión siguiente.</li>
-<li><strong>Inferencia de las redes del lazo lento.</strong> La red de profundidad es determinista salvo diferencias numéricas mínimas de la GPU, pero recibe fotogramas distintos (fuente 2) en instantes distintos (fuente 1). El VLM no interviene en vuelo; en TownSim y CitySim planifica la ruta una vez por escenario, con temperatura 0 y caché por contenido, de modo que todas las semillas y celdas de un lote vuelan el mismo plan (cap. 4, §4.3.1). Si se usara el VLM en vuelo (<code>STRATEGIC_SOURCE = vlm</code>), su muestreo (<code>temperature = 0.2</code>, sin semilla fijada en el servidor) sería una fuente adicional exclusiva del brazo <code>slm</code>; la determinación de la inferencia en servidores de LLM no está garantizada aun con temperatura cero, porque los kernels no son invariantes al tamaño de lote y este varía con la carga del servidor (<a href="#13-referencias-ref-he-2025">He, 2025</a>).</li>
+<li><strong>Inferencia de las redes del lazo lento.</strong> La red de profundidad es determinista salvo diferencias numéricas mínimas de la GPU, pero recibe fotogramas distintos (fuente 2) en instantes distintos (fuente 1). El VLM no interviene en vuelo; en los escenarios con obstrucción planifica la ruta una vez por escenario, con temperatura 0 y caché por contenido, de modo que todas las semillas y celdas de un lote vuelan el mismo plan (cap. 4, §4.3.1). Si se usara el VLM en vuelo (<code>STRATEGIC_SOURCE = vlm</code>), su muestreo (<code>temperature = 0.2</code>, sin semilla fijada en el servidor) sería una fuente adicional exclusiva del brazo <code>slm</code>; la determinación de la inferencia en servidores de LLM no está garantizada aun con temperatura cero, porque los kernels no son invariantes al tamaño de lote y este varía con la carga del servidor (<a href="#13-referencias-ref-he-2025">He, 2025</a>).</li>
 <li><strong>Deriva temporal de las respuestas asíncronas.</strong> Que una respuesta estratégica llegue antes o después de su edad máxima (10 s), o de que el dron supere la sub-meta que produciría, y que un barrido se resuelva antes o después de su watchdog (<code>SLM_DEEP_WATCHDOG_MS</code>), depende de la latencia de la red en ese instante; el mismo fotograma puede producir un rodeo en una corrida y nada en otra. Cambia cualitativamente qué decide el ciclo.</li>
 </ol>
 <p>Estas cinco fuentes se acumulan multiplicativamente sobre una misión de miles de ciclos. La divergencia entre dos semillas de la misma celda es, por tanto, real y sustancial — pero es <strong>estocasticidad no controlada</strong>, no un factor manipulado.</p>
@@ -3534,7 +3536,7 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <p>Cada lote se ejecuta según la siguiente secuencia, en este orden estricto:</p>
 <ol>
 <li><strong>Árbol confirmado.</strong> El runner no arranca con cambios sin commitear en <code>airsim-loop/</code>, <code>config/</code>, <code>airsim-plan/</code> o <code>experiments/</code> (termina con código 2), de modo que todas las corridas de un lote llevan el mismo <code>code_version</code> (§10.9.3). Tampoco arranca con otro intérprete de Python que el de <code>AIRSIM_ENV_DIR</code> en <code>config/.env</code> (Anexo 6).</li>
-<li><strong>Preparación del entorno.</strong> Abrir en Unreal el nivel del escenario y aplicar el perfil de escalabilidad documentado en el capítulo 3 (<code>Config/DefaultScalability.ini</code>, con las sombras necesarias para que la estimación de TTC disponga de los gradientes que usa el flujo). En los lotes 2 a 6, Ollama debe responder en <code>127.0.0.1:11434</code> para el plan de ruta (<code>startOllama.ps1</code>; el script del lote lo verifica): el runner calcula el plan una vez por escenario antes de la primera corrida y todas las corridas del lote vuelan ese plan. En el lote 1 (<code>--route-plan off</code>) el servidor puede quedar cerrado y su VRAM queda para Unreal (Anexo 6). La red de profundidad la carga el propio grafo al compilarse (~19 s).</li>
+<li><strong>Preparación del entorno.</strong> Abrir en Unreal el nivel del escenario y aplicar el perfil de escalabilidad documentado en el capítulo 3 (<code>Config/DefaultScalability.ini</code>, con las sombras necesarias para que la estimación de TTC disponga de los gradientes que usa el flujo). En los lotes 3, 4 y 6, Ollama debe responder en <code>127.0.0.1:11434</code> para el plan de ruta (<code>startOllama.ps1</code>; el script del lote lo verifica): el runner calcula el plan una vez por escenario antes de la primera corrida y todas las corridas del lote vuelan ese plan. En los lotes 1, 2 y 5 (<code>--route-plan off</code>) el servidor puede quedar cerrado y su VRAM queda para Unreal (Anexo 6). La red de profundidad la carga el propio grafo al compilarse (~19 s).</li>
 <li><strong>Higiene de estado.</strong> El runner ejecuta <code>client.reset()</code> y <code>client.clear_debug_markers()</code> al inicio de cada corrida. No se depende de que el operador recuerde limpiar los marcadores de <code>plot_mission_route.py</code>.</li>
 <li><strong>Piloto de validación.</strong> En los lotes con obstrucción (3, 4 y 6), una corrida <code>slm:depth</code> con la semilla 99, revisada contra el criterio de pase del escenario antes de lanzar el lote (§10.12.2). Los pilotos se guardan aparte y no entran al análisis.</li>
 <li><strong>Lote completo.</strong> Un subproceso por corrida (escenario × celda × semilla), con las celdas alternadas dentro de cada semilla (§10.4.4). Un lote cortado se reanuda con <code>-Resume</code>, que saltea las corridas válidas ya hechas.</li>
@@ -3573,7 +3575,7 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <td>ídem</td>
 <td>30</td>
 <td>31 37 41 43 47 53 59 61 67 71</td>
-<td>vlm</td>
+<td>off</td>
 <td>~3 h</td>
 </tr>
 <tr>
@@ -3603,7 +3605,7 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <td><code>slm:depth</code>, <code>fsm:depth</code>, <code>reactive</code></td>
 <td>30</td>
 <td>179 181 191 193 197 199 211 223 227 229</td>
-<td>vlm</td>
+<td>off</td>
 <td>~2 h</td>
 </tr>
 <tr>
@@ -3737,7 +3739,7 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 ├── loteN_&lt;escenario&gt;/
 │   ├── batch_&lt;ts&gt;.log                   # registro del lote
 │   └── &lt;escenario&gt;/                     # stem del manifiesto: townsim_ini, citysim_pilot, …
-│       ├── route_plan/                  # plan de ruta del escenario (TownSim y CitySim)
+│       ├── route_plan/                  # plan de ruta del escenario (lotes 3, 4 y 6)
 │       └── &lt;brazo&gt;/                     # slm | fsm | reactive
 │           └── &lt;estrategia&gt;/            # depth | blind
 │               └── seed_&lt;N&gt;_&lt;timestamp&gt;/    # una carpeta autocontenida por corrida
@@ -3935,7 +3937,7 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 </table>
 <p>Los umbrales de la capa estratégica (período de 1 s con la profundidad, edad máxima de 10 s, sub-meta a 15 m, cambio de altura de 4 m, deduplicación de 10 m) no están calibrados: son decisiones de diseño.</p>
 <h3 id="10-metodologia-experimental-10122-celdas-pilotos-comparaciones-y-descartes">10.12.2 Celdas, pilotos, comparaciones y descartes<a class="headerlink" href="#10-metodologia-experimental-10122-celdas-pilotos-comparaciones-y-descartes" title="Permanent link">&para;</a></h3>
-<p><strong>Calibración previa.</strong> La fuente del lazo lento pasa por el banco de prueba a bordo (§10.13) antes de llevarse al vuelo: una pregunta se vuela solo si la fuente la responde, contra la etiqueta de referencia, por encima del criterio de pase. Con el resultado del banco (cap. 11, §11.0), las preguntas de la capa estratégica y del barrido las responde la profundidad estimada, y el VLM solo planifica la ruta antes del vuelo (<code>--route-plan vlm</code> en TownSim y CitySim).</p>
+<p><strong>Calibración previa.</strong> La fuente del lazo lento pasa por el banco de prueba a bordo (§10.13) antes de llevarse al vuelo: una pregunta se vuela solo si la fuente la responde, contra la etiqueta de referencia, por encima del criterio de pase. Con el resultado del banco (cap. 11, §11.0), las preguntas de la capa estratégica y del barrido las responde la profundidad estimada, y el VLM solo planifica la ruta antes del vuelo (<code>--route-plan vlm</code> en los escenarios con obstrucción, §10.3.0, punto 5).</p>
 <p><strong>Celdas.</strong> Los tres lotes con obstrucción —3 (<code>townsim_ini</code>), 4 (<code>townsim_calib_cruce_frontal</code>) y 6 (<code>citysim_pilot</code>), también llamados D, E y F— agregan a las tres celdas comunes (§10.2.3) la celda <code>fsm:blind</code>: la FSM sin barrido, con su escape determinista. Solo se corre donde hay atascos que resolver; en los controles sería idéntica a <code>fsm:depth</code>.</p>
 <p><strong>Pilotos y criterios de pase.</strong> Cada lote va precedido por un piloto de validación (<code>slm:depth</code>, semilla 99, guardado en <code>airsim-runs/produccion/v4/pilotos/</code>). Criterios: en el lote 3, el dron cruza el corredor arbolado; en el 4, rodea el edificio o al menos lo bordea; en el 6, alcanza WP_0_SUR y WP_1 sin quedar trabado sobre la autopista. Un piloto que no cumple su criterio indica una regresión que se diagnostica antes de lanzar el lote.</p>
 <p><strong>Comparaciones planificadas por lote</strong> (métrica primaria: SPL, §10.7.1). (i) <code>slm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) <code>fsm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el barrido con profundidad en la resolución de atascos, con la misma política de lazo rápido? (iii) <code>slm:depth</code> vs. <code>fsm:depth</code>: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo <code>slm</code>? La pregunta «¿aporta el VLM en vuelo?» no es una comparación de estos lotes: la responde el banco (§10.13).</p>
@@ -4129,24 +4131,15 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <p>La tabla muestra el uso previsto del instrumento: cada pregunta que no pasa se descarta en lugar de compensarse con reglas, y cada fuente que pasa se lleva al vuelo y se juzga con los lotes. Las cifras completas están en el capítulo 11 (§11.0), y la descripción de la red de profundidad, en el capítulo 6 (§6.14).</p>
 <h3 id="10-metodologia-experimental-10135-alcance-y-limites">10.13.5 Alcance y límites<a class="headerlink" href="#10-metodologia-experimental-10135-alcance-y-limites" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Un solo entorno medido.</strong> Las 6926 poses del banco provienen de corridas de <code>citysim_pilot</code>; TownSim no tiene banco. El criterio exige pasar en todos los entornos medidos. Para el VLM la conclusión no cambia, porque no pasa ni siquiera en CitySim. Para la profundidad y para el plan de ruta por parches, en TownSim solo los evalúan los lotes de vuelo (lotes 2 a 4). Un banco en TownSim es la extensión pendiente más directa (§10.10.2).</li>
+<li><strong>Un solo entorno medido.</strong> Las 6926 poses del banco provienen de corridas de <code>citysim_pilot</code>; TownSim no tiene banco. El criterio exige pasar en todos los entornos medidos. Para el VLM la conclusión no cambia, porque no pasa ni siquiera en CitySim. Para la profundidad y para el plan de ruta por parches, en TownSim solo los evalúan los lotes de vuelo (lotes 2 a 4; el plan de ruta, solo los lotes 3 y 4). Un banco en TownSim es la extensión pendiente más directa (§10.10.2).</li>
 <li><strong>Muestras sesgadas hacia los lugares difíciles.</strong> Las muestras estratégicas y de barrido se toman donde el sistema consultó, que suelen ser los tramos con obstáculos; la evaluación equilibra las clases verdaderas para que la exactitud balanceada no dependa de esa proporción.</li>
 <li><strong>Render sintético.</strong> La etiqueta sale del mismo render que ve la fuente. Una red entrenada en parte con imágenes sintéticas, como la de profundidad, puede rendir menos con una cámara real.</li>
 <li><strong>Pocos barridos.</strong> 14 y 22 barridos alcanzan para ver que el VLM responde siempre lo mismo, pero no para interpretar su AUC.</li>
 </ul></section><section class="print-page" id="11-resultados" heading-number="12"><h1 id="11-resultados-11-resultados-comparativos-slm-vs-fsm">11. Resultados comparativos SLM vs. FSM<a class="headerlink" href="#11-resultados-11-resultados-comparativos-slm-vs-fsm" title="Permanent link">&para;</a></h1>
-<!-- PENDIENTE v4 -->
-<blockquote>
-<p><strong>Alcance de este capítulo.</strong> Salvo el banco de prueba del VLM (§11.0) y los lotes de la capa estratégica (§11.6), que usan la configuración vigente, los resultados corresponden al <strong>lote base</strong> (75 corridas ejecutadas el 8 y 9 de septiembre). El lote base se ejecutó con una configuración del brazo <code>slm</code> distinta de la descrita en los capítulos 5–8: el VLM elegía macro-acciones tácticas y el barrido de resolución de atascos le pedía una acción, en lugar de proponer sub-metas ancladas a la pose del fotograma. Tres advertencias para leerlo:</p>
-<ol>
-<li><strong>Escenarios de control</strong> (§11.1, §11.4.1, §11.4.2, §11.4.3): no ejercen la capa táctica de atasco y son válidos como medida del costo del brazo <code>slm</code> (H2).</li>
-<li><strong>Escenarios con obstrucción</strong> (<code>townsim_ini</code>, <code>townsim_calib_cruce_frontal</code>, <code>citymap_pilot</code>; §11.4.2b, §11.4.2c, §11.4.3b y §11.5.2–§11.5.4): se ejecutaron sin los waypoints WP_0b y WP_1b de <code>townsim_ini</code> ni <code>WP_0_SUR</code> de <code>citymap_pilot</code> (cap. 10 §10.3.3), con más de un <code>code_version</code> por escenario y con el umbral de ocupación en 0.35 (canal efectivamente inactivo, cap. 7 §7.5). <strong>No describen el desempeño del sistema de los capítulos 5–8</strong>, que se evaluará con los lotes D, E y F (§10.12).</li>
-<li><strong>El VLM intervino en los brazos <code>slm</code> y <code>fsm</code>.</strong> Ambos resolvieron sus deadlocks con <code>deep_vlm</code> (barrido + consulta al VLM) y el lote no tiene una celda sin VLM en la resolución de atascos, por lo que <strong>ninguna diferencia entre los brazos deliberativos y el <code>reactive</code> puede atribuirse al contenido de las respuestas del modelo</strong> (cap. 10 §10.2.2). La auditoría de corridas de diagnóstico (cap. 9 §9.8) encontró además respuestas del barrido casi constantes, lo que refuerza esta cautela.</li>
-</ol>
-<p>La distancia mínima al obstáculo (<code>DistMin</code>) se midió en este lote con el canal de profundidad del simulador, como auditoría externa al lazo de control; el sistema de los capítulos 5–8 no usa ese canal (cap. 10 §10.3.0).</p>
-</blockquote>
+<p>Este capítulo reporta dos instrumentos. El banco de prueba a bordo (§11.0) mide, fuera de vuelo, qué preguntas sabe responder cada fuente del lazo lento, y es el que fija la configuración que vuela. La corrida productiva v4 (§11.1–§11.7) evalúa esa configuración en vuelo: seis lotes, uno por escenario, con 10 semillas por celda y 210 corridas en total, analizadas con el protocolo del capítulo 10 (§10.7).</p>
 <h2 id="11-resultados-110-banco-de-prueba-del-vlm-linea-base-a-bordo">11.0 Banco de prueba del VLM: línea base a bordo<a class="headerlink" href="#11-resultados-110-banco-de-prueba-del-vlm-linea-base-a-bordo" title="Permanent link">&para;</a></h2>
-<p>El banco (<code>airsim-loop/experiments/vlm_bench/</code>; qué es, cómo se construyó y cómo se usó para decidir, en cap. 10 §10.13) mide, fuera de vuelo, qué preguntas sabe responder el modelo, contra una etiqueta de referencia tomada de la profundidad del simulador en la misma pose. La <strong>línea base</strong> de todas las comparaciones es la corrida del 7–8 de octubre de 2026 (<code>airsim-runs/vlm_bench/v2/</code>) con la configuración de vuelo vigente: LFM2.5-VL-1.6B Q4_K_M en Ollama, contexto de 8192 tokens, <strong>en la misma GPU que Unreal Engine y el grafo de control</strong> (cap. 8 §8.1.2). Se toma esa condición, y no la del servidor dedicado anterior, porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo.</p>
-<p><strong>Datos.</strong> Muestras de las 21 corridas que tienen telemetría y los dos videos (frontal y FollowCam): pilotos <code>citysim_pilot</code> v2 y v3 y los tres pilotos con el modelo local. De 6926 poses se reprodujeron en AirSim 1908 (todas las consultas estratégicas, 429, y los barridos, 579, más 900 de trayectoria al azar). Válidas para evaluar: 915; se excluyen 190 con la cámara dentro de la geometría, 384 con captura inestable y 589 con la pose mal reproducida (correlación con lo registrado en vuelo &lt; 0.5). El centro está libre en el 51 % de las válidas. Cada pregunta se hace con decodificación restringida y temperatura 0, a 384 px (los barridos a 256 px, como en vuelo), sobre hasta 60 muestras por clase.</p>
+<p>El banco (<code>airsim-loop/experiments/vlm_bench/</code>; qué es, cómo se construyó y cómo se usó para decidir, en cap. 10 §10.13) mide, fuera de vuelo, qué preguntas sabe responder el modelo, contra una etiqueta de referencia tomada de la profundidad del simulador en la misma pose. La <strong>línea base</strong> de todas las comparaciones es la corrida <code>airsim-runs/vlm_bench/v2/</code> con la configuración de vuelo vigente: LFM2.5-VL-1.6B Q4_K_M en Ollama, contexto de 8192 tokens, <strong>en la misma GPU que Unreal Engine y el grafo de control</strong> (cap. 8 §8.1.2). Se toma esa condición porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo.</p>
+<p><strong>Datos.</strong> Muestras de las 21 corridas de <code>citysim_pilot</code> que tienen telemetría y los dos videos (frontal y FollowCam). De 6926 poses se reprodujeron en AirSim 1908 (todas las consultas estratégicas, 429, y los barridos, 579, más 900 de trayectoria al azar). Válidas para evaluar: 915; se excluyen 190 con la cámara dentro de la geometría, 384 con captura inestable y 589 con la pose mal reproducida (correlación con lo registrado en vuelo &lt; 0.5). El centro está libre en el 51 % de las válidas. Cada pregunta se hace con decodificación restringida y temperatura 0, a 384 px (los barridos a 256 px, como en vuelo), sobre hasta 60 muestras por clase.</p>
 <p><strong>Criterio de pase:</strong> exactitud balanceada de la respuesta tal como sale ≥ 0.65 y límite inferior del IC 95 % (<em>bootstrap</em> por corrida) por encima del azar. El AUC, calculado con la probabilidad de la opción leída de los <em>logprobs</em>, es diagnóstico: indica si hay señal que el modelo no expresa en la respuesta, no configura el vuelo.</p>
 <table>
 <thead>
@@ -4246,1321 +4239,641 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 </table>
 <p>* Con 14 y 22 barridos el AUC se calcula sobre muy pocos pares y cambia de extremo a extremo con el orden de las imágenes: no es interpretable.</p>
 <p><strong>Ninguna pregunta pasa.</strong> Tres son constantes y el resto queda a pocos puntos del azar. En la pregunta de vuelo, las filas 1 y 3 de la grilla salen «libre» en el 100 % de las muestras (realmente libres: 72–78 % arriba, 38–47 % abajo), y en la fila del medio la respuesta depende de la posición del sector más que de la escena (A2 libre 14 %, B2 70 %, C2 52 %, con ~50–57 % reales). Con las etiquetas permutadas la respuesta coincide con la del orden normal en el 75 % de los sectores: el modelo responde sobre todo a la posición en la imagen. Los <em>logprobs</em> no rescatan la grilla (AUC 0.53); la única señal latente apreciable está en <code>borde_superior</code> (AUC 0.69, frente a una respuesta casi constante).</p>
-<!-- PENDIENTE v4 -->
-<p>Dos consecuencias para el vuelo. La sub-meta de la capa estratégica sale de la posición de las celdas, no de la escena: en el piloto <code>seed_99_20261007T214055Z</code>, 12 de 31 sub-metas eligieron la fila de abajo —siempre «libre»— y el dron descendió hasta apoyarse en el tablero de una autopista elevada a ~7 m, del que no pudo girar para el barrido. El desempate por fila con margen (<code>VLM_SUBGOAL_TIE_DEG</code>, cap. 5 §5.10.3) evita ese descenso, pero no aporta información de la escena. Y el barrido declara transitables todos los rumbos, de modo que la salida del atasco la decide la exclusión de rumbos ya probados (cap. 5 §5.12), no el modelo.</p>
+<p><strong>Consecuencia para el vuelo.</strong> Con el VLM como fuente de la capa estratégica, la sub-meta saldría de la posición de las celdas y no de la escena: la fila de abajo, siempre «libre», haría descender al dron hacia las estructuras horizontales. Y el barrido declararía transitables todos los rumbos, de modo que la salida del atasco la decidiría la exclusión de rumbos ya probados (cap. 5 §5.12), no el modelo. Por eso el VLM no vuela.</p>
 <p><strong>Plan de ruta sobre el mapa</strong> (juicio por parches, cap. 4 §4.3.1; 59 candidatas en 11 tramos de <code>citysim_pilot</code> y <code>citysim_clear</code>, 28 realmente libres). La probabilidad media de «calle» separa las rutas libres de las bloqueadas con AUC 0.81. La ruta elegida es libre en 10 de 11 tramos, igual que la recta: en el único tramo con la recta bloqueada (<code>citysim_pilot</code> WP_2 → WP_3, la recta cruza un edificio) el plan elige un desvío libre, y en un tramo de <code>citysim_clear</code> elige un desvío bloqueado con la recta libre. En la prueba de parches del mapa (60 parches etiquetados, cinco clases) el modelo local obtiene exactitud balanceada 0.65 y AUC 0.79; el planificador usa la probabilidad, no la respuesta.</p>
 <p><strong>La misma pregunta con profundidad estimada</strong> (<code>experiments/vlm_bench/seg_depth_probe.py</code>; detalle en cap. 6 §6.14.1). Con el mismo fotograma, la misma geometría y la misma etiqueta, el p5 de la profundidad estimada por Depth Anything V2 Metric Outdoor Small separa sectores libres de bloqueados con exactitud balanceada del 75 % [72–77 %] y AUC 0.83 (625 muestras × 9 sectores; 76 % y 0.84 en las 120 muestras de las preguntas del VLM), en 82 ms. Es la única señal que pasa el criterio. En los barridos (290 imágenes, sector central) logra 75 % [68–82 %] y AUC 0.87. Una red de segmentación semántica chica (<code>yolo26n-sem</code>) queda en el azar (AUC 0.50): la clase de un píxel no dice a qué distancia está.</p>
-<!-- PENDIENTE v4 -->
-<p><strong>Latencia en vuelo con el modelo a bordo</strong> (piloto <code>seed_99_20261007T214055Z</code>, 65 consultas estratégicas): mediana 0.77 s, p90 0.80 s, máximo 2.8 s, sin <em>timeouts</em>. La captura (<code>simGetImages</code>, mediana 103 ms) y el período del lazo (mediana 237 ms) quedan en el rango de los pilotos con el servidor dedicado (91–94 ms y 216–228 ms).</p>
-<h2 id="11-resultados-111-resultados-del-lote-base-5-semillas">11.1 Resultados del lote base (5 semillas)<a class="headerlink" href="#11-resultados-111-resultados-del-lote-base-5-semillas" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-
-<p>Estrategia de desbloqueo: <code>deep_vlm</code> en todos los casos. Las celdas muestran media ± desviación
-estándar sobre las 5 semillas independientes. Tasa de éxito: 5/5 y 0 colisiones en los 45 runs.</p>
-<h3 id="11-resultados-tier-0-minisim_clear-minisim-craterpng">Tier 0 — <code>minisim_clear</code> · MiniSim (crater.png)<a class="headerlink" href="#11-resultados-tier-0-minisim_clear-minisim-craterpng" title="Permanent link">&para;</a></h3>
-<p>Escenario: 3 waypoints en L (~180 m), altitud −10 m, ambiente despejado.</p>
+<h2 id="11-resultados-111-corrida-productiva-v4-datos-y-validez">11.1 Corrida productiva v4: datos y validez<a class="headerlink" href="#11-resultados-111-corrida-productiva-v4-datos-y-validez" title="Permanent link">&para;</a></h2>
+<p><strong>Configuración.</strong> La del capítulo 10: capa estratégica y barrido con profundidad estimada (<code>STRATEGIC_SOURCE = depth</code>, <code>DEADLOCK_STRATEGY = depth</code>), el VLM fuera del lazo de vuelo, plan de ruta con el VLM solo en los lotes con obstrucción (§10.3.0, punto 5), techo de 1200 s / 6000 ciclos por corrida y spawn limpio de AirSim. Resultados en <code>airsim-runs/produccion/v4/</code> y análisis con <code>analyze_lotes.py --family 18</code>, que escribe <code>analisis_lotes.md</code> y dos CSV.</p>
+<p><strong>Integridad.</strong> Cada lote se corrió de una vez, con un solo <code>code_version</code> y sin cambios sin confirmar: lote 1 <code>b0332e1a</code>, lote 2 <code>12e90aab</code>, lotes 3 y 4 <code>835ae75f</code>, lote 5 <code>7053f405</code> y lote 6 <code>55583639</code>. El código de vuelo es idéntico en todas esas versiones: entre ellas solo cambian las líneas de avance del runner y la configuración del lanzador. El análisis toma la versión de referencia de cada lote y no descarta ninguna corrida: 210 válidas, ninguna con menos de 50 ciclos, ninguna colisión registrada. Los tres pilotos y las corridas apartadas por un error de armado del escenario (registradas en <code>DESCARTE.md</code>) no entran.</p>
+<p><strong>Distancia mínima.</strong> DistMin se calcula sin la primera muestra de la auditoría, que es un artefacto del arranque: en una corrida de <code>townsim_clear</code> marca 0.003 m y la siguiente, 18.3 m. El valor de ~0.10 m que se repite en los escenarios con obstrucción es, probablemente, el plano cercano de la cámara de auditoría dentro del follaje o contra una fachada, sin colisión física.</p>
+<p><strong>SPL.</strong> La longitud óptima es la del manifiesto (§10.6.1). En el lote 6 los cuatro brazos vuelan además los puntos de paso del plan de ruta, de modo que su SPL queda por debajo de 1 aun en la ruta perfecta; el sesgo es igual para todas las celdas y el SPL se lee solo dentro de cada lote.</p>
+<h2 id="11-resultados-112-resultados-por-celda">11.2 Resultados por celda<a class="headerlink" href="#11-resultados-112-resultados-por-celda" title="Permanent link">&para;</a></h2>
+<p>Éxito con su IC de Wilson al 95 %; SPL, tiempo de las misiones exitosas y DistMin como mediana [p25, p75]; terminación de las corridas fallidas.</p>
 <table>
 <thead>
 <tr>
-<th>Brazo</th>
-<th>Éxito</th>
-<th>Duración media (s)</th>
-<th>σ (s)</th>
-<th>Dist. media (m)</th>
-<th>σ (m)</th>
-<th>Colisiones</th>
-<th>Invoc. SLM</th>
-<th>Deliberación</th>
-<th>Fallback SLM</th>
-<th>Deadlocks</th>
-<th>Res. atasco VLM</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>slm</code></td>
-<td>5/5 ✅</td>
-<td><strong>164.2</strong></td>
-<td>9.4</td>
-<td>185.6</td>
-<td>1.6</td>
-<td>0</td>
-<td>49.6</td>
-<td>6.5%</td>
-<td>3.2%</td>
-<td>0</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>5/5 ✅</td>
-<td>174.2</td>
-<td>38.7</td>
-<td>218.9</td>
-<td>15.3</td>
-<td>0</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>1.4</td>
-<td>100%</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>5/5 ✅</td>
-<td>74.7</td>
-<td>0.4</td>
-<td>183.6</td>
-<td>0.2</td>
-<td>0</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>0</td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<p><em>Dist. mín. al obstáculo (media):</em> <code>slm</code> 6.5 m · <code>fsm</code> 8.0 m · <code>reactive</code> 7.9 m</p>
-<p><strong>Ratio <code>slm</code>/<code>reactive</code>:</strong> 2.20× · <strong>Ratio <code>fsm</code>/<code>reactive</code>:</strong> 2.33×</p>
-<p><strong>Observación:</strong> En ambiente despejado la diferencia entre brazos es de velocidad pura. <code>reactive</code>
-completa en 74.7 s (sin deliberar); <code>slm</code> tarda 2.20× más por sus 49.6 invocaciones promedio al
-VLM. La alta varianza del <code>fsm</code> (σ=38.7 s) refleja la variabilidad en el número de deadlocks por
-corrida (0–3, media 1.4), todos resueltos por <code>deep_vlm</code>. La varianza del <code>reactive</code> es
-prácticamente nula (σ=0.4 s), confirmando que sin deliberación el brazo es determinista.</p>
-<hr />
-<h3 id="11-resultados-tier-1-townsim_clear-townsim-townsim_calibpng">Tier 1 — <code>townsim_clear</code> · TownSim (townsim_calib.png)<a class="headerlink" href="#11-resultados-tier-1-townsim_clear-townsim-townsim_calibpng" title="Permanent link">&para;</a></h3>
-<p>Escenario: perímetro completo del complejo, 6 WPs, ~626 m, altitud de tránsito −30 m.</p>
-<table>
-<thead>
-<tr>
-<th>Brazo</th>
-<th>Éxito</th>
-<th>Duración media (s)</th>
-<th>σ (s)</th>
-<th>Dist. media (m)</th>
-<th>σ (m)</th>
-<th>Colisiones</th>
-<th>Invoc. SLM</th>
-<th>Deliberación</th>
-<th>Fallback SLM</th>
-<th>Deadlocks</th>
-<th>Res. atasco VLM</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>slm</code></td>
-<td>5/5 ✅</td>
-<td><strong>296.0</strong></td>
-<td>12.8</td>
-<td>624.4</td>
-<td>6.9</td>
-<td>0</td>
-<td>9.6</td>
-<td>0.8%</td>
-<td>2.2%</td>
-<td>2.6</td>
-<td>100%</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>5/5 ✅</td>
-<td>329.5</td>
-<td>46.0</td>
-<td>637.3</td>
-<td>15.8</td>
-<td>0</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>3.8</td>
-<td>100%</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>5/5 ✅</td>
-<td>259.7</td>
-<td>3.1</td>
-<td>626.2</td>
-<td>2.2</td>
-<td>0</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>0</td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<p><em>Dist. mín. al obstáculo (media):</em> <code>slm</code> 8.5 m · <code>fsm</code> 8.8 m · <code>reactive</code> 13.9 m</p>
-<p><strong>Ratio <code>slm</code>/<code>reactive</code>:</strong> 1.14× · <strong>Ratio <code>fsm</code>/<code>reactive</code>:</strong> 1.27×</p>
-<p><strong>Observación:</strong> La longitud de la ruta (~626 m vs. ~184 m en Tier 0) diluye el overhead por
-invocación: con solo 9.6 invocaciones promedio sobre ~4 500 ciclos, la tasa de deliberación cae a
-0.8%. El <code>slm</code> sigue siendo más lento que el <code>reactive</code> (1.14×), pero la diferencia se redujo a
-36 s de promedio. El <code>fsm</code> acumula más deadlocks (3.8 vs. 2.6 del <code>slm</code>) y presenta la mayor
-varianza (σ=46 s), incluyendo una corrida de 406 s por un bloqueo prolongado. El <code>reactive</code> no
-registra deadlocks y tiene σ=3.1 s, su varianza residual proviene del jitter de la física de AirSim.</p>
-<hr />
-<h3 id="11-resultados-tier-2-citysim_clear-citysim-citysim_calibpng">Tier 2 — <code>citysim_clear</code> · CitySim (citysim_calib.png)<a class="headerlink" href="#11-resultados-tier-2-citysim_clear-citysim-citysim_calibpng" title="Permanent link">&para;</a></h3>
-<p>Escenario: perímetro de una manzana del grid regular, 4 WPs, ~431 m, altitud de tránsito variable
-(rampa desde −10 m hasta −50 m y retorno a −10 m).</p>
-<table>
-<thead>
-<tr>
-<th>Brazo</th>
-<th>Éxito</th>
-<th>Duración media (s)</th>
-<th>σ (s)</th>
-<th>Dist. media (m)</th>
-<th>σ (m)</th>
-<th>Colisiones</th>
-<th>Invoc. SLM</th>
-<th>Deliberación</th>
-<th>Fallback SLM</th>
-<th>Deadlocks</th>
-<th>Res. atasco VLM</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>slm</code></td>
-<td>5/5 ✅</td>
-<td><strong>175.5</strong></td>
-<td>3.2</td>
-<td>427.4</td>
-<td>1.0</td>
-<td>0</td>
-<td>2.2</td>
-<td>0.3%</td>
-<td>0%</td>
-<td>0</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>5/5 ✅</td>
-<td>187.7</td>
-<td>20.9</td>
-<td>434.9</td>
-<td>3.8</td>
-<td>0</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>0.8</td>
-<td>100%</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>5/5 ✅</td>
-<td>165.2</td>
-<td>0.2</td>
-<td>431.0</td>
-<td>0.5</td>
-<td>0</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>0</td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<p><em>Dist. mín. al obstáculo (media):</em> <code>slm</code> 9.4 m · <code>fsm</code> 10.0 m · <code>reactive</code> 10.4 m</p>
-<p><strong>Ratio <code>slm</code>/<code>reactive</code>:</strong> 1.06× · <strong>Ratio <code>fsm</code>/<code>reactive</code>:</strong> 1.14×</p>
-<p><strong>Observación:</strong> Con solo 2.2 invocaciones promedio al VLM y tasa de deliberación de 0.3%, el
-overhead del <code>slm</code> es marginal (10.3 s sobre 165 s de base). El <code>fsm</code> presenta dos corridas con
-deadlock (seeds 4 y 5, 212 s y 208 s) que elevan la media y σ. El <code>reactive</code> es virtualmente
-determinista (σ=0.2 s). Los tres brazos completan sin colisiones, confirmando que la altitud de
-crucero está por encima de la línea de tejados en este escenario de control.</p>
-<hr />
-<h2 id="11-resultados-112-tabla-de-resultados-por-brazo-y-escenario">11.2 Tabla de resultados por brazo y escenario<a class="headerlink" href="#11-resultados-112-tabla-de-resultados-por-brazo-y-escenario" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-
-<p>Media sobre 5 semillas. Col./km = 0 en los tres tiers (0 colisiones en 45 corridas).
-DistMin = media de la distancia mínima al obstáculo por corrida.</p>
-<table>
-<thead>
-<tr>
-<th>Brazo</th>
-<th>Tier / Escenario</th>
-<th>Éxito</th>
-<th>Col./km</th>
-<th>DistMin (m)</th>
-<th>Tiempo (s)</th>
-<th>Deliberación</th>
-<th>Fallback SLM</th>
-<th>Res. Atasco VLM</th>
-<th>Ratio vs <code>reactive</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>slm</code></td>
-<td>Tier 0 (<code>minisim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>6.5</td>
-<td>164.2 ± 9.4</td>
-<td>6.5%</td>
-<td>3.2%</td>
-<td>— (0 deadlocks)</td>
-<td><strong>2.20×</strong></td>
-</tr>
-<tr>
-<td><code>slm</code></td>
-<td>Tier 1 (<code>townsim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>8.5</td>
-<td>296.0 ± 12.8</td>
-<td>0.8%</td>
-<td>2.2%</td>
-<td>100% (2.6/corrida)</td>
-<td><strong>1.14×</strong></td>
-</tr>
-<tr>
-<td><code>slm</code></td>
-<td>Tier 1 (<code>townsim_ini</code>)</td>
-<td>0/5 ⛔ timeout</td>
-<td>0</td>
-<td>0.21</td>
-<td>900 (límite)</td>
-<td>1.4%</td>
-<td>0%</td>
-<td>100% (20.2/corrida)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>slm</code></td>
-<td>Tier 1 (<code>townsim_calib_cruce_frontal</code>)</td>
-<td>1/5 ⚠️</td>
-<td>0</td>
-<td>0.10</td>
-<td>772.7 ± 285.1</td>
-<td>1.9%</td>
-<td>0%</td>
-<td>95.3% (18.4/corrida)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>slm</code></td>
-<td>Tier 2 (<code>citysim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>9.4</td>
-<td>175.5 ± 3.2</td>
-<td>0.3%</td>
-<td>0%</td>
-<td>— (0 deadlocks)</td>
-<td><strong>1.06×</strong></td>
-</tr>
-<tr>
-<td><code>slm</code></td>
-<td>Tier 2 (<code>citymap_pilot</code>)</td>
-<td>0/5 ⛔ timeout</td>
-<td>0</td>
-<td>0.22</td>
-<td>600 (límite)</td>
-<td>2.3%</td>
-<td>0%</td>
-<td>100% (20.4/corrida)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>Tier 0 (<code>minisim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>8.0</td>
-<td>174.2 ± 38.7</td>
-<td>—</td>
-<td>—</td>
-<td>100% (1.4/corrida)</td>
-<td>2.33×</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>Tier 1 (<code>townsim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>8.8</td>
-<td>329.5 ± 46.0</td>
-<td>—</td>
-<td>—</td>
-<td>100% (3.8/corrida)</td>
-<td>1.27×</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>Tier 1 (<code>townsim_ini</code>)</td>
-<td>0/5 ⛔ timeout</td>
-<td>0</td>
-<td>0.17</td>
-<td>900 (límite)</td>
-<td>—</td>
-<td>—</td>
-<td>100% (24.0/corrida)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>Tier 1 (<code>townsim_calib_cruce_frontal</code>)</td>
-<td>0/5 ⛔ timeout</td>
-<td>0</td>
-<td>0.16</td>
-<td>900 (límite)</td>
-<td>—</td>
-<td>—</td>
-<td>100% (6.2/corrida)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>Tier 2 (<code>citysim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>10.0</td>
-<td>187.7 ± 20.9</td>
-<td>—</td>
-<td>—</td>
-<td>100% (0.8/corrida)</td>
-<td>1.14×</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>Tier 2 (<code>citymap_pilot</code>)</td>
-<td>0/5 ⛔ timeout</td>
-<td>0</td>
-<td>0.10</td>
-<td>600 (límite)</td>
-<td>—</td>
-<td>—</td>
-<td>100% (21.4/corrida)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>Tier 0 (<code>minisim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>7.9</td>
-<td>74.7 ± 0.4</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>1.00×</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>Tier 1 (<code>townsim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>13.9</td>
-<td>259.7 ± 3.1</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>1.00×</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>Tier 1 (<code>townsim_ini</code>)</td>
-<td>0/5 ⛔ timeout</td>
-<td>0</td>
-<td>0.44</td>
-<td>900 (límite)</td>
-<td>—</td>
-<td>—</td>
-<td>— (0 deadlocks)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>Tier 1 (<code>townsim_calib_cruce_frontal</code>)</td>
-<td>2/5 ⚠️</td>
-<td>0</td>
-<td>0.67</td>
-<td>603.1 ± 406.8</td>
-<td>—</td>
-<td>—</td>
-<td>— (0 deadlocks)</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>Tier 2 (<code>citysim_clear</code>)</td>
-<td>5/5 ✅</td>
-<td>0</td>
-<td>10.4</td>
-<td>165.2 ± 0.2</td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
-<td>1.00×</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>Tier 2 (<code>citymap_pilot</code>)</td>
-<td>0/5 ⛔ paralizado</td>
-<td>0</td>
-<td>3.05</td>
-<td>600 (límite)</td>
-<td>—</td>
-<td>—</td>
-<td>— (0 deadlocks)</td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="11-resultados-113-analisis-estadistico-del-lote-base">11.3 Análisis estadístico del lote base<a class="headerlink" href="#11-resultados-113-analisis-estadistico-del-lote-base" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-
-<h3 id="11-resultados-1131-tabla-de-ratios-de-tiempo-de-mision-h2">11.3.1 Tabla de ratios de tiempo de misión (H2)<a class="headerlink" href="#11-resultados-1131-tabla-de-ratios-de-tiempo-de-mision-h2" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
+<th>Lote</th>
 <th>Escenario</th>
-<th>Tiempo <code>reactive</code> (s)</th>
-<th>Tiempo <code>slm</code> (s)</th>
-<th>Ratio <code>slm</code>/<code>reactive</code></th>
-<th>Tiempo <code>fsm</code> (s)</th>
-<th>Ratio <code>fsm</code>/<code>reactive</code></th>
-<th>Invoc. VLM (<code>slm</code>)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Tier 0 <code>minisim_clear</code></td>
-<td>74.7 ± 0.4</td>
-<td>164.2 ± 9.4</td>
-<td><strong>2.20×</strong></td>
-<td>174.2 ± 38.7</td>
-<td>2.33×</td>
-<td>49.6</td>
-</tr>
-<tr>
-<td>Tier 1 <code>townsim_clear</code></td>
-<td>259.7 ± 3.1</td>
-<td>296.0 ± 12.8</td>
-<td><strong>1.14×</strong></td>
-<td>329.5 ± 46.0</td>
-<td>1.27×</td>
-<td>9.6</td>
-</tr>
-<tr>
-<td>Tier 2 <code>citysim_clear</code></td>
-<td>165.2 ± 0.2</td>
-<td>175.5 ± 3.2</td>
-<td><strong>1.06×</strong></td>
-<td>187.7 ± 20.9</td>
-<td>1.14×</td>
-<td>2.2</td>
-</tr>
-</tbody>
-</table>
-<p>El ratio <code>slm</code>/<code>reactive</code> decrece monotónicamente con la longitud de la ruta (y con la distancia
-por invocación VLM): 2.20× → 1.14× → 1.06×. Esto es consistente con H2: el costo temporal del
-brazo <code>slm</code> no es lineal en la distancia sino en la frecuencia de deliberación.</p>
-<h3 id="11-resultados-1132-prueba-u-de-mann-whitney-y-cliffs-delta">11.3.2 Prueba U de Mann-Whitney y Cliff's Delta<a class="headerlink" href="#11-resultados-1132-prueba-u-de-mann-whitney-y-cliffs-delta" title="Permanent link">&para;</a></h3>
-<p>Métrica: tiempo de misión (<code>duration_s</code>) en corridas con <code>success = True</code> (todas las corridas del
-lote base). Prueba bilateral. Corrección de Bonferroni: 18 comparaciones previstas
-(3 pares × 6 escenarios, incluyendo extendidos); umbral ajustado α = 0.05/18 ≈ 0.0028.</p>
-<table>
-<thead>
-<tr>
-<th>Comparación</th>
-<th>Escenario</th>
-<th>U</th>
-<th>z</th>
-<th>p</th>
-<th>p (Bonf.)</th>
-<th>Cliff's δ</th>
-<th>Significancia</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>slm</code> vs <code>reactive</code></td>
-<td>Tier 0 <code>minisim_clear</code></td>
-<td>25</td>
-<td>2.61</td>
-<td>0.009</td>
-<td>0.162</td>
-<td><strong>+1.00</strong></td>
-<td>* (no Bonf.)</td>
-</tr>
-<tr>
-<td><code>slm</code> vs <code>reactive</code></td>
-<td>Tier 1 <code>townsim_clear</code></td>
-<td>25</td>
-<td>2.61</td>
-<td>0.009</td>
-<td>0.162</td>
-<td><strong>+1.00</strong></td>
-<td>* (no Bonf.)</td>
-</tr>
-<tr>
-<td><code>slm</code> vs <code>reactive</code></td>
-<td>Tier 2 <code>citysim_clear</code></td>
-<td>25</td>
-<td>2.61</td>
-<td>0.009</td>
-<td>0.162</td>
-<td><strong>+1.00</strong></td>
-<td>* (no Bonf.)</td>
-</tr>
-<tr>
-<td><code>fsm</code> vs <code>reactive</code></td>
-<td>Tier 0 <code>minisim_clear</code></td>
-<td>25</td>
-<td>2.61</td>
-<td>0.009</td>
-<td>0.162</td>
-<td><strong>+1.00</strong></td>
-<td>* (no Bonf.)</td>
-</tr>
-<tr>
-<td><code>fsm</code> vs <code>reactive</code></td>
-<td>Tier 1 <code>townsim_clear</code></td>
-<td>25</td>
-<td>2.61</td>
-<td>0.009</td>
-<td>0.162</td>
-<td><strong>+1.00</strong></td>
-<td>* (no Bonf.)</td>
-</tr>
-<tr>
-<td><code>fsm</code> vs <code>reactive</code></td>
-<td>Tier 2 <code>citysim_clear</code></td>
-<td>25</td>
-<td>2.61</td>
-<td>0.009</td>
-<td>0.162</td>
-<td><strong>+1.00</strong></td>
-<td>* (no Bonf.)</td>
-</tr>
-<tr>
-<td><code>slm</code> vs <code>fsm</code></td>
-<td>Tier 0 <code>minisim_clear</code></td>
-<td>13</td>
-<td>0.10</td>
-<td>0.917</td>
-<td>1.000</td>
-<td>+0.04</td>
-<td>ns</td>
-</tr>
-<tr>
-<td><code>slm</code> vs <code>fsm</code></td>
-<td>Tier 1 <code>townsim_clear</code></td>
-<td>6</td>
-<td>−1.36</td>
-<td>0.175</td>
-<td>1.000</td>
-<td>−0.52</td>
-<td>ns</td>
-</tr>
-<tr>
-<td><code>slm</code> vs <code>fsm</code></td>
-<td>Tier 2 <code>citysim_clear</code></td>
-<td>13</td>
-<td>0.10</td>
-<td>0.917</td>
-<td>1.000</td>
-<td>+0.04</td>
-<td>ns</td>
-</tr>
-</tbody>
-</table>
-<p><em>Referencia de δ: |δ| &lt; 0.147 negligible, 0.147–0.33 pequeño, 0.33–0.474 mediano, &gt; 0.474 grande
-(<a href="#13-referencias-ref-romano-2006">Romano et al., 2006</a>).</em></p>
-<p><strong>Interpretación:</strong></p>
-<ul>
-<li>
-<p><strong><code>slm</code> vs <code>reactive</code> y <code>fsm</code> vs <code>reactive</code>:</strong> δ = +1.00 en los tres tiers — separación perfecta,
-  ninguna corrida de <code>reactive</code> supera en tiempo a ninguna corrida de <code>slm</code> o <code>fsm</code>. El p-valor
-  unadjustado (0.009) indica significancia a α = 0.05, pero no supera el umbral de Bonferroni
-  (0.0028) con K = 5 semillas. El límite inferior del p alcanzable con K = 5 es 7.9 × 10⁻³ —
-  imposible superar Bonferroni con este tamaño muestral independientemente de cuán perfecta sea
-  la separación. El efecto es real (δ = 1.0) pero la potencia estadística es insuficiente para
-  la corrección multivariada. Ampliar a K = 10 (ver §5.3 del plan de pruebas) bajaría el p mínimo
-  alcanzable a 1.1 × 10⁻⁵, dentro del rango de Bonferroni.</p>
-</li>
-<li>
-<p><strong><code>slm</code> vs <code>fsm</code>:</strong> no significativo en ningún tier (p &gt; 0.17). En Tier 1, δ = −0.52 (grande)
-  favorece al <code>slm</code>, impulsado por el outlier del <code>fsm</code> (406 s, seed 2, bloqueo prolongado). Con
-  K = 5 y alta varianza del <code>fsm</code>, este resultado no es concluyente — requiere los escenarios de
-  obstrucción real para separar los brazos deliberativos.</p>
-</li>
-</ul>
-<h3 id="11-resultados-1133-perfil-de-deliberacion-por-tier">11.3.3 Perfil de deliberación por tier<a class="headerlink" href="#11-resultados-1133-perfil-de-deliberacion-por-tier" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Tier</th>
-<th>Invoc. VLM promedio</th>
-<th>Tasa deliberación</th>
-<th>Dist. / invocación</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Tier 0 <code>minisim_clear</code></td>
-<td>49.6</td>
-<td>6.5%</td>
-<td>~3.7 m/invoc.</td>
-</tr>
-<tr>
-<td>Tier 1 <code>townsim_clear</code></td>
-<td>9.6</td>
-<td>0.8%</td>
-<td>~65 m/invoc.</td>
-</tr>
-<tr>
-<td>Tier 2 <code>citysim_clear</code></td>
-<td>2.2</td>
-<td>0.3%</td>
-<td>~194 m/invoc.</td>
-</tr>
-</tbody>
-</table>
-<p>La distancia por invocación aumenta 52× entre Tier 0 y Tier 2. En Tier 0, el VLM es consultado
-cada ~3.7 m; en Tier 2, cada ~194 m. Esto confirma que el comportamiento cauteloso del <code>slm</code>
-durante la espera VLM (avance lento, sin giro) reduce la frecuencia de invocación a medida que la
-ruta tiene menos quiebres de rumbo y menos incertidumbre perceptual — incluso en ausencia de
-obstáculos reales.</p>
-<hr />
-<h2 id="11-resultados-114-analisis-por-tipo-de-escenario">11.4 Análisis por tipo de escenario<a class="headerlink" href="#11-resultados-114-analisis-por-tipo-de-escenario" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-
-<h3 id="11-resultados-1141-tier-0-control-sin-obstaculos-minisim_clear">11.4.1 Tier 0 — Control sin obstáculos (<code>minisim_clear</code>)<a class="headerlink" href="#11-resultados-1141-tier-0-control-sin-obstaculos-minisim_clear" title="Permanent link">&para;</a></h3>
-<p>El escenario más simple (3 WPs en L, ambiente despejado) establece el costo puro del brazo <code>slm</code>
-sin ningún beneficio compensatorio. El lote estadístico (5 semillas) confirma la tendencia del
-piloto con mayor precisión:</p>
-<ul>
-<li><strong><code>reactive</code>:</strong> 74.7 ± 0.4 s — prácticamente determinista. Es la cota inferior de velocidad del
-  sistema: sin deliberación, sin overhead, trayectoria directa al siguiente waypoint.</li>
-<li><strong><code>slm</code>:</strong> 164.2 ± 9.4 s — 49.6 invocaciones promedio al VLM (6.5% de los ciclos). La varianza
-  (σ = 9.4 s) proviene de la variabilidad en la latencia de inferencia del VLM por corrida.
-  Ningún deadlock: el ambiente despejado no genera atascos en el <code>slm</code>.</li>
-<li><strong><code>fsm</code>:</strong> 174.2 ± 38.7 s — tiempo medio mayor al <code>slm</code>, con alta varianza (σ = 38.7 s) por la
-  variabilidad en deadlocks (0–3 por corrida). El overhead de la FSM en este escenario es
-  comparable al del VLM, pero más errático.</li>
-</ul>
-<p>La separación <code>slm</code>/<code>reactive</code> (Cliff's δ = +1.0) es perfecta: en las 25 comparaciones posibles
-(5 × 5 semillas), cada corrida de <code>reactive</code> fue más rápida que cualquier corrida de <code>slm</code>. El
-mismo patrón se observa para <code>fsm</code> vs <code>reactive</code>. En entorno despejado, ningún brazo deliberativo
-puede competir en velocidad con el <code>reactive</code> — la ventaja del VLM no tiene dónde manifestarse.</p>
-<p><strong>Predicción verificada:</strong> la diferencia <code>reactive</code> vs. <code>slm</code>/<code>fsm</code> tiene Cliff's δ = 1.0 en los
-tres tiers, confirmando el patrón esperado. La comparación <code>slm</code> vs. <code>fsm</code> es no significativa
-(δ = 0.04), como era esperado: en ausencia de obstáculos, ambos brazos deliberativos incurren en
-un overhead similar sin diferenciarse en calidad de decisión.</p>
-<h3 id="11-resultados-1142-tier-1-perimetro-urbano-de-crucero-townsim_clear">11.4.2 Tier 1 — Perímetro urbano de crucero (<code>townsim_clear</code>)<a class="headerlink" href="#11-resultados-1142-tier-1-perimetro-urbano-de-crucero-townsim_clear" title="Permanent link">&para;</a></h3>
-<p>La longitud de la ruta (~626 m, 3.4× Tier 0) diluye el overhead del VLM: de 49.6 invocaciones
-en Tier 0 a 9.6, y la tasa de deliberación baja de 6.5% a 0.8%. El ratio <code>slm</code>/<code>reactive</code>
-cae de 2.20× a 1.14×: el <code>slm</code> tarda 36 s más que el <code>reactive</code> en promedio, sobre una base de
-260 s.</p>
-<p>El dato más relevante de Tier 1 es la asimetría de deadlocks entre brazos:
-- <code>reactive</code>: 0 deadlocks en las 5 corridas (σ ≈ 0 en tiempo).
-- <code>slm</code>: 2.6 deadlocks promedio (todos resueltos al 100% por <code>deep_vlm</code>).
-- <code>fsm</code>: 3.8 deadlocks promedio, incluyendo un bloqueo de &gt;400 s en seed 2.</p>
-<p>Este patrón es consistente con la arquitectura: el <code>reactive</code> no tiene concepto de "objetivo
-pendiente" y no genera atascos; los brazos deliberativos sí. La diferencia entre <code>slm</code> (2.6) y
-<code>fsm</code> (3.8) sugiere que la consulta al VLM ayuda a evitar algunos deadlocks incluso en escenarios
-de control — aunque con K = 5 este resultado no es estadísticamente concluyente (δ = −0.52, ns).</p>
-<p>El escenario de interés real para Tier 1 es <code>townsim_ini</code> (corredores vegetados) y
-<code>townsim_calib_cruce_frontal</code> (bloqueo frontal masivo), donde el VLM tiene un caso de uso genuino
-y la diferencia <code>slm</code> vs <code>fsm</code> debería hacerse significativa. Los datos de <code>townsim_clear</code> solo
-establecen la cota de partida del lote base.</p>
-<h3 id="11-resultados-1142b-tier-1-corredor-arbolado-townsim_ini">11.4.2b Tier 1 — Corredor arbolado (<code>townsim_ini</code>)<a class="headerlink" href="#11-resultados-1142b-tier-1-corredor-arbolado-townsim_ini" title="Permanent link">&para;</a></h3>
-<p><code>townsim_ini</code> es el primer escenario de obstrucción real del lote: el corredor peatonal central
-de TownSim, volado a z=−10 m (bajo la copa de los árboles), de norte a sur entre los edificios.
-Los tres brazos fallan en las 15 corridas por timeout (900 s), sin una sola colisión registrada.</p>
-<table>
-<thead>
-<tr>
-<th>Brazo</th>
-<th>Éxito</th>
-<th>Dist. media recorrida</th>
-<th>Deadlocks (media)</th>
-<th>Res. VLM</th>
+<th>Celda</th>
+<th>Éxito [IC 95 %]</th>
+<th>SPL</th>
+<th>Tiempo de éxito (s)</th>
 <th>DistMin (m)</th>
+<th>Fallas</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>slm</code></td>
-<td>0/5 ⛔</td>
-<td>134.7 ± 50.4 m</td>
-<td>20.2</td>
-<td>100%</td>
-<td>0.21</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>0/5 ⛔</td>
-<td>176.2 ± 84.2 m</td>
-<td>24.0</td>
-<td>100%</td>
-<td>0.17</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>0/5 ⛔</td>
-<td>158.5 ± 10.9 m</td>
-<td>0</td>
-<td>—</td>
-<td>0.44</td>
-</tr>
-</tbody>
-</table>
-<p>Ningún brazo superó el 60% de la ruta (~310 m total). El <code>reactive</code> es el más consistente en
-distancia recorrida (σ=10.9 m vs. 50–84 m del los brazos deliberativos), pero tampoco progresa:
-sin deadlock detection, oscila ante los obstáculos sin activar el mecanismo de escape, lo que
-resulta en movimiento local sin avance neto hacia el siguiente waypoint.</p>
-<p>Los brazos deliberativos acumulan entre 10 y 44 deadlocks por corrida (media: <code>slm</code> 20.2,
-<code>fsm</code> 24.0). El <code>deep_vlm</code> resuelve el 100% de ellos, pero cada resolución consume ciclos
-adicionales (escaneo + reposicionamiento), y la tasa de aparición de nuevos deadlocks supera
-la capacidad de avance efectivo: el sistema entra en un estado de "deadlock crónico" donde
-el <code>deep_vlm</code> nunca puede entregar progreso sostenido.</p>
-<p><strong>Interpretación para H1:</strong> el escenario <code>townsim_ini</code> coloca a los tres brazos más allá del
-umbral de capacidad de la arquitectura actual — el corredor a z=−10 m resulta demasiado
-obstruido para completarse en el presupuesto temporal. Esto no invalida H1, pero desplaza la
-comparación: con 0/5 éxitos en todos los brazos, la métrica discriminante no es la tasa de
-éxito sino la <strong>distancia recorrida antes del timeout</strong>. En esa métrica, el <code>fsm</code> aventaja
-ligeramente al <code>reactive</code> y al <code>slm</code> (176 m vs. 158 m vs. 135 m), contrariamente a la hipótesis
-de que el VLM debería guiar mejor en corredores obstruidos. La alta varianza del <code>slm</code> (σ=50 m)
-y del <code>fsm</code> (σ=84 m) impide conclusiones estadísticas con K=5.</p>
-<p><strong>Por qué falla específicamente el sensor monocular en este escenario.</strong> El fracaso uniforme de
-los tres brazos en <code>townsim_ini</code> no es un artefacto de ajuste de parámetros ni una falla aislada
-de la política de decisión: <code>townsim_ini</code> fue diseñado deliberadamente como caso adversarial para
-la percepción monocular, y el resultado expone justamente el límite físico que ese diseño buscaba
-provocar. Vale la pena explicitar el mecanismo, desarrollado formalmente en el
-<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>:</p>
-<ol>
-<li><strong>Flujo traslacional nulo cerca del Foco de Expansión (FOE).</strong> Por la relación deducida en el
-   Anexo 5 (§A5.4.1), <span class="arithmatex">\(\|v_{\text{trans}}\| \propto \|p - \text{FOE}\|\)</span>: el flujo óptico de un
-   punto se anula a medida que su proyección se acerca al FOE, es decir, al centro geométrico de
-   la trayectoria de avance. En un corredor recto cubierto de follaje volado a z=−10 m (bajo la
-   copa de los árboles), las ramas que están <em>exactamente en la línea de vuelo</em> — las de mayor
-   riesgo de colisión — son las que producen la señal de flujo más débil, mientras que el follaje
-   periférico (que no bloquea el paso) genera el flujo más intenso. El <code>ObstacleField</code> tiende
-   entonces a reportar menor confianza justo donde la decisión es más urgente.</li>
-<li><strong>Textura repetitiva y auto-similar.</strong> Ramas y hojas violan el supuesto de correspondencia
-   unívoca del que depende cualquier estimador de flujo: un parche de follaje es visualmente
-   indistinguible de sus vecinos, por lo que el problema de apertura (<em>aperture problem</em>) se
-   agrava y el vector estimado resulta frecuentemente espurio, incluso lejos del FOE.</li>
-<li><strong>Retroalimentación negativa entre cautela y evidencia.</strong> Ante la ambigüedad de señal, los tres
-   brazos recurren a maniobras de bajo desplazamiento neto, lo que reduce aún más la línea de base
-   de paralaje disponible entre frames consecutivos — un ciclo de "menor confianza → mayor cautela
-   → menor movimiento → menor evidencia" que no se rompe por sí solo.</li>
-</ol>
-<p>Estos tres efectos son manifestaciones de la <strong>maldición monocular</strong> (ambigüedad de escala más
-dependencia estructural del movimiento; Anexo 7, §A7.1): no son errores de implementación del
-pipeline de <code>flow_ttc.py</code>, sino un límite físico del sensor elegido por diseño (§1.2). El deadlock
-crónico observado en <code>slm</code> (20.2/corrida) y <code>fsm</code> (24.0/corrida) es, en este sentido, la
-manifestación en la capa de control de una falla que se origina en la capa de percepción: el VLM y
-la FSM reciben evidencia degradada o nula del mismo pasaje que deben atravesar, y ningún
-razonamiento táctico adicional puede compensar la ausencia de señal geométrica confiable en la
-dirección de interés. Esto también explica por qué el <code>reactive</code> — que no delibera y por tanto no
-puede "esperar más evidencia" — tampoco progresa: sin flujo utilizable cerca del eje de avance, el
-campo de obstáculos frontal no genera un gradiente de evasión claro en ninguna capa de decisión.</p>
-<p><strong>Opciones para el análisis final:</strong> (a) aumentar <code>--max-seconds</code> a 1800 s y re-correr para dar
-tiempo a que algún brazo complete; (b) elevar la altitud del corredor a z=−20 m para reducir la
-densidad de obstrucción; (c) aceptar el resultado como hallazgo de límite operativo y reportar
-distancia recorrida en lugar de tasa de éxito; (d) como línea de trabajo futuro, evaluar una
-mitigación estructural del problema de percepción — no solo del ajuste de escenario — mediante un
-segundo canal de profundidad instantánea (visión estereoscópica) que no dependa del FOE ni del
-movimiento entre frames (Anexo 7, §A7.4–§A7.6). La opción (c) es la más honesta científicamente
-dado que los datos ya están colectados; la opción (d) es la que efectivamente atacaría la causa
-raíz identificada arriba, a diferencia de (a) y (b), que solo relajan el caso de prueba.</p>
-<h3 id="11-resultados-1142c-tier-1-bloqueo-frontal-masivo-townsim_calib_cruce_frontal">11.4.2c Tier 1 — Bloqueo frontal masivo (<code>townsim_calib_cruce_frontal</code>)<a class="headerlink" href="#11-resultados-1142c-tier-1-bloqueo-frontal-masivo-townsim_calib_cruce_frontal" title="Permanent link">&para;</a></h3>
-<p>El escenario cruza la fila de edificios oeste a nivel de calle (z=−10 m), regresando al spawn. Es
-el primer escenario con obstrucción frontal garantizada: el waypoint WP_3 está al otro lado de una
-fila de edificios y no hay ruta directa a nivel de calle.</p>
-<table>
-<thead>
-<tr>
-<th>Brazo</th>
-<th>Éxito</th>
-<th>Dist. media (m)</th>
-<th>Deadlocks (media)</th>
-<th>Res. VLM</th>
-<th>Tiempo exitoso (s)</th>
-<th>DistMin (m)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>slm</code></td>
-<td>1/5 ⚠️</td>
-<td>253.8 ± 51.4</td>
-<td>18.4</td>
-<td>95.3%</td>
-<td>262.7 (seed 4)</td>
-<td>0.10</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>0/5 ⛔</td>
-<td>274.1 ± 41.4</td>
-<td>6.2</td>
-<td>100%</td>
-<td>—</td>
-<td>0.16</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>2/5 ⚠️</td>
-<td>286.6 ± 53.1</td>
-<td>0</td>
-<td>—</td>
-<td>157.5 (seeds 3–4)</td>
-<td>0.67</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Hallazgo principal:</strong> el <code>reactive</code> supera a los brazos deliberativos en tasa de éxito (2/5 vs.
-1/5 vs. 0/5) y en velocidad cuando logra completar (~157 s vs. ~263 s del <code>slm</code>). El patrón de
-éxito del <code>reactive</code> es bimodal: en seeds 3 y 4 navega el bloqueo por evasión de flujo óptico puro
-en ~157 s; en seeds 1, 2 y 5 oscila ante los edificios y agota el presupuesto. El éxito depende
-del ángulo de aproximación inicial, no de deliberación.</p>
-<p>El <code>slm</code> logra 1 éxito (seed 4, 5 deadlocks, 262 s) con la tasa de resolución más baja observada
-(95.3% — 4.7% de deadlocks no resueltos por <code>deep_vlm</code>), lo que indica que la geometría del cruce
-genera situaciones que el escaneo profundo no puede resolver completamente. El <code>fsm</code> falla todas
-con solo 6.2 deadlocks promedio: no es que acumule más atascos que en <code>townsim_clear</code>, sino que
-los atascos en la zona de bloqueo frontal son cualitativamente diferentes — la FSM sin VLM no puede
-distinguir "avanzar por arriba" de "avanzar lateralmente" ante una fachada continua.</p>
-<p><strong>Interpretación para H1:</strong> el VLM no aporta ventaja estadísticamente demostrable en este escenario
-con K=5 (1/5 slm vs. 2/5 reactive vs. 0/5 fsm). El resultado es contraintuitivo respecto a H1:
-el brazo sin deliberación (<code>reactive</code>) es el más exitoso. Una posible explicación es que el
-flujo óptico sí detecta el obstáculo frontal y lo evade por la ruta de menor resistencia (vertical
-o lateral), mientras que los brazos deliberativos generan deadlocks que paralizan la evasión. Con
-K=10 y análisis de SPL por waypoint, sería posible determinar si el VLM contribuye en el segmento
-específico de cruce o no.</p>
-<h3 id="11-resultados-1143b-tier-2-corredores-urbanos-angostos-citymap_pilot">11.4.3b Tier 2 — Corredores urbanos angostos (<code>citymap_pilot</code>)<a class="headerlink" href="#11-resultados-1143b-tier-2-corredores-urbanos-angostos-citymap_pilot" title="Permanent link">&para;</a></h3>
-<p><code>citymap_pilot</code> es el escenario terminal: 7 WPs en grilla urbana a z=−10 m entre edificios de
-50–100 m. La ruta total es ~310 m; ningún brazo supera el 58% de la ruta dentro del presupuesto
-de 600 s.</p>
-<table>
-<thead>
-<tr>
-<th>Brazo</th>
-<th>Éxito</th>
-<th>Dist. media recorrida</th>
-<th>σ (m)</th>
-<th>Deadlocks (media)</th>
-<th>Res. VLM</th>
-<th>DistMin (m)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>slm</code></td>
-<td>0/5 ⛔</td>
-<td>168.5 m</td>
-<td>83.9</td>
-<td>20.4</td>
-<td>100%</td>
-<td>0.22</td>
-</tr>
-<tr>
-<td><code>fsm</code></td>
-<td>0/5 ⛔</td>
-<td>178.0 m</td>
-<td>90.8</td>
-<td>21.4</td>
-<td>100%</td>
-<td>0.10</td>
-</tr>
-<tr>
-<td><code>reactive</code></td>
-<td>0/5 ⛔</td>
-<td><strong>26.7 m</strong></td>
-<td>0.4</td>
-<td>0</td>
-<td>—</td>
-<td>3.05</td>
-</tr>
-</tbody>
-</table>
-<p>El hallazgo más significativo es la conducta del <code>reactive</code>: recorre exactamente ~27 m en las
-5 semillas (σ=0.4 m — comportamiento cuasi-determinista) y se detiene. La causa identificada
-es geométrica: la ruta pasa por debajo de una autopista elevada y el dron queda atrapado bajo
-su estructura. El flujo óptico detecta superficies en todas las direcciones y el controlador
-oscila sin poder escapar — sin un mecanismo de escape global, el <code>reactive</code> permanece bajo la
-autopista hasta agotar el presupuesto. La distancia mínima al obstáculo (media 3.05 m) refleja
-el espacio bajo la estructura, no proximidad a los edificios de los corredores.</p>
-<p>Los brazos deliberativos recorren ~170 m usando <code>deep_vlm</code> para resolver deadlocks (20–21 por
-corrida, todos resueltos al 100%). La alta varianza (σ≈87 m) indica que el progreso depende
-fuertemente de la semilla: en seed 3 (<code>slm</code>, 18.7 m) y seed 5 (<code>fsm</code>, 16.6 m) el dron queda
-paralizado desde el primer waypoint — comportamiento análogo al <code>reactive</code> pero detonado por un
-deadlock inicial irresuelto que consume el presupuesto.</p>
-<p><strong>Inversión del resultado respecto a <code>townsim_calib_cruce_frontal</code>:</strong> en ese escenario el
-<code>reactive</code> superaba a los brazos deliberativos (2/5 vs. 1/5 vs. 0/5); en <code>citymap_pilot</code> los
-brazos deliberativos superan al <code>reactive</code> en distancia recorrida (170 m vs. 27 m). La diferencia
-es la geometría: en <code>townsim_calib_cruce_frontal</code> existe una "ruta de escape" lateral que el flujo
-óptico puede encontrar sin necesidad de razonamiento global; en <code>citymap_pilot</code> la grilla de
-corredores angostos bloquea todas las salidas locales y el <code>reactive</code> no tiene manera de determinar
-qué corredor elegir. El <code>deep_vlm</code>, aunque no completa la misión, al menos permite que el dron
-explore sucesivamente los deadlocks y avance en la dirección correcta entre resoluciones.</p>
-<p><strong>Interpretación para H1:</strong> <code>citymap_pilot</code> proporciona la diferencia más grande del lote entre
-los brazos deliberativos y el <code>reactive</code> — 6.3× más distancia — en un entorno donde el flujo
-óptico solo no es suficiente para elegir entre corredores.</p>
-<p><strong>Atribución.</strong> Esa diferencia no demuestra que el VLM haya elegido el corredor
-correcto. Primero, la comparten <code>slm</code> (168.5 m) y <code>fsm</code> (178.0 m), y ambos usaban el mismo
-barrido con VLM en sus deadlocks; el <code>fsm</code>, sin consulta táctica al modelo, recorrió incluso algo
-más. Segundo, el lote no tiene una celda con resolución de atascos sin VLM (<code>blind</code>), de modo
-que la ventaja sobre el <code>reactive</code> puede deberse a que <strong>cualquier</strong> mecanismo de resolución de
-deadlocks mueve al dron —barridos, escapes verticales, esquinas—, con independencia de lo que
-responda el modelo. Tercero, la auditoría de corridas de diagnóstico en este mismo escenario (cap. 9 §9.8)
-encontró respuestas del barrido casi constantes y errores de integración que invertían su
-sentido. El <code>reactive</code>, por su parte, quedó atrapado a ~27 m bajo la autopista elevada, la estructura
-que el waypoint <code>WP_0_SUR</code> de <code>citysim_pilot.json</code> evita (cap. 10 §10.3.3). El contraste
-que permite atribuir el efecto al VLM es <code>fsm × blind</code>, previsto en los lotes con obstrucción.
-Sin embargo, con 0/5 éxitos en todos los brazos y K=5, no es posible establecer significancia
-estadística. El escenario confirma el escenario de uso previsto del VLM (ambigüedad semántica
-entre corredores de textura uniforme) pero a una escala de dificultad que excede el presupuesto
-temporal disponible.</p>
-<h3 id="11-resultados-1143-tier-2-entorno-urbano-de-crucero-citysim_clear">11.4.3 Tier 2 — Entorno urbano de crucero (<code>citysim_clear</code>)<a class="headerlink" href="#11-resultados-1143-tier-2-entorno-urbano-de-crucero-citysim_clear" title="Permanent link">&para;</a></h3>
-<p>Con 2.2 invocaciones promedio al VLM y tasa de deliberación de 0.3%, el <code>slm</code> opera en modo casi
-puramente reactivo en este escenario: sólo 10 s de overhead sobre la base de 165 s del <code>reactive</code>.
-Los tres brazos completan sin colisiones y sin diferencias de seguridad (DistMin: 9.4–10.4 m).</p>
-<p>Tres observaciones son relevantes para el análisis posterior:</p>
-<ol>
-<li>
-<p><strong><code>reactive</code> determinista:</strong> σ = 0.2 s — la varianza más baja de los tres tiers. A −50 m de
-   altitud máxima, sin obstáculos activos, el <code>reactive</code> ejecuta la ruta con variación nula.</p>
-</li>
-<li>
-<p><strong><code>fsm</code> variable:</strong> dos corridas con deadlock (seeds 4 y 5, 208 s y 212 s) vs. tres sin deadlock
-   (~170 s). La geometría del manifiesto (cambios de altitud en rampa) genera ocasionalmente
-   atascos en la FSM que no se producen en el <code>reactive</code> ni en el <code>slm</code>. Con K = 5, δ = +0.04
-   (<code>slm</code> vs <code>fsm</code>), no significativo.</p>
-</li>
-<li>
-<p><strong><code>slm</code> recorre menos distancia que <code>fsm</code>:</strong> 427.4 m vs. 434.9 m — el <code>slm</code> tiende a trayectorias
-   más cortas que la FSM, posiblemente porque las pocas invocaciones VLM producen correcciones de
-   rumbo que evitan desviaciones que la FSM acumula al gestionar sus deadlocks.</p>
-</li>
-</ol>
-<p>El escenario <code>citymap_pilot</code> (corredores angostos a −10 m, entre edificios de 50–100 m) es el
-experimento de Tier 2 donde el VLM tiene potencia discriminativa real. Los datos de <code>citysim_clear</code>
-establecen que, en condiciones de tránsito libre, ningún brazo discrimina en calidad de navegación —
-diferencia esperada por diseño experimental.</p>
-<hr />
-<h2 id="11-resultados-115-sintesis-de-hallazgos">11.5 Síntesis de hallazgos<a class="headerlink" href="#11-resultados-115-sintesis-de-hallazgos" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-
-<h3 id="11-resultados-1151-soporte-a-hipotesis-h2-overhead-del-vlm-se-diluye-con-la-longitud-de-ruta">11.5.1 Soporte a hipótesis H2 (overhead del VLM se diluye con la longitud de ruta)<a class="headerlink" href="#11-resultados-1151-soporte-a-hipotesis-h2-overhead-del-vlm-se-diluye-con-la-longitud-de-ruta" title="Permanent link">&para;</a></h3>
-<p><strong>H2 se confirma cualitativamente</strong> con los tres escenarios de control completados:</p>
-<table>
-<thead>
-<tr>
-<th>Escenario</th>
-<th>Ruta (m)</th>
-<th>Ratio <code>slm</code>/<code>reactive</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
+<td>1</td>
 <td><code>minisim_clear</code></td>
-<td>~185</td>
-<td>2.20×</td>
+<td><code>slm:depth</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.54 [0.51, 0.56]</td>
+<td>165.1 [159.8, 171.4]</td>
+<td>15.51 [15.47, 15.64]</td>
+<td>—</td>
 </tr>
 <tr>
+<td>1</td>
+<td></td>
+<td><code>fsm:depth</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.38 [0.35, 0.43]</td>
+<td>306.4 [252.9, 369.5]</td>
+<td>15.49 [15.44, 15.63]</td>
+<td>—</td>
+</tr>
+<tr>
+<td>1</td>
+<td></td>
+<td><code>reactive</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.63 [0.63, 0.63]</td>
+<td>84.9 [84.7, 85.3]</td>
+<td>15.47 [15.46, 15.50]</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
 <td><code>townsim_clear</code></td>
-<td>~626</td>
-<td>1.14×</td>
+<td><code>slm:depth</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.89 [0.87, 0.90]</td>
+<td>379.8 [366.4, 399.1]</td>
+<td>16.41 [12.43, 16.48]</td>
+<td>—</td>
 </tr>
 <tr>
+<td>2</td>
+<td></td>
+<td><code>fsm:depth</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.76 [0.72, 0.80]</td>
+<td>488.6 [434.1, 516.2]</td>
+<td>1.55 [0.24, 3.63]</td>
+<td>1 <code>physics_locked</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td><code>reactive</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.93 [0.91, 0.93]</td>
+<td>272.6 [272.4, 280.8]</td>
+<td>14.77 [7.89, 16.68]</td>
+<td>—</td>
+</tr>
+<tr>
+<td>5</td>
 <td><code>citysim_clear</code></td>
-<td>~427</td>
-<td>1.06×</td>
-</tr>
-</tbody>
-</table>
-<p>El ratio decrece monótonamente con la longitud de ruta, con separación perfecta entre los tres
-tiers (Cliff's δ = 1.0 en comparaciones por pares). La potencia estadística es insuficiente para
-la corrección Bonferroni (K = 5, p mínimo alcanzable ~7.9×10⁻³ &gt;&gt; α = 0.0028), pero el patrón es
-consistente con la predicción teórica: el overhead fijo de cada invocación VLM (~3–5 s) se reparte
-sobre un presupuesto de tiempo mayor a medida que la ruta se alarga.</p>
-<h3 id="11-resultados-1152-soporte-a-hipotesis-h1-vlm-aporta-ventaja-en-ambientes-obstruidos">11.5.2 Soporte a hipótesis H1 (VLM aporta ventaja en ambientes obstruidos)<a class="headerlink" href="#11-resultados-1152-soporte-a-hipotesis-h1-vlm-aporta-ventaja-en-ambientes-obstruidos" title="Permanent link">&para;</a></h3>
-<p><strong>H1 no se confirma ni refuta con los datos disponibles.</strong> El diseño experimental identifica tres
-regímenes cualitativamente distintos:</p>
-<table>
-<thead>
-<tr>
-<th>Escenario</th>
-<th>Régimen</th>
-<th>Ganancia del VLM</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>minisim_clear</code>, <code>townsim_clear</code>, <code>citysim_clear</code></td>
-<td>Control libre</td>
-<td>Ninguna — costo puro</td>
+<td><code>slm:depth</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.70 [0.68, 0.72]</td>
+<td>286.2 [277.1, 288.9]</td>
+<td>11.45 [10.38, 12.50]</td>
+<td>1 <code>physics_locked</code></td>
 </tr>
 <tr>
-<td><code>townsim_calib_cruce_frontal</code></td>
-<td>Bloqueo frontal</td>
-<td>Negativa: <code>reactive</code> 2/5 &gt; <code>slm</code> 1/5 &gt; <code>fsm</code> 0/5</td>
+<td>5</td>
+<td></td>
+<td><code>fsm:depth</code></td>
+<td>6/10 [0.31, 0.83]</td>
+<td>0.42 [0.00, 0.43]</td>
+<td>705.9 [664.8, 748.9]</td>
+<td>0.10 [0.10, 0.11]</td>
+<td>4 <code>physics_locked</code></td>
 </tr>
 <tr>
+<td>5</td>
+<td></td>
+<td><code>reactive</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.79 [0.79, 0.79]</td>
+<td>192.3 [190.6, 194.1]</td>
+<td>10.85 [10.70, 10.97]</td>
+<td>—</td>
+</tr>
+<tr>
+<td>3</td>
 <td><code>townsim_ini</code></td>
-<td>Deadlock crónico</td>
-<td>Neutral — 0/5 todos; VLM incapaz de recuperar señal monocular</td>
+<td><code>slm:depth</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.48 [0.43, 0.48]</td>
+<td>519.9 [517.9, 524.3]</td>
+<td>0.13 [0.11, 0.37]</td>
+<td>1 <code>physics_locked</code></td>
 </tr>
 <tr>
-<td><code>citymap_pilot</code></td>
-<td>Ambigüedad de corredor</td>
-<td>Positiva en distancia para <code>slm</code> y <code>fsm</code> (6.3×) vs. <code>reactive</code>; 0/5 todos; no atribuible al VLM (§11.4.3b)</td>
+<td>3</td>
+<td></td>
+<td><code>fsm:depth</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.32 [0.31, 0.37]</td>
+<td>805.8 [704.9, 822.1]</td>
+<td>0.23 [0.12, 0.38]</td>
+<td>1 <code>physics_locked</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td></td>
+<td><code>fsm:blind</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.38 [0.35, 0.40]</td>
+<td>625.1 [594.7, 684.6]</td>
+<td>0.24 [0.11, 0.38]</td>
+<td>1 <code>physics_locked</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td></td>
+<td><code>reactive</code></td>
+<td>0/10 [0.00, 0.28]</td>
+<td>0.00</td>
+<td>—</td>
+<td>1.94 [1.35, 2.36]</td>
+<td>10 tope de tiempo</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>townsim_calib_cruce_frontal</code></td>
+<td><code>slm:depth</code></td>
+<td>5/10 [0.24, 0.76]</td>
+<td>0.28 [0.00, 0.58]</td>
+<td>479.0 [401.7, 497.0]</td>
+<td>0.14 [0.12, 0.36]</td>
+<td>5 <code>physics_locked</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td><code>fsm:depth</code></td>
+<td>8/10 [0.49, 0.94]</td>
+<td>0.41 [0.33, 0.43]</td>
+<td>608.3 [558.9, 687.1]</td>
+<td>0.25 [0.16, 0.34]</td>
+<td>2 <code>physics_locked</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td><code>fsm:blind</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.46 [0.40, 0.49]</td>
+<td>492.4 [469.3, 572.7]</td>
+<td>0.14 [0.12, 0.26]</td>
+<td>1 <code>physics_locked</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td><code>reactive</code></td>
+<td>0/10 [0.00, 0.28]</td>
+<td>0.00</td>
+<td>—</td>
+<td>0.11 [0.10, 0.18]</td>
+<td>10 tope de tiempo</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>citysim_pilot</code></td>
+<td><code>slm:depth</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.48 [0.46, 0.51]</td>
+<td>483.1 [452.7, 513.0]</td>
+<td>4.14 [2.32, 4.14]</td>
+<td>—</td>
+</tr>
+<tr>
+<td>6</td>
+<td></td>
+<td><code>fsm:depth</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.34 [0.33, 0.37]</td>
+<td>805.6 [688.1, 834.7]</td>
+<td>1.16 [0.20, 2.63]</td>
+<td>1 <code>physics_locked</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td></td>
+<td><code>fsm:blind</code></td>
+<td>5/10 [0.24, 0.76]</td>
+<td>0.14 [0.00, 0.34]</td>
+<td>712.5 [625.4, 870.8]</td>
+<td>0.11 [0.10, 1.28]</td>
+<td>3 <code>physics_locked</code>, 2 tope de tiempo</td>
+</tr>
+<tr>
+<td>6</td>
+<td></td>
+<td><code>reactive</code></td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.53 [0.53, 0.53]</td>
+<td>313.2 [309.6, 319.4]</td>
+<td>4.14 [4.14, 4.14]</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<p>El dato más favorable a H1 es <code>citymap_pilot</code>: los brazos deliberativos cubren 6.3× más
-distancia que el <code>reactive</code>. Pero, como se discute en §11.4.3b, la ventaja la comparten <code>slm</code> y
-<code>fsm</code>, ambos con el VLM en la resolución de atascos y sin una celda <code>blind</code> de contraste, por lo
-que no puede atribuirse a que el modelo elija el corredor correcto. Además, 0/5 éxitos en todos
-los brazos impide cuantificar ventaja en términos de tasa de éxito.</p>
-<p>El resultado contraintuitivo de <code>townsim_calib_cruce_frontal</code> (el brazo menos deliberativo supera
-a los más deliberativos) ilustra un efecto de composición: en obstrucciones donde existe una
-"ruta de escape" geométricamente accesible desde la posición actual, el <code>reactive</code> la encuentra
-más rápido porque no detiene el vuelo para deliberar. El <code>deep_vlm</code> introduce latencia de
-reposicionamiento que, en este caso, llega cuando el momento de escape ya pasó.</p>
-<h3 id="11-resultados-1153-limites-operativos-identificados">11.5.3 Límites operativos identificados<a class="headerlink" href="#11-resultados-1153-limites-operativos-identificados" title="Permanent link">&para;</a></h3>
-<p>Los escenarios de obstrucción revelan dos límites distintos de la arquitectura:</p>
-<p><strong>Límite de percepción monocular (<code>townsim_ini</code>):</strong> el corredor arbolado a z=−10 m produce
-deadlock crónico en los tres brazos porque la señal de flujo óptico se degrada en la dirección
-de avance (flujo traslacional nulo cerca del FOE) y las texturas repetitivas del follaje generan
-vectores espurios. Ningún mecanismo de decisión puede compensar la ausencia de señal geométrica
-confiable en la dirección de interés. Este es un límite físico del sensor monocular, no del
-algoritmo de control. Con la configuración final —profundidad monocular estimada en la capa
-estratégica y en el barrido (cap. 5 §5.10.6)— las diez corridas de <code>townsim_ini</code> del lote de
-octubre completan la misión (§11.6.2). La comparación no es controlada (otro manifiesto, otro
-código), pero indica que el límite era del canal de flujo solo, no del sensor monocular.</p>
-<p><strong>Límite de escape geométrico (<code>citymap_pilot</code>, <code>reactive</code>):</strong> cuando la geometría cierra todas
-las salidas locales — el dron queda atrapado bajo una autopista elevada con el techo arriba, el
-suelo abajo y paredes laterales —, el flujo óptico no puede generar un gradiente de evasión útil
-en ninguna dirección. La opción "perder altura" no ayuda (agrava el atrapamiento bajo la
-estructura). Hace falta un mecanismo que proponga una salida no accesible localmente en el
-campo de flujo; el barrido <code>deep_vlm</code> está concebido para eso, pero el lote base no permite
-distinguir su aporte del de cualquier otro mecanismo de resolución de deadlocks (§11.4.3b).</p>
-<h3 id="11-resultados-1154-conclusion-operativa">11.5.4 Conclusión operativa<a class="headerlink" href="#11-resultados-1154-conclusion-operativa" title="Permanent link">&para;</a></h3>
-<p>Los 75 runs del lote completo establecen que:</p>
-<ol>
-<li><strong>En ruta libre</strong>, ningún brazo deliberativo justifica su overhead frente al <code>reactive</code> en
-   términos de velocidad o seguridad. El VLM añade latencia sin agregar valor de decisión.</li>
-<li><strong>En ambientes con obstrucción geométrica compleja</strong> (<code>citymap_pilot</code>), los brazos con
-   resolución de deadlocks progresan 6.3× más que el <code>reactive</code>, aunque sin completar la misión.
-   El lote no permite atribuir esa ventaja al contenido de las respuestas del VLM (§11.4.3b).</li>
-<li><strong>En ambientes con degradación de señal monocular</strong> (<code>townsim_ini</code>), la limitación es de
-   percepción, no de decisión. Ningún brazo — deliberativo o reactivo — puede compensarla. La
-   extensión natural de esta línea de investigación es la incorporación de un segundo canal de
-   profundidad instantánea (visión estereoscópica) que no dependa del movimiento entre frames
-   (Anexo 7, §A7.4–§A7.6).</li>
-<li><strong>El VLM no penaliza la seguridad:</strong> la distancia mínima al obstáculo (medida con el canal de
-   profundidad del simulador, como auditoría externa) es similar o mejor que la del <code>reactive</code> en los
-   escenarios donde todos los brazos operan, y las 45 corridas de control producen 0 colisiones
-   en todos los brazos.</li>
-</ol>
-<h2 id="11-resultados-116-lotes-de-la-capa-estrategica-octubre-configuracion-vigente">11.6 Lotes de la capa estratégica (octubre, configuración vigente)<a class="headerlink" href="#11-resultados-116-lotes-de-la-capa-estrategica-octubre-configuracion-vigente" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-
-<p>Dos lotes con el sistema de los capítulos 5–8 responden si la capa estratégica aporta y con qué fuente. Diseño común: brazo <code>slm</code>, barrido de deadlock con profundidad estimada (<code>DEADLOCK_STRATEGY = depth</code>) igual en todas las celdas —así se aísla la capa estratégica—, semillas 1–5 con jitter de la pose inicial, mismo plan de vuelo para todas las corridas de un escenario y el modelo de inferencia en la misma GPU que Unreal. El avance se mide en <strong>waypoints del plan completados</strong> (no con el índice del registro, que cuenta también las sub-metas insertadas). La regla de decisión se fijó antes de correr cada lote: una fuente aporta más que otra si la mediana del avance a un tiempo de referencia la supera en un umbral <strong>y</strong> gana en al menos 4 de las 5 semillas emparejadas; si ningún par lo cumple, las fuentes son equivalentes en avance y se decide por costo y seguridad. El p-valor se informa como diagnóstico: con 5 pares el mínimo del Wilcoxon exacto es 0.0625. Análisis: <code>experiments/analyze_strategic_batch.py</code>.</p>
-<h3 id="11-resultados-1161-citysim-citysim_pilot-sin-diferencia-en-avance">11.6.1 CitySim (<code>citysim_pilot</code>): sin diferencia en avance<a class="headerlink" href="#11-resultados-1161-citysim-citysim_pilot-sin-diferencia-en-avance" title="Permanent link">&para;</a></h3>
-<p>15 corridas (fuentes <code>depth</code>, <code>vlm</code> y <code>off</code>), tope de 480 s, plan de ruta del VLM (cap. 4 §4.3.1; 15 waypoints con los desvíos). Regla: diferencia de medianas ≥ 2 waypoints a 400 s.</p>
+<p><strong>Cómo terminan las corridas que fallan.</strong> No hay colisiones en ninguna de las 210. De las 23 fallas de los brazos con evasión, 21 son abortos por <code>physics_locked</code>: el dron queda apoyado o incrustado en la malla y el vigilante corta la corrida (cap. 5 §5.19). Las otras 2, de <code>fsm:blind</code> en el lote 6, y las 20 de <code>reactive</code> en los lotes 3 y 4 llegan al tope de 1200 s sin completar. <code>reactive</code> es casi determinista: en los controles y en el lote 6 sus 10 corridas difieren en pocos segundos, y su varianza entre semillas confirma que el entorno aporta poca variación por sí solo (§10.4.1).</p>
+<h2 id="11-resultados-113-escenarios-de-control-lotes-1-2-y-5-costo-de-la-arquitectura-h2">11.3 Escenarios de control (lotes 1, 2 y 5): costo de la arquitectura (H2)<a class="headerlink" href="#11-resultados-113-escenarios-de-control-lotes-1-2-y-5-costo-de-la-arquitectura-h2" title="Permanent link">&para;</a></h2>
+<p><strong>Comparaciones planificadas</strong> (tiempo de las misiones exitosas; δ &gt; 0 indica que la primera celda tarda más):</p>
 <table>
 <thead>
 <tr>
-<th>Fuente</th>
-<th>Plan a 150 / 300 / 400 s (mediana)</th>
-<th style="text-align: right;">Éxito</th>
-<th style="text-align: right;">Colisiones</th>
-<th style="text-align: right;">DistMin mediana (peor)</th>
-<th style="text-align: right;">Deadlocks (total)</th>
-<th style="text-align: right;">Latencia de la capa</th>
+<th>Lote</th>
+<th>Comparación</th>
+<th>n</th>
+<th>δ de Cliff [IC 95 %]</th>
+<th>p (permutación exacta)</th>
+<th>p Bonferroni</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>depth</code></td>
-<td>5 / 10 / 13</td>
-<td style="text-align: right;">3/5</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">5.83 m (0.10)</td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">108 ms</td>
+<td>1</td>
+<td><code>slm</code> vs. <code>fsm</code></td>
+<td>10 / 10</td>
+<td>−1.00 [−1.00, −1.00]</td>
+<td>1.1 × 10⁻⁵</td>
+<td>2.0 × 10⁻⁴</td>
 </tr>
 <tr>
-<td><code>vlm</code></td>
-<td>6 / 10 / 13</td>
-<td style="text-align: right;">4/5</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">3.29 m (0.13)</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">788 ms</td>
+<td>1</td>
+<td><code>slm</code> vs. <code>reactive</code></td>
+<td>10 / 10</td>
+<td>+1.00 [+1.00, +1.00]</td>
+<td>1.1 × 10⁻⁵</td>
+<td>2.0 × 10⁻⁴</td>
 </tr>
 <tr>
-<td><code>off</code></td>
-<td>6 / 11 / 13</td>
-<td style="text-align: right;">5/5</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">4.95 m (1.89)</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">—</td>
+<td>1</td>
+<td><code>fsm</code> vs. <code>reactive</code></td>
+<td>10 / 10</td>
+<td>+1.00 [+1.00, +1.00]</td>
+<td>1.1 × 10⁻⁵</td>
+<td>2.0 × 10⁻⁴</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>slm</code> vs. <code>fsm</code></td>
+<td>10 / 9</td>
+<td>−0.98 [−1.00, −0.87]</td>
+<td>4.3 × 10⁻⁵</td>
+<td>7.8 × 10⁻⁴</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>slm</code> vs. <code>reactive</code></td>
+<td>10 / 10</td>
+<td>+1.00 [+1.00, +1.00]</td>
+<td>1.1 × 10⁻⁵</td>
+<td>2.0 × 10⁻⁴</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>fsm</code> vs. <code>reactive</code></td>
+<td>9 / 10</td>
+<td>+1.00 [+1.00, +1.00]</td>
+<td>2.2 × 10⁻⁵</td>
+<td>3.9 × 10⁻⁴</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>slm</code> vs. <code>fsm</code></td>
+<td>9 / 6</td>
+<td>−1.00 [−1.00, −1.00]</td>
+<td>4.0 × 10⁻⁴</td>
+<td>0.0072</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>slm</code> vs. <code>reactive</code></td>
+<td>9 / 10</td>
+<td>+1.00 [+1.00, +1.00]</td>
+<td>2.2 × 10⁻⁵</td>
+<td>3.9 × 10⁻⁴</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>fsm</code> vs. <code>reactive</code></td>
+<td>6 / 10</td>
+<td>+1.00 [+1.00, +1.00]</td>
+<td>2.5 × 10⁻⁴</td>
+<td>0.0045</td>
 </tr>
 </tbody>
 </table>
-<p>Ningún par cumple la regla: las tres fuentes son <strong>equivalentes en avance</strong>. Por costo y seguridad, <code>off</code> es la mejor celda (todas las misiones completas, sin deadlocks, el mejor peor caso de distancia). Las fallas de las otras dos: <code>depth</code> semilla 1 llegó a 14 de 15 waypoints al tope de tiempo; <code>depth</code> semilla 5 tuvo tres deadlocks y se acercó a 0.10 m; <code>vlm</code> semilla 2 terminó por congelamiento físico, con el dron incrustado en la malla tras sub-metas repetidas hacia la fila de abajo de la grilla. Con 5 semillas, 5/5 frente a 3/5 no es significativo (Fisher p ≈ 0.44): la lectura es que la capa no aporta en este escenario, no que empeore. En <code>off</code> no hubo deadlocks, de modo que el barrido no se ejerció.</p>
-<h3 id="11-resultados-1162-townsim-townsim_ini-mismo-avance-mas-margen-con-la-profundidad">11.6.2 TownSim (<code>townsim_ini</code>): mismo avance, más margen con la profundidad<a class="headerlink" href="#11-resultados-1162-townsim-townsim_ini-mismo-avance-mas-margen-con-la-profundidad" title="Permanent link">&para;</a></h3>
-<p>10 corridas (fuentes <code>depth</code> y <code>off</code>; el VLM quedó fuera por su AUC de 0.53 en el banco y su equivalencia en CitySim), tope de 900 s, manifiesto validado a mano sin plan de ruta (el mapa de TownSim no está verificado como registrado y el plan podría sacar la ruta del corredor). El escenario cruza el corredor peatonal arbolado a 10 m de altura, bajo las copas. Regla: diferencia de medianas ≥ 1 waypoint (de 8) a 900 s.</p>
+<p>Las nueve son significativas tras Bonferroni (α = 0.0028), con separación completa o casi: en los tres tiers el orden es <strong><code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code></strong>. El orden esperado en §10.8.1 era <code>reactive</code> &lt; <code>fsm</code> &lt; <code>slm</code>: la FSM resulta la más lenta, por las razones de §11.5.</p>
+<p><strong>Razón de tiempos y su dependencia de la ruta.</strong></p>
 <table>
 <thead>
 <tr>
-<th>Fuente</th>
-<th style="text-align: right;">Éxito</th>
-<th style="text-align: right;">Duración (mediana)</th>
-<th style="text-align: right;">Recorrido (mediana)</th>
-<th style="text-align: right;">DistMin en el corredor, mediana (peor)</th>
-<th style="text-align: right;">Segundos a &lt; 1 m en el corredor (mediana)</th>
-<th style="text-align: right;">Deadlocks resueltos por el barrido</th>
-<th style="text-align: right;">Latencia de la capa</th>
+<th>Lote</th>
+<th>Ruta</th>
+<th><span class="arithmatex">\(t_{\text{slm}}/t_{\text{reactive}}\)</span></th>
+<th><span class="arithmatex">\(t_{\text{slm}} - t_{\text{reactive}}\)</span></th>
+<th>Consultas por misión (<code>slm</code>)</th>
+<th>Sub-metas</th>
+<th><span class="arithmatex">\(t_{\text{fsm}}/t_{\text{reactive}}\)</span></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>off</code></td>
-<td style="text-align: right;">5/5</td>
-<td style="text-align: right;">286 s</td>
-<td style="text-align: right;">362 m</td>
-<td style="text-align: right;">0.11 m (0.10)</td>
-<td style="text-align: right;">29</td>
-<td style="text-align: right;">15/16</td>
-<td style="text-align: right;">—</td>
+<td>1 <code>minisim_clear</code></td>
+<td>~180 m</td>
+<td>1.95</td>
+<td>80 s</td>
+<td>90</td>
+<td>27 %</td>
+<td>3.61</td>
 </tr>
 <tr>
-<td><code>depth</code></td>
-<td style="text-align: right;">5/5</td>
-<td style="text-align: right;">307 s</td>
-<td style="text-align: right;">428 m</td>
-<td style="text-align: right;">0.41 m (0.10)</td>
-<td style="text-align: right;">10</td>
-<td style="text-align: right;">4/14</td>
-<td style="text-align: right;">114 ms</td>
+<td>5 <code>citysim_clear</code></td>
+<td>~420 m</td>
+<td>1.49</td>
+<td>94 s</td>
+<td>151</td>
+<td>37 %</td>
+<td>3.67</td>
+</tr>
+<tr>
+<td>2 <code>townsim_clear</code></td>
+<td>~640 m</td>
+<td>1.39</td>
+<td>107 s</td>
+<td>235</td>
+<td>8 %</td>
+<td>1.79</td>
 </tr>
 </tbody>
 </table>
-<p>Las diez corridas completan los ocho waypoints sin colisiones: <strong>equivalentes en avance</strong>. Costo y seguridad tiran en sentidos opuestos:</p>
+<p>Ordenados por longitud de ruta, la razón <span class="arithmatex">\(t_{\text{slm}}/t_{\text{reactive}}\)</span> decrece: 1.95, 1.49, 1.39. La diferencia absoluta crece mucho menos que la ruta: la ruta se multiplica por 3.5 y la diferencia por 1.3. Es la forma que predice H2, un costo aproximadamente aditivo y no un factor multiplicativo (§10.1); con un solo escenario por tier, la progresión es descriptiva.</p>
+<p><strong>De dónde sale el costo.</strong> No sale de esperar al modelo: la capa estratégica corre en su propio hilo, con latencia mediana de 104–125 ms por consulta en los controles, y el dron no frena a esperarla. Sale de lo que la capa hace con la respuesta y del gobernador de velocidad:</p>
 <ul>
-<li><strong><code>off</code> es más barato:</strong> 21 s menos de mediana (más rápido en 4 de 5 semillas) y 66 m menos de recorrido, sin servicio de capa.</li>
-<li><strong><code>depth</code> mantiene más distancia del follaje:</strong> pasa menos segundos a menos de 1 m en <strong>las 5 semillas emparejadas</strong> (0 frente a 21, 10/33, 3/43, 10/27, 11/29; Wilcoxon exacto p = 0.0625, el mínimo posible con 5 pares).</li>
+<li><strong>Sub-metas en ruta libre.</strong> En el plano sin obstáculos de MiniSim, el 27 % de las 912 consultas proponen una sub-meta; en <code>citysim_clear</code>, el 37 %, con otro 12 % sin sector libre. En <code>townsim_clear</code>, a −30 m sobre la línea de tejados, solo el 8 %. Cada sub-meta inserta un desvío: <code>slm</code> recorre 17 % más que <code>reactive</code> en el lote 1 (223 frente a 191 m), 4 % en el 2 y 11 % en el 5.</li>
+<li><strong>Gobernador de velocidad.</strong> Limita el avance cuando falta evidencia perceptual (cap. 5 §5.13): está activo en el 27–43 % de los ciclos de <code>slm</code>, frente al 7–18 % de <code>reactive</code>. La velocidad horizontal media de <code>slm</code> es 1.35–1.79 m/s; la de <code>reactive</code>, 2.42–2.48 m/s.</li>
 </ul>
-<p>DistMin se calculó por tramo con la pose de cada muestra de la auditoría: los acercamientos ocurren en la plaza y el corredor (x &lt; −40 m); en el resto de la misión la distancia mínima supera los 10 m. El valor de ~0.10 m que se repite es, probablemente, el plano cercano de la cámara dentro del follaje —sin colisión física—; no se verificó en video. La primera muestra de cada corrida se excluye: en <code>off</code> semilla 1 marcó 0.012 m a 30 m de altura y la siguiente, 98 m. Con <code>off</code> los deadlocks son deterministas —los tres en el paso de la moldura (WP_1b), con escape vertical de −10 a −16 m— y el barrido con profundidad los resuelve (15 de 16). Con <code>depth</code> ocurren en otros puntos y el barrido resuelve menos (4 de 14), sin abortos: los no resueltos salen por el escape vertical.</p>
-<p><strong>Referencia histórica, no comparable.</strong> En el lote base (§11.4.2b) las 15 corridas de <code>townsim_ini</code> llegaron al tope de 900 s sin completar. Aquel lote voló otro manifiesto (sin WP_0b ni WP_1b), otro código y el barrido con el VLM; la diferencia no se puede atribuir a un solo cambio.</p>
-<h3 id="11-resultados-1163-lectura-conjunta-y-decision-de-configuracion">11.6.3 Lectura conjunta y decisión de configuración<a class="headerlink" href="#11-resultados-1163-lectura-conjunta-y-decision-de-configuracion" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>La capa estratégica no acelera la misión</strong> con ninguna fuente, en ninguno de los dos escenarios: el avance lo dan el plan de vuelo y el lazo rápido.</li>
-<li><strong>Con obstáculos orgánicos, la capa con profundidad aporta margen</strong> de manera consistente; en CitySim ese efecto no se vio.</li>
-<li><strong>Ninguna señal favorece al VLM en el lazo.</strong> En la capa estratégica fue equivalente a no tener capa, con una latencia siete veces mayor que la de la profundidad.</li>
-<li><strong>El barrido con profundidad se ejerció en vuelo</strong> en TownSim y resolvió 19 de 30 deadlocks; todas las misiones terminaron.</li>
-</ul>
-<p>Por el margen en vegetación, y con un costo moderado (~114 ms en su propio hilo, ~440 MiB de VRAM, 7 % más de tiempo de misión), la configuración final es <code>STRATEGIC_SOURCE = depth</code> y <code>DEADLOCK_STRATEGY = depth</code> (cap. 5 §5.10.7). Es una decisión de criterio sobre resultados con 5 semillas por escenario, no un efecto significativo.</p>
-<p><strong>Límites.</strong> Un escenario por tipo y 5 semillas por celda; DistMin solo mira el tercio central de la cámara frontal (los roces laterales no cuentan); en TownSim la captura de imágenes tarda el doble que en CitySim (mediana 209 ms frente a 110 ms), igual para las dos celdas.</p></section><section class="print-page" id="12-conclusiones" heading-number="13"><h1 id="12-conclusiones-12-conclusiones">12. Conclusiones<a class="headerlink" href="#12-conclusiones-12-conclusiones" title="Permanent link">&para;</a></h1>
+<p><strong>Seguridad.</strong> Sin colisiones en ningún brazo. DistMin de <code>slm</code> y <code>reactive</code> es la misma en los tres controles (δ de 0.07 a 0.31, sin diferencia). La FSM pasa mucho más cerca en los dos controles con estructuras: 1.55 m en <code>townsim_clear</code> y 0.10 m en <code>citysim_clear</code> (δ = +0.90 y +0.94 a favor de <code>slm</code>, secundarias).</p>
+<p><strong>Validez del control.</strong> El lote 1 no tiene fallas, de modo que el sistema no muestra problemas de percepción, guiado ni infraestructura en el plano libre (§10.8.1). <code>citysim_clear</code> no cumple la expectativa de cero atascos: 31 en <code>slm</code> y 83 en <code>fsm</code>. Sus cinco fallas ocurren en el mismo tramo, WP_2 (−30 m) → WP_3 (−50 m): el dron queda incrustado a ~50 m de altura entre 15 y 25 m al oeste de la recta del manifiesto, que <code>reactive</code> sigue sin desviarse. La ruta es libre; lo que la vuelve peligrosa es salir de ella.</p>
+<h2 id="11-resultados-114-escenarios-con-obstruccion-lotes-3-4-y-6-beneficio-de-la-capa-deliberativa-h1">11.4 Escenarios con obstrucción (lotes 3, 4 y 6): beneficio de la capa deliberativa (H1)<a class="headerlink" href="#11-resultados-114-escenarios-con-obstruccion-lotes-3-4-y-6-beneficio-de-la-capa-deliberativa-h1" title="Permanent link">&para;</a></h2>
+<p><strong>Comparaciones planificadas</strong> (SPL; δ &gt; 0 indica mejor SPL de la primera celda):</p>
+<table>
+<thead>
+<tr>
+<th>Lote</th>
+<th>Comparación</th>
+<th>δ de Cliff [IC 95 %]</th>
+<th>p</th>
+<th>p Bonferroni</th>
+<th>Éxito A / B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>(i) <code>slm:depth</code> vs. <code>fsm:blind</code></td>
+<td>+0.73 [+0.28, +1.00]</td>
+<td>0.0039</td>
+<td>0.071</td>
+<td>9/10 / 9/10</td>
+</tr>
+<tr>
+<td>3</td>
+<td>(ii) <code>fsm:depth</code> vs. <code>fsm:blind</code></td>
+<td>−0.49 [−0.90, 0.00]</td>
+<td>0.065</td>
+<td>1.00</td>
+<td>9/10 / 9/10</td>
+</tr>
+<tr>
+<td>3</td>
+<td>(iii) <code>slm:depth</code> vs. <code>fsm:depth</code></td>
+<td><strong>+0.81 [+0.40, +1.00]</strong></td>
+<td>0.0011</td>
+<td><strong>0.019</strong></td>
+<td>9/10 / 9/10</td>
+</tr>
+<tr>
+<td>4</td>
+<td>(i) <code>slm:depth</code> vs. <code>fsm:blind</code></td>
+<td>+0.05 [−0.52, +0.62]</td>
+<td>0.87</td>
+<td>1.00</td>
+<td>5/10 / 9/10</td>
+</tr>
+<tr>
+<td>4</td>
+<td>(ii) <code>fsm:depth</code> vs. <code>fsm:blind</code></td>
+<td>−0.40 [−0.82, +0.12]</td>
+<td>0.14</td>
+<td>1.00</td>
+<td>8/10 / 9/10</td>
+</tr>
+<tr>
+<td>4</td>
+<td>(iii) <code>slm:depth</code> vs. <code>fsm:depth</code></td>
+<td>+0.10 [−0.52, +0.66]</td>
+<td>0.73</td>
+<td>1.00</td>
+<td>5/10 / 8/10</td>
+</tr>
+<tr>
+<td>6</td>
+<td>(i) <code>slm:depth</code> vs. <code>fsm:blind</code></td>
+<td><strong>+1.00 [+1.00, +1.00]</strong></td>
+<td>1.1 × 10⁻⁵</td>
+<td><strong>2.0 × 10⁻⁴</strong></td>
+<td>10/10 / 5/10</td>
+</tr>
+<tr>
+<td>6</td>
+<td>(ii) <code>fsm:depth</code> vs. <code>fsm:blind</code></td>
+<td>+0.39 [−0.15, +0.84]</td>
+<td>0.14</td>
+<td>1.00</td>
+<td>9/10 / 5/10</td>
+</tr>
+<tr>
+<td>6</td>
+<td>(iii) <code>slm:depth</code> vs. <code>fsm:depth</code></td>
+<td><strong>+1.00 [+1.00, +1.00]</strong></td>
+<td>1.1 × 10⁻⁵</td>
+<td><strong>2.0 × 10⁻⁴</strong></td>
+<td>10/10 / 9/10</td>
+</tr>
+</tbody>
+</table>
+<p>Tres de las nueve son significativas tras Bonferroni, las tres a favor de <code>slm:depth</code>. Ninguna favorece a una FSM. Las tasas de éxito no difieren significativamente en ningún par (Fisher, secundaria), salvo (i) en el lote 6 sin corrección (p = 0.033).</p>
+<p><strong>Lote 3, <code>townsim_ini</code> (corredor arbolado).</strong> <code>slm:depth</code> supera a <code>fsm:depth</code> en SPL con un efecto grande; frente a <code>fsm:blind</code> el efecto también es grande (δ = +0.73) pero no supera la corrección. Las tres celdas con evasión completan 9 de 10. <code>reactive</code> no completa ninguna: las 10 corridas quedan trabadas en el corredor antes de WP_2_CENTRO_CORREDOR hasta el tope de tiempo. El desglose por tramo (<code>summary_by_wp.csv</code>) muestra que <code>slm</code> es más rápido en casi todos los tramos, incluido el retorno a cielo abierto (20 s frente a 56–63 s de las FSM), y más lento en uno solo, la salida del corredor (71 s frente a 46–49 s). La ventaja no se concentra en el follaje, como esperaba §10.8.2: está repartida a lo largo de la ruta y la explica sobre todo la lentitud general de la FSM (§11.5), no una mejor decisión en el corredor.</p>
+<p><strong>Lote 4, <code>townsim_calib_cruce_frontal</code> (bloqueo frontal).</strong> Ninguna diferencia significativa. <code>slm:depth</code> completa 5 de 10 —las cinco fallas son <code>physics_locked</code>— y es la celda más rápida cuando completa (479 s); <code>fsm:blind</code> completa 9 de 10 y tiene el mejor SPL. El lote es válido según el criterio de §10.8.2, porque el tramo de cruce sí produce atascos: 42 en <code>slm</code> y 134 en <code>fsm:depth</code>. <code>reactive</code> no completa ninguna: 8 de 10 quedan frente al edificio, en el punto de paso VIA_WP_3_2 del plan.</p>
+<p><strong>Lote 6, <code>citysim_pilot</code> (rodeo de manzanas).</strong> <code>slm:depth</code> completa las 10 y supera a las dos FSM con separación completa. El barrido no mejora significativamente a la FSM (ii), aunque <code>fsm:depth</code> completa 9 frente a 5 de <code>fsm:blind</code>, cuyo escape ciego termina incrustado a −30 m en la misma zona en tres corridas. <code>reactive</code> también completa las 10 —el resultado que §10.8.2 no esperaba—, porque el plan de ruta, común a las cuatro celdas, ya rodea el único tramo con la recta bloqueada (WP_2 → WP_3). En este lote la obstrucción la resuelve el plan en tierra, no la política en vuelo: la comparación entre celdas mide cómo cada una sigue una ruta que ya evita el bloqueo.</p>
+<p><strong>Capa estratégica.</strong> Las tres celdas <code>slm:depth</code> consultan la capa unas 240–270 veces por misión, con latencia mediana de 114–135 ms.</p>
+<table>
+<thead>
+<tr>
+<th>Lote</th>
+<th>Consultas</th>
+<th><code>directo_libre</code></th>
+<th>Sub-meta</th>
+<th>Sin sector libre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>2362</td>
+<td>66 %</td>
+<td>29 %</td>
+<td>5 %</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2450</td>
+<td>75 %</td>
+<td>21 %</td>
+<td>4 %</td>
+</tr>
+<tr>
+<td>6</td>
+<td>2734</td>
+<td>74 %</td>
+<td>24 %</td>
+<td>2 %</td>
+</tr>
+</tbody>
+</table>
+<p>La capa discrimina: declara el camino directo libre en dos tercios a tres cuartos de las consultas y propone sub-metas en el resto, más que en <code>townsim_clear</code> (8 %). No se midió el avance hacia el waypoint real tras cada sub-meta (§10.6.3), de modo que no se puede afirmar que cada sub-meta acerque a la meta.</p>
+<p><strong>Barrido de atascos.</strong> Con <code>slm:depth</code> la tasa mediana de resolución es 0.33 en el lote 3, 0.25 en el 4 y 0.75 en el 6; con <code>fsm:depth</code>, 0.45, 0.38 y 0.33. «Resuelto» significa que el barrido encontró un rumbo transitable, no que el dron haya salido del atasco (§10.6.4). <code>slm</code> declara muchos menos atascos que la FSM: 23, 42 y 7 frente a 180, 134 y 176.</p>
+<p><strong>Seguridad.</strong> Sin colisiones, pero DistMin cae a ~0.1–0.25 m en todas las celdas con evasión de los lotes 3 y 4: el dron roza el follaje y las fachadas sin registrar contacto, y las fallas son de ese tipo, abortos por quedar apoyado en la geometría.</p>
+<h2 id="11-resultados-115-dos-defectos-del-brazo-fsm-que-afectan-las-comparaciones">11.5 Dos defectos del brazo FSM que afectan las comparaciones<a class="headerlink" href="#11-resultados-115-dos-defectos-del-brazo-fsm-que-afectan-las-comparaciones" title="Permanent link">&para;</a></h2>
+<p>El análisis de las corridas encontró dos defectos de implementación del brazo FSM, presentes en los seis lotes. No afectan a <code>slm</code> ni a <code>reactive</code>. Ambos hacen a la FSM más lenta y la exponen a más fallas, de modo que <strong>todas las comparaciones contra la FSM están sesgadas a favor de <code>slm</code></strong>, con un sesgo que no se puede estimar con estos datos.</p>
+<p><strong>Deadlock falso al despegar.</strong> El runner cuenta el progreso hacia el waypoint también durante el ascenso vertical inicial. La distancia horizontal no cambia mientras el dron sube, el contador de atasco llega a ~30–37 ciclos y la FSM, que usa ese contador, declara un deadlock apenas termina el ascenso, sin haberse movido. El barrido descarta entonces el rumbo hacia el waypoint como rumbo fallido y manda al dron en otra dirección. <code>slm</code> decide sus atascos con su propio detector (cap. 5 §5.3.1) y no lo sufre. Ocurre en las 10 corridas <code>fsm:depth</code> de los lotes 1, 2, 3, 5 y 6, en las 10 <code>fsm:blind</code> de los lotes 3 y 6, y en pocas del lote 4 (1 de <code>fsm:depth</code>, 3 de <code>fsm:blind</code>), cuyo primer waypoint es un ascenso en el lugar. Su costo depende del escenario: en <code>townsim_clear</code>, con WP_1 sobre el spawn, la FSM igual llega en ~7 s; en <code>citysim_clear</code> tarda 112 s de mediana en alcanzar WP_1, contra 47 s de <code>slm</code>. Contradice la condición del diseño de que el despegue no es un atasco (§10.12.2).</p>
+<p><strong>Escape agotado por el techo de altitud.</strong> La FSM no sube por encima de <code>MAX_ESCAPE_ALT_M</code> = 30 m, el mismo techo que usa el escape del brazo <code>slm</code>. Por encima, cada escape vertical se convierte en un giro de 90° con un desvío lateral inyectado. En las rutas a −30 m o más arriba eso ocurre con frecuencia: 281 veces en las 10 corridas <code>fsm:depth</code> de <code>citysim_clear</code> (entre 17 y 53 por corrida), con las cuatro fallas en el tramo a −50 m; 42 en <code>townsim_clear</code>, cuyo crucero va justo a −30 m; y 98 en <code>fsm:blind</code> del lote 6, cuyo escape ciego sube hasta el techo. Los desvíos sacan a la FSM de la ruta libre hacia las estructuras.</p>
+<p>Los dos defectos explican buena parte de lo que separa a la FSM de las otras celdas: el orden inesperado <code>slm</code> &lt; <code>fsm</code> en los controles (§11.3), la proximidad de la FSM a las estructuras, el gobernador de velocidad activo en el 48–79 % de sus ciclos y sus fallas en <code>citysim_clear</code>. También afectan la comparación (ii) de los lotes con obstrucción, porque las dos celdas FSM los comparten.</p>
+<h2 id="11-resultados-116-ritmo-del-lazo-y-latencias">11.6 Ritmo del lazo y latencias<a class="headerlink" href="#11-resultados-116-ritmo-del-lazo-y-latencias" title="Permanent link">&para;</a></h2>
+<p>El período mediano del lazo es de 0.20–0.24 s en todas las celdas salvo <code>reactive</code> en los lotes 3, 4 y 6 (0.26–0.31 s): el lazo cumple aproximadamente su objetivo de 5 Hz. La latencia del grafo por ciclo tiene mediana de 110–303 ms y p95 de 231–364 ms, sin diferencias sistemáticas entre brazos; depende sobre todo del escenario (MiniSim es el más rápido). La capa estratégica no suma latencia al ciclo: corre en su propio hilo y responde en 104–135 ms de mediana.</p>
+<h2 id="11-resultados-117-sintesis-por-hipotesis">11.7 Síntesis por hipótesis<a class="headerlink" href="#11-resultados-117-sintesis-por-hipotesis" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Hipótesis</th>
+<th>Evidencia</th>
+<th>Lectura</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>H1</strong> — beneficio en obstrucción</td>
+<td><code>slm:depth</code> &gt; <code>fsm:depth</code> en SPL en los lotes 3 y 6 (δ = +0.81 y +1.00, significativas); &gt; <code>fsm:blind</code> en el lote 6 (δ = +1.00); sin diferencia en el lote 4</td>
+<td>Parcial. Ninguna FSM supera a <code>slm</code> en ningún lote, pero las ventajas están sesgadas por los defectos de la FSM (§11.5): en el lote 3 se reparten a lo largo de la ruta y en el lote 6 la obstrucción la resuelve el plan común. En el bloqueo frontal, el escenario donde se esperaba el beneficio más claro, <code>slm</code> pierde la mitad de las corridas</td>
+</tr>
+<tr>
+<td><strong>H2</strong> — costo aditivo</td>
+<td><span class="arithmatex">\(t_{\text{slm}}/t_{\text{reactive}}\)</span> = 1.95, 1.49 y 1.39 con rutas de ~180, ~420 y ~640 m; las nueve comparaciones de los controles, significativas</td>
+<td>Sostenida. El costo crece mucho menos que la ruta. No lo pone la inferencia, que no bloquea, sino las sub-metas en ruta libre y el gobernador de velocidad</td>
+</tr>
+<tr>
+<td><strong>H3</strong> — interacción brazo × escenario</td>
+<td>Frente a <code>reactive</code>: <code>slm</code> pierde en tiempo en los tres controles y gana en los lotes 3 y 4, donde <code>reactive</code> no completa ninguna corrida. Frente a la FSM: <code>slm</code> gana o empata en los seis lotes</td>
+<td>Sostenida frente a <code>reactive</code>: el signo del efecto cambia con el escenario. Frente a la FSM no hay cambio de signo, y los defectos de la FSM impiden separar la política de la implementación</td>
+</tr>
+</tbody>
+</table>
+<p>El mapa que resume la corrida: <strong>en ruta libre la capa deliberativa solo cuesta</strong> (entre 1.4 y 2 veces el tiempo del control reactivo, sin ganar seguridad); <strong>donde la ruta directa se tranca, la evasión con profundidad estimada es lo que permite completar la misión</strong>, cosa que el control reactivo no logra; y <strong>la ventaja de la capa estratégica frente a una FSM sin barrido no está demostrada</strong> con esta implementación de la FSM. El VLM no interviene en vuelo; su único aporte medible está en el plan de ruta en tierra (§11.0), que en <code>citysim_pilot</code> alcanza para que hasta el control reactivo complete la misión.</p></section><section class="print-page" id="12-conclusiones" heading-number="13"><h1 id="12-conclusiones-12-conclusiones">12. Conclusiones<a class="headerlink" href="#12-conclusiones-12-conclusiones" title="Permanent link">&para;</a></h1>
 <h2 id="12-conclusiones-121-retomar-el-hilo-conductor">12.1 Retomar el hilo conductor<a class="headerlink" href="#12-conclusiones-121-retomar-el-hilo-conductor" title="Permanent link">&para;</a></h2>
 <p>Este trabajo partió de una constatación práctica: en un sistema de control donde un modelo de lenguaje visivo consume descripciones de escena para deliberar sobre maniobras de evasión, el error más caro no está en la política de decisión del modelo sino en la interfaz que lo alimenta.</p>
 <p>La evidencia de esa afirmación —desincronización de esquemas de percepción, campos nulos por calibración de escala diferencial, descarte silencioso en grafos de estado— nunca emergió observando el comportamiento superficial del vuelo; emergió auditando formalmente los contratos de datos y la propagación de estado entre capas (cap. 9).</p>
-<!-- PENDIENTE v4 -->
-<p>Los 75 runs del lote experimental (5 escenarios × 3 brazos × 5 semillas) validan la arquitectura resultante de ese proceso de depuración y permiten responder, con datos, a la pregunta de investigación central.</p>
-<!-- PENDIENTE v4 -->
-<p><strong>Alcance de la evidencia.</strong> Esos 75 runs se ejecutaron el 8 y 9 de septiembre con una configuración del brazo <code>slm</code> en la que el VLM elegía macro-acciones tácticas (cap. 11). El mismo método de auditoría —comparar la respuesta cruda del modelo con la acción efectivamente ejecutada— encontró, en corridas de diagnóstico sobre <code>citysim_pilot</code>, un error de marco de referencia que ejecutaba al revés la respuesta del barrido, un valor por defecto que reemplazaba la respuesta del modelo, respuestas casi constantes, una señal de profundidad del simulador filtrada al brazo evaluado y una capa de reglas deterministas apiladas sobre la decisión del modelo (cap. 9, §9.8). El sistema descrito en los capítulos 5–8 contiene los mecanismos de contención de esos fallos. Con él se corrieron, en octubre, el banco de prueba del VLM a bordo (cap. 11, §11.0) y dos lotes de la capa estratégica en CitySim y en el corredor arbolado de TownSim (cap. 11, §11.6). Las conclusiones de §12.2 sobre los escenarios de control siguen en pie; las de los escenarios con obstrucción describen la configuración del lote base, salvo donde se indica la evidencia de octubre, y la comparación entre brazos con el sistema final queda para los lotes D, E y F (cap. 10, §10.12).</p>
+<p>El sistema que resulta de ese proceso se evaluó con dos instrumentos. El banco de prueba a bordo (cap. 11, §11.0) midió, contra etiquetas de referencia, qué preguntas sabe responder cada fuente del lazo lento, y fijó la configuración que vuela: la capa estratégica y el barrido de atascos responden con profundidad monocular estimada, y el VLM queda fuera del lazo de vuelo, en el plan de ruta previo al despegue. La corrida productiva v4 (cap. 11, §11.1–§11.7) evaluó esa configuración en seis escenarios, con 10 semillas por celda y 210 corridas, y permite responder con datos a la pregunta de investigación.</p>
+<p><strong>Alcance de la evidencia.</strong> La comparación entre brazos tiene un sesgo conocido: el análisis de las corridas encontró dos defectos de implementación del brazo FSM —un deadlock falso al terminar el despegue y un techo de altitud que convierte sus escapes verticales en giros por encima de 30 m— que lo hacen más lento y lo exponen a más fallas (cap. 11, §11.5). Las conclusiones frente a <code>reactive</code> no están afectadas; las conclusiones frente a la FSM favorecen a <code>slm</code> en una medida que estos datos no permiten estimar.</p>
 <hr />
 <h2 id="12-conclusiones-122-respuesta-a-la-pregunta-de-investigacion">12.2 Respuesta a la pregunta de investigación<a class="headerlink" href="#12-conclusiones-122-respuesta-a-la-pregunta-de-investigacion" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-
-<p><strong>¿Aporta el brazo deliberativo VLM (<code>slm</code>) sobre la máquina de estados (<code>fsm</code>) y sobre el control puramente reactivo (<code>reactive</code>) en navegación autónoma de dron en entornos urbanos simulados?</strong></p>
-<p>La respuesta es matizada por escenario y no puede reducirse a un único enunciado:</p>
-<h3 id="12-conclusiones-en-entornos-de-transito-libre-45-corridas-de-control">En entornos de tránsito libre (45 corridas de control)<a class="headerlink" href="#12-conclusiones-en-entornos-de-transito-libre-45-corridas-de-control" title="Permanent link">&para;</a></h3>
-<p>El <code>slm</code> no aporta ventaja sobre el <code>fsm</code> ni sobre el <code>reactive</code> en términos de tasa de éxito o seguridad: los tres brazos completan todas las rutas sin colisiones. El VLM introduce un overhead de tiempo que se diluye con la longitud de ruta (<strong>H2 confirmada</strong>):</p>
+<p><strong>¿Aporta el brazo deliberativo (<code>slm</code>) sobre la máquina de estados (<code>fsm</code>) y sobre el control puramente reactivo (<code>reactive</code>) en navegación autónoma de dron en entornos urbanos simulados?</strong></p>
+<p>La respuesta depende del escenario y del brazo contra el que se compara.</p>
+<h3 id="12-conclusiones-en-ruta-libre-solo-costo-h2-sostenida">En ruta libre: solo costo (H2 sostenida)<a class="headerlink" href="#12-conclusiones-en-ruta-libre-solo-costo-h2-sostenida" title="Permanent link">&para;</a></h3>
+<p>En los tres escenarios de control <code>slm</code> completa 29 de 30 misiones y <code>reactive</code> las 30, sin colisiones (la FSM, 25), y <code>slm</code> mantiene la misma distancia a las estructuras que <code>reactive</code>. No gana seguridad ni éxito; cuesta tiempo. Las nueve comparaciones de tiempo son significativas tras Bonferroni, con separación completa o casi, y el orden es el mismo en los tres tiers: <code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code>.</p>
 <table>
 <thead>
 <tr>
 <th>Escenario</th>
-<th>Ruta aprox.</th>
-<th>Ratio <code>slm</code>/<code>reactive</code></th>
+<th>Ruta</th>
+<th><span class="arithmatex">\(t_{\text{slm}}/t_{\text{reactive}}\)</span></th>
+<th><span class="arithmatex">\(t_{\text{slm}} - t_{\text{reactive}}\)</span></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>minisim_clear</code> (Tier 0, ~185 m)</td>
-<td>2.20×</td>
-<td></td>
+<td><code>minisim_clear</code> (Tier 0)</td>
+<td>~180 m</td>
+<td>1.95</td>
+<td>80 s</td>
 </tr>
 <tr>
-<td><code>townsim_clear</code> (Tier 1, ~626 m)</td>
-<td>1.14×</td>
-<td></td>
+<td><code>citysim_clear</code> (Tier 2)</td>
+<td>~420 m</td>
+<td>1.49</td>
+<td>94 s</td>
 </tr>
 <tr>
-<td><code>citysim_clear</code> (Tier 2, ~427 m)</td>
-<td>1.06×</td>
-<td></td>
+<td><code>townsim_clear</code> (Tier 1)</td>
+<td>~640 m</td>
+<td>1.39</td>
+<td>107 s</td>
 </tr>
 </tbody>
 </table>
-<p>El ratio decrece monótonamente (Cliff's δ = 1.0 en comparaciones por pares). La convergencia hacia 1.0× a medida que la ruta se alarga confirma que el overhead del VLM es absorbido por el presupuesto total de vuelo: en rutas largas, pocas invocaciones son necesarias y su peso relativo decrece. El costo temporal <em>efectivo</em> por invocación, derivado de las diferencias de tiempo de misión del capítulo 11, es de ~1.8 s en Tier 0 (89.5 s de diferencia sobre 49.6 invocaciones) y ~3.8 s en Tier 1 (36 s sobre 9.6); supera la latencia de inferencia pura medida en un piloto (mediana de 1.46 s, cap. 8, §8.6) porque incluye el avance cauto a 0.5 m/s mientras se esperaba la respuesta. En el sistema descrito en el capítulo 5 el dron no frena a esperar al VLM fuera de los deadlocks, por lo que este costo debe medirse de nuevo. Esta predicción se sostenía teóricamente (cap. 8, §8.6)
-y los datos la verifican.</p>
-<h3 id="12-conclusiones-en-entornos-con-obstruccion-30-corridas-de-prueba-extendida">En entornos con obstrucción (30 corridas de prueba extendida)<a class="headerlink" href="#12-conclusiones-en-entornos-con-obstruccion-30-corridas-de-prueba-extendida" title="Permanent link">&para;</a></h3>
-<p>La evidencia es heterogénea y revela tres regímenes cualitativamente distintos:</p>
-<p><strong>Régimen 1 — Deadlock crónico por límite de percepción (<code>townsim_ini</code>):</strong> El corredor arbolado a z=−10 m produce 0/5 éxitos en los tres brazos. El flujo óptico traslacional se anula precisamente en los obstáculos centrados en la trayectoria (cerca del Foco de Expansión), que son los de mayor riesgo frontal. Ningún mecanismo de decisión puede compensar la ausencia de señal geométrica confiable: ni el <code>deep_vlm</code>, ni la FSM, ni el control reactivo. En el lote base esto pareció un límite del sensor; con la configuración final —profundidad monocular estimada desde el mismo RGB en la capa estratégica y en el barrido— las diez corridas de octubre en este escenario completaron la misión sin colisiones (cap. 11, §11.6.2). La comparación no es controlada (otro manifiesto y otro código), pero sugiere que el límite era del canal de flujo óptico solo, no de la cámara monocular.</p>
-<p><strong>Régimen 2 — Trampa geométrica por ausencia de razonamiento global (<code>citymap_pilot</code>):</strong> Los brazos deliberativos (<code>slm</code>, <code>fsm</code>) cubren <strong>6.3× más distancia</strong> que el <code>reactive</code> (170 m vs. 27 m). El <code>reactive</code> queda paralizado bajo una autopista elevada: el flujo óptico detecta superficies en todas las direcciones y el controlador oscila sin escape posible — sin razonamiento global, ninguna evasión local desbloquea la situación. Es la diferencia más grande del lote a favor de los brazos deliberativos, pero <strong>no puede atribuirse al VLM</strong>: la comparten <code>slm</code> y <code>fsm</code> (ambos resolvían sus deadlocks con el mismo barrido con VLM), no hay una celda de resolución sin VLM con la que contrastarla, y la auditoría de corridas de diagnóstico en este escenario encontró respuestas del barrido casi constantes (cap. 9, §9.8; cap. 11, §11.4.3b). Lo que el dato sostiene es que <strong>algún</strong> mecanismo de resolución de deadlocks es necesario en este régimen; si el VLM es el que aporta, es la pregunta de los lotes con obstrucción.</p>
-<p><strong>Régimen 3 — Obstrucción frontal con escape lateral accesible
-(<code>townsim_calib_cruce_frontal</code>):</strong> El <code>reactive</code> supera a los brazos deliberativos (2/5 vs. 1/5 vs. 0/5). Cuando existe una ruta de escape geométricamente accesible desde la posición actual, el flujo óptico la encuentra más rápido porque no detiene el vuelo para deliberar; el <code>deep_vlm</code> introduce latencia de reposicionamiento que, en el momento de la oportunidad de evasión, ya pasó. El VLM no aporta ventaja —y en la mayoría de semillas introduce una desventaja neta.</p>
+<p>La razón decrece con la longitud de la ruta y la diferencia absoluta crece mucho menos que la ruta: el costo de la arquitectura se comporta como un término aproximadamente aditivo, que es lo que predice H2. El costo no lo pone la inferencia: la capa estratégica corre en su propio hilo, responde en ~110 ms y el dron no frena a esperarla. Lo ponen lo que la capa hace con la respuesta y el gobernador de velocidad: en el plano vacío de MiniSim, el 27 % de las consultas proponen una sub-meta que desvía al dron, y el gobernador limita el avance en el 27–43 % de los ciclos de <code>slm</code>, frente al 7–18 % de <code>reactive</code>. Reducir el costo de la arquitectura en ruta libre es, por tanto, un problema de cuándo desviar y cuándo frenar, no de acelerar el modelo.</p>
+<h3 id="12-conclusiones-con-obstruccion-la-evasion-con-profundidad-decide-la-capa-estrategica-sin-demostrar">Con obstrucción: la evasión con profundidad decide; la capa estratégica, sin demostrar<a class="headerlink" href="#12-conclusiones-con-obstruccion-la-evasion-con-profundidad-decide-la-capa-estrategica-sin-demostrar" title="Permanent link">&para;</a></h3>
+<p><strong>Frente al control reactivo, la diferencia es binaria.</strong> En el corredor arbolado de <code>townsim_ini</code> y en el bloqueo frontal de <code>townsim_calib_cruce_frontal</code>, <code>reactive</code> no completa ninguna de sus 20 corridas: queda trabado frente al follaje o la fachada hasta el tope de tiempo. Los brazos con evasión y barrido completan entre 5 y 9 de cada 10. Ese es el resultado más firme del trabajo, y es el que sostiene H3: el signo del efecto de la deliberación cambia con el escenario, de costo puro en ruta libre a condición necesaria donde la ruta directa se tranca.</p>
+<p><strong>Frente a la FSM, la ventaja de <code>slm</code> existe pero no se puede atribuir.</strong> <code>slm:depth</code> supera en SPL a <code>fsm:depth</code> en <code>townsim_ini</code> (δ = +0.81) y a las dos FSM en <code>citysim_pilot</code> (δ = +1.00), las tres comparaciones significativas tras Bonferroni; en el bloqueo frontal no hay diferencia y <code>slm</code> pierde la mitad de sus corridas, contra 1 de 10 de la FSM sin barrido. Tres razones impiden leer esas ventajas como un aporte de la capa estratégica:</p>
+<ul>
+<li><strong>Los defectos de la FSM</strong> (§12.1) la hacen más lenta en toda la ruta, y en <code>townsim_ini</code> la ventaja de <code>slm</code> está repartida a lo largo del recorrido, incluido el retorno a cielo abierto, en lugar de concentrarse en el follaje como se esperaba.</li>
+<li><strong>En <code>citysim_pilot</code> el plan de ruta resuelve el bloqueo antes del vuelo</strong>, para las cuatro celdas: hasta <code>reactive</code> completa las 10 corridas. La comparación mide qué tan bien cada brazo sigue una ruta que ya evita el obstáculo.</li>
+<li><strong>El bloqueo frontal</strong>, el escenario donde se esperaba el beneficio más claro de rodear en lugar de subir, es justamente donde <code>slm</code> no muestra ventaja.</li>
+</ul>
+<p>La capa estratégica sí discrimina: declara el camino directo libre en dos tercios a tres cuartos de las consultas y propone sub-metas en el resto. Pero no se midió si esas sub-metas acercan al waypoint real, de modo que su contribución al avance queda sin establecer.</p>
+<h3 id="12-conclusiones-el-vlm">El VLM<a class="headerlink" href="#12-conclusiones-el-vlm" title="Permanent link">&para;</a></h3>
+<p>Medido contra etiquetas de referencia, el VLM de 1.6 B no separa sectores volables de bloqueados (AUC 0.53) ni rumbos abiertos de cerrados en el barrido; una red de profundidad monocular de ~25 M de parámetros sí lo hace (AUC 0.83–0.87), en 82 ms en el banco y ~110–135 ms en vuelo (cap. 11, §11.0 y §11.4). Por eso el VLM no vuela. Su único aporte medible está fuera del lazo: el plan de ruta sobre el mapa cenital (AUC 0.81), donde la pregunta es de reconocimiento de calles y techos, no de distancia. En <code>citysim_pilot</code> ese plan basta para que el control reactivo complete una misión de rodeo de manzanas; en <code>citysim_clear</code>, sobre una ruta ya libre, elige un desvío bloqueado, y por eso los escenarios de control vuelan sin plan.</p>
 <h3 id="12-conclusiones-sintesis">Síntesis<a class="headerlink" href="#12-conclusiones-sintesis" title="Permanent link">&para;</a></h3>
-<p>Con la evidencia disponible, <strong>no se puede afirmar que el VLM aporte valor</strong> en ningún régimen. El único dato favorable —el progreso de los brazos deliberativos en <code>citymap_pilot</code>— no aísla al modelo de los mecanismos de resolución de deadlocks que lo rodeaban, y la auditoría de corridas de diagnóstico mostró respuestas que apenas dependían de la escena y llegaban a ejecutarse al revés (cap. 9, §9.8). El régimen en el que el VLM <em>debería</em> aportar es rodear obstáculos y elegir corredores donde el flujo óptico no discrimina, y el sistema está construido para medir exactamente eso: el modelo es la única fuente de rodeos del brazo <code>slm</code>, sin reglas que lo corrijan, y el lote incluye el contraste sin VLM (<code>fsm × blind</code>).</p>
-<!-- PENDIENTE v4 -->
-<p><strong>Evidencia de octubre con el sistema final</strong> (cap. 11, §11.0 y §11.6). Medido contra etiquetas de referencia, el VLM de 1.6 B no separa sectores volables de bloqueados (AUC 0.53) ni rumbos abiertos de cerrados en el barrido; una red de profundidad monocular de ~25 M de parámetros sí lo hace (AUC 0.83–0.87) en ~110 ms. En vuelo, la capa estratégica no acelera la misión con ninguna fuente; con obstáculos orgánicos, la fuente de profundidad aleja al dron del follaje en las cinco semillas. El único aporte medible del VLM está fuera del lazo: el plan de ruta sobre el mapa cenital (AUC 0.81), donde la pregunta es de reconocimiento y no de distancia. Por eso la configuración final saca al VLM del lazo táctico y lo deja en la planificación previa al vuelo.</p>
-<p>No aporta valor en ruta libre ni en obstrucciones con escape local. No puede compensar el límite físico del sensor monocular en textura auto-similar densa. Con K=5 semillas y la corrección de Bonferroni aplicada a 18 comparaciones (α_corr ≈ 0.0028), ningún resultado individual alcanza significancia estadística formal. El patrón H2, no obstante, es consistente con δ = 1.0 en todos los pares; el de <code>citymap_pilot</code> es cuantitativamente sustancial (6.3×) pero, por las razones dadas, no constituye evidencia de H1. La validación estadística requeriría K ≥ 10–15 semillas por condición.</p>
+<p><strong>En ruta libre la capa deliberativa solo cuesta</strong>: entre 1.4 y 2 veces el tiempo del control reactivo, sin ganar éxito ni seguridad. <strong>Donde la ruta directa se tranca, evadir con profundidad estimada y resolver los atascos con un barrido es lo que permite completar la misión</strong>, cosa que el control reactivo no logra. <strong>La ventaja de la capa estratégica sobre una máquina de estados no está demostrada</strong>: las diferencias a favor de <code>slm</code> existen, pero la implementación de la FSM evaluada tiene defectos que las inflan. Un VLM pequeño no aporta en el lazo de vuelo; aporta como planificador de ruta sobre un mapa registrado.</p>
 <hr />
 <h2 id="12-conclusiones-123-limitaciones">12.3 Limitaciones<a class="headerlink" href="#12-conclusiones-123-limitaciones" title="Permanent link">&para;</a></h2>
-<!-- PENDIENTE v4 -->
-<ul>
-<li><strong>Evidencia con obstrucción obtenida con otra configuración:</strong> los resultados de los escenarios con obstrucción (0/5 en <code>townsim_ini</code>, el patrón de tres regímenes) se obtuvieron con la configuración del lote base. No describen el sistema de los capítulos 5–8. Las corridas piloto, ejecutadas cada una con ajustes distintos, fueron de diagnóstico y no constituyen evidencia estadística; su valor está en los fallos que expusieron (cap. 9).</li>
-</ul>
-<!-- PENDIENTE v4 -->
 <ul>
 <li>
-<p><strong>Validación en vuelo limitada:</strong> la capa estratégica, el barrido en marco mundo y la detección de atasco de dos señales están cubiertos por tests (incluido el grafo compilado de punta a punta) y tienen dos lotes de vuelo (25 corridas, cap. 11 §11.6), con un escenario por tipo y 5 semillas por celda. Sus umbrales (período de 3 s, edad máxima de 10 s, sub-meta a 15 m como máximo, cambio de altitud de 4 m como máximo, deduplicación de 10 m, radio de 8 m sin consultas alrededor del waypoint, grilla de 3×3) son decisiones de diseño, no valores calibrados.</p>
+<p><strong>Defectos del brazo FSM:</strong> el deadlock falso al despegar y el escape agotado por el techo de 30 m (cap. 11, §11.5) afectan las seis comparaciones <code>slm</code>–<code>fsm</code> y las comparaciones entre las dos FSM. Las conclusiones frente a la FSM son, por eso, cotas favorables a <code>slm</code>.</p>
 </li>
 <li>
-<p><strong>Capacidad de discriminación del VLM no demostrada:</strong> en las corridas de diagnóstico, 52 de 53 respuestas sectoriales declararon el frente transitable, incluso a menos de un metro de una superficie (cap. 9, §9.8.3). El diseño del sistema cambia la pregunta y el prompt (cap. 8, §8.3–§8.5), y el banco de prueba con el modelo a bordo (cap. 11, §11.0) muestra que LFM2.5-VL-1.6B no distingue sectores volables de bloqueados en el render de CitySim: ninguna de las ocho preguntas evaluadas supera el criterio, la grilla de vuelo queda en 53 % de exactitud balanceada y el barrido declara transitables todos los rumbos. La única señal aprovechable está en el mapa cenital (AUC 0.81 para rutas libres frente a bloqueadas). Por eso la configuración final responde la misma pregunta con la profundidad estimada (cap. 5, §5.10.6–§5.10.7), y el VLM queda en la planificación de ruta.</p>
+<p><strong>Plan de ruta común en <code>citysim_pilot</code>:</strong> el plan rodea el único tramo bloqueado antes del vuelo, de modo que el lote más difícil no ejerce la resolución de la obstrucción en vuelo. Los puntos de paso del plan toman la altitud del waypoint de destino, por lo que un desvío en un tramo que desciende baja al comienzo y no a lo largo del tramo (cap. 4, §4.3.1).</p>
 </li>
 <li>
-<p><strong>Componentes del lazo rápido sin evaluar por separado:</strong> la evasión por flujo, <code>GIRAR_90</code>, el gobernador de velocidad, la detección de techo y la reacción a contacto forman parte del sistema por ser comunes en espíritu a los tres brazos, no por evidencia de beneficio. Varios de sus umbrales se fijaron sobre una o dos corridas.</p>
+<p><strong>Un escenario por tipo:</strong> cada nivel de dificultad está representado por una ruta concreta. Un efecto observado es una propiedad de esa geometría hasta que se replique en otra ruta del mismo tipo, y la progresión de H2 entre tiers es descriptiva.</p>
 </li>
-</ul>
-<!-- PENDIENTE v4 -->
-<ul>
 <li>
-<p><strong>Latencia del VLM sin medición controlada:</strong> con los servidores anteriores las mediciones no coinciden entre sí (mediana de 1.46 s en un piloto frente a 5.3–5.6 s en las corridas de diagnóstico, cap. 8, §8.6); con el modelo local vigente la mediana en vuelo es de 0.77 s. No hay una medición que separe tamaño de imagen, carga de GPU y arranque en frío. Con la configuración final el VLM no corre en vuelo, de modo que esta limitación solo afecta a la ablación con <code>STRATEGIC_SOURCE = vlm</code>.</p>
+<p><strong>Tamaño de muestra:</strong> con K = 10 una separación completa supera la corrección de Bonferroni para 18 comparaciones (α ≈ 0.0028), pero una separación parcial no: la comparación <code>slm:depth</code>–<code>fsm:blind</code> en <code>townsim_ini</code> (δ = +0.73, p = 0.0039) es un efecto grande no detectado con esta potencia, no un efecto ausente.</p>
+</li>
+<li>
+<p><strong>Contribución de la capa estratégica sin medir:</strong> no se midió el avance hacia el waypoint real tras cada sub-meta (cap. 10, §10.6.3). Sus umbrales (período, edad máxima de 10 s, sub-meta a 15 m como máximo, cambio de altitud de 4 m como máximo, deduplicación de 10 m, radio sin consultas alrededor del waypoint, grilla de 3×3) son decisiones de diseño, no valores calibrados.</p>
+</li>
+<li>
+<p><strong>Seguridad medida sin contacto:</strong> no hubo colisiones registradas en ninguna corrida, pero DistMin cae a ~0.1–0.25 m en todos los brazos con evasión de los escenarios con vegetación y fachadas, y las fallas son abortos por quedar apoyado en la geometría. El valor de ~0.10 m que se repite probablemente es el plano cercano de la cámara de auditoría, sin verificación en video; la seguridad informada es la ausencia de colisión, no un margen medido.</p>
+</li>
+<li>
+<p><strong>Capacidad de discriminación del VLM no demostrada:</strong> el banco de prueba con el modelo a bordo (cap. 11, §11.0) muestra que LFM2.5-VL-1.6B no distingue sectores volables de bloqueados en el render de CitySim: ninguna de las ocho preguntas evaluadas supera el criterio, la grilla de vuelo queda en 53 % de exactitud balanceada y el barrido declara transitables todos los rumbos. Por eso la configuración final responde la misma pregunta con la profundidad estimada (cap. 5, §5.10.7), y el VLM queda en la planificación de ruta.</p>
+</li>
+<li>
+<p><strong>Componentes del lazo rápido sin evaluar por separado:</strong> la evasión por flujo, <code>GIRAR_90</code>, el gobernador de velocidad, la detección de techo y la reacción a contacto forman parte del sistema por ser comunes a los tres brazos, no por evidencia de beneficio. El gobernador, en particular, explica buena parte del costo de <code>slm</code> en ruta libre y no tiene una celda que lo aísle.</p>
+</li>
+<li>
+<p><strong>Latencia del VLM solo fuera de vuelo:</strong> con la configuración final el VLM no corre en vuelo; su latencia (0.34–0.88 s por pregunta y 2.6–3.1 s por barrido en el banco, en la misma GPU que Unreal) solo importa para la ablación con <code>STRATEGIC_SOURCE = vlm</code>.</p>
 </li>
 <li>
 <p><strong>Validación exclusivamente en simulación (AirSim):</strong> sin validación en hardware físico (Jetson Nano + dron real), que el plan de trabajo aprobado (<code>plan_tesis/plan-tesis.md</code>, §"Transferencia de los resultados obtenidos") sitúa como siguiente etapa fuera del alcance de este trabajo.</p>
 </li>
-</ul>
-<!-- PENDIENTE v4 -->
-<ul>
 <li>
-<p><strong>Tamaño de muestra:</strong> K=5 semillas por condición (75 corridas en total). La corrección de Bonferroni para 18 comparaciones fija α_corr ≈ 0.0028, un umbral que el p-valor mínimo alcanzable con K=5 (p ≈ 7.9×10⁻³) no puede superar. Los resultados son indicativos y cuantitativamente consistentes, pero no formalmente significativos.</p>
+<p><strong>Sensor monocular (parcialmente mitigado):</strong> el canal de flujo óptico depende del movimiento del vehículo entre frames, lo que lo hace estructuralmente ciego a obstáculos centrados en la trayectoria (Foco de Expansión) y a las superficies horizontales a la altura de vuelo (cap. 9, §9.8.7). En el lazo lento lo complementa la profundidad monocular estimada (Depth Anything V2, <a href="#13-referencias-ref-yang-2024">Yang et al., 2024</a>; cap. 6, §6.14), que juzga un fotograma aislado y no necesita traslación. Sus límites: se entrenó en parte con datos sintéticos y se evaluó sobre el mismo render (en cámara real puede rendir menos), su escala métrica no está calibrada a la altura de vuelo y el follaje sigue siendo el caso difícil: en <code>townsim_ini</code> el dron completa la misión pero pasa a ~0.1 m de las copas. La validación en imágenes reales queda pendiente (Anexo 7).</p>
 </li>
 <li>
-<p><strong>Sensor monocular (parcialmente mitigado):</strong> el canal de flujo óptico depende del movimiento del vehículo entre frames, lo que lo hace estructuralmente ciego a obstáculos centrados en la trayectoria (Foco de Expansión) y a las superficies horizontales a la altura de vuelo (cap. 9, §9.8.7). La configuración final lo complementa en el lazo lento con profundidad monocular estimada (Depth Anything V2, <a href="#13-referencias-ref-yang-2024">Yang et al., 2024</a>; cap. 6, §6.14), que juzga un fotograma aislado y no necesita traslación. Un primer intento de septiembre, que usaba la misma red como freno del lazo rápido con otro estadístico, se había descartado; con el p5 por sector y un umbral de 15 m pasó el banco de prueba (AUC 0.83–0.87). Sus límites: se entrenó en parte con datos sintéticos y se evaluó sobre el mismo render (en cámara real puede rendir menos), su escala métrica no está calibrada a la altura de vuelo y el follaje sigue siendo el caso difícil (en <code>townsim_ini</code> redujo los acercamientos, no los eliminó). La validación en imágenes reales queda pendiente (Anexo 7).</p>
-</li>
-<li>
-<p><strong>Calibración del canal de ocupación de <code>ObstacleField</code> parcial:</strong> el canal de TTC está formalmente validado contra etiquetas de referencia tomadas de la profundidad del simulador (cap. 7). El umbral de ocupación se recalibró por ROC/Youden (<code>OBSTACLE_OCCUPANCY_BLOCKED = 0.011</code>, AUC = 0.87) pero con 196 frames, una sola escena y 29 positivos; el valor original 0.35 nunca se disparaba y el lote base se ejecutó antes de la recalibración (cap. 7, §7.5). La validación cruzada en otras escenas y el efecto del <code>OccupancyCalibrator</code> adaptativo siguen sin evaluarse.</p>
+<p><strong>Calibración del canal de ocupación de <code>ObstacleField</code> parcial:</strong> el canal de TTC está formalmente validado contra etiquetas de referencia tomadas de la profundidad del simulador (cap. 7). El umbral de ocupación se calibró por ROC/Youden (<code>OBSTACLE_OCCUPANCY_BLOCKED = 0.011</code>, AUC = 0.87) con 196 frames, una sola escena y 29 positivos (cap. 7, §7.5). La validación cruzada en otras escenas y el efecto del <code>OccupancyCalibrator</code> adaptativo siguen sin evaluarse.</p>
 </li>
 <li>
 <p><strong>Un único mapa por escenario:</strong> cada escenario de obstrucción se corrió en un solo mapa urbano (TownSim o CitySim). La generalización de los resultados a otras geometrías urbanas no está garantizada con los datos disponibles.</p>
@@ -5571,14 +4884,16 @@ y los datos la verifican.</p>
 </ul>
 <hr />
 <h2 id="12-conclusiones-124-trabajo-futuro-y-mejoras">12.4 Trabajo futuro y mejoras<a class="headerlink" href="#12-conclusiones-124-trabajo-futuro-y-mejoras" title="Permanent link">&para;</a></h2>
-<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en los ejes siguientes, integrando la transferencia física, la arquitectura de la capa deliberativa y la infraestructura perceptual:</p>
-<!-- PENDIENTE v4 -->
+<p>Las líneas de continuidad y optimización derivadas de este trabajo se estructuran en los ejes siguientes, integrando la validación del sistema, la arquitectura de la capa deliberativa, la infraestructura perceptual y la transferencia física:</p>
 <ul>
 <li>
-<p><strong>Especialización y adaptación ligera del modelo deliberativo vía LoRA/QLoRA (Anexo 3):</strong> En la implementación evaluada, el modelo multimodal (<strong>LFM2.5-VL-1.6B</strong>, <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>; antes Qwen2.5-VL-3B-Instruct) opera en régimen <em>zero-shot</em>. El prompt ya es mínimo (una imagen con la grilla y una respuesta de nueve valores sin texto libre) y la latencia local es de ~0.8 s (cap. 8, §8.6), de modo que el margen de LoRA está en la <strong>calidad</strong> de la respuesta: que el modelo distinga sectores libres de bloqueados, lo que hoy no hace (AUC 0.53, cap. 11 §11.0). Como se fundamenta en el capítulo 8 (§8.8) y se desarrolla en detalle en el <a href="#anexos-a3-optimizacion-lora">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras inicial y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las   matrices de atención (<span class="arithmatex">\(W_q, W_v\)</span>) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT) utilizando la telemetría de vuelos exitosos. Un conjunto de entrenamiento natural son los fotogramas con columnas que la propia capa estratégica registra (cap. 5, §5.10.4), etiquetados con la profundidad del simulador en forma offline —sin que esa señal entre nunca al lazo de vuelo—.</p>
+<p><strong>Validación del sistema:</strong> la continuación más directa de este trabajo, porque condiciona la lectura de la comparación con la FSM. (i) Corregir los dos defectos del brazo FSM —no contar progreso durante el despegue y revisar el techo de escape en rutas que vuelan por encima de 30 m— y repetir las comparaciones <code>slm</code>–<code>fsm</code>. (ii) Medir el avance hacia el waypoint real tras cada sub-meta de la capa estratégica en los tres escenarios con obstrucción (cap. 10, §10.6.3). (iii) Agregar una celda que aísle el gobernador de velocidad, que explica buena parte del costo de <code>slm</code> en ruta libre. (iv) Correr un escenario de rodeo sin plan de ruta, para que la obstrucción se resuelva en vuelo. (v) Que los puntos de paso del plan de ruta conserven la altitud más alta del tramo hasta llegar al destino. (vi) Incorporar un test de contrato que recorra <code>src/agents/</code> y falle ante cualquier clave de estado no declarada en <code>DroneState</code>.</p>
 </li>
 <li>
-<p><strong>Decodificación restringida con gramáticas reducidas y dinámicas condicionadas por el grafo (Anexo 4):</strong> El <a href="#anexos-a4-decodificacion-restringida">Anexo 4</a>, §A4.4.2, especifica una optimización pensada para un modelo que elige macro-acciones: la <strong>inyección dinámica de gramáticas acotadas según el estado de vuelo y el motivo de consulta</strong>. En el sistema descrito el modelo no emite acciones (sus esquemas describen sectores o imágenes, §8.2), por lo que la idea se traslada a restringir <strong>qué describe</strong> según el contexto (por ejemplo, omitir los sectores que el lazo rápido ya sabe bloqueadas). La propuesta original, como referencia:</p>
+<p><strong>Especialización y adaptación ligera del modelo deliberativo vía LoRA/QLoRA (Anexo 3):</strong> En la implementación evaluada, el modelo multimodal (<strong>LFM2.5-VL-1.6B</strong>, <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>) opera en régimen <em>zero-shot</em>. El prompt ya es mínimo (una imagen con la grilla y una respuesta de nueve valores sin texto libre) y la latencia local es de ~0.8 s (cap. 8, §8.6), de modo que el margen de LoRA está en la <strong>calidad</strong> de la respuesta: que el modelo distinga sectores libres de bloqueados, lo que hoy no hace (AUC 0.53, cap. 11 §11.0). Como se fundamenta en el capítulo 8 (§8.8) y se desarrolla en detalle en el <a href="#anexos-a3-optimizacion-lora">Anexo 3</a>, la sintonización fina de bajo rango (<em>Low-Rank Adaptation</em>, LoRA / QLoRA / DoRA) quedó excluida del alcance inmediato por escasez de diversidad en el dataset de maniobras y para evitar riesgos de sobreajuste a geometrías urbanas particulares. Como trabajo futuro, se proyecta entrenar adaptadores sobre las matrices de atención (<span class="arithmatex">\(W_q, W_v\)</span>) y proyecciones MLP del LLM (manteniendo congelado el codificador visual ViT). Un conjunto de entrenamiento natural son los fotogramas que la propia capa estratégica registra (cap. 5, §5.10.4), etiquetados con la profundidad del simulador en forma offline —sin que esa señal entre nunca al lazo de vuelo—; la corrida v4 deja más de 7500 consultas de los escenarios con obstrucción.</p>
+</li>
+<li>
+<p><strong>Decodificación restringida con gramáticas reducidas y dinámicas condicionadas por el grafo (Anexo 4):</strong> El <a href="#anexos-a4-decodificacion-restringida">Anexo 4</a>, §A4.4.2, especifica una optimización pensada para un modelo que elige macro-acciones: la <strong>inyección dinámica de gramáticas acotadas según el estado de vuelo y el motivo de consulta</strong>. En el sistema descrito el modelo no emite acciones (sus esquemas describen sectores o imágenes, §8.2), por lo que la idea se traslada a restringir <strong>qué describe</strong> según el contexto (por ejemplo, omitir los sectores que el lazo rápido ya sabe bloqueados). La propuesta, como referencia:</p>
 </li>
 <li>Ante colisiones inminentes (<code>"TTC_CRITICO"</code>), restringir la gramática estrictamente a <code>["evasive", "girar_90"]</code>, podando sintácticamente cualquier token asociado a acciones pasivas.</li>
 <li>Ante atascos cinemáticos (<code>"DEADLOCK_ESCAPE"</code>), forzar alternativas de escape <code>["girar_90", "fsm", "degraded"]</code>, impidiendo bucles de evasión redundantes.</li>
@@ -5589,21 +4904,17 @@ y los datos la verifican.</p>
 <p><strong>Perfeccionamiento del lazo perceptual monocular (Anexo 5):</strong></p>
 </li>
 <li>Validación cruzada del umbral de ocupación (ya calibrado por ROC/Youden sobre una escena, cap. 7, §7.5) en CitySim y en escenas con vegetación, con un dataset mayor que 29 positivos y evaluación del <code>OccupancyCalibrator</code> adaptativo, hoy ausente del runner de lotes (<a href="#anexos-a5-percepcion-monocular-flujo-optico">Anexo 5</a>).</li>
-<li>Completar la validación de la derotación angular: la <em>inhibición</em> del estimador ante guiñadas de 0.3–1.0 rad/s está verificada (cap. 7, §7.6), pero falta caracterizar el error de TTC en el rango previo al guard (0–0.3 rad/s), la reanudación de la estimación al cesar el giro y el comportamiento con IMU real.</li>
-</ul>
-<!-- PENDIENTE v4 -->
-<ul>
 <li>
-<p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong> El fracaso uniforme de los tres brazos en <code>townsim_ini</code> (cap. 11, §11.4.2b) expuso un límite estructural del sensor monocular: el flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión), que son los de mayor riesgo de colisión frontal (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.1–§A7.2). Como trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del movimiento entre frames al recuperar profundidad métrica en un único instante (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, con limitaciones propias frente a follaje en movimiento y geometría subpíxel.</p>
+<p>Completar la validación de la derotación angular: la <em>inhibición</em> del estimador ante guiñadas de 0.3–1.0 rad/s está verificada (cap. 7, §7.6), pero falta caracterizar el error de TTC en el rango previo al guard (0–0.3 rad/s), la reanudación de la estimación al cesar el giro y el comportamiento con IMU real.</p>
 </li>
 <li>
-<p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="#anexos-a8-navegacion-rl">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en VLM pre-entrenado. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>, manteniendo activa la capa deliberativa VLM en modo jerárquico. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— sin el overhead de latencia de un VLM (0.8 s de mediana con el modelo local, 1.5–5.6 s con los servidores anteriores, cap. 8 §8.6, vs. &lt; 5 ms de inferencia neuronal, estimado). El <a href="#anexos-a8-navegacion-rl">Anexo 8</a> desarrolla en detalle la jerarquía VLM → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos (K=5, 3 escenarios, 60 corridas). Su prerequisito es que el brazo <code>slm</code> tenga resultados estables.</p>
+<p><strong>Mitigación de la "maldición monocular" en pasajes densamente obstruidos (Anexo 7):</strong> El control reactivo, que depende solo del flujo óptico, no atraviesa el corredor arbolado de <code>townsim_ini</code> en ninguna corrida, y los brazos que sí lo atraviesan con profundidad estimada pasan a ~0.1 m de las copas (cap. 11, §11.4). El flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión), que son los de mayor riesgo de colisión frontal (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.1–§A7.2). Como trabajo futuro de menor costo que un LiDAR emulado, se propone incorporar un segundo canal de profundidad instantánea mediante un <strong>par estéreo</strong> (baseline fija y conocida), que resuelve la ambigüedad de escala y elimina la dependencia del movimiento entre frames al recuperar profundidad métrica en un único instante (<a href="#anexos-a7-maldicion-monocular-estereo">Anexo 7</a>, §A7.3–§A7.6). El SLAM monocular disperso o semi-denso queda como línea posterior y complementaria, con limitaciones propias frente a follaje en movimiento y geometría subpíxel.</p>
+</li>
+<li>
+<p><strong>Política de navegación por aprendizaje por refuerzo visual como cuarto brazo (<code>rl</code>) (<a href="#anexos-a8-navegacion-rl">Anexo 8</a>):</strong> Los tres brazos evaluados (<code>reactive</code>, <code>fsm</code>, <code>slm</code>) cubren el espacio de estrategias reactiva, basada en lógica explícita y basada en una capa estratégica sobre profundidad estimada. Un cuarto brazo ortogonal a los tres anteriores es una <strong>política neuronal entrenada por RL</strong> que ocupa la misma capa táctica que <code>fsm_node</code> y <code>evasive_node</code>. La hipótesis central es que una política especializada en el espacio de macro-acciones de este sistema (<code>MANTENER_RUMBO</code>, <code>EVADIR_*</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>) puede superar al brazo <code>reactive</code> en obstrucción densa —donde el flujo óptico colapsa— con una inferencia de &lt; 5 ms (estimado). El <a href="#anexos-a8-navegacion-rl">Anexo 8</a> desarrolla en detalle la jerarquía planificador → RL → PX4, el espacio de observación mixto <code>{rgb, ttc_field, nav}</code>, la función de recompensa con currículo, la justificación de PPO sobre SAC/DQN, la arquitectura CNN+FC propuesta y el protocolo de evaluación comparativa de los 4 brazos. Su prerequisito es corregir los defectos de la FSM, para que la comparación entre brazos sea limpia.</p>
 </li>
 <li>
 <p><strong>Modelos de mundo latentes (LeWorldModel) como complemento o alternativa parcial al SLM (<a href="#anexos-a9-modelos-de-mundo-latentes-edge">Anexo 9</a>):</strong> En marzo de 2026 se presentó LeWorldModel (<a href="#13-referencias-ref-maes-2026">Maes et al., 2026</a>), un modelo de mundo de tipo JEPA de ~15 M de parámetros que aprende la dinámica del entorno de extremo a extremo desde píxeles y planifica en su espacio latente con tiempos del orden de un segundo, frente a los 1.6 B parámetros del VLM empleado en esta tesis. El Anexo 9 analiza qué aportaría y qué perdería el sistema con este tipo de modelo (predicción de consecuencias de acciones continuas frente a la semántica y el razonamiento global del VLM), estima analíticamente su viabilidad en una <em>companion computer</em> Jetson Nano / Orin Nano —memoria holgada, latencia condicionada al presupuesto de muestreo de la planificación— y concluye que, con la evidencia actual (resultados en tareas 2D/3D simples, sin validación en visión monocular urbana aérea), no corresponde reemplazar al brazo <code>slm</code> sino <strong>complementarlo</strong> como verificador de consecuencias y detector de sorpresa, o usarlo como simulador latente para entrenar el brazo <code>rl</code> del Anexo 8. Las cifras de latencia del anexo son estimaciones; su reemplazo por mediciones en hardware edge y el protocolo de evaluación en lazo cerrado (§A9.7) constituyen el trabajo futuro concreto.</p>
-</li>
-<li>
-<p><strong>Validación del sistema:</strong> además de correr los lotes D, E y F con la celda <code>fsm × blind</code>, quedan tres tareas concretas. (i) Medir la distribución de resultados de la capa estratégica con profundidad y el avance hacia el waypoint real tras cada sub-meta en los tres escenarios con obstrucción (cap. 10, §10.6.3). (ii) Incorporar un test de contrato que recorra <code>src/agents/</code> y falle ante cualquier clave de estado no declarada en <code>DroneState</code>; hoy los tests verifican solo las claves de control en el grafo compilado. (iii) Evaluar por separado los componentes del lazo rápido conservados sin evidencia (gobernador de velocidad, <code>GIRAR_90</code>, detección de techo).</p>
 </li>
 <li>
 <p><strong>Transferencia a hardware embebido y navegación en enjambre:</strong></p>
@@ -6985,7 +6296,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <tr>
 <td><code>STRATEGIC_SOURCE</code></td>
 <td><code>"depth"</code></td>
-<td>Fuente de la capa estratégica: <code>"depth"</code> (profundidad monocular estimada, cap. 5 §5.10.6), <code>"vlm"</code> (grilla del VLM) u <code>"off"</code> (sin capa). Con <code>depth</code>/<code>depth</code> el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 11 §11.6).</td>
+<td>Fuente de la capa estratégica: <code>"depth"</code> (profundidad monocular estimada, cap. 5 §5.10.6), <code>"vlm"</code> (grilla del VLM) u <code>"off"</code> (sin capa). Con <code>depth</code>/<code>depth</code> el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 5 §5.10.7; cap. 11 §11.0).</td>
 </tr>
 <tr>
 <td><code>DEPTH_MODEL</code></td>
@@ -7515,7 +6826,7 @@ Las celdas se alternan dentro de cada semilla, con el orden rotado por semilla. 
 </code></pre></div>
 El script escribe <code>analisis_lotes.md</code> y dos CSV en la raíz de los lotes: por celda, éxito con IC de Wilson, SPL, tiempo de las misiones exitosas y distancia mínima; y las 18 comparaciones primarias con delta de Cliff, IC <em>bootstrap</em> y prueba de permutación exacta sobre rangos, con corrección de Bonferroni (cap. 10, §10.7).</p></section><section class="print-page" id="anexos-a7-maldicion-monocular-estereo" heading-number="15.7"><h1 id="anexos-a7-maldicion-monocular-estereo-anexo-7-la-maldicion-monocular-en-pasajes-densamente-obstruidos-y-mitigacion-con-vision-estereoscopica">Anexo 7: La "maldición monocular" en pasajes densamente obstruidos y mitigación con visión estereoscópica<a class="headerlink" href="#anexos-a7-maldicion-monocular-estereo-anexo-7-la-maldicion-monocular-en-pasajes-densamente-obstruidos-y-mitigacion-con-vision-estereoscopica" title="Permanent link">&para;</a></h1>
 <p>Este anexo desarrolla, con mayor rigor que el que admite el cuerpo del capítulo de resultados
-(§11.4.2b), el mecanismo físico por el cual la percepción monocular pura falla de forma
+(§11.4), el mecanismo físico por el cual la percepción monocular pura falla de forma
 estructural — no incidental — en corredores densamente arbolados como <code>townsim_ini</code>, y evalúa la
 visión estereoscópica como la mitigación de menor costo y mayor factibilidad de despliegue antes
 de recurrir a sensores activos más caros (LiDAR, radar).</p>
@@ -7558,7 +6869,7 @@ aproximación, tiende asintóticamente a flujo cero a medida que el dron se acer
 </blockquote>
 <hr />
 <h2 id="anexos-a7-maldicion-monocular-estereo-a72-por-que-un-corredor-arbolado-es-el-caso-adversarial-por-diseno">A7.2 Por qué un corredor arbolado es el caso adversarial por diseño<a class="headerlink" href="#anexos-a7-maldicion-monocular-estereo-a72-por-que-un-corredor-arbolado-es-el-caso-adversarial-por-diseno" title="Permanent link">&para;</a></h2>
-<p>El escenario <code>townsim_ini</code> (cap. 11, §11.4.2b) — corredor peatonal recto, volado a z=−10 m, bajo la
+<p>El escenario <code>townsim_ini</code> (cap. 11, §11.4; el brazo <code>reactive</code>, que solo usa flujo óptico, no lo atraviesa en ninguna de sus 10 corridas) — corredor peatonal recto, volado a z=−10 m, bajo la
 copa de los árboles — combina ambos componentes de la maldición monocular con un tercer factor
 agravante propio de la vegetación:</p>
 <ol>
@@ -7646,8 +6957,8 @@ correspondencia lateral entre las dos vistas sigue siendo un desafío—, pero e
 problema menos frágil que en flujo óptico, porque no depende de que exista movimiento suficiente
 del vehículo para generar paralaje utilizable: la línea de base está siempre presente, sea que el
 dron esté en hover, girando o avanzando lentamente. Esto es relevante porque el régimen de "cautela
-extrema → movimiento mínimo → menos evidencia" descrito en §11.4.2b (el ciclo de retroalimentación
-negativa que agrava el deadlock crónico) deja de aplicar: el par estéreo entrega profundidad
+extrema → movimiento mínimo → menos evidencia" (el ciclo de retroalimentación negativa que
+agrava el deadlock, con el gobernador de velocidad limitando el avance, cap. 5 §5.13) deja de aplicar: el par estéreo entrega profundidad
 métrica incluso cuando el vehículo está casi detenido.</p>
 <hr />
 <h2 id="anexos-a7-maldicion-monocular-estereo-a74-costobeneficio-frente-a-lidar-emulado-planardepth-y-factibilidad-en-airsim">A7.4 Costo/beneficio frente a LiDAR emulado (PlanarDepth) y factibilidad en AirSim<a class="headerlink" href="#anexos-a7-maldicion-monocular-estereo-a74-costobeneficio-frente-a-lidar-emulado-planardepth-y-factibilidad-en-airsim" title="Permanent link">&para;</a></h2>
@@ -7747,7 +7058,7 @@ monocular sin heredar todas las limitaciones de un LiDAR en el mismo entorno.</p
 componentes formales de la maldición monocular (§A7.1): fija la escala métrica sin depender de IMU
 ni de referencias externas, y elimina la dependencia del flujo respecto de la posición del FOE, que
 es precisamente el mecanismo identificado en §A7.2 como causa estructural del fracaso en
-<code>townsim_ini</code> (cap. 11, §11.4.2b). Es, además, más fácil de justificar como próximo paso concreto
+<code>townsim_ini</code> (cap. 11, §11.4). Es, además, más fácil de justificar como próximo paso concreto
 que un LiDAR emulado, porque emula una limitación de hardware real y económicamente accesible (un
 segundo sensor RGB de bajo costo) en lugar de saltar directamente a una clase de sensor que la
 mayoría de los UAVs urbanos pequeños de este dominio de aplicación no incorpora.</p>

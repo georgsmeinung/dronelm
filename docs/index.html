@@ -78,7 +78,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Versión: 2026-09-30</span>
+          <span class="badge-pill badge-teal">Versión: 2026-10-27</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -89,8 +89,28 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-10-14)</h2>
+        <h2>Actualizaciones Recientes (2026-10-27)</h2>
         <div class="card-grid">
+          <div class="card">
+            <h4>Corrida Productiva v4: 210 Corridas</h4>
+            <p>Seis lotes, uno por escenario (MiniSim, TownSim y CitySim; tres de control y tres con obstrucción), 10 semillas por celda, techo de 1200 s por corrida. Celdas <code>slm:depth</code>, <code>fsm:depth</code> y <code>reactive</code>, más <code>fsm:blind</code> en los lotes con obstrucción. Ninguna colisión en las 210. Análisis con <code>analyze_lotes.py</code>: permutación exacta sobre rangos, delta de Cliff con IC bootstrap y Bonferroni sobre 18 comparaciones (capítulos 11 y 12 del informe).</p>
+          </div>
+          <div class="card">
+            <h4>Ruta Libre: la Capa Deliberativa Solo Cuesta</h4>
+            <p>En los tres controles el orden de tiempo es <code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code>, con las nueve comparaciones significativas. La razón <code>slm</code>/<code>reactive</code> baja con la longitud de la ruta (1.95, 1.49 y 1.39 en ~180, ~420 y ~640 m): un costo aproximadamente aditivo. No lo pone la inferencia, que no frena al dron, sino las sub-metas en ruta libre y el gobernador de velocidad.</p>
+          </div>
+          <div class="card">
+            <h4>Obstrucción: la Evasión con Profundidad Decide</h4>
+            <p>En el corredor arbolado y en el bloqueo frontal de TownSim, el control reactivo no completa ninguna de sus 20 corridas; los brazos con evasión y barrido completan entre 5 y 9 de cada 10. Frente a la FSM, <code>slm:depth</code> la supera en SPL en <code>townsim_ini</code> y <code>citysim_pilot</code> (δ = +0.81 y +1.00), pero la ventaja no se puede atribuir a la capa estratégica.</p>
+          </div>
+          <div class="card">
+            <h4>Dos Defectos del Brazo FSM</h4>
+            <p>El análisis de las corridas encontró que la FSM declara un deadlock falso al terminar el despegue vertical (el contador de atasco sube durante el ascenso) y que su techo de escape de 30 m convierte cada escape vertical en un giro en las rutas altas. Ambos la hacen más lenta y la exponen a más fallas: las comparaciones contra la FSM favorecen a <code>slm</code>.</p>
+          </div>
+          <div class="card">
+            <h4>Controles sin Plan de Ruta</h4>
+            <p>Los escenarios de control (<code>*_clear</code>) vuelan el manifiesto tal cual: son la ruta fija de base de cada tier. El plan de ruta con el VLM queda solo para los escenarios con obstrucción. En <code>citysim_pilot</code> el plan ya rodea el tramo bloqueado para todas las celdas, y hasta el control reactivo completa las 10 corridas.</p>
+          </div>
           <div class="card">
             <h4>Informe Alineado con el Código</h4>
             <p>Barrida completa del informe contra el código y <code>config/.env</code> vigentes: el modelo de visión-lenguaje es LFM2.5-VL-1.6B (tag local <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>), el flujo óptico trabaja a 640 px y el capítulo 6 incorpora la sección de profundidad monocular estimada con Depth Anything V2 (<a href="https://arxiv.org/abs/2406.09414">Yang et al., 2024</a>).</p>
@@ -106,10 +126,6 @@
           <div class="card">
             <h4>Banco de Prueba con el VLM a Bordo</h4>
             <p>Con LFM2.5-VL-1.6B (Q4_K_M) en Ollama sobre la misma GPU que Unreal, el VLM no separa sectores volables de bloqueados (AUC 0.53) y declara transitables todos los rumbos del barrido; la profundidad estimada lo hace con AUC 0.83–0.87. La única señal útil del VLM está en el plan de ruta sobre el mapa cenital (AUC 0.81 con el juicio por parches).</p>
-          </div>
-          <div class="card">
-            <h4>Lotes de la Capa Estratégica</h4>
-            <p>CitySim (15 corridas) y el corredor arbolado de TownSim (10 corridas), regla de decisión fijada antes de correr: ninguna fuente (profundidad, VLM o sin capa) acelera la misión. En TownSim las 10 misiones se completan y la capa con profundidad mantiene al dron más lejos del follaje en las 5 semillas (10 s frente a 29 s a menos de 1 m). Configuración final: <code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>; el VLM no corre durante el vuelo.</p>
           </div>
           <div class="card">
             <h4>Plan de Ruta con el VLM sobre el Mapa</h4>
@@ -382,7 +398,7 @@
           </div>
           <div class="card">
             <h4>5. Punto Ciego Estructural del Sensor Monocular (FOE)</h4>
-            <p>El flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión). En pasillos arbolados densos, ninguno de los tres brazos de control puede detectar el obstáculo frontal crítico. Mitigación parcial: señales de contacto (<code>imu_contact</code>, <code>blind_wall</code>) y detección de atasco. Solución estructural: cámara estéreo (Anexo 7).</p>
+            <p>El flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión). En el corredor arbolado de <code>townsim_ini</code>, el control reactivo, que solo usa flujo óptico, no completa ninguna de sus 10 corridas. Mitigación: profundidad monocular estimada en el lazo lento (los brazos con evasión completan 9 de 10, aunque pasan a ~0.1 m de las copas), señales de contacto (<code>imu_contact</code>, <code>blind_wall</code>) y detección de atasco. Solución estructural: cámara estéreo (Anexo 7).</p>
           </div>
           <div class="card">
             <h4>6. Integración del VLM</h4>
@@ -471,7 +487,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-10-14):</strong> Lote base completo (75 corridas: 5 escenarios × 3 brazos × 5 semillas). VLM local (LFM2.5-VL-1.6B Q4_K_M, tag <code>lfm2.5-vl-1.6b:q4km-ctx8k</code> en Ollama, misma GPU que Unreal) con banco de prueba a bordo: sin señal en primera persona (AUC 0.53), señal útil en el plan de ruta sobre el mapa (AUC 0.81). Capa estratégica y barrido con profundidad monocular estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>); dos lotes de la capa estratégica (CitySim, 15 corridas; corredor arbolado de TownSim, 10 corridas, 10/10 misiones completas). 299 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad del simulador. Pendiente: comparación entre brazos con el sistema final (lotes D, E y F).</p>
+          <p><strong>Estado actual (2026-10-27):</strong> Corrida productiva v4 completa: 6 lotes, 210 corridas, 10 semillas por celda, sin colisiones; capítulos 11 y 12 del informe redactados con sus resultados. Configuración de vuelo: capa estratégica y barrido con profundidad monocular estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>); el VLM local (LFM2.5-VL-1.6B Q4_K_M, tag <code>lfm2.5-vl-1.6b:q4km-ctx8k</code> en Ollama) no vuela y planifica la ruta de los escenarios con obstrucción (AUC 0.81 sobre el mapa, 0.53 en primera persona). 321 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad del simulador. Pendiente: corregir los dos defectos del brazo FSM y repetir las comparaciones contra él.</p>
         </div>
       </section>
 
@@ -677,7 +693,7 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>Repositorio: georgsmeinung/dronelm</p>
-        <p>Fecha de actualización: 2026-10-14</p>
+        <p>Fecha de actualización: 2026-10-27</p>
       </footer>
     </main>
   </div>

@@ -187,3 +187,42 @@ def test_env_file_declares_airsimenv_without_dotenv_escapes():
     # "\a" entre comillas dobles seria un escape de python-dotenv: el valor se escribe con "/".
     assert pe.expected_env_dir().replace("\\", "/").lower().endswith("tesismcd/airsimenv")
     assert "\a" not in pe.expected_env_dir()
+
+
+def test_reference_version_is_per_lote(tmp_path):
+    """2026-10-27: cada lote v4 tiene su code_version; una referencia global descartaria los demas lotes."""
+    for seed in (1, 2, 3):
+        _write_summary(tmp_path, "minisim_clear", "slm", "depth", seed, code_version="aaa", cycles=900)
+        _write_summary(tmp_path, "townsim_ini", "slm", "depth", seed, code_version="bbb", cycles=900)
+    _write_summary(tmp_path, "townsim_ini", "slm", "depth", 4, code_version="aaa", cycles=900)
+    _write_summary(tmp_path, "townsim_ini", "slm", "depth", 5, code_version="bbb-dirty", cycles=900)
+    # Lo descartado a mano no entra, aunque empate en cantidad con el lote valido.
+    for seed in (1, 2, 3, 4):
+        _write_summary(tmp_path / "descarte" / "lote1_viejo", "minisim_clear", "slm", "depth", seed,
+                       code_version="old", cycles=900)
+    runs = al.load_runs(str(tmp_path))
+    assert all(r["code_version"] != "old" for r in runs)
+    refs = al.reference_versions(runs)
+    assert refs == {"minisim_clear": "aaa", "townsim_ini": "bbb"}
+    kept, dropped = al.filter_runs(runs, refs)
+    assert len(kept) == 6
+    assert sorted(reason for _, reason in dropped) == ["code_version aaa != bbb", "code_version bbb-dirty"]
+    # Una referencia global fija sigue disponible (--ref-version) y descarta el otro lote.
+    kept_global, _ = al.filter_runs(runs, "aaa")
+    assert {r["scenario"] for r in kept_global} == {"minisim_clear", "townsim_ini"} and len(kept_global) == 4
+    assert "A `aaa`, D `bbb`" in al._ref_text(refs)
+
+
+def test_distmin_drops_first_audit_sample(tmp_path):
+    """2026-10-27: la primera muestra de la auditoria es un artefacto del arranque (0.003 m y luego 18.3 m)."""
+    p = _write_summary(tmp_path, "townsim_clear", "slm", "depth", 31, code_version="aaa", cycles=900,
+                       min_obstacle_dist_m=0.003)
+    p.with_name(p.name.replace(".summary.json", ".distmin.ndjson")).write_text(
+        "\n".join(json.dumps({"t": i, "dist_m": d}) for i, d in enumerate([0.003, 18.28, 20.36, 14.6])),
+        encoding="utf-8")
+    _write_summary(tmp_path, "townsim_clear", "slm", "depth", 37, code_version="aaa", cycles=900,
+                   min_obstacle_dist_m=5.0)  # sin auditoria: queda el valor del summary
+    by_seed = {r["seed"]: r for r in al.load_runs(str(tmp_path))}
+    assert by_seed[31]["min_obstacle_dist_m"] == pytest.approx(14.6)
+    assert by_seed[31]["min_obstacle_dist_m_raw"] == pytest.approx(0.003)
+    assert by_seed[37]["min_obstacle_dist_m"] == 5.0 and "min_obstacle_dist_m_raw" not in by_seed[37]

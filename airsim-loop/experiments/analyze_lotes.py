@@ -19,12 +19,23 @@ Bonferroni sobre la familia primaria: 3 comparaciones x lotes analizados.
 Secundarias, sin correccion y rotuladas como tales: exito (Fisher exacto y diferencia de tasas con IC de
 Newcombe) y distancia minima al obstaculo.
 
-Descartes (Sec. 10.12.2): code_version distinto del de referencia, sufijo '-dirty', menos de 50 ciclos, o
-semilla fuera de --seeds. Los pilotos (directorio pilotos/) no entran.
+Descartes (Sec. 10.12.2): code_version distinto del de referencia de su lote, sufijo '-dirty', menos de 50
+ciclos, o semilla fuera de --seeds. Los pilotos (pilotos/) y las corridas descartadas a mano (descarte/,
+motivo en DESCARTE.md) no entran.
+
+Version de referencia por lote (2026-10-27): cada lote se corre de una vez con un solo code_version, pero los
+seis lotes v4 tienen versiones distintas (el codigo de vuelo es identico desde b0332e1a; cambian el runner y
+el lanzador). La referencia es la version limpia mas frecuente dentro de cada escenario; --ref-version la
+fija para todos.
+
+DistMin sin la primera muestra (2026-10-27): la primera muestra de la auditoria (`.distmin.ndjson`) es un
+artefacto del arranque (0.003 m en townsim_clear slm semilla 31, seguida de 18.3 m; cap. 11 Sec. 11.6.2).
+Si el archivo existe, `min_obstacle_dist_m` se recalcula sin ella; el valor del summary queda en
+`min_obstacle_dist_m_raw`.
 
 Uso (desde airsim-loop/):
-    python experiments/analyze_lotes.py ../airsim-runs/lotes_final
-    python experiments/analyze_lotes.py ../airsim-runs/lotes_final --ref-version 1a2b3c4d --seeds 1 2 3 4 5
+    python experiments/analyze_lotes.py ../airsim-runs/produccion/v4 --family 18
+    python experiments/analyze_lotes.py ../airsim-runs/produccion/v4 --ref-version 1a2b3c4d --seeds 2 3 5
 """
 from __future__ import annotations
 
@@ -67,6 +78,7 @@ def comparisons_for(cells_present, design: str = "auto") -> list[tuple[str, str,
     return COMPARISONS_ARMS
 MIN_VALID_CYCLES = 50
 ALPHA = 0.05
+DISTMIN_SKIP_FIRST = 1
 
 
 # ---------------------------------------------------------------- estadisticos
@@ -144,39 +156,72 @@ def cell_label(run: dict) -> str:
     return "reactive" if arm == "reactive" else f"{arm} x {run.get('deadlock_strategy')}"
 
 
+def distmin_without_first(summary_path: Path, skip: int = DISTMIN_SKIP_FIRST) -> float | None:
+    """Minimo de la auditoria de DistMin sin las primeras `skip` muestras; None si no hay datos."""
+    path = summary_path.with_name(summary_path.name.replace(".summary.json", ".distmin.ndjson"))
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    values = []
+    for line in lines[skip:]:
+        try:
+            d = json.loads(line).get("dist_m")
+        except (ValueError, AttributeError):
+            continue
+        if d is not None:
+            values.append(float(d))
+    return min(values) if values else None
+
+
 def load_runs(root: str) -> list[dict]:
     runs = []
     for path in glob.glob(str(Path(root) / "**" / "*.summary.json"), recursive=True):
         p = Path(path)
-        if "pilotos" in p.relative_to(root).parts:
+        if {"pilotos", "descarte"} & set(p.relative_to(root).parts):
             continue
         try:
             run = json.loads(p.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
         run["_path"] = p.relative_to(root).as_posix()
+        recomputed = distmin_without_first(p)
+        if recomputed is not None:
+            run["min_obstacle_dist_m_raw"] = run.get("min_obstacle_dist_m")
+            run["min_obstacle_dist_m"] = recomputed
         runs.append(run)
     return runs
 
 
+def _clean(version) -> bool:
+    return bool(version) and not str(version).endswith("-dirty") and version != "unknown"
+
+
 def reference_version(runs: list[dict]) -> str | None:
     """La version limpia mas frecuente; None si no hay ninguna."""
-    clean = Counter(r.get("code_version") for r in runs
-                    if r.get("code_version") and not str(r["code_version"]).endswith("-dirty")
-                    and r.get("code_version") != "unknown")
+    clean = Counter(r.get("code_version") for r in runs if _clean(r.get("code_version")))
     return clean.most_common(1)[0][0] if clean else None
 
 
-def filter_runs(runs: list[dict], ref_version: str | None, seeds=None) -> tuple[list[dict], list[tuple[dict, str]]]:
+def reference_versions(runs: list[dict]) -> dict[str, str | None]:
+    """Version de referencia por lote: la limpia mas frecuente dentro de cada escenario."""
+    return {s: reference_version([r for r in runs if r.get("scenario") == s])
+            for s in sorted({r.get("scenario") for r in runs if r.get("scenario") in LOTES})}
+
+
+def filter_runs(runs: list[dict], ref_version: str | dict | None,
+                seeds=None) -> tuple[list[dict], list[tuple[dict, str]]]:
+    """`ref_version`: una version para todos los lotes, o {escenario: version} (una por lote)."""
     kept, dropped = [], []
     for r in runs:
         version = str(r.get("code_version"))
+        ref = ref_version.get(r.get("scenario")) if isinstance(ref_version, dict) else ref_version
         if r.get("scenario") not in LOTES:
             reason = f"escenario fuera de los lotes ({r.get('scenario')})"
         elif version.endswith("-dirty"):
             reason = f"code_version {version}"
-        elif ref_version and version != ref_version:
-            reason = f"code_version {version} != {ref_version}"
+        elif ref and version != ref:
+            reason = f"code_version {version} != {ref}"
         elif int(r.get("cycles") or 0) < MIN_VALID_CYCLES:
             reason = f"{r.get('cycles')} ciclos (< {MIN_VALID_CYCLES}, falla de infraestructura)"
         elif seeds is not None and r.get("seed") not in seeds:
@@ -258,9 +303,16 @@ def analyze(runs: list[dict], optimal: dict, n_boot: int = 5000, family: int | N
     return {"lotes": lotes, "family": family, "alpha_corr": alpha_corr, "cells": cells, "comparisons": comps}
 
 
-def report_md(res: dict, ref_version: str | None, n_kept: int, dropped) -> str:
+def _ref_text(ref_version) -> str:
+    if isinstance(ref_version, dict):
+        return ", ".join(f"{LOTES[s]} `{v}`" for s, v in sorted(ref_version.items(), key=lambda kv: LOTES[kv[0]]))
+    return f"`{ref_version}`"
+
+
+def report_md(res: dict, ref_version, n_kept: int, dropped) -> str:
     lines = ["# Lotes finales: analisis", "",
-             f"- code_version de referencia: `{ref_version}`",
+             f"- code_version de referencia (por lote): {_ref_text(ref_version)}",
+             f"- DistMin sin las primeras {DISTMIN_SKIP_FIRST} muestras de la auditoria (artefacto del arranque)",
              f"- Corridas validas: {n_kept}; descartadas: {len(dropped)}",
              f"- Familia primaria: {res['family']} comparaciones (3 por lote; lotes presentes: {', '.join(res['lotes'])}); "
              f"alfa corregido (Bonferroni) = {res['alpha_corr']:.4f}",
@@ -298,7 +350,8 @@ def main():
     parser = argparse.ArgumentParser(description="Analisis de los lotes finales (cap. 10 Sec. 10.12.2)")
     parser.add_argument("root", help="Directorio de los lotes (p. ej. ../airsim-runs/lotes_final)")
     parser.add_argument("--ref-version", default=None,
-                        help="code_version de referencia; por defecto, la version limpia mas frecuente")
+                        help="code_version de referencia para todos los lotes; por defecto, la version limpia mas "
+                             "frecuente de cada lote")
     parser.add_argument("--seeds", nargs="+", type=int, default=None)
     parser.add_argument("--missions-dir", default=str(Path(__file__).resolve().parents[2] / "airsim-plan" / "missions" / "flightplans"))
     parser.add_argument("--n-boot", type=int, default=5000)
@@ -311,10 +364,11 @@ def main():
     args = parser.parse_args()
 
     runs = load_runs(args.root)
-    ref = args.ref_version or reference_version(runs)
-    versions = Counter(str(r.get("code_version")) for r in runs)
-    if len(versions) > 1:
-        print(f"[lotes] AVISO: varias code_version en {args.root}: {dict(versions)}; referencia = {ref}")
+    ref = args.ref_version or reference_versions(runs)
+    for scen in sorted({r.get("scenario") for r in runs if r.get("scenario") in LOTES}):
+        versions = Counter(str(r.get("code_version")) for r in runs if r.get("scenario") == scen)
+        if len(versions) > 1:
+            print(f"[lotes] AVISO: varias code_version en {scen}: {dict(versions)}")
     kept, dropped = filter_runs(runs, ref, set(args.seeds) if args.seeds else None)
     res = analyze(kept, load_optimal_lengths(args.missions_dir), args.n_boot, args.family, args.design)
 

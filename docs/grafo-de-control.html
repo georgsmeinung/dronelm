@@ -41,7 +41,7 @@
         </div>
         <div class="thesis-meta-item">
           <span class="meta-label">Documento</span>
-          <span class="meta-value">Referencia técnica<br />Estado al 2026-09-30</span>
+          <span class="meta-value">Referencia técnica<br />Estado al 2026-10-27</span>
         </div>
       </div>
 
@@ -68,7 +68,7 @@
     <!-- Main Content Area -->
     <main>
       <header>
-        <p class="eyebrow">airsim-loop · lazo táctico · 2026-10-14</p>
+        <p class="eyebrow">airsim-loop · lazo táctico · 2026-10-27</p>
         <h1>Configuración del grafo de control</h1>
         <p class="lead-subtitle">
           Referencia técnica del lazo de navegación autónoma <strong>tal como está en el código</strong>: topología,
@@ -84,7 +84,7 @@
           <div><dt>Capa estratégica</dt><dd>depth · 1 <span>s</span></dd></div>
           <div><dt>Edad máx.</dt><dd>10 <span>s</span></dd></div>
           <div><dt>Deadlock</dt><dd>depth</dd></div>
-          <div><dt>Tests</dt><dd>299</dd></div>
+          <div><dt>Tests</dt><dd>321</dd></div>
         </dl>
         <div class="badges-row">
           <a class="badge-pill badge-blue"
@@ -195,8 +195,8 @@
 
               <!-- lazo lento -->
               <rect class="dg-focus" x="450" y="290" width="210" height="60" rx="3" />
-              <text class="dg-name-a" x="555" y="313" text-anchor="middle">capa estratégica (VLM)</text>
-              <text class="dg-sub" x="555" y="331" text-anchor="middle">hilo asíncrono · 3–6 s por consulta</text>
+              <text class="dg-name-a" x="555" y="313" text-anchor="middle">capa estratégica (profundidad)</text>
+              <text class="dg-sub" x="555" y="331" text-anchor="middle">hilo asíncrono · ~110 ms por consulta</text>
 
               <path class="dg-edge-a" d="M520 208 L520 286" marker-end="url(#ara)" />
               <text class="dg-lab" x="512" y="252" text-anchor="end">frame + pose (ancla)</text>
@@ -1021,10 +1021,16 @@
       <section id="limitaciones">
         <h2 class="numbered"><span class="sec-n">12</span><span>Limitaciones conocidas</span></h2>
         <ul>
-          <li><strong>Validación en vuelo limitada.</strong> La capa estratégica y el barrido tienen dos lotes de vuelo
-            (CitySim y el corredor arbolado de TownSim, 25 corridas, 5 semillas por celda); sus umbrales son
-            decisiones de diseño, no valores calibrados, y la comparación entre brazos con el sistema final (lotes
-            D, E y F) está pendiente.</li>
+          <li><strong>Validación en vuelo: un escenario por tipo.</strong> La corrida productiva v4 evalúa el grafo en
+            seis escenarios con 10 semillas por celda (210 corridas, informe cap. 11). Los umbrales de la capa
+            estratégica son decisiones de diseño, no valores calibrados, y no se midió el avance hacia el waypoint
+            real tras cada sub-meta.</li>
+          <li><strong>Dos defectos del brazo FSM.</strong> El runner cuenta el progreso también durante el despegue
+            vertical, de modo que la FSM, que usa ese contador, declara un deadlock falso apenas termina el ascenso;
+            el brazo <code>slm</code> usa el <code>StallDetector</code> y no lo sufre. Y por encima de
+            <code>MAX_ESCAPE_ALT_M</code> (30 m) cada escape vertical de la FSM se convierte en
+            <code>GIRAR_90</code> con un desvío lateral, frecuente en rutas a −30 m o más. Ambos sesgan la
+            comparación <code>slm</code>–<code>fsm</code> a favor de <code>slm</code>.</li>
           <li><strong>El VLM no discrimina en primera persona.</strong> En el banco de prueba a bordo,
             LFM2.5-VL-1.6B no distinguió sectores volables de bloqueados (AUC 0.53) y declaró transitables todos los
             rumbos del barrido. Por eso la capa y el barrido usan la profundidad estimada; el VLM aporta solo en el
@@ -1069,7 +1075,7 @@
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>airsim-loop · lazo táctico</p>
-        <p>Estado al 2026-09-30</p>
+        <p>Estado al 2026-10-27</p>
       </footer>
     </main>
   </div>

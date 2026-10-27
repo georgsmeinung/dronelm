@@ -174,7 +174,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `SLM_HTTP_TIMEOUT_S` / `SLM_DEEP_HTTP_TIMEOUT_S` | `15.0` / `20.0` | Timeout del cliente HTTP en la consulta estratégica y en el barrido. |
 | `SLM_DEEP_WATCHDOG_MS` | `18000` | Watchdog del barrido panorámico; debe ser menor que `SLM_DEEP_HTTP_TIMEOUT_S` para que gane siempre al corte HTTP. |
 | `DEADLOCK_STRATEGY` | `"depth"` | Resolución de atascos: `"depth"` (barrido juzgado por la profundidad estimada, cap. 5 §5.12), `"deep_vlm"` (barrido + VLM; ablación) o `"blind"` (escape vertical sin barrido). Cualquier otro valor aborta el arranque. |
-| `STRATEGIC_SOURCE` | `"depth"` | Fuente de la capa estratégica: `"depth"` (profundidad monocular estimada, cap. 5 §5.10.6), `"vlm"` (grilla del VLM) u `"off"` (sin capa). Con `depth`/`depth` el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 11 §11.6). |
+| `STRATEGIC_SOURCE` | `"depth"` | Fuente de la capa estratégica: `"depth"` (profundidad monocular estimada, cap. 5 §5.10.6), `"vlm"` (grilla del VLM) u `"off"` (sin capa). Con `depth`/`depth` el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 5 §5.10.7; cap. 11 §11.0). |
 | `DEPTH_MODEL` | `depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf` | Red de profundidad métrica (~25 M parámetros, ~110 ms con la GPU compartida, ~440 MiB de VRAM). Se descarga de Hugging Face la primera vez. |
 | `DEPTH_FREE_M` | `15.0` | Un sector (o un rumbo del barrido) es libre si el percentil 5 de su profundidad estimada es ≥ este valor; igual a `VLM_SUBGOAL_DIST_M`. |
 | `DEPTH_STRATEGIC_PERIOD_S` | `1.0` | Período mínimo entre consultas de la capa estratégica con la profundidad (con el VLM rige `VLM_STRATEGIC_PERIOD_S`, 3 s). |

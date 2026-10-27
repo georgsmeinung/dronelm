@@ -1,7 +1,7 @@
 # Anexo 7: La "maldición monocular" en pasajes densamente obstruidos y mitigación con visión estereoscópica
 
 Este anexo desarrolla, con mayor rigor que el que admite el cuerpo del capítulo de resultados
-(§11.4.2b), el mecanismo físico por el cual la percepción monocular pura falla de forma
+(§11.4), el mecanismo físico por el cual la percepción monocular pura falla de forma
 estructural — no incidental — en corredores densamente arbolados como `townsim_ini`, y evalúa la
 visión estereoscópica como la mitigación de menor costo y mayor factibilidad de despliegue antes
 de recurrir a sensores activos más caros (LiDAR, radar).
@@ -56,7 +56,7 @@ proyección perspectiva, presente en cualquier algoritmo de flujo óptico o SfM 
 
 ## A7.2 Por qué un corredor arbolado es el caso adversarial por diseño
 
-El escenario `townsim_ini` (cap. 11, §11.4.2b) — corredor peatonal recto, volado a z=−10 m, bajo la
+El escenario `townsim_ini` (cap. 11, §11.4; el brazo `reactive`, que solo usa flujo óptico, no lo atraviesa en ninguna de sus 10 corridas) — corredor peatonal recto, volado a z=−10 m, bajo la
 copa de los árboles — combina ambos componentes de la maldición monocular con un tercer factor
 agravante propio de la vegetación:
 
@@ -153,8 +153,8 @@ correspondencia lateral entre las dos vistas sigue siendo un desafío—, pero e
 problema menos frágil que en flujo óptico, porque no depende de que exista movimiento suficiente
 del vehículo para generar paralaje utilizable: la línea de base está siempre presente, sea que el
 dron esté en hover, girando o avanzando lentamente. Esto es relevante porque el régimen de "cautela
-extrema → movimiento mínimo → menos evidencia" descrito en §11.4.2b (el ciclo de retroalimentación
-negativa que agrava el deadlock crónico) deja de aplicar: el par estéreo entrega profundidad
+extrema → movimiento mínimo → menos evidencia" (el ciclo de retroalimentación negativa que
+agrava el deadlock, con el gobernador de velocidad limitando el avance, cap. 5 §5.13) deja de aplicar: el par estéreo entrega profundidad
 métrica incluso cuando el vehículo está casi detenido.
 
 ---
@@ -264,7 +264,7 @@ La visión estereoscópica resuelve de forma directa y con bajo costo computacio
 componentes formales de la maldición monocular (§A7.1): fija la escala métrica sin depender de IMU
 ni de referencias externas, y elimina la dependencia del flujo respecto de la posición del FOE, que
 es precisamente el mecanismo identificado en §A7.2 como causa estructural del fracaso en
-`townsim_ini` (cap. 11, §11.4.2b). Es, además, más fácil de justificar como próximo paso concreto
+`townsim_ini` (cap. 11, §11.4). Es, además, más fácil de justificar como próximo paso concreto
 que un LiDAR emulado, porque emula una limitación de hardware real y económicamente accesible (un
 segundo sensor RGB de bajo costo) en lugar de saltar directamente a una clase de sensor que la
 mayoría de los UAVs urbanos pequeños de este dominio de aplicación no incorpora.

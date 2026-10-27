@@ -1,3 +1,106 @@
+# 2026-10-27 (e) - Informe: caps. 11 y 12 reescritos con la corrida v4
+
+Sin cambios de codigo.
+
+- **Cap. 11**: se conserva §11.0 (banco de prueba a bordo, lo citan los caps. 1, 4, 5, 6, 8, 9 y 10), sin
+  las dos anecdotas de pilotos con el VLM en vuelo. §11.1-§11.7 nuevos, con la corrida v4 (210 corridas):
+  datos y validez (una version de referencia por lote, DistMin sin la primera muestra, sesgo del SPL en el
+  lote 6), tabla por celda con terminacion de las fallas, controles (H2: razon slm/reactive 1.95, 1.49, 1.39
+  con rutas de ~180, ~420 y ~640 m; costo por sub-metas en ruta libre y gobernador de velocidad), obstruccion
+  (H1: comparaciones planificadas, capa estrategica, barrido, desglose por tramo de `townsim_ini`), los dos
+  defectos de la FSM como amenaza a la validez, ritmo del lazo y sintesis por hipotesis. Fuera: lote base de
+  septiembre y lotes de la capa estrategica de octubre.
+- **Cap. 12**: hilo conductor y respuesta a la pregunta con la corrida v4 (ruta libre: solo costo; con
+  obstruccion: la evasion con profundidad decide frente a `reactive`, la ventaja frente a la FSM no se puede
+  atribuir; el VLM aporta como planificador de ruta). Limitaciones nuevas: defectos de la FSM, plan comun en
+  `citysim_pilot`, potencia con K = 10, contribucion de la capa sin medir, seguridad sin margen medido.
+  Trabajo futuro: validacion del sistema (corregir la FSM, avance tras sub-meta, aislar el gobernador,
+  rodeo sin plan, altitud de los puntos de paso, test de contrato de `DroneState`). Sin menciones a
+  configuraciones anteriores.
+- Referencias a secciones eliminadas actualizadas en `informe/README.md`, Anexo 6 y Anexo 7.
+- Pendiente: regenerar `docs/` con `informe/build.ps1`.
+
+# 2026-10-27 (d) - `analyze_lotes.py`: referencia por lote y DistMin sin la primera muestra; analisis de v4
+
+- **Version de referencia por lote** (`reference_versions`): la limpia mas frecuente dentro de cada escenario.
+  Con una referencia global se descartaban cinco de los seis lotes (cada lote v4 tiene su `code_version`; el
+  codigo de vuelo es identico desde `b0332e1a`). `--ref-version` sigue fijando una para todos.
+- **DistMin sin la primera muestra** (`distmin_without_first`, `DISTMIN_SKIP_FIRST = 1`): se recalcula desde el
+  `.distmin.ndjson`; el valor del summary queda en `min_obstacle_dist_m_raw`. Cambia las medianas de los
+  controles (p. ej. lote 1: ~12.7 -> ~15.5 m).
+- **`descarte/` fuera del analisis**, como `pilotos/`: en `townsim_clear` el lote descartado (`1fa4c0e2`)
+  empataba 30 a 30 con el valido y podia quedar como referencia.
+- Tests: `test_reference_version_is_per_lote`, `test_distmin_drops_first_audit_sample`. Suite: 321 tests.
+- **Analisis** (`analyze_lotes.py ../airsim-runs/produccion/v4 --family 18`): 210 corridas validas, 0
+  descartadas; Bonferroni sobre 18 comparaciones (alfa 0.0028). Salida en `v4/analisis_lotes.md` y CSV.
+  - Controles (A, B, C; tiempo de las misiones exitosas): las 9 comparaciones son significativas, con delta
+    de Cliff en +-1 o casi: `reactive` < `slm` < `fsm` en los tres tiers.
+  - D `townsim_ini` (SPL): (iii) `slm:depth` > `fsm:depth` significativa (delta +0.81, p Bonf. 0.019); (i)
+    `slm` > `fsm:blind` no (p Bonf. 0.071).
+  - E `townsim_calib_cruce_frontal`: ninguna significativa; `slm:depth` completa 5/10 contra 9/10 de
+    `fsm:blind`.
+  - F `citysim_pilot`: (i) y (iii) significativas (delta +1.00): `slm:depth` supera a las dos FSM; (ii) no.
+  - Las comparaciones con la FSM estan afectadas por sus dos defectos conocidos (deadlock falso al despegar y
+    escape agotado por el techo de 30 m, entrada 2026-10-22 (c)); en F la obstruccion la resuelve el plan de
+    ruta comun a las cuatro celdas.
+- Siguiente: reescribir los caps. 11 y 12 con estos resultados.
+
+# 2026-10-27 (c) - Corrida productiva v4: lote 6 completo (`citysim_pilot`); los seis lotes terminados
+
+Resultados en `airsim-runs/produccion/v4/lote6_citysim_pilot/` (fuera de git). Cuatro celdas (`slm:depth`,
+`fsm:depth`, `fsm:blind`, `reactive`), 10 semillas, techo de 1200 s / 6000 ciclos, plan de ruta vlm. Pasa la
+verificacion de integridad: 40 `summary.json`, un solo `code_version` (`55583639`), sin `-dirty`, sin FALLO en
+el `batch_20261027T102711.log`, 0 colisiones. 2026-10-27 10:27 -> 17:15. Plan calculado en 122 s, identico al
+del piloto (4 tramos desviados, 7 puntos de paso, 15 waypoints en total).
+
+| Celda | Exitos | Duracion mediana de los exitos | DistMin mediana (sin 1ra muestra) | Deadlocks | Recorrido (mediana) |
+|---|---|---|---|---|---|
+| `slm:depth` | 10/10 | 483.1 s | 4.14 m | 7 | 699 m |
+| `fsm:depth` | 9/10 | 805.6 s | 1.16 m | 176 | 947 m |
+| `fsm:blind` | 5/10 | 712.5 s | 0.11 m | - | 916 m |
+| `reactive` | 10/10 | 313.2 s | 4.14 m | 0 | 640 m |
+
+- **Modos de falla** (6, todas de la FSM):
+  - `fsm:blind` semillas 263, 269 y 271: `physics_locked` entre 430 y 583 s pasado WP_3, en (59-72, -146, -30).
+    El escape ciego sube hasta -30 m, donde el techo convierte cada CLIMB en escape agotado, y queda
+    incrustado en la misma zona donde termino el piloto.
+  - `fsm:blind` semillas 251 y 257: al tope de 1200 s, con 14 y 9 de los 15 waypoints del plan.
+  - `fsm:depth` semilla 233: `physics_locked` a 440 s en (58, -78, -18), con 7 de 15.
+- **`reactive` completa las 10**: el plan de ruta, que vuelan las cuatro celdas, ya rodea el unico tramo con
+  la recta bloqueada (WP_2 -> WP_3, `desvio_izq_25m`). En este lote la obstruccion la resuelve el plan en
+  tierra, comun a todos los brazos, y no la politica en vuelo: la comparacion entre celdas mide como cada una
+  sigue una ruta ya libre de bloqueos. Las 10 corridas `reactive` son casi identicas (313-329 s, DistMin 4.14 m
+  en todas).
+- **Defectos de la FSM** (entrada 2026-10-22 (c)): deadlock falso al despegar en las 20 corridas `fsm`; escape
+  agotado por el techo de 30 m, 98 en `fsm:blind` y 24 en `fsm:depth`. Los deadlocks de `fsm:blind` figuran
+  en `-` porque el escape ciego no se registra como evento de barrido.
+- **Lectura preliminar**: `slm:depth` completa todas, +54 % de tiempo sobre `reactive`, con el mismo margen a
+  obstaculos. El barrido con profundidad mejora a la FSM sin barrido (9/10 contra 5/10), al reves que en los
+  lotes 3 y 4.
+- **Seis lotes terminados**: 1 (`b0332e1a`), 2 (`12e90aab`), 3 y 4 (`835ae75f`), 5 (`7053f405`) y 6
+  (`55583639`), con un solo `code_version` por lote. El codigo de vuelo es identico desde `b0332e1a`: entre
+  esas versiones solo cambian las lineas de avance del runner y la configuracion del lanzador.
+- Pendientes: ajustar `analyze_lotes.py` (hoy toma un unico `code_version` de referencia y descartaria cinco
+  lotes; tiene que usar uno por lote y excluir la primera muestra de DistMin), correr el analisis y reescribir
+  los caps. 11 y 12.
+
+# 2026-10-27 (b) - Piloto del lote 6 (`citysim_pilot`): pasa el criterio, OK para el lote
+
+Corrida `slm:depth` semilla 99 con plan de ruta vlm (`code_version` `55583639`), en
+`airsim-runs/produccion/v4/pilotos/lote6_citysim_pilot/` (no entra al analisis).
+
+- **Plan de ruta** (170.7 s, `lfm2.5-vl-1.6b:q4km-ctx8k` sobre `citysim_ortho.png`): 4 tramos desviados y 7
+  puntos de paso, todos a -10 m como el manifiesto (sin el problema de altitud de `citysim_clear`). En
+  WP_2 -> WP_3, el tramo con la recta bloqueada, elige `desvio_izq_25m` (p = 0.63 contra 0.50 de la recta).
+- **Criterio de pase** (`experiments/README.md`, lote 6): alcanza WP_0_SUR y WP_1 sin quedar trabado sobre la
+  autopista elevada. Cumple, y sigue hasta WP_2 y WP_3 con todos los puntos de paso.
+- **Fin**: `physics_locked` a 321 s (1269 ciclos), pasado WP_3 y rumbo a WP_4: la capa estrategica eligio una
+  sub-meta en la fila de arriba (sector C1, +24 deg), el dron subio a -18 m y quedo incrustado en
+  (61, -146.5). 0 colisiones, 2 deadlocks, DistMin 0.14 m. Es una falla del sistema en un tramo del
+  escenario, no un error de armado: no frena el lote, que mide con 10 semillas por celda cuantas veces
+  ocurre.
+- Siguiente: lote 6 (4 celdas, 40 corridas, plan de ruta vlm, Ollama arriba).
+
 # 2026-10-27 - Corrida productiva v4: lote 2 completo (`townsim_clear`, sin plan de ruta)
 
 Relanzamiento del lote 2 con `--route-plan off` (control, entrada 2026-10-22 (b)). Resultados en
