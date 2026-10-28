@@ -10,7 +10,7 @@ Directores:
 
 Alumno:
 
--   [NICOLAU, Jorge Enrique](https://www.linkedin.com/in/jorgenicolau/)
+-   [NICOLAU, Jorge Enrique](https://jorgenicolau.ar)
 
 Este repositorio contiene la implementación del Trabajo Final de Máster en Ingeniería (Ciencia de Datos) de la **Universidad Austral**.
 
@@ -18,8 +18,9 @@ Este repositorio contiene la implementación del Trabajo Final de Máster en Ing
 
 #### Proyecto:
 
+[![Website](https://img.shields.io/badge/Project-Website-white.svg)](https://jorgenicolau.ar/dronelm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Activity](https://img.shields.io/badge/CHANGELOG-2026--0929-teal)](CHANGELOG.md) 
+[![Activity](https://img.shields.io/badge/CHANGELOG-2026--1028-teal)](CHANGELOG.md) 
 [![Plan](https://img.shields.io/badge/Plan-Aprobado_2025--0829-drakgray)](./plan_tesis/plan-tesis.md)
 [![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)](./plan_tesis/plan-tesis.md#objetivo-del-trabajo)
 [![Infome](https://img.shields.io/badge/Informe-Tesis_MCD-172187)](https://jorgenicolau.ar/dronelm/informe/00-COVER.html)
