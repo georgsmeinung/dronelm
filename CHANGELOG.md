@@ -1,3 +1,35 @@
+# 2026-10-28 - Sitio: explorador 3D del lazo tactico y diagrama de topologia interactivo
+
+Sin cambios de codigo de vuelo.
+
+- **`docs/explorador.html`** (+ `explorador.css`, `explorador.js`): pagina nueva estilo "atlas" con Three.js
+  r170 desde jsDelivr, sin build. Simulacion pedagogica en el navegador del grafo de `airsim-loop` con el
+  orden de reglas y los umbrales de `config/.env` (TTC 3.2 / 4.6 s, FOV 60 %, 10 y 50 ciclos de atasco,
+  sectores libres a p5 >= 15 m, sub-metas a 15 m, edad maxima 10 s, barrido de 4 rumbos).
+  - Escena ortografica con vistas Sistema, Mision, Grafo, Percepcion y Capa estrategica; rayos del
+    `ObstacleField` por TTC, sectores de la capa y del barrido, estela, waypoints y sub-metas; el grafo
+    LangGraph en una plataforma con un pulso por ciclo y el lazo lento en teal.
+  - Controles: escenario (ruta libre, torre, malla invisible al flujo, corredor arbolado, plaza vacia),
+    brazo `slm`/`fsm`/`reactive`, `STRATEGIC_SOURCE` `depth`/`vlm`/`off`, `DEADLOCK_STRATEGY` `depth`/`blind`,
+    perder fotogramas y agregar obstaculos con un clic.
+  - Inspector por nodo con valores en vivo, cascada de `navigate` con la regla que gana, traza por ciclo y
+    recorrido guiado de 6 pasos (problema, flujo optico, 5 Hz, capa estrategica, deadlock, resultados v4).
+  - Simplificaciones declaradas al pie: TTC por rayos sobre la geometria en lugar de flujo optico (sin
+    traslacion no hay evidencia), contacto que desliza, respuesta del VLM sorteada con la tasa del banco
+    (AUC 0.53). Reproduce lo cualitativo de v4: `reactive` no completa ninguna obstruccion, `slm` y `fsm`
+    si; la capa no acelera la mision; `blind` no supera la malla. Los numeros del paso 6 son los de v4.
+- **`docs/grafo-de-control.html`, seccion 02**: el SVG de topologia es interactivo, sin animacion. Panel de
+  estado de entrada de un ciclo (fotograma, despegue, barrido, StallDetector, maniobra, contacto, altitud,
+  `z_path_blocked`, TTC, FOV) con 10 estados de ejemplo: el diagrama marca el camino, la regla de la cascada
+  de la seccion 6 y el comando de la tabla de la seccion 9, y enciende el lazo lento con `expedite()`. Clic
+  en un nodo: que hace, campos de `DroneState` que lee y escribe, enlace a su seccion. Pie de figura
+  corregido ("azul", no "teal").
+- `docs/styles.css`: estilos `.dg-node` y `.gi-*` (container query para una columna en anchos chicos).
+- Enlaces al explorador en `docs/index.html` (barra lateral y recuadro de arquitectura) y en la barra lateral
+  de `docs/grafo-de-control.html`.
+- `.claude/launch.json`: configuracion `docs` (`http.server` en el puerto 8765) para previsualizar el sitio;
+  los modulos ES no cargan desde `file://`.
+
 # 2026-10-27 (e) - Informe: caps. 11 y 12 reescritos con la corrida v4
 
 Sin cambios de codigo.

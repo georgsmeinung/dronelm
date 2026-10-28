@@ -597,6 +597,64 @@ figcaption b { color: var(--ink-soft); font-weight: 600; }
 .dg-lab-a  { font-family: var(--font-mono); font-size: 11px; fill: var(--accent); font-weight: 500; }
 .dg-arrow  { fill: var(--ink-soft); }
 .dg-arrow-a{ fill: var(--accent); }
+.dg-arrow-h{ fill: var(--ink); }
+
+/* Diagrama interactivo: nodos seleccionables y camino del estado elegido */
+.dg-node { cursor: pointer; outline: none; }
+.dg-node rect { transition: opacity .15s, stroke-width .15s; }
+.dg-node:hover rect, .dg-node:focus-visible rect { stroke: var(--accent); stroke-width: 2.2; }
+.dg-node.sel rect { stroke: var(--accent); stroke-width: 2.6; stroke-dasharray: none; }
+.dg-node.on rect { fill: var(--accent-wash); stroke: var(--ink); stroke-width: 2.2; }
+.dg-edge.on { stroke: var(--ink); stroke-width: 2.6; }
+svg.dg-live .dg-node:not(.on):not(.sel), svg.dg-live .dg-edge:not(.on), svg.dg-live .dg-edge-a:not(.on) { opacity: .3; }
+svg.dg-live .dg-node.dg-slow.on { opacity: 1; }
+.dg-out { font-weight: 700; }
+
+.gi { border-top: 1px solid var(--rule-soft); padding: 14px 18px 18px; background: var(--surface); container-type: inline-size; }
+.gi-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; }
+.gi-k { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-right: 4px; }
+.gi-presets button {
+  font: 500 12.5px var(--font-sans); color: var(--ink-soft); background: var(--surface-2);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 4px 11px; cursor: pointer;
+}
+.gi-presets button:hover { border-color: var(--accent); color: var(--accent); }
+.gi-presets button.on { background: var(--accent-wash); border-color: var(--accent); color: var(--accent); }
+.gi-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 18px; }
+.gi-state fieldset { border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 10px; padding: 8px 12px 10px; }
+.gi-state legend { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 0 4px; }
+.gi-row { display: grid; grid-template-columns: 1fr 110px 56px; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); padding: 3px 0; }
+.gi-row select { grid-column: 2 / 4; font: 500 12.5px var(--font-mono); color: var(--ink); background: var(--surface-2); border: 1px solid var(--rule); border-radius: 6px; padding: 3px 6px; }
+.gi-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+.gi-row output { font: 500 12px var(--font-mono); color: var(--ink); text-align: right; }
+.gi-chk { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-soft); padding: 3px 0; }
+.gi-chk input { accent-color: var(--accent); }
+.gi-out { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.gi-result, .gi-detail { border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; }
+.gi-path { font: 500 12.5px var(--font-mono); color: var(--ink); margin: 0 0 8px; word-break: break-word; }
+.gi-act { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 2px 0 10px; }
+.gi-act b { font: 700 15px var(--font-mono); color: var(--accent); }
+.gi-act span { font: 12px var(--font-mono); color: var(--muted); }
+.gi-rules { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+.gi-rules li { display: grid; grid-template-columns: 58px 1fr; gap: 6px; padding: 4px 6px; border-radius: 5px; color: var(--ink-soft); }
+.gi-rules li b { font: 600 11px var(--font-mono); }
+.gi-rules li.no b { color: var(--muted); }
+.gi-rules li.no span { text-decoration: line-through; text-decoration-color: var(--rule); }
+.gi-rules li.hit { background: var(--accent-wash); color: var(--ink); }
+.gi-rules li.hit b { color: var(--accent); }
+.gi-rules li.skip { opacity: .4; }
+.gi-note { font-size: 12.5px; color: var(--ink-soft); margin: 10px 0 0; }
+.gi-note.slow { color: var(--accent-ink); }
+.gi-detail h4 { margin: 0 0 4px; font: 700 14px var(--font-mono); color: var(--ink); }
+.gi-detail p { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
+.gi-detail .gi-fields { font: 12px var(--font-mono); color: var(--ink); word-break: break-word; }
+.gi-detail .gi-fields span { color: var(--muted); font-family: var(--font-sans); }
+.gi-detail a { font-size: 12.5px; }
+@container (max-width: 760px) {
+  .gi-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 420px) {
+  .gi-row { grid-template-columns: 1fr 90px 50px; }
+}
 
 /* ==========================================================================
    Código

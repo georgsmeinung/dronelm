@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Explorador interactivo del lazo táctico: un dron con una sola cámara RGB, el grafo de control a 5 Hz, la capa estratégica anclada a la pose y el barrido de deadlock, simulados en 3D en el navegador." />
+  <title>Explorador del Lazo Táctico — Navegación Autónoma de Drones con SLM/VLM</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="explorador.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" title="Volver al sitio del proyecto">
+      <img src="favicon.svg" alt="" width="22" height="22" />
+      <span class="brand-name">Explorador de Solución</span>
+      <span class="brand-tag">lazo táctico</span>
+    </a>
+    <nav class="topnav">
+      <a href="index.html">Proyecto</a>
+      <a href="grafo-de-control.html">Grafo de control</a>
+      <a href="informe/00-COVER.html">Informe</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>¿Cómo navega un dron por la ciudad con una sola cámara?</h1>
+      <p>Sin LiDAR y sin el sensor de profundidad del simulador: flujo óptico para reaccionar a 5 Hz, una red de
+        profundidad monocular que propone rodeos sin frenar al dron, y un barrido de cuatro rumbos cuando se traba.
+        Acá corre una versión simplificada del grafo de la tesis, con sus umbrales reales.</p>
+    </div>
+    <button class="hero-cta" id="btn-tour">Recorrido guiado <span aria-hidden="true">→</span></button>
+  </section>
+
+  <section class="toolbar" aria-label="Controles de la simulación">
+    <label class="field">
+      <span>Escenario</span>
+      <select id="sel-scenario"></select>
+    </label>
+    <div class="btn-group">
+      <button class="btn primary" id="btn-run"><span class="ico">▶</span> <span class="lbl">Volar</span></button>
+      <button class="btn" id="btn-step" title="Avanzar un ciclo del grafo (200 ms)">⏭ Ciclo</button>
+      <button class="btn" id="btn-reset" title="Volver al despegue">↺ Reiniciar</button>
+    </div>
+    <label class="field small">
+      <span>Velocidad</span>
+      <select id="sel-speed">
+        <option value="0.5">×0.5</option>
+        <option value="1" selected>×1</option>
+        <option value="2">×2</option>
+        <option value="4">×4</option>
+      </select>
+    </label>
+    <span class="sep" aria-hidden="true"></span>
+    <label class="field">
+      <span>Brazo</span>
+      <select id="sel-arm">
+        <option value="slm">slm (lazo rápido + lento)</option>
+        <option value="fsm">fsm (máquina de estados)</option>
+        <option value="reactive">reactive (solo guiado)</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>Capa estratégica</span>
+      <select id="sel-source">
+        <option value="depth">depth (Depth Anything V2)</option>
+        <option value="vlm">vlm (LFM2.5-VL-1.6B)</option>
+        <option value="off">off</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>Deadlock</span>
+      <select id="sel-deadlock">
+        <option value="depth">depth (barrido)</option>
+        <option value="blind">blind (subir)</option>
+      </select>
+    </label>
+    <span class="sep" aria-hidden="true"></span>
+    <div class="btn-group">
+      <button class="btn" id="btn-drop" title="Los próximos 3 ciclos llegan sin imagen">Perder fotogramas</button>
+      <button class="btn" id="btn-place" aria-pressed="false" title="Hacé clic en el suelo para agregar un obstáculo">+ Obstáculo</button>
+      <select id="sel-place" aria-label="Tipo de obstáculo">
+        <option value="building">edificio</option>
+        <option value="mesh">malla (invisible al flujo)</option>
+        <option value="tree">árbol</option>
+      </select>
+    </div>
+  </section>
+
+  <main class="workspace">
+    <aside class="col col-left">
+      <section class="card lesson" id="lesson">
+        <header class="card-h">
+          <h2>Recorrido</h2>
+          <span class="lesson-count" id="lesson-count"></span>
+        </header>
+        <div class="lesson-steps" id="lesson-steps" role="tablist"></div>
+        <article class="lesson-body" id="lesson-body"></article>
+        <footer class="lesson-nav">
+          <button class="btn" id="lesson-prev">← Anterior</button>
+          <button class="btn primary" id="lesson-next">Siguiente →</button>
+        </footer>
+      </section>
+
+      <section class="card">
+        <header class="card-h">
+          <h2>ObstacleField</h2>
+          <span class="hint">flujo óptico · 3×3</span>
+        </header>
+        <div class="grid3" id="hud-field"></div>
+        <div class="legend">
+          <span><i class="sw crit"></i>TTC ≤ 3.2 s</span>
+          <span><i class="sw warn"></i>≤ 4.6 s</span>
+          <span><i class="sw safe"></i>libre</span>
+          <span><i class="sw none"></i>sin evidencia</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <header class="card-h">
+          <h2>StallDetector</h2>
+          <span class="hint">señales de atasco</span>
+        </header>
+        <div id="hud-stall" class="meters"></div>
+      </section>
+    </aside>
+
+    <section class="col col-center">
+      <div class="viewport-card">
+        <header class="view-tabs" role="tablist" aria-label="Vistas">
+          <button role="tab" data-view="system" class="active">Sistema</button>
+          <button role="tab" data-view="mission">Misión</button>
+          <button role="tab" data-view="graph">Grafo</button>
+          <button role="tab" data-view="perception">Percepción</button>
+          <button role="tab" data-view="strategic">Capa estratégica</button>
+          <span class="view-spacer"></span>
+          <label class="toggle"><input type="checkbox" id="chk-rays" checked /> Rayos</label>
+          <label class="toggle"><input type="checkbox" id="chk-follow" /> Seguir</label>
+        </header>
+        <div class="viewport" id="viewport">
+          <div class="status-strip" id="status-strip"></div>
+          <div class="place-hint" id="place-hint" hidden>Clic en el suelo para ubicar el obstáculo · Esc para salir</div>
+          <div class="view-help">Rotar: arrastrar · Zoom: rueda · Inspeccionar: clic en un nodo o en el dron</div>
+        </div>
+      </div>
+
+      <section class="card trace">
+        <header class="card-h">
+          <h2>Traza por ciclo</h2>
+          <span class="hint">lo mismo que guarda el JSONL de una corrida, resumido</span>
+        </header>
+        <div class="trace-wrap">
+          <table>
+            <thead>
+              <tr><th>ciclo</th><th>t</th><th>ruta en el grafo</th><th>regla</th><th>acción</th><th>TTC c.</th><th>evento</th></tr>
+            </thead>
+            <tbody id="trace-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <aside class="col col-right">
+      <section class="card inspector" id="inspector" aria-live="polite"></section>
+      <section class="card">
+        <header class="card-h">
+          <h2>Capa estratégica</h2>
+          <span class="hint" id="strat-hint">última respuesta</span>
+        </header>
+        <div class="grid3 strat" id="hud-strat"></div>
+        <p class="small-note" id="strat-note">Todavía no hubo consultas.</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="page-foot">
+    <p><strong>Qué es y qué no es.</strong> Una simulación pedagógica en el navegador, no Cosys-AirSim. El orden de
+      las reglas, los umbrales (TTC 3.2 / 4.6 s, 10 y 50 ciclos de atasco, sectores libres a ≥ 15 m, sub-metas a 15 m,
+      edad máxima 10 s) y la topología del grafo son los de <code>airsim-loop</code>. Simplificado: el
+      <code>ObstacleField</code> se calcula con rayos sobre la geometría en lugar de flujo óptico (sin traslación no hay
+      evidencia, como en el sistema real), <code>GIRAR_90</code> completa el giro de 90° dentro de su duración, el contacto
+      con un obstáculo desliza al dron en lugar de dañarlo y la respuesta del
+      VLM se sortea con la tasa medida en el banco de prueba (declara libres casi todos los sectores, AUC 0.53).
+      La referencia completa está en el <a href="grafo-de-control.html">Grafo de Control Táctico</a> y en los capítulos 5–9
+      del <a href="informe/00-COVER.html">informe</a>.</p>
+    <p class="muted">Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral · Jorge E. Nicolau</p>
+  </footer>
+
+  <noscript><p class="noscript">El explorador necesita JavaScript y WebGL.</p></noscript>
+  <script type="module" src="explorador.js"></script>
+</body>
+
+</html>

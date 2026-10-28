@@ -61,6 +61,7 @@
           <li><a href="#invariantes">11 · Invariantes</a></li>
           <li><a href="#limitaciones">12 · Limitaciones</a></li>
         </ul>
+        <a class="nav-page" href="explorador.html">Explorador interactivo (3D)</a>
         <a class="nav-page" href="index.html">Volver al resumen del proyecto</a>
       </nav>
     </aside>
@@ -152,69 +153,160 @@
                 <marker id="ara" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
                   <polygon class="dg-arrow-a" points="0 0, 10 4, 0 8" />
                 </marker>
+                <marker id="arh" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+                  <polygon class="dg-arrow-h" points="0 0, 10 4, 0 8" />
+                </marker>
               </defs>
 
-              <!-- lazo rapido -->
-              <rect class="dg-box" x="20" y="148" width="104" height="44" rx="3" />
-              <text class="dg-name" x="72" y="175" text-anchor="middle">capture</text>
+              <!-- lazo rapido (cada nodo es seleccionable; el panel de abajo marca el camino de un estado) -->
+              <g class="dg-node" data-node="capture" tabindex="0" role="button" aria-label="Nodo capture">
+                <rect class="dg-box" x="20" y="148" width="104" height="44" rx="3" />
+                <text class="dg-name" x="72" y="175" text-anchor="middle">capture</text>
+              </g>
 
-              <rect class="dg-router" x="150" y="148" width="124" height="44" rx="3" />
-              <text class="dg-name" x="212" y="168" text-anchor="middle">degraded</text>
-              <text class="dg-name" x="212" y="183" text-anchor="middle">_router</text>
+              <g class="dg-node" data-node="degraded_router" tabindex="0" role="button" aria-label="Arista condicional degraded_router">
+                <rect class="dg-router" x="150" y="148" width="124" height="44" rx="3" />
+                <text class="dg-name" x="212" y="168" text-anchor="middle">degraded</text>
+                <text class="dg-name" x="212" y="183" text-anchor="middle">_router</text>
+              </g>
 
-              <rect class="dg-box" x="300" y="148" width="120" height="44" rx="3" />
-              <text class="dg-name" x="360" y="167" text-anchor="middle">perception</text>
-              <text class="dg-sub" x="360" y="182" text-anchor="middle">ObstacleField</text>
+              <g class="dg-node" data-node="perception" tabindex="0" role="button" aria-label="Nodo perception">
+                <rect class="dg-box" x="300" y="148" width="120" height="44" rx="3" />
+                <text class="dg-name" x="360" y="167" text-anchor="middle">perception</text>
+                <text class="dg-sub" x="360" y="182" text-anchor="middle">ObstacleField</text>
+              </g>
 
-              <rect class="dg-box" x="450" y="132" width="210" height="76" rx="3" />
-              <text class="dg-name" x="555" y="156" text-anchor="middle">navigate</text>
-              <text class="dg-sub" x="555" y="174" text-anchor="middle">StallDetector · 8 reglas</text>
-              <text class="dg-sub" x="555" y="190" text-anchor="middle">reactive · evasive · GIRAR_90 · deadlock</text>
+              <g class="dg-node" data-node="navigate" tabindex="0" role="button" aria-label="Nodo navigate">
+                <rect class="dg-box" x="450" y="132" width="210" height="76" rx="3" />
+                <text class="dg-name" x="555" y="156" text-anchor="middle">navigate</text>
+                <text class="dg-sub" x="555" y="174" text-anchor="middle">StallDetector · 8 reglas</text>
+                <text class="dg-sub" x="555" y="190" text-anchor="middle">reactive · evasive · GIRAR_90 · deadlock</text>
+              </g>
+              <text class="dg-lab-a dg-out" id="dg-out-nav" x="555" y="226" text-anchor="middle"></text>
 
-              <rect class="dg-box" x="300" y="16" width="180" height="44" rx="3" />
-              <text class="dg-name" x="390" y="35" text-anchor="middle">degraded_hover</text>
-              <text class="dg-sub" x="390" y="50" text-anchor="middle">FRENAR, sin percepción</text>
+              <g class="dg-node" data-node="degraded_hover" tabindex="0" role="button" aria-label="Nodo degraded_hover">
+                <rect class="dg-box" x="300" y="16" width="180" height="44" rx="3" />
+                <text class="dg-name" x="390" y="35" text-anchor="middle">degraded_hover</text>
+                <text class="dg-sub" x="390" y="50" text-anchor="middle">FRENAR, sin percepción</text>
+              </g>
 
-              <rect class="dg-box" x="700" y="146" width="140" height="48" rx="3" />
-              <text class="dg-name" x="770" y="166" text-anchor="middle">motor</text>
-              <text class="dg-sub" x="770" y="181" text-anchor="middle">gobernador · 1 cmd/ciclo</text>
+              <g class="dg-node" data-node="motor" tabindex="0" role="button" aria-label="Nodo motor">
+                <rect class="dg-box" x="700" y="146" width="140" height="48" rx="3" />
+                <text class="dg-name" x="770" y="166" text-anchor="middle">motor</text>
+                <text class="dg-sub" x="770" y="181" text-anchor="middle">gobernador · 1 cmd/ciclo</text>
+              </g>
+              <text class="dg-lab-a dg-out" id="dg-out-motor" x="770" y="214" text-anchor="middle"></text>
 
-              <rect class="dg-box" x="872" y="159" width="52" height="22" rx="11" />
-              <text class="dg-lab" x="898" y="174" text-anchor="middle">END</text>
+              <g class="dg-node" data-node="END" tabindex="0" role="button" aria-label="Fin del ciclo">
+                <rect class="dg-box" x="872" y="159" width="52" height="22" rx="11" />
+                <text class="dg-lab" x="898" y="174" text-anchor="middle">END</text>
+              </g>
 
-              <line class="dg-edge" x1="124" y1="170" x2="146" y2="170" marker-end="url(#ar)" />
-              <line class="dg-edge" x1="274" y1="170" x2="296" y2="170" marker-end="url(#ar)" />
+              <line class="dg-edge" data-edge="capture>degraded_router" x1="124" y1="170" x2="146" y2="170" marker-end="url(#ar)" />
+              <line class="dg-edge" data-edge="degraded_router>perception" x1="274" y1="170" x2="296" y2="170" marker-end="url(#ar)" />
               <text class="dg-lab" x="285" y="162" text-anchor="middle">ok</text>
-              <line class="dg-edge" x1="420" y1="170" x2="446" y2="170" marker-end="url(#ar)" />
-              <line class="dg-edge" x1="660" y1="170" x2="696" y2="170" marker-end="url(#ar)" />
-              <line class="dg-edge" x1="840" y1="170" x2="868" y2="170" marker-end="url(#ar)" />
+              <line class="dg-edge" data-edge="perception>navigate" x1="420" y1="170" x2="446" y2="170" marker-end="url(#ar)" />
+              <line class="dg-edge" data-edge="navigate>motor" x1="660" y1="170" x2="696" y2="170" marker-end="url(#ar)" />
+              <line class="dg-edge" data-edge="motor>END" x1="840" y1="170" x2="868" y2="170" marker-end="url(#ar)" />
 
-              <path class="dg-edge" d="M212 148 L212 38 L296 38" marker-end="url(#ar)" />
+              <path class="dg-edge" data-edge="degraded_router>degraded_hover" d="M212 148 L212 38 L296 38" marker-end="url(#ar)" />
               <text class="dg-lab" x="218" y="100">degradado</text>
-              <path class="dg-edge" d="M480 38 L770 38 L770 142" marker-end="url(#ar)" />
+              <path class="dg-edge" data-edge="degraded_hover>motor" d="M480 38 L770 38 L770 142" marker-end="url(#ar)" />
 
               <!-- lazo lento -->
-              <rect class="dg-focus" x="450" y="290" width="210" height="60" rx="3" />
-              <text class="dg-name-a" x="555" y="313" text-anchor="middle">capa estratégica (profundidad)</text>
-              <text class="dg-sub" x="555" y="331" text-anchor="middle">hilo asíncrono · ~110 ms por consulta</text>
+              <g class="dg-node dg-slow" data-node="strategic" tabindex="0" role="button" aria-label="Capa estratégica">
+                <rect class="dg-focus" x="450" y="290" width="210" height="60" rx="3" />
+                <text class="dg-name-a" x="555" y="313" text-anchor="middle">capa estratégica (profundidad)</text>
+                <text class="dg-sub" x="555" y="331" text-anchor="middle">hilo asíncrono · ~110 ms por consulta</text>
+              </g>
 
-              <path class="dg-edge-a" d="M520 208 L520 286" marker-end="url(#ara)" />
+              <path class="dg-edge-a dg-slow" data-edge="navigate>strategic" d="M520 208 L520 286" marker-end="url(#ara)" />
               <text class="dg-lab" x="512" y="252" text-anchor="end">frame + pose (ancla)</text>
-              <path class="dg-edge-a" d="M590 286 L590 212" marker-end="url(#ara)" />
+              <path class="dg-edge-a dg-slow" data-edge="strategic>navigate" d="M590 286 L590 212" marker-end="url(#ara)" />
               <text class="dg-lab" x="600" y="252">respuesta → sub-meta</text>
 
-              <rect class="dg-box" x="700" y="296" width="180" height="48" rx="3" />
-              <text class="dg-name" x="790" y="316" text-anchor="middle">WaypointTracker</text>
-              <text class="dg-sub" x="790" y="331" text-anchor="middle">lazo externo · inject_corner</text>
-              <path class="dg-edge-a" d="M660 320 L696 320" marker-end="url(#ara)" />
+              <g class="dg-node dg-slow" data-node="tracker" tabindex="0" role="button" aria-label="WaypointTracker">
+                <rect class="dg-box" x="700" y="296" width="180" height="48" rx="3" />
+                <text class="dg-name" x="790" y="316" text-anchor="middle">WaypointTracker</text>
+                <text class="dg-sub" x="790" y="331" text-anchor="middle">lazo externo · inject_corner</text>
+              </g>
+              <path class="dg-edge-a dg-slow" data-edge="strategic>tracker" d="M660 320 L696 320" marker-end="url(#ara)" />
 
-              <text class="dg-lab" x="20" y="400">Lazo rápido: 5 Hz, único que comanda velocidades.</text>
-              <text class="dg-lab" x="20" y="418">Lazo lento (teal): propone sub-metas en coordenadas del mundo; nunca comanda velocidades.</text>
+              <text class="dg-lab" x="20" y="400">Lazo rápido: 5 Hz, único que comanda velocidades. Clic en un nodo para ver qué lee y qué escribe.</text>
+              <text class="dg-lab" x="20" y="418">Lazo lento (azul): propone sub-metas en coordenadas del mundo; nunca comanda velocidades.</text>
             </svg>
           </div>
+
+          <!-- Panel interactivo: estado de entrada -> camino, regla y comando (sin animacion) -->
+          <div class="gi" id="gi">
+            <div class="gi-presets" role="group" aria-label="Estados de ejemplo">
+              <span class="gi-k">Estados de ejemplo</span>
+              <button type="button" data-preset="crucero">Crucero despejado</button>
+              <button type="button" data-preset="muro">Muro de frente</button>
+              <button type="button" data-preset="columna">Obstáculo al centro</button>
+              <button type="button" data-preset="lateral">Obstáculo al costado</button>
+              <button type="button" data-preset="malla">Contra una malla</button>
+              <button type="button" data-preset="deadlock">Trabado 10 ciclos</button>
+              <button type="button" data-preset="barrido">Barrido en curso</button>
+              <button type="button" data-preset="bajo">Vuelo bajo</button>
+              <button type="button" data-preset="sinimagen">Sin imagen</button>
+              <button type="button" data-preset="despegue">Despegue</button>
+            </div>
+
+            <div class="gi-grid">
+              <form class="gi-state" id="gi-form" aria-label="Estado de entrada del ciclo">
+                <fieldset>
+                  <legend>Ciclo</legend>
+                  <label class="gi-row"><span>Brazo</span>
+                    <select name="arm"><option value="slm">slm</option><option value="reactive">reactive</option></select></label>
+                  <label class="gi-chk"><input type="checkbox" name="degraded" /> Fotograma perdido (<code>degraded</code>)</label>
+                  <label class="gi-chk"><input type="checkbox" name="takeoff" /> Despegue vertical en curso</label>
+                </fieldset>
+                <fieldset>
+                  <legend>StallDetector y maniobras</legend>
+                  <label class="gi-chk"><input type="checkbox" name="scan" /> Barrido panorámico en curso</label>
+                  <label class="gi-row"><span>Detenido con avance ordenado</span>
+                    <input type="range" name="stopped" min="0" max="10" step="1" /><output data-for="stopped"></output></label>
+                  <label class="gi-row"><span>Ciclos sin progreso</span>
+                    <input type="range" name="noprog" min="0" max="50" step="1" /><output data-for="noprog"></output></label>
+                  <label class="gi-row"><span>Maniobra comprometida</span>
+                    <select name="maneuver">
+                      <option value="">ninguna</option><option>EVADIR_IZQUIERDA</option><option>EVADIR_DERECHA</option>
+                      <option>GIRAR_90</option><option>GANAR_ALTURA</option><option>PERDER_ALTURA</option>
+                    </select></label>
+                  <label class="gi-chk"><input type="checkbox" name="imu" /> <code>imu_contact</code></label>
+                  <label class="gi-chk"><input type="checkbox" name="blind" /> <code>blind_wall</code></label>
+                </fieldset>
+                <fieldset>
+                  <legend>Altitud</legend>
+                  <label class="gi-row"><span>Altitud</span>
+                    <input type="range" name="alt" min="0" max="40" step="0.5" /><output data-for="alt"></output></label>
+                  <label class="gi-chk"><input type="checkbox" name="zblocked" /> Techo sobre el waypoint (<code>z_path_blocked</code>, dz &gt; 1 m)</label>
+                </fieldset>
+                <fieldset>
+                  <legend>ObstacleField</legend>
+                  <label class="gi-row"><span>TTC centro (B2)</span>
+                    <input type="range" name="ttcC" min="0.5" max="10" step="0.1" /><output data-for="ttcC"></output></label>
+                  <label class="gi-chk"><input type="checkbox" name="cblocked" /> Centro bloqueado</label>
+                  <label class="gi-row"><span>TTC mínimo (9 celdas)</span>
+                    <input type="range" name="ttcMin" min="0.5" max="10" step="0.1" /><output data-for="ttcMin"></output></label>
+                  <label class="gi-row"><span>FOV bloqueado</span>
+                    <input type="range" name="fov" min="0" max="100" step="1" /><output data-for="fov"></output></label>
+                </fieldset>
+              </form>
+
+              <div class="gi-out" aria-live="polite">
+                <div class="gi-result" id="gi-result"></div>
+                <div class="gi-detail" id="gi-detail"></div>
+              </div>
+            </div>
+          </div>
+
           <figcaption><b>Cuatro nodos y una arista condicional.</b> El único punto de decisión del grafo es
             <code>degraded_router</code>; la política vive dentro de <code>navigate</code>, que invoca los
-            comportamientos (guiado, evasión, giro, escape, barrido) como funciones. En teal, el lazo lento: la capa
+            comportamientos (guiado, evasión, giro, escape, barrido) como funciones. Con el panel se fija el estado de
+            entrada de un ciclo y el diagrama marca el camino, la regla de <code>navigate</code> que gana y el comando
+            que emite el motor; clic en un nodo para ver qué lee y qué escribe. En azul, el lazo lento: la capa
             estratégica recibe el fotograma con su pose y devuelve, varios ciclos después, una sub-meta en el mundo que
             el bucle externo inserta en el <code>WaypointTracker</code>.</figcaption>
         </figure>
@@ -1100,6 +1192,256 @@
         observer.observe(section);
       });
     });
+  </script>
+
+  <script>
+    // Diagrama de topologia interactivo: el estado de entrada de un ciclo decide el camino,
+    // la regla de navigate (seccion 6) y el comando de action_to_command (seccion 9).
+    (() => {
+      const svg = document.querySelector('#topologia svg');
+      const form = document.getElementById('gi-form');
+      if (!svg || !form) return;
+
+      const TTC_EVASION = 3.2, TTC_SAFE = 4.6, FOV_BLOCKED = 60, OPTICAL_MIN_ALT = 4.5;
+      const STOP_CYCLES = 10, NOPROG_CYCLES = 50;
+      const INF = 10;
+
+      const RULES = [
+        ['1', 'Barrido panorámico en curso'],
+        ['2', 'stopped_prolonged o wp_no_progress'],
+        ['3', 'Maniobra comprometida'],
+        ['4', 'imu_contact o blind_wall'],
+        ['5', 'Altitud < 4.5 m'],
+        ['6', 'z_path_blocked y dz > 1 m'],
+        ['7', 'TTC centro ≤ 3.2 s, o centro bloqueado y TTC ≤ 4.6 s'],
+        ['7b', 'Centro bloqueado o TTC mínimo ≤ 4.6 s'],
+        ['8', 'Camino despejado'],
+      ];
+
+      // tabla de la seccion 9 (body frame, NED: vz negativo = sube)
+      const CMD = {
+        MANTENER_RUMBO:   'vx guiado · vz guiado · yaw guiado',
+        EVADIR_IZQUIERDA: 'vx 0.8 (0.3 con estructura cerca) · vz guiado · −15 °/s, snap −90°',
+        EVADIR_DERECHA:   'vx 0.8 (0.3 con estructura cerca) · vz guiado · +15 °/s, snap +90°',
+        GANAR_ALTURA:     'vx 0 · vz −1.5 · yaw guiado',
+        PERDER_ALTURA:    'vx 1.0 · vz +0.8 · yaw 0',
+        GIRAR_90:         'vx 0 · vz 0 · ±20 °/s hacia el waypoint, snap ±90°',
+        FRENAR:           'vx 0 · vz 0 + ancla de altitud · yaw 0',
+        BARRIDO:          'giro en el lugar a 4 rumbos, 2 ciclos de asentamiento por rumbo',
+      };
+      const SHORT = {
+        MANTENER_RUMBO: 'vx/vz/yaw guiados', EVADIR_IZQUIERDA: 'vx 0.8 · −15 °/s', EVADIR_DERECHA: 'vx 0.8 · +15 °/s',
+        GANAR_ALTURA: 'vz −1.5 m/s', PERDER_ALTURA: 'vx 1.0 · vz +0.8', GIRAR_90: 'vx 0 · ±20 °/s',
+        FRENAR: 'vx 0 · vz 0 · ancla', BARRIDO: 'rotación en el lugar',
+      };
+
+      const NODES = {
+        capture: {
+          t: 'capture_node', sec: 'nodos',
+          d: 'Guarda el fotograma y la telemetría anteriores, captura RGB + telemetría de AirSim y marca degraded si no hay imagen o la telemetría no viene del simulador. No captura profundidad.',
+          r: 'telemetría del simulador', w: 'rgb_image, prev_image, prev_telemetry, telemetry, frame_history, frame_history_ts, degraded',
+        },
+        degraded_router: {
+          t: 'degraded_router', sec: 'topologia',
+          d: 'La única arista condicional del grafo: con datos va a perception, sin datos a degraded_hover. No escribe estado.',
+          r: 'degraded', w: '—',
+        },
+        degraded_hover: {
+          t: 'degraded_hover_node', sec: 'nodos',
+          d: 'Sin datos no se mueve: emite FRENAR con estado degradado y no consulta a la capa estratégica.',
+          r: 'degraded', w: 'next_action, flight_status',
+        },
+        perception: {
+          t: 'perception_node', sec: 'nodos',
+          d: 'FlowTTCEstimator: flujo óptico denso (DIS) sobre el par de fotogramas, derotación por actitud, foco de expansión y TTC por celda. Única fuente de percepción del lazo rápido.',
+          r: 'rgb_image, prev_image, telemetry, prev_telemetry', w: 'obstacle_field, estimated_ttc, scene_summary',
+        },
+        navigate: {
+          t: 'navigate_node', sec: 'navigate',
+          d: 'Antes de la cascada corre StallDetector.update() y StrategicLayer.tick(); después gana la primera de las 8 reglas que aplica. Invoca reactive_node, evasive_node, GIRAR_90, el barrido o el escape como funciones.',
+          r: 'obstacle_field, waypoint_guidance, telemetry, active_maneuver, _scan_phase',
+          w: 'next_action, route, active_maneuver, maneuver_cycles_left, deliberations[], inject_corner, _deadlock_*, _scan_*, imu_contact_event, blind_wall_event, _stopped_cycles, _wp_no_progress_cycles',
+        },
+        motor: {
+          t: 'motor_node', sec: 'cinematica',
+          d: 'action_to_command() traduce la macro-acción a velocidades en body frame. Ancla de altitud en FRENAR, gobernador de velocidad y exactamente un comando por ciclo (last-command-wins).',
+          r: 'next_action, waypoint_guidance, _hover_alt_anchor, _speed_cap', w: 'velocity_command, flight_status, _hover_alt_anchor, _speed_cap',
+        },
+        END: {
+          t: 'END', sec: 'lazo',
+          d: 'Fin del ciclo del grafo. El lazo externo sigue: note_executed_command(), _escape_reset, inject_corner, salidas y sleep hasta completar los 200 ms.',
+          r: '—', w: '—',
+        },
+        strategic: {
+          t: 'capa estratégica', sec: 'estrategica',
+          d: 'Hilo aparte: recibe el fotograma con la pose de la captura (ancla) y devuelve, varios ciclos después, qué sectores de la grilla 3×3 son volables. La sub-meta se calcula con el ancla, no con la pose actual. Nunca comanda velocidades.',
+          r: 'fotograma + pose + waypoint del momento de la captura', w: 'deliberations[], last_deliberation, _vlm_strategic, inject_corner',
+        },
+        tracker: {
+          t: 'WaypointTracker', sec: 'lazo',
+          d: 'Lazo externo: avanza el objetivo dentro de 3.5 m, calcula el guiado e inserta la sub-meta delante del waypoint activo (inject_corner), reemplazando la pendiente salvo duplicados a menos de 10 m.',
+          r: 'inject_corner, _escape_reset', w: 'waypoints, current_wp_index, target_waypoint, waypoint_guidance',
+        },
+      };
+
+      const PRESETS = {
+        crucero:   {},
+        muro:      { ttcC: 2.4, cblocked: true, ttcMin: 2.4, fov: 78 },
+        columna:   { ttcC: 3.0, cblocked: true, ttcMin: 3.0, fov: 22 },
+        lateral:   { ttcC: INF, ttcMin: 4.0, fov: 18 },
+        malla:     { blind: true, stopped: 4, noprog: 22, ttcC: INF, ttcMin: INF, fov: 4 },
+        deadlock:  { stopped: 10, noprog: 30, imu: true },
+        barrido:   { scan: true, ttcC: INF, ttcMin: INF },
+        bajo:      { alt: 3, ttcC: 2.0, ttcMin: 2.0, cblocked: true, fov: 35 },
+        sinimagen: { degraded: true, ttcC: 2.4, cblocked: true, ttcMin: 2.4, fov: 78 },
+        despegue:  { takeoff: true, alt: 6, ttcC: INF, ttcMin: INF },
+      };
+      const BASE = { arm: 'slm', degraded: false, takeoff: false, scan: false, stopped: 0, noprog: 0, maneuver: '',
+        imu: false, blind: false, alt: 12, zblocked: false, ttcC: INF, cblocked: false, ttcMin: INF, fov: 5 };
+
+      const fmtTTC = (v) => (v >= INF ? '∞' : `${v.toFixed(1)} s`);
+
+      function read() {
+        const s = {};
+        for (const el of form.elements) {
+          if (!el.name) continue;
+          s[el.name] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+        }
+        s.ttcMin = Math.min(s.ttcMin, s.ttcC);
+        return s;
+      }
+
+      function write(s) {
+        for (const el of form.elements) {
+          if (!el.name || !(el.name in s)) continue;
+          if (el.type === 'checkbox') el.checked = s[el.name]; else el.value = s[el.name];
+        }
+      }
+
+      // cascada del brazo slm (seccion 6); devuelve la regla, la accion y las notas del ciclo
+      function evaluate(s) {
+        const fast = ['capture', 'degraded_router', 'perception', 'navigate', 'motor', 'END'];
+        if (s.degraded) {
+          return { path: ['capture', 'degraded_router', 'degraded_hover', 'motor', 'END'], rule: null, action: 'FRENAR', checked: 0,
+            why: 'Sin imagen: degraded_router desvía a degraded_hover. No hay percepción ni consulta estratégica en este ciclo.' };
+        }
+        if (s.takeoff) {
+          return { path: fast, rule: 'despegue', action: 'MANTENER_RUMBO', checked: 0,
+            why: 'Despegue vertical: los tres brazos usan reactive_node; el dron sube en el lugar con vx = 0, sin evasión por flujo ni conteo de atasco.' };
+        }
+        if (s.arm === 'reactive') {
+          return { path: fast, rule: 'reactive', action: 'MANTENER_RUMBO', checked: 0,
+            why: 'El brazo reactive delega siempre en reactive_node: guiado nominal con la guiñada acotada a 5 °/s cerca de un obstáculo. No evade, no detecta atascos y no consulta a la capa estratégica.' };
+        }
+        const tests = [
+          () => s.scan && { action: 'BARRIDO', why: 'Un barrido es dueño del dron hasta resolver o caer por sus watchdogs.' },
+          () => (s.stopped >= STOP_CYCLES || s.noprog >= NOPROG_CYCLES) && {
+            action: 'BARRIDO', slow: 'cancel',
+            why: `${s.stopped >= STOP_CYCLES ? 'stopped_prolonged' : 'wp_no_progress'}: empieza el barrido de 4 rumbos (DEADLOCK_STRATEGY = depth). Con blind, o si el barrido falla, escape GANAR_ALTURA 1.6 s.` },
+          () => s.maneuver && { action: s.maneuver, why: 'Anti flip-flop: la maniobra se completa antes de aceptar otra decisión.' },
+          () => (s.imu || s.blind) && { action: 'EVADIR_IZQUIERDA', alt: 'EVADIR_DERECHA',
+            why: `${s.imu ? 'imu_contact' : 'blind_wall'}: contacto que el flujo óptico no ve. evasive_node corrige hacia el sector con menor ocupación y mayor TTC.` },
+          () => s.alt < OPTICAL_MIN_ALT && { action: 'MANTENER_RUMBO', why: 'Bajo el piso óptico el flujo ve el suelo en movimiento y produce TTC falsos: guiado nominal con reactive_node.' },
+          () => s.zblocked && { action: 'PERDER_ALTURA', why: 'El waypoint está bajo un techo detectado: la altura pasa a ser una dimensión de navegación.' },
+          () => (s.ttcC <= TTC_EVASION || (s.cblocked && s.ttcC <= TTC_SAFE)) && (s.fov > FOV_BLOCKED
+            ? { action: 'GIRAR_90', slow: 'expedite', why: `Peligro frontal con ${s.fov} % del campo bloqueado (> 60 %): giro en el lugar hacia el lado del waypoint y consulta inmediata a la capa estratégica con ese fotograma.` }
+            : { action: 'EVADIR_IZQUIERDA', alt: 'EVADIR_DERECHA', why: 'Peligro frontal con el campo mayormente libre: evasive_node esquiva; el rodeo lo decide la capa estratégica.' }),
+          () => (s.cblocked || s.ttcMin <= TTC_SAFE) && { action: 'EVADIR_IZQUIERDA', alt: 'EVADIR_DERECHA', why: 'Ventana de advertencia: corrección lateral preventiva.' },
+          () => ({ action: 'MANTENER_RUMBO', why: 'Camino despejado: guiado nominal hacia el objetivo activo.' }),
+        ];
+        for (let i = 0; i < tests.length; i++) {
+          const r = tests[i]();
+          if (r) return { path: fast, rule: RULES[i][0], checked: i, ...r };
+        }
+      }
+
+      let selected = 'navigate';
+
+      function render() {
+        const s = read();
+        for (const o of form.querySelectorAll('output')) {
+          const v = s[o.dataset.for];
+          o.textContent = o.dataset.for.startsWith('ttc') ? fmtTTC(v) : o.dataset.for === 'alt' ? `${v} m` : o.dataset.for === 'fov' ? `${v} %` : `${v}`;
+        }
+        form.elements.maneuver.disabled = s.arm === 'reactive';
+        const r = evaluate(s);
+
+        // diagrama
+        svg.classList.add('dg-live');
+        const on = new Set(r.path);
+        const edges = new Set(r.path.slice(1).map((n, i) => `${r.path[i]}>${n}`));
+        if (r.slow === 'expedite') { on.add('strategic'); edges.add('navigate>strategic'); }
+        svg.querySelectorAll('.dg-node').forEach((g) => {
+          g.classList.toggle('on', on.has(g.dataset.node));
+          g.classList.toggle('sel', g.dataset.node === selected);
+        });
+        svg.querySelectorAll('[data-edge]').forEach((e) => {
+          const hit = edges.has(e.dataset.edge);
+          e.classList.toggle('on', hit);
+          if (e.classList.contains('dg-edge')) e.setAttribute('marker-end', hit ? 'url(#arh)' : 'url(#ar)');
+        });
+        const act = r.alt ? `${r.action.replace('_IZQUIERDA', '_*')}` : r.action;
+        document.getElementById('dg-out-nav').textContent = r.path.includes('navigate')
+          ? (r.rule && /^\d/.test(r.rule) ? `regla ${r.rule} → ${act}` : `${r.rule} → ${act}`) : '';
+        document.getElementById('dg-out-motor').textContent = SHORT[r.action] || '';
+
+        // resultado
+        const rules = s.arm === 'reactive' || s.degraded || s.takeoff ? '' : `<ul class="gi-rules">${RULES.map(([n, c], i) => {
+          const cls = i < r.checked ? 'no' : i === r.checked ? 'hit' : 'skip';
+          return `<li class="${cls}"><b>${n === '8' ? '8' : n}</b><span>${c}${n === '6' ? '' : ''}</span></li>`;
+        }).join('')}</ul>`;
+        const actLabel = r.alt ? `${r.action} / ${r.alt}` : r.action;
+        const slow = r.slow === 'expedite'
+          ? '<p class="gi-note slow">Lazo lento: <code>expedite()</code> envía este fotograma con su pose a la capa estratégica; la respuesta llega varios ciclos después como sub-meta.</p>'
+          : r.slow === 'cancel'
+            ? '<p class="gi-note slow">Lazo lento: cualquier consulta estratégica en vuelo se cancela; el barrido es más reciente y su sub-meta no debe ser pisada por una respuesta vieja.</p>'
+            : s.arm === 'slm' && !s.degraded
+              ? '<p class="gi-note">Lazo lento: <code>StrategicLayer.tick()</code> corre igual antes de la cascada; consulta cada 1 s con la profundidad si la altura, la distancia al waypoint y el recorte lo permiten. Nunca frena al dron.</p>'
+              : '';
+        document.getElementById('gi-result').innerHTML = `
+          <div class="gi-path">${r.path.join(' → ')}</div>
+          <div class="gi-act"><b>${actLabel}</b><span>${CMD[r.action]}</span></div>
+          <p class="gi-note" style="margin-top:0">${r.why}</p>
+          ${rules}${slow}`;
+        renderDetail();
+      }
+
+      function renderDetail() {
+        const n = NODES[selected];
+        document.getElementById('gi-detail').innerHTML = `
+          <h4>${n.t}</h4><p>${n.d}</p>
+          <div class="gi-fields"><span>Lee:</span> ${n.r}</div>
+          <div class="gi-fields" style="margin-top:4px"><span>Escribe:</span> ${n.w}</div>
+          <p style="margin:8px 0 0"><a href="#${n.sec}">Ver la sección →</a></p>`;
+      }
+
+      function pick(node) {
+        selected = node;
+        svg.querySelectorAll('.dg-node').forEach((g) => g.classList.toggle('sel', g.dataset.node === selected));
+        renderDetail();
+      }
+
+      svg.querySelectorAll('.dg-node').forEach((g) => {
+        g.addEventListener('click', () => pick(g.dataset.node));
+        g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(g.dataset.node); } });
+      });
+      form.addEventListener('input', () => {
+        document.querySelectorAll('.gi-presets button').forEach((b) => b.classList.remove('on'));
+        render();
+      });
+      document.querySelectorAll('.gi-presets button').forEach((b) => {
+        b.addEventListener('click', () => {
+          const arm = form.elements.arm.value;
+          write({ ...BASE, arm, ...PRESETS[b.dataset.preset] });
+          document.querySelectorAll('.gi-presets button').forEach((x) => x.classList.toggle('on', x === b));
+          render();
+        });
+      });
+
+      write(BASE);
+      document.querySelector('.gi-presets [data-preset="crucero"]').classList.add('on');
+      render();
+    })();
   </script>
 </body>
 
