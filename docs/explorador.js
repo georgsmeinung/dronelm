@@ -1201,9 +1201,9 @@ class Scene3D {
       if (tw.t >= 1) this.tween = null;
     }
     this.controls.update();
-    // nivel de detalle: las etiquetas del grafo solo cuando un bloque mide mas de ~60 px
+    // nivel de detalle: en la vista Grafo siempre; en las demas, cuando un bloque mide mas de ~34 px
     const ppm = (this.host.clientHeight / 120) * this.camera.zoom;
-    const showGraph = ppm * 9 > 60;
+    const showGraph = this.view === 'graph' || ppm * 9 > 34;
     if (showGraph !== this.graphLabelsOn) {
       this.graphLabelsOn = showGraph;
       for (const o of this.graph.children) if (o.userData.lod) o.visible = showGraph;

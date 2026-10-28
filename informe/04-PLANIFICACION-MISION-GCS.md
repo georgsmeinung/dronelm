@@ -7,7 +7,9 @@ La arquitectura general del sistema responde a un principio de diseño fundament
 1. **El planificador de estación terrena (`airsim-plan` / WebDCS):** opera de manera previa al despegue del vehículo. En esta etapa, el sistema puede tolerar presupuestos de tiempo del orden de 5 a 10 segundos para interpretar instrucciones en lenguaje natural, consultar información contextual del entorno, aplicar reglas de seguridad operacional y generar un plan de vuelo global validado.
 2. **El lazo táctico a bordo (`airsim-loop`):** opera en tiempo real estricto una vez que el vehículo está en el aire (capítulo 5). Bajo una frecuencia objetivo de 5 a 10 Hz, su función no es diseñar la ruta global sino mantener la estabilidad cinemática, seguir los objetivos asignados y ejecutar maniobras reactivas inmediatas de evasión de obstáculos a partir de visión monocular ligera.
 
-![Planificación de Misión UAV y Arquitectura de Control](informe-03-planificacion-del-vuelo.jpg)
+![Arquitectura en tres fases: planificación en tierra, lazo táctico a bordo y auditoría](2026-1028%20dos_cerebros.png)
+
+*La arquitectura en tres fases. En tierra se compila la misión y el VLM planifica la ruta sobre el mapa cenital; el manifiesto se transmite una vez. A bordo, el lazo rápido es el único que comanda velocidades y el lazo lento propone sub-metas con la profundidad estimada (capítulo 5). Después, la traza por ciclo alimenta el visor y el análisis por lote. Abajo, qué modelo trabaja en cada fase.*
 
 El desacoplamiento permite que la misión sea validada, persistida y versionada de forma determinista antes de iniciar los motores. Asimismo, garantiza que el lazo táctico a bordo no dependa de una conexión de red permanente con la estación terrena: una vez transmitido el manifiesto de vuelo, el dron opera de forma enteramente autónoma, protegiendo la seguridad del vuelo ante eventuales pérdidas de enlace de radio o telemetría.
 
@@ -172,7 +174,9 @@ El campo `state` hace que la traza no dependa de haber previsto qué registrar: 
 
 ### Visor de auditoría (`.viewer.html`)
 
-<img src="informe-03-auditoria-de-vuelo.png"/>
+<img src="2026-1028 visor_auditoria.png"/>
+
+*Visor de una corrida `slm:depth` de `townsim_ini` (corrida v4, lote 3, semilla 89) en el ciclo 398: un muro cubre el campo, el lazo rápido gira 90° y adelanta la consulta estratégica #40.*
 
 El visor es un único archivo HTML que se genera al cerrar cada corrida. Lleva la traza embebida como JSON dentro de la página, de modo que se abre con doble clic, sin servidor: un navegador bloquea, desde `file://`, la lectura de otro archivo local con `fetch`, pero sí reproduce un video de la misma carpeta. Tiene cuatro partes:
 

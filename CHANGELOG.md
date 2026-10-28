@@ -24,7 +24,30 @@ Sin cambios de codigo de vuelo.
   de la seccion 6 y el comando de la tabla de la seccion 9, y enciende el lazo lento con `expedite()`. Clic
   en un nodo: que hace, campos de `DroneState` que lee y escribe, enlace a su seccion. Pie de figura
   corregido ("azul", no "teal").
-- `docs/styles.css`: estilos `.dg-node` y `.gi-*` (container query para una columna en anchos chicos).
+- **Figura del grafo en tres capas**: el PNG de septiembre (`2026-0930 grafo_control.png`: Qwen2.5-VL-3B,
+  consultas cada 3 s, grilla A-E, deadlock como regla 6, barrido `deep_vlm`) se reemplaza por un SVG en
+  `grafo-de-control.html` alineado con la seccion 6: lazo externo (pasos 1-5), grafo de un ciclo con la
+  cascada de reglas coloreada por tipo de accion, lazo lento con profundidad y linea de tiempo de una consulta
+  (profundidad vs VLM). Exportado a `informe/2026-1028 grafo_control.png` (2080x1424, Chrome headless, modo
+  claro); lo usan el cap. 5 (Figura 5.1, pie reescrito), `informe/README.md` y `docs/index.html`. El PNG
+  viejo queda en el repo sin referencias.
+- **Figuras desactualizadas reemplazadas** (las viejas quedan en el repo sin referencias):
+  - `2026-0625 Navegación con SLM y Langraph.png` (YOLOv8, gatekeeper, `slm_planner`) e
+    `informe-03-planificacion-del-vuelo.jpg` (LiDAR, Phi-3, Jetson) -> `2026-1028 dos_cerebros.png`:
+    tierra (compilacion de la mision y plan de ruta con el VLM por parches), a bordo (lazo rapido y lazo
+    lento con profundidad) y auditoria, mas una banda "que modelo trabaja donde" con sus AUC. Usada en
+    `docs/index.html` (Arquitectura) y en el cap. 4 §4.1, con pie nuevo.
+  - `2026-0823 Refinamiento Algoritmo de Navegacion.png` (`ttc_router` < 2.5 s, IPM/SLIC, VLM que elige
+    AVANZAR) -> `2026-1028 pipeline_percepcion.png`: par de fotogramas, DIS, derotacion, FOE, TTC por pixel,
+    `ObstacleField`; umbrales 3.2 / 4.6 s con sus AUC; puntos ciegos del flujo y como se cubren. Usada en
+    `docs/index.html` (Percepcion).
+  - `informe-03-auditoria-de-vuelo.png` (visor viejo: un video, `route = deliberative`, `ESCANEO`) ->
+    `2026-1028 visor_auditoria.png`: visor actual de `townsim_ini`, `slm:depth`, semilla 89 de v4, ciclo 398
+    (GIRAR_90 con la consulta estrategica #40). Cap. 4, con pie nuevo.
+  - Fuentes SVG de los dos diagramas en `informe/fig-src/`, con `export.ps1` (Chrome headless, 2x, claro).
+- `docs/styles.css`: estilos `.dg-node`, `.gi-*` (container query para una columna en anchos chicos) y del
+  diagrama en tres capas (`.dg-band*`, `.dg-act`, `.dg-c-*`, linea de tiempo).
+- Pendiente: regenerar `docs/informe/` con `informe/build.ps1` para que el cap. 5 publicado use la figura nueva.
 - Enlaces al explorador en `docs/index.html` (barra lateral y recuadro de arquitectura) y en la barra lateral
   de `docs/grafo-de-control.html`.
 - `.claude/launch.json`: configuracion `docs` (`http.server` en el puerto 8765) para previsualizar el sitio;

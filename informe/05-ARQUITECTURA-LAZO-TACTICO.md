@@ -22,9 +22,9 @@ capture ──(ok)──────────► perception ──► navigat
 
 `navigate` es un **único nodo** que contiene la política. Los comportamientos concretos (guiado, evasión lateral, giro de 90°, escape vertical, barrido panorámico) son funciones que `navigate` invoca, no nodos del grafo.
 
-<img src="2026-0930 grafo_control.png"/>
+<img src="2026-1028 grafo_control.png"/>
 
-*Figura 5.1. Grafo de control. El lazo rápido (izquierda) es el único que comanda velocidades; el lazo lento (derecha) consulta de forma asíncrona a su fuente —por defecto, la red de profundidad estimada (§5.10.6); la figura muestra la alternativa con el VLM— y devuelve sub-metas en coordenadas del mundo, que el bucle externo inserta en el `WaypointTracker`.*
+*Figura 5.1. Grafo de control en tres capas. Arriba, el bucle externo da una vuelta cada 200 ms y en el paso ③ ejecuta un ciclo del grafo; el grafo (centro) es el único que comanda velocidades y `navigate` aplica la primera de sus ocho reglas que se cumple. El lazo lento (derecha) consulta de forma asíncrona a su fuente —la red de profundidad estimada (§5.10.6)— y devuelve sub-metas en coordenadas del mundo, que el paso ④ inserta en el `WaypointTracker`. Abajo, una consulta a lo largo de diez ciclos: con la profundidad la sub-meta se aplica en el ciclo siguiente; con el VLM, cuatro ciclos después y calculada con la pose del pedido.*
 
 ### 5.1.2 Dos lazos desacoplados
 

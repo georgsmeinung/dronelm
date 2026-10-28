@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 712" width="1200" height="712" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- Arquitectura en tres fases: tierra, a bordo y auditoria. Fuente de informe/2026-1028 dos_cerebros.png -->
+  <style>
+    .bg   { fill: #FFFFFF; }
+    .col  { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD3DD; stroke-width: 1.2; }
+    .c-teal { stroke: #0F9488; stroke-width: 1.8; }
+    .c-acc  { stroke: #0066CC; stroke-width: 1.8; }
+    .c-ink  { stroke: #4A5568; stroke-width: 1.8; }
+    .w-teal { fill: #E3F6F3; } .w-acc { fill: #E6F2FF; } .w-ink { fill: #EDF0F4; }
+    .head { font-size: 13px; font-weight: 800; letter-spacing: .06em; }
+    .t-teal { fill: #0F9488; } .t-acc { fill: #0066CC; } .t-ink { fill: #2D3748; } .t-mut { fill: #718096; }
+    .sub  { font-size: 12px; fill: #718096; }
+    .ttl  { font-size: 14px; font-weight: 700; fill: #1A202C; }
+    .txt  { font-size: 12.5px; fill: #4A5568; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11.5px; fill: #1A202C; }
+    .lab-s { font-size: 10.5px; fill: #718096; }
+    .lab  { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #718096; }
+    .arrow { fill: none; stroke: #4A5568; stroke-width: 2; }
+    .big  { font-size: 22px; font-weight: 800; fill: #1A202C; letter-spacing: -.01em; }
+    .ground { fill: #EEF1F5; } .bldg { fill: #CBD3DD; }
+    .cand { fill: none; stroke: #A0AEC0; stroke-width: 2; stroke-dasharray: 5 4; }
+    .best { fill: none; stroke: #0F9488; stroke-width: 3; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" />
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1200" height="712" />
+
+  <!-- ===== Columna 1: tierra ===== -->
+  <rect class="col" x="20" y="20" width="370" height="480" rx="10" />
+  <text class="head t-teal" x="38" y="48">ANTES DEL VUELO · EN TIERRA</text>
+  <text class="sub" x="38" y="67">airsim-plan · WebDCS · se toleran segundos</text>
+
+  <rect class="card c-teal" x="36" y="84" width="338" height="112" rx="8" />
+  <text class="ttl" x="52" y="107">1 · Compilar la misión</text>
+  <text class="txt" x="52" y="129">directiva del operador en lenguaje natural</text>
+  <text class="txt" x="52" y="147">→ LLM local compila un MissionManifest</text>
+  <text class="txt" x="52" y="165">→ validado con Pydantic: waypoints NED</text>
+  <text class="txt" x="52" y="183">   dentro del mapa, con z &lt; 0</text>
+
+  <rect class="card c-teal" x="36" y="208" width="338" height="168" rx="8" />
+  <text class="ttl" x="52" y="231">2 · Plan de ruta con el VLM</text>
+  <text class="txt" x="52" y="253">por tramo: recta, dos en L, desvíos paralelos</text>
+  <text class="txt" x="52" y="271">parche de 16 m cada 8 m sobre el mapa cenital</text>
+  <text class="txt" x="52" y="289">el VLM clasifica: calle, edificio, árboles,</text>
+  <text class="txt" x="52" y="307">   estacionamiento, autopista elevada</text>
+  <text class="txt" x="52" y="325">puntaje = P(calle) media, de los logprobs</text>
+  <text class="txt" x="52" y="343">gana la mejor → waypoints VIA_* al manifiesto</text>
+  <text class="txt" x="52" y="361">una vez por misión: todo el lote, mismo plan</text>
+
+  <!-- mini mapa con candidatas -->
+  <rect class="card" x="36" y="388" width="338" height="98" rx="8" />
+  <rect class="ground" x="46" y="396" width="318" height="82" rx="4" />
+  <rect class="bldg" x="150" y="414" width="96" height="44" rx="2" />
+  <rect class="bldg" x="84" y="402" width="40" height="24" rx="2" />
+  <rect class="bldg" x="270" y="440" width="44" height="30" rx="2" />
+  <path class="cand" d="M64 466 L330 410" />
+  <path class="cand" d="M64 466 L64 410 L330 410" />
+  <path class="best" d="M64 466 L330 466 L330 410" />
+  <circle cx="64" cy="466" r="6" fill="#259E5F" />
+  <circle cx="330" cy="410" r="6" fill="#0066CC" />
+  <circle cx="330" cy="466" r="4" fill="#0F9488" />
+  <text class="lab" x="338" y="470" text-anchor="start" style="font-size:10px;fill:#0F9488">VIA</text>
+  <text class="lab" x="156" y="425" style="font-size:10px">edificio</text>
+  <text class="lab" x="74" y="477" style="font-size:10px">inicio</text>
+
+  <!-- flecha tierra -> a bordo -->
+  <line class="arrow" x1="392" y1="250" x2="446" y2="250" marker-end="url(#ah)" />
+  <text class="lab-s" x="420" y="226" text-anchor="middle">manifiesto</text>
+  <text class="lab-s" x="420" y="240" text-anchor="middle">una vez</text>
+
+  <!-- ===== Columna 2: a bordo ===== -->
+  <rect class="col" x="450" y="20" width="350" height="480" rx="10" />
+  <text class="head t-acc" x="468" y="48">EN VUELO · A BORDO</text>
+  <text class="sub" x="468" y="67">airsim-loop · 5 Hz · sin enlace con tierra</text>
+
+  <rect class="card" x="466" y="84" width="318" height="72" rx="8" />
+  <text class="ttl" x="482" y="107">Sensores</text>
+  <text class="txt" x="482" y="129">una cámara RGB frontal + telemetría</text>
+  <text class="txt" x="482" y="147">sin LiDAR ni profundidad del simulador</text>
+
+  <line class="arrow" x1="625" y1="156" x2="625" y2="176" marker-end="url(#ah)" />
+
+  <rect class="card c-acc w-acc" x="466" y="178" width="318" height="132" rx="8" />
+  <text class="ttl" x="482" y="201">Lazo rápido · cada 200 ms</text>
+  <text class="txt" x="482" y="223">flujo óptico → ObstacleField (TTC 3×3)</text>
+  <text class="txt" x="482" y="241">navigate: 8 reglas en orden fijo</text>
+  <text class="txt" x="482" y="259">motor: un comando por ciclo</text>
+  <text class="txt" x="482" y="283" style="font-weight:700;fill:#0066CC">el único que comanda velocidades</text>
+
+  <line class="arrow" x1="590" y1="310" x2="590" y2="330" marker-end="url(#ah)" />
+  <line class="arrow" x1="660" y1="330" x2="660" y2="312" marker-end="url(#ah)" />
+  <text class="lab" x="582" y="324" text-anchor="end">frame + pose</text>
+  <text class="lab" x="668" y="324">sub-meta</text>
+
+  <rect class="card c-acc" x="466" y="332" width="318" height="120" rx="8" />
+  <text class="ttl" x="482" y="355">Lazo lento · hilo aparte</text>
+  <text class="txt" x="482" y="377">profundidad estimada desde el mismo RGB</text>
+  <text class="txt" x="482" y="395">sub-metas en el mundo, ancladas a la pose</text>
+  <text class="txt" x="482" y="413">barrido de 4 rumbos si el dron se traba</text>
+  <text class="txt" x="482" y="437" style="font-weight:700;fill:#0066CC">nunca frena al dron</text>
+
+  <text class="sub" x="625" y="482" text-anchor="middle">en la configuración final, el VLM no vuela</text>
+
+  <!-- flecha a bordo -> despues -->
+  <line class="arrow" x1="802" y1="250" x2="856" y2="250" marker-end="url(#ah)" />
+  <text class="lab-s" x="830" y="226" text-anchor="middle">traza</text>
+  <text class="lab-s" x="830" y="240" text-anchor="middle">por ciclo</text>
+
+  <!-- ===== Columna 3: despues ===== -->
+  <rect class="col" x="860" y="20" width="320" height="480" rx="10" />
+  <text class="head t-ink" x="878" y="48">DESPUÉS · AUDITORÍA</text>
+  <text class="sub" x="878" y="67">airsim-runs · finalize_run</text>
+
+  <rect class="card c-ink" x="876" y="84" width="288" height="168" rx="8" />
+  <text class="ttl" x="892" y="107">Registro de la corrida</text>
+  <text class="txt" x="892" y="129">traza JSONL: DroneState por ciclo</text>
+  <text class="txt" x="892" y="147">CSV plano y summary.json</text>
+  <text class="txt" x="892" y="165">videos frontal y FollowCam</text>
+  <text class="txt" x="892" y="183">fotogramas de cada consulta</text>
+  <text class="txt" x="892" y="207">DistMin: hilo de auditoría aislado,</text>
+  <text class="txt" x="892" y="225">   la única lectura de profundidad</text>
+  <text class="txt" x="892" y="243">   del simulador (fuera del lazo)</text>
+
+  <rect class="card c-ink" x="876" y="264" width="288" height="110" rx="8" />
+  <text class="ttl" x="892" y="287">Visor HTML por corrida</text>
+  <text class="txt" x="892" y="309">dos videos sincronizados por ciclo</text>
+  <text class="txt" x="892" y="327">campo de obstáculos, consulta y estado</text>
+  <text class="txt" x="892" y="345">tabla de ciclos navegable</text>
+  <text class="txt" x="892" y="363">se abre con doble clic, sin servidor</text>
+
+  <rect class="card c-ink" x="876" y="386" width="288" height="100" rx="8" />
+  <text class="ttl" x="892" y="409">Análisis por lote</text>
+  <text class="txt" x="892" y="431">analyze_lotes.py: permutación</text>
+  <text class="txt" x="892" y="449">exacta, delta de Cliff con IC</text>
+  <text class="txt" x="892" y="467">y Bonferroni</text>
+
+  <!-- ===== Banda inferior: que modelo trabaja donde ===== -->
+  <rect class="col" x="20" y="520" width="1160" height="172" rx="10" />
+  <text class="head t-ink" x="38" y="548">QUÉ MODELO TRABAJA DÓNDE</text>
+
+  <rect class="card c-teal" x="36" y="562" width="272" height="114" rx="8" />
+  <text class="ttl" x="52" y="586">LLM local</text>
+  <text class="txt" x="52" y="608">tierra · compila la misión</text>
+  <text class="txt" x="52" y="626">una vez, antes de armar motores</text>
+  <text class="lab" x="52" y="660">salida validada por esquema</text>
+
+  <rect class="card c-teal" x="320" y="562" width="272" height="114" rx="8" />
+  <text class="ttl" x="336" y="586">VLM LFM2.5-VL-1.6B</text>
+  <text class="txt" x="336" y="608">tierra · plan de ruta sobre el mapa</text>
+  <text class="txt" x="336" y="626">clasifica parches cenitales</text>
+  <text class="lab" x="336" y="660">AUC 0.81 con parches</text>
+
+  <rect class="card c-acc" x="604" y="562" width="272" height="114" rx="8" />
+  <text class="ttl" x="620" y="586">Flujo óptico (DIS)</text>
+  <text class="txt" x="620" y="608">a bordo · lazo rápido, 5 Hz</text>
+  <text class="txt" x="620" y="626">TTC por celda, sin redes neuronales</text>
+  <text class="lab" x="620" y="660">TTC: AUC 0.96–0.97</text>
+
+  <rect class="card c-acc" x="888" y="562" width="276" height="114" rx="8" />
+  <text class="ttl" x="904" y="586">Depth Anything V2</text>
+  <text class="txt" x="904" y="608">a bordo · lazo lento, ~110 ms</text>
+  <text class="txt" x="904" y="626">qué sectores son volables</text>
+  <text class="lab" x="904" y="660">AUC 0.83–0.87 (VLM: 0.53)</text>
+</svg>

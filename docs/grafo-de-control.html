@@ -311,11 +311,186 @@
             el bucle externo inserta en el <code>WaypointTracker</code>.</figcaption>
         </figure>
 
-        <figure style="margin: 28px 0; background-color: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;">
-          <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-0930 grafo_control.png" alt="Grafo de control" style="width: 100%; height: auto; display: block; object-fit: contain;">
-          <figcaption style="padding: 16px; border-top: 1px solid var(--rule); text-align: left; color: var(--muted); font-size: 13px;">
-            <strong>Figura del informe (cap. 5, Figura 5.1).</strong> Lazo rápido a la izquierda, lazo lento del VLM a la derecha.
-          </figcaption>
+        <figure>
+          <div class="fig-scroll">
+            <svg class="dg-wide" viewBox="0 0 1040 712" role="img"
+              aria-label="El grafo de control en tres capas: el lazo externo da una vuelta cada 200 ms e invoca un ciclo del grafo; el grafo captura, percibe, decide con ocho reglas en orden y emite un comando; el lazo lento corre en un hilo aparte y devuelve sub-metas en coordenadas del mundo. Abajo, una línea de tiempo muestra que el dron sigue volando mientras espera la respuesta.">
+              <defs>
+                <marker id="ar2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+                  <polygon class="dg-arrow" points="0 0, 10 4, 0 8" />
+                </marker>
+                <marker id="ara2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
+                  <polygon class="dg-arrow-a" points="0 0, 10 4, 0 8" />
+                </marker>
+              </defs>
+
+              <!-- A. lazo externo -->
+              <rect class="dg-band" x="10" y="8" width="1020" height="60" rx="6" />
+              <text class="dg-head" x="24" y="25">LAZO EXTERNO · main.py / runner.py · una vuelta cada 200 ms</text>
+              <rect class="dg-chip" x="24" y="32" width="168" height="28" rx="14" />
+              <text class="dg-name" x="108" y="50" text-anchor="middle">① tracker.update()</text>
+              <rect class="dg-chip" x="206" y="32" width="168" height="28" rx="14" />
+              <text class="dg-name" x="290" y="50" text-anchor="middle">② compute_guidance()</text>
+              <rect class="dg-chip-on" x="388" y="32" width="168" height="28" rx="14" />
+              <text class="dg-name" x="472" y="50" text-anchor="middle">③ graph.invoke()</text>
+              <rect class="dg-chip-on" x="570" y="32" width="200" height="28" rx="14" />
+              <text class="dg-name" x="670" y="50" text-anchor="middle">④ inject_corner</text>
+              <rect class="dg-chip" x="784" y="32" width="150" height="28" rx="14" />
+              <text class="dg-name" x="859" y="50" text-anchor="middle">⑤ registro · sleep</text>
+              <text class="dg-lab" x="946" y="50">↻ 200 ms</text>
+              <line class="dg-edge" x1="192" y1="46" x2="204" y2="46" marker-end="url(#ar2)" />
+              <line class="dg-edge" x1="374" y1="46" x2="386" y2="46" marker-end="url(#ar2)" />
+              <line class="dg-edge" x1="556" y1="46" x2="568" y2="46" marker-end="url(#ar2)" />
+              <line class="dg-edge" x1="770" y1="46" x2="782" y2="46" marker-end="url(#ar2)" />
+
+              <!-- ③ invoca un ciclo del grafo -->
+              <path class="dg-edge" d="M430 60 V88 H74 V156" marker-end="url(#ar2)" />
+              <text class="dg-lab" x="252" y="83" text-anchor="middle">③ ejecuta un ciclo del grafo</text>
+
+              <!-- sub-metas del lazo lento hacia ④ -->
+              <path class="dg-edge-d" d="M1000 138 V84 H670 V62" marker-end="url(#ara2)" />
+              <path class="dg-edge-d" d="M1015 350 H1024 V84 H1000" />
+              <text class="dg-lab-a" x="662" y="80" text-anchor="end">sub-meta (x, y, z) en el mundo</text>
+
+              <!-- B. grafo LangGraph -->
+              <rect class="dg-band-n" x="10" y="100" width="660" height="392" rx="6" />
+              <text class="dg-head" x="96" y="122">GRAFO LANGGRAPH · un ciclo · el único que comanda velocidades</text>
+
+              <rect class="dg-box" x="24" y="160" width="100" height="46" rx="4" />
+              <text class="dg-name" x="74" y="180" text-anchor="middle">capture</text>
+              <text class="dg-sub" x="74" y="196" text-anchor="middle">RGB + telemetría</text>
+
+              <polygon class="dg-router" points="172,163 200,183 172,203 144,183" />
+              <text class="dg-lab" x="172" y="187" text-anchor="middle">¿img?</text>
+              <line class="dg-edge" x1="124" y1="183" x2="142" y2="183" marker-end="url(#ar2)" />
+              <line class="dg-edge" x1="200" y1="183" x2="216" y2="183" marker-end="url(#ar2)" />
+              <text class="dg-lab" x="208" y="176" text-anchor="middle">sí</text>
+
+              <rect class="dg-box" x="218" y="160" width="140" height="46" rx="4" />
+              <text class="dg-name" x="288" y="180" text-anchor="middle">perception</text>
+              <text class="dg-sub" x="288" y="196" text-anchor="middle">flujo → ObstacleField</text>
+
+              <path class="dg-edge" d="M172 163 V142 H580 V158" marker-end="url(#ar2)" />
+              <text class="dg-lab" x="376" y="137" text-anchor="middle">no: sin imagen ni telemetría</text>
+              <rect class="dg-box" x="500" y="160" width="160" height="46" rx="4" />
+              <text class="dg-name" x="580" y="180" text-anchor="middle">degraded_hover</text>
+              <text class="dg-sub" x="580" y="196" text-anchor="middle">FRENAR: no se mueve</text>
+              <path class="dg-edge" d="M650 206 V390" marker-end="url(#ar2)" />
+
+              <line class="dg-edge" x1="288" y1="206" x2="288" y2="228" marker-end="url(#ar2)" />
+
+              <!-- navigate: cascada de reglas -->
+              <rect class="dg-box" x="24" y="230" width="450" height="248" rx="4" />
+              <text class="dg-name" x="40" y="252">navigate · brazo slm</text>
+              <text class="dg-sub" x="40" y="270">antes de las reglas: StallDetector.update() · StrategicLayer.tick()</text>
+              <text class="dg-sub" x="40" y="288">gana la primera regla que se cumple ↓</text>
+
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="302" r="9" /><text class="dg-badge-t" x="46" y="305.5" text-anchor="middle">1</text>
+                <text class="dg-txt" x="62" y="306">barrido de deadlock en curso</text><text class="dg-act dg-c-crit" x="290" y="306">→ seguir el barrido</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="321" r="9" /><text class="dg-badge-t" x="46" y="324.5" text-anchor="middle">2</text>
+                <text class="dg-txt" x="62" y="325">trabado 10 ciclos / 10 s sin avance</text><text class="dg-act dg-c-crit" x="290" y="325">→ DEADLOCK: barrido</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="340" r="9" /><text class="dg-badge-t" x="46" y="343.5" text-anchor="middle">3</text>
+                <text class="dg-txt" x="62" y="344">maniobra comprometida</text><text class="dg-act dg-c-mut" x="290" y="344">→ continuarla</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="359" r="9" /><text class="dg-badge-t" x="46" y="362.5" text-anchor="middle">4</text>
+                <text class="dg-txt" x="62" y="363">contacto IMU o muro ciego</text><text class="dg-act dg-c-warn" x="290" y="363">→ evasive_node</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="378" r="9" /><text class="dg-badge-t" x="46" y="381.5" text-anchor="middle">5</text>
+                <text class="dg-txt" x="62" y="382">altitud &lt; 4.5 m (piso óptico)</text><text class="dg-act dg-c-safe" x="290" y="382">→ reactive_node</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="397" r="9" /><text class="dg-badge-t" x="46" y="400.5" text-anchor="middle">6</text>
+                <text class="dg-txt" x="62" y="401">waypoint bajo un techo</text><text class="dg-act dg-c-warn" x="290" y="401">→ PERDER_ALTURA</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="416" r="9" /><text class="dg-badge-t" x="46" y="419.5" text-anchor="middle">7</text>
+                <text class="dg-txt" x="62" y="420">TTC centro ≤ 3.2 s</text><text class="dg-act dg-c-warn" x="290" y="420">→ evadir / GIRAR_90 *</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="435" r="9" /><text class="dg-badge-t" x="46" y="438.5" text-anchor="middle">7b</text>
+                <text class="dg-txt" x="62" y="439">TTC ≤ 4.6 s o centro bloqueado</text><text class="dg-act dg-c-warn" x="290" y="439">→ evasive_node</text></g>
+              <g class="dg-rule"><circle class="dg-badge" cx="46" cy="454" r="9" /><text class="dg-badge-t" x="46" y="457.5" text-anchor="middle">8</text>
+                <text class="dg-txt" x="62" y="458">nada de lo anterior</text><text class="dg-act dg-c-safe" x="290" y="458">→ guiado nominal</text></g>
+              <text class="dg-lab" x="40" y="473">* GIRAR_90 si el muro tapa &gt; 60 %; consulta ya al lazo lento</text>
+
+              <!-- motor -->
+              <line class="dg-edge" x1="474" y1="427" x2="498" y2="427" marker-end="url(#ar2)" />
+              <rect class="dg-box" x="500" y="392" width="160" height="70" rx="4" />
+              <text class="dg-name" x="580" y="414" text-anchor="middle">motor</text>
+              <text class="dg-sub" x="580" y="432" text-anchor="middle">acción → velocidades</text>
+              <text class="dg-sub" x="580" y="448" text-anchor="middle">1 comando por ciclo</text>
+              <text class="dg-lab" x="580" y="482" text-anchor="middle">END → vuelve a ④</text>
+
+              <!-- llamadas al lazo lento -->
+              <line class="dg-edge-d" x1="474" y1="262" x2="692" y2="262" marker-end="url(#ara2)" />
+              <text class="dg-lab-a" x="566" y="256" text-anchor="middle">tick(): frame + pose</text>
+              <line class="dg-edge-d" x1="474" y1="321" x2="692" y2="321" marker-end="url(#ara2)" />
+              <text class="dg-lab-a" x="566" y="315" text-anchor="middle">regla 2</text>
+
+              <!-- C. lazo lento -->
+              <rect class="dg-band-a" x="680" y="100" width="350" height="392" rx="6" />
+              <text class="dg-head dg-head-a" x="696" y="122">LAZO LENTO · hilo aparte · nunca comanda</text>
+
+              <rect class="dg-focus" x="695" y="138" width="320" height="142" rx="4" />
+              <text class="dg-name-a" x="711" y="160">Capa estratégica</text>
+              <text class="dg-txt" x="711" y="181">fuente: profundidad estimada (DA-V2)</text>
+              <text class="dg-txt" x="711" y="198">cada 1 s · ~110 ms por consulta</text>
+              <text class="dg-txt" x="711" y="215">grilla 3×3: libre si p5 ≥ 15 m</text>
+              <text class="dg-txt" x="711" y="232">ancla: la pose del fotograma pedido</text>
+              <text class="dg-txt" x="711" y="249">→ sub-meta a 15 m hacia el sector libre</text>
+              <text class="dg-txt" x="711" y="266">   más cercano a la meta</text>
+
+              <rect class="dg-focus" x="695" y="298" width="320" height="110" rx="4" />
+              <text class="dg-name-a" x="711" y="320">Barrido de deadlock</text>
+              <text class="dg-txt" x="711" y="341">gira a 4 rumbos y asienta en cada uno</text>
+              <text class="dg-txt" x="711" y="358">profundidad: transitable si p5 ≥ 15 m</text>
+              <text class="dg-txt" x="711" y="375">→ sub-meta al rumbo más cercano a la meta</text>
+              <text class="dg-txt" x="711" y="392">sin ninguno o con falla: GANAR_ALTURA</text>
+
+              <rect class="dg-box" x="695" y="424" width="320" height="54" rx="4" />
+              <text class="dg-name" x="711" y="445">DeliberationService</text>
+              <text class="dg-sub" x="711" y="465">hilo worker · cola de 1 · descarta &gt; 10 s</text>
+
+              <!-- D. linea de tiempo -->
+              <rect class="dg-band" x="10" y="506" width="1020" height="198" rx="6" />
+              <text class="dg-head" x="24" y="528">POR QUÉ EL DRON NO FRENA · un pedido al lazo lento a lo largo de 10 ciclos</text>
+              <circle class="dg-c-safe" cx="640" cy="524" r="5" /><text class="dg-lab" x="650" y="528">guiado</text>
+              <circle class="dg-c-warn" cx="712" cy="524" r="5" /><text class="dg-lab" x="722" y="528">evasión / giro</text>
+              <circle class="dg-c-crit" cx="834" cy="524" r="5" /><text class="dg-lab" x="844" y="528">deadlock</text>
+              <circle class="dg-c-acc" cx="924" cy="524" r="5" /><text class="dg-lab" x="934" y="528">lazo lento</text>
+
+              <text class="dg-txt" x="24" y="563">lazo rápido · 5 Hz</text>
+              <text class="dg-txt" x="24" y="603">profundidad · 1 s</text>
+              <text class="dg-txt" x="24" y="643">vlm · 3 s (opcional)</text>
+
+              <rect class="dg-cyc" x="160" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="200" y="563" text-anchor="middle">ciclo 0</text>
+              <rect class="dg-cyc" x="245" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="285" y="563" text-anchor="middle">ciclo 1</text>
+              <rect class="dg-cyc" x="330" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="370" y="563" text-anchor="middle">ciclo 2</text>
+              <rect class="dg-cyc" x="415" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="455" y="563" text-anchor="middle">ciclo 3</text>
+              <rect class="dg-cyc" x="500" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="540" y="563" text-anchor="middle">ciclo 4</text>
+              <rect class="dg-cyc" x="585" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="625" y="563" text-anchor="middle">ciclo 5</text>
+              <rect class="dg-cyc" x="670" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="710" y="563" text-anchor="middle">ciclo 6</text>
+              <rect class="dg-cyc" x="755" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="795" y="563" text-anchor="middle">ciclo 7</text>
+              <rect class="dg-cyc" x="840" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="880" y="563" text-anchor="middle">ciclo 8</text>
+              <rect class="dg-cyc" x="925" y="546" width="81" height="26" rx="3" /><text class="dg-lab" x="965" y="563" text-anchor="middle">ciclo 9</text>
+
+              <line class="dg-tick" x1="160" y1="540" x2="160" y2="660" />
+              <text class="dg-lab-a" x="164" y="584">ancla: pose del ciclo 0</text>
+
+              <rect class="dg-bar-a" x="160" y="591" width="47" height="18" rx="3" />
+              <polygon class="dg-c-acc" points="250,592 258,600 250,608 242,600" />
+              <text class="dg-lab" x="266" y="604">sub-meta aplicada en el ciclo 1</text>
+              <rect class="dg-bar-a" x="585" y="591" width="47" height="18" rx="3" />
+              <polygon class="dg-c-acc" points="675,592 683,600 675,608 667,600" />
+              <text class="dg-lab" x="691" y="604">siguiente consulta, 1 s después</text>
+
+              <rect class="dg-bar-m" x="160" y="631" width="340" height="18" rx="3" />
+              <text class="dg-bar-t" x="330" y="644" text-anchor="middle">inferencia ~0.8 s · el dron sigue volando</text>
+              <polygon class="dg-c-acc" points="590,632 598,640 590,648 582,640" />
+              <text class="dg-lab" x="606" y="644">sub-meta en el ciclo 5, calculada con la pose del ciclo 0</text>
+
+              <text class="dg-txt" x="24" y="680">Mientras el pedido está en vuelo, el lazo rápido comanda un ciclo cada 200 ms. La respuesta se descarta si tiene</text>
+              <text class="dg-txt" x="24" y="697">más de 10 s, si cambió el waypoint o si la sub-meta ya quedó atrás; nunca se reemplaza por un valor por defecto.</text>
+            </svg>
+          </div>
+          <figcaption><b>El grafo de control en tres capas.</b> Arriba, el lazo externo da una vuelta cada 200 ms; en el paso ③
+            ejecuta un ciclo del grafo (centro), que captura, percibe, decide con ocho reglas en orden y emite un único
+            comando. A la derecha, el lazo lento corre en un hilo aparte: recibe el fotograma con su pose y devuelve, más
+            tarde, sub-metas en coordenadas del mundo que el paso ④ inserta en el <code>WaypointTracker</code>. Abajo, por
+            qué esa espera no detiene al dron. Configuración final: fuente <code>depth</code> y barrido <code>depth</code>;
+            el VLM queda en el plan de ruta previo al vuelo.</figcaption>
         </figure>
 
         <div class="table-container">

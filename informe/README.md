@@ -42,7 +42,7 @@ reescribir la estructura cada vez.
   en vez de definir estructura.
 - Las imágenes y diagramas ya generados (`.png`, `.jpg`, `.mmd`) quedan en `informe/`
   junto a los capítulos que los referencian.
-- El capítulo 5 embebe el diagrama del grafo de control (`2026-0930 grafo_control.png`) y describe la topología del grafo compilado en `src/agents/graph.py`.
+- El capítulo 5 embebe el diagrama del grafo de control (`2026-1028 grafo_control.png`) y describe la topología del grafo compilado en `src/agents/graph.py`.
 - El capítulo 3 embebe las imágenes de calibración de telemetría en `informe/` (trayectorias y perfiles de velocidad reales vs. simulados).
 - El capítulo 4 detalla la planificación previa al vuelo en tierra mediante la estación GCS WebDCS y el compilador de misiones a `MissionManifest` JSON inmutable.
 

@@ -213,9 +213,9 @@
         </p>
 
         <figure style="margin: 28px 0; background-color: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;">
-          <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-0625 Navegación con SLM y Langraph.png" alt="Navegación con SLM y LangGraph" style="width: 100%; height: auto; display: block; max-height: 600px; object-fit: cover;">
+          <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-1028 dos_cerebros.png" alt="Arquitectura en tres fases: planificación en tierra, lazo táctico a bordo y auditoría" style="width: 100%; height: auto; display: block; object-fit: contain;">
           <figcaption style="padding: 16px; border-top: 1px solid var(--rule); text-align: left; color: var(--muted); font-size: 13px;">
-            <strong>Arquitectura desacoplada:</strong> Planificación deliberativa en tierra con SLM y lazo táctico reactivo a bordo orquestado por LangGraph con percepción integrada.
+            <strong>Arquitectura desacoplada:</strong> en tierra se compila la misión y el VLM planifica la ruta sobre el mapa cenital; a bordo, el lazo rápido es el único que comanda velocidades y el lazo lento propone sub-metas con la profundidad estimada; después, cada corrida queda auditada por ciclo.
           </figcaption>
         </figure>
 
@@ -276,7 +276,7 @@
         </ul>
 
         <figure style="margin: 28px 0; background-color: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;">
-          <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-0930 grafo_control.png" alt="Grafo de control" style="width: 100%; height: auto; display: block; max-height: 600px; object-fit: contain;">
+          <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-1028 grafo_control.png" alt="Grafo de control" style="width: 100%; height: auto; display: block; max-height: 600px; object-fit: contain;">
           <figcaption style="padding: 16px; border-top: 1px solid var(--rule); text-align: left; color: var(--muted); font-size: 13px;">
             <strong>Grafo de control:</strong> el lazo rápido es el único que comanda velocidades; el lazo lento consulta a su fuente (hoy, la profundidad estimada) de forma asíncrona y devuelve sub-metas en coordenadas del mundo, que el bucle externo inserta en el <code>WaypointTracker</code>.
           </figcaption>
@@ -307,9 +307,9 @@
         </p>
 
         <figure style="margin: 28px 0; background-color: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;">
-          <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-0823 Refinamiento Algoritmo de Navegacion.png" alt="Refinamiento Algoritmo de Navegación" style="width: 100%; height: auto; display: block; max-height: 600px; object-fit: cover;">
+          <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-1028 pipeline_percepcion.png" alt="Pipeline de percepción del lazo rápido: flujo óptico, derotación, foco de expansión, TTC y ObstacleField" style="width: 100%; height: auto; display: block; object-fit: contain;">
           <figcaption style="padding: 16px; border-top: 1px solid var(--rule); text-align: left; color: var(--muted); font-size: 13px;">
-            <strong>Pipeline de percepción:</strong> Flujo óptico denso, derotación por IMU, estimación de FOE y cálculo de TTC en tiempo real sin detectores neuronales.
+            <strong>Pipeline de percepción:</strong> flujo óptico denso, derotación por la actitud, foco de expansión y TTC por celda, sin detectores neuronales; abajo, los umbrales calibrados con ROC y los puntos ciegos del flujo con lo que los cubre.
           </figcaption>
         </figure>
 
