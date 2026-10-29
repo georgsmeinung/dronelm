@@ -1,3 +1,41 @@
+# 2026-10-28 (b) - Cuadernos de airsim-loop: grafo, telemetria, estadistica, planificacion VLM y banco
+
+Sin cambios de codigo de vuelo. Los cinco cuadernos corren sin AirSim, Ollama ni GPU (kernel `airsimenv`,
+directorio `airsim-loop/`) y verifican sus cifras contra las salidas de referencia.
+
+- **`explicacion_nodos_langgraph.ipynb` (NB3)**, reescrito para el grafo actual (`capture -> perception ->
+  navigate -> motor`; el de septiembre usaba `policy_router`, ya eliminado). Ejecuta el codigo de vuelo:
+  topologia compilada, `DroneState`, ciclos completos con un cliente simulado (aproximacion con TTC conocido),
+  los cinco pasos de `FlowTTCEstimator` (derotacion con homografia exacta), las 8 reglas de `navigate` con un
+  estado por regla, `action_to_command`, ancla y gobernador. Replay de `navigate` sobre `citysim_pilot` slm
+  semilla 233 desde el JSONL: 99.1 % de ciclos iguales; las 17 diferencias son el lado de la evasion con
+  ocupaciones empatadas por el redondeo a 3 decimales del log.
+- **`auditoria_interactiva_telemetria.ipynb` (NB2)**, reescrito para la v4: archivos y columnas de una corrida,
+  `summary.json` recalculado desde el CSV, periodo del lazo y latencias, traza de decision, `ObstacleField`
+  por fuente, capa estrategica (p5 por sector y sub-metas), atascos y gobernador, trayectoria sobre
+  `citysim_ortho.png` con el plan de ruta y DistMin, desglose por waypoint y la misma semilla en las 4 celdas.
+- **`analisis_estadistico_resultados.ipynb` (NB1)**, reescrito para la v4 importando `analyze_lotes.py`:
+  filtros, SPL, Wilson, una comparacion abierta (delta de Cliff, bootstrap, permutacion exacta sobre los
+  184 756 repartos), las 18 comparaciones, secundarias, H2 y latencias (agregacion por ciclos de la celda,
+  la del cap. 11 §11.6). Coincide con `analisis_lotes.md` en todas las celdas y comparaciones.
+  Exporta `notebooks/output/v4_*.csv` y `figures/v4_*.png`.
+- **`planificacion_vlm.ipynb` (NB4)**, nuevo: plan de ruta sobre el mapa (registro, candidatas, por que
+  parches, logprobs -> P(calle), eleccion recalculada desde `plan.json` igual en los 8 tramos, VIA, cache,
+  `route_bench` AUC 0.81), geometria de la capa estrategica (las 77 sub-metas de la corrida de referencia se
+  reproducen exactas desde el ancla) y el barrido.
+- **`banco_vlm_decisiones.ipynb` (NB5)**, nuevo: construccion del banco (muestras, validez, etiqueta),
+  preguntas, criterio de pase con bootstrap por corrida, sesgo por posicion; mismas etiquetas con region,
+  segmentacion y profundidad; `map_probe`, `route_bench`, lote piloto de fuentes con su regla prefijada,
+  umbrales de TTC por Youden y ocupacion D2. Cada decision con su variable de `config/.env`.
+
+Hallazgos al documentar (sin corregir):
+- `FlowTTCEstimator._estimate_foe`: el recorte de outliers cuenta como inlier el vector alineado con p -> FOE,
+  pero en expansion el flujo apunta FOE -> p. En una aproximacion pura no hay inliers y `foe_confidence` queda
+  en el tope de 0.3, por debajo de `OBSTACLE_MIN_CONFIDENCE_TTC` (0.35): el TTC solo no bloquea, bloquea la
+  ocupacion. En `citysim_pilot` slm semilla 233, `foe_confidence` > 0.3 en el 7.6 % de los ciclos con flujo.
+- Cap. 7 §7.4: con los tres escenarios del dataset de TTC el umbral de Youden para tau = 1 s da 1.93 s (la
+  tabla dice ~2.1 s); tau = 2 s y 3 s reproducen 3.18 s y 4.58 s.
+
 # 2026-10-28 - Sitio: explorador 3D del lazo tactico y diagrama de topologia interactivo
 
 Sin cambios de codigo de vuelo.
