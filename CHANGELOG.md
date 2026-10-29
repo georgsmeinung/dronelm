@@ -10,16 +10,16 @@ directorio `airsim-loop/`) y verifican sus cifras contra las salidas de referenc
   estado por regla, `action_to_command`, ancla y gobernador. Replay de `navigate` sobre `citysim_pilot` slm
   semilla 233 desde el JSONL: 99.1 % de ciclos iguales; las 17 diferencias son el lado de la evasion con
   ocupaciones empatadas por el redondeo a 3 decimales del log.
-- **`auditoria_interactiva_telemetria.ipynb` (NB2)**, reescrito para la v4: archivos y columnas de una corrida,
+- **`NB2_auditoria_interactiva_telemetria.ipynb` (NB2)**, reescrito para la v4: archivos y columnas de una corrida,
   `summary.json` recalculado desde el CSV, periodo del lazo y latencias, traza de decision, `ObstacleField`
   por fuente, capa estrategica (p5 por sector y sub-metas), atascos y gobernador, trayectoria sobre
   `citysim_ortho.png` con el plan de ruta y DistMin, desglose por waypoint y la misma semilla en las 4 celdas.
-- **`analisis_estadistico_resultados.ipynb` (NB1)**, reescrito para la v4 importando `analyze_lotes.py`:
+- **`NB1_analisis_estadistico_resultados.ipynb` (NB1)**, reescrito para la v4 importando `analyze_lotes.py`:
   filtros, SPL, Wilson, una comparacion abierta (delta de Cliff, bootstrap, permutacion exacta sobre los
   184 756 repartos), las 18 comparaciones, secundarias, H2 y latencias (agregacion por ciclos de la celda,
   la del cap. 11 §11.6). Coincide con `analisis_lotes.md` en todas las celdas y comparaciones.
   Exporta `notebooks/output/v4_*.csv` y `figures/v4_*.png`.
-- **`planificacion_vlm.ipynb` (NB4)**, nuevo: plan de ruta sobre el mapa (registro, candidatas, por que
+- **`NB4_planificacion_vlm.ipynb` (NB4)**, nuevo: plan de ruta sobre el mapa (registro, candidatas, por que
   parches, logprobs -> P(calle), eleccion recalculada desde `plan.json` igual en los 8 tramos, VIA, cache,
   `route_bench` AUC 0.81), geometria de la capa estrategica (las 77 sub-metas de la corrida de referencia se
   reproducen exactas desde el ancla) y el barrido.
@@ -28,11 +28,26 @@ directorio `airsim-loop/`) y verifican sus cifras contra las salidas de referenc
   segmentacion y profundidad; `map_probe`, `route_bench`, lote piloto de fuentes con su regla prefijada,
   umbrales de TTC por Youden y ocupacion D2. Cada decision con su variable de `config/.env`.
 
-Hallazgos al documentar (sin corregir):
+- NB3 carga `config/.env` antes de importar `src`, como `runner.py`: `src/agents/__init__` importa la percepcion
+  antes de que `graph.py` cargue el `.env`, y sin esto el flujo corria a 320 px en vez de los 640 de vuelo.
+
+Hallazgos al documentar (sin corregir el codigo de vuelo; documentados en el informe):
 - `FlowTTCEstimator._estimate_foe`: el recorte de outliers cuenta como inlier el vector alineado con p -> FOE,
   pero en expansion el flujo apunta FOE -> p. En una aproximacion pura no hay inliers y `foe_confidence` queda
   en el tope de 0.3, por debajo de `OBSTACLE_MIN_CONFIDENCE_TTC` (0.35): el TTC solo no bloquea, bloquea la
   ocupacion. En `citysim_pilot` slm semilla 233, `foe_confidence` > 0.3 en el 7.6 % de los ciclos con flujo.
+- El arreglo (invertir el sentido en la prueba, 2 lineas) se midio fuera de vuelo con los fotogramas del video
+  frontal de 3 corridas slm (D, E, F) a 640 px: centro bloqueado del 20-27 % al 33-40 % de los ciclos y regla 7
+  del 23-32 % al 42-47 %. Contra DistMin < 5 m la sensibilidad sube (0.22-0.31 -> 0.33-0.39) pero los falsos
+  positivos tambien (0.22-0.30 -> 0.32-0.37): mas evasiones sin mejor separacion. Invalida las calibraciones de
+  TTC y D2 (hechas con la confianza topada). No se aplica.
+- Campo de obstaculos en vuelo contra la auditoria de DistMin (11 621 muestras de las corridas slm de la v4,
+  positivo = obstaculo a menos de 5 m en el tercio central, 999 positivos): el sector central figura bloqueado
+  en el 23 % de los positivos y en el 17 % de los negativos. La discriminacion de los escenarios guiados del
+  cap. 7 (AUC 0.96-0.97) no se reproduce en las escenas de los lotes.
+- Informe: cap. 6 §6.6 y §6.9 (limitacion de la prueba de inliers), cap. 7 §7.5 (limite (v) de D2) y §7.7 (dos
+  parrafos: discriminacion en vuelo y efecto del arreglo), cap. 12 §12.3 (limitacion) y §12.4 (trabajo futuro).
+  `docs/informe/` no se regenero.
 - Cap. 7 §7.4: con los tres escenarios del dataset de TTC el umbral de Youden para tau = 1 s da 1.93 s (la
   tabla dice ~2.1 s); tau = 2 s y 3 s reproducen 3.18 s y 4.58 s.
 

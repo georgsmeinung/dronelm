@@ -96,9 +96,9 @@ Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos
 Corren sin AirSim, Ollama ni GPU (kernel con el entorno `airsimenv`, directorio de trabajo `airsim-loop/`) sobre los datos de `airsim-runs/`:
 
 - [`explicacion_nodos_langgraph.ipynb`](explicacion_nodos_langgraph.ipynb) (NB3): el grafo de control paso a paso con el código de vuelo, y el replay de `navigate` sobre una corrida v4.
-- [`auditoria_interactiva_telemetria.ipynb`](auditoria_interactiva_telemetria.ipynb) (NB2): la telemetría de una corrida y cómo de ella sale su `summary.json`.
-- [`analisis_estadistico_resultados.ipynb`](analisis_estadistico_resultados.ipynb) (NB1): el análisis estadístico de la corrida v4 (cap. 11), verificado contra `analisis_lotes.md`.
-- [`planificacion_vlm.ipynb`](planificacion_vlm.ipynb) (NB4): el plan de ruta con el VLM sobre el mapa cenital y la geometría de las sub-metas.
+- [`NB2_auditoria_interactiva_telemetria.ipynb`](NB2_auditoria_interactiva_telemetria.ipynb) (NB2): la telemetría de una corrida y cómo de ella sale su `summary.json`.
+- [`NB1_analisis_estadistico_resultados.ipynb`](NB1_analisis_estadistico_resultados.ipynb) (NB1): el análisis estadístico de la corrida v4 (cap. 11), verificado contra `analisis_lotes.md`.
+- [`NB4_planificacion_vlm.ipynb`](NB4_planificacion_vlm.ipynb) (NB4): el plan de ruta con el VLM sobre el mapa cenital y la geometría de las sub-metas.
 - [`banco_vlm_decisiones.ipynb`](banco_vlm_decisiones.ipynb) (NB5): el banco de prueba y las decisiones de diseño que salen de él y de los lotes piloto.
 
 ---

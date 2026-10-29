@@ -1303,6 +1303,9 @@
 <p><strong>Calibración del canal de ocupación de <code>ObstacleField</code> parcial:</strong> el canal de TTC está formalmente validado contra etiquetas de referencia tomadas de la profundidad del simulador (cap. 7). El umbral de ocupación se calibró por ROC/Youden (<code>OBSTACLE_OCCUPANCY_BLOCKED = 0.011</code>, AUC = 0.87) con 196 frames, una sola escena y 29 positivos (cap. 7, §7.5). La validación cruzada en otras escenas y el efecto del <code>OccupancyCalibrator</code> adaptativo siguen sin evaluarse.</p>
 </li>
 <li>
+<p><strong>Discriminación del flujo óptico en vuelo y prueba de inliers del FOE:</strong> contra la auditoría de distancia mínima, el sector central del campo de obstáculos registrado en vuelo sale bloqueado en el 23 % de las muestras con un obstáculo a menos de 5 m y en el 17 % de las demás (cap. 7, §7.7): en las escenas de los lotes distingue poco más que al azar, lejos del AUC de 0.96–0.97 de los escenarios guiados. La implementación evaluada tiene además invertida la prueba de inliers del FOE, lo que topa la confianza en 0.3 y deja el bloqueo en manos de la ocupación (cap. 6, §6.6). Corregirla aumenta las evasiones sin mejorar la separación, por lo que no se aplicó. Los resultados de este trabajo corresponden al código con la prueba invertida.</p>
+</li>
+<li>
 <p><strong>Un único mapa por escenario:</strong> cada escenario de obstrucción se corrió en un solo mapa urbano (TownSim o CitySim). La generalización de los resultados a otras geometrías urbanas no está garantizada con los datos disponibles.</p>
 </li>
 <li>
@@ -1331,6 +1334,7 @@
 <p><strong>Perfeccionamiento del lazo perceptual monocular (Anexo 5):</strong></p>
 </li>
 <li>Validación cruzada del umbral de ocupación (ya calibrado por ROC/Youden sobre una escena, cap. 7, §7.5) en CitySim y en escenas con vegetación, con un dataset mayor que 29 positivos y evaluación del <code>OccupancyCalibrator</code> adaptativo, hoy ausente del runner de lotes (<a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">Anexo 5</a>).</li>
+<li>Corregir la prueba de inliers del FOE (cap. 6, §6.6) y, con ella, recalibrar en AirSim el TTC (§7.4) y la ocupación (§7.5), que se obtuvieron con la confianza topada. La corrección sola no basta: el campo apenas separa obstáculos cercanos en vuelo (cap. 7, §7.7), así que la validación debería hacerse en las escenas de los lotes (con la auditoría de DistMin como etiqueta) y no solo en escenarios guiados. Recién con una mejora medida ahí correspondería repetir los lotes.</li>
 <li>
 <p>Completar la validación de la derotación angular: la <em>inhibición</em> del estimador ante guiñadas de 0.3–1.0 rad/s está verificada (cap. 7, §7.6), pero falta caracterizar el error de TTC en el rango previo al guard (0–0.3 rad/s), la reanudación de la estimación al cesar el giro y el comportamiento con IMU real.</p>
 </li>
