@@ -27,7 +27,6 @@ const CFG = {
   SCAN_ROT_TIMEOUT: 10,       // SCAN_ROT_TIMEOUT_CYCLES
   DEPTH_FREE_M: 15,           // DEPTH_FREE_M
   DEPTH_PERIOD: 1.0,          // DEPTH_STRATEGIC_PERIOD_S
-  VLM_PERIOD: 3.0,            // VLM_STRATEGIC_PERIOD_S
   MAX_AGE: 10,                // VLM_STRATEGIC_MAX_AGE_S
   SUBGOAL_DIST: 15,           // VLM_SUBGOAL_DIST_M
   MIN_AHEAD: 4,               // VLM_SUBGOAL_MIN_AHEAD_M
@@ -35,7 +34,7 @@ const CFG = {
   MIN_SUB_ALT: 6,             // VLM_SUBGOAL_MIN_ALT_M
   NEAR_WP: 8,                 // VLM_NEAR_WP_M
   SLM_MIN_ALT: 8,             // SLM_MIN_ALT_M
-  GOAL_CROP_DEG: 33.7,        // recorte cuadrado del VLM
+  GOAL_CROP_DEG: 33.7,        // recorte cuadrado que juzga la capa
   DEDUP: 10,                  // SUBGOAL_DEDUP_M
   MAX_ESCAPE_ALT: 30,         // MAX_ESCAPE_ALT_M
   EVADE_CYCLES: 10,           // MANEUVER_DURATION_S = 2.0
@@ -354,10 +353,9 @@ class Sim {
     this.gov = 1.2;
   }
 
-  // -- capa estrategica: hilo asincrono, ancla a la pose del fotograma
+  // -- capa estrategica (fuente: profundidad estimada): hilo asincrono, ancla a la pose del fotograma
   stratTick(g, ev) {
     const st = this.strat;
-    const depth = this.opts.source === 'depth';
     if (st.pending && this.t >= st.pending.readyT) this.stratProcess(st.pending, ev);
     if (st.pending || this.scan || this.takeoff) return;
     const ri = this.realWpIndex();
@@ -365,20 +363,17 @@ class Sim {
     const wp = this.wps[ri];
     const dWp = hyp(wp.x - this.pos.x, wp.y - this.pos.y);
     const goalAz = wrap(Math.atan2(wp.y - this.pos.y, wp.x - this.pos.x) - this.yaw);
-    const period = depth ? CFG.DEPTH_PERIOD : CFG.VLM_PERIOD;
-    const due = st.expedite || this.t - st.last >= period - 1e-6;
+    const due = st.expedite || this.t - st.last >= CFG.DEPTH_PERIOD - 1e-6;
     if (!due || this.pos.z < CFG.SLM_MIN_ALT || dWp <= CFG.NEAR_WP || Math.abs(goalAz) > CFG.GOAL_CROP_DEG * DEG) return;
     const anchor = { x: this.pos.x, y: this.pos.y, z: this.pos.z, yaw: this.yaw, wp: wp.label, t: this.t };
-    const latency = depth ? 0.11 : 0.6 + this.rng() * 0.5;
-    let sectors;
-    if (depth) sectors = this.depthSectors(anchor);
-    else sectors = [...Array(9)].map((_, k) => ({ r: Math.floor(k / 3), c: k % 3, d: NaN, free: this.rng() < 0.9 }));
+    const latency = 0.11;
+    const sectors = this.depthSectors(anchor);
     st.pending = { id: st.nextId++, anchor, readyT: this.t + latency, latency, sectors, expedited: st.expedite };
     st.expedite = false;
     st.last = this.t;
     st.sent++;
     this.lastPulse = 'req';
-    ev.push(`consulta estratégica #${st.pending.id} (${depth ? 'depth' : 'vlm'}${st.pending.expedited ? ', adelantada' : ''})`);
+    ev.push(`consulta estratégica #${st.pending.id}${st.pending.expedited ? ' (adelantada)' : ''}`);
   }
 
   stratProcess(q, ev) {
@@ -1326,14 +1321,14 @@ const INSPECT = {
     return {
       kicker: 'lazo lento · hilo aparte', title: 'Capa estratégica',
       body: `<p>Juzga qué sectores de una grilla 3×3 del fotograma son volables y convierte la respuesta en una <b>sub-meta en coordenadas del mundo</b>, calculada con la pose del momento de la captura (el ancla). El dron nunca frena a esperarla.</p>
-        <p>Fuente: <code>${src}</code>${src === 'depth' ? ' · Depth Anything V2, ~110 ms, cada 1 s, libre si p5 ≥ 15 m (AUC 0.83–0.87).' : src === 'vlm' ? ' · LFM2.5-VL-1.6B local, ~0.8 s, cada 3 s. En el banco de prueba no separó libres de bloqueados (AUC 0.53).' : ' · apagada.'}</p>
+        <p>${src === 'off' ? 'Capa apagada: el dron vuela solo con el lazo rápido y el barrido de deadlock.' : 'Fuente: profundidad estimada con Depth Anything V2 desde el mismo RGB, ~110 ms por consulta, cada 1 s; un sector es libre si el percentil 5 de su profundidad es ≥ 15 m (AUC 0.83–0.87).'}</p>
         <p>Se descarta si tiene más de 10 s, si cambió el waypoint o si la sub-meta ya quedó atrás.</p>`,
       live: kv([
         ['consultas', st.sent], ['sub-metas aplicadas', st.applied], ['descartadas', st.discarded],
         ['en vuelo', st.pending ? `#${st.pending.id} (${fmt(st.pending.latency * 1000, 0)} ms)` : '—'],
         ['última', r ? `#${r.id}: ${r.outcome}` : '—'],
       ]),
-      src: 'src/agents/vlm_strategic.py · depth_client.py',
+      src: 'src/agents/vlm_strategic.py (StrategicLayer) · depth_client.py',
     };
   },
   tracker: (s) => ({
@@ -1364,7 +1359,7 @@ function buildLessons(app) {
     {
       title: 'El problema',
       html: `<p>Un cuadricóptero tiene que recorrer waypoints entre edificios. En un cañón urbano el LiDAR es caro y la profundidad del simulador no existiría en un dron real: el sistema solo tiene <b>una cámara RGB</b> y la telemetría.</p>
-        <p>Tiene que reaccionar en fracciones de segundo y, a la vez, decidir rodeos que requieren «mirar» la escena. Un modelo de lenguaje en la misma GPU tarda casi un segundo en contestar.</p>`,
+        <p>Tiene que reaccionar en fracciones de segundo y, a la vez, decidir rodeos que requieren «mirar» la escena con una red, que lleva más que un ciclo de control. Por eso el sistema separa las dos cosas en dos lazos.</p>`,
       setup: () => app.apply({ scenario: 'libre', arm: 'slm', source: 'depth', deadlock: 'depth', view: 'system', inspect: 'drone', run: true }),
       tries: [['Ver el grafo de cerca', () => app.setView('graph')], ['Seguir al dron', () => app.setView('perception')]],
     },
@@ -1386,10 +1381,11 @@ function buildLessons(app) {
     },
     {
       title: 'Pensar despacio, sin frenar',
-      html: `<p>En paralelo, la <b>capa estratégica</b> mira el fotograma con una grilla 3×3 y dice qué sectores son volables. Cada pedido guarda la <b>pose del fotograma</b>: la respuesta llega varios ciclos después y se traduce con esa pose a una sub-meta en el mundo, válida aunque el dron haya girado.</p>
-        <p>La configuración final usa profundidad monocular estimada (Depth Anything V2, ~110 ms). El VLM a bordo no distinguió sectores volables de bloqueados (AUC 0.53 contra 0.83–0.87) y quedó para el plan de ruta sobre el mapa.</p>`,
+      html: `<p>En paralelo, la <b>capa estratégica</b> estima la profundidad del fotograma con una red monocular (Depth Anything V2, ~110 ms) y marca qué sectores de una grilla 3×3 son volables: libres si el percentil 5 de su profundidad es ≥ 15 m.</p>
+        <p>Cada pedido guarda la <b>pose del fotograma</b>: la respuesta llega en el ciclo siguiente y se traduce con esa pose a una sub-meta en el mundo, válida aunque el dron haya girado. El lazo rápido nunca la espera.</p>
+        <p>Mirá la grilla de la derecha: el borde punteado es el sector de la meta y el lleno, el elegido.</p>`,
       setup: () => app.apply({ scenario: 'torre', arm: 'slm', source: 'depth', view: 'strategic', inspect: 'strategic', run: true }),
-      tries: [['Cambiar a VLM', () => app.apply({ source: 'vlm', reset: true, run: true })], ['Apagar la capa', () => app.apply({ source: 'off', reset: true, run: true })]],
+      tries: [['Apagar la capa', () => app.apply({ source: 'off', reset: true, run: true })], ['Volver a encenderla', () => app.apply({ source: 'depth', reset: true, run: true })]],
     },
     {
       title: 'Destrabarse',
@@ -1401,16 +1397,26 @@ function buildLessons(app) {
     },
     {
       title: 'Lo que mostró la evaluación',
-      html: `<p>Corrida productiva v4: seis escenarios en MiniSim, TownSim y CitySim, 10 semillas por celda.</p>
+      html: `<p>Corrida productiva v4: seis escenarios en MiniSim, TownSim y CitySim, 10 semillas por celda, 210 corridas.</p>
         <div class="stat-row">
-          <div class="stat"><b>210</b><span>corridas</span></div>
-          <div class="stat"><b>0</b><span>colisiones</span></div>
-          <div class="stat"><b>0 / 20</b><span>reactive con obstrucción</span></div>
-          <div class="stat"><b>5–9 / 10</b><span>brazos con evasión y barrido</span></div>
+          <div class="stat"><b>1.4–2×</b><span>tiempo de slm frente a reactive en ruta libre</span></div>
+          <div class="stat"><b>0 / 20</b><span>reactive con obstrucción en TownSim</span></div>
+          <div class="stat"><b>5–9 / 10</b><span>las celdas con evasión y salida de atascos</span></div>
+          <div class="stat"><b>9 / 10</b><span>fsm:blind, sin profundidad ni capa</span></div>
         </div>
-        <p>En ruta libre la capa deliberativa solo cuesta: <code>reactive &lt; slm &lt; fsm</code> en tiempo, con una razón slm/reactive de 1.95, 1.49 y 1.39 según la longitud. Con obstrucción, la evasión y el barrido con profundidad deciden. Detalle en los capítulos <a href="informe/11-RESULTADOS.html">11</a> y <a href="informe/12-CONCLUSIONES.html">12</a>.</p>`,
+        <ul>
+          <li><b>En ruta libre, la arquitectura solo cuesta tiempo:</b> <code>reactive &lt; slm &lt; fsm</code>. No lo pone la red, que no frena al dron, sino las sub-metas y el gobernador de velocidad.</li>
+          <li><b>Con obstrucción, deciden la evasión por flujo y una salida de los atascos.</b> <code>reactive</code> no tiene ninguna de las dos y no completa; la profundidad estimada no es necesaria para eso.</li>
+          <li><b>La ventaja de slm sobre la FSM no se puede atribuir a la capa estratégica:</b> la FSM evaluada tiene dos defectos que la hacen más lenta.</li>
+          <li><b>La seguridad no está medida:</b> la bandera de colisión de AirSim no detecta follaje ni apoyos, y con vegetación el dron pasa a ~0.1 m de las copas.</li>
+        </ul>
+        <p>Probá los brazos en el corredor arbolado. Detalle en los capítulos <a href="informe/11-RESULTADOS.html">11</a> y <a href="informe/12-CONCLUSIONES.html">12</a>.</p>`,
       setup: () => app.apply({ scenario: 'arboles', arm: 'slm', source: 'depth', deadlock: 'depth', view: 'system', inspect: 'drone', run: true, speed: 2 }),
-      tries: [['Probar reactive', () => app.apply({ arm: 'reactive', reset: true, run: true })], ['Probar fsm', () => app.apply({ arm: 'fsm', reset: true, run: true })], ['Volver a slm', () => app.apply({ arm: 'slm', reset: true, run: true })]],
+      tries: [
+        ['reactive', () => app.apply({ arm: 'reactive', reset: true, run: true })],
+        ['fsm sin profundidad (blind)', () => app.apply({ arm: 'fsm', deadlock: 'blind', reset: true, run: true })],
+        ['Volver a slm', () => app.apply({ arm: 'slm', deadlock: 'depth', reset: true, run: true })],
+      ],
     },
   ];
 }

@@ -10,14 +10,18 @@ Sin cambios de codigo de vuelo.
     `ObstacleField` por TTC, sectores de la capa y del barrido, estela, waypoints y sub-metas; el grafo
     LangGraph en una plataforma con un pulso por ciclo y el lazo lento en teal.
   - Controles: escenario (ruta libre, torre, malla invisible al flujo, corredor arbolado, plaza vacia),
-    brazo `slm`/`fsm`/`reactive`, `STRATEGIC_SOURCE` `depth`/`vlm`/`off`, `DEADLOCK_STRATEGY` `depth`/`blind`,
-    perder fotogramas y agregar obstaculos con un clic.
+    brazo `slm`/`fsm`/`reactive`, capa estrategica `depth`/`off`, `DEADLOCK_STRATEGY` `depth`/`blind`,
+    perder fotogramas y agregar obstaculos con un clic. Sin la fuente `vlm`: el explorador muestra la
+    configuracion actual, y el VLM solo aparece como planificador de ruta antes del vuelo.
   - Inspector por nodo con valores en vivo, cascada de `navigate` con la regla que gana, traza por ciclo y
     recorrido guiado de 6 pasos (problema, flujo optico, 5 Hz, capa estrategica, deadlock, resultados v4).
+    El paso 6 sigue la sintesis del cap. 12: en ruta libre solo costo; con obstruccion deciden la evasion
+    por flujo y la salida de atascos (`fsm:blind` 9/10), no la profundidad; ventaja sobre la FSM sin
+    atribuir; seguridad no medida.
   - Simplificaciones declaradas al pie: TTC por rayos sobre la geometria en lugar de flujo optico (sin
-    traslacion no hay evidencia), contacto que desliza, respuesta del VLM sorteada con la tasa del banco
-    (AUC 0.53). Reproduce lo cualitativo de v4: `reactive` no completa ninguna obstruccion, `slm` y `fsm`
-    si; la capa no acelera la mision; `blind` no supera la malla. Los numeros del paso 6 son los de v4.
+    traslacion no hay evidencia), profundidad estimada como minimo de los rayos del sector, contacto que
+    desliza. Reproduce lo cualitativo de v4: `reactive` no completa ninguna obstruccion, `slm` y `fsm` si;
+    la capa no acelera la mision; `blind` no supera la malla. Los numeros del paso 6 son los de v4.
 - **`docs/grafo-de-control.html`, seccion 02**: el SVG de topologia es interactivo, sin animacion. Panel de
   estado de entrada de un ciclo (fotograma, despegue, barrido, StallDetector, maniobra, contacto, altitud,
   `z_path_blocked`, TTC, FOV) con 10 estados de ejemplo: el diagrama marca el camino, la regla de la cascada
@@ -48,6 +52,10 @@ Sin cambios de codigo de vuelo.
 - `docs/styles.css`: estilos `.dg-node`, `.gi-*` (container query para una columna en anchos chicos) y del
   diagrama en tres capas (`.dg-band*`, `.dg-act`, `.dg-c-*`, linea de tiempo).
 - Pendiente: regenerar `docs/informe/` con `informe/build.ps1` para que el cap. 5 publicado use la figura nueva.
+- `docs/index.html` alineado con la sintesis del cap. 12: «Ninguna colision» y «sin colisiones» pasan a
+  «seguridad sin medir» (la bandera de colision no detecta follaje ni apoyos); la tarjeta de obstruccion
+  ahora dice que deciden la evasion por flujo y la salida de atascos (`fsm:blind` 9/10), no la profundidad;
+  longitud de `townsim_clear` corregida a ~600 m.
 - Enlaces al explorador en `docs/index.html` (barra lateral y recuadro de arquitectura) y en la barra lateral
   de `docs/grafo-de-control.html`.
 - `.claude/launch.json`: configuracion `docs` (`http.server` en el puerto 8765) para previsualizar el sitio;

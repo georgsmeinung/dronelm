@@ -94,15 +94,15 @@
         <div class="card-grid">
           <div class="card">
             <h4>Corrida Productiva v4: 210 Corridas</h4>
-            <p>Seis lotes, uno por escenario (MiniSim, TownSim y CitySim; tres de control y tres con obstrucción), 10 semillas por celda, techo de 1200 s por corrida. Celdas <code>slm:depth</code>, <code>fsm:depth</code> y <code>reactive</code>, más <code>fsm:blind</code> en los lotes con obstrucción. Ninguna colisión en las 210. Análisis con <code>analyze_lotes.py</code>: permutación exacta sobre rangos, delta de Cliff con IC bootstrap y Bonferroni sobre 18 comparaciones (capítulos 11 y 12 del informe).</p>
+            <p>Seis lotes, uno por escenario (MiniSim, TownSim y CitySim; tres de control y tres con obstrucción), 10 semillas por celda, techo de 1200 s por corrida. Celdas <code>slm:depth</code>, <code>fsm:depth</code> y <code>reactive</code>, más <code>fsm:blind</code> en los lotes con obstrucción. La bandera de colisión de AirSim no se activó, pero no detecta follaje ni apoyos: la seguridad queda sin medir. Análisis con <code>analyze_lotes.py</code>: permutación exacta sobre rangos, delta de Cliff con IC bootstrap y Bonferroni sobre 18 comparaciones (capítulos 11 y 12 del informe).</p>
           </div>
           <div class="card">
             <h4>Ruta Libre: la Capa Deliberativa Solo Cuesta</h4>
-            <p>En los tres controles el orden de tiempo es <code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code>, con las nueve comparaciones significativas. La razón <code>slm</code>/<code>reactive</code> baja con la longitud de la ruta (1.95, 1.49 y 1.39 en ~180, ~420 y ~640 m): un costo aproximadamente aditivo. No lo pone la inferencia, que no frena al dron, sino las sub-metas en ruta libre y el gobernador de velocidad.</p>
+            <p>En los tres controles el orden de tiempo es <code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code>, con las nueve comparaciones significativas. La razón <code>slm</code>/<code>reactive</code> baja con la longitud de la ruta (1.95, 1.49 y 1.39 en ~180, ~420 y ~600 m): un costo aproximadamente aditivo. No lo pone la inferencia, que no frena al dron, sino las sub-metas en ruta libre y el gobernador de velocidad.</p>
           </div>
           <div class="card">
-            <h4>Obstrucción: la Evasión con Profundidad Decide</h4>
-            <p>En el corredor arbolado y en el bloqueo frontal de TownSim, el control reactivo no completa ninguna de sus 20 corridas; los brazos con evasión y barrido completan entre 5 y 9 de cada 10. Frente a la FSM, <code>slm:depth</code> la supera en SPL en <code>townsim_ini</code> y <code>citysim_pilot</code> (δ = +0.81 y +1.00), pero la ventaja no se puede atribuir a la capa estratégica.</p>
+            <h4>Obstrucción: Deciden la Evasión y la Salida de Atascos</h4>
+            <p>En el corredor arbolado y en el bloqueo frontal de TownSim, el control reactivo no completa ninguna de sus 20 corridas; las celdas con evasión por flujo y alguna salida de los atascos completan entre 5 y 9 de cada 10, y <code>fsm:blind</code>, sin profundidad ni capa estratégica, 9 de 10 en los dos lotes. La profundidad estimada no es necesaria para completar. Frente a la FSM, <code>slm:depth</code> la supera en SPL en <code>townsim_ini</code> y <code>citysim_pilot</code> (δ = +0.81 y +1.00), pero la ventaja no se puede atribuir a la capa estratégica.</p>
           </div>
           <div class="card">
             <h4>Dos Defectos del Brazo FSM</h4>
@@ -490,7 +490,7 @@
         </div>
 
         <div class="alert-box">
-          <p><strong>Estado actual (2026-10-27):</strong> Corrida productiva v4 completa: 6 lotes, 210 corridas, 10 semillas por celda, sin colisiones; capítulos 11 y 12 del informe redactados con sus resultados. Configuración de vuelo: capa estratégica y barrido con profundidad monocular estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>); el VLM local (LFM2.5-VL-1.6B Q4_K_M, tag <code>lfm2.5-vl-1.6b:q4km-ctx8k</code> en Ollama) no vuela y planifica la ruta de los escenarios con obstrucción (AUC 0.81 sobre el mapa, 0.53 en primera persona). 321 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad del simulador. Pendiente: corregir los dos defectos del brazo FSM y repetir las comparaciones contra él.</p>
+          <p><strong>Estado actual (2026-10-27):</strong> Corrida productiva v4 completa: 6 lotes, 210 corridas, 10 semillas por celda; seguridad sin medir (la bandera de colisión no detecta follaje ni apoyos); capítulos 11 y 12 del informe redactados con sus resultados. Configuración de vuelo: capa estratégica y barrido con profundidad monocular estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>); el VLM local (LFM2.5-VL-1.6B Q4_K_M, tag <code>lfm2.5-vl-1.6b:q4km-ctx8k</code> en Ollama) no vuela y planifica la ruta de los escenarios con obstrucción (AUC 0.81 sobre el mapa, 0.53 en primera persona). 321 pruebas unitarias, incluido el grafo compilado de punta a punta y la guardia contra el uso del canal de profundidad del simulador. Pendiente: corregir los dos defectos del brazo FSM y repetir las comparaciones contra él.</p>
         </div>
       </section>
 

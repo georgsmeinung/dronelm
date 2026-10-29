@@ -190,7 +190,7 @@ Gira 90° sin traslación (`yaw_rate` ±20°/s, `target_yaw` redondeado a la cua
 
 ## 5.10 Capa estratégica (`vlm_strategic.py`)
 
-**Archivos:** `src/agents/vlm_strategic.py` (`StrategicLayer`), `src/agents/vlm_client.py` (consulta al VLM), `src/agents/depth_client.py` y `src/perception/depth_estimator.py` (consulta a la red de profundidad), `src/agents/deliberation_service.py` (hilo worker). La capa no es un nodo del grafo: `navigate` llama a `StrategicLayer.tick(state)` una vez por ciclo.
+**Archivos:** `src/agents/vlm_strategic.py` (`StrategicLayer`), `src/agents/vlm_client.py` (consulta al VLM), `src/agents/depth_client.py` y `src/perception/depth_estimator.py` (consulta a la red de profundidad), `src/agents/deliberation_service.py` (hilo worker). La capa no es un nodo del grafo: `navigate` llama a `StrategicLayer.tick(state)` una vez por ciclo. El módulo y varios de sus parámetros (`VLM_STRATEGIC_*`, `VLM_SUBGOAL_*`) llevan «VLM» en el nombre porque en las primeras versiones la capa consultaba al modelo; hoy valen para cualquier fuente (cap. 10, §10.2.1, «Nombres heredados»).
 
 **Fuente (`STRATEGIC_SOURCE`).** La pregunta de la capa —qué sectores de una grilla 3×3 están libres— la puede responder el VLM (`vlm`) o la red de profundidad estimada (`depth`, default); con `off` la capa no se crea. Las dos fuentes devuelven la misma estructura (`{"sectores": {celda: libre|bloqueado}}`), de modo que el ancla, la traducción a sub-metas y las validaciones de §5.10.3 son las mismas. Las subsecciones §5.10.1–§5.10.5 describen la capa con el VLM como fuente, porque esa fuente fija la forma de la pregunta y de la respuesta; §5.10.6 describe la fuente por defecto, la profundidad estimada, y §5.10.7 justifica esa elección.
 
