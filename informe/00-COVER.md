@@ -15,7 +15,7 @@ Directores:
 
 Alumno:
 
--   [NICOLAU, Jorge Enrique](https://www.linkedin.com/in/jorgenicolau/)
+-   [NICOLAU, Jorge Enrique](https://jorgenicolau.ar/)
 
 <div class="page-break" style="page-break-before: always; break-before: page;"></div>
 
