@@ -1,6 +1,6 @@
-# F3.2: Logging estructurado por ciclo, un JSONL por corrida.
+# Logging estructurado por ciclo, un JSONL por corrida.
 #
-# Registra todo lo que F3.3 (runner + analyze) necesita para comparar los
+# Registra todo lo que el runner y analyze necesitan para comparar los
 # brazos SLM / FSM / reactivo: tasa de exito, colisiones, distancia minima a
 # obstaculo, latencias por rama, invocaciones/fallback/timeout del SLM,
 # adherencia al formato JSON. min_obstacle_dist_m queda siempre en None desde 2026-0930: el lazo
@@ -23,7 +23,7 @@ def _format_ts_for_filename(ts: float) -> str:
     milisegundos que exige el estandar) para nombre de archivo -- legible a
     simple vista, a diferencia de un epoch crudo tipo "175620...". Precision
     de milisegundos porque varios fotogramas de una misma deliberacion (p.
-    ej. el barrido del escaneo profundo, H2) pueden compartir el segundo.
+    ej. el barrido del escaneo profundo) pueden compartir el segundo.
     """
     dt = datetime.fromtimestamp(ts, tz=timezone.utc)
     return dt.strftime("%Y%m%dT%H%M%S") + f".{dt.microsecond // 1000:03d}Z"
@@ -60,7 +60,7 @@ _CSV_FIELDNAMES = [
     # exacto de cada ciclo desde el CSV.
     "ctrl_stuck_cycles", "ctrl_active_maneuver", "ctrl_maneuver_cycles_left",
     "ctrl_slm_pending",
-    # Señales de percepción V3/V4 (Zona 1+2, simplificación 2026-09): permiten
+    # Señales de percepción (simplificación 2026-09): permiten
     # reconstruir en replay exactamente qué disparó la evasión o la inyección
     # de profundidad sin cruzar fuentes de datos.
     "ctrl_stuck_invisible",
@@ -130,8 +130,8 @@ class FlightLogger:
         self._slm_timeouts = 0
         self._success = False
         self._route_histogram: Dict[str, int] = {}  # Contar por tipo de ruta
-        # H3.2 (PLAN-MEJORAS-3): eventos de resolucion de atasco (blind vs.
-        # deep_vlm, ver src/agents/deep_scan.py), para el ablation de H3.
+        # Eventos de resolucion de atasco (blind vs.
+        # deep_vlm, ver src/agents/deep_scan.py), para el ablation de la estrategia de atasco.
         self._deadlock_events: list = []
         # Resumen por waypoint (2026-0903, pedido explicito): ciclos
         # consumidos y uso del nodo deliberativo/escaneo profundo por cada
@@ -329,7 +329,7 @@ class FlightLogger:
             "dist_to_wp_m": guidance.get("distance", 0.0),
             "degraded": state.get("degraded", False),
             "deadlock_event": deadlock_event,
-            # Señales de percepción V3/V4 — permiten auditar qué disparó cada decisión
+            # Señales de percepción: permiten auditar qué disparó cada decisión
             "perception": {
                 "stuck_invisible": bool(state.get("stuck_invisible", False)),
                 "imu_contact_event": bool(state.get("imu_contact_event", False)),
@@ -453,7 +453,7 @@ class FlightLogger:
         return get_code_version()
 
     def close(self) -> Dict[str, Any]:
-        # H3.2/H3.3/S4 (PLAN-SLAM): deep_scan_events cuenta todos los eventos
+        # deep_scan_events cuenta todos los eventos
         # con estrategia guiada por VLM (deep_vlm + slam_assess). Antes filtraba
         # solo deep_vlm, lo que daba deep_scan_events=0 con slam_assess activo.
         scan_strategies = {"deep_vlm", "slam_assess", "depth"}
@@ -479,7 +479,7 @@ class FlightLogger:
             "slm_fallback_rate": (self._slm_fallbacks / self._slm_invocations) if self._slm_invocations else None,
             "slm_timeout_rate": (self._slm_timeouts / self._slm_invocations) if self._slm_invocations else None,
             "route_histogram": self._route_histogram,
-            # H3.1/H3.3: variable de diseno del factorial AGENT_ARM x
+            # Variable de diseno del factorial AGENT_ARM x
             # DEADLOCK_STRATEGY, leida al cierre (no al abrir el logger) para
             # que corridas largas reflejen el valor vigente durante el vuelo.
             "deadlock_strategy": os.getenv("DEADLOCK_STRATEGY", "depth"),

@@ -7,7 +7,7 @@
 # comparte ningun objeto con el grafo ni con el DroneState: no hay camino por el que una muestra
 # vuelva al control. finalize_run() consolida el archivo en el summary.json al cerrar la corrida.
 #
-# Definicion (identica a la del lote base, G3.1): percentil 5 del tercio central de la imagen de
+# Definicion (identica a la del lote base): percentil 5 del tercio central de la imagen de
 # profundidad; la corrida reporta el minimo de las muestras.
 from __future__ import annotations
 

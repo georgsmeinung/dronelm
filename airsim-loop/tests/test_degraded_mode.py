@@ -1,4 +1,4 @@
-"""F0.6 regresion: si AirSim no responde (capture devuelve source != "airsim"
+"""Regresion: si AirSim no responde (capture devuelve source != "airsim"
 
 o imagen None), el lazo debe comandar hover y NO ejecutar percepcion ni
 deliberacion, en lugar de "volar" sobre datos simulados como hacia la

@@ -1,4 +1,4 @@
-"""F1.3: analiza el dataset de collect_ttc_dataset.py.
+"""Analiza el dataset de collect_ttc_dataset.py.
 
 - Dispersion ttc_est vs ttc_gt, correlacion y error relativo.
 - Error estratificado por velocidad y por |yaw_rate| (valida la derotacion).
@@ -43,7 +43,7 @@ def correlation_and_error(records):
 
 
 def stratified_by_yaw_rate(records):
-    print("\nError relativo estratificado por |yaw_rate| (valida la derotacion, F1.2):")
+    print("\nError relativo estratificado por |yaw_rate| (valida la derotacion):")
     bins = [(0.0, 0.05), (0.05, 0.2), (0.2, 1.0), (1.0, float("inf"))]
     for lo, hi in bins:
         subset = [

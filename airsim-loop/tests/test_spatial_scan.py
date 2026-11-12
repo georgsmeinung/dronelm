@@ -1,4 +1,4 @@
-# Fase H1 (PLAN-MEJORAS-3): escaneo espacial inicial.
+# Escaneo espacial inicial.
 from __future__ import annotations
 
 import math
@@ -56,7 +56,7 @@ def test_initial_scan_never_requests_depth(monkeypatch):
 
 
 def test_initial_scan_labels_images_by_heading_not_by_time(monkeypatch):
-    """Invariante F2.1/H1.2: las etiquetas deben ser por rumbo ([Rumbo XXX°]),
+    """Invariante: las etiquetas deben ser por rumbo ([Rumbo XXX°]),
     nunca por fotograma temporal (t-N) -- el eje de este barrido es espacial,
     no temporal."""
     monkeypatch.setattr(spatial_scan_mod, "SCAN_HEADING_COUNT", 3)
@@ -90,7 +90,7 @@ def test_initial_scan_labels_images_by_heading_not_by_time(monkeypatch):
 
 
 def test_initial_scan_vlm_timeout_does_not_block_mission_start(monkeypatch):
-    """H1.3.3: un timeout del VLM no debe bloquear el retorno de la funcion
+    """Un timeout del VLM no debe bloquear el retorno de la funcion
     mas alla de INITIAL_SCAN_TIMEOUT_MS, y la mision debe poder seguir sin
     contexto (available=False)."""
     monkeypatch.setattr(spatial_scan_mod, "SCAN_HEADING_COUNT", 2)

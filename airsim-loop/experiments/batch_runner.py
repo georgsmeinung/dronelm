@@ -1,4 +1,4 @@
-"""G4: Corrida de Tesis - Batch runner para 3 brazos × 3 escenarios × N semillas.
+"""Corrida de Tesis - Batch runner para 3 brazos × 3 escenarios × N semillas.
 
 Ejecuta un experimento factorial: cada combinación de brazo, escenario y semilla se
 corre en un subproceso separado. Agrupa resultados por escenario para análisis.
@@ -88,7 +88,7 @@ def run_experiment(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="G4: Corrida de Tesis")
+    parser = argparse.ArgumentParser(description="Corrida de Tesis")
     parser.add_argument("--scenarios", nargs="+", required=True)
     parser.add_argument("--arms", nargs="+", default=["slm", "fsm", "reactive"])
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3, 4, 5])
@@ -107,13 +107,13 @@ def main():
 
     env_ok, env_msg = check_python_env()
     if not env_ok and not args.allow_any_python:
-        print(f"[G4] ABORTADO: {env_msg}")
+        print(f"[batch] ABORTADO: {env_msg}")
         sys.exit(3)
 
     out_dir_path = Path(args.out_dir)
     out_dir_path.mkdir(parents=True, exist_ok=True)
 
-    print(f"[G4] Iniciando corrida de tesis")
+    print(f"[batch] Iniciando corrida de tesis")
     print(f"  Escenarios: {len(args.scenarios)}")
     print(f"  Brazos: {len(args.arms)} ({', '.join(args.arms)})")
     print(f"  Semillas: {len(args.seeds)} ({args.seeds[0]}-{args.seeds[-1]})")
@@ -179,7 +179,7 @@ def main():
         json.dump(results, f, indent=2, default=str)
 
     print()
-    print(f"[G4] Corrida completada. Resultados en {results_summary_path}")
+    print(f"[batch] Corrida completada. Resultados en {results_summary_path}")
 
     # Imprimir tabla de resultados
     print("\n=== TABLA DE RESULTADOS ===\n")

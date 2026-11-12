@@ -1,4 +1,4 @@
-# Paso 1 y 5: Conexion con la API nativa de AirSim.
+# Conexion con la API nativa de AirSim.
 # Encapsula la captura sensorial (imagen RGB + telemetria) y el envio de
 # comandos de velocidad hacia el simulador. Si la libreria cosys-airsim
 # no esta disponible o el simulador no responde, se degrada a modo
@@ -49,13 +49,13 @@ DEFAULT_VEHICLE = _required_env("AIRSIM_VEHICLE_NAME")
 DEFAULT_CAMERA = os.getenv("AIRSIM_CAMERA_NAME", "0")
 DEFAULT_FRAME_WIDTH = int(os.getenv("DEFAULT_FRAME_WIDTH", "1080"))
 DEFAULT_FRAME_HEIGHT = int(os.getenv("DEFAULT_FRAME_HEIGHT", "720"))
-# F0.6: en modo estricto (default en vuelo), si AirSim no responde, capture()
+# En modo estricto (default en vuelo), si AirSim no responde, capture()
 # devuelve None en lugar de un frame sintetico. Los frames simulados quedan
 # disponibles solo para tests (AIRSIM_STRICT=false).
 AIRSIM_STRICT = os.getenv("AIRSIM_STRICT", "true").lower() == "true"
 # Reintento 2026-0826 (v2, ver CHANGELOG.md) del fix de cabeceo. El primer
 # intento (revertido) atava la vigencia del comando a un multiplo del periodo
-# del lazo (0.5s a 5Hz, ver F0.1 original) con un margen de reemision al 30%: en la practica igual
+# del lazo (0.5s a 5Hz) con un margen de reemision al 30%: en la practica igual
 # reemitia cada ~2 ciclos aunque el setpoint no hubiera cambiado, sin dejarle
 # tiempo real al PID interno de SimpleFlight para asentarse -- enfoque
 # equivocado, no la idea en si. Un operador humano no retoca el stick cada
@@ -438,7 +438,7 @@ class AirSimClient:
         self._connected = False
 
     # ------------------------------------------------------------------ #
-    # Paso 1: captura sensorial                                          #
+    # Captura sensorial                                                  #
     # ------------------------------------------------------------------ #
     def capture(
         self, return_depth: bool = False
@@ -512,7 +512,7 @@ class AirSimClient:
                 # azul invertidos (confirmado visualmente 2026-0903: el
                 # empedrado calido de la plaza se veia azulado en los .png de
                 # auditoria del VLM). El VLM recibia esta misma imagen con los
-                # canales invertidos desde que existe vision directa (F2).
+                # canales invertidos desde que existe vision directa.
                 image = np.ascontiguousarray(image[:, :, ::-1])
                 if (
                     image.shape[1] != self.frame_width
@@ -561,8 +561,8 @@ class AirSimClient:
             state = self._client.getMultirotorState(vehicle_name=self.vehicle_name)
             t_after_state = time.time()
             telemetry = _state_to_telemetry(state, timestamp_s=image_timestamp_s)
-            # V3-VLM-REFINEMENT: un único RPC obtiene angular + linear acceleration.
-            # imu_angular_velocity → flow_ttc.py (P1-PLAN-SLAM, pre-integración).
+            # Un único RPC obtiene angular + linear acceleration.
+            # imu_angular_velocity → flow_ttc.py (pre-integración).
             # imu_linear_acceleration → capture_node (jitter RMS, contact detection).
             imu_full = self.get_imu_full_data()
             if imu_full is not None:
@@ -609,7 +609,7 @@ class AirSimClient:
     def get_imu_angular_velocity(self) -> Optional[Dict[str, float]]:
         """Devuelve velocidad angular cruda del giroscopio (rad/s) en ejes NED.
 
-        P1 (PLAN-SLAM): se usa en flow_ttc.py para pre-integración IMU.
+        Se usa en flow_ttc.py para pre-integración IMU.
         wx=roll rate, wy=pitch rate, wz=yaw rate.
         """
         if not self._connected or self._client is None:
@@ -628,7 +628,7 @@ class AirSimClient:
     def get_imu_full_data(self) -> Optional[Dict[str, Any]]:
         """Devuelve velocidad angular Y aceleración lineal en un único RPC.
 
-        V3-VLM-REFINEMENT: la aceleración transversal (ax, ay) se usa en
+        La aceleración transversal (ax, ay) se usa en
         capture_node para calcular imu_jitter_level e imu_contact_event.
         Llama a getImuData() una sola vez para evitar dos round-trips RPC.
         """
@@ -665,7 +665,7 @@ class AirSimClient:
             return self._simulated_telemetry()
 
     # ------------------------------------------------------------------ #
-    # Paso 5: comando motriz                                             #
+    # Comando motriz                                                     #
     # ------------------------------------------------------------------ #
     def execute_velocity(
         self,

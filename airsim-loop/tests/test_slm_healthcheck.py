@@ -1,4 +1,4 @@
-"""Tests para el healthcheck del SLM (G1.2)."""
+"""Tests para el healthcheck del SLM."""
 import os
 import pytest
 from unittest.mock import patch, MagicMock

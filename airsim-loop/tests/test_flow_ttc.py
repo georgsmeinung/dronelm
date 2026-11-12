@@ -62,7 +62,7 @@ def test_derotation_cancels_pure_yaw_rotation():
 
 
 def test_derotation_has_non_zero_effect():
-    """Validación física (G2.1 del plan): derotación debe tener efecto en el flujo.
+    """Validación física: derotación debe tener efecto en el flujo.
 
     Usa flujo sintético de rotación pura (generado con el mismo modelo que
     _derotate espera) y verifica que aplicar derotación produce un resultado
@@ -131,7 +131,7 @@ def test_estimate_returns_degraded_field_on_nonpositive_dt():
 
 
 def test_divergence_matches_two_over_ttc():
-    """Regla transversal física (G0.2 del plan): para un campo traslacional puro
+    """Regla transversal física: para un campo traslacional puro
 
     con TTC conocido, la divergencia debe cumplir aprox. div ≈ 2/TTC.
     La escala del flujo sintético es tal que magnitud = (2/TTC) * dt, que da

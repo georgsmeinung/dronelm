@@ -1,7 +1,5 @@
-# Fase H0 (PLAN-MEJORAS-3): guardia arquitectonica de la exclusion total de
-# profundidad. Va primero, antes de que exista codigo nuevo (H1/H2) que
-# pueda violarla por accidente -- que es exactamente lo que casi paso en la
-# conversacion de diseno que origino este plan (ver PLAN-MEJORAS-3.md §0).
+# Guardia arquitectonica de la exclusion total de profundidad: impide que
+# codigo nuevo la viole por accidente.
 #
 # Este test es puramente estatico (lee cada archivo como texto): no importa
 # ningun modulo, asi que corre incluso sin las dependencias opcionales
@@ -13,7 +11,7 @@ from typing import List
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Lista blanca (§H0.1): modulos de vuelo. Deben quedar libres de
+# Lista blanca: modulos de vuelo. Deben quedar libres de
 # `return_depth=True` (o con espacios) y de `DepthPlanar`, tanto en codigo
 # como en comentarios que documenten una llamada real.
 FLIGHT_WHITELIST: List[str] = [
@@ -49,7 +47,7 @@ FLIGHT_WHITELIST: List[str] = [
     "src/planning/vlm_logprobs.py",
 ]
 
-# Lista de excepcion (§0.2): instrumentacion de laboratorio, corre offline en
+# Lista de excepcion: instrumentacion de laboratorio, corre offline en
 # scripts separados del grafo. Nunca se realimenta al control.
 DEPTH_EXCEPTION_LIST: List[str] = [
     "experiments/collect_ttc_dataset.py",
@@ -105,7 +103,7 @@ def test_flight_module_whitelist_covers_every_flight_source_file():
 
 
 def test_depth_exception_files_exist_and_are_documented():
-    """La lista de excepcion (§0.2) tiene que seguir apuntando a archivos
+    """La lista de excepcion tiene que seguir apuntando a archivos
     reales -- si uno se borra o se renombra, la excepcion debe actualizarse
     a mano en vez de quedar como documentacion muerta."""
     for rel_path in DEPTH_EXCEPTION_LIST:
@@ -113,7 +111,7 @@ def test_depth_exception_files_exist_and_are_documented():
 
 
 def test_guard_actually_detects_a_reintroduced_depth_read(tmp_path, monkeypatch):
-    """Prueba que la guardia detecta la violacion (H0.3): sin esto, el test
+    """Prueba que la guardia detecta la violacion: sin esto, el test
     de arriba podria estar pasando por casualidad (p. ej. un typo en el
     patron buscado) en vez de por ausencia real de lecturas de profundidad."""
     poisoned = tmp_path / "graph.py"

@@ -1,4 +1,4 @@
-"""G4: Análisis de Resultados de Tesis.
+"""Análisis de Resultados de Tesis.
 
 Lee los JSONL de corridas y RESULTS_SUMMARY.json para generar tablas comparativas,
 estadísticas por brazo, y métricas de desempeño.

@@ -1,4 +1,4 @@
-"""F1.3: recolecta un dataset TTC-estimado vs TTC-real (por canal depth) para
+"""Recolecta un dataset TTC-estimado vs TTC-real (por canal depth) para
 
 validar/calibrar FlowTTCEstimator. Requiere AirSim corriendo.
 
@@ -56,7 +56,7 @@ YAW_SWEEP_PERIOD_S = 8.0  # Período más largo para poblar bins [0.1, 0.3) rad/
 
 
 class ScriptedPilot:
-    """Piloteo scripteado por escenario (F1.3: no requiere piloto manual).
+    """Piloteo scripteado por escenario (no requiere piloto manual).
 
     El freno de seguridad usa histeresis (engancha bajo SAFE_STOP_DIST_M,
     libera solo por encima de SAFE_RESUME_DIST_M) en lugar de un unico

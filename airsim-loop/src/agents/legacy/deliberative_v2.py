@@ -2,11 +2,11 @@
 # Nodo deliberativo del grafo v1 (brazo slm hasta 2026-09-10) + prompts/parsers tacticos. Evidencia: nunca supero al brazo reactivo (ver memoria vlm-strategic-layer).
 # Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
 # apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
-# Paso 4B: Cerebro Deliberativo (VLM / SLM local), brazo "slm".
+# Cerebro Deliberativo (VLM / SLM local), brazo "slm".
 #
 # Se activa cuando el router detecta peligro critico en el sector central del
-# ObstacleField (F1.1) o FOV bloqueado sin bypass determinista disponible.
-# La consulta al SLM corre en un hilo aparte (DeliberationService, F0.5): el
+# ObstacleField o FOV bloqueado sin bypass determinista disponible.
+# La consulta al SLM corre en un hilo aparte (DeliberationService): el
 # nodo NUNCA bloquea el lazo de control. En el ciclo que encola el pedido (o
 # mientras espera respuesta) el comando es FRENAR; cuando el resultado llega
 # (o el watchdog expira) se aplica la decision y se libera el freno.
@@ -72,7 +72,7 @@ DELIB_WAIT_CREEP_SPEED_MPS = float(os.getenv("DELIB_WAIT_CREEP_SPEED_MPS", "0.5"
 
 # VlmGoal: confianza mínima para que el táctico inyecte la sub-meta.
 VLM_GOAL_MIN_CONFIDENCE = float(os.getenv("VLM_GOAL_MIN_CONFIDENCE", "0.7"))
-VLM_PROACTIVE_ENABLED = False  # V2 eliminado (simplificación Zona 1): sin beneficio medible en runs.
+VLM_PROACTIVE_ENABLED = False  # Desactivado: sin beneficio medible en runs.
 
 # Macro-acciones que el SLM puede elegir. GIRAR_90 queda fuera: es un bypass
 # determinista (ver policy_router en graph.py), nunca una eleccion del modelo.
@@ -326,8 +326,8 @@ def _fallback_decision(field: ObstacleField, guidance: Optional[Dict[str, Any]] 
 def _parse_decision(raw: str) -> Optional[Dict[str, Any]]:
     """Extrae la decisión del texto del SLM de manera ultratolerante a Markdown o texto conversacional.
 
-    Sigue siendo la red de seguridad aunque se use decodificación restringida
-    (F2.3): un servidor que no soporte json_schema, o que lo soporte mal,
+    Sigue siendo la red de seguridad aunque se use decodificación restringida:
+    un servidor que no soporte json_schema, o que lo soporte mal,
     debe seguir produciendo una decisión utilizable.
     """
     if not raw:
@@ -494,7 +494,7 @@ def _encode_frame_base64(frame: Any, max_size: int = VLM_IMAGE_MAX_SIZE) -> Opti
 def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], str, float, Optional[str]]:
     """Consulta al servidor compatible con OpenAI (LM Studio u Ollama).
 
-    Intenta primero con decodificación restringida (json_schema, F2.3); si el
+    Intenta primero con decodificación restringida (json_schema); si el
     servidor no la soporta, reintenta en modo libre y el parser tolerante
     sigue siendo la red de seguridad final. Corre en el hilo worker de
     DeliberationService: esta función nunca se llama desde el hilo del grafo.
@@ -504,11 +504,11 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
 
     prompt = payload["prompt"]
     images_b64 = payload.get("images_b64")
-    # H2 (PLAN-MEJORAS-3): el escaneo profundo reusa esta misma funcion de
+    # El escaneo profundo reusa esta misma funcion de
     # consulta (una unica cola/hilo worker, ver DeliberationService) pero con
     # su propio system prompt y etiquetas por rumbo en vez de por fotograma
     # -- reusar la etiqueta temporal aca seria el mismo error que corrigio
-    # F2.1 (afirmarle al modelo un eje que no es el real, ver deep_scan.py).
+    # (afirmarle al modelo un eje que no es el real, ver deep_scan.py).
     is_deep_scan = payload.get("mode") == "deep_scan"
     # 2026-0930: capa estrategica anclada a pose (vlm_strategic.py): system prompt, esquema y
     # parser propios; una sola imagen con columnas dibujadas.
@@ -523,7 +523,7 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
             total_frames = len(images_b64)
             user_content: List[Dict[str, Any]] = [{"type": "text", "text": prompt}]
             for i, img_b64 in enumerate(images_b64):
-                # Invariante (F2.1 / test_prompt_invariants): una etiqueta por
+                # Invariante (test_prompt_invariants): una etiqueta por
                 # imagen efectivamente enviada, nunca una historia inventada.
                 if image_labels and i < len(image_labels):
                     user_content.append({"type": "text", "text": f"{image_labels[i]}:"})
@@ -612,7 +612,7 @@ def _query_slm_impl(payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], 
 
 
 def make_deliberation_service() -> DeliberationService:
-    """Factory del servicio asincrono de deliberacion (F0.5)."""
+    """Factory del servicio asincrono de deliberacion."""
     return DeliberationService(query_fn=_query_slm_impl)
 
 
@@ -652,7 +652,7 @@ def _apply_maneuver_kinematics(decision: Dict[str, Any], guidance: Dict[str, Any
 def make_deliberative_node(service: DeliberationService, trajectory: "Any | None" = None):
     """Construye el nodo deliberativo ligado a un DeliberationService concreto.
 
-    trajectory: FlightTrajectory (S1/PLAN-SLAM), opcional — se pasa a
+    trajectory: FlightTrajectory, opcional — se pasa a
     deep_scan_cycle() para el modo slam_assess.
     """
 
@@ -727,7 +727,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
         if stuck_cycles >= stuck_threshold and not escape_locked and not corridor_open and not _vlm_result_ready:
             state["_deadlock_cycles"] = int(state.get("_deadlock_cycles", 0)) + 1
 
-            # H2 (PLAN-MEJORAS-3): antes de forzar el escape ciego, intentar
+            # Antes de forzar el escape ciego, intentar
             # un escaneo panoramico + una consulta al VLM (DEADLOCK_STRATEGY=
             # deep_vlm). El escape sincronico de abajo queda intacto como red
             # de seguridad final -- si el escaneo no resuelve (timeout,
@@ -811,7 +811,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
                 # ningun nodo lo producia.
                 target_yaw = cmd.get("target_yaw")
                 if target_yaw is not None:
-                    # F1 (Zona 2): ajustar corner según historia de stalls laterales.
+                    # Ajustar corner según historia de stalls laterales.
                     # Determinar qué zona lateral corresponde al giro comprometido.
                     bearing_err_f1 = float(guidance.get("bearing_err_deg", 0.0))
                     f1_side = "izq" if cmd.get("yaw_rate", 0.0) < 0 else "der"
@@ -834,14 +834,14 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
                             opp_sign  = 1 if f1_side == "izq" else -1  # opuesto al giro comprometido
                             effective_target_yaw = round((curr_hdg + 90.0 * opp_sign) / 90.0) * 90.0
                             f1_note = (
-                                f" [F1: corner invertido — {f1_side} {f1_stall:.0%}/{f1_att}int;"
+                                f" [corner invertido — {f1_side} {f1_stall:.0%}/{f1_att}int;"
                                 f" {f1_opp} {f1_opp_stall:.0%}/{f1_opp_att}int]"
                             )
                         else:
                             # Ambas zonas bloqueadas: reducir offset para intentar pasar más cerca.
                             _corner_offset = max(3.0, _corner_offset * 0.25)
                             f1_note = (
-                                f" [F1: ambas zonas con stall — corner {_corner_offset:.0f}m]"
+                                f" [ambas zonas con stall — corner {_corner_offset:.0f}m]"
                             )
                         cmd["rationale"] = cmd.get("rationale", "") + f1_note
                     state["inject_corner"] = compute_corner_waypoint(

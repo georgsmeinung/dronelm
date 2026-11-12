@@ -1,5 +1,5 @@
-# Paso 4A-bis: Maniobra Evasiva Local Rapida (brazo SLM).
-# Ejecuta una correccion lateral rapida usando el ObstacleField (F1.1) en
+# Maniobra Evasiva Local Rapida (brazo SLM).
+# Ejecuta una correccion lateral rapida usando el ObstacleField en
 # lugar de las detecciones YOLO que ya no existen, o continua la ejecucion
 # comprometida de una macro-accion previa para evitar oscilaciones (flip-flop).
 from __future__ import annotations

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """
 D2 — Captura del dataset para calibración ROC del canal de ocupación.
-PLAN-DEUDA-TECNICA.md, Fase D2.
 
 El dron realiza aproximaciones controladas a una pared en TownSim,
 capturando pares (RGB + DepthPlanar) + ObstacleField en cada ciclo.

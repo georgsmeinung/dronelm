@@ -2,25 +2,25 @@
 # deep_scan con slam_assess, scene_to_action, _apply_trajectory_overrides (1a/1b/1c/2/3), Fix L/L2/14/11/17. Evidencia slam_assess: 5 corridas truncadas, sin control.
 # Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
 # apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
-# Fase H2 (PLAN-MEJORAS-3): escaneo espacial profundo en atasco duro.
+# Escaneo espacial profundo en atasco duro.
 #
 # Compartido entre el brazo SLM (deliberative.py) y el brazo FSM (fsm.py):
 # ambos comparten el mismo mecanismo raiz de escape sincronico por atasco
 # ("mismo fix que fsm.py", ver deliberative.py). DEADLOCK_STRATEGY selecciona
 # si, antes de forzar el escape ciego (GANAR_ALTURA/PERDER_ALTURA alternado),
 # se intenta un barrido de rumbos + una unica consulta al VLM con el panorama
-# completo (H3.1: factorial AGENT_ARM x DEADLOCK_STRATEGY).
+# completo (factorial AGENT_ARM x DEADLOCK_STRATEGY).
 #
-# Corre DENTRO del mismo StateGraph/lazo, nunca en un loop aparte (H2.2):
+# Corre DENTRO del mismo StateGraph/lazo, nunca en un loop aparte:
 # reutiliza el frame que capture_node ya produjo este ciclo (nunca llama a
 # capture() de nuevo) y reemite su propio velocity_command cada ciclo via
 # motor_node, igual que cualquier otro nodo de politica. La vigilancia del
 # gatekeeper rapido (policy_router) nunca se apaga mientras dura el barrido:
 # sin traslacion, FlowTTCEstimator no produce evidencia (foe_confidence=0),
 # asi que has_open_corridor() da False y el router sigue enrutando hacia el
-# nodo que llama a esta funcion -- ver PLAN-MEJORAS-3.md §0.3.
+# nodo que llama a esta funcion.
 #
-# Principio rector (PLAN-MEJORAS-3.md §0): exclusion total de profundidad.
+# Principio rector: exclusion total de profundidad.
 # Este modulo NUNCA pide el canal de profundidad al simulador -- reutiliza
 # unicamente el frame RGB que ya esta en el DroneState.
 from __future__ import annotations
@@ -34,9 +34,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from .action_map import action_to_command, compute_corner_waypoint
 from .deliberation_service import DeliberationService
 
-# S4 (PLAN-SLAM): slam_assess es ahora el modo por defecto y único activo.
+# slam_assess es ahora el modo por defecto y único activo.
 # deep_vlm y blind quedan como legado seleccionable vía variable de entorno
-# (para el factorial de S6: comparar cap.11 deep_vlm vs slam_assess).
+# (para el factorial: comparar deep_vlm vs slam_assess).
 DEADLOCK_STRATEGY = os.getenv("DEADLOCK_STRATEGY", "slam_assess")  # "slam_assess" | "deep_vlm" | "blind" (legado)
 SCAN_HEADING_COUNT_DEEP = int(os.getenv("SCAN_HEADING_COUNT_DEEP", "4"))
 SCAN_SETTLE_CYCLES_DEEP = int(os.getenv("SCAN_SETTLE_CYCLES_DEEP", "2"))
@@ -161,7 +161,7 @@ RESPONSE_JSON_SCHEMA_SCENE = {
     },
 }
 
-# S3 (PLAN-SLAM): prompt de slam_assess — frame frontal + historial de
+# Prompt de slam_assess — frame frontal + historial de
 # trayectoria como contexto. Rediseno 2026-0929: el VLM ya no elige acciones
 # sino que describe la escena; la capa de navegacion decide a partir de la
 # descripcion + las estadisticas de trayectoria.
@@ -869,7 +869,7 @@ def _slam_assess_cycle(
     consecutive_escapes: int,
     trajectory: "Any | None",
 ) -> bool:
-    """Escape de deadlock basado en historial de trayectoria (S3 PLAN-SLAM).
+    """Escape de deadlock basado en historial de trayectoria.
 
     Sin rotación panorámica: solo el frame frontal del ciclo actual más el
     contexto textual de FlightTrajectory. Se activa en el mismo ciclo en que
@@ -1106,7 +1106,7 @@ def deep_scan_cycle(
     consecutive_escapes: int,
     trajectory: "Any | None" = None,
 ) -> bool:
-    """Ejecuta un paso del escaneo profundo (H2.2).
+    """Ejecuta un paso del escaneo profundo.
 
     Debe llamarse SOLO cuando ya se determino que hay atasco duro sin
     corredor (misma condicion que dispara el escape sincronico existente).
@@ -1123,7 +1123,7 @@ def deep_scan_cycle(
     """
     state["route"] = "deliberative" if arm == "slm" else "fsm"
 
-    # S3/S4 (PLAN-SLAM): modo slam_assess — sin rotación panorámica, frame
+    # Modo slam_assess — sin rotación panorámica, frame
     # frontal + historial de trayectoria. Delega en _slam_assess_cycle().
     if DEADLOCK_STRATEGY == "slam_assess":
         return _slam_assess_cycle(

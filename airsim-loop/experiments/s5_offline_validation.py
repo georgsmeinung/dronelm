@@ -1,10 +1,10 @@
-"""S5 (PLAN-SLAM): Validación offline de FlightTrajectory sobre logs existentes.
+"""Validación offline de FlightTrajectory sobre logs existentes.
 
 Reconstruye TrajectoryEvent a partir de los JSONL de airsim-runs/townsim* y
 verifica que trajectory_context_text() identifique correctamente las zonas
 bloqueadas en ventanas previas a eventos de deadlock.
 
-Definición operacional de "stall" para S5:
+Definición operacional de "stall" para esta validación:
   - Un ciclo está en stall si la acción es de tipo escape (GANAR_ALTURA,
     FRENAR, EVADIR_*, GIRAR_90, DESCENDER) O si delta_wp_m > STALL_THRESHOLD.
   Esto refleja que slam_assess se activa cuando el FSM lleva varias iteraciones
@@ -264,7 +264,7 @@ def analyse_file(path: Path, runs_dir: Path, min_run: int = MIN_ESCAPE_RUN) -> d
 # ─── main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="S5: validación offline de FlightTrajectory")
+    parser = argparse.ArgumentParser(description="Validación offline de FlightTrajectory")
     parser.add_argument(
         "--runs-dir",
         default=str(REPO_ROOT.parent / "airsim-runs"),
@@ -299,7 +299,7 @@ def main() -> None:
         print(f"ERROR: ningún archivo coincide con '{args.pattern}' en {runs_dir}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"S5 Validación offline — {len(files)} archivos\n")
+    print(f"Validación offline — {len(files)} archivos\n")
     print(f"  SLAM_STALL_THRESHOLD_M  = {SLAM_STALL_THRESHOLD_M} m")
     print(f"  Stall = acción escape O delta_wp > {SLAM_STALL_THRESHOLD_M}m")
     print(f"  Deadlock = {args.min_escape_run} ciclos consecutivos en stall")
@@ -383,9 +383,9 @@ def main() -> None:
     info_rate = summary_informative / summary_total_windows
     print(f"\n  Criterio PASS (INFO >= {args.pass_threshold*100:.0f}%): {info_rate*100:.1f}%")
     if info_rate >= args.pass_threshold:
-        print(f"PASS S5 PASS: deteccion informativa >= {args.pass_threshold*100:.0f}% ({info_rate*100:.1f}%)")
+        print(f"PASS: deteccion informativa >= {args.pass_threshold*100:.0f}% ({info_rate*100:.1f}%)")
     else:
-        print(f"FAIL S5 FAIL: deteccion informativa < {args.pass_threshold*100:.0f}% ({info_rate*100:.1f}%)")
+        print(f"FAIL: deteccion informativa < {args.pass_threshold*100:.0f}% ({info_rate*100:.1f}%)")
         sys.exit(1)
 
 

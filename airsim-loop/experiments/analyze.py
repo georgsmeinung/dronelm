@@ -1,4 +1,4 @@
-"""F3.3: agrega los summary.json de experiments/runner.py y produce la tabla
+"""Agrega los summary.json de experiments/runner.py y produce la tabla
 
 comparativa SLM vs FSM vs reactivo (objetivo especifico del plan de tesis).
 
@@ -93,7 +93,7 @@ def load_cycles_for_latency(runs_dir: str):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("runs_dir", nargs="?", default="runs")
-    parser.add_argument("--missions-dir", default="missions", help="para calcular SPL (F3.3)")
+    parser.add_argument("--missions-dir", default="missions", help="para calcular SPL")
     args = parser.parse_args()
 
     rows = load_summaries(args.runs_dir)
@@ -132,9 +132,9 @@ def main():
         p50, p95 = np.percentile(lats, 50), np.percentile(lats, 95)
         print(f"  {arm:<10} {route or '(vacio)':<14} N={len(lats):<6} p50={p50:.1f}ms p95={p95:.1f}ms")
 
-    # H3.3 (PLAN-MEJORAS-3): tabla de resolucion de atascos desagregada por
+    # Tabla de resolucion de atascos desagregada por
     # AGENT_ARM x DEADLOCK_STRATEGY. deadlock_strategy default a "blind" para
-    # corridas de antes de H3 (summary.json sin ese campo).
+    # corridas anteriores a ese campo del summary.json.
     by_arm_strategy = defaultdict(list)
     for r in rows:
         by_arm_strategy[(r["arm"], r.get("deadlock_strategy", "blind"))].append(r)

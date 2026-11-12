@@ -1,4 +1,4 @@
-# F3.1: Brazo de comparacion FSM (Maquina de Estados Finitos).
+# Brazo de comparacion FSM (Maquina de Estados Finitos).
 #
 # Mismo ObstacleField, mismo espacio de macro-acciones y el mismo
 # action_to_command() que usan evasive_node y deliberative_node: lo unico
@@ -19,7 +19,7 @@ from .deliberation_service import DeliberationService
 from src.navigation.waypoint_tracker import effective_stall_threshold, hard_stall_threshold
 from src.perception import ObstacleField, empty_field, has_open_corridor
 
-# H3.1 (PLAN-MEJORAS-3): el brazo FSM comparte la capacidad de escaneo
+# El brazo FSM comparte la capacidad de escaneo
 # profundo con el brazo SLM (mismo DeliberationService, ver graph.py). Si se
 # llama a fsm_node() directamente sin pasar `service` (p. ej. tests
 # existentes que nunca ejercitan DEADLOCK_STRATEGY=deep_vlm), este singleton
@@ -176,7 +176,7 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
         escape_locked = False
         consecutive_escapes = 0
 
-    # H2/H3.1 (PLAN-MEJORAS-3): antes de que _decide_state() caiga a la
+    # Antes de que _decide_state() caiga a la
     # alternancia ciega CLIMB/DESCEND, intentar el escaneo panoramico
     # compartido con el brazo SLM (DEADLOCK_STRATEGY=deep_vlm). Misma
     # condicion que _decide_state usa internamente para esa rama.

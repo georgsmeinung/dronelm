@@ -1,8 +1,8 @@
-# Paso 6: Bucle continuo de control autonomo.
+# Bucle continuo de control autonomo.
 # Captura -> percepcion -> gatekeeper -> (reflejo | cerebro) -> motor -> ...
 #
-# F0.3: un unico AirSimClient se crea y conecta aca, y se inyecta en
-# compile_workflow(). F0.5: compile_workflow() devuelve tambien el
+# Un unico AirSimClient se crea y conecta aca, y se inyecta en
+# compile_workflow(). compile_workflow() devuelve tambien el
 # DeliberationService para poder apagarlo prolijamente al salir.
 import math
 import os
@@ -25,8 +25,8 @@ from src.perception.obstacle_field import OccupancyCalibrator
 
 DEFAULT_LOOP_HZ = float(os.getenv("LOOP_HZ", "5.0"))
 AGENT_ARM = os.getenv("AGENT_ARM", "slm")
-FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # F3.2: override manual de la ruta de log
-# F3.2b: sin AIRSIM_FLIGHT_LOG explicito, cada corrida interactiva (main.py) igual
+FLIGHT_LOG_PATH = os.getenv("AIRSIM_FLIGHT_LOG")  # Override manual de la ruta de log
+# Sin AIRSIM_FLIGHT_LOG explicito, cada corrida interactiva (main.py) igual
 # se registra sola bajo AIRSIM_RUNS_DIR/manual/, para poder inspeccionar telemetria
 # de pruebas manuales (antes solo quedaba lo que se veia por consola). "none" desactiva.
 FLIGHT_LOG_DISABLED = (FLIGHT_LOG_PATH or "").strip().lower() == "none"
@@ -88,7 +88,7 @@ def _print_state(state: DroneState, cycle_num: int = 0) -> None:
     wp_info = f"WP {wp_idx}/{wp_total} ({wp_label}) | Dist: {dist:.1f}m | Desvío: {err:+.0f}°" if target_wp else "Misión sin WP activo"
     print(f"\n[Ciclo #{cycle_num}][{AGENT_ARM}] {wp_info} | Alt: {alt:.1f}m | Yaw: {yaw_deg:.1f}°{coll_str} | TTC: {ttc_str}{degraded_str}")
 
-    # Línea de percepción: resumen por sector del ObstacleField (F1.1).
+    # Línea de percepción: resumen por sector del ObstacleField.
     if field is not None and hasattr(field, "summary_text"):
         for line in field.summary_text().split("\n")[1:]:
             print(f"  {line}")
@@ -150,7 +150,7 @@ def main() -> None:
     mission_id = manifest_data.get("mission_id", "MOCK_MISSION")
     os.environ.pop(f"STOP_MISSION_{mission_id}", None)
 
-    # F0.3: un unico cliente de AirSim para todo el proceso.
+    # Un unico cliente de AirSim para todo el proceso.
     airsim_client = AirSimClient(loop_hz=DEFAULT_LOOP_HZ)
     airsim_client.connect()
     # 2026-0903: los dibujos de depuracion de scripts/plot_mission_route.py
@@ -167,7 +167,7 @@ def main() -> None:
     if waypoints_list:
         print(f"[Navegación] Cargados {len(waypoints_list)} waypoints de misión. Iniciando hacia {waypoints_list[0].get('label', 'WP_1')}.")
 
-    # H1 (PLAN-MEJORAS-3): escaneo espacial inicial, parado y rotando, antes
+    # Escaneo espacial inicial, parado y rotando, antes
     # de entrar al lazo tactico. Advisory: sesga el rumbo de arranque y sirve
     # de chequeo de cordura contra el plan de mision, nunca reemplaza al
     # ObstacleField por ciclo como autoridad de seguridad.
@@ -289,7 +289,7 @@ def main() -> None:
                 mission_termination_reason = "stopped"
                 break
 
-            # Verificar límites de tiempo y ciclos (G3.2).
+            # Verificar límites de tiempo y ciclos.
             if MISSION_MAX_CYCLES > 0 and cycle_count >= MISSION_MAX_CYCLES:
                 print(f"[Ciclo] Límite de ciclos alcanzado ({cycle_count} >= {MISSION_MAX_CYCLES}). Abortando misión.")
                 mission_termination_reason = "max_cycles"
@@ -318,7 +318,7 @@ def main() -> None:
                 break
             target_wp = waypoint_tracker.update(pos_now)
             guidance = waypoint_tracker.compute_guidance(pos_now, yaw_now)
-            # F2.5: progreso real (no ciclos-en-ruta-evasiva) para decidir el escape de deadlock.
+            # Progreso real (no ciclos-en-ruta-evasiva) para decidir el escape de deadlock.
             # Fix 1 (2026-0824): esperar al SLM dentro del watchdog no cuenta
             # como "sin progresar" (ver _deliberation_pending en deliberative.py).
             # Fix 2: distancia HORIZONTAL, no 3D -- subir para escapar de un
@@ -369,7 +369,7 @@ def main() -> None:
                 # el contador de atasco de la ruta para no re-disparar de inmediato.
                 waypoint_tracker.reset_progress()
 
-            # H3.2 (PLAN-MEJORAS-3): evento de resolucion de atasco (deep_scan
+            # Evento de resolucion de atasco (deep_scan
             # o escape ciego), consumido por FlightLogger para el ablation
             # blind vs. deep_vlm. Mismo patron que _escape_reset arriba: se
             # consume con pop() en el lazo, nunca queda pisando el estado.
@@ -444,7 +444,7 @@ def main() -> None:
         print("\nApagando sistema de navegacion.")
         mission_termination_reason = "interrupted"
     finally:
-        # Detectar colisión si no se documentó otra razón (G3.2).
+        # Detectar colisión si no se documentó otra razón.
         if mission_termination_reason is None:
             collision = drone_state.get("telemetry", {}).get("collision", {})
             if collision.get("has_collided"):

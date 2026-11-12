@@ -1,4 +1,4 @@
-"""F3.3: runner batch headless para comparar los 3 brazos (slm/fsm/reactive).
+"""Runner batch headless para comparar los 3 brazos (slm/fsm/reactive).
 
 N misiones x M escenarios x K semillas, sin ventana cv2 ni overhead de UI.
 Escribe un JSONL por corrida via FlightLogger.
@@ -149,7 +149,7 @@ def run_one(
     client.connect()
     # Limpia colision/velocidad/estado del controlador interno que pudiera
     # haber quedado de una corrida anterior en el mismo proceso de AirSim
-    # (ver PLAN-MEJORAS.md F3.3: "client.reset()" antes de reposicionar).
+    # (por eso client.reset() va antes de reposicionar).
     client.reset()
     # 2026-0903: los dibujos de scripts/plot_mission_route.py se ven en la
     # captura de camara que recibe el VLM (mismo motivo que main.py) --
@@ -225,7 +225,7 @@ def run_one(
             print(f"[runner] FollowCam deshabilitada: {exc}")
             follow_recorder = None
 
-    # Healthcheck del SLM antes de empezar (G1.2). Solo si alguna capa del vuelo usa el VLM (2026-10-10): con
+    # Healthcheck del SLM antes de empezar. Solo si alguna capa del vuelo usa el VLM (2026-10-10): con
     # STRATEGIC_SOURCE y DEADLOCK_STRATEGY en depth/off/blind el VLM no corre en vuelo y Ollama puede estar
     # cerrado (libera ~1 GB de VRAM para Unreal).
     vlm_in_flight = (os.getenv("STRATEGIC_SOURCE", "depth") == "vlm"
@@ -365,7 +365,7 @@ def run_one(
                 tracker.drop_temporary("VLM: camino directo libre")
             if state.pop("_escape_reset", False):
                 tracker.reset_progress()
-            # H3.2: evento de resolucion de atasco (blind vs. deep_vlm),
+            # Evento de resolucion de atasco (blind vs. deep_vlm),
             # consumido por FlightLogger para el ablation (mismo patron que
             # main.py: se saca del estado con pop(), nunca queda pisandolo).
             deadlock_event = state.pop("_deadlock_event", None)
@@ -484,7 +484,7 @@ def main():
     parser.add_argument(
         "--deadlock-strategies", nargs="+", default=[os.getenv("DEADLOCK_STRATEGY", "depth")],
         choices=["depth", "deep_vlm", "blind"],
-        help="H3.1/S6 (PLAN-SLAM): factorial AGENT_ARM x DEADLOCK_STRATEGY. "
+        help="Factorial AGENT_ARM x DEADLOCK_STRATEGY. "
              "'depth' (default de config/.env): barrido + profundidad estimada. 'deep_vlm': barrido + VLM. "
              "'blind': escape determinista sin barrido (ablacion).",
     )
@@ -497,7 +497,7 @@ def main():
     )
     parser.add_argument(
         "--cells", nargs="+", default=None,
-        help="2026-10-15 (lotes D/E/F, cap. 10 §10.12.2): celdas brazo:estrategia a correr, p. ej. "
+        help="2026-10-15 (lotes D/E/F, informe IT.10.12.2): celdas brazo:estrategia a correr, p. ej. "
              "'slm:depth fsm:depth fsm:blind reactive'. Reemplaza el producto --arms x --deadlock-strategies: "
              "solo se corren esas celdas y se ALTERNAN dentro de cada semilla (con el orden rotado por "
              "semilla), para repartir entre ellas la deriva del simulador en el tiempo.",
@@ -505,7 +505,7 @@ def main():
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
     parser.add_argument("--allow-dirty", action="store_true",
                          help="Correr aunque el arbol tenga cambios sin commitear (code_version '-dirty'). "
-                              "Por defecto el lote no arranca: esas corridas se descartan (cap. 10 §10.12.2).")
+                              "Por defecto el lote no arranca: esas corridas se descartan (informe IT.10.12.2).")
     parser.add_argument("--allow-any-python", action="store_true",
                          help="Correr aunque el interprete no sea el de AIRSIM_ENV_DIR (config/.env). Por defecto "
                               "el lote no arranca: todas las corridas deben salir del mismo entorno.")
@@ -663,7 +663,7 @@ def _cell(deadlock_strategy: str, strategic_source: Optional[str]) -> str:
 
 ARMS = ("slm", "fsm", "reactive")
 DEADLOCK_STRATEGIES = ("depth", "deep_vlm", "blind")
-# Corridas con menos ciclos son fallas de infraestructura, no del dron (cap. 10 §10.12.2).
+# Corridas con menos ciclos son fallas de infraestructura, no del dron (informe IT.10.12.2).
 MIN_VALID_CYCLES = 50
 
 

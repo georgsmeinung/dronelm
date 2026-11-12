@@ -1,4 +1,4 @@
-# Paso 3/4: Contrato unico de percepcion (F1.1 del plan de mejoras).
+# Contrato unico de percepcion.
 # ObstacleField es el UNICO objeto que router, evasive, deliberative, fsm y
 # el logger de vuelo consultan. Ningun consumidor debe leer campos crudos de
 # flujo optico o mascaras: todo pasa por esta API.
@@ -111,7 +111,7 @@ class ObstacleField:
         return self.source == "flow" and self.foe_confidence > 0.0
 
     def decay_ttc(self, dt_s: float, source: str = "holdover") -> "ObstacleField":
-        """Devuelve copia con TTC decrementado en dt_s segundos (P2: holdover temporal)."""
+        """Devuelve copia con TTC decrementado en dt_s segundos (holdover temporal)."""
         new_cells: Dict[Tuple[str, str], Cell] = {}
         for key, cell in self.cells.items():
             new_ttc = max(0.0, cell.ttc_s - dt_s) if cell.ttc_s != float("inf") else float("inf")
@@ -128,7 +128,7 @@ class ObstacleField:
     def merge_depth_estimate(self, depth_m: float, cmd_vx: float) -> "ObstacleField":
         """Devuelve copia con sector centro bloqueado por estimación monocular de profundidad.
 
-        Se llama desde perception_node (V4) cuando el modelo detecta un obstáculo
+        Se llama desde perception_node cuando el modelo detecta un obstáculo
         que el flujo óptico no ve (foe_confidence baja en malla del árbol). Inyecta
         una señal conservadora en las tres celdas de centro:
           - occupancy: justo por encima de OCCUPANCY_BLOCKED_THRESHOLD → is_blocked()=True

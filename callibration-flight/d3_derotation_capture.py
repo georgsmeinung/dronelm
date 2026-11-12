@@ -1,4 +1,4 @@
-"""D3 — Validación de derotación con yaw agresivo (PLAN-DEUDA-TECNICA.md).
+"""D3 — Validación de derotación con yaw agresivo.
 
 El dron hovea a distancia fija de una pared y aplica yaw rotacional a tasas
 crecientes. Mide foe_confidence y field_source por frame para determinar en

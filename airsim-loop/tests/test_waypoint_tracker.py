@@ -23,7 +23,7 @@ def test_empty_waypoint_list_is_immediately_completed():
 
 
 def test_dist_xy_ignores_altitude_unlike_distance():
-    """Regresion del bug de escape por altura descontrolado (F3.3, 2026-0824):
+    """Regresion del bug de escape por altura descontrolado (2026-0824):
 
     subir (cambiar Z) hacia un waypoint a altitud constante no debe mover
     dist_xy, aunque si empeora distance (3D). runner.py/main.py usan dist_xy
@@ -77,7 +77,7 @@ def test_record_progress_increments_when_stalled():
 
 
 def test_long_correct_manhattan_detour_does_not_count_as_stuck():
-    """Regresion F2.5: un desvio largo pero que sigue acercando al waypoint
+    """Regresion: un desvio largo pero que sigue acercando al waypoint
 
     (aunque tome muchos ciclos) no debe contar como atasco.
     """

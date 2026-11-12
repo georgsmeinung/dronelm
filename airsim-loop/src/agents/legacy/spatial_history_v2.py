@@ -1,8 +1,8 @@
 # CONGELADO 2026-09-30 (legacy, fuera del camino de vuelo, sin tests).
-# FlightTrajectory (stall rates por zona). Alimentaba C1/D1/traj_stall/fallback: sin evidencia de avance.
+# FlightTrajectory (stall rates por zona). Alimentaba las reglas de trayectoria y el fallback: sin evidencia de avance.
 # Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
 # apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
-# S1 + S2 (PLAN-SLAM): buffer de trayectoria acumulada para slam_assess.
+# Buffer de trayectoria acumulada para slam_assess.
 #
 # A diferencia de ObstacleField (que depende de foe_confidence y falla
 # exactamente en los escenarios de bloqueo), FlightTrajectory acumula
@@ -37,8 +37,8 @@ class TrajectoryEvent:
     delta_wp_m: float        # Δ distancia al waypoint: positivo = retroceso, negativo = avance
     stall: bool              # True si delta_wp_m > SLAM_STALL_THRESHOLD_M
     flow_had_evidence: bool  # foe_confidence > 0 ese ciclo
-    obstacle_class: Optional[str] = None   # S3b: "tree" | "building" | None
-    obstacle_conf: float = 0.0             # S3b: confianza de la detección YOLO
+    obstacle_class: Optional[str] = None   # "tree" | "building" | None
+    obstacle_conf: float = 0.0             # Confianza de la detección YOLO
 
 
 class FlightTrajectory:
@@ -63,7 +63,7 @@ class FlightTrajectory:
         current_heading_deg: float = 0.0,
         max_events: int = 0,
     ) -> str:
-        """Resumen textual de trayectoria para el prompt de slam_assess (S2).
+        """Resumen textual de trayectoria para el prompt de slam_assess.
 
         Agrupa eventos por zona angular relativa al heading actual y cuenta
         intentos y stalls por zona. El vocabulario está alineado con las
@@ -151,7 +151,7 @@ class FlightTrajectory:
             else:
                 note = f" Avance promedio {avg_prog_display:.2f}m/ciclo."
 
-            # S3b: incluir clase de obstáculo si hay anotaciones
+            # Incluir clase de obstáculo si hay anotaciones
             obs_notes = ""
             if data["classes"]:
                 top = max(data["classes"], key=lambda x: x[1])

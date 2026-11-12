@@ -17,7 +17,7 @@ def _default_deadlock_strategy_blind(monkeypatch):
 
     del desarrollador (2026-0901: .env de este entorno trae
     DEADLOCK_STRATEGY=deep_vlm por pedido explicito para pruebas de vuelo
-    manuales -- sin este fixture, cualquier test escrito antes de H2 que
+    manuales -- sin este fixture, cualquier test escrito antes del escaneo profundo que
     ejercite el escape sincronico "a ciegas" se rompe en silencio segun quien
     lo corra). "blind" es el default explicito y estable para todo el suite;
     un test que quiera ejercitar deep_vlm lo pisa el mismo con su propio

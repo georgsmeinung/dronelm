@@ -10,7 +10,7 @@ import os
 from typing import Any, Dict, Optional
 
 DEFAULT_FORWARD_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "2.0"))
-# P3 (PLAN-SLAM): límite de yaw (°/s) cuando el dron está cerca de un obstáculo
+# Límite de yaw (°/s) cuando el dron está cerca de un obstáculo
 # (TTC_centro < TTC_SAFE_THRESHOLD o en modo evasivo). Mantiene la derotación
 # de flow_ttc dentro del límite operativo (~0.175 rad/s ≈ 10°/s a 5 Hz).
 FLOW_MAX_YAW_DPS_NEAR_OBSTACLE = float(os.getenv("FLOW_MAX_YAW_DPS_NEAR_OBSTACLE", "5.0"))
@@ -44,7 +44,7 @@ def _manhattan_snap_yaw(current_yaw_deg: float, delta_deg: float) -> float:
 
 
 def safe_yaw_rate(yaw_rate_dps: float, near_obstacle: bool) -> float:
-    """P3 (PLAN-SLAM): clampea yaw_rate cuando el sensor puede degradarse por rotación."""
+    """Clampea yaw_rate cuando el sensor puede degradarse por rotación."""
     if near_obstacle:
         return max(-FLOW_MAX_YAW_DPS_NEAR_OBSTACLE,
                    min(FLOW_MAX_YAW_DPS_NEAR_OBSTACLE, yaw_rate_dps))

@@ -1,4 +1,4 @@
-"""F0.0: mide el techo real de simGetImages/getMultirotorState sobre la
+"""Mide el techo real de simGetImages/getMultirotorState sobre la
 
 conexion real (Mac -> Windows u otro host remoto), para elegir LOOP_HZ y la
 resolucion del pipeline de percepcion con evidencia en lugar de un default.

@@ -2,7 +2,7 @@
 # Profundidad monocular (Depth Anything V2); estaba desactivada (DEPTH_BRAKE_M=0) en todas las corridas.
 # Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
 # apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
-# V4-VLM-REFINEMENT: Estimación monocular de profundidad (Depth Anything V2 Metric).
+# Estimación monocular de profundidad (Depth Anything V2 Metric).
 #
 # Arquitectura: mismo patrón productor/consumidor que DeliberationService.
 # request() encola el frame RGB; poll() devuelve el último resultado sin
@@ -44,7 +44,7 @@ DEPTH_SECTOR_RIGHT  = float(os.getenv("DEPTH_SECTOR_RIGHT",  "0.80"))
 # Percentil robusto: 5 % es más resistente que el mínimo puro a píxeles ruidosos,
 # pero aún captura obstáculos reales que cubren una fracción pequeña del sector.
 DEPTH_PERCENTILE    = int(os.getenv("DEPTH_PERCENTILE", "5"))
-# E2 (Zona 2): clasificación de textura de profundidad para inferir tipo de obstáculo.
+# Clasificación de textura de profundidad para inferir tipo de obstáculo.
 # CV (std/mean) alto → profundidad irregular → follaje con huecos.
 # far_fraction alto → muchos píxeles lejanos mezclados con los cercanos → misma firma.
 # Umbral CV calibrado en renders UE5: pared ~0.10–0.25, árbol ~0.55–1.5.

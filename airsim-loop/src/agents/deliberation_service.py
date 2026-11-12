@@ -1,9 +1,9 @@
-# F0.5: Servicio de deliberacion asincrono.
+# Servicio de deliberacion asincrono.
 #
 # Antes, deliberative_node llamaba a _query_slm() de forma sincronica dentro
 # del grafo: el lazo entero (captura + percepcion + control) quedaba
 # bloqueado hasta 8s (el timeout del cliente OpenAI) por ciclo, y ademas
-# graph.py invocaba el nodo dos veces por el bug de doble ruta (ver F0.2).
+# graph.py invocaba el nodo dos veces por el bug de doble ruta.
 #
 # DeliberationService corre la consulta al SLM en un hilo aparte con una cola
 # de tamano 1 (el pedido mas nuevo reemplaza al pendiente: no tiene sentido

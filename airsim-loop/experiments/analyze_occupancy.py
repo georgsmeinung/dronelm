@@ -1,4 +1,4 @@
-"""G0.4: Recalibración de OBSTACLE_OCCUPANCY_BLOCKED contra dataset de F1.3.
+"""Recalibración de OBSTACLE_OCCUPANCY_BLOCKED contra el dataset de TTC (collect_ttc_dataset.py).
 
 - Usa ttc_gt_s * speed_mps para estimar profundidad real.
 - Define "celda ocupada" como profundidad <= umbral (5, 10, 15 m).

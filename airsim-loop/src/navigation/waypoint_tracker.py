@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 DEFAULT_ACCEPTANCE_RADIUS = float(os.getenv("WAYPOINT_ACCEPTANCE_RADIUS", "3.5"))
 DEFAULT_CRUISE_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "5.0"))
-# F2.5: margen (metros) para considerar que hubo progreso real hacia el
+# Margen (metros) para considerar que hubo progreso real hacia el
 # waypoint activo. Un desvio Manhattan largo pero que reduce distancia no
 # cuenta como atasco; solo cuenta la falta de progreso sostenida.
 PROGRESS_EPS_M = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
@@ -173,7 +173,7 @@ class WaypointTracker:
         self.current_index: int = 0
         self.is_completed: bool = len(self.waypoints) == 0
         self._locked_turn_dir: Optional[int] = None
-        # F2.5: seguimiento de progreso real (distancia minima vista al WP
+        # Seguimiento de progreso real (distancia minima vista al WP
         # activo) en lugar de contar ciclos en rutas evasivas/deliberativas.
         self._min_dist_seen: Optional[float] = None
         self.progress_stall_cycles: int = 0
@@ -268,7 +268,7 @@ class WaypointTracker:
     def record_progress(self, dist_to_wp: float, bearing_err_deg: float = 0.0) -> int:
         """Registra la distancia actual al waypoint activo y actualiza el
 
-        contador de ciclos sin progreso real (F2.5). Devuelve el contador
+        contador de ciclos sin progreso real. Devuelve el contador
         actualizado. Un desvío correcto que sigue reduciendo la distancia
         mínima vista nunca incrementa el contador, aunque tome muchos ciclos.
 

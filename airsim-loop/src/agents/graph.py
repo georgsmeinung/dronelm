@@ -188,7 +188,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
 
     def degraded_hover_node(state: DroneState) -> DroneState:
         cmd = action_to_command("FRENAR", telemetry=state.get("telemetry", {}) or {})
-        cmd["rationale"] = "AirSim no disponible: hover de seguridad (F0.6)."
+        cmd["rationale"] = "AirSim no disponible: hover de seguridad."
         state["next_action"] = "FRENAR"
         state["velocity_command"] = cmd
         state["route"] = "degraded"

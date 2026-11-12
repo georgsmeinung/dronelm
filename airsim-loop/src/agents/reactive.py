@@ -1,4 +1,4 @@
-# Paso 4A: Reflejo rapido (control reactivo).
+# Reflejo rapido (control reactivo).
 # Ruta de computo casi nulo: cuando el Gatekeeper considera que el camino
 # esta despejado, el planificador reactivo simplemente mantiene el rumbo
 # por defecto y devuelve un comando de velocidad neutro/avance.
@@ -30,7 +30,7 @@ def reactive_node(state: Dict[str, Any]) -> Dict[str, Any]:
     guidance = state.get("waypoint_guidance") or {}
     is_completed = state.get("mission_completed", False) or guidance.get("is_completed", False)
 
-    # P3 (PLAN-SLAM): suprimir yaw durante percepción cuando hay obstáculo cercano.
+    # Suprimir yaw durante percepción cuando hay obstáculo cercano.
     # Aplica solo a MANTENER_RUMBO (guiado continuo) — no a giro de 90° ni evasión.
     from src.perception.obstacle_field import TTC_BLOCKED_THRESHOLD_S
     field: ObstacleField = state.get("obstacle_field") or empty_field()

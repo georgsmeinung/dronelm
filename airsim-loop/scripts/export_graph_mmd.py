@@ -1,4 +1,4 @@
-"""F4.1: regenera el .mmd del grafo de control DESDE el grafo compilado
+"""Regenera el .mmd del grafo de control DESDE el grafo compilado
 (en vez de mantenerlo a mano), para que la divergencia doc/codigo no pueda
 repetirse.
 

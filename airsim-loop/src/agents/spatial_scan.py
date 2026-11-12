@@ -1,4 +1,4 @@
-# Fase H1 (PLAN-MEJORAS-3): escaneo espacial inicial (pre-vuelo).
+# Escaneo espacial inicial (pre-vuelo).
 #
 # Barrido de yaw en el lugar (nunca traslacion) inmediatamente despues del
 # despegue, antes de que main.py entre al `while True` del lazo tactico.
@@ -14,7 +14,7 @@
 # Watchdog propio y generoso: si el VLM falla o expira, la mision arranca
 # igual sin contexto inicial -- un VLM caido nunca debe impedir el despegue.
 #
-# Principio rector (PLAN-MEJORAS-3.md §0): exclusion total de profundidad.
+# Principio rector: exclusion total de profundidad.
 # Este modulo NUNCA pide el canal de profundidad al simulador.
 from __future__ import annotations
 
@@ -211,7 +211,7 @@ def run_initial_scan(airsim_client: Any) -> Dict[str, Any]:
 
     Nunca lanza: cualquier falla (VLM caido, timeout, formato invalido)
     devuelve `{"available": False, "reason": ...}` en vez de propagar la
-    excepcion -- la mision debe poder arrancar igual (H1.2).
+    excepcion -- la mision debe poder arrancar igual.
     """
     print(f"[EscaneoInicial] Iniciando barrido de {SCAN_HEADING_COUNT} rumbos...")
     try:
@@ -225,7 +225,7 @@ def run_initial_scan(airsim_client: Any) -> Dict[str, Any]:
             heading = _normalize_deg(start_yaw_deg + i * step)
             _rotate_to_heading(airsim_client, heading)
             time.sleep(INITIAL_SCAN_SETTLE_S)
-            # Sin pedir profundidad (principio rector §0 del plan): el escaneo
+            # Sin pedir profundidad (principio rector de exclusion): el escaneo
             # inicial no tiene pase libre por ocurrir antes del movimiento.
             image, _telem = airsim_client.capture()
             frames.append((round(heading, 1), image))

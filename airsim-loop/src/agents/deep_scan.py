@@ -453,7 +453,7 @@ def deep_scan_cycle(
     consecutive_escapes: int = 0,
     trajectory: "Any | None" = None,  # sin uso desde 2026-0930; se acepta por compatibilidad (fsm.py)
 ) -> bool:
-    """Ejecuta un paso del escaneo profundo (H2.2).
+    """Ejecuta un paso del escaneo profundo.
 
     Debe llamarse SOLO cuando ya se determino que hay atasco duro sin
     corredor (misma condicion que dispara el escape sincronico existente).

@@ -145,7 +145,7 @@ def test_slm_invocations_count_once_per_deliberation_not_per_repeated_cycle(tmp_
 
 
 def test_deep_scan_frames_use_their_own_capture_timestamp_not_resolution_time(tmp_path):
-    """Los fotogramas del barrido del escaneo profundo (H2) se toman en
+    """Los fotogramas del barrido del escaneo profundo se toman en
 
     rumbos/ciclos DISTINTOS, varios segundos antes de que el VLM resuelva
     -- cada uno debe llevar SU PROPIO timestamp real, nunca el instante
@@ -320,7 +320,7 @@ def test_per_waypoint_summary_csv(tmp_path):
 
 
 def test_summary_includes_code_version_from_git(tmp_path):
-    """I0.2 (PLAN-MEJORAS-4): summary.json debe incluir code_version con el
+    """summary.json debe incluir code_version con el
     hash corto de git para que cada corrida sea auditable por commit. En un
     repo con .git, el valor no debe ser None ni 'unknown'."""
     run_dir = tmp_path / "TEST_CV-20260904T000000Z"
