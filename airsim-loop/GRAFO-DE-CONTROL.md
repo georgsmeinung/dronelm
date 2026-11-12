@@ -1,6 +1,6 @@
 # Grafo de control
 
-> Estado del lazo de `airsim-loop` al **2026-10-14**. Describe la configuracion **tal como esta en el codigo** ([`src/agents/graph.py`](src/agents/graph.py)) y en [`config/.env`](../config/.env): `STRATEGIC_SOURCE=depth`, `DEADLOCK_STRATEGY=depth`, `ROUTE_PLAN_MODE=vlm`. La version anterior de este documento (policy_router de 5 ramas, nodo deliberativo, `slam_assess`) corresponde a codigo hoy congelado en [`src/agents/legacy/`](src/agents/legacy/). Version extendida: informe, cap. 5 (arquitectura), cap. 6 §6.14 (profundidad estimada) y cap. 4 §4.4 (registro de corrida y visor).
+> Estado del lazo de `airsim-loop` al **2026-10-14**. Describe la configuracion **tal como esta en el codigo** ([`src/agents/graph.py`](src/agents/graph.py)) y en [`config/.env`](../config/.env): `STRATEGIC_SOURCE=depth`, `DEADLOCK_STRATEGY=depth`, `ROUTE_PLAN_MODE=vlm`. La version anterior de este documento (policy_router de 5 ramas, nodo deliberativo, `slam_assess`) corresponde a codigo hoy congelado en [`src/agents/legacy/`](src/agents/legacy/). Version extendida: informe, cap. 5 (arquitectura), cap. 6 IT.6.14 (profundidad estimada) y cap. 4 IT.4.4 (registro de corrida y visor).
 
 ---
 
@@ -25,7 +25,7 @@ capture -> (degradado?) -> perception -> navigate -> motor -> END
 | `capture` | RGB + telemetria. Si AirSim no responde: `degraded=True`. |
 | `degraded_hover` | `FRENAR`: sin datos no se mueve. |
 | `perception` | `FlowTTCEstimator` -> `ObstacleField` (flujo optico a 640 px, FOE, TTC). Unica fuente de percepcion del lazo rapido. |
-| `navigate` | Brazo `reactive` / `fsm` / `slm` (ver §3). |
+| `navigate` | Brazo `reactive` / `fsm` / `slm` (ver GC.3). |
 | `motor` | Ancla de altitud en `FRENAR`, gobernador de velocidad, `execute_velocity` no bloqueante. |
 
 Servicios (un hilo cada uno, creados solo si alguna capa los usa): profundidad (`make_depth_service`, si `STRATEGIC_SOURCE=depth` o `DEADLOCK_STRATEGY=depth`) y VLM (`make_deliberation_service`, si `vlm` o `deep_vlm`). Con depth/depth no se crea el del VLM.
@@ -39,7 +39,7 @@ La velocidad de "detenido" se mide por desplazamiento entre ciclos (AirSim repor
 | # | Condicion | Accion | Por que |
 |---|---|---|---|
 | 1 | Barrido panoramico en curso | seguir el barrido | Es duenio del dron hasta resolver o caer por sus watchdogs. |
-| 2 | Trabado (>=10 ciclos con orden de avanzar y sin desplazamiento medido) o ~10 s sin acercarse 2 m al objetivo | **deadlock** (§5) | Precede a todo salvo el barrido: una accion que se repite sin mover al dron (maniobra, evasion, descenso por techo) no puede taparlo (piloto v3 seed 99: 220 ciclos de PERDER_ALTURA sin deadlock). |
+| 2 | Trabado (>=10 ciclos con orden de avanzar y sin desplazamiento medido) o ~10 s sin acercarse 2 m al objetivo | **deadlock** (GC.5) | Precede a todo salvo el barrido: una accion que se repite sin mover al dron (maniobra, evasion, descenso por techo) no puede taparlo (piloto v3 seed 99: 220 ciclos de PERDER_ALTURA sin deadlock). |
 | 3 | Maniobra comprometida | continuarla | Anti flip-flop. |
 | 4 | Contacto IMU o avance ordenado sin movimiento (2 ciclos) | `evasive_node` | Obstaculo que el flujo no ve. |
 | 5 | Bajo el piso optico (4.5 m) sin techo | `reactive_node` | Aterrizaje/vuelo bajo: el flujo no es valido. |
@@ -47,7 +47,7 @@ La velocidad de "detenido" se mide por desplazamiento entre ciclos (AirSim repor
 | 7 | TTC frontal critico | FOV >60% bloqueado: `GIRAR_90` hacia el WP **y** consulta inmediata a la capa estrategica con ese frame; si no: `evasive_node` | El lazo rapido esquiva; el rodeo lo decide el lazo lento. |
 | 8 | — | `reactive_node` | Guiado nominal. |
 
-Brazos de comparacion: `reactive` = solo `reactive_node`; `fsm` = [`fsm.py`](src/agents/fsm.py) (comparte el barrido de §5 si `DEADLOCK_STRATEGY` es `depth` o `deep_vlm`; con `blind`, su propia alternancia CLIMB/DESCEND).
+Brazos de comparacion: `reactive` = solo `reactive_node`; `fsm` = [`fsm.py`](src/agents/fsm.py) (comparte el barrido de GC.5 si `DEADLOCK_STRATEGY` es `depth` o `deep_vlm`; con `blind`, su propia alternancia CLIMB/DESCEND).
 
 ## 4. Capa estrategica ([`vlm_strategic.py`](src/agents/vlm_strategic.py))
 
@@ -78,7 +78,7 @@ Toda sub-meta viene del lazo lento (capa estrategica o barrido) y se inserta tal
 | `FlightTrajectory` (C1, D1, `traj_stall`, fallback) | 45 deadlocks disparados solo por esta senal, sin avance posterior. `legacy/spatial_history_v2.py`. |
 | Contador del tracker / eventos de "frentes bloqueados" / `stuck_invisible` / `pos_freeze` como disparadores | Solapados con las dos senales de la regla 2. |
 | Escape vertical forzado, deteccion de escaneo huerfano | Overrides / reemplazados por la regla 1. |
-| Profundidad monocular como freno del lazo rapido, aviso G1 | Desactivada en todas las corridas / solo alimentaba prompts legacy. La profundidad estimada volvio en otro rol: fuente del lazo lento (§4), con el p5 por sector validado en el banco. |
+| Profundidad monocular como freno del lazo rapido, aviso G1 | Desactivada en todas las corridas / solo alimentaba prompts legacy. La profundidad estimada volvio en otro rol: fuente del lazo lento (GC.4), con el p5 por sector validado en el banco. |
 | Nodo deliberativo legacy, `slam_assess` | Factorial 09-07..09-10: el brazo slm nunca supero al reactivo; slam_assess sin evidencia (5 corridas truncadas). |
 | VLM en vuelo (capa estrategica y barrido) | Banco a bordo: grilla AUC 0.53, barrido "todo transitable" 14/14; lote CitySim: equivalente a no tener capa. Queda como ablacion (`vlm`, `deep_vlm`). |
 

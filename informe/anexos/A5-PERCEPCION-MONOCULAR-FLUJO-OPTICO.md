@@ -1,6 +1,6 @@
 # Anexo 5: Fundamentos matemáticos de percepción monocular, flujo óptico y estimación de tiempo hasta la colisión (TTC)
 
-La premisa sensorial sobre la que se fundamenta DroneLM es la autosuficiencia perceptiva bajo restricciones severas de costo y carga útil (§1.2): gobernar un vehículo aéreo no tripulado (UAV) en entornos urbanos y suburbanos tridimensionales utilizando exclusivamente una **cámara monocular RGB convencional** y la **telemetría de actitud angular** provista por una unidad de medición inercial (IMU) estándar, prescindiendo por diseño de sensores activos pesados o costosos (LiDAR, radar, sonar) y de cámaras estereoscópicas calibradas.
+La premisa sensorial sobre la que se fundamenta DroneLM es la autosuficiencia perceptiva bajo restricciones severas de costo y carga útil (IT.1.2): gobernar un vehículo aéreo no tripulado (UAV) en entornos urbanos y suburbanos tridimensionales utilizando exclusivamente una **cámara monocular RGB convencional** y la **telemetría de actitud angular** provista por una unidad de medición inercial (IMU) estándar, prescindiendo por diseño de sensores activos pesados o costosos (LiDAR, radar, sonar) y de cámaras estereoscópicas calibradas.
 
 El desafío físico de este enfoque radica en la **ambigüedad proyectiva**: una cámara proyecta el mundo tridimensional $\mathbb{R}^3$ sobre un plano bidimensional $\mathbb{R}^2$, perdiendo la escala métrica absoluta de distancia ($Z$). Para recuperar la información de proximidad de manera pasiva y reactiva, el sistema explota el **flujo óptico**, es decir, el patrón aparente de movimiento de las intensidades lumínicas en el plano de la imagen inducido por el movimiento relativo entre la cámara y la escena.
 
@@ -245,7 +245,7 @@ def is_blocked(self) -> bool:
     if self.confidence < 0.15:
         return False
     # 2. Voto por ocupación de área
-    if self.occupancy >= 0.011:  # OBSTACLE_OCCUPANCY_BLOCKED, calibrado por ROC (cap. 7, §7.5)
+    if self.occupancy >= 0.011:  # OBSTACLE_OCCUPANCY_BLOCKED, calibrado por ROC (cap. 7, IT.7.5)
         return True
     # 3. Voto directo por TTC bajo (con confianza estricta >= 0.35)
     return self.confidence >= 0.35 and self.ttc_s <= 2.5

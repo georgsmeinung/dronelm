@@ -61,12 +61,12 @@ Router único de política. Reemplaza a la combinación `ttc_router` + `hover_be
 - **`fsm`**: siempre `fsm_node`, máquina de estados determinista sobre el mismo `ObstacleField` y el mismo `action_to_command()` que usa el brazo SLM — para que la comparación SLM vs FSM sea limpia.
 - **`slm`** (default): la lógica táctica jerárquica original (TTC + bloqueo por sector + persistencia de maniobra + escape de deadlock), resolviendo hacia `keep_going` / `evasive` / `girar_90` (bypass determinista si el FOV está mayormente bloqueado) / `deliberative`.
 
-El orden de evaluación **es** la política; la cascada completa, con el racional de cada paso, está en [`GRAFO-DE-CONTROL.md` §6](GRAFO-DE-CONTROL.md).
+El orden de evaluación **es** la política; la cascada completa, con el racional de cada paso, está en [`GRAFO-DE-CONTROL.md`, GC.3](GRAFO-DE-CONTROL.md).
 
 ### `deliberative` (brazo `slm`)
 Corre en un hilo aparte (`DeliberationService`, `src/agents/deliberation_service.py`): el nodo **nunca bloquea** el lazo de control. El ciclo en que se encola el pedido (o mientras se espera respuesta) el comando es `FRENAR`; si el SLM no responde dentro de `SLM_WATCHDOG_MS` (6000 ms, calibrado sobre latencias reales de LM Studio), se aplica el fallback determinista y se marca `timeout=True` en `deliberations[]`. Usa decodificación restringida (`response_format=json_schema`) cuando el servidor la soporta, con el parser tolerante como red de seguridad.
 
-Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos sin progreso real hacia el waypoint, fuerza `GANAR_ALTURA` sin consultar al modelo. El escape está acotado por tres guardas — umbral coherente con la métrica que lo alimenta, chequeo de corredor visible, y enclavamiento tras `MAX_CONSECUTIVE_ESCAPES` intentos sin progreso horizontal medido — cuya ausencia produjo el estado absorbente documentado en [`../CHANGELOG.md`](../CHANGELOG.md) (2026-0824). Ver [`GRAFO-DE-CONTROL.md` §7](GRAFO-DE-CONTROL.md).
+Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos sin progreso real hacia el waypoint, fuerza `GANAR_ALTURA` sin consultar al modelo. El escape está acotado por tres guardas — umbral coherente con la métrica que lo alimenta, chequeo de corredor visible, y enclavamiento tras `MAX_CONSECUTIVE_ESCAPES` intentos sin progreso horizontal medido — cuya ausencia produjo el estado absorbente documentado en [`../CHANGELOG.md`](../CHANGELOG.md) (2026-0824). Ver [`GRAFO-DE-CONTROL.md`, GC.5](GRAFO-DE-CONTROL.md).
 
 ### `evasive`, `fsm`, `girar_90`, `motor`
 `evasive_node` y `fsm_node` comparten `action_to_command()` (`src/agents/action_map.py`) con `deliberative_node`: es la única fuente de verdad de la cinemática por macro-acción, para que ninguna tenga dos definiciones distintas según quién la ejecute. `motor_node` envía el comando final a `AirSimClient.execute_velocity()`, que ya no bloquea (`moveByVelocityBodyFrameAsync` es last-command-wins; antes un `.join()` fijaba el período del lazo en 2 s).
@@ -81,7 +81,7 @@ Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos
 - [`src/agents/action_map.py`](src/agents/action_map.py): cinemática única por macro-acción.
 - [`src/agents/deliberation_service.py`](src/agents/deliberation_service.py): worker asíncrono para la consulta al SLM.
 - [`src/agents/deliberative.py`](src/agents/deliberative.py), [`evasive.py`](src/agents/evasive.py), [`fsm.py`](src/agents/fsm.py), [`reactive.py`](src/agents/reactive.py): los tres brazos de política + el guiado nominal.
-- [`src/agents/deep_scan.py`](src/agents/deep_scan.py): barrido panorámico + consulta al VLM para el escape de deadlock (§7 de GRAFO-DE-CONTROL.md).
+- [`src/agents/deep_scan.py`](src/agents/deep_scan.py): barrido panorámico + consulta al VLM para el escape de deadlock (`GRAFO-DE-CONTROL.md`, GC.5).
 - [`src/agents/spatial_scan.py`](src/agents/spatial_scan.py): escaneo espacial pre-vuelo (PLAN-MEJORAS-3 H1) — advisory, fuera del StateGraph.
 - [`src/perception/obstacle_field.py`](src/perception/obstacle_field.py): contrato único de percepción.
 - [`src/perception/flow_ttc.py`](src/perception/flow_ttc.py): derotación + FOE + TTC.
@@ -95,11 +95,11 @@ Este nodo aloja además el **escape de deadlock**: cuando el dron acumula ciclos
 
 Corren sin AirSim, Ollama ni GPU (kernel con el entorno `airsimenv`, directorio de trabajo `airsim-loop/`) sobre los datos de `airsim-runs/`:
 
-- [`explicacion_nodos_langgraph.ipynb`](explicacion_nodos_langgraph.ipynb) (NB3): el grafo de control paso a paso con el código de vuelo, y el replay de `navigate` sobre una corrida v4.
+- [`NB1_analisis_estadistico_resultados.ipynb`](NB1_analisis_estadistico_resultados.ipynb) (NB1): el análisis estadístico de la corrida v4 (IT.11), verificado contra `analisis_lotes.md`.
 - [`NB2_auditoria_interactiva_telemetria.ipynb`](NB2_auditoria_interactiva_telemetria.ipynb) (NB2): la telemetría de una corrida y cómo de ella sale su `summary.json`.
-- [`NB1_analisis_estadistico_resultados.ipynb`](NB1_analisis_estadistico_resultados.ipynb) (NB1): el análisis estadístico de la corrida v4 (cap. 11), verificado contra `analisis_lotes.md`.
+- [`NB3_explicacion_nodos_langgraph.ipynb`](NB3_explicacion_nodos_langgraph.ipynb) (NB3): el grafo de control paso a paso con el código de vuelo, y el replay de `navigate` sobre una corrida v4.
 - [`NB4_planificacion_vlm.ipynb`](NB4_planificacion_vlm.ipynb) (NB4): el plan de ruta con el VLM sobre el mapa cenital y la geometría de las sub-metas.
-- [`banco_vlm_decisiones.ipynb`](banco_vlm_decisiones.ipynb) (NB5): el banco de prueba y las decisiones de diseño que salen de él y de los lotes piloto.
+- [`NB5_banco_vlm_decisiones.ipynb`](NB5_banco_vlm_decisiones.ipynb) (NB5): el banco de prueba y las decisiones de diseño que salen de él y de los lotes piloto.
 
 ---
 
@@ -124,7 +124,7 @@ FOV_BLOCKED_THRESHOLD=0.6
 REACTIVE_FORWARD_SPEED=2.0
 SLM_WATCHDOG_MS=6000         # calibrado sobre latencias reales (regimen 2-3.5s, cold-start 8s+)
 
-# Atasco y escape de deadlock (el umbral EFECTIVO se deriva, ver GRAFO-DE-CONTROL.md §9)
+# Atasco y escape de deadlock (el umbral EFECTIVO se deriva, ver informe IT.5.15.2)
 EVASION_STUCK_THRESHOLD=10
 WAYPOINT_PROGRESS_EPS_M=0.5
 MIN_PROGRESS_SPEED_MPS=0.25

@@ -22,7 +22,7 @@ Para garantizar la fiabilidad del proceso de compilación sin incurrir en alucin
 - Se define un *System Prompt* formalizado (`compiler_system.md`) que instruye al modelo sobre las dimensiones del entorno de simulación, las restricciones del espacio aéreo urbano y el formato de salida requerido.
 - Se implementa una capa de coerción y extracción de JSON (`json_extract.py`) respaldada por esquemas de validación estricta en **Pydantic** (`manifest.py`). Si la salida generada por el LLM no cumple con los tipos de datos o las restricciones cinemáticas impuestas, el compilador rechaza el plan y solicita una reevaluación antes de comprometer el vuelo.
 
-Cabe una aclaración sobre el alcance actual de la interfaz: si bien el compilador semántico descripto en esta sección está completamente implementado y expuesto como endpoint del backend, la interfaz de WebDCS en su estado presente no ofrece ningún control para invocarlo. La superficie de interacción del operador quedó acotada, por decisión de alcance del proyecto, a la edición manual de waypoints sobre la carta de navegación (IT.4.4.1) — priorizando el desarrollo del control de vuelo por sobre la interfaz de planificación asistida. La compilación desde lenguaje natural queda documentada aquí como una capacidad construida y validada, que puede exponerse en la interfaz sin cambios en el backend.
+Cabe una aclaración sobre el alcance actual de la interfaz: si bien el compilador semántico descripto en esta sección está completamente implementado y expuesto como endpoint del backend, la interfaz de WebDCS en su estado presente no ofrece ningún control para invocarlo. La superficie de interacción del operador quedó acotada, por decisión de alcance del proyecto, a la edición manual de waypoints sobre la carta de navegación (IT.4.4) — priorizando el desarrollo del control de vuelo por sobre la interfaz de planificación asistida. La compilación desde lenguaje natural queda documentada aquí como una capacidad construida y validada, que puede exponerse en la interfaz sin cambios en el backend.
 
 ## 4.3 El contrato del Manifiesto de Misión (`MissionManifest`)
 
@@ -64,6 +64,8 @@ El producto final del planificador terrestre es un archivo JSON denominado **`Mi
 En la configuración de los experimentos (cap. 10) las dos preguntas las responde la red de profundidad estimada (cap. 5 IT.5.10.6, cap. 6 IT.6.14): el p5 de la profundidad de cada sector frente a 15 m. Con `STRATEGIC_SOURCE = vlm` o `DEADLOCK_STRATEGY = deep_vlm` las responde el VLM, con prompts que se arman en vuelo y decodificación restringida (`json_schema`) a esquemas sin campo de acción (cap. 8 IT.8.5). En los dos casos el código convierte la respuesta en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.
 
 ### 4.3.1 Plan de ruta con el VLM sobre el mapa cenital
+
+NB4.1–NB4.8 reproducen el plan que voló el lote 6 a partir de las respuestas guardadas del modelo.
 
 El manifiesto une los waypoints en línea recta, y en una ciudad la recta suele cruzar una manzana. En vuelo, la cámara ve solo lo que tiene delante a 10 m de altura y el sistema debe inferir por dónde rodear un edificio cuyo final no ve; desde arriba, la misma pregunta se vuelve de reconocimiento: si una línea dibujada sobre el mapa va por la calle o por encima de los edificios. Es el tipo de juicio que un VLM pequeño resuelve mejor, porque no exige estimar distancias en primera persona. Por eso la estación terrena agrega un paso de planificación con el VLM **antes del despegue** (`src/planning/route_planner.py`): corre una sola vez por misión, la misión espera su resultado y nada de esto ocurre dentro del lazo táctico.
 
@@ -173,6 +175,8 @@ El campo `state` hace que la traza no dependa de haber previsto qué registrar: 
 **Cierre y reparación (`finalize_run`).** Es el último paso de toda corrida del runner y es idempotente: consolida DistMin en el resumen y, si el proceso murió antes de cerrar, reconstruye el CSV con las columnas `state.*` a partir del JSONL (que se vacía a disco ciclo a ciclo), repara el índice de los videos y regenera el visor. Una corrida interrumpida se cierra a mano con `python experiments/finalize_run.py <carpeta>` (o `--all <raíz>` para todas las incompletas).
 
 ### Visor de auditoría (`.viewer.html`)
+
+NB2 es su equivalente en Python: abre una corrida de la v4, recalcula desde el registro por ciclo las métricas del `summary.json` y grafica la traza de decisión, el `ObstacleField`, la capa estratégica y la trayectoria sobre el mapa.
 
 <img src="2026-1028 visor_auditoria.png"/>
 

@@ -2,7 +2,7 @@
 
 Este anexo desarrolla el diseño técnico de un cuarto brazo de comparación experimental
 (`rl`) basado en **aprendizaje por refuerzo visual (*Reinforcement Learning*, RL)**,
-propuesto como trabajo futuro en §12.4. El brazo `rl` no está implementado en el sistema
+propuesto como trabajo futuro en IT.12.4. El brazo `rl` no está implementado en el sistema
 evaluado en el capítulo 11; este anexo especifica su arquitectura, espacio de
 observaciones y acciones, función de recompensa, protocolo de entrenamiento y posición en
 el conjunto de hipótesis experimentales de la tesis, de forma que sirva como base técnica
@@ -28,7 +28,7 @@ producido por `FlowTTCEstimator` y la telemetría de guiado (`waypoint_guidance`
 produce directamente una macro-acción del mismo vocabulario que usan `fsm_node` y
 `evasive_node`. La capa estratégica del VLM sigue activa en modo jerárquico: puede inyectar sub-metas en
 coordenadas del mundo (`inject_corner`) y resolver atascos duros con el barrido `deep_vlm`,
-igual que con los brazos existentes (cap. 5, §5.10, §5.12).
+igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).
 
 Esta posición garantiza que la comparación de los cuatro brazos (`reactive`, `fsm`, `slm`,
 `rl`) mida exclusivamente **quién elige mejor la táctica**, no quién tiene mejor lógica de
@@ -83,7 +83,7 @@ real donde la calibración del flujo es incierta.
 ## A8.3 Espacio de acciones
 
 Se propone un espacio discreto de seis acciones, alineado con `PROMPT_ACTIONS` del nodo
-deliberativo (§8.3, §5.14):
+deliberativo (IT.8.3, IT.5.14):
 
 | Índice | Macro-acción | Semántica |
 |---|---|---|
@@ -95,7 +95,7 @@ deliberativo (§8.3, §5.14):
 | 5 | `FRENAR` | Detener el drone (hover) |
 
 La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
-(`action_to_command()`, §5.14): la política neuronal nunca genera velocidades directamente,
+(`action_to_command()`, IT.5.14): la política neuronal nunca genera velocidades directamente,
 lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
 saturaciones y convenciones de Body Frame que los brazos `fsm` y `slm`.
 
@@ -188,7 +188,7 @@ parcialmente por tres decisiones de diseño:
 
 La validación en escenarios no vistos durante el entrenamiento —especialmente
 `citymap_pilot`— es la prueba empírica más directa de generalización, y su resultado es
-una de las incógnitas clave del protocolo de evaluación de §A8.6.
+una de las incógnitas clave del protocolo de evaluación de IT.A8.6.
 
 ### Arquitectura de la política
 
@@ -203,14 +203,14 @@ La rama CNN extrae características visuales del frame RGB. La rama FC procesa e
 ## A8.6 Protocolo de evaluación comparativa
 
 El brazo `rl`, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
-los brazos `slm`, `fsm` y `reactive` (cap. 10, §10.2), para que la comparación sea válida:
+los brazos `slm`, `fsm` y `reactive` (cap. 10, IT.10.2), para que la comparación sea válida:
 
 ```
 K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
 ```
 
 Los escenarios propuestos para la evaluación del brazo `rl` son los seis de la
-tesis (cap. 10, §10.3.4):
+tesis (cap. 10, IT.10.3.4):
 
 | Escenario | Tier | Tipo |
 |---|---|---|
@@ -221,7 +221,7 @@ tesis (cap. 10, §10.3.4):
 | `townsim_calib_cruce_frontal` | 1 | Bloqueo frontal masivo |
 | `citysim_pilot` | 2 | Obstrucción estructural (rodeo de manzanas) |
 
-Las métricas son las mismas que §10.6 (éxito, SPL, tiempo de misión, colisiones,
+Las métricas son las mismas que IT.10.6 (éxito, SPL, tiempo de misión, colisiones,
 distancia mínima, tasa de consulta) más dos métricas específicas del brazo `rl`:
 
 - `policy_latency_ms`: tiempo de inferencia de la política neuronal (objetivo < 5 ms en
@@ -236,7 +236,7 @@ La tabla de comparación propuesta para el capítulo 11 sería:
 | Tasa de éxito — tránsito libre | ref | ref | ref | ? |
 | Tasa de éxito — obstrucción densa | ref | ref | ref | ? |
 | Ratio tiempo vs. `reactive` | 1.0× | ? | ? | ? |
-| Latencia de decisión | ~0.1 ms | ~0.2 ms | ~0.1 s por consulta del lazo lento (profundidad; cap. 6, §6.14.3) | < 5 ms (estimado) |
+| Latencia de decisión | ~0.1 ms | ~0.2 ms | ~0.1 s por consulta del lazo lento (profundidad; cap. 6, IT.6.14.3) | < 5 ms (estimado) |
 | Consumo adicional de VRAM | — | — | ~440 MiB (red de profundidad) | < 50 MB (CNN pequeña) |
 
 La hipótesis de trabajo es que el brazo `rl` superará al brazo `reactive` en escenarios de
@@ -256,7 +256,7 @@ sistema.
 La implementación del brazo `rl` tiene las siguientes dependencias sobre el trabajo ya
 realizado:
 
-- **Seis lotes completados** (cap. 10, §10.5.3): la comparación `slm` vs. `fsm` vs. `reactive`
+- **Seis lotes completados** (cap. 10, IT.10.5.3): la comparación `slm` vs. `fsm` vs. `reactive`
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.
 - **Brazo `slm` validado** con `DEADLOCK_STRATEGY=depth`: la política RL se entrenará
@@ -273,11 +273,11 @@ pip install sb3-contrib                # TQC, RecurrentPPO si se necesitan
 
 El entrenamiento puede ejecutarse en la misma máquina de desarrollo (RTX 5060, 8 GB VRAM),
 ya que el brazo `rl` no requiere inferencia de VLM durante el entrenamiento. El presupuesto
-estimado de VRAM para PPO con la arquitectura CNN propuesta (§A8.5) es < 2 GB, compatible
+estimado de VRAM para PPO con la arquitectura CNN propuesta (IT.A8.5) es < 2 GB, compatible
 con AirSim corriendo en paralelo.
 
 ---
 
-*Las referencias citadas en este anexo corresponden a las entradas del §13 del presente
+*Las referencias citadas en este anexo corresponden a las entradas del IT.13 del presente
 informe. La evaluación cuantitativa del brazo `rl` y su comparación con los tres brazos
-implementados forma parte del trabajo futuro descrito en §12.4.*
+implementados forma parte del trabajo futuro descrito en IT.12.4.*

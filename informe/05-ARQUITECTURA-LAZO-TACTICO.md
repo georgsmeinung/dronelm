@@ -1,5 +1,7 @@
 # 5. Arquitectura del lazo táctico
 
+NB3 ejecuta el código de vuelo de este capítulo sin AirSim: compila el grafo, dispara cada regla de `navigate` con un estado construido a mano y reproduce las decisiones de una corrida de la v4 desde su registro.
+
 ## 5.0 Escaneo espacial pre-vuelo (`spatial_scan`)
 
 Antes de entrar al lazo, `main.py` llama de forma bloqueante a `run_initial_scan()` (`src/agents/spatial_scan.py`). No es un nodo del `StateGraph`: se ejecuta una sola vez, entre la conexión con AirSim y la compilación del grafo. Realiza un barrido de yaw en el lugar hacia `SCAN_HEADING_COUNT` (6) rumbos equiespaciados, captura un fotograma por rumbo y envía todas las imágenes en una única consulta al VLM, que devuelve un contexto cualitativo de la escena y un rumbo recomendado.
@@ -180,7 +182,7 @@ Invoca `FlowTTCEstimator.estimate()` con el par de fotogramas y la telemetría d
 
 **Función:** `evasive_node` en `src/agents/evasive.py`. **Activación:** contacto (`imu_contact` / `blind_wall`) o peligro frontal sin FOV mayormente bloqueado (reglas 3, 7 y 7b).
 
-Compara la ocupación de los sectores laterales del `ObstacleField` y elige `EVADIR_IZQUIERDA` o `EVADIR_DERECHA` hacia el menos ocupado (a igualdad, el de mayor TTC), con velocidad de evasión agresiva (`vx` = 1.2 m/s). `action_to_command()` fija un `target_yaw` redondeado al múltiplo de 90° más cercano (`_manhattan_snap_yaw`), adecuado a la cuadrícula urbana. La maniobra se compromete en `active_maneuver` y `navigate` la continúa (regla 3).
+Compara la ocupación de los sectores laterales del `ObstacleField` y elige `EVADIR_IZQUIERDA` o `EVADIR_DERECHA` hacia el menos ocupado (a igualdad, el de mayor TTC), con velocidad de evasión agresiva (`vx` = 1.2 m/s). `action_to_command()` fija un `target_yaw` redondeado al múltiplo de 90° más cercano (`_manhattan_snap_yaw`), adecuado a la cuadrícula urbana. La evasión lateral **no se compromete**: `evasive_node` no escribe `active_maneuver`, de modo que el lado se vuelve a elegir en cada ciclo con el campo de ese ciclo y, con ocupaciones laterales parecidas, puede alternar de un ciclo al siguiente (NB3.3).
 
 ## 5.9 Giro de 90° (`GIRAR_90`)
 
@@ -224,6 +226,8 @@ El modelo responde, con decodificación restringida por esquema JSON (IT.8.2):
 
 ### 5.10.3 Ancla y sincronización
 
+NB4.9 recalcula, con el ancla y la respuesta registradas, las sub-metas de una corrida del lote 6 y obtiene los mismos puntos que se inyectaron en vuelo.
+
 Al enviar, la capa guarda un **ancla**: posición (x, y, z) y yaw del fotograma, timestamp, etiqueta del waypoint real y su distancia horizontal, la dirección de la meta (azimut y elevación respecto del eje óptico) y el sector en el que cae. Cada sector tiene así una **dirección absoluta**: rumbo = yaw del ancla + azimut del centro del sector, y elevación del centro del sector, ambos calculados con proyección *pinhole* sobre los tercios del recorte, con la focal del fotograma completo (para un fotograma de 3:2 y 90° de campo horizontal, el recorte abarca ±33.7° y los centros de los sectores quedan a ±24.0° tanto en azimut como en elevación). Cuando la respuesta llega (`get_result(request_id)`), `decide_subgoal()` la traduce y valida contra el presente:
 
 1. Descarta la respuesta si pasaron más de `VLM_STRATEGIC_MAX_AGE_S` (10 s) o si el waypoint real cambió.
@@ -249,7 +253,7 @@ Un hilo daemon con cola de entrada de tamaño 1: `request(payload)` vacía la co
 
 El capítulo 6 (IT.6.14) describe la red, su evaluación y sus limitaciones; aquí se resume su integración en la capa. La red es Depth Anything V2 Metric Outdoor Small ([Yang et al., 2024](13-REFERENCIAS.md#ref-yang-2024)), de ~25 M de parámetros, que estima la profundidad **en metros** a partir del fotograma RGB del ciclo. No es el sensor de profundidad de AirSim, que sigue fuera del lazo (IT.5.16): es lo que haría una red a bordo de un dron que solo tiene la cámara.
 
-**Del mapa de profundidad a la grilla.** Sobre el mismo recorte cuadrado central y los mismos tercios que la grilla del VLM (IT.5.10.2), se toma el **percentil 5** de la profundidad estimada de cada sector —lo más cercano, sin píxeles sueltos— y el sector es `libre` si ese valor es ≥ `DEPTH_FREE_M` (15 m, la misma distancia que la sub-meta). Es el mismo estadístico con el que se construyeron las etiquetas de referencia del banco de prueba (cap. 11, IT.11.0), de modo que la exactitud medida allí es la del juicio que usa el vuelo.
+**Del mapa de profundidad a la grilla.** Sobre el mismo recorte cuadrado central y los mismos tercios que la grilla del VLM (IT.5.10.2), se toma el **percentil 5** de la profundidad estimada de cada sector —lo más cercano, sin píxeles sueltos— y el sector es `libre` si ese valor es ≥ `DEPTH_FREE_M` (15 m, la misma distancia que la sub-meta). **A 10 m de altura, la fila de abajo no sale libre.** El borde inferior del recorte mira a −33.7° del eje óptico y, a 10 m de altura, corta el suelo a 15 m (a 8 m, a 12 m): sobre terreno plano el p5 de un sector de la fila 3 no llega a 15 m, y en la corrida de referencia de NB2.6 (`citysim_pilot`, a −10 m) los tres sectores de esa fila salen bloqueados en el 100 % de las consultas. En los tramos a nivel de calle, por lo tanto, la capa con profundidad propone rodeos por el costado o por arriba, nunca por abajo. A 30 m el borde corta el suelo a 45 m y la fila sí puede salir libre. La geometría se desarrolla en NB4.9. Es el mismo estadístico con el que se construyeron las etiquetas de referencia del banco de prueba (cap. 11, IT.11.0), de modo que la exactitud medida allí es la del juicio que usa el vuelo.
 
 **Servicio.** `make_depth_service()` envuelve la red en un `DeliberationService` con la misma interfaz que el del VLM (IT.5.10.5); los pedidos llevan el fotograma crudo, no JPEG en base64. La red corre en el hilo del servicio, nunca en el lazo: ~110 ms por consulta con la GPU compartida con Unreal, frente a ~790 ms del VLM local, y ~440 MiB de VRAM adicionales. Al crearse, el servicio carga la red con un fotograma vacío, para que la primera consulta en vuelo no pague la carga. Una falla de la red se reporta como error y el llamador cae a su camino de falla, como ante un timeout del VLM.
 
@@ -329,7 +333,7 @@ Todos los comportamientos comparten `action_to_command()` (`src/agents/action_ma
 
 `RETROCEDER` forma parte del vocabulario, pero **ningún comportamiento del brazo `slm` lo emite** (IT.5.3.4). `GANAR_ALTURA` asciende en el lugar y sin deriva lateral: una deriva alejaría el waypoint en el plano XY, la métrica que decide si el atasco se resolvió.
 
-Las duraciones de las maniobras comprometidas son: `MANEUVER_DURATION_S` (2.0 s en producción) para `EVADIR_*` y para la macro resuelta por el barrido; `ESCAPE_MANEUVER_DURATION_S` (1.6 s) para el escape vertical; `GIRAR90_DURATION_S` (1.0 s) para el giro.
+Las duraciones de las maniobras comprometidas del brazo `slm` son: `MANEUVER_DURATION_S` (2.0 s en producción) para la macro resuelta por el barrido; `ESCAPE_MANEUVER_DURATION_S` (1.6 s) para el escape vertical; `GIRAR90_DURATION_S` (1.0 s) para el giro. Las evasiones laterales de `evasive_node` no se comprometen (IT.5.8): la entrada `EVADIR_*` de `_MANEUVER_DURATION` en `graph.py` solo se usaría si la decidiera `_dispatch`, y en la configuración evaluada ninguna regla lo hace. El brazo `fsm`, en cambio, compromete `EVADIR_*`, `GANAR_ALTURA` y `PERDER_ALTURA` durante `FSM_MANEUVER_DURATION_S` (1.5 s).
 
 ## 5.15 Guiado a waypoint: `WaypointTracker`
 

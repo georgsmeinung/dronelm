@@ -16,11 +16,11 @@ reescribir la estructura cada vez.
 | 4 | [`04-PLANIFICACION-MISION-GCS.md`](04-PLANIFICACION-MISION-GCS.md) | Redactado — Planificación en tierra, GCS WebDCS, estructura de corridas `airsim-runs/` y viewer | — |
 | 5 | [`05-ARQUITECTURA-LAZO-TACTICO.md`](05-ARQUITECTURA-LAZO-TACTICO.md) | Redactado — Grafo LangGraph de cuatro nodos (`capture → perception → navigate → motor`) con dos lazos desacoplados: lazo rápido a 5 Hz (guiado, evasión por flujo óptico, `GIRAR_90`) y capa estratégica asíncrona del VLM que propone sub-metas ancladas a la pose del fotograma; `StallDetector` (dron trabado, sin progreso al waypoint); resolución de deadlock por barrido panorámico `deep_vlm` con rumbos medidos; `WaypointTracker` y sub-metas; detección de techo y `z_path_blocked`; `DroneState`; salvaguardas (sin canal de profundidad); registro de vuelo, vigilancia de congelamiento y `land_smooth` | — |
 | 6 | [`06-PERCEPCION-MONOCULAR.md`](06-PERCEPCION-MONOCULAR.md) | Redactado — Pipeline completo DIS→derotación→FOE→TTC→ObstacleField; lógica `is_blocked()`; API pública; complementariedad VLM | — |
-| 7 | [`07-ESTIMACION-TTC.md`](07-ESTIMACION-TTC.md) | Redactado — Validación experimental: etiquetas de referencia de profundidad, dataset 3735 registros, AUC ROC 0.96–0.97, umbrales por Youden; §7.5 calibración ROC del canal de ocupación (D2, parcial) y §7.6 validación de la inhibición ante giros agresivos (D3, parcial) | datos de giros agresivos y dataset ocupación |
+| 7 | [`07-ESTIMACION-TTC.md`](07-ESTIMACION-TTC.md) | Redactado — Validación experimental: etiquetas de referencia de profundidad, dataset 3735 registros, AUC ROC 0.96–0.97, umbrales por Youden; IT.7.5 calibración ROC del canal de ocupación (D2, parcial) y IT.7.6 validación de la inhibición ante giros agresivos (D3, parcial) | datos de giros agresivos y dataset ocupación |
 | 8 | [`08-DECISIONES-SLM.md`](08-DECISIONES-SLM.md) | Redactado — Selección de modelo (LFM2.5-VL-1.6B Q4_K_M GGUF, tag `lfm2.5-vl-1.6b:q4km-ctx8k` en Ollama local; antes Qwen2.5-VL-3B), decodificación restringida + parser estricto, rol del VLM como perceptor semántico anclado al mundo (grilla de 3×3 con dirección absoluta en la capa estratégica, imágenes numeradas con rumbo medido en el barrido), `action_to_command`, prompts, latencia y consulta asíncrona con caducidad, nombres de campo compactos, LoRA no adoptado | — |
 | 9 | [`09-MODOS-DE-FALLA-LLM.md`](09-MODOS-DE-FALLA-LLM.md) | Redactado — 6 modos de falla documentados (schema drift, desalineación temporal, divergencia descalibrada, state clipping en LangGraph, degradaciones sensoriales, integración del VLM), cada uno con su mecanismo de contención; metodología de diagnóstico; riesgos residuales | — |
-| 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo en 3 Tiers); §10.12 lotes con obstrucción; §10.13 banco de prueba a bordo (qué es, cómo se construyó y cómo decidió el diseño del lazo) | — |
-| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | Redactado — banco de prueba a bordo (§11.0) y corrida productiva v4: 6 lotes, 210 corridas (§11.1–§11.7), con los defectos del brazo FSM que sesgan la comparación (§11.5) | — |
+| 10 | [`10-METODOLOGIA-EXPERIMENTAL.md`](10-METODOLOGIA-EXPERIMENTAL.md) | Redactado — Metodología experimental (SLM vs FSM vs Reactivo en 3 Tiers); IT.10.12 lotes con obstrucción; IT.10.13 banco de prueba a bordo (qué es, cómo se construyó y cómo decidió el diseño del lazo) | — |
+| 11 | [`11-RESULTADOS.md`](11-RESULTADOS.md) | Redactado — banco de prueba a bordo (IT.11.0) y corrida productiva v4: 6 lotes, 210 corridas (IT.11.1–IT.11.7), con los defectos del brazo FSM que sesgan la comparación (IT.11.5) | — |
 | 12 | [`12-CONCLUSIONES.md`](12-CONCLUSIONES.md) | Redactado sobre la corrida v4 | — |
 | 13 | [`13-REFERENCIAS.md`](13-REFERENCIAS.md) | Compilado y depurado — todas las entradas citadas en el texto; enlaces y metadatos verificados contra arXiv/DataCite/Crossref o la página original (ver nota de verificación) | — |
 | — | [`anexos/A1-EXPLORACION-SLM-GGUF.md`](anexos/A1-EXPLORACION-SLM-GGUF.md) | Material de referencia — selección de modelos GGUF, decodificación estructurada y análisis de innovación | — |
@@ -29,9 +29,9 @@ reescribir la estructura cada vez.
 | — | [`anexos/A4-DECODIFICACION-RESTRINGIDA.md`](anexos/A4-DECODIFICACION-RESTRINGIDA.md) | Material de referencia — decodificación restringida, gramáticas formales, GBNF, `json_schema` y optimización del grafo de control | — |
 | — | [`anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md`](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md) | Material de referencia — fundamentos matemáticos de percepción monocular, flujo óptico y estimación de TTC | — |
 | — | [`anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md`](anexos/A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.md) | Material de referencia — configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad | — |
-| — | [`anexos/A7-MALDICION-MONOCULAR-ESTEREO.md`](anexos/A7-MALDICION-MONOCULAR-ESTEREO.md) | Material de referencia — formaliza la "maldición monocular" (ambigüedad de escala + flujo nulo cerca del FOE) como causa raíz del fracaso del control reactivo (0/10) en `townsim_ini` (§11.4) y evalúa mitigación estéreo (dos cámaras / adaptador de un sensor) frente a LiDAR, con sus propias limitaciones en follaje denso | §11.4, §12.4 |
-| — | [`anexos/A8-NAVEGACION-RL.md`](anexos/A8-NAVEGACION-RL.md) | Trabajo futuro — diseño técnico del cuarto brazo experimental `rl` (PPO visual): jerarquía VLM → RL → PX4, espacio de observación `{rgb, ttc_field, nav}`, espacio de acciones discretas (6 macro-acciones), función de recompensa con currículo, justificación PPO vs SAC/DQN, arquitectura CNN+FC, advertencia sobre generalización (caso Swift/ETH), protocolo de evaluación 4 brazos (60 corridas) | §12.4 |
-| — | [`anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.md`](anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.md) | Trabajo futuro — análisis de LeWorldModel (JEPA, ~15 M parámetros) como alternativa/complemento del SLM: trade-offs, brechas de aplicabilidad, tres opciones de integración, estimación de viabilidad en Jetson Nano/Orin Nano y protocolo de evaluación | §12.4 |
+| — | [`anexos/A7-MALDICION-MONOCULAR-ESTEREO.md`](anexos/A7-MALDICION-MONOCULAR-ESTEREO.md) | Material de referencia — formaliza la "maldición monocular" (ambigüedad de escala + flujo nulo cerca del FOE) como causa raíz del fracaso del control reactivo (0/10) en `townsim_ini` (IT.11.4) y evalúa mitigación estéreo (dos cámaras / adaptador de un sensor) frente a LiDAR, con sus propias limitaciones en follaje denso | IT.11.4, IT.12.4 |
+| — | [`anexos/A8-NAVEGACION-RL.md`](anexos/A8-NAVEGACION-RL.md) | Trabajo futuro — diseño técnico del cuarto brazo experimental `rl` (PPO visual): jerarquía VLM → RL → PX4, espacio de observación `{rgb, ttc_field, nav}`, espacio de acciones discretas (6 macro-acciones), función de recompensa con currículo, justificación PPO vs SAC/DQN, arquitectura CNN+FC, advertencia sobre generalización (caso Swift/ETH), protocolo de evaluación 4 brazos (60 corridas) | IT.12.4 |
+| — | [`anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.md`](anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.md) | Trabajo futuro — análisis de LeWorldModel (JEPA, ~15 M parámetros) como alternativa/complemento del SLM: trade-offs, brechas de aplicabilidad, tres opciones de integración, estimación de viabilidad en Jetson Nano/Orin Nano y protocolo de evaluación | IT.12.4 |
 
 ## Convenciones
 
@@ -56,10 +56,10 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
 ## Pendiente
 
 ### Datos experimentales faltantes
-- **§7.5** — Calibración ROC completa del canal de ocupación: ejecutar `experiments/analyze_occupancy.py`
+- **IT.7.5** — Calibración ROC completa del canal de ocupación: ejecutar `experiments/analyze_occupancy.py`
   sobre el dataset completo (3735 registros), construir curva ROC, derivar umbral por Youden.
   El umbral actual `OBSTACLE_OCCUPANCY_BLOCKED = 0.35` es provisorio.
-- **§7.6** — Validación de la derotación con giros agresivos (±0.3–0.5 rad/s). El dataset
+- **IT.7.6** — Validación de la derotación con giros agresivos (±0.3–0.5 rad/s). El dataset
   actual solo cubre `|yaw_rate| < 0.05` rad/s.
 
 ### Capítulos pendientes de redactar
@@ -72,17 +72,17 @@ ubicar evidencia experimental y métricas, pero no forman parte del texto citado
 - Referencias (`13-REFERENCIAS.md`): las entradas se verificaron automáticamente (arXiv/DataCite, Crossref y respuesta HTTP de la URL) y las incidencias se corrigieron a mano. No se verificaron de forma automática los autores ni las páginas de las entradas con DOI o arXiv, ni el contenido de las páginas web de prensa y mercado (`dataintelo-2025` bloquea la consulta automatizada y debe revisarse en navegador).
 
 ### Nota estructural
-- El capítulo 3 (§3.2) documenta como desvío de hecho la sustitución del pipeline de
+- El capítulo 3 (IT.3.2) documenta como desvío de hecho la sustitución del pipeline de
   fotogrametría de Buenos Aires (RealityCapture + OpenStreetMap + Blender) del plan
   aprobado por la jerarquía de tres Tiers en Unreal Engine (`MiniSim`, `TownSim`, `CitySim`).
 - El Anexo 7 parte del fracaso del control reactivo, que solo usa flujo óptico, en el corredor
-  arbolado `townsim_ini` (0/10, sin colisiones, cap. 11, §11.4): el hallazgo experimental exige una
+  arbolado `townsim_ini` (0/10, sin colisiones, cap. 11, IT.11.4): el hallazgo experimental exige una
   explicación física, no solo estadística, de por qué el sensor monocular colapsa justo en el
-  eje de avance (flujo nulo cerca del Foco de Expansión, Anexo 5 §A5.4.1) y textura auto-similar
+  eje de avance (flujo nulo cerca del Foco de Expansión, Anexo 5 IT.A5.4.1) y textura auto-similar
   del follaje. El anexo formaliza ese mecanismo como la "maldición monocular", evalúa la visión
   estereoscópica (dos cámaras o un adaptador de un solo sensor, más barato) como mitigación de
-  menor costo que LiDAR, y aclara que ningún sensor de rango es inmune al follaje denso (§A7.5) —
-  para no presentar el estéreo como una "bala de plata". Referenciado desde §11.4 y desde el
-  trabajo futuro del cap. 12 (§12.4). El plan de implementación y protocolo experimental para
+  menor costo que LiDAR, y aclara que ningún sensor de rango es inmune al follaje denso (IT.A7.5) —
+  para no presentar el estéreo como una "bala de plata". Referenciado desde IT.11.4 y desde el
+  trabajo futuro del cap. 12 (IT.12.4). El plan de implementación y protocolo experimental para
   medir esta propuesta (si se decide ejecutar) queda fuera del informe, en
   `plan-tesis/PLAN-BINOCULAR.md` y `plan-tesis/PLAN-STEREO-ADAPTER.md`.

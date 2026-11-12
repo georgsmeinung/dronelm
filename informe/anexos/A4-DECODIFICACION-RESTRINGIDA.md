@@ -2,7 +2,7 @@
 
 La incorporación de modelos de lenguaje pequeños (*Small Language Models*, SLMs) y modelos multimodales compactos (*Small Vision-Language Models*, sVLMs) en el lazo de control táctico de un vehículo aéreo no tripulado (UAV) introduce una paradoja arquitectónica fundamental: **la naturaleza probabilística y estocástica de los modelos neuronales frente a los requerimientos deterministas, de baja latencia y tolerancia cero a fallas de sintaxis propios de la robótica aérea**.
 
-En DroneLM, el VLM juzga rutas candidatas sobre el mapa cenital antes del vuelo (§4.3.1) y, como fuente alternativa del lazo lento (§5.10), describe qué sectores del fotograma o qué rumbos de un barrido son volables. Si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador falla y la consulta se pierde: en vuelo, eso significa ciclos de control sin la información que se pidió (§8.2, §9.1).
+En DroneLM, el VLM juzga rutas candidatas sobre el mapa cenital antes del vuelo (IT.4.3.1) y, como fuente alternativa del lazo lento (IT.5.10), describe qué sectores del fotograma o qué rumbos de un barrido son volables. Si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador falla y la consulta se pierde: en vuelo, eso significa ciclos de control sin la información que se pidió (IT.8.2, IT.9.1).
 
 Este anexo desarrolla los fundamentos teóricos, los mecanismos algorítmicos y el procedimiento exhaustivo de ingeniería para implementar **decodificación restringida (*constrained decoding*) basada en gramáticas formales y esquemas estrictos (`json_schema` / GBNF)**. Se demuestra cómo esta técnica erradica las alucinaciones estructurales, comprime el tiempo de inferencia hasta en un 60–80% y optimiza el grafo de control (`StateGraph`) de DroneLM mediante gramáticas acotadas dinámicas adaptadas al contexto de vuelo.
 
@@ -14,7 +14,7 @@ En la generación autorregresiva convencional, un modelo autoregresivo produce u
 
 $$y_t \sim P(y_t \mid y_{<t}, x)$$
 
-donde $x$ representa la secuencia del prompt de entrada e $y_{<t} = (y_1, \dots, y_{t-1})$ los tokens generados previamente. Para **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)), uno de los dos modelos candidatos (§8.1.2), el tamaño del vocabulario asciende a $|V| = 152\,064$ tokens; el modelo adoptado, LFM2.5-VL-1.6B, tiene un vocabulario menor, y el argumento no cambia.
+donde $x$ representa la secuencia del prompt de entrada e $y_{<t} = (y_1, \dots, y_{t-1})$ los tokens generados previamente. Para **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025)), uno de los dos modelos candidatos (IT.8.1.2), el tamaño del vocabulario asciende a $|V| = 152\,064$ tokens; el modelo adoptado, LFM2.5-VL-1.6B, tiene un vocabulario menor, y el argumento no cambia.
 
 ### A4.1.1 Modos de falla de la decodificación libre en DroneLM
 Cuando se solicita una salida JSON únicamente mediante instrucciones en el *system prompt* (*prompt engineering* puro), los modelos de 3B parámetros exhiben una tasa de incumplimiento sintáctico de entre el 20% y el 35% en condiciones de vuelo continuo ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025)). Los modos de falla de la decodificación libre incluyen:
@@ -22,7 +22,7 @@ Cuando se solicita una salida JSON únicamente mediante instrucciones en el *sys
 2. **Encapsulamiento en Markdown irregular:** uso intermitente de triples comillas invertidas (```` ```json ... ``` ````), a menudo con saltos de línea mal posicionados.
 3. **Malformación sintáctica:** comas terminales huérfanas (*trailing commas*), omisión de llaves de cierre `}` por corte de contexto o escape defectuoso de caracteres en cadenas.
 4. **Alucinación de macro-acciones fuera de lista blanca:** emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., `"girar_rapido"`, `"subir_diagonal"`, `"stop"` en lugar de `keep_going`, `evasive`, `girar_90`, `fsm`, `degraded`).
-5. **Latencia descontrolada por verbosidad:** generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido, cap. 8, §8.6) y forzando la caída al escape de respaldo.
+5. **Latencia descontrolada por verbosidad:** generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido, cap. 8, IT.8.6) y forzando la caída al escape de respaldo.
 
 ```
 Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
@@ -113,17 +113,17 @@ En sistemas avanzados, las restricciones gramaticales se combinan con **decodifi
 
 ## A4.4 Optimización del Grafo de Control (`StateGraph`) mediante Decodificación Restringida
 
-> **Relación con el sistema.** En el sistema descrito en los capítulos 5 y 8, el VLM **no emite acciones**: la consulta estratégica y el barrido usan dos esquemas descriptivos (sectores de una grilla de 3×3, `libre`/`bloqueado`; tipo y transitabilidad por imagen), detallados en el capítulo 8, §8.2.1, y validados por `src/agents/vlm_client.py`. Los esquemas, gramáticas y fragmentos de código de esta sección y de §A4.5–§A4.6 ilustran la técnica sobre un **decisor de acciones** (`DroneTacticalDecision`), que es el caso en el que la poda gramatical tiene mayor efecto; no corresponden al código del sistema.
+> **Relación con el sistema.** En el sistema descrito en los capítulos 5 y 8, el VLM **no emite acciones**: la consulta estratégica y el barrido usan dos esquemas descriptivos (sectores de una grilla de 3×3, `libre`/`bloqueado`; tipo y transitabilidad por imagen), detallados en el capítulo 8, IT.8.2.1, y validados por `src/agents/vlm_client.py`. Los esquemas, gramáticas y fragmentos de código de esta sección y de IT.A4.5–IT.A4.6 ilustran la técnica sobre un **decisor de acciones** (`DroneTacticalDecision`), que es el caso en el que la poda gramatical tiene mayor efecto; no corresponden al código del sistema.
 
 La interacción entre el modelo de lenguaje y el grafo de control táctico (`src/agents/graph.py`) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una **arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo**.
 
 ### A4.4.1 Invariantes del lazo táctico garantizados por la gramática
-En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los comportamientos de la capa de decisión (`reactive_node`, `evasive_node`, el giro de 90° y el barrido) convergen en una interfaz estricta gobernada por `action_to_command()` (§8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:
+En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los comportamientos de la capa de decisión (`reactive_node`, `evasive_node`, el giro de 90° y el barrido) convergen en una interfaz estricta gobernada por `action_to_command()` (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:
 
 <img src="a4-invariante-lazo-tactico.jpg"/>
 
 Al imponer decodificación restringida en la consulta al VLM, se garantizan tres invariantes operativas fundamentales:
-1. **Ausencia total de fallas de parseo en el lazo:** se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un **98%–100%**, como se verifica empíricamente en el informe (§8.2, §11).
+1. **Ausencia total de fallas de parseo en el lazo:** se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un **98%–100%**, como se verifica empíricamente en el informe (IT.8.2, IT.11).
 2. **Determinismo en el espacio de acción:** el campo `action` se constriñe a la enumeración canónica:
    $$\text{action} \in \{\text{"keep\_going"}, \text{"evasive"}, \text{"girar\_90"}, \text{"fsm"}, \text{"degraded"}\}$$
    Esto asegura que `action_to_command()` siempre recibe un identificador registrado, eliminando ramas de ejecución indefinidas en los actuadores del dron.
@@ -132,7 +132,7 @@ Al imponer decodificación restringida en la consulta al VLM, se garantizan tres
 ### A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo
 Una de las innovaciones de mayor impacto para optimizar el lazo deliberativo consiste en la **parametrización dinámica de la gramática en función del estado de vuelo actual**.
 
-En lugar de emplear un esquema JSON estático para todas las consultas, la consulta al VLM selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (`reason_note`, §8.5):
+En lugar de emplear un esquema JSON estático para todas las consultas, la consulta al VLM selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (`reason_note`, IT.8.5):
 
 | Motivo de Consulta (`reason_note`) | Condición de Activación en Grafo | Gramática / Restricción Dinámica del Enum `action` | Racionalidad Operativa y Beneficio |
 |---|---|---|---|
@@ -202,7 +202,7 @@ ws ::= [ \t\n]*
 
 ## A4.6 Procedimiento ilustrativo de implementación paso a paso
 
-A continuación se detalla, sobre el decisor de acciones ilustrativo de §A4.4, la metodología para integrar la decodificación restringida en un lazo como el de DroneLM, desde la definición de tipos hasta la ejecución asincrónica. El código del sistema sigue el mismo patrón con los esquemas descriptivos del capítulo 8 (`vlm_client.py`, `vlm_strategic.py`, `deep_scan.py`).
+A continuación se detalla, sobre el decisor de acciones ilustrativo de IT.A4.4, la metodología para integrar la decodificación restringida en un lazo como el de DroneLM, desde la definición de tipos hasta la ejecución asincrónica. El código del sistema sigue el mismo patrón con los esquemas descriptivos del capítulo 8 (`vlm_client.py`, `vlm_strategic.py`, `deep_scan.py`).
 
 ### Paso 1: Modelado estricto con Pydantic y generación dinámica de esquemas
 Se declaran los modelos de datos que sirven como contrato único de verdad:
@@ -244,7 +244,7 @@ def get_decision_schema(reason_note: str) -> dict:
 ```
 
 ### Paso 2: Configuración del cliente en el servicio asincrónico
-El servicio asincrónico (en el sistema, `DeliberationService`, §5.10.5) despacha la petición al backend local (Ollama, vLLM o llama-server) inyectando el esquema restringido:
+El servicio asincrónico (en el sistema, `DeliberationService`, IT.5.10.5) despacha la petición al backend local (Ollama, vLLM o llama-server) inyectando el esquema restringido:
 
 ```python
 # ejemplo ilustrativo: worker del servicio asincrónico
@@ -272,7 +272,7 @@ def _worker_loop(self):
 ```
 
 ### Paso 3: Análisis tolerante de defensa en profundidad (`_parse_decision`)
-A pesar de la garantía matemática de la decodificación restringida, las buenas prácticas de ingeniería en sistemas ciberfísicos exigen **defensa en profundidad** ante posibles migraciones de backend o errores de transporte HTTP (§8.2.2). Ejemplo ilustrativo:
+A pesar de la garantía matemática de la decodificación restringida, las buenas prácticas de ingeniería en sistemas ciberfísicos exigen **defensa en profundidad** ante posibles migraciones de backend o errores de transporte HTTP (IT.8.2.2). Ejemplo ilustrativo:
 
 ```python
 # ejemplo ilustrativo (decisor de acciones)
@@ -313,8 +313,8 @@ def _parse_decision(raw_text: str, default_action: str = "keep_going") -> tuple[
 ```
 
 ### Paso 4: Sincronización con el perro guardián y continuidad del vuelo
-En el sistema, la integración con la temporalidad del lazo de control se articula con dos reglas (cap. 8, §8.6):
-* Mientras una consulta de la capa estratégica está en vuelo, el dron **no se frena**: el lazo rápido sigue volando, lo que además preserva la traslación que el flujo óptico necesita, y la respuesta se traduce con la pose del fotograma que la originó (§5.10.3).
+En el sistema, la integración con la temporalidad del lazo de control se articula con dos reglas (cap. 8, IT.8.6):
+* Mientras una consulta de la capa estratégica está en vuelo, el dron **no se frena**: el lazo rápido sigue volando, lo que además preserva la traslación que el flujo óptico necesita, y la respuesta se traduce con la pose del fotograma que la originó (IT.5.10.3).
 * Durante un barrido, el dron espera en el lugar bajo el perro guardián `SLM_DEEP_WATCHDOG_MS` (18 s); al expirar, cae al escape vertical. Con decodificación restringida, la consulta estratégica del VLM local tarda ~0.8 s (cuatro ciclos) y el barrido de cuatro imágenes ~3 s.
 
 ---
@@ -340,5 +340,5 @@ La decodificación restringida no constituye un mero filtro estético de salida 
 
 Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se resumen en tres puntos esenciales:
 1. **Fiabilidad operacional categórica:** erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de atascos y degradaciones espurias del sistema.
-2. **Eficiencia temporal crítica:** al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 §8.6), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).
+2. **Eficiencia temporal crítica:** al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 IT.8.6), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).
 3. **Acoplamiento formal con el grafo de control:** permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.

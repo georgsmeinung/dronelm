@@ -356,7 +356,7 @@ Cada corrida emite `<stem>.summary_by_wp.csv` con ciclos consumidos, duración, 
 
 ## 10.7 Protocolo estadístico
 
-El análisis lo implementa `airsim-loop/experiments/analyze_lotes.py`, que escribe `analisis_lotes.md` y dos CSV en la raíz de los lotes:
+El análisis lo implementa `airsim-loop/experiments/analyze_lotes.py`, que escribe `analisis_lotes.md` y dos CSV en la raíz de los lotes; NB1 abre cada paso (NB1.5 desarrolla una comparación completa):
 
 ```powershell
 D:\TesisMCD\airsimenv\python.exe ..\airsim-loop\experiments\analyze_lotes.py ..\airsim-runs\produccion\v4 --family 18
@@ -646,8 +646,9 @@ Tres componentes del lazo de control salen de lo que el banco mide: la fuente de
 | `grid_prod` y `scan_prod` con el VLM de vuelo | Ninguna de las ocho preguntas pasa; las filas de arriba y de abajo salen «libres» siempre; el barrido declara todo transitable | El VLM no responde la pregunta del lazo lento; desempate por fila con margen si se usa (`VLM_SUBGOAL_TIE_DEG`, cap. 5 IT.5.10.3) |
 | `region_probe`: reconocimiento por sector en la cámara frontal | No pasa (exactitud 48–49 %; AUC 0.53–0.62) | No se pregunta «qué hay» en lugar de «a qué distancia» |
 | `seg_depth_probe`: profundidad monocular y segmentación | Profundidad: 75 % y AUC 0.83 por sector, AUC 0.87 en los barridos; segmentación: AUC 0.50 | La capa estratégica y el barrido usan la profundidad estimada (`STRATEGIC_SOURCE=depth`, `DEADLOCK_STRATEGY=depth`) |
+| Lote piloto de fuentes de la capa estratégica: 15 corridas `slm` en `citysim_pilot`, fuentes `depth`, `vlm` y `off` con 5 semillas emparejadas y regla de decisión fijada antes de correr (NB5.9) | Las tres fuentes son equivalentes en avance (mediana de 13 waypoints a los 400 s en las tres); éxitos 3/5 con `depth`, 4/5 con `vlm` y 5/5 con `off` | `depth` sobre `vlm` por latencia (~0.1 s frente a ~0.8 s) y distancia mínima. Frente a `off`, el lote no muestra ventaja de la capa estratégica, pero con 5 pares tampoco puede descartarla: el *p* de Wilcoxon no baja de 0.0625 aun con separación completa. La capa se conserva para juzgarla en la v4 con 10 semillas, en la comparación `slm:depth`–`fsm:depth` (IT.10.2.3); la v4 no incluye una celda `slm` sin capa (IT.10.10) |
 
-La tabla muestra el uso previsto del instrumento: cada pregunta que no pasa se descarta en lugar de compensarse con reglas, y cada fuente que pasa se lleva al vuelo y se juzga con los lotes. Las cifras completas están en el capítulo 11 (IT.11.0), y la descripción de la red de profundidad, en el capítulo 6 (IT.6.14).
+La tabla muestra el uso previsto del instrumento: cada pregunta que no pasa se descarta en lugar de compensarse con reglas, y cada fuente que pasa se lleva al vuelo y se juzga con los lotes. Las cifras completas están en el capítulo 11 (IT.11.0), y la descripción de la red de profundidad, en el capítulo 6 (IT.6.14). NB5 recalcula cada fila de la tabla a partir de los datos guardados del banco y del lote piloto.
 
 ### 10.13.5 Alcance y límites
 

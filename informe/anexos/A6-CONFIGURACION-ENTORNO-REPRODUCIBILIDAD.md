@@ -1,8 +1,8 @@
 # Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad
 
-La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (§10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / `llama.cpp`)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.
+La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (IT.10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / `llama.cpp`)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.
 
-Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (§10.3).
+Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (IT.10.3).
 
 ---
 
@@ -99,18 +99,18 @@ El plugin Cosys-AirSim lee su configuración al inicio desde el archivo `setting
 2. **`ClockType: "SteppableClock"`**: sincroniza el paso temporal de la simulación física con las consultas RPC de la API. A diferencia de `ScalableClock` o el reloj de pared del sistema, `SteppableClock` garantiza que cuando la GPU experimenta caídas momentáneas de tasa de cuadros por la inferencia del modelo multimodal, la física de vuelo no sufra aceleraciones destructivas ni inestabilidades de integración numérica en el estimador inercial.
 3. **`ApiServerPort: 41451`**: puerto TCP de enlace Msgpack-RPC por el que se comunican `AirSimClient` y el motor de Unreal Engine.
 4. **`CameraDefaults.CaptureSettings`**:
-   * `ImageType 0` (`Scene`): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (`FlowTTCEstimator`) y por la red de profundidad estimada de la capa estratégica (cap. 6, §6.14); con `STRATEGIC_SOURCE = vlm`, por el VLM. La cámara frontal no se declara: se usa la del vehículo por defecto (`AIRSIM_CAMERA_NAME = "0"`), con el campo visual horizontal por defecto de 90°.
-   * `ImageType 3` (`DepthPlanar`) / `ImageType 1` (`DepthPerspective`): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, §10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, §5.16).
+   * `ImageType 0` (`Scene`): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (`FlowTTCEstimator`) y por la red de profundidad estimada de la capa estratégica (cap. 6, IT.6.14); con `STRATEGIC_SOURCE = vlm`, por el VLM. La cámara frontal no se declara: se usa la del vehículo por defecto (`AIRSIM_CAMERA_NAME = "0"`), con el campo visual horizontal por defecto de 90°.
+   * `ImageType 3` (`DepthPlanar`) / `ImageType 1` (`DepthPerspective`): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, IT.10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, IT.5.16).
    * `ImageType 5` (`Segmentation`): canal de segmentación semántica de mallas para auditoría visual.
    * `Width: 1080, Height: 720`: resolución nativa del render target frontal.
-5. **`Vehicles.Drone1.Cameras.FollowCam`**: cámara externa de seguimiento, 4 m detrás, 2.5 m a la izquierda y 1.5 m arriba del dron, inclinada 15° hacia abajo, sin estabilización. Solo la usa la auditoría: produce el video `.follow.webm` que el visor sincroniza con el frontal (cap. 4, §4.4). Ningún componente del lazo la lee; si no está declarada, la corrida se graba sin ese video.
+5. **`Vehicles.Drone1.Cameras.FollowCam`**: cámara externa de seguimiento, 4 m detrás, 2.5 m a la izquierda y 1.5 m arriba del dron, inclinada 15° hacia abajo, sin estabilización. Solo la usa la auditoría: produce el video `.follow.webm` que el visor sincroniza con el frontal (cap. 4, IT.4.4). Ningún componente del lazo la lee; si no está declarada, la corrida se graba sin ese video.
 6. **`SubWindows`**: dos ventanas secundarias en el visor de Unreal Engine, con la cámara de seguimiento y la frontal en tiempo real, para supervisar las corridas.
 
 ---
 
 ## A6.2 Perfil de escalabilidad gráfica de Unreal Engine 5.5 y preservación de gradientes
 
-En estaciones de trabajo con una única GPU de consumo (NVIDIA GeForce RTX 5060 de 8 GB de VRAM), la simulación gráfica fotorrealista compite directamente por la memoria de video con los tensores del modelo de lenguaje (§8.1). Para permitir la coexistencia de ambos procesos sin provocar desbordamientos (*Out-Of-Memory*), es imperativo optimizar el rendimiento gráfico del motor.
+En estaciones de trabajo con una única GPU de consumo (NVIDIA GeForce RTX 5060 de 8 GB de VRAM), la simulación gráfica fotorrealista compite directamente por la memoria de video con los tensores del modelo de lenguaje (IT.8.1). Para permitir la coexistencia de ambos procesos sin provocar desbordamientos (*Out-Of-Memory*), es imperativo optimizar el rendimiento gráfico del motor.
 
 Sin embargo, reducir indiscriminadamente la calidad gráfica introduce un problema crítico en la visión artificial: **los algoritmos de flujo óptico denso (Farnebäck y DIS) requieren textura visual y gradientes de intensidad espacial para calcular correspondencias entre fotogramas**. Si se desactivan las sombras o se aplica un desenfoque excesivo en las texturas de los edificios y el suelo, el flujo óptico decae por debajo del piso de ruido (`0.35 px`), dejando ciego al estimador de colisión.
 
@@ -170,31 +170,31 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `LOCAL_LLM_MODEL_NAME`| `"lfm2.5-vl-1.6b:q4km-ctx8k"` | Modelo de vuelo: tag local de Ollama creado desde `hf.co/LiquidAI/LFM2.5-VL-1.6B-GGUF:Q4_K_M` con `num_ctx=8192` (~1.6 GB de VRAM; con el contexto por defecto, 3.1 GB). No usar la variante `-Extract` (completa el esquema sin mirar la imagen) ni la conversión MLX (respuesta vacía con JSON restringido y *logprobs*). |
 | `VLM_IMAGE_MAX_SIZE` | `384` | Lado mayor de la imagen de la capa estratégica. Limita los tokens visuales y, con ellos, la latencia. |
 | `DEEP_SCAN_IMAGE_MAX_SIZE` | `256` | Lado mayor de cada imagen del barrido panorámico (varias imágenes por consulta). |
-| `VLM_USE_JSON_SCHEMA` | `true` | Decodificación restringida por esquema JSON (Anexo 4; cap. 8, §8.2). |
+| `VLM_USE_JSON_SCHEMA` | `true` | Decodificación restringida por esquema JSON (Anexo 4; cap. 8, IT.8.2). |
 | `SLM_HTTP_TIMEOUT_S` / `SLM_DEEP_HTTP_TIMEOUT_S` | `15.0` / `20.0` | Timeout del cliente HTTP en la consulta estratégica y en el barrido. |
 | `SLM_DEEP_WATCHDOG_MS` | `18000` | Watchdog del barrido panorámico; debe ser menor que `SLM_DEEP_HTTP_TIMEOUT_S` para que gane siempre al corte HTTP. |
-| `DEADLOCK_STRATEGY` | `"depth"` | Resolución de atascos: `"depth"` (barrido juzgado por la profundidad estimada, cap. 5 §5.12), `"deep_vlm"` (barrido + VLM; ablación) o `"blind"` (escape vertical sin barrido). Cualquier otro valor aborta el arranque. |
-| `STRATEGIC_SOURCE` | `"depth"` | Fuente de la capa estratégica: `"depth"` (profundidad monocular estimada, cap. 5 §5.10.6), `"vlm"` (grilla del VLM) u `"off"` (sin capa). Con `depth`/`depth` el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 5 §5.10.7; cap. 11 §11.0). |
+| `DEADLOCK_STRATEGY` | `"depth"` | Resolución de atascos: `"depth"` (barrido juzgado por la profundidad estimada, cap. 5 IT.5.12), `"deep_vlm"` (barrido + VLM; ablación) o `"blind"` (escape vertical sin barrido). Cualquier otro valor aborta el arranque. |
+| `STRATEGIC_SOURCE` | `"depth"` | Fuente de la capa estratégica: `"depth"` (profundidad monocular estimada, cap. 5 IT.5.10.6), `"vlm"` (grilla del VLM) u `"off"` (sin capa). Con `depth`/`depth` el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 5 IT.5.10.7; cap. 11 IT.11.0). |
 | `DEPTH_MODEL` | `depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf` | Red de profundidad métrica (~25 M parámetros, ~110 ms con la GPU compartida, ~440 MiB de VRAM). Se descarga de Hugging Face la primera vez. |
 | `DEPTH_FREE_M` | `15.0` | Un sector (o un rumbo del barrido) es libre si el percentil 5 de su profundidad estimada es ≥ este valor; igual a `VLM_SUBGOAL_DIST_M`. |
 | `DEPTH_STRATEGIC_PERIOD_S` | `1.0` | Período mínimo entre consultas de la capa estratégica con la profundidad (con el VLM rige `VLM_STRATEGIC_PERIOD_S`, 3 s). |
 | `VLM_STRATEGIC_ENABLED` | `true` | Habilita la capa estratégica cuando su fuente es el VLM; con `STRATEGIC_SOURCE = depth` no se consulta (para quitar la capa se usa `STRATEGIC_SOURCE = off`). |
 | `VLM_STRATEGIC_PERIOD_S` / `VLM_STRATEGIC_MAX_AGE_S` | `3.0` / `10.0` | Período mínimo entre consultas estratégicas y edad máxima de una respuesta para aplicarla. |
-| `CAMERA_HFOV_DEG` | `90.0` | Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, §5.10.3). |
+| `CAMERA_HFOV_DEG` | `90.0` | Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, IT.5.10.3). |
 | `VLM_SUBGOAL_DIST_M` / `VLM_SUBGOAL_MIN_AHEAD_M` | `15.0` / `4.0` | Distancia máxima de la sub-meta desde el ancla (nunca más lejos que el waypoint real) y distancia mínima por delante del dron para aplicarla. |
 | `VLM_MAX_DZ_M` / `VLM_SUBGOAL_MIN_ALT_M` | `4.0` / `6.0` | Cambio máximo de altitud de una sub-meta (filas 1 y 3 de la grilla) y altitud mínima de una sub-meta. |
-| `VLM_SUBGOAL_TIE_DEG` | `10.0` | Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio > arriba > abajo) (cap. 5, §5.10.3). |
+| `VLM_SUBGOAL_TIE_DEG` | `10.0` | Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio > arriba > abajo) (cap. 5, IT.5.10.3). |
 | `VLM_NEAR_WP_M` | `8.0` | A menos de esta distancia horizontal del waypoint real no se consulta al VLM ni se barre. |
-| `SCAN_FAILED_SECTOR_DEG` / `SCAN_REPEAT_RADIUS_M` / `SCAN_HISTORY_MAX` | `45.0` / `10.0` / `12` | Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, §5.12). |
-| `ROUTE_PLAN_MODE` | `vlm` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`vlm`) o manifiesto tal cual (`off`). Activado con el juez por parches (AUC 0.81 en el banco, cap. 4 §4.3.1); requiere un mapa registrado con el mundo (`citysim_ortho.png`, `townsim_ortho.png`). El lote de MiniSim, sin obstáculos, vuela con `--route-plan off` (cap. 10, §10.5.3). |
-| `ROUTE_JUDGE` / `ROUTE_PATCH_STEP_M` / `ROUTE_PATCH_M` / `ROUTE_PATCH_CONTEXT_M` | `patches` / `8.0` / `16.0` / `48.0` | Juicio de cada candidata: parches cada 8 m, de 16 m con 48 m de contexto, clasificados por el VLM; la candidata se puntúa con la probabilidad media de «calle» (cap. 4 §4.3.1). |
-| `ROUTE_RENDER` | `corridor` | Dibujo de cada candidata para el planificador: `corridor` (pasillo con recorte propio, rotado y con el resto oscurecido) o `line` (línea roja sobre el recorte común del tramo, norte arriba). Cada uno tiene su prompt (cap. 4 §4.3.1). |
+| `SCAN_FAILED_SECTOR_DEG` / `SCAN_REPEAT_RADIUS_M` / `SCAN_HISTORY_MAX` | `45.0` / `10.0` / `12` | Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, IT.5.12). |
+| `ROUTE_PLAN_MODE` | `vlm` | Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (`vlm`) o manifiesto tal cual (`off`). Activado con el juez por parches (AUC 0.81 en el banco, cap. 4 IT.4.3.1); requiere un mapa registrado con el mundo (`citysim_ortho.png`, `townsim_ortho.png`). El lote de MiniSim, sin obstáculos, vuela con `--route-plan off` (cap. 10, IT.10.5.3). |
+| `ROUTE_JUDGE` / `ROUTE_PATCH_STEP_M` / `ROUTE_PATCH_M` / `ROUTE_PATCH_CONTEXT_M` | `patches` / `8.0` / `16.0` / `48.0` | Juicio de cada candidata: parches cada 8 m, de 16 m con 48 m de contexto, clasificados por el VLM; la candidata se puntúa con la probabilidad media de «calle» (cap. 4 IT.4.3.1). |
+| `ROUTE_RENDER` | `corridor` | Dibujo de cada candidata para el planificador: `corridor` (pasillo con recorte propio, rotado y con el resto oscurecido) o `line` (línea roja sobre el recorte común del tramo, norte arriba). Cada uno tiene su prompt (cap. 4 IT.4.3.1). |
 | `ROUTE_CORRIDOR_M` | `10.0` | Ancho del pasillo dibujado (m). |
 | `ROUTE_LLM_MODEL_NAME` | `"lfm2.5-vl-1.6b:q4km-ctx8k"` | Modelo del planificador de ruta, en el mismo servidor que el de vuelo; si falta, se usa `LOCAL_LLM_MODEL_NAME`. Necesita JSON forzado y *logprobs* en la misma consulta (la versión GGUF de LFM los da; la MLX no). |
 | `ROUTE_DETOURS_M` / `ROUTE_MIN_SIDE_M` / `ROUTE_MARGIN_M` | `25,50` / `10.0` / `25.0` | Rutas candidatas por tramo: desvíos paralelos a cada lado, lado mínimo de una ruta en L y margen del recorte del mapa. |
 | `ROUTE_IMAGE_PX` / `ROUTE_TIE_EPS` | `672` / `0.05` | Tamaño de la imagen del mapa que ve el modelo y diferencia de probabilidad por debajo de la cual se elige la candidata más corta. |
-| `VLM_STUCK_QUERY_CYCLES` | `15` | Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, §5.10.1). |
-| `VLM_MAX_TOKENS_STRATEGIC` / `VLM_MAX_TOKENS_DEEP` | `384` / `512` | Tope de tokens de la respuesta por modo; una respuesta cortada por el tope se reporta como `respuesta_truncada` (cap. 8, §8.5.4). |
+| `VLM_STUCK_QUERY_CYCLES` | `15` | Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, IT.5.10.1). |
+| `VLM_MAX_TOKENS_STRATEGIC` / `VLM_MAX_TOKENS_DEEP` | `384` / `512` | Tope de tokens de la respuesta por modo; una respuesta cortada por el tope se reporta como `respuesta_truncada` (cap. 8, IT.8.5.4). |
 | `CEILING_SIDEWAYS_STUCK_M` | `0.03` | Desplazamiento horizontal por ciclo por debajo del cual, con avance ordenado, el dron está trabado de costado y no se cuenta para detectar techo. |
 | `VLM_STRATEGIC_MAX_GOAL_OFF_DEG` | `40.0` | Azimut máximo de la meta para consultar; en la práctica rige el recorte cuadrado (±33.7° en un fotograma de 3:2). |
 
@@ -210,7 +210,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
 | `FLOW_ALGORITHM` | `"dis"` | Backend de flujo óptico: `"dis"` (Dense Inverse Search, rápido) o `"farneback"`. |
-| `FLOW_DOWNSCALE_WIDTH`| `640` | Ancho al que se reduce el fotograma antes de calcular el flujo óptico ($640 \times 427\text{ px}$); el default del código es 320 (cap. 6, §6.3). |
+| `FLOW_DOWNSCALE_WIDTH`| `640` | Ancho al que se reduce el fotograma antes de calcular el flujo óptico ($640 \times 427\text{ px}$); el default del código es 320 (cap. 6, IT.6.3). |
 | `CAMERA_FX` / `CAMERA_FY`| `554.0` | Distancia focal calibrada de la cámara en píxeles. |
 | `FLOW_NOISE_FLOOR_PX` | `0.35` | Magnitud mínima en píxeles para considerar que un vector es señal física y no ruido numérico. |
 | `FOE_OUTLIER_ANGLE_RAD`| `0.35` | Umbral angular en radianes ($\approx 20^\circ$) para el filtro de consistencia *RANSAC-lite* del FOE. |
@@ -220,7 +220,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 ### 5. Umbrales del `ObstacleField`
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
-| `OBSTACLE_OCCUPANCY_BLOCKED`| `0.011` | Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden (AUC 0.87; cap. 7, §7.5); un valor de 0.35 dejaría el canal inactivo. |
+| `OBSTACLE_OCCUPANCY_BLOCKED`| `0.011` | Umbral de ocupación para declarar bloqueo. Calibrado por ROC/Youden (AUC 0.87; cap. 7, IT.7.5); un valor de 0.35 dejaría el canal inactivo. |
 | `OBSTACLE_TTC_BLOCKED_S` | `2.5` | Umbral temporal de TTC (en segundos) por debajo del cual una celda se considera en colisión inminente. |
 | `OBSTACLE_MIN_CONFIDENCE` | `0.15` | Piso de píxeles válidos para que una celda participe en la votación. |
 | `OBSTACLE_MIN_CONFIDENCE_TTC`| `0.35` | Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación. |
@@ -228,7 +228,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 ### 5b. Detección de atasco, escape y cierre de misión
 | Variable | Valor nominal | Justificación y efecto |
 |---|---|---|
-| `STOPPED_DELIBERATIVE_CYCLES` / `STOPPED_MIN_CMD_MPS` | `10` / `0.30` | Ciclos con avance comandado (≥ 0.30 m/s) sin movimiento real antes de declarar deadlock por dron trabado (cap. 5, §5.3.1). |
+| `STOPPED_DELIBERATIVE_CYCLES` / `STOPPED_MIN_CMD_MPS` | `10` / `0.30` | Ciclos con avance comandado (≥ 0.30 m/s) sin movimiento real antes de declarar deadlock por dron trabado (cap. 5, IT.5.3.1). |
 | `WP_NO_PROGRESS_MIN_M` / `WP_NO_PROGRESS_THRESHOLD` | `2.0` / `50` | Mejora mínima de la distancia al objetivo actual y ciclos (10 s) sin ella antes de declarar deadlock. |
 | `OPTICAL_MIN_ALT_M` | `4.5` | Piso óptico: por debajo, el flujo no es válido y no se cuentan señales de atasco. |
 | `MAX_ESCAPE_ALT_M` | `30.0` | Por encima de esta altitud, el escape determinista es `GIRAR_90` en lugar de `GANAR_ALTURA`. |
@@ -237,19 +237,19 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `CORNER_OFFSET_M` | `15.0` | Distancia del desvío determinista del brazo `fsm`. El barrido usa `VLM_SUBGOAL_DIST_M`, igual que la capa estratégica. |
 | `SUBGOAL_DEDUP_M` | `10.0` | Una sub-meta a menos de esta distancia de la pendiente se ignora. |
 | `MANEUVER_DURATION_S` / `ESCAPE_MANEUVER_DURATION_S` / `GIRAR90_DURATION_S` | `2.0` / `1.6` / `1.0` | Duración de las maniobras comprometidas: evasión lateral, escape vertical y giro de 90°. |
-| `EVASION_STUCK_THRESHOLD` / `STUCK_HARD_FACTOR` / `MAX_CONSECUTIVE_ESCAPES` | `10` / `1.5` / `2` | Umbrales de atasco y de escape del brazo `fsm` (cap. 5, §5.11, §5.15.2). |
-| `CEILING_DETECT_CYCLES` / `CEILING_DETECT_DZ_M` / `CEILING_MARGIN_M` / `CEILING_SAFE_GAP_M` / `CEILING_RELEASE_M` | `10` / `0.15` / `0.8` / `3.0` / `15.0` | Detección de techo del guiado (cap. 5, §5.15.3). |
-| `GOV_ENABLED` | `true` | Gobernador de velocidad (cap. 5, §5.13). |
-| `FREEZE_CYCLES` / `FREEZE_RECOVERY` | `25` / `abort` | Ciclos con estado físico idéntico para declarar `physics_locked`, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, §5.19). |
+| `EVASION_STUCK_THRESHOLD` / `STUCK_HARD_FACTOR` / `MAX_CONSECUTIVE_ESCAPES` | `10` / `1.5` / `2` | Umbrales de atasco y de escape del brazo `fsm` (cap. 5, IT.5.11, IT.5.15.2). |
+| `CEILING_DETECT_CYCLES` / `CEILING_DETECT_DZ_M` / `CEILING_MARGIN_M` / `CEILING_SAFE_GAP_M` / `CEILING_RELEASE_M` | `10` / `0.15` / `0.8` / `3.0` / `15.0` | Detección de techo del guiado (cap. 5, IT.5.15.3). |
+| `GOV_ENABLED` | `true` | Gobernador de velocidad (cap. 5, IT.5.13). |
+| `FREEZE_CYCLES` / `FREEZE_RECOVERY` | `25` / `abort` | Ciclos con estado físico idéntico para declarar `physics_locked`, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, IT.5.19). |
 | `LAND_DESCENT_SPEED_MPS` | `0.5` | Velocidad del descenso de `land_smooth()` al final de la misión. |
-| `DISTMIN_TRACK_ENABLED` / `DISTMIN_TRACK_PERIOD_S` | `true` / `1.0` | Hilo de auditoría de DistMin y período de muestreo de la profundidad (cap. 10, §10.6.1). |
-| `TAKEOFF_VERTICAL` / `TAKEOFF_ALT_TOL_M` | `true` / `1.0` | Despegue vertical hasta la altitud del primer objetivo antes de avanzar (cap. 5, §5.15). |
-| `FLOW_HOLDOVER_MAX_FRAMES` / `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` | `3` / `5.0` | Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, §6.12). |
+| `DISTMIN_TRACK_ENABLED` / `DISTMIN_TRACK_PERIOD_S` | `true` / `1.0` | Hilo de auditoría de DistMin y período de muestreo de la profundidad (cap. 10, IT.10.6.1). |
+| `TAKEOFF_VERTICAL` / `TAKEOFF_ALT_TOL_M` | `true` / `1.0` | Despegue vertical hasta la altitud del primer objetivo antes de avanzar (cap. 5, IT.5.15). |
+| `FLOW_HOLDOVER_MAX_FRAMES` / `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` | `3` / `5.0` | Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, IT.6.12). |
 
 ### 6. Grabación de Video y Viewport
 | Variable | Valor nominal | Default si ausente | Justificación y efecto |
 |---|---|---|---|
-| `FLIGHT_VIDEO_SCALE` / `FLIGHT_VIDEO_QUEUE_MAX` | `0.6` / `300` | `0.6` / `300` | Escala del video respecto del cuadro de la cámara y tamaño de la cola del hilo codificador (la codificación corre fuera del lazo de control, cap. 5, §5.18). |
+| `FLIGHT_VIDEO_SCALE` / `FLIGHT_VIDEO_QUEUE_MAX` | `0.6` / `300` | `0.6` / `300` | Escala del video respecto del cuadro de la cámara y tamaño de la cola del hilo codificador (la codificación corre fuera del lazo de control, cap. 5, IT.5.18). |
 | `FLIGHT_RECORD_VIDEO` | `true` | `false` | Habilita la grabación del video de auditoría `.webm` (VP8) por corrida. Desactivar en lotes *headless* elimina la escritura de un frame por ciclo a disco, reduciendo la carga de CPU en ≈ 30 %. |
 | `FLIGHT_RECORD_VIEWPORT` | `false` | `false` | Activa el modo *split-screen*: el video resultante tiene doble ancho horizontal, con la cámara del drone a la izquierda y el viewport de Unreal Engine Editor a la derecha. Requiere las dependencias adicionales `mss` y `pywin32`. Si alguna de las dos no está instalada, o la ventana de UE no es visible en pantalla, el panel derecho se rellena con negro y la grabación continúa sin interrupción (degradación silenciosa). Debe desactivarse en corridas *batch* o *headless* donde el editor no está en pantalla. |
 | `VIEWPORT_WINDOW_TITLE` | `"UnrealEditor"` | `"UnrealEditor"` | Subcadena del título de la ventana de Unreal Engine que utiliza `ViewportCapture` para localizar la ventana. La comparación ignora mayúsculas y minúsculas. Se selecciona la primera ventana visible que contenga la subcadena y tenga dimensiones superiores a $100 \times 100\text{ px}$. En UE5 el título suele seguir el patrón `"UnrealEditor – <NombreProyecto>"`. |
@@ -259,7 +259,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 
 ## A6.4 Estructura del repositorio y artefactos de corrida (`airsim-runs/`)
 
-Cada vuelo ejecutado en simulación genera una carpeta autocontenida que ninguna otra corrida sobrescribe. Desde WebDCS (`main.py`), la carpeta es `airsim-runs/<MISSION_ID>-<TIMESTAMP>/`; el runner experimental la ubica en la jerarquía del diseño, `<lote>/<escenario>/<brazo>/<estrategia>/seed_<N>_<timestamp>/` (cap. 10, §10.9.1). La lista completa de archivos y campos está en el capítulo 4 (§4.4); los principales son:
+Cada vuelo ejecutado en simulación genera una carpeta autocontenida que ninguna otra corrida sobrescribe. Desde WebDCS (`main.py`), la carpeta es `airsim-runs/<MISSION_ID>-<TIMESTAMP>/`; el runner experimental la ubica en la jerarquía del diseño, `<lote>/<escenario>/<brazo>/<estrategia>/seed_<N>_<timestamp>/` (cap. 10, IT.10.9.1). La lista completa de archivos y campos está en el capítulo 4 (IT.4.4); los principales son:
 
 ```
 seed_<N>_<ts>/
@@ -307,10 +307,10 @@ Contiene la identificación de la corrida y sus indicadores. Ejemplo de una corr
 }
 ```
 
-*Nota sobre trazabilidad:* el campo `code_version` almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en `airsim-loop/`, `config/`, `airsim-plan/` o `experiments/`, lleva el sufijo `-dirty` (`src/logging/code_version.py`): el hash solo identifica el código con el árbol limpio. El runner no arranca un lote con el árbol sucio, y una corrida `-dirty` no entra al análisis (cap. 10, §10.9.3 y §10.12.2).
+*Nota sobre trazabilidad:* el campo `code_version` almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en `airsim-loop/`, `config/`, `airsim-plan/` o `experiments/`, lleva el sufijo `-dirty` (`src/logging/code_version.py`): el hash solo identifica el código con el árbol limpio. El runner no arranca un lote con el árbol sucio, y una corrida `-dirty` no entra al análisis (cap. 10, IT.10.9.3 y IT.10.12.2).
 
 ### A6.4.2 Estructura de la traza ciclo a ciclo (`.jsonl`)
-Cada línea del archivo es un registro JSON por ciclo del lazo (5 Hz), escrito por `FlightLogger`. Los campos principales son `t` y `cycle`; `arm`, `scenario` y `seed`; posición NED, velocidad y actitud; `route` y `action`; el `obstacle_field` completo por sector; latencias del ciclo; el bloque `slm` en los ciclos con una consulta del lazo lento; colisión; objetivo activo y distancia; y `state`, el `DroneState` completo serializado (cap. 4, §4.4).
+Cada línea del archivo es un registro JSON por ciclo del lazo (5 Hz), escrito por `FlightLogger`. Los campos principales son `t` y `cycle`; `arm`, `scenario` y `seed`; posición NED, velocidad y actitud; `route` y `action`; el `obstacle_field` completo por sector; latencias del ciclo; el bloque `slm` en los ciclos con una consulta del lazo lento; colisión; objetivo activo y distancia; y `state`, el `DroneState` completo serializado (cap. 4, IT.4.4).
 
 ---
 
@@ -372,7 +372,7 @@ Cuatro waypoints, ~420 m, sobre el perímetro de una manzana de `CitySim`. La al
 
 ### A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (`townsim_ini.json`)
 
-Ocho waypoints, ~340 m. Incluye `WP_0b_SOBRE_PLAZA` (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y `WP_1b_PASO_MOLDURA` (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, §10.3.2.
+Ocho waypoints, ~340 m. Incluye `WP_0b_SOBRE_PLAZA` (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y `WP_1b_PASO_MOLDURA` (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, IT.10.3.2.
 
 ```json
 {
@@ -409,7 +409,7 @@ Para replicar de forma independiente los experimentos documentados en el capítu
 3. Verificar la disponibilidad del plugin binario de Cosys-AirSim en el proyecto de Unreal Engine 5.5 correspondiente (MiniSim, TownSim o CitySim).
 
 ### Paso 2: Instalación del archivo `settings.json`
-Guardar el contenido de §A6.1 como `settings.json` en la carpeta `Documents\AirSim` del usuario (o en `OneDrive\Documents\AirSim` si Documentos está redirigida), antes de abrir el proyecto de Unreal Engine.
+Guardar el contenido de IT.A6.1 como `settings.json` en la carpeta `Documents\AirSim` del usuario (o en `OneDrive\Documents\AirSim` si Documentos está redirigida), antes de abrir el proyecto de Unreal Engine.
 
 ### Paso 3: Inicialización del servidor de modelos (Ollama, misma GPU)
 1. Ejecutar `startOllama.ps1` (raíz `D:\TesisMCD`, fuera del repositorio). El script lee el modelo de `config/.env`; reinicia Ollama con `OLLAMA_MODELS` apuntando a la carpeta de modelos de la aplicación, `OLLAMA_KEEP_ALIVE=-1` (el modelo no se descarga entre corridas) y `OLLAMA_CONTEXT_LENGTH=8192`; cierra los `llama-server` huérfanos (en Windows sobreviven al cierre de `ollama.exe` y retienen VRAM); descarga el GGUF base y crea el tag de 8 k si faltan, y precarga el modelo de vuelo:
@@ -428,7 +428,7 @@ Guardar el contenido de §A6.1 como `settings.json` en la carpeta `Documents\Air
 3. Constatar que en la esquina superior aparezca la notificación de conexión de AirSim en el puerto 41451.
 
 ### Paso 5: Ejecución de los lotes (*Runner*)
-Los seis lotes del diseño experimental (cap. 10, §10.5.3) se lanzan con los scripts versionados en `experiments/`, que fijan escenario, celdas, semillas, presupuesto (1200 s / 6000 ciclos) y modo del plan de ruta, y usan el intérprete de `AIRSIM_ENV_DIR`:
+Los seis lotes del diseño experimental (cap. 10, IT.10.5.3) se lanzan con los scripts versionados en `experiments/`, que fijan escenario, celdas, semillas, presupuesto (1200 s / 6000 ciclos) y modo del plan de ruta, y usan el intérprete de `AIRSIM_ENV_DIR`:
 ```powershell
 cd experiments
 .\run_lote3_townsim_ini.ps1 -Pilot    # piloto de validación
@@ -445,11 +445,11 @@ python experiments/runner.py \
     --route-plan vlm \
     --out-dir ../airsim-runs/produccion/v4/lote3_townsim_ini
 ```
-Las celdas se alternan dentro de cada semilla, con el orden rotado por semilla. Sin `--deadlock-strategies` ni `--strategic-sources` se usan los valores de `config/.env` (`depth`/`depth`). `--route-plan vlm` planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (TownSim o CitySim). Cada corrida se cierra con `finalize_run` (cap. 4, §4.4); una corrida interrumpida se cierra con `python experiments/finalize_run.py --all <raíz>`.
+Las celdas se alternan dentro de cada semilla, con el orden rotado por semilla. Sin `--deadlock-strategies` ni `--strategic-sources` se usan los valores de `config/.env` (`depth`/`depth`). `--route-plan vlm` planifica la ruta con el VLM una vez por escenario y requiere el servidor de Ollama y un mapa registrado (TownSim o CitySim). Cada corrida se cierra con `finalize_run` (cap. 4, IT.4.4); una corrida interrumpida se cierra con `python experiments/finalize_run.py --all <raíz>`.
 
 ### Paso 6: Procesamiento de datos y consolidación estadística
 Una vez finalizados los lotes, generar las tablas estadísticas:
 ```powershell
 D:\TesisMCD\airsimenv\python.exe ..\airsim-loop\experiments\analyze_lotes.py ..\airsim-runs\produccion\v4 --family 18
 ```
-El script escribe `analisis_lotes.md` y dos CSV en la raíz de los lotes: por celda, éxito con IC de Wilson, SPL, tiempo de las misiones exitosas y distancia mínima; y las 18 comparaciones primarias con delta de Cliff, IC *bootstrap* y prueba de permutación exacta sobre rangos, con corrección de Bonferroni (cap. 10, §10.7).
+El script escribe `analisis_lotes.md` y dos CSV en la raíz de los lotes: por celda, éxito con IC de Wilson, SPL, tiempo de las misiones exitosas y distancia mínima; y las 18 comparaciones primarias con delta de Cliff, IC *bootstrap* y prueba de permutación exacta sobre rangos, con corrección de Bonferroni (cap. 10, IT.10.7).
