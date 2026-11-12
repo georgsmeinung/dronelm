@@ -56,6 +56,7 @@
           <li><a href="#progreso">Progreso de Tesis</a></li>
           <li><a href="#stack">Stack Tecnológico</a></li>
           <li><a href="#evaluacion">Evaluación y Calibración</a></li>
+          <li><a href="#cuadernos">Cuadernos de Cálculo</a></li>
           <li><a href="#instalacion">Instalación y Uso</a></li>
           <li><a href="#informe">Informe de Tesis</a></li>
         </ul>
@@ -79,8 +80,8 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Versión: 2026-10-27</span>
-          <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan_tesis/plan-tesis.md"
+          <span class="badge-pill badge-teal">Versión: 2026-11-12</span>
+          <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan-tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
           <span class="badge-pill badge-green">TTC AUC: 0.96–0.97</span>
@@ -90,8 +91,12 @@
 
       <!-- Últimas actualizaciones -->
       <section id="actualizaciones">
-        <h2>Actualizaciones Recientes (2026-10-27)</h2>
+        <h2>Actualizaciones Recientes (2026-11-12)</h2>
         <div class="card-grid">
+          <div class="card">
+            <h4>Cuadernos de Cálculo NB1–NB5</h4>
+            <p>Cinco cuadernos de Jupyter reproducen los cálculos del informe sin AirSim, Ollama ni GPU: el análisis estadístico de la corrida v4 (NB1), la auditoría de la telemetría de una corrida (NB2), el grafo de control con el código de vuelo (NB3), la planificación con el VLM y la geometría de las sub-metas (NB4) y el banco de prueba con las decisiones de diseño que salen de él (NB5). El informe los cita como <code>NBk.n</code> y a sus propias secciones como <code>IT.x</code>. Ver <a href="#cuadernos">Cuadernos de Cálculo</a>.</p>
+          </div>
           <div class="card">
             <h4>Corrida Productiva v4: 210 Corridas</h4>
             <p>Seis lotes, uno por escenario (MiniSim, TownSim y CitySim; tres de control y tres con obstrucción), 10 semillas por celda, techo de 1200 s por corrida. Celdas <code>slm:depth</code>, <code>fsm:depth</code> y <code>reactive</code>, más <code>fsm:blind</code> en los lotes con obstrucción. La bandera de colisión de AirSim no se activó, pero no detecta follaje ni apoyos: la seguridad queda sin medir. Análisis con <code>analyze_lotes.py</code>: permutación exacta sobre rangos, delta de Cliff con IC bootstrap y Bonferroni sobre 18 comparaciones (capítulos 11 y 12 del informe).</p>
@@ -363,7 +368,7 @@
                 <td><strong>Despejado / Seguro</strong></td>
                 <td>TTC > 4.6 s o TTC = +∞</td>
                 <td>—</td>
-                <td>Navegación en crucero nominal hacia el waypoint (<code>keep_going</code>).</td>
+                <td>Navegación en crucero nominal hacia el waypoint (guiado de <code>reactive_node</code>).</td>
               </tr>
             </tbody>
           </table>
@@ -630,6 +635,54 @@
         </div>
       </section>
 
+      <!-- Cuadernos de Cálculo -->
+      <section id="cuadernos">
+        <h2>Cuadernos de Cálculo (NB1–NB5)</h2>
+        <p>
+          Los cálculos del informe se pueden reproducir en cinco cuadernos de Jupyter, en <code>airsim-loop/</code>.
+          Corren sin AirSim, Ollama ni GPU (entorno <code>airsimenv</code>, directorio de trabajo <code>airsim-loop/</code>)
+          sobre los datos guardados en <code>airsim-runs/</code>. El informe los cita como <code>NBk.n</code>.
+        </p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Cuaderno</th>
+                <th>Qué detalla</th>
+                <th>Informe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/NB1_analisis_estadistico_resultados.ipynb">NB1</a></strong></td>
+                <td>Análisis estadístico de la corrida v4 paso a paso con las funciones de <code>analyze_lotes.py</code>: filtros, SPL, Wilson, una comparación desarrollada (delta de Cliff, <em>bootstrap</em>, permutación exacta, Bonferroni), las 18 comparaciones, H2 y latencias, verificado contra <code>analisis_lotes.md</code>. Además, el campo de obstáculos en vuelo frente a la distancia mínima (NB1.11) y la prueba de <em>inliers</em> del FOE en los dos sentidos sobre el video frontal (NB1.12).</td>
+                <td>IT.10.7, IT.11, IT.7.7</td>
+              </tr>
+              <tr>
+                <td><strong><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/NB2_auditoria_interactiva_telemetria.ipynb">NB2</a></strong></td>
+                <td>Una corrida por dentro: archivos, <code>summary.json</code> recalculado desde la traza, ritmo del lazo, traza de decisión, <code>ObstacleField</code>, capa estratégica, atascos y gobernador, trayectoria sobre el mapa cenital y la misma semilla en los cuatro brazos.</td>
+                <td>IT.4.4, IT.10.6, IT.11.6</td>
+              </tr>
+              <tr>
+                <td><strong><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/NB3_explicacion_nodos_langgraph.ipynb">NB3</a></strong></td>
+                <td>El grafo de control ejecutando el código de vuelo: topología, <code>DroneState</code>, ciclos con un cliente simulado de TTC conocido, los cinco pasos del estimador de flujo, las ocho reglas de <code>navigate</code>, la cinemática de cada macro-acción y un <em>replay</em> de una corrida real (99 % de las decisiones reproducidas).</td>
+                <td>IT.5, IT.6</td>
+              </tr>
+              <tr>
+                <td><strong><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/NB4_planificacion_vlm.ipynb">NB4</a></strong></td>
+                <td>El plan de ruta con el VLM sobre el mapa cenital (candidatas, juicio por parches, <em>logprobs</em>, elección reproducida desde el plan guardado) y la geometría con la que la capa estratégica y el barrido fijan sub-metas en el mundo.</td>
+                <td>IT.4.3, IT.5.10, IT.5.12</td>
+              </tr>
+              <tr>
+                <td><strong><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/NB5_banco_vlm_decisiones.ipynb">NB5</a></strong></td>
+                <td>Las decisiones de diseño que salen de mediciones: el banco del VLM contra etiquetas de referencia, profundidad y segmentación con la misma etiqueta, parches del mapa, rutas contra AirSim, el lote piloto de fuentes, los umbrales de TTC por Youden y el de ocupación (D2).</td>
+                <td>IT.7, IT.10.13, IT.11.0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- Instalación y Uso -->
       <section id="instalacion">
         <h2>Instalación y Uso</h2>
@@ -696,7 +749,7 @@ python -m uvicorn webdcs.main:app --reload</code></pre>
       <footer>
         <p>Facultad de Ingeniería — Maestría en Ciencia de Datos — Universidad Austral</p>
         <p>Repositorio: georgsmeinung/dronelm</p>
-        <p>Fecha de actualización: 2026-10-27</p>
+        <p>Fecha de actualización: 2026-11-12</p>
       </footer>
     </main>
   </div>

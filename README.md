@@ -21,8 +21,8 @@ Este repositorio contiene la implementación del Trabajo Final de Máster en Ing
 [![Website](https://img.shields.io/badge/Project-Website-white.svg)](https://jorgenicolau.ar/dronelm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Activity](https://img.shields.io/badge/CHANGELOG-2026--1028-teal)](CHANGELOG.md) 
-[![Plan](https://img.shields.io/badge/Plan-Aprobado_2025--0829-drakgray)](./plan_tesis/plan-tesis.md)
-[![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)](./plan_tesis/plan-tesis.md#objetivo-del-trabajo)
+[![Plan](https://img.shields.io/badge/Plan-Aprobado_2025--0829-drakgray)](./plan-tesis/plan-tesis.md)
+[![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)](./plan-tesis/plan-tesis.md#objetivo-del-trabajo)
 [![Infome](https://img.shields.io/badge/Informe-Tesis_MCD-172187)](https://jorgenicolau.ar/dronelm/informe/00-COVER.html)
 
 
@@ -39,78 +39,79 @@ Este repositorio contiene la implementación del Trabajo Final de Máster en Ing
 
 ## 📋 Resumen del Proyecto
 
-Este proyecto consiste en el desarrollo, implementación y evaluación de un sistema de **navegación autónoma para drones** (cuadricópteros eVTOL) en entornos urbanos simulados mediante **visión monocular pura (RGB)** y **Modelos de Lenguaje Pequeños (SLMs)** que se ejecutan localmente.
+Este proyecto desarrolla y evalúa un sistema de **navegación autónoma para drones** (cuadricópteros eVTOL) en entornos urbanos simulados, con **visión monocular (una cámara RGB)** y modelos que corren localmente, sin LiDAR ni profundidad del simulador en el lazo de vuelo.
 
-El objetivo central es diseñar un pipeline desacoplado de dos niveles (lazo de planificación en tierra y lazo táctico en vuelo) y contrastar la toma de decisiones basada en SLMs con lógicas tradicionales (reactivas y deterministas), analizando latencias, consumo computacional, robustez ante obstáculos e imprecisiones físicas en maniobras urbanas.
+La arquitectura separa un **plan en tierra** (manifiesto de misión y plan de ruta) de un **lazo táctico a bordo** de dos escalas de tiempo: un lazo rápido de guiado y evasión por flujo óptico, único que comanda velocidades, y un lazo lento que propone sub-metas en coordenadas del mundo. La evaluación compara esa arquitectura (brazo `slm`) con una máquina de estados finitos (`fsm`) y con un control solo de guiado (`reactive`), en 210 corridas sobre seis escenarios.
 
-La simulación se ejecuta sobre **Unreal Engine 5.5** utilizando el plugin **Cosys-AirSim**, recreando entornos urbanos fotorrealistas calle por calle.
+El nombre del brazo `slm` viene de las primeras versiones, en las que el lazo lento consultaba a un modelo de visión-lenguaje (LFM2.5-VL-1.6B). El banco de prueba a bordo mostró que el modelo no distingue sectores volables de bloqueados (AUC 0.53), y la misma pregunta pasó a responderla una red de profundidad monocular (Depth Anything V2, AUC 0.83–0.87). **En la configuración evaluada ningún modelo de lenguaje decide en vuelo**: el VLM planifica la ruta sobre el mapa cenital antes del despegue (informe, IT.10.2.1, «Nombres heredados»).
+
+La simulación corre en **Unreal Engine 5.5** con el plugin **Cosys-AirSim**, en tres entornos de dificultad creciente: `MiniSim`, `TownSim` y `CitySim`.
 
 ---
 
 ## 🏗️ Arquitectura del Sistema
 
-El sistema implementa una arquitectura desacoplada de dos cerebros:
+<img src="informe/2026-1028 dos_cerebros.png"/>
 
-1. **Lazo de Planificación y Control en Tierra (Ground Station & WebDCS - `airsim-plan`):**
-   * **WebDCS (Ground Control Station Web):** Interfaz web basada en FastAPI para la planificación manual de misiones (carta de navegación interactiva, edición de waypoints). Cada corrida del lazo táctico se audita *post-vuelo* con un visor HTML autocontenido que sincroniza el video anotado con la traza completa de decisiones del SLM (prompt, respuesta cruda y latencia de cada consulta).
-   * **Compilador de Misiones:** Procesa instrucciones en lenguaje natural mediante LLMs locales/remotos para generar un manifiesto estructurado (`MissionManifest.json`) con waypoints georreferenciados en la cuadrícula urbana y reglas de comportamiento.
+1. **En tierra, antes del vuelo (`airsim-plan`).**
+   * **WebDCS:** estación de control web (FastAPI) para editar waypoints sobre la carta de navegación y compilar el manifiesto inmutable de la misión.
+   * **Plan de ruta con el VLM** (`airsim-loop/src/planning/route_planner.py`): para cada tramo genera rutas candidatas (recta, en L y desvíos paralelos), el VLM clasifica parches del mapa cenital registrado y gana la candidata con mayor probabilidad media de «calle». Se usa en los escenarios con obstrucción.
+2. **A bordo, en vuelo (`airsim-loop`).** Un `StateGraph` de LangGraph (`capture` → `perception` → `navigate` → `motor`, con `degraded_hover` si AirSim no responde) que el bucle externo ejecuta a 5 Hz:
+   * **Percepción** (`src/perception/flow_ttc.py`): flujo óptico denso (DIS) derotado con la actitud, Foco de Expansión y Tiempo-a-Colisión por celda en una grilla 3×3; el resultado es el `ObstacleField`, único contrato de percepción.
+   * **`navigate`** (`src/agents/graph.py`): ocho reglas en orden fijo; la primera que se cumple decide el ciclo (barrido en curso, deadlock, maniobra comprometida, contacto, piso óptico, techo, peligro frontal por TTC, guiado nominal).
+   * **Lazo lento** (`src/agents/vlm_strategic.py`, en un hilo aparte): cada 1 s juzga qué sectores del fotograma están libres a 15 m con la profundidad estimada y fija una sub-meta en coordenadas del mundo, anclada a la pose del fotograma; el dron nunca frena a esperarla.
+   * **Deadlock** (`src/agents/deep_scan.py`): barrido de 4 rumbos juzgado por la profundidad estimada; sin rumbo libre, escape vertical.
+   * **`motor`:** ancla de altitud en `FRENAR`, gobernador de velocidad y comando a Cosys-AirSim.
+3. **Después del vuelo (`airsim-runs`).** Cada corrida deja su traza por ciclo (JSONL y CSV), `summary.json`, videos frontal y de seguimiento, la auditoría de distancia mínima y un visor HTML autocontenido. `airsim-loop/experiments/analyze_lotes.py` produce el análisis estadístico de los lotes.
 
-2. **Lazo Táctico Autónomo en Vuelo (`airsim-loop`):**
-   * **Grafo de Decisión por Tick (LangGraph):** Bucle continuo de percepción-decisión-actuación estructurado como un `StateGraph` ejecutado a `LOOP_HZ` (5–10 Hz). Cada ciclo recorre el grafo desde `capture` hasta `motor` y termina en `__end__`; la ciclicidad es aportada por el bucle externo (`main.py`), ya que el grafo se recompila y evalúa desde cero en cada tick sin aristas de retorno internas.
-   * **Modo Degradado (`degraded_hover`):** Si la fuente de telemetría o imagen no proviene de AirSim (`source != "airsim"`), el ciclo salta directamente a `degraded_hover` comandando hover preventivo, evitando la inyección de datos sintéticos plausibles y omitiendo percepción y deliberación.
-   * **Percepción Monocular por Flujo Óptico (`perception`):** Estimación continua del `ObstacleField` (grilla sector × banda, FOE por mínimos cuadrados ponderados y TTC en segundos) mediante flujo óptico derotado con la actitud inercial — sin red neuronal de detección. Es el único contrato de percepción consumido por las políticas de control.
-   * **Enrutador de Política (`policy_router`), seleccionable por brazo (`AGENT_ARM`):**
-     * **Crucero Nominal (`keep_going`):** Avance fluido guiado por `WaypointTracker` (con corrección de rumbo por *cross-track error*, zona muerta angular y suavizado EMA).
-     * **Evasión Reactiva (`evasive`):** Desvíos suaves de corto plazo con persistencia táctica (*Maneuver Lock*) ante proximidad moderada de obstáculos.
-     * **Bypass Determinista (`girar_90`):** Maniobra ortogonal de escape rápido ante bloqueo severo o esquinas de cuadrícula urbana.
-     * **Brazo FSM Determinista (`fsm`):** Política de máquina de estados finitos que comparte el mismo espacio de macro-acciones y cinemática para benchmarking.
-     * **Deliberación por Excepción (`deliberative`, brazo `slm`):** La consulta al SLM es la excepción, no la regla. Ante bloqueo estructural aplica **freno previo (`FRENAR`)**, consulta asíncrona en hilo desacoplado (`DeliberationService`), watchdog (`SLM_WATCHDOG_MS`), decodificación restringida (`response_format=json_schema`) con parser tolerante como red de seguridad, persistencia de maniobra y fallback determinista.
-     * **Escalación ante Atasco Persistente:** Ante un atasco duro sin corredor visible, un barrido panorámico (giros puros en el lugar, sin traslación) captura fotogramas en varios rumbos y consulta una única vez al modelo de visión con el panorama completo, antes de recurrir al escape ciego determinista como red de seguridad final. Configurable como variable experimental de ablación (`DEADLOCK_STRATEGY=blind|deep_vlm`).
-   * **Navegación Urbana en Cuadrícula (Manhattan Detour & Cornering):** Inyección dinámica de sub-waypoints de esquina (`CORNER_WP`) con alineación ortogonal estricta ($0^\circ, \pm 90^\circ, 180^\circ$), permitiendo rodear manzanas completas sin "efecto imán" ni giros en círculos.
-   * **Actuación Motriz (`motor`):** Traducción unificada de la macro-acción a comandos cinemáticos en coordenadas de chasis (Body Frame) con saturación de guiñada y emisión hacia `Cosys-AirSim`.
+<img src="informe/2026-1028 grafo_control.png"/>
 
-Para ilustrar el flujo completo:
+La descripción completa está en el capítulo 5 del informe y en [`airsim-loop/GRAFO-DE-CONTROL.md`](airsim-loop/GRAFO-DE-CONTROL.md).
 
-<img src="informe/2026-0825 Inforgrafia Nuevo Grafo de Control Autonomo.jpg"/>
+---
 
-1. **Ground Station (WebDCS):** Planificación manual de waypoints y compilación del manifiesto inmutable `MissionManifest.json`.
-2. **Captura y Modo Degradado (`capture`):** Adquisición de fotograma y telemetría; desvío inmediato a `degraded_hover` si la fuente no es AirSim.
-3. **Percepción Monocular (`perception`):** Generación del contrato `ObstacleField` (ocupación por sector, TTC real y foco de expansión) derotado por la actitud del dron.
-4. **Enrutamiento de Política (`policy_router`):**
-   - **Camino Despejado:** Ejecución de `keep_going` guiado por `WaypointTracker`.
-   - **Proximidad Moderada:** Desvío con `evasive` y persistencia táctica (*Maneuver Lock*).
-   - **Bloqueo Severo / Bypass:** Giro ortogonal rápido con `girar_90`.
-   - **Brazo de Referencia FSM:** Enrutamiento a la política determinista `fsm`.
-   - **Bloqueo Estructural (Brazo SLM):** Freno preventivo (`FRENAR`) y activación asíncrona del nodo `deliberative` bajo watchdog.
-5. **Actuación Motriz (`motor`):** Conversión de la macro-acción a comando cinemático en Body Frame sobre `Cosys-AirSim` y cierre de tick hacia `__end__`.
+## 📓 Cuadernos de Cálculo (NB1–NB5)
+
+Los cálculos del informe se pueden reproducir en cinco cuadernos de Jupyter, en [`airsim-loop/`](airsim-loop). Corren sin AirSim, Ollama ni GPU, con el entorno `airsimenv` y `airsim-loop/` como directorio de trabajo, sobre los datos guardados en `airsim-runs/`. El informe los cita como `NBk.n` (por ejemplo, NB1.10), del mismo modo que cita sus propias secciones como `IT.x`.
+
+| Cuaderno | Qué detalla | Secciones del informe |
+|---|---|---|
+| [`NB1_analisis_estadistico_resultados.ipynb`](airsim-loop/NB1_analisis_estadistico_resultados.ipynb) | El análisis estadístico de la corrida v4 paso a paso, con las mismas funciones de `analyze_lotes.py`: filtros de validez, SPL, éxito con IC de Wilson, una comparación desarrollada completa (delta de Cliff, *bootstrap*, permutación exacta, Bonferroni), las 18 comparaciones, H2 y latencias. Verifica que sus tablas coinciden con `analisis_lotes.md`. Agrega la fuente del campo de obstáculos por celda y el sector central frente a la distancia mínima (NB1.11), y la prueba de *inliers* del FOE en los dos sentidos sobre el video frontal (NB1.12). | IT.10.7, IT.11, IT.7.7 |
+| [`NB2_auditoria_interactiva_telemetria.ipynb`](airsim-loop/NB2_auditoria_interactiva_telemetria.ipynb) | Una corrida de la v4 por dentro: los archivos que deja, cómo de la traza por ciclo sale cada métrica del `summary.json`, el ritmo del lazo, la traza de decisión, el `ObstacleField` en el tiempo, la capa estratégica, los atascos y el gobernador, la trayectoria sobre el mapa cenital y la misma semilla volada por los cuatro brazos. Es el equivalente en Python del visor HTML. | IT.4.4, IT.10.6, IT.11.6 |
+| [`NB3_explicacion_nodos_langgraph.ipynb`](airsim-loop/NB3_explicacion_nodos_langgraph.ipynb) | El grafo de control ejecutando el código de vuelo sin AirSim: topología, `DroneState`, ciclos completos con un cliente simulado de TTC conocido, los cinco pasos del estimador de flujo, las ocho reglas de `navigate` disparadas una por una, la cinemática de cada macro-acción, el motor y un *replay* de `navigate` sobre una corrida real (99 % de las decisiones reproducidas). | IT.5, IT.6 |
+| [`NB4_planificacion_vlm.ipynb`](airsim-loop/NB4_planificacion_vlm.ipynb) | Dónde interviene el VLM: el plan de ruta sobre el mapa cenital (candidatas, juicio por parches, *logprobs* → probabilidad de «calle», elección reproducida desde el plan guardado) y la geometría con la que la capa estratégica y el barrido convierten una respuesta en una sub-meta en el mundo. | IT.4.3, IT.5.10, IT.5.12 |
+| [`NB5_banco_vlm_decisiones.ipynb`](airsim-loop/NB5_banco_vlm_decisiones.ipynb) | Las decisiones de diseño que salen de mediciones: el banco de prueba del VLM contra etiquetas de referencia, la misma pregunta con profundidad y segmentación, el reconocimiento de parches del mapa, las rutas contra AirSim, el lote piloto de fuentes de la capa estratégica, los umbrales de TTC por Youden y el umbral de ocupación (D2), cada una con su variable de `config/.env`. | IT.7, IT.10.13, IT.11.0 |
+
+Las salidas que exportan (tablas y figuras de la v4, y los cálculos por ciclo que NB1.12 reusa) quedan en `airsim-loop/notebooks/output/`.
 
 ---
 
 ## 📂 Estructura del Repositorio
 
-El código del proyecto se organiza en los siguientes componentes:
-
-*   **[`airsim-plan`](./airsim-plan):** Planificador de misiones y Ground Control Station. Contiene el CLI `airsim-plan` y el servidor web **WebDCS** para planificación manual de waypoints.
-*   **[`airsim-loop`](./airsim-loop):** Lazo de control táctico autónomo del dron. Implementa el grafo de navegación en LangGraph (Captura, Percepción por Flujo Óptico/TTC, Router Táctico, brazos SLM/FSM/Reactivo y Control de Waypoints), el registro de vuelo por corrida (JSONL/CSV, resumen por waypoint, video `.webm` anotado y visor HTML de auditoría post-vuelo), la suite de tests (138 tests) y el framework de experimentación (`experiments/runner.py` y `experiments/analyze.py` para corridas batch N misiones × M escenarios × K semillas comparando los tres brazos; `experiments/collect_ttc_dataset.py` y `experiments/analyze_ttc.py` para calibrar los umbrales de TTC contra el canal depth).
-*   **[`airsim-mcp`](./airsim-mcp):** Servidor de Model Context Protocol (MCP) que expone herramientas de telemetría y control de AirSim para interactuar con agentes autónomos externos.
-*   **[`airsim-kc`](./airsim-kc):** Scripts de control manual mediante teclado (`kc_control.py`) para pilotaje directo y configuración de segmentación en AirSim.
-*   **[`airsim-poc`](./airsim-poc):** Pruebas de concepto iniciales de conexión, telemetría y maniobras básicas.
-*   **[`airsim-settings`](./airsim-settings):** Archivos de configuración de AirSim / Cosys-AirSim (`settings.json`, perfiles predefinidos y guía de enlaces).
-*   **[`callibration_flight`](./callibration_flight):** Scripts de calibración y notebooks estadísticos que comparan la variabilidad inercial y física del simulador vs. drones reales (DJI).
-*   **[`local-llm-eval`](./local-llm-eval):** Suite de benchmarking para evaluar latencias (ms), tokens/segundo y adherencia a esquemas JSON de modelos locales (Phi-3, Qwen 2.5, Gemma 2, Llama 3.2, Liquid LFM).
-*   **[`plan_tesis`](./plan_tesis), [`docs`](./docs) e [`informe`](./informe):** Documentación del plan de tesis, objetivos aprobados y changelogs. `informe/` contiene los capítulos de la tesis en Markdown (caps. 01–12 en redacción activa); `docs/` aloja el sitio de documentación construido con **MkDocs** (tema personalizado Universidad Austral, build automatizado con script de PDF).
+*   **[`airsim-plan`](./airsim-plan):** planificador de misiones y estación de control (CLI `airsim-plan` y servidor web **WebDCS**).
+*   **[`airsim-loop`](./airsim-loop):** lazo táctico a bordo (grafo de LangGraph, percepción por flujo óptico, capa estratégica, barrido, guiado a waypoint y registro de vuelo), plan de ruta con el VLM, los cuadernos NB1–NB5, la suite de tests (321) y los scripts de experimentación y análisis (`experiments/runner.py`, `experiments/analyze_lotes.py`, `experiments/vlm_bench/`).
+*   **[`experiments`](./experiments):** lanzadores de los seis lotes de la corrida v4 (`run_loteN_*.ps1`, `run_lotes.ps1`) y su descripción.
+*   **[`config`](./config):** `config/.env`, fuente única de la configuración de vuelo, y los *prompts* del VLM.
+*   **[`airsim-mcp`](./airsim-mcp):** servidor de Model Context Protocol con herramientas de telemetría y control de AirSim.
+*   **[`airsim-kc`](./airsim-kc):** control manual por teclado y configuración de segmentación.
+*   **[`airsim-poc`](./airsim-poc):** pruebas de concepto iniciales de conexión y telemetría.
+*   **[`airsim-settings`](./airsim-settings):** configuraciones de Cosys-AirSim (`settings.json`).
+*   **[`callibration-flight`](./callibration-flight):** calibración del simulador frente a vuelos reales y los experimentos de calibración del campo de obstáculos (D2, D3).
+*   **[`local-llm-eval`](./local-llm-eval):** benchmark de modelos locales (latencia, tokens por segundo, adherencia a esquemas JSON).
+*   **[`plan-tesis`](./plan-tesis), [`informe`](./informe) y [`docs`](./docs):** plan de tesis aprobado; capítulos y anexos del informe en Markdown; sitio del proyecto y versión HTML y PDF del informe (`informe/build.ps1`, MkDocs).
+*   **`airsim-runs/`** (fuera de git): resultados de las corridas, incluida la corrida productiva v4 en `airsim-runs/produccion/v4/`.
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
 *   **Simulación:** Unreal Engine 5.5 + Cosys-AirSim.
-*   **Lenguajes y Entorno:** Python 3.10+, Conda / Miniconda.
-*   **Visión por Computadora:** OpenCV (flujo óptico denso Farnebäck/DIS) para estimación de `ObstacleField` y TTC; sin red de detección.
-*   **Modelos de Lenguaje (SLM/VLM):** LM Studio / Ollama (API local compatible con OpenAI) para inferencia local. Modelo adoptado: **`Qwen2.5-VL-3B`** (VLM, 3B parámetros, cabe en 2–3.5 GB de VRAM dejando margen para UE5.5). Candidatos evaluados y descartados: `Phi-4-mini`, `Qwen3-4B`, `SmolLM3`, `Qwen2.5-VL-7B` (excede VRAM). Decodificación restringida con `json_schema` eleva la tasa de adherencia al esquema de 73% → 98%.
-*   **Control y Orquestación:** LangGraph (grafo de decisión por tick), Pydantic (validación de esquemas JSON).
-*   **Ground Control Station:** FastAPI, HTML5, Vanilla CSS / JS (Inter + JetBrains Mono).
-*   **Evaluación y Calibración:** Promptfoo (benchmarking de prompts) y Jupyter Notebooks (SciPy / NumPy / Matplotlib).
+*   **Entorno:** Python 3.10, Conda (`airsimenv`).
+*   **Visión por computadora:** OpenCV (flujo óptico denso DIS) para el `ObstacleField` y el TTC; Depth Anything V2 Metric Outdoor Small (~25 M parámetros, `transformers`) para la profundidad estimada del lazo lento.
+*   **Modelo de visión-lenguaje:** LFM2.5-VL-1.6B Q4_K_M en Ollama (`lfm2.5-vl-1.6b:q4km-ctx8k`), en la misma GPU que Unreal, con decodificación restringida por `json_schema`; en la configuración evaluada solo planifica la ruta.
+*   **Control y orquestación:** LangGraph, Pydantic.
+*   **Estación de control:** FastAPI, HTML5, CSS y JS sin *framework*.
+*   **Análisis:** Jupyter, pandas, SciPy, NumPy, Matplotlib y seaborn; Promptfoo para el benchmark de *prompts*.
 
 ---
 
@@ -122,11 +123,11 @@ El código del proyecto se organiza en los siguientes componentes:
 > 🔗 **Descarga de Entornos Precompilados:** Los binarios y proyectos de simulación (incluyendo **`CitySim`**, el entorno principal de validación experimental y benchmark) se encuentran disponibles en la carpeta compartida de **[Google Drive](https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7)**.
 
 ### Prerrequisitos
-*   GPU NVIDIA con soporte CUDA (ej. RTX 4060 / 5060 o superior) para simulación fluida y para acelerar la inferencia del SLM local.
-*   Unreal Engine 5.5 con el entorno de simulación compilado o binario precompilado (ej. **`CitySim` / `CityParkSim`** para validación, o `City Sample`).
-*   LM Studio o Ollama sirviendo el SLM en `LOCAL_LLM_URL` (puerto `1234` o `11434`); puede correr en la misma máquina o en otra de la LAN, ya que la consulta es asíncrona y no bloquea el lazo de percepción.
+*   GPU NVIDIA con soporte CUDA (por ejemplo, RTX 4060 / 5060 o superior) para la simulación, la red de profundidad y el VLM local.
+*   Unreal Engine 5.5 con el entorno de simulación compilado o el binario precompilado (`MiniSim`, `TownSim` o `CitySim`).
+*   Ollama en `127.0.0.1:11434` con el modelo `lfm2.5-vl-1.6b:q4km-ctx8k`, solo para el plan de ruta (lotes con obstrucción). Corre en la misma máquina y la misma GPU que Unreal.
 
-> **Nota de topología (2026-08):** AirSim y `airsim-loop` deben ejecutarse en la **misma máquina** (loopback `127.0.0.1`). Un benchmark de `simGetImages` sobre AirSim remoto en LAN mostró que prácticamente todas las capturas agotaban un timeout de 8s independientemente de la resolución (ver `CHANGELOG.md`, sección F0.0), por lo que solo el servidor del SLM puede quedar en otra máquina de la red.
+> **Nota de topología:** AirSim y `airsim-loop` deben ejecutarse en la **misma máquina** (`127.0.0.1`): con AirSim remoto en la LAN, prácticamente todas las capturas de imagen agotaban el *timeout* (ver `CHANGELOG.md`).
 
 ### 1. Configuración del Entorno Python
 Crea y activa el entorno de Conda utilizando el archivo `environment.yml` (o `environment-arm64.yml` para ARM):
@@ -150,20 +151,28 @@ cd airsim-plan
 python -m uvicorn webdcs.main:app --reload
 ```
 
-Abre en tu navegador `http://localhost:8000` para acceder a la interfaz WebDCS y planificar misiones manualmente. La auditoría de las decisiones del SLM se hace *post-vuelo*, con el visor HTML que cada corrida genera automáticamente.
+Abre en tu navegador `http://localhost:8000` para acceder a la interfaz WebDCS y planificar misiones manualmente. La auditoría de cada corrida se hace *post-vuelo*, con el visor HTML que la corrida genera automáticamente.
+
+### 4. Correr los lotes de la corrida v4
+Los lanzadores están en [`experiments/`](experiments) (descripción de cada lote en [`experiments/README.md`](experiments/README.md)):
+
+```powershell
+cd experiments
+.\run_lote3_townsim_ini.ps1 -Pilot    # piloto con la semilla 99
+.\run_lote3_townsim_ini.ps1           # lote completo
+```
+
+El análisis de los seis lotes se reproduce con `airsim-loop/experiments/analyze_lotes.py` o, paso a paso, en NB1.
 
 ---
 
-## 📊 Evaluación y Calibración del Simulador
+## 📊 Evaluación y Resultados
 
-En [`callibration_flight`](./callibration_flight) y [`CHANGELOG.md`](CHANGELOG.md) se documentan:
-*   **Fidelidad Cinemática:** Calibración de la rigidez inercial en giros de actitud y control de guiñada amortiguado para replicar límites de aeronaves reales.
-*   **Robustez de Visión Monocular Pura:** Desacople del Time-To-Collision de la distancia estática, eliminando oscilaciones en zigzag (*slalom*) y adaptando el crucero al ancho de calle.
-*   **Calibración de TTC contra el canal depth:** `TTC_EVASION_THRESHOLD`/`TTC_SAFE_THRESHOLD` calibrados con 3735 registros de vuelo real (aproximación frontal, cañón recto, giros de yaw) — AUC 0.96–0.97 para el evento "colisión dentro de τ segundos" pese a correlación puntual baja del valor estimado.
-*   **Benchmark de Inferencia Local:** Tiempos de respuesta de modelos compactos de 2B-4B parámetros corriendo en paralelo con el lazo de percepción por flujo óptico.
-*   **Integridad de datos — corte 2026-09-03:** Dos bugs críticos corregidos en esa fecha afectan toda corrida anterior: (1) canales R/B invertidos en capturas de AirSim (el VLM veía colores erróneos); (2) marcadores de debug superpuestos en el fotograma enviado al modelo. **Cualquier corrida anterior al 2026-09-03 no es comparable** para métricas del brazo `slm`. El campo `code_version` en `summary.json` permite identificar la versión que generó cada corrida.
-*   **Comparación de brazos (SLM vs FSM vs Reactivo):** primeros batches end-to-end con `experiments/runner.py` validaron el pipeline de instrumentación (logging, latencias por ciclo, SPL) y expusieron y corrigieron un deadlock real en el mecanismo de escape por altura. La corrida comparativa final de la tesis (Tier 2 / CitySim, protocolo G4: 3 brazos × 3 escenarios × 5 semillas), con el servidor SLM disponible durante toda la corrida, está pendiente.
-*   **Auditoría de Vuelo Post-Corrida:** cada ejecución queda en una carpeta autocontenida (JSONL/CSV, fotogramas, video `.webm` anotado) con un visor HTML que sincroniza en ambos sentidos la reproducción del video con la fila correspondiente de la traza — permite reconstruir, para cualquier instante del vuelo, qué fotograma vio el modelo y qué decisión tomó.
+*   **Calibración del simulador:** la cinemática de Cosys-AirSim se contrastó con telemetría de drones comerciales reales (`callibration-flight/`, informe IT.3).
+*   **Validación del TTC:** contra etiquetas de referencia tomadas de la profundidad del simulador, AUC 0.96–0.97 para el evento «colisión dentro de τ s» (0.85–0.93 en la aproximación frontal); los umbrales de evasión salen del índice de Youden (IT.7, NB5.10). En las escenas de los lotes el campo de obstáculos discrimina poco más que al azar (IT.7.7, NB1.11).
+*   **Banco de prueba del VLM a bordo:** ninguna de las ocho preguntas pasa el criterio; la grilla del lazo lento queda en AUC 0.53. La profundidad estimada responde la misma pregunta con AUC 0.83–0.87 (IT.11.0, NB5).
+*   **Corrida productiva v4:** seis lotes, uno por escenario, 10 semillas por celda, 210 corridas; análisis con permutación exacta, delta de Cliff y Bonferroni sobre 18 comparaciones (IT.11, NB1). En ruta libre el brazo `slm` cuesta entre 1.4 y 2 veces el tiempo del control reactivo; con obstrucción, lo que permite completar la misión es la evasión por flujo óptico junto con una salida de los atascos; la ventaja de la capa estratégica frente a la FSM no está demostrada, porque la FSM evaluada tiene dos defectos de implementación que la desfavorecen (IT.12).
+*   **Auditoría post-corrida:** cada ejecución queda en una carpeta autocontenida con un visor HTML que sincroniza los videos con la traza por ciclo (IT.4.4, NB2).
 
 ---
 
