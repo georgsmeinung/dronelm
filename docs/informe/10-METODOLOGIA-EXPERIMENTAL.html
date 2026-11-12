@@ -3094,7 +3094,7 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <p>Cada corrida emite <code>&lt;stem&gt;.summary_by_wp.csv</code> con ciclos consumidos, duración, ciclos deliberativos, tasa de deliberación y eventos de barrido <strong>por tramo de misión</strong>. Es la herramienta que permite aislar los tramos de ascenso vertical de las fases de crucero y maniobra horizontal: sin este desglose, una métrica agregada de misión atribuye a "el escenario" una dificultad que puede pertenecer a un solo tramo de 20 segundos, como el ascenso inicial entre follaje de <code>townsim_ini</code>.</p>
 <hr />
 <h2 id="107-protocolo-estadistico">10.7 Protocolo estadístico<a class="headerlink" href="#107-protocolo-estadistico" title="Permanent link">&para;</a></h2>
-<p>El análisis lo implementa <code>airsim-loop/experiments/analyze_lotes.py</code>, que escribe <code>analisis_lotes.md</code> y dos CSV en la raíz de los lotes:</p>
+<p>El análisis lo implementa <code>airsim-loop/experiments/analyze_lotes.py</code>, que escribe <code>analisis_lotes.md</code> y dos CSV en la raíz de los lotes; NB1 abre cada paso (NB1.5 desarrolla una comparación completa):</p>
 <div class="highlight"><pre><span></span><code><span class="n">D</span><span class="p">:\</span><span class="n">TesisMCD</span><span class="p">\</span><span class="n">airsimenv</span><span class="p">\</span><span class="n">python</span><span class="p">.</span><span class="n">exe</span> <span class="p">..\</span><span class="n">airsim-loop</span><span class="p">\</span><span class="n">experiments</span><span class="p">\</span><span class="n">analyze_lotes</span><span class="p">.</span><span class="n">py</span> <span class="p">..\</span><span class="n">airsim-runs</span><span class="p">\</span><span class="n">produccion</span><span class="p">\</span><span class="n">v4</span> <span class="p">-</span><span class="n">-family</span> <span class="n">18</span>
 </code></pre></div>
 <h3 id="1071-metricas-primarias-y-comparaciones-planificadas">10.7.1 Métricas primarias y comparaciones planificadas<a class="headerlink" href="#1071-metricas-primarias-y-comparaciones-planificadas" title="Permanent link">&para;</a></h3>
@@ -3538,9 +3538,14 @@ El signo del efecto de H1 depende del escenario: en ambientes despejados la capa
 <td>Profundidad: 75 % y AUC 0.83 por sector, AUC 0.87 en los barridos; segmentación: AUC 0.50</td>
 <td>La capa estratégica y el barrido usan la profundidad estimada (<code>STRATEGIC_SOURCE=depth</code>, <code>DEADLOCK_STRATEGY=depth</code>)</td>
 </tr>
+<tr>
+<td>Lote piloto de fuentes de la capa estratégica: 15 corridas <code>slm</code> en <code>citysim_pilot</code>, fuentes <code>depth</code>, <code>vlm</code> y <code>off</code> con 5 semillas emparejadas y regla de decisión fijada antes de correr (NB5.9)</td>
+<td>Las tres fuentes son equivalentes en avance (mediana de 13 waypoints a los 400 s en las tres); éxitos 3/5 con <code>depth</code>, 4/5 con <code>vlm</code> y 5/5 con <code>off</code></td>
+<td><code>depth</code> sobre <code>vlm</code> por latencia (~0.1 s frente a ~0.8 s) y distancia mínima. Frente a <code>off</code>, el lote no muestra ventaja de la capa estratégica, pero con 5 pares tampoco puede descartarla: el <em>p</em> de Wilcoxon no baja de 0.0625 aun con separación completa. La capa se conserva para juzgarla en la v4 con 10 semillas, en la comparación <code>slm:depth</code>–<code>fsm:depth</code> (IT.10.2.3); la v4 no incluye una celda <code>slm</code> sin capa (IT.10.10)</td>
+</tr>
 </tbody>
 </table>
-<p>La tabla muestra el uso previsto del instrumento: cada pregunta que no pasa se descarta en lugar de compensarse con reglas, y cada fuente que pasa se lleva al vuelo y se juzga con los lotes. Las cifras completas están en el capítulo 11 (IT.11.0), y la descripción de la red de profundidad, en el capítulo 6 (IT.6.14).</p>
+<p>La tabla muestra el uso previsto del instrumento: cada pregunta que no pasa se descarta en lugar de compensarse con reglas, y cada fuente que pasa se lleva al vuelo y se juzga con los lotes. Las cifras completas están en el capítulo 11 (IT.11.0), y la descripción de la red de profundidad, en el capítulo 6 (IT.6.14). NB5 recalcula cada fila de la tabla a partir de los datos guardados del banco y del lote piloto.</p>
 <h3 id="10135-alcance-y-limites">10.13.5 Alcance y límites<a class="headerlink" href="#10135-alcance-y-limites" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Un solo entorno medido.</strong> Las 6926 poses del banco provienen de corridas de <code>citysim_pilot</code>; TownSim no tiene banco. El criterio exige pasar en todos los entornos medidos. Para el VLM la conclusión no cambia, porque no pasa ni siquiera en CitySim. Para la profundidad y para el plan de ruta por parches, en TownSim solo los evalúan los lotes de vuelo (lotes 2 a 4; el plan de ruta, solo los lotes 3 y 4). Un banco en TownSim es la extensión pendiente más directa (IT.10.10.2).</li>

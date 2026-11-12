@@ -759,10 +759,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#por-que-un-modelo-multimodal-811-y-812" class="md-nav__link">
+  <a href="#por-que-un-modelo-multimodal-it811-y-it812" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Por qué un modelo multimodal (§8.1.1 y §8.1.2)
+        Por qué un modelo multimodal (IT.8.1.1 y IT.8.1.2)
       
     </span>
   </a>
@@ -1192,10 +1192,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#por-que-un-modelo-multimodal-811-y-812" class="md-nav__link">
+  <a href="#por-que-un-modelo-multimodal-it811-y-it812" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Por qué un modelo multimodal (§8.1.1 y §8.1.2)
+        Por qué un modelo multimodal (IT.8.1.1 y IT.8.1.2)
       
     </span>
   </a>
@@ -1431,9 +1431,9 @@
 </tr>
 </tbody>
 </table>
-<h3 id="por-que-un-modelo-multimodal-811-y-812">Por qué un modelo multimodal (§8.1.1 y §8.1.2)<a class="headerlink" href="#por-que-un-modelo-multimodal-811-y-812" title="Permanent link">&para;</a></h3>
-<p>Los modelos textuales analizados son adecuados para procesar telemetría pura, pero la percepción monocular tiene <strong>puntos ciegos estructurales en la estimación de flujo óptico</strong> (maniobras de sustentación estática <em>hover</em>, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse §6.1 y §6.12). Bajo esas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Por eso el sistema usa un modelo con <strong>capacidad de visión nativa</strong> (<em>Small Vision-Language Model</em>, sVLM), que inspecciona directamente el fotograma de la cámara frontal o el mapa cenital.</p>
-<p>Los dos sVLM candidatos que caben en el presupuesto son <strong>Qwen2.5-VL-3B-Instruct</strong> (<a href="../13-REFERENCIAS.html#ref-qwen-team-2025">Qwen Team, 2025</a>; Q4_K_M, ~2.0 GB de VRAM) y <strong>LFM2.5-VL-1.6B</strong> (Q4_K_M, tag local de Ollama <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, ~1.6 GB de VRAM). El adoptado es LFM2.5-VL-1.6B, por latencia y por su mejor reconocimiento de parches del mapa (cap. 8, §8.1.2; cap. 10, §10.13.4). Ambos cumplen los requisitos:
+<h3 id="por-que-un-modelo-multimodal-it811-y-it812">Por qué un modelo multimodal (IT.8.1.1 y IT.8.1.2)<a class="headerlink" href="#por-que-un-modelo-multimodal-it811-y-it812" title="Permanent link">&para;</a></h3>
+<p>Los modelos textuales analizados son adecuados para procesar telemetría pura, pero la percepción monocular tiene <strong>puntos ciegos estructurales en la estimación de flujo óptico</strong> (maniobras de sustentación estática <em>hover</em>, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse IT.6.1 y IT.6.12). Bajo esas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Por eso el sistema usa un modelo con <strong>capacidad de visión nativa</strong> (<em>Small Vision-Language Model</em>, sVLM), que inspecciona directamente el fotograma de la cámara frontal o el mapa cenital.</p>
+<p>Los dos sVLM candidatos que caben en el presupuesto son <strong>Qwen2.5-VL-3B-Instruct</strong> (<a href="../13-REFERENCIAS.html#ref-qwen-team-2025">Qwen Team, 2025</a>; Q4_K_M, ~2.0 GB de VRAM) y <strong>LFM2.5-VL-1.6B</strong> (Q4_K_M, tag local de Ollama <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, ~1.6 GB de VRAM). El adoptado es LFM2.5-VL-1.6B, por latencia y por su mejor reconocimiento de parches del mapa (cap. 8, IT.8.1.2; cap. 10, IT.10.13.4). Ambos cumplen los requisitos:
 * <strong>Huella de memoria</strong> dentro del presupuesto operativo restante de la GPU.
 * <strong>Inspección visual directa</strong> del fotograma, para discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
 * <strong>Compatibilidad de decodificación</strong>: soporte de decodificación restringida (<code>json_schema</code>) y <em>logprobs</em> en la misma consulta (en formato GGUF).</p>
@@ -1455,17 +1455,17 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 * <strong>Limitaciones</strong>: genera una penalización de rendimiento temporal del 10% al 30% en la velocidad de decodificación, debido a la evaluación continua de las reglas gramaticales sobre el conjunto de tokens candidatos.</p>
 <h3 id="3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance">3. Decodificación guiada basada en autómatas finitos (<em>Outlines</em>, <em>Guidance</em>, <em>llguidance</em>)<a class="headerlink" href="#3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance" title="Permanent link">&para;</a></h3>
 <p>La formalización teórica introducida por <a href="../13-REFERENCIAS.html#ref-willard-2023">Willard y Louf (2023)</a> reformula el esquema JSON o expresión regular requerida como un autómata finito determinista (DFA). Mediante el preprocesamiento del vocabulario del tokenizador, el motor indexa de manera eficiente qué tokens son admisibles para cada estado del autómata, aplicando la máscara de <em>logits</em> con una sobrecarga computacional sensiblemente menor a la evaluación de gramáticas complejas.</p>
-<p>Estudios empíricos recientes (<a href="../13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-raspanti-2025">Raspanti et al., 2025</a>) demuestran que la decodificación restringida token a token no solo erradica errores de parseo (elevando la adherencia estructural del ~73% a &gt;98%), sino que preserva e incluso optimiza la coherencia semántica en modelos pequeños, al suprimir caminos de generación dispersos o redundantes. Este enfoque constituye el núcleo del soporte de <code>response_format: {"type": "json_schema", ...}</code> implementado en el sistema (§8.2.1).</p>
+<p>Estudios empíricos recientes (<a href="../13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-raspanti-2025">Raspanti et al., 2025</a>) demuestran que la decodificación restringida token a token no solo erradica errores de parseo (elevando la adherencia estructural del ~73% a &gt;98%), sino que preserva e incluso optimiza la coherencia semántica en modelos pequeños, al suprimir caminos de generación dispersos o redundantes. Este enfoque constituye el núcleo del soporte de <code>response_format: {"type": "json_schema", ...}</code> implementado en el sistema (IT.8.2.1).</p>
 <h3 id="4-estandarizacion-de-llamadas-a-herramientas-model-context-protocol-mcp">4. Estandarización de llamadas a herramientas: Model Context Protocol (MCP)<a class="headerlink" href="#4-estandarizacion-de-llamadas-a-herramientas-model-context-protocol-mcp" title="Permanent link">&para;</a></h3>
 <p>En arquitecturas modulares, la interacción entre el modelo deliberativo y las herramientas externas (sensores, registros de vuelo, interfaces con Unreal Engine) puede articularse mediante el <strong>Model Context Protocol</strong> (MCP; <a href="../13-REFERENCIAS.html#ref-anthropic-2024">Anthropic, 2024</a>). MCP define un protocolo de cliente-servidor en JSON-RPC que desacopla la lógica del modelo de los servicios del sistema anfitrión, permitiendo exponer primitivas de consulta y actuación de forma segura, determinista y local sin conexión a Internet.</p>
 <hr />
 <h2 id="a14-procedimiento-practico-de-configuracion-e-integracion-local">A1.4 Procedimiento práctico de configuración e integración local<a class="headerlink" href="#a14-procedimiento-practico-de-configuracion-e-integracion-local" title="Permanent link">&para;</a></h2>
-<p>El modelo corre en la misma estación y la misma GPU que la simulación, porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo; esa es la condición que se toma como representativa y como línea base del banco de prueba (cap. 11, §11.0). La integración tiene tres partes:</p>
+<p>El modelo corre en la misma estación y la misma GPU que la simulación, porque un VLM a bordo comparte el cómputo con el resto del sistema de vuelo; esa es la condición que se toma como representativa y como línea base del banco de prueba (cap. 11, IT.11.0). La integración tiene tres partes:</p>
 <ol>
 <li><strong>Servidor local en la GPU de la simulación</strong>:</li>
 <li>Ollama sirve LFM2.5-VL-1.6B (Q4_K_M, GGUF) sobre la misma RTX 5060 que Unreal Engine 5.5 y el grafo de control, con un contexto limitado a 8192 tokens: ~1.6 GB de VRAM, frente a 3.1 GB con el contexto por defecto (casi todo caché de atención). El script <code>startOllama.ps1</code> levanta el servidor (Anexo 6).</li>
 <li>
-<p>La red de profundidad del lazo lento (~440 MiB) comparte la misma GPU; con la configuración por defecto el VLM no corre durante el vuelo, solo en la planificación de ruta previa (cap. 4, §4.3.1).</p>
+<p>La red de profundidad del lazo lento (~440 MiB) comparte la misma GPU; con la configuración por defecto el VLM no corre durante el vuelo, solo en la planificación de ruta previa (cap. 4, IT.4.3.1).</p>
 </li>
 <li>
 <p><strong>API HTTP compatible con OpenAI</strong>:</p>
@@ -1477,7 +1477,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <li>
 <p><strong>Puente con el grafo de control</strong>:</p>
 </li>
-<li>La respuesta estructurada se valida con el parser de su modo (<code>parse_strategic</code>, <code>parse_panorama_description</code>; §8.2.2) y el código la traduce a geometría: una sub-meta en coordenadas del mundo anclada a la pose del fotograma (cap. 5, §5.10.3) o, en el planificador, una puntuación por ruta candidata (cap. 4, §4.3.1). El modelo nunca elige una macro-acción.</li>
+<li>La respuesta estructurada se valida con el parser de su modo (<code>parse_strategic</code>, <code>parse_panorama_description</code>; IT.8.2.2) y el código la traduce a geometría: una sub-meta en coordenadas del mundo anclada a la pose del fotograma (cap. 5, IT.5.10.3) o, en el planificador, una puntuación por ruta candidata (cap. 4, IT.4.3.1). El modelo nunca elige una macro-acción.</li>
 </ol>
 <hr />
 <h2 id="a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026">A1.5 Análisis crítico de innovación y posicionamiento en el estado del arte (2024–2026)<a class="headerlink" href="#a15-analisis-critico-de-innovacion-y-posicionamiento-en-el-estado-del-arte-20242026" title="Permanent link">&para;</a></h2>
@@ -1516,7 +1516,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <td>Alto</td>
 <td>Bajo (+0.1–0.3 GB en KV cache)</td>
 <td>La telemetría numérica cruda resulta opaca para modelos compactos; la transformación en resúmenes semánticos estructurados maximiza el razonamiento del SLM (<a href="../13-REFERENCIAS.html#ref-wang-2025">Wang et al., 2025</a>).</td>
-<td><strong>Integrado</strong> (módulo <code>ObstacleField</code> y prompts estructurados; §6.12, §8.5).</td>
+<td><strong>Integrado</strong> (módulo <code>ObstacleField</code> y prompts estructurados; IT.6.12, IT.8.5).</td>
 </tr>
 <tr>
 <td><strong>Control híbrido deliberativo-reactivo con FSM</strong></td>
@@ -1530,7 +1530,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <td>Alto</td>
 <td>Nulo en VRAM; sobrecarga mínima de latencia</td>
 <td>Sustituye el parseo heurístico por restricciones a nivel de logits; convierte el espacio discreto de macro-acciones en una gramática ejecutable (<a href="../13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-raspanti-2025">Raspanti et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-willard-2023">Willard &amp; Louf, 2023</a>).</td>
-<td><strong>Integrado</strong> (adherencia elevada del 73% al 98%; §8.2.1).</td>
+<td><strong>Integrado</strong> (adherencia elevada del 73% al 98%; IT.8.2.1).</td>
 </tr>
 <tr>
 <td><strong>Autocorrección reflexiva en una sola pasada (<em>Single-Pass Self-Refinement</em>)</strong></td>

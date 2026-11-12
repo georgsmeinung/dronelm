@@ -1231,7 +1231,7 @@
 <h1 id="anexo-8-politica-de-navegacion-visual-por-aprendizaje-por-refuerzo-diseno-propuesto-como-cuarto-brazo">Anexo 8: Política de Navegación Visual por Aprendizaje por Refuerzo — Diseño Propuesto como Cuarto Brazo<a class="headerlink" href="#anexo-8-politica-de-navegacion-visual-por-aprendizaje-por-refuerzo-diseno-propuesto-como-cuarto-brazo" title="Permanent link">&para;</a></h1>
 <p>Este anexo desarrolla el diseño técnico de un cuarto brazo de comparación experimental
 (<code>rl</code>) basado en <strong>aprendizaje por refuerzo visual (<em>Reinforcement Learning</em>, RL)</strong>,
-propuesto como trabajo futuro en §12.4. El brazo <code>rl</code> no está implementado en el sistema
+propuesto como trabajo futuro en IT.12.4. El brazo <code>rl</code> no está implementado en el sistema
 evaluado en el capítulo 11; este anexo especifica su arquitectura, espacio de
 observaciones y acciones, función de recompensa, protocolo de entrenamiento y posición en
 el conjunto de hipótesis experimentales de la tesis, de forma que sirva como base técnica
@@ -1251,7 +1251,7 @@ producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>wa
 produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
 <code>evasive_node</code>. La capa estratégica del VLM sigue activa en modo jerárquico: puede inyectar sub-metas en
 coordenadas del mundo (<code>inject_corner</code>) y resolver atascos duros con el barrido <code>deep_vlm</code>,
-igual que con los brazos existentes (cap. 5, §5.10, §5.12).</p>
+igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).</p>
 <p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
 <code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
 seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
@@ -1294,7 +1294,7 @@ real donde la calibración del flujo es incierta.</p>
 <hr />
 <h2 id="a83-espacio-de-acciones">A8.3 Espacio de acciones<a class="headerlink" href="#a83-espacio-de-acciones" title="Permanent link">&para;</a></h2>
 <p>Se propone un espacio discreto de seis acciones, alineado con <code>PROMPT_ACTIONS</code> del nodo
-deliberativo (§8.3, §5.14):</p>
+deliberativo (IT.8.3, IT.5.14):</p>
 <table>
 <thead>
 <tr>
@@ -1337,7 +1337,7 @@ deliberativo (§8.3, §5.14):</p>
 </tbody>
 </table>
 <p>La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
-(<code>action_to_command()</code>, §5.14): la política neuronal nunca genera velocidades directamente,
+(<code>action_to_command()</code>, IT.5.14): la política neuronal nunca genera velocidades directamente,
 lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
 saturaciones y convenciones de Body Frame que los brazos <code>fsm</code> y <code>slm</code>.</p>
 <p><strong>Espacio continuo (extensión futura).</strong> Una vez que el brazo discreto haya convergido, se
@@ -1451,7 +1451,7 @@ parcialmente por tres decisiones de diseño:</p>
 </ol>
 <p>La validación en escenarios no vistos durante el entrenamiento —especialmente
 <code>citymap_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
-una de las incógnitas clave del protocolo de evaluación de §A8.6.</p>
+una de las incógnitas clave del protocolo de evaluación de IT.A8.6.</p>
 <h3 id="arquitectura-de-la-politica">Arquitectura de la política<a class="headerlink" href="#arquitectura-de-la-politica" title="Permanent link">&para;</a></h3>
 <p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales paralelos:</p>
 <p><img src="a8-arquitectura-dos-cabezales.jpg"></p>
@@ -1459,11 +1459,11 @@ una de las incógnitas clave del protocolo de evaluación de §A8.6.</p>
 <hr />
 <h2 id="a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
 <p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
-los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, §10.2), para que la comparación sea válida:</p>
+los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, IT.10.2), para que la comparación sea válida:</p>
 <div class="highlight"><pre><span></span><code>K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
 </code></pre></div>
 <p>Los escenarios propuestos para la evaluación del brazo <code>rl</code> son los seis de la
-tesis (cap. 10, §10.3.4):</p>
+tesis (cap. 10, IT.10.3.4):</p>
 <table>
 <thead>
 <tr>
@@ -1505,7 +1505,7 @@ tesis (cap. 10, §10.3.4):</p>
 </tr>
 </tbody>
 </table>
-<p>Las métricas son las mismas que §10.6 (éxito, SPL, tiempo de misión, colisiones,
+<p>Las métricas son las mismas que IT.10.6 (éxito, SPL, tiempo de misión, colisiones,
 distancia mínima, tasa de consulta) más dos métricas específicas del brazo <code>rl</code>:</p>
 <ul>
 <li><code>policy_latency_ms</code>: tiempo de inferencia de la política neuronal (objetivo &lt; 5 ms en
@@ -1550,7 +1550,7 @@ distancia mínima, tasa de consulta) más dos métricas específicas del brazo <
 <td>Latencia de decisión</td>
 <td>~0.1 ms</td>
 <td>~0.2 ms</td>
-<td>~0.1 s por consulta del lazo lento (profundidad; cap. 6, §6.14.3)</td>
+<td>~0.1 s por consulta del lazo lento (profundidad; cap. 6, IT.6.14.3)</td>
 <td>&lt; 5 ms (estimado)</td>
 </tr>
 <tr>
@@ -1576,7 +1576,7 @@ sistema.</p>
 <p>La implementación del brazo <code>rl</code> tiene las siguientes dependencias sobre el trabajo ya
 realizado:</p>
 <ul>
-<li><strong>Seis lotes completados</strong> (cap. 10, §10.5.3): la comparación <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
+<li><strong>Seis lotes completados</strong> (cap. 10, IT.10.5.3): la comparación <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.</li>
 <li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=depth</code>: la política RL se entrenará
@@ -1590,12 +1590,12 @@ pip<span class="w"> </span>install<span class="w"> </span>sb3-contrib<span class
 </code></pre></div>
 <p>El entrenamiento puede ejecutarse en la misma máquina de desarrollo (RTX 5060, 8 GB VRAM),
 ya que el brazo <code>rl</code> no requiere inferencia de VLM durante el entrenamiento. El presupuesto
-estimado de VRAM para PPO con la arquitectura CNN propuesta (§A8.5) es &lt; 2 GB, compatible
+estimado de VRAM para PPO con la arquitectura CNN propuesta (IT.A8.5) es &lt; 2 GB, compatible
 con AirSim corriendo en paralelo.</p>
 <hr />
-<p><em>Las referencias citadas en este anexo corresponden a las entradas del §13 del presente
+<p><em>Las referencias citadas en este anexo corresponden a las entradas del IT.13 del presente
 informe. La evaluación cuantitativa del brazo <code>rl</code> y su comparación con los tres brazos
-implementados forma parte del trabajo futuro descrito en §12.4.</em></p>
+implementados forma parte del trabajo futuro descrito en IT.12.4.</em></p>
 
 
 
