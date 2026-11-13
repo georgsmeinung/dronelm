@@ -197,16 +197,16 @@ Cada lote se ejecuta según la siguiente secuencia, en este orden estricto:
 
 ### A12.5.3 Celdas, semillas y presupuesto de cada lote
 
-Los scripts de los lotes están versionados en `experiments/` (`run_lotes.ps1` define el diseño; cada `run_loteN_*.ps1` lo llama con su número). El diseño completo es:
+Los scripts de los lotes están versionados en `experiments/` (`run_lotes.ps1` define el diseño; cada `run_loteN_*.ps1` lo llama con su número). El diseño completo es (las 3 celdas comunes son `slm:depth`, `fsm:depth` y `reactive`):
 
 | Lote | Escenario | Nivel UE | Celdas | Corridas | Semillas | Plan de ruta | Tiempo estimado |
 |---|---|---|---|---|---|---|---|
-| 1 | `minisim_clear` | MiniSim | `slm:depth`, `fsm:depth`, `reactive` | 30 | 2 3 5 7 11 13 17 19 23 29 | off | ~1.5 h |
-| 2 | `townsim_clear` | TownSim | ídem | 30 | 31 37 41 43 47 53 59 61 67 71 | off | ~3 h |
-| 3 | `townsim_ini` | TownSim | ídem + `fsm:blind` | 40 | 73 79 83 89 97 101 103 107 109 113 | vlm | ≤ 11.5 h |
-| 4 | `townsim_calib_cruce_frontal` | TownSim | ídem + `fsm:blind` | 40 | 127 131 137 139 149 151 157 163 167 173 | vlm | ≤ 14 h |
-| 5 | `citysim_clear` | CitySim | `slm:depth`, `fsm:depth`, `reactive` | 30 | 179 181 191 193 197 199 211 223 227 229 | off | ~2 h |
-| 6 | `citysim_pilot` | CitySim | ídem + `fsm:blind` | 40 | 233 239 241 251 257 263 269 271 277 281 | vlm | ≤ 12 h |
+| 1 | `minisim_clear` | MiniSim | las 3 comunes | 30 | 2 3 5 7 11 13 17 19 23 29 | off | ~1.5 h |
+| 2 | `townsim_clear` | TownSim | las 3 comunes | 30 | 31 37 41 43 47 53 59 61 67 71 | off | ~3 h |
+| 3 | `townsim_ini` | TownSim | las 3 comunes + `fsm:blind` | 40 | 73 79 83 89 97 101 103 107 109 113 | vlm | ≤ 11.5 h |
+| 4 | `townsim_calib_cruce_frontal` | TownSim | las 3 comunes + `fsm:blind` | 40 | 127 131 137 139 149 151 157 163 167 173 | vlm | ≤ 14 h |
+| 5 | `citysim_clear` | CitySim | las 3 comunes | 30 | 179 181 191 193 197 199 211 223 227 229 | off | ~2 h |
+| 6 | `citysim_pilot` | CitySim | las 3 comunes + `fsm:blind` | 40 | 233 239 241 251 257 263 269 271 277 281 | vlm | ≤ 12 h |
 | **Total** | | | | **210** | | | **~44 h** (peor caso) |
 
 En los lotes despejados el tiempo estimado es el típico (las corridas terminan en pocos minutos); en los de obstrucción, el peor caso, con las celdas que se traban agotando el presupuesto.
@@ -417,6 +417,7 @@ Cada muestra es una foto o un cuadro de video de una corrida, con la pose del dr
 5. **Etiquetar.** Un sector es **libre** si ese percentil es ≥ 15 m, la misma distancia que se le pide juzgar a la fuente y a la que se fija la sub-meta.
 
 De ahí salen las etiquetas de cada pregunta:
+
 - *Centro libre*: el estado del sector central.
 - *Lado por donde termina el obstáculo*: el lado del hueco libre más cercano al centro en la franja a la altura del dron.
 - *Espacio libre por encima*: si al menos la mitad del sector superior central está libre.

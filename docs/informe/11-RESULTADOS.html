@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1417,12 +1417,11 @@
 <p><strong>Configuración e integridad.</strong> La del capítulo 10: capa estratégica y barrido con profundidad estimada, el VLM fuera del lazo de vuelo, plan de ruta solo en los lotes con obstrucción y techo de 1200 s por corrida. Cada lote se corrió de una vez, con un solo <code>code_version</code> y sin cambios sin confirmar; el código de vuelo es idéntico en todas las versiones. Ninguna corrida se descarta: 210 válidas, ninguna con menos de 50 ciclos y ninguna colisión registrada por la bandera de AirSim (que no detecta todos los contactos, IT.10.6.1). NB1 reproduce el análisis y verifica que sus tablas coinciden con las del reporte (NB1.10).</p>
 <p><strong>Distancia mínima y SPL.</strong> DistMin se calcula sin la primera muestra de la auditoría, un artefacto del arranque. El valor de ~0.10 m que se repite en los escenarios con obstrucción es, probablemente, el plano cercano de la cámara de auditoría dentro del follaje o contra una fachada: contacto o casi contacto que la bandera no registra. En los lotes 3, 4 y 6 todas las celdas vuelan además los puntos de paso del plan de ruta, de modo que su SPL queda por debajo de 1 aun en la ruta perfecta; el sesgo es igual para todas las celdas de un lote.</p>
 <h2 id="112-resultados-por-celda">11.2 Resultados por celda<a class="headerlink" href="#112-resultados-por-celda" title="Permanent link">&para;</a></h2>
-<p>Éxito con su IC de Wilson al 95 %; SPL, tiempo de las misiones exitosas y DistMin como mediana [p25, p75]; terminación de las corridas fallidas.</p>
+<p>Éxito con su IC de Wilson al 95 %; SPL, tiempo de las misiones exitosas y DistMin como mediana [p25, p75]; terminación de las corridas fallidas (PL: <code>physics_locked</code>; TT: tope de tiempo). El escenario de cada lote está en la tabla de IT.10.4.2.</p>
 <table>
 <thead>
 <tr>
 <th>Lote</th>
-<th>Escenario</th>
 <th>Celda</th>
 <th>Éxito [IC 95 %]</th>
 <th>SPL</th>
@@ -1434,212 +1433,191 @@
 <tbody>
 <tr>
 <td>1</td>
-<td><code>minisim_clear</code></td>
 <td><code>slm:depth</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.54 [0.51, 0.56]</td>
-<td>165.1 [159.8, 171.4]</td>
-<td>15.51 [15.47, 15.64]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.54 [0.51, 0.56]</td>
+<td>165.1 [159.8, 171.4]</td>
+<td>15.51 [15.47, 15.64]</td>
 <td>—</td>
 </tr>
 <tr>
 <td>1</td>
-<td></td>
 <td><code>fsm:depth</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.38 [0.35, 0.43]</td>
-<td>306.4 [252.9, 369.5]</td>
-<td>15.49 [15.44, 15.63]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.38 [0.35, 0.43]</td>
+<td>306.4 [252.9, 369.5]</td>
+<td>15.49 [15.44, 15.63]</td>
 <td>—</td>
 </tr>
 <tr>
 <td>1</td>
-<td></td>
 <td><code>reactive</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.63 [0.63, 0.63]</td>
-<td>84.9 [84.7, 85.3]</td>
-<td>15.47 [15.46, 15.50]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.63 [0.63, 0.63]</td>
+<td>84.9 [84.7, 85.3]</td>
+<td>15.47 [15.46, 15.50]</td>
 <td>—</td>
 </tr>
 <tr>
 <td>2</td>
-<td><code>townsim_clear</code></td>
 <td><code>slm:depth</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.89 [0.87, 0.90]</td>
-<td>379.8 [366.4, 399.1]</td>
-<td>16.41 [12.43, 16.48]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.89 [0.87, 0.90]</td>
+<td>379.8 [366.4, 399.1]</td>
+<td>16.41 [12.43, 16.48]</td>
 <td>—</td>
 </tr>
 <tr>
 <td>2</td>
-<td></td>
 <td><code>fsm:depth</code></td>
-<td>9/10 [0.60, 0.98]</td>
-<td>0.76 [0.72, 0.80]</td>
-<td>488.6 [434.1, 516.2]</td>
-<td>1.55 [0.24, 3.63]</td>
-<td>1 <code>physics_locked</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.76 [0.72, 0.80]</td>
+<td>488.6 [434.1, 516.2]</td>
+<td>1.55 [0.24, 3.63]</td>
+<td>1 PL</td>
 </tr>
 <tr>
 <td>2</td>
-<td></td>
 <td><code>reactive</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.93 [0.91, 0.93]</td>
-<td>272.6 [272.4, 280.8]</td>
-<td>14.77 [7.89, 16.68]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.93 [0.91, 0.93]</td>
+<td>272.6 [272.4, 280.8]</td>
+<td>14.77 [7.89, 16.68]</td>
 <td>—</td>
 </tr>
 <tr>
 <td>5</td>
-<td><code>citysim_clear</code></td>
 <td><code>slm:depth</code></td>
-<td>9/10 [0.60, 0.98]</td>
-<td>0.70 [0.68, 0.72]</td>
-<td>286.2 [277.1, 288.9]</td>
-<td>11.45 [10.38, 12.50]</td>
-<td>1 <code>physics_locked</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.70 [0.68, 0.72]</td>
+<td>286.2 [277.1, 288.9]</td>
+<td>11.45 [10.38, 12.50]</td>
+<td>1 PL</td>
 </tr>
 <tr>
 <td>5</td>
-<td></td>
 <td><code>fsm:depth</code></td>
-<td>6/10 [0.31, 0.83]</td>
-<td>0.42 [0.00, 0.43]</td>
-<td>705.9 [664.8, 748.9]</td>
-<td>0.10 [0.10, 0.11]</td>
-<td>4 <code>physics_locked</code></td>
+<td>6/10 [0.31, 0.83]</td>
+<td>0.42 [0.00, 0.43]</td>
+<td>705.9 [664.8, 748.9]</td>
+<td>0.10 [0.10, 0.11]</td>
+<td>4 PL</td>
 </tr>
 <tr>
 <td>5</td>
-<td></td>
 <td><code>reactive</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.79 [0.79, 0.79]</td>
-<td>192.3 [190.6, 194.1]</td>
-<td>10.85 [10.70, 10.97]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.79 [0.79, 0.79]</td>
+<td>192.3 [190.6, 194.1]</td>
+<td>10.85 [10.70, 10.97]</td>
 <td>—</td>
 </tr>
 <tr>
 <td>3</td>
-<td><code>townsim_ini</code></td>
 <td><code>slm:depth</code></td>
-<td>9/10 [0.60, 0.98]</td>
-<td>0.48 [0.43, 0.48]</td>
-<td>519.9 [517.9, 524.3]</td>
-<td>0.13 [0.11, 0.37]</td>
-<td>1 <code>physics_locked</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.48 [0.43, 0.48]</td>
+<td>519.9 [517.9, 524.3]</td>
+<td>0.13 [0.11, 0.37]</td>
+<td>1 PL</td>
 </tr>
 <tr>
 <td>3</td>
-<td></td>
 <td><code>fsm:depth</code></td>
-<td>9/10 [0.60, 0.98]</td>
-<td>0.32 [0.31, 0.37]</td>
-<td>805.8 [704.9, 822.1]</td>
-<td>0.23 [0.12, 0.38]</td>
-<td>1 <code>physics_locked</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.32 [0.31, 0.37]</td>
+<td>805.8 [704.9, 822.1]</td>
+<td>0.23 [0.12, 0.38]</td>
+<td>1 PL</td>
 </tr>
 <tr>
 <td>3</td>
-<td></td>
 <td><code>fsm:blind</code></td>
-<td>9/10 [0.60, 0.98]</td>
-<td>0.38 [0.35, 0.40]</td>
-<td>625.1 [594.7, 684.6]</td>
-<td>0.24 [0.11, 0.38]</td>
-<td>1 <code>physics_locked</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.38 [0.35, 0.40]</td>
+<td>625.1 [594.7, 684.6]</td>
+<td>0.24 [0.11, 0.38]</td>
+<td>1 PL</td>
 </tr>
 <tr>
 <td>3</td>
-<td></td>
 <td><code>reactive</code></td>
-<td>0/10 [0.00, 0.28]</td>
+<td>0/10 [0.00, 0.28]</td>
 <td>0.00</td>
 <td>—</td>
-<td>1.94 [1.35, 2.36]</td>
-<td>10 tope de tiempo</td>
+<td>1.94 [1.35, 2.36]</td>
+<td>10 TT</td>
 </tr>
 <tr>
 <td>4</td>
-<td><code>townsim_calib_cruce_frontal</code></td>
 <td><code>slm:depth</code></td>
-<td>5/10 [0.24, 0.76]</td>
-<td>0.28 [0.00, 0.58]</td>
-<td>479.0 [401.7, 497.0]</td>
-<td>0.14 [0.12, 0.36]</td>
-<td>5 <code>physics_locked</code></td>
+<td>5/10 [0.24, 0.76]</td>
+<td>0.28 [0.00, 0.58]</td>
+<td>479.0 [401.7, 497.0]</td>
+<td>0.14 [0.12, 0.36]</td>
+<td>5 PL</td>
 </tr>
 <tr>
 <td>4</td>
-<td></td>
 <td><code>fsm:depth</code></td>
-<td>8/10 [0.49, 0.94]</td>
-<td>0.41 [0.33, 0.43]</td>
-<td>608.3 [558.9, 687.1]</td>
-<td>0.25 [0.16, 0.34]</td>
-<td>2 <code>physics_locked</code></td>
+<td>8/10 [0.49, 0.94]</td>
+<td>0.41 [0.33, 0.43]</td>
+<td>608.3 [558.9, 687.1]</td>
+<td>0.25 [0.16, 0.34]</td>
+<td>2 PL</td>
 </tr>
 <tr>
 <td>4</td>
-<td></td>
 <td><code>fsm:blind</code></td>
-<td>9/10 [0.60, 0.98]</td>
-<td>0.46 [0.40, 0.49]</td>
-<td>492.4 [469.3, 572.7]</td>
-<td>0.14 [0.12, 0.26]</td>
-<td>1 <code>physics_locked</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.46 [0.40, 0.49]</td>
+<td>492.4 [469.3, 572.7]</td>
+<td>0.14 [0.12, 0.26]</td>
+<td>1 PL</td>
 </tr>
 <tr>
 <td>4</td>
-<td></td>
 <td><code>reactive</code></td>
-<td>0/10 [0.00, 0.28]</td>
+<td>0/10 [0.00, 0.28]</td>
 <td>0.00</td>
 <td>—</td>
-<td>0.11 [0.10, 0.18]</td>
-<td>10 tope de tiempo</td>
+<td>0.11 [0.10, 0.18]</td>
+<td>10 TT</td>
 </tr>
 <tr>
 <td>6</td>
-<td><code>citysim_pilot</code></td>
 <td><code>slm:depth</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.48 [0.46, 0.51]</td>
-<td>483.1 [452.7, 513.0]</td>
-<td>4.14 [2.32, 4.14]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.48 [0.46, 0.51]</td>
+<td>483.1 [452.7, 513.0]</td>
+<td>4.14 [2.32, 4.14]</td>
 <td>—</td>
 </tr>
 <tr>
 <td>6</td>
-<td></td>
 <td><code>fsm:depth</code></td>
-<td>9/10 [0.60, 0.98]</td>
-<td>0.34 [0.33, 0.37]</td>
-<td>805.6 [688.1, 834.7]</td>
-<td>1.16 [0.20, 2.63]</td>
-<td>1 <code>physics_locked</code></td>
+<td>9/10 [0.60, 0.98]</td>
+<td>0.34 [0.33, 0.37]</td>
+<td>805.6 [688.1, 834.7]</td>
+<td>1.16 [0.20, 2.63]</td>
+<td>1 PL</td>
 </tr>
 <tr>
 <td>6</td>
-<td></td>
 <td><code>fsm:blind</code></td>
-<td>5/10 [0.24, 0.76]</td>
-<td>0.14 [0.00, 0.34]</td>
-<td>712.5 [625.4, 870.8]</td>
-<td>0.11 [0.10, 1.28]</td>
-<td>3 <code>physics_locked</code>, 2 tope de tiempo</td>
+<td>5/10 [0.24, 0.76]</td>
+<td>0.14 [0.00, 0.34]</td>
+<td>712.5 [625.4, 870.8]</td>
+<td>0.11 [0.10, 1.28]</td>
+<td>3 PL, 2 TT</td>
 </tr>
 <tr>
 <td>6</td>
-<td></td>
 <td><code>reactive</code></td>
-<td>10/10 [0.72, 1.00]</td>
-<td>0.53 [0.53, 0.53]</td>
-<td>313.2 [309.6, 319.4]</td>
-<td>4.14 [4.14, 4.14]</td>
+<td>10/10 [0.72, 1.00]</td>
+<td>0.53 [0.53, 0.53]</td>
+<td>313.2 [309.6, 319.4]</td>
+<td>4.14 [4.14, 4.14]</td>
 <td>—</td>
 </tr>
 </tbody>
@@ -1663,7 +1641,7 @@
 <td>1</td>
 <td><code>slm</code> vs. <code>fsm</code></td>
 <td>10 / 10</td>
-<td>−1.00 [−1.00, −1.00]</td>
+<td>−1.00 [−1.00, −1.00]</td>
 <td>1.1 × 10⁻⁵</td>
 <td>2.0 × 10⁻⁴</td>
 </tr>
@@ -1671,7 +1649,7 @@
 <td>1</td>
 <td><code>slm</code> vs. <code>reactive</code></td>
 <td>10 / 10</td>
-<td>+1.00 [+1.00, +1.00]</td>
+<td>+1.00 [+1.00, +1.00]</td>
 <td>1.1 × 10⁻⁵</td>
 <td>2.0 × 10⁻⁴</td>
 </tr>
@@ -1679,7 +1657,7 @@
 <td>1</td>
 <td><code>fsm</code> vs. <code>reactive</code></td>
 <td>10 / 10</td>
-<td>+1.00 [+1.00, +1.00]</td>
+<td>+1.00 [+1.00, +1.00]</td>
 <td>1.1 × 10⁻⁵</td>
 <td>2.0 × 10⁻⁴</td>
 </tr>
@@ -1687,7 +1665,7 @@
 <td>2</td>
 <td><code>slm</code> vs. <code>fsm</code></td>
 <td>10 / 9</td>
-<td>−0.98 [−1.00, −0.87]</td>
+<td>−0.98 [−1.00, −0.87]</td>
 <td>4.3 × 10⁻⁵</td>
 <td>7.8 × 10⁻⁴</td>
 </tr>
@@ -1695,7 +1673,7 @@
 <td>2</td>
 <td><code>slm</code> vs. <code>reactive</code></td>
 <td>10 / 10</td>
-<td>+1.00 [+1.00, +1.00]</td>
+<td>+1.00 [+1.00, +1.00]</td>
 <td>1.1 × 10⁻⁵</td>
 <td>2.0 × 10⁻⁴</td>
 </tr>
@@ -1703,7 +1681,7 @@
 <td>2</td>
 <td><code>fsm</code> vs. <code>reactive</code></td>
 <td>9 / 10</td>
-<td>+1.00 [+1.00, +1.00]</td>
+<td>+1.00 [+1.00, +1.00]</td>
 <td>2.2 × 10⁻⁵</td>
 <td>3.9 × 10⁻⁴</td>
 </tr>
@@ -1711,7 +1689,7 @@
 <td>5</td>
 <td><code>slm</code> vs. <code>fsm</code></td>
 <td>9 / 6</td>
-<td>−1.00 [−1.00, −1.00]</td>
+<td>−1.00 [−1.00, −1.00]</td>
 <td>4.0 × 10⁻⁴</td>
 <td>0.0072</td>
 </tr>
@@ -1719,7 +1697,7 @@
 <td>5</td>
 <td><code>slm</code> vs. <code>reactive</code></td>
 <td>9 / 10</td>
-<td>+1.00 [+1.00, +1.00]</td>
+<td>+1.00 [+1.00, +1.00]</td>
 <td>2.2 × 10⁻⁵</td>
 <td>3.9 × 10⁻⁴</td>
 </tr>
@@ -1727,7 +1705,7 @@
 <td>5</td>
 <td><code>fsm</code> vs. <code>reactive</code></td>
 <td>6 / 10</td>
-<td>+1.00 [+1.00, +1.00]</td>
+<td>+1.00 [+1.00, +1.00]</td>
 <td>2.5 × 10⁻⁴</td>
 <td>0.0045</td>
 </tr>
@@ -1798,7 +1776,7 @@
 <tr>
 <td>3</td>
 <td>(i) <code>slm:depth</code> vs. <code>fsm:blind</code></td>
-<td>+0.73 [+0.28, +1.00]</td>
+<td>+0.73 [+0.28, +1.00]</td>
 <td>0.0039</td>
 <td>0.071</td>
 <td>9/10 / 9/10</td>
@@ -1806,7 +1784,7 @@
 <tr>
 <td>3</td>
 <td>(ii) <code>fsm:depth</code> vs. <code>fsm:blind</code></td>
-<td>−0.49 [−0.90, 0.00]</td>
+<td>−0.49 [−0.90, 0.00]</td>
 <td>0.065</td>
 <td>1.00</td>
 <td>9/10 / 9/10</td>
@@ -1814,7 +1792,7 @@
 <tr>
 <td>3</td>
 <td>(iii) <code>slm:depth</code> vs. <code>fsm:depth</code></td>
-<td><strong>+0.81 [+0.40, +1.00]</strong></td>
+<td><strong>+0.81 [+0.40, +1.00]</strong></td>
 <td>0.0011</td>
 <td><strong>0.019</strong></td>
 <td>9/10 / 9/10</td>
@@ -1822,7 +1800,7 @@
 <tr>
 <td>4</td>
 <td>(i) <code>slm:depth</code> vs. <code>fsm:blind</code></td>
-<td>+0.05 [−0.52, +0.62]</td>
+<td>+0.05 [−0.52, +0.62]</td>
 <td>0.87</td>
 <td>1.00</td>
 <td>5/10 / 9/10</td>
@@ -1830,7 +1808,7 @@
 <tr>
 <td>4</td>
 <td>(ii) <code>fsm:depth</code> vs. <code>fsm:blind</code></td>
-<td>−0.40 [−0.82, +0.12]</td>
+<td>−0.40 [−0.82, +0.12]</td>
 <td>0.14</td>
 <td>1.00</td>
 <td>8/10 / 9/10</td>
@@ -1838,7 +1816,7 @@
 <tr>
 <td>4</td>
 <td>(iii) <code>slm:depth</code> vs. <code>fsm:depth</code></td>
-<td>+0.10 [−0.52, +0.66]</td>
+<td>+0.10 [−0.52, +0.66]</td>
 <td>0.73</td>
 <td>1.00</td>
 <td>5/10 / 8/10</td>
@@ -1846,7 +1824,7 @@
 <tr>
 <td>6</td>
 <td>(i) <code>slm:depth</code> vs. <code>fsm:blind</code></td>
-<td><strong>+1.00 [+1.00, +1.00]</strong></td>
+<td><strong>+1.00 [+1.00, +1.00]</strong></td>
 <td>1.1 × 10⁻⁵</td>
 <td><strong>2.0 × 10⁻⁴</strong></td>
 <td>10/10 / 5/10</td>
@@ -1854,7 +1832,7 @@
 <tr>
 <td>6</td>
 <td>(ii) <code>fsm:depth</code> vs. <code>fsm:blind</code></td>
-<td>+0.39 [−0.15, +0.84]</td>
+<td>+0.39 [−0.15, +0.84]</td>
 <td>0.14</td>
 <td>1.00</td>
 <td>9/10 / 5/10</td>
@@ -1862,7 +1840,7 @@
 <tr>
 <td>6</td>
 <td>(iii) <code>slm:depth</code> vs. <code>fsm:depth</code></td>
-<td><strong>+1.00 [+1.00, +1.00]</strong></td>
+<td><strong>+1.00 [+1.00, +1.00]</strong></td>
 <td>1.1 × 10⁻⁵</td>
 <td><strong>2.0 × 10⁻⁴</strong></td>
 <td>10/10 / 9/10</td>

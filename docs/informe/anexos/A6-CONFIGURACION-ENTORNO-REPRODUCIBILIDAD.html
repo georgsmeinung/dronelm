@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1937,15 +1937,17 @@
 <span class="na">r.DetailMode</span><span class="o">=</span><span class="s">2</span>
 </code></pre></div>
 <h3 id="a622-preset-de-escalabilidad-en-el-editor-de-unreal-engine">A6.2.2 Preset de escalabilidad en el Editor de Unreal Engine<a class="headerlink" href="#a622-preset-de-escalabilidad-en-el-editor-de-unreal-engine" title="Permanent link">&para;</a></h3>
-<p>Para las corridas de producción se configuró el siguiente perfil dentro del editor de Unreal Engine:
-* <strong>Resolution Scale:</strong> 100% (sin reescalado espacial en el motor).
-* <strong>View Distance:</strong> Medium (suficiente para el horizonte visual del dron).
-* <strong>Anti-Aliasing:</strong> TSR (Temporal Super Resolution) en Medium.
-* <strong>Post-Processing:</strong> Low (suprime desenfoques cinemáticos artificiales).
-* <strong>Shadows:</strong> <strong>Epic</strong> (crucial para proyectar sombras nítidas sobre el pavimento, proporcionando los gradientes texturales que explota el flujo óptico).
-* <strong>Global Illumination:</strong> Lumen en Low / Screen Space.
-* <strong>Reflections:</strong> Screen Space.
-* <strong>Effects:</strong> <strong>Epic</strong> (garantiza la resolución completa del render target de la cámara virtual de AirSim).</p>
+<p>Para las corridas de producción se configuró el siguiente perfil dentro del editor de Unreal Engine:</p>
+<ul>
+<li><strong>Resolution Scale:</strong> 100% (sin reescalado espacial en el motor).</li>
+<li><strong>View Distance:</strong> Medium (suficiente para el horizonte visual del dron).</li>
+<li><strong>Anti-Aliasing:</strong> TSR (Temporal Super Resolution) en Medium.</li>
+<li><strong>Post-Processing:</strong> Low (suprime desenfoques cinemáticos artificiales).</li>
+<li><strong>Shadows:</strong> <strong>Epic</strong> (crucial para proyectar sombras nítidas sobre el pavimento, proporcionando los gradientes texturales que explota el flujo óptico).</li>
+<li><strong>Global Illumination:</strong> Lumen en Low / Screen Space.</li>
+<li><strong>Reflections:</strong> Screen Space.</li>
+<li><strong>Effects:</strong> <strong>Epic</strong> (garantiza la resolución completa del render target de la cámara virtual de AirSim).</li>
+</ul>
 <p><em>(Véase captura de referencia en el repositorio: <code>informe/2026-0907 Scalability Config for Airsim and Shadows needed for TTC estimation.png</code>).</em></p>
 <hr />
 <h2 id="a63-especificacion-exhaustiva-de-variables-de-entorno-configenv">A6.3 Especificación exhaustiva de variables de entorno (<code>config/.env</code>)<a class="headerlink" href="#a63-especificacion-exhaustiva-de-variables-de-entorno-configenv" title="Permanent link">&para;</a></h2>

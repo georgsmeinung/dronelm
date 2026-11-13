@@ -91,14 +91,16 @@ Cinco principios gobiernan todos los escenarios (justificación en el Anexo 12, 
 
 ### 10.4.2 La batería de escenarios
 
-| Lote | Tier | Entorno (proyecto UE) | Escenario | Rol | Ruta desde el *spawn* | $\ell_{\text{opt}}$ (SPL) | Altitud | Dificultad esperada | Hipótesis que ejercita |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | 0 | MiniSim (plano sin obstáculos) | `minisim_clear` | Control / cota inferior | 181 m | 120 m | −10 m | Nula | H2, H3 (costo puro) |
-| 2 | 1 | TownSim (`townsim_ortho.png`) | `townsim_clear` | Control de crucero largo | 598 m | 588 m | −30 m | Baja | H2 (dilución del costo) |
-| 3 | 1 | TownSim | `townsim_ini` | Vegetación en ruta | 343 m | 312 m | −30/−22/−10 m | Media-alta | H1 |
-| 4 | 1 | TownSim | `townsim_calib_cruce_frontal` | Bloqueo frontal masivo | 350 m | 320 m | −30/−10 m | Alta | **H1** |
-| 5 | 2 | CitySim (`citysim_ortho.png`) | `citysim_clear` | Control en rampa sobre el perímetro de una manzana | 421 m | 345 m | −10/−30/−50 m | Baja | H2, H3 |
-| 6 | 2 | CitySim | `citysim_pilot` | Rodeo de manzanas y elección de corredor | 391 m | 339 m | −10 m | **Máxima** | **H1, H3** |
+| Lote | Escenario | Entorno | Rol | Ruta / $\ell_{\text{opt}}$ | Altitud | Dificultad · hipótesis |
+|:---:|---|---|---|---|---|---|
+| 1 | `minisim_clear` | MiniSim (T0) | Control: cota inferior | 181 / 120 m | −10 m | Nula · H2, H3 |
+| 2 | `townsim_clear` | TownSim (T1) | Control: crucero largo | 598 / 588 m | −30 m | Baja · H2 |
+| 3 | `townsim_ini` | TownSim (T1) | Vegetación en ruta | 343 / 312 m | −30 a −10 m | Media-alta · H1 |
+| 4 | `townsim_calib_cruce_frontal` | TownSim (T1) | Bloqueo frontal | 350 / 320 m | −30 a −10 m | Alta · **H1** |
+| 5 | `citysim_clear` | CitySim (T2) | Control en rampa | 421 / 345 m | −10 a −50 m | Baja · H2, H3 |
+| 6 | `citysim_pilot` | CitySim (T2) | Rodeo de manzanas | 391 / 339 m | −10 m | **Máxima** · **H1, H3** |
+
+*Ruta: longitud desde el punto de partida, con el ascenso; $\ell_{\text{opt}}$: suma de los tramos entre waypoints del manifiesto, la que usa el SPL (IT.10.6.1). T0–T2: nivel de dificultad del entorno. En los lotes 3, 4 y 6 el plan de ruta agrega puntos de paso a la ruta volada (IT.10.4.1, punto 5).*
 
 **Tier 0 — MiniSim.** Un plano sin estructuras verticales: mide el **costo puro del brazo `slm`**, sin nada que decidir, y la **tasa de falsos positivos de percepción**, porque todo evento de evasión o deadlock es, por construcción, falso.
 

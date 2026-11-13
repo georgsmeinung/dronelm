@@ -1,7 +1,6 @@
 # Informe de tesis — índice y estado
 
-Estructura de capítulos para la tesis *"Navegación Autónoma de Drones Urbanos con Visión
-Monocular y Small Language Model (SLM)"*. Un archivo Markdown por capítulo, para poder
+Estructura de capítulos para la tesis *"Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños"*. Un archivo Markdown por capítulo, para poder
 compilar a PDF o HTML por separado o concatenados (por ejemplo con Pandoc) sin tener que
 reescribir la estructura cada vez.
 

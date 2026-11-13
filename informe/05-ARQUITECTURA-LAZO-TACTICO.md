@@ -10,17 +10,15 @@ El grafo se compila **una vez** y el bucle externo (`main.py` o `experiments/run
 
 ### 5.1.1 Topología: cuatro nodos y una arista condicional
 
-```
-capture ──(ok)──────────► perception ──► navigate ──► motor ──► FIN
-   │                                                    ▲
-   └──(AirSim sin datos)──► degraded_hover ─────────────┘
-```
+<img src="2026-1113 topologia_grafo.png"/>
+
+*Figura 5.1. Topología del grafo compilado. Si AirSim entrega imagen y telemetría, el ciclo pasa por `perception` y `navigate`; si no, la arista condicional lo lleva a `degraded_hover`, que frena sin percepción ni decisión. Los dos caminos terminan en `motor`, el único nodo que actúa.*
 
 `navigate` es un **único nodo** que contiene la política. Los comportamientos concretos (guiado, evasión lateral, giro de 90°, escape vertical, barrido panorámico) son funciones que `navigate` invoca, no nodos del grafo.
 
 <img src="2026-1028 grafo_control.png"/>
 
-*Figura 5.1. Grafo de control en tres capas. Arriba, el bucle externo da una vuelta cada 200 ms y en el paso ③ ejecuta un ciclo del grafo; el grafo (centro) es el único que comanda velocidades y `navigate` aplica la primera de sus ocho reglas que se cumple. El lazo lento (derecha) consulta de forma asíncrona a su fuente —la red de profundidad estimada (IT.5.5.4)— y devuelve sub-metas en coordenadas del mundo, que el paso ④ inserta en el `WaypointTracker`. Abajo, una consulta a lo largo de diez ciclos: con la profundidad la sub-meta se aplica en el ciclo siguiente; con el VLM, cuatro ciclos después y calculada con la pose del pedido.*
+*Figura 5.2. Grafo de control en tres capas. Arriba, el bucle externo da una vuelta cada 200 ms y en el paso ③ ejecuta un ciclo del grafo; el grafo (centro) es el único que comanda velocidades y `navigate` aplica la primera de sus ocho reglas que se cumple. El lazo lento (derecha) consulta de forma asíncrona a su fuente —la red de profundidad estimada (IT.5.5.4)— y devuelve sub-metas en coordenadas del mundo, que el paso ④ inserta en el `WaypointTracker`. Abajo, una consulta a lo largo de diez ciclos: con la profundidad la sub-meta se aplica en el ciclo siguiente; con el VLM, cuatro ciclos después y calculada con la pose del pedido.*
 
 ### 5.1.2 Dos lazos desacoplados
 

@@ -229,6 +229,19 @@
     word-break: break-word;
     overflow-wrap: break-word;
     hyphens: auto;
+    padding: 0.45em 0.55em !important;
+  }
+
+  /* Identificadores de código en tablas: no partirlos a mitad de palabra
+     (minisim_c / lear). Se cortan solo en espacios; break-word no reduce el
+     ancho mínimo de la columna, así que una palabra se parte únicamente si
+     no entra en la página. */
+  .md-typeset table:not([class]) code,
+  .md-typeset__scrollwrap table code {
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    hyphens: none;
   }
 
   /* Evitar cortes dentro de bloques de código y figuras */

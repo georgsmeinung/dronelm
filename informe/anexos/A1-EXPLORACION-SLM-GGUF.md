@@ -31,19 +31,22 @@ Las variantes *Q4_K_M* (cuantización a 4 bits con ponderación mixta en bloques
 
 Se evaluaron los siguientes modelos instruccionales (*instruct-tuned*) en formato GGUF para su ejecución bajo motores locales como `llama.cpp` y LM Studio:
 
-| Modelo | Parámetros | Tamaño GGUF (quant) | VRAM estimada (full offload) | Fortalezas operativas | Comportamiento con salida estructurada | Disponibilidad de referencia |
-|---|---|---|---|---|---|---|
-| **Phi-4-mini-Instruct** | 3.8B | ~2.5–3.2 GB (Q4_K_M) | ~2.2–3.0 GB | Ajuste fino sobre datos sintéticos de alta fidelidad; sólida capacidad de razonamiento lógico y matemático ([Abdin et al., 2024](../13-REFERENCIAS.md#ref-abdin-2024)). | Muy alta adherencia a esquemas rígidos; mínima variación sintáctica. | `microsoft/Phi-4-mini-instruct-GGUF` |
-| **Qwen3-4B-Instruct** | ~4B | ~2.8–3.5 GB (Q4_K_M) | ~2.5–3.5 GB | Excelente seguimiento de instrucciones complejas; capacidad nativa de *tool-calling*. | Soporte consistente de esquemas JSON mediante prompting y gramáticas. | `Qwen/Qwen3-4B-Instruct-GGUF` |
-| **SmolLM3-3B-Instruct** | 3B | ~2.0–2.6 GB (Q4_K_M) | ~1.8–2.5 GB | Huella de memoria mínima; preentrenado específicamente para entornos embebidos y de bajo consumo. | Fácil de orientar a formatos fijos, aunque con menor tolerancia a contextos extensos. | `HuggingFaceTB/SmolLM3-3B-GGUF` |
-| **Gemma-3-4B-IT** | 4B | ~2.8–3.4 GB (Q4_K_M) | ~2.5–3.2 GB | Arquitectura optimizada por Google; notable coherencia lingüística y comprensión contextual. | Buen desempeño estructurado, pero mayor demanda de KV cache en secuencias largas. | `google/gemma-3-4b-it-GGUF` |
-| **Ministral-3-3B-Instruct** | 3B | ~2.2–2.7 GB (Q4_K_M) | ~2.0–2.6 GB | Diseñado específicamente por Mistral AI para despliegues de borde (*edge inference*); atención deslizante. | Rápido y estable en la emisión de respuestas compactas delimitadas. | `mistralai/Ministral-3-3B-Instruct-GGUF` |
+| Modelo | Parámetros | GGUF Q4_K_M | VRAM (offload total) | Fortalezas operativas | Salida estructurada |
+| --- | --- | --- | --- | --- | --- |
+| **Phi-4-mini-Instruct** | 3.8B | ~2.5–3.2 GB | ~2.2–3.0 GB | Ajuste fino sobre datos sintéticos de alta fidelidad; sólida capacidad de razonamiento lógico y matemático ([Abdin et al., 2024](../13-REFERENCIAS.md#ref-abdin-2024)). | Muy alta adherencia a esquemas rígidos; mínima variación sintáctica. |
+| **Qwen3-4B-Instruct** | ~4B | ~2.8–3.5 GB | ~2.5–3.5 GB | Excelente seguimiento de instrucciones complejas; capacidad nativa de *tool-calling*. | Soporte consistente de esquemas JSON mediante prompting y gramáticas. |
+| **SmolLM3-3B-Instruct** | 3B | ~2.0–2.6 GB | ~1.8–2.5 GB | Huella de memoria mínima; preentrenado específicamente para entornos embebidos y de bajo consumo. | Fácil de orientar a formatos fijos, aunque con menor tolerancia a contextos extensos. |
+| **Gemma-3-4B-IT** | 4B | ~2.8–3.4 GB | ~2.5–3.2 GB | Arquitectura optimizada por Google; notable coherencia lingüística y comprensión contextual. | Buen desempeño estructurado, pero mayor demanda de KV cache en secuencias largas. |
+| **Ministral-3-3B-Instruct** | 3B | ~2.2–2.7 GB | ~2.0–2.6 GB | Diseñado específicamente por Mistral AI para despliegues de borde (*edge inference*); atención deslizante. | Rápido y estable en la emisión de respuestas compactas delimitadas. |
+
+Repositorios GGUF de referencia: Phi-4-mini-Instruct, `microsoft/Phi-4-mini-instruct-GGUF`; Qwen3-4B-Instruct, `Qwen/Qwen3-4B-Instruct-GGUF`; SmolLM3-3B-Instruct, `HuggingFaceTB/SmolLM3-3B-GGUF`; Gemma-3-4B-IT, `google/gemma-3-4b-it-GGUF`; Ministral-3-3B-Instruct, `mistralai/Ministral-3-3B-Instruct-GGUF`.
 
 ### Por qué un modelo multimodal (IT.8.1.1 y IT.8.1.2)
 
 Los modelos textuales analizados son adecuados para procesar telemetría pura, pero la percepción monocular tiene **puntos ciegos estructurales en la estimación de flujo óptico** (maniobras de sustentación estática *hover*, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse IT.6.1 y IT.6.11). Bajo esas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Por eso el sistema usa un modelo con **capacidad de visión nativa** (*Small Vision-Language Model*, sVLM), que inspecciona directamente el fotograma de la cámara frontal o el mapa cenital.
 
 Los dos sVLM candidatos que caben en el presupuesto son **Qwen2.5-VL-3B-Instruct** ([Qwen Team, 2025](../13-REFERENCIAS.md#ref-qwen-team-2025); Q4_K_M, ~2.0 GB de VRAM) y **LFM2.5-VL-1.6B** (Q4_K_M, tag local de Ollama `lfm2.5-vl-1.6b:q4km-ctx8k`, ~1.6 GB de VRAM). El adoptado es LFM2.5-VL-1.6B, por latencia y por su mejor reconocimiento de parches del mapa (cap. 8, IT.8.1.2; cap. 10, IT.10.2). Ambos cumplen los requisitos:
+
 * **Huella de memoria** dentro del presupuesto operativo restante de la GPU.
 * **Inspección visual directa** del fotograma, para discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
 * **Compatibilidad de decodificación**: soporte de decodificación restringida (`json_schema`) y *logprobs* en la misma consulta (en formato GGUF).
@@ -63,11 +66,13 @@ Eres un controlador de vuelo determinista. Responde ÚNICAMENTE un objeto JSON v
 conforme a este esquema: {"action": "keep_going" | "evasive" | "girar_90" | "fsm" | "degraded", "reason": str}.
 No incluyas introducciones, markdown (```), ni texto posterior.
 ```
+
 * **Ventajas**: implementación trivial; no impone sobrecarga computacional en el motor de inferencia.
 * **Limitaciones**: fiabilidad imperfecta. En modelos compactos (<7B parámetros), la tasa de adherencia sintáctica ronda el 70–85%, presentándose ocasionalmente truncamientos, alucinaciones de sintaxis o texto preliminar que corrompen el flujo de control.
 
 ### 2. Gramáticas libres de contexto (GBNF en `llama.cpp`)
 El motor `llama.cpp` proporciona un subsistema de decodificación guiada por gramáticas formales (*GGML BNF* o GBNF; Gerganov, 2023). En cada paso de generación autorregresiva, el motor filtra y enmascara los *logits* del vocabulario, asignando probabilidad cero ($-\infty$) a cualquier token que no cumpla con la regla de transición definida en la gramática.
+
 * **Ventajas**: garantiza matemáticamente que el 100% de los tokens emitidos respeten la estructura gramatical (e.g., sintaxis JSON perfecta).
 * **Limitaciones**: genera una penalización de rendimiento temporal del 10% al 30% en la velocidad de decodificación, debido a la evaluación continua de las reglas gramaticales sobre el conjunto de tokens candidatos.
 
@@ -118,6 +123,7 @@ Una revisión exhaustiva de la literatura especializada publicada entre 2024 y 2
 En términos de originalidad puramente teórica o arquitectónica, la arquitectura en lazo cerrado simple se sitúa en un nivel de madurez consolidado (patrón canónico de ingeniería). Intentar justificar la novedad de una tesis únicamente en el hecho de conectar un modelo de lenguaje a un simulador de vuelo representaría un posicionamiento metodológicamente vulnerable.
 
 Por el contrario, **el verdadero aporte de ingeniería de esta tesis radica en la resolución de los cuellos de botella prácticos que la literatura suele ignorar o delegar a servidores masivos en la nube**:
+
 1. La integración sinérgica entre **percepción monocular por flujo óptico pasivo** (capítulo 6) y un modelo visual compacto local (capítulo 8), delimitando cuándo se activa el razonamiento deliberativo y cuándo se recurre al control reactivo.
 2. La caracterización sistemática de los **modos de fallo en tiempo real** bajo presupuestos severos de cómputo y memoria (capítulo 9).
 3. La garantía de determinismo y fiabilidad operativa mediante **decodificación restringida por esquemas gramaticales** y arquitecturas jerárquicas de seguridad.

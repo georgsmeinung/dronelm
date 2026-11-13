@@ -4,15 +4,35 @@
     {
       "name": "webdcs",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "cd /d D:\\TesisMCD\\dronelm\\airsim-plan && D:\\TesisMCD\\airsimenv\\python.exe -m uvicorn webdcs.main:app --no-access-log --port 8000"],
+      "runtimeArgs": [
+        "/c",
+        "cd /d D:\\TesisMCD\\dronelm\\airsim-plan && D:\\TesisMCD\\airsimenv\\python.exe -m uvicorn webdcs.main:app --no-access-log --port 8000"
+      ],
       "port": 8000,
       "url": "http://localhost:8000"
     },
     {
       "name": "docs",
       "runtimeExecutable": "D:\\TesisMCD\\airsimenv\\python.exe",
-      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "D:\\TesisMCD\\dronelm\\docs"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "D:\\TesisMCD\\dronelm\\docs"
+      ],
       "port": 8765
+    },
+    {
+      "name": "informe",
+      "runtimeExecutable": "D:\\Python\\3.14\\Scripts\\mkdocs.exe",
+      "runtimeArgs": [
+        "serve",
+        "-a",
+        "127.0.0.1:8766",
+        "--no-livereload"
+      ],
+      "port": 8766
     }
   ]
 }

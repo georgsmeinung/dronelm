@@ -41,7 +41,11 @@ $$K_{\text{Sobel}} = \frac{1}{8}\begin{pmatrix} -1 & 0 & 1 \\ -2 & 0 & 2 \\ -1 &
 
 produce divergencias unas 8 veces mayores que las correctas, y el canal de ocupación satura a `1.0` con cualquier gradiente de flujo, incluso en espacio abierto.
 
-La consecuencia ilustra un problema de diseño de predicados disyuntivos sobre canales de distinta confianza. La lógica $\text{is\_blocked} = (\text{occ} \geq t_{occ}) \lor (\text{conf} \geq 0.35 \land \text{ttc} \leq 2.5)$ asume canales calibrados en escalas comparables: si uno está sobre-estimado, la disyunción lo vuelve dominante y anula al otro, y el TTC, que tiene validación empírica (cap. 7), pierde toda influencia. El caso inverso también ocurre: un umbral de ocupación demasiado alto deja mudo a ese canal y la detección recae solo en el TTC (cap. 7, IT.7.5).
+La consecuencia ilustra un problema de diseño de predicados disyuntivos sobre canales de distinta confianza. Una celda $c$ se declara bloqueada (cap. 6, IT.6.9) si
+
+$$\text{bloqueada}(c) = \big(o_c \geq t_o\big) \lor \big(\kappa_c \geq 0.35 \land \hat{\tau}_c \leq 2.5\,\text{s}\big)$$
+
+con $o_c$ la ocupación, $\kappa_c$ la confianza y $\hat{\tau}_c$ el TTC de la celda (IT.6.8). La disyunción asume canales calibrados en escalas comparables: si uno está sobre-estimado, se vuelve dominante y anula al otro, y el TTC, que tiene validación empírica (cap. 7), pierde toda influencia. El caso inverso también ocurre: un umbral de ocupación demasiado alto deja mudo a ese canal y la detección recae solo en el TTC (cap. 7, IT.7.5).
 
 **Mecanismo de contención.** La divergencia se calcula con `np.gradient()`, normalizado intrínsecamente; el umbral de ocupación está calibrado contra profundidad de referencia por curva ROC (cap. 7, IT.7.5); y los dos canales tienen umbrales de confianza diferenciados (0.15 para ocupación, 0.35 para TTC), de modo que ningún canal puede dominar al otro sin confianza suficiente, aun ante recalibraciones futuras.
 

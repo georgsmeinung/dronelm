@@ -18,19 +18,9 @@ El lazo rápido prescinde de redes neuronales de detección —detectores de caj
 
 `FlowTTCEstimator.estimate()` ejecuta cada ciclo cinco etapas en secuencia y produce un `ObstacleField`:
 
-```
-Frame(t-1) + Frame(t) + Telemetría(t-1, t)
-    ↓
-[1] Escala y conversión a escala de grises
-    ↓
-[2] Flujo óptico denso (DIS / Farneback)
-    ↓
-[3] Derotación por telemetría de actitud (IMU)
-    ↓
-[4] Estimación del FOE + RANSAC-lite de outliers
-    ↓
-[5] TTC por píxel + divergencia → agregación por celdas → ObstacleField
-```
+<img src="2026-1113 pipeline_cinco_etapas.png"/>
+
+*Figura 6.1. Las cinco etapas del estimador de flujo óptico. Cada ciclo recibe el par de fotogramas y la telemetría de ambos, y produce el `ObstacleField` que consume el lazo rápido; si alguna etapa no tiene evidencia suficiente, la salida es un campo vacío con confianza nula.*
 
 Si en cualquier etapa no hay evidencia suficiente (primer ciclo, modo degradado, rotación grande entre frames, flujo bajo el piso de ruido), la función retorna un campo vacío con confianza nula, marcando explícitamente la ausencia de evidencia sin ningún clamp cosmético que la enmascare.
 
@@ -70,15 +60,21 @@ la forma discreta de $TTC = Z / v_{\text{cierre}}$, válida con traslación domi
 
 ## 6.8 Grilla de celdas 3×3 y agregación por sector
 
-El campo traslacional se divide en una grilla de 3 columnas (sectores *izquierda*, *centro*, *derecha*) × 3 filas, y para cada celda se calcula:
+El campo traslacional se divide en una grilla de 3 columnas (sectores *izquierda*, *centro*, *derecha*) × 3 filas. Para cada celda $c$, sea $N_c$ su número de píxeles y $V_c$ el conjunto de los válidos (flujo por encima del piso de ruido). Se calculan tres valores:
 
-- **Confianza**: fracción de píxeles válidos de la celda multiplicada por la confianza del FOE; refleja tanto la densidad local de flujo como la calidad global del FOE.
-- **TTC de celda**: percentil 20 de los TTC finitos de la celda, conservador y resistente a TTC espuriamente bajos en píxeles aislados; con menos de 5 píxeles válidos, infinito.
-- **Ocupación**: media de la divergencia positiva de la celda escalada por un factor de calibración,
+$$
+\begin{aligned}
+\kappa_c &= \frac{|V_c|}{N_c}\,\kappa_{\text{FOE}} \\
+\hat{\tau}_c &= P_{20}\big\{\,\tau(p) : p \in V_c,\ \tau(p) < \infty\,\big\} \\
+o_c &= \min\!\big(1,\ \max(0,\ k\,\bar{d}_c)\big)
+\end{aligned}
+$$
 
-$$\text{occupancy} = \text{clip}\!\left(\bar{\text{div}}^+ \times \frac{0.450}{8.0},\ 0,\ 1\right)$$
+- **Confianza** $\kappa_c$: la fracción de píxeles válidos de la celda por la confianza del FOE, $\kappa_{\text{FOE}}$ (IT.6.6). Combina la densidad local de flujo con la calidad global del FOE.
+- **TTC de celda** $\hat{\tau}_c$: el percentil 20 de los TTC finitos de la celda, conservador y resistente a TTC espuriamente bajos en píxeles aislados. Con menos de 5 píxeles válidos, $\hat{\tau}_c = \infty$.
+- **Ocupación** $o_c$: la divergencia media de la celda, $\bar{d}_c = \frac{1}{|V_c|}\sum_{p \in V_c} \text{div}(p)$ (en s⁻¹, IT.6.7), multiplicada por una constante $k \approx 0.056$ s y acotada a $[0, 1]$. Una celda que en promedio se contrae ($\bar{d}_c \le 0$) tiene ocupación nula; una que se expande la tiene proporcional a la tasa de expansión.
 
-El factor se determinó empíricamente comparando las salidas del estimador con profundidad de referencia del simulador; no es un valor físicamente derivado sino el mejor punto de operación en los escenarios de esta tesis. El protocolo de validación se describe en el capítulo 7.
+La constante $k$ (en el código, $0.450/8$) se determinó empíricamente contra la profundidad de referencia del simulador: no es un valor físicamente derivado sino un factor de escala. Como $o_c$ es lineal en $\bar{d}_c$ por debajo de 1, el umbral de bloqueo de 0.011 (IT.6.9) equivale a pedir una divergencia media de al menos ~0.2 s⁻¹ en la celda. El protocolo de validación se describe en el capítulo 7.
 
 ## 6.9 El predicado de bloqueo: fusión de dos canales
 

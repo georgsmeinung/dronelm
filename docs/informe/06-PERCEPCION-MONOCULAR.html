@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1526,18 +1526,8 @@
 <p><strong>Limitación estructural.</strong> El flujo óptico necesita <strong>traslación entre frames</strong>: en hover, giro puro o crucero muy lento la señal colapsa, y lo mismo ocurre con un obstáculo centrado en el foco de expansión. El lazo lento, que mira un único fotograma, cubre esa limitación con la profundidad estimada (IT.6.12).</p>
 <h2 id="62-pipeline-de-percepcion-cinco-etapas">6.2 Pipeline de percepción: cinco etapas<a class="headerlink" href="#62-pipeline-de-percepcion-cinco-etapas" title="Permanent link">&para;</a></h2>
 <p><code>FlowTTCEstimator.estimate()</code> ejecuta cada ciclo cinco etapas en secuencia y produce un <code>ObstacleField</code>:</p>
-<div class="highlight"><pre><span></span><code>Frame(t-1) + Frame(t) + Telemetría(t-1, t)
-    ↓
-[1] Escala y conversión a escala de grises
-    ↓
-[2] Flujo óptico denso (DIS / Farneback)
-    ↓
-[3] Derotación por telemetría de actitud (IMU)
-    ↓
-[4] Estimación del FOE + RANSAC-lite de outliers
-    ↓
-[5] TTC por píxel + divergencia → agregación por celdas → ObstacleField
-</code></pre></div>
+<p><img src="2026-1113 pipeline_cinco_etapas.png"/></p>
+<p><em>Figura 6.1. Las cinco etapas del estimador de flujo óptico. Cada ciclo recibe el par de fotogramas y la telemetría de ambos, y produce el <code>ObstacleField</code> que consume el lazo rápido; si alguna etapa no tiene evidencia suficiente, la salida es un campo vacío con confianza nula.</em></p>
 <p>Si en cualquier etapa no hay evidencia suficiente (primer ciclo, modo degradado, rotación grande entre frames, flujo bajo el piso de ruido), la función retorna un campo vacío con confianza nula, marcando explícitamente la ausencia de evidencia sin ningún clamp cosmético que la enmascare.</p>
 <h2 id="63-etapa-1-escala-y-parametros-intrinsecos">6.3 Etapa 1: escala y parámetros intrínsecos<a class="headerlink" href="#63-etapa-1-escala-y-parametros-intrinsecos" title="Permanent link">&para;</a></h2>
 <p>Los fotogramas se convierten a escala de grises y se escalan a un ancho de trabajo de 640 px, con la distancia focal escalada en proporción; a 320 px, el valor usado en la validación del capítulo 7, los objetos finos como las ramas quedan bajo el piso de ruido.</p>
@@ -1557,14 +1547,20 @@
 <p>la forma discreta de <span class="arithmatex">\(TTC = Z / v_{\text{cierre}}\)</span>, válida con traslación dominante. Cerca del FOE o con flujo muy pequeño, el TTC tiende a infinito: sin evidencia de aproximación.</p>
 <p><strong>Canal de divergencia.</strong> En paralelo, el estimador computa la divergencia del campo traslacional, <span class="arithmatex">\(\text{div}(x,y) = \partial u / \partial x + \partial v / \partial y\)</span>, con diferencias centradas normalizadas por <span class="arithmatex">\(\Delta t\)</span>. La divergencia positiva indica expansión local: el objeto en ese punto se acerca. Es un indicador complementario que no requiere estimar el FOE: aun si el ajuste del FOE falla, una celda con divergencia positiva elevada sigue siendo evidencia de aproximación.</p>
 <h2 id="68-grilla-de-celdas-33-y-agregacion-por-sector">6.8 Grilla de celdas 3×3 y agregación por sector<a class="headerlink" href="#68-grilla-de-celdas-33-y-agregacion-por-sector" title="Permanent link">&para;</a></h2>
-<p>El campo traslacional se divide en una grilla de 3 columnas (sectores <em>izquierda</em>, <em>centro</em>, <em>derecha</em>) × 3 filas, y para cada celda se calcula:</p>
+<p>El campo traslacional se divide en una grilla de 3 columnas (sectores <em>izquierda</em>, <em>centro</em>, <em>derecha</em>) × 3 filas. Para cada celda <span class="arithmatex">\(c\)</span>, sea <span class="arithmatex">\(N_c\)</span> su número de píxeles y <span class="arithmatex">\(V_c\)</span> el conjunto de los válidos (flujo por encima del piso de ruido). Se calculan tres valores:</p>
+<div class="arithmatex">\[
+\begin{aligned}
+\kappa_c &amp;= \frac{|V_c|}{N_c}\,\kappa_{\text{FOE}} \\
+\hat{\tau}_c &amp;= P_{20}\big\{\,\tau(p) : p \in V_c,\ \tau(p) &lt; \infty\,\big\} \\
+o_c &amp;= \min\!\big(1,\ \max(0,\ k\,\bar{d}_c)\big)
+\end{aligned}
+\]</div>
 <ul>
-<li><strong>Confianza</strong>: fracción de píxeles válidos de la celda multiplicada por la confianza del FOE; refleja tanto la densidad local de flujo como la calidad global del FOE.</li>
-<li><strong>TTC de celda</strong>: percentil 20 de los TTC finitos de la celda, conservador y resistente a TTC espuriamente bajos en píxeles aislados; con menos de 5 píxeles válidos, infinito.</li>
-<li><strong>Ocupación</strong>: media de la divergencia positiva de la celda escalada por un factor de calibración,</li>
+<li><strong>Confianza</strong> <span class="arithmatex">\(\kappa_c\)</span>: la fracción de píxeles válidos de la celda por la confianza del FOE, <span class="arithmatex">\(\kappa_{\text{FOE}}\)</span> (IT.6.6). Combina la densidad local de flujo con la calidad global del FOE.</li>
+<li><strong>TTC de celda</strong> <span class="arithmatex">\(\hat{\tau}_c\)</span>: el percentil 20 de los TTC finitos de la celda, conservador y resistente a TTC espuriamente bajos en píxeles aislados. Con menos de 5 píxeles válidos, <span class="arithmatex">\(\hat{\tau}_c = \infty\)</span>.</li>
+<li><strong>Ocupación</strong> <span class="arithmatex">\(o_c\)</span>: la divergencia media de la celda, <span class="arithmatex">\(\bar{d}_c = \frac{1}{|V_c|}\sum_{p \in V_c} \text{div}(p)\)</span> (en s⁻¹, IT.6.7), multiplicada por una constante <span class="arithmatex">\(k \approx 0.056\)</span> s y acotada a <span class="arithmatex">\([0, 1]\)</span>. Una celda que en promedio se contrae (<span class="arithmatex">\(\bar{d}_c \le 0\)</span>) tiene ocupación nula; una que se expande la tiene proporcional a la tasa de expansión.</li>
 </ul>
-<div class="arithmatex">\[\text{occupancy} = \text{clip}\!\left(\bar{\text{div}}^+ \times \frac{0.450}{8.0},\ 0,\ 1\right)\]</div>
-<p>El factor se determinó empíricamente comparando las salidas del estimador con profundidad de referencia del simulador; no es un valor físicamente derivado sino el mejor punto de operación en los escenarios de esta tesis. El protocolo de validación se describe en el capítulo 7.</p>
+<p>La constante <span class="arithmatex">\(k\)</span> (en el código, <span class="arithmatex">\(0.450/8\)</span>) se determinó empíricamente contra la profundidad de referencia del simulador: no es un valor físicamente derivado sino un factor de escala. Como <span class="arithmatex">\(o_c\)</span> es lineal en <span class="arithmatex">\(\bar{d}_c\)</span> por debajo de 1, el umbral de bloqueo de 0.011 (IT.6.9) equivale a pedir una divergencia media de al menos ~0.2 s⁻¹ en la celda. El protocolo de validación se describe en el capítulo 7.</p>
 <h2 id="69-el-predicado-de-bloqueo-fusion-de-dos-canales">6.9 El predicado de bloqueo: fusión de dos canales<a class="headerlink" href="#69-el-predicado-de-bloqueo-fusion-de-dos-canales" title="Permanent link">&para;</a></h2>
 <p>La decisión de si una celda está <strong>bloqueada</strong> fusiona los dos canales con una compuerta disyuntiva condicionada a la confianza:</p>
 <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>

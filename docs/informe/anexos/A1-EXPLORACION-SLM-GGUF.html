@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1488,67 +1488,64 @@
 <tr>
 <th>Modelo</th>
 <th>Parámetros</th>
-<th>Tamaño GGUF (quant)</th>
-<th>VRAM estimada (full offload)</th>
+<th>GGUF Q4_K_M</th>
+<th>VRAM (offload total)</th>
 <th>Fortalezas operativas</th>
-<th>Comportamiento con salida estructurada</th>
-<th>Disponibilidad de referencia</th>
+<th>Salida estructurada</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>Phi-4-mini-Instruct</strong></td>
 <td>3.8B</td>
-<td>~2.5–3.2 GB (Q4_K_M)</td>
+<td>~2.5–3.2 GB</td>
 <td>~2.2–3.0 GB</td>
 <td>Ajuste fino sobre datos sintéticos de alta fidelidad; sólida capacidad de razonamiento lógico y matemático (<a href="../13-REFERENCIAS.html#ref-abdin-2024">Abdin et al., 2024</a>).</td>
 <td>Muy alta adherencia a esquemas rígidos; mínima variación sintáctica.</td>
-<td><code>microsoft/Phi-4-mini-instruct-GGUF</code></td>
 </tr>
 <tr>
 <td><strong>Qwen3-4B-Instruct</strong></td>
 <td>~4B</td>
-<td>~2.8–3.5 GB (Q4_K_M)</td>
+<td>~2.8–3.5 GB</td>
 <td>~2.5–3.5 GB</td>
 <td>Excelente seguimiento de instrucciones complejas; capacidad nativa de <em>tool-calling</em>.</td>
 <td>Soporte consistente de esquemas JSON mediante prompting y gramáticas.</td>
-<td><code>Qwen/Qwen3-4B-Instruct-GGUF</code></td>
 </tr>
 <tr>
 <td><strong>SmolLM3-3B-Instruct</strong></td>
 <td>3B</td>
-<td>~2.0–2.6 GB (Q4_K_M)</td>
+<td>~2.0–2.6 GB</td>
 <td>~1.8–2.5 GB</td>
 <td>Huella de memoria mínima; preentrenado específicamente para entornos embebidos y de bajo consumo.</td>
 <td>Fácil de orientar a formatos fijos, aunque con menor tolerancia a contextos extensos.</td>
-<td><code>HuggingFaceTB/SmolLM3-3B-GGUF</code></td>
 </tr>
 <tr>
 <td><strong>Gemma-3-4B-IT</strong></td>
 <td>4B</td>
-<td>~2.8–3.4 GB (Q4_K_M)</td>
+<td>~2.8–3.4 GB</td>
 <td>~2.5–3.2 GB</td>
 <td>Arquitectura optimizada por Google; notable coherencia lingüística y comprensión contextual.</td>
 <td>Buen desempeño estructurado, pero mayor demanda de KV cache en secuencias largas.</td>
-<td><code>google/gemma-3-4b-it-GGUF</code></td>
 </tr>
 <tr>
 <td><strong>Ministral-3-3B-Instruct</strong></td>
 <td>3B</td>
-<td>~2.2–2.7 GB (Q4_K_M)</td>
+<td>~2.2–2.7 GB</td>
 <td>~2.0–2.6 GB</td>
 <td>Diseñado específicamente por Mistral AI para despliegues de borde (<em>edge inference</em>); atención deslizante.</td>
 <td>Rápido y estable en la emisión de respuestas compactas delimitadas.</td>
-<td><code>mistralai/Ministral-3-3B-Instruct-GGUF</code></td>
 </tr>
 </tbody>
 </table>
+<p>Repositorios GGUF de referencia: Phi-4-mini-Instruct, <code>microsoft/Phi-4-mini-instruct-GGUF</code>; Qwen3-4B-Instruct, <code>Qwen/Qwen3-4B-Instruct-GGUF</code>; SmolLM3-3B-Instruct, <code>HuggingFaceTB/SmolLM3-3B-GGUF</code>; Gemma-3-4B-IT, <code>google/gemma-3-4b-it-GGUF</code>; Ministral-3-3B-Instruct, <code>mistralai/Ministral-3-3B-Instruct-GGUF</code>.</p>
 <h3 id="por-que-un-modelo-multimodal-it811-y-it812">Por qué un modelo multimodal (IT.8.1.1 y IT.8.1.2)<a class="headerlink" href="#por-que-un-modelo-multimodal-it811-y-it812" title="Permanent link">&para;</a></h3>
 <p>Los modelos textuales analizados son adecuados para procesar telemetría pura, pero la percepción monocular tiene <strong>puntos ciegos estructurales en la estimación de flujo óptico</strong> (maniobras de sustentación estática <em>hover</em>, giros puros sobre el eje de guiñada y áreas de baja textura visual; véanse IT.6.1 y IT.6.11). Bajo esas condiciones, el resumen perceptivo numérico queda desprovisto de información confiable. Por eso el sistema usa un modelo con <strong>capacidad de visión nativa</strong> (<em>Small Vision-Language Model</em>, sVLM), que inspecciona directamente el fotograma de la cámara frontal o el mapa cenital.</p>
-<p>Los dos sVLM candidatos que caben en el presupuesto son <strong>Qwen2.5-VL-3B-Instruct</strong> (<a href="../13-REFERENCIAS.html#ref-qwen-team-2025">Qwen Team, 2025</a>; Q4_K_M, ~2.0 GB de VRAM) y <strong>LFM2.5-VL-1.6B</strong> (Q4_K_M, tag local de Ollama <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, ~1.6 GB de VRAM). El adoptado es LFM2.5-VL-1.6B, por latencia y por su mejor reconocimiento de parches del mapa (cap. 8, IT.8.1.2; cap. 10, IT.10.2). Ambos cumplen los requisitos:
-* <strong>Huella de memoria</strong> dentro del presupuesto operativo restante de la GPU.
-* <strong>Inspección visual directa</strong> del fotograma, para discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).
-* <strong>Compatibilidad de decodificación</strong>: soporte de decodificación restringida (<code>json_schema</code>) y <em>logprobs</em> en la misma consulta (en formato GGUF).</p>
+<p>Los dos sVLM candidatos que caben en el presupuesto son <strong>Qwen2.5-VL-3B-Instruct</strong> (<a href="../13-REFERENCIAS.html#ref-qwen-team-2025">Qwen Team, 2025</a>; Q4_K_M, ~2.0 GB de VRAM) y <strong>LFM2.5-VL-1.6B</strong> (Q4_K_M, tag local de Ollama <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, ~1.6 GB de VRAM). El adoptado es LFM2.5-VL-1.6B, por latencia y por su mejor reconocimiento de parches del mapa (cap. 8, IT.8.1.2; cap. 10, IT.10.2). Ambos cumplen los requisitos:</p>
+<ul>
+<li><strong>Huella de memoria</strong> dentro del presupuesto operativo restante de la GPU.</li>
+<li><strong>Inspección visual directa</strong> del fotograma, para discernir la semántica de la escena (e.g., vegetación vs. obstáculo estructural rígido).</li>
+<li><strong>Compatibilidad de decodificación</strong>: soporte de decodificación restringida (<code>json_schema</code>) y <em>logprobs</em> en la misma consulta (en formato GGUF).</li>
+</ul>
 <hr />
 <h2 id="a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida">A1.3 Métodos para la imposición de salida estructurada y gramática restringida<a class="headerlink" href="#a13-metodos-para-la-imposicion-de-salida-estructurada-y-gramatica-restringida" title="Permanent link">&para;</a></h2>
 <p>En una arquitectura de control robótico en lazo cerrado, la generación de lenguaje en formato libre (<em>free-form text</em>) resulta inaceptable: respuestas prolijas, explicaciones accesorias o desviaciones sintácticas invalidan el analizador (<em>parser</em>), provocando la interrupción temporal o el congelamiento del lazo de control.</p>
@@ -1558,13 +1555,17 @@
 <div class="highlight"><pre><span></span><code>Eres un controlador de vuelo determinista. Responde ÚNICAMENTE un objeto JSON válido
 conforme a este esquema: {&quot;action&quot;: &quot;keep_going&quot; | &quot;evasive&quot; | &quot;girar_90&quot; | &quot;fsm&quot; | &quot;degraded&quot;, &quot;reason&quot;: str}.
 No incluyas introducciones, markdown (```), ni texto posterior.
-</code></pre></div>
-* <strong>Ventajas</strong>: implementación trivial; no impone sobrecarga computacional en el motor de inferencia.
-* <strong>Limitaciones</strong>: fiabilidad imperfecta. En modelos compactos (&lt;7B parámetros), la tasa de adherencia sintáctica ronda el 70–85%, presentándose ocasionalmente truncamientos, alucinaciones de sintaxis o texto preliminar que corrompen el flujo de control.</p>
+</code></pre></div></p>
+<ul>
+<li><strong>Ventajas</strong>: implementación trivial; no impone sobrecarga computacional en el motor de inferencia.</li>
+<li><strong>Limitaciones</strong>: fiabilidad imperfecta. En modelos compactos (&lt;7B parámetros), la tasa de adherencia sintáctica ronda el 70–85%, presentándose ocasionalmente truncamientos, alucinaciones de sintaxis o texto preliminar que corrompen el flujo de control.</li>
+</ul>
 <h3 id="2-gramaticas-libres-de-contexto-gbnf-en-llamacpp">2. Gramáticas libres de contexto (GBNF en <code>llama.cpp</code>)<a class="headerlink" href="#2-gramaticas-libres-de-contexto-gbnf-en-llamacpp" title="Permanent link">&para;</a></h3>
-<p>El motor <code>llama.cpp</code> proporciona un subsistema de decodificación guiada por gramáticas formales (<em>GGML BNF</em> o GBNF; Gerganov, 2023). En cada paso de generación autorregresiva, el motor filtra y enmascara los <em>logits</em> del vocabulario, asignando probabilidad cero (<span class="arithmatex">\(-\infty\)</span>) a cualquier token que no cumpla con la regla de transición definida en la gramática.
-* <strong>Ventajas</strong>: garantiza matemáticamente que el 100% de los tokens emitidos respeten la estructura gramatical (e.g., sintaxis JSON perfecta).
-* <strong>Limitaciones</strong>: genera una penalización de rendimiento temporal del 10% al 30% en la velocidad de decodificación, debido a la evaluación continua de las reglas gramaticales sobre el conjunto de tokens candidatos.</p>
+<p>El motor <code>llama.cpp</code> proporciona un subsistema de decodificación guiada por gramáticas formales (<em>GGML BNF</em> o GBNF; Gerganov, 2023). En cada paso de generación autorregresiva, el motor filtra y enmascara los <em>logits</em> del vocabulario, asignando probabilidad cero (<span class="arithmatex">\(-\infty\)</span>) a cualquier token que no cumpla con la regla de transición definida en la gramática.</p>
+<ul>
+<li><strong>Ventajas</strong>: garantiza matemáticamente que el 100% de los tokens emitidos respeten la estructura gramatical (e.g., sintaxis JSON perfecta).</li>
+<li><strong>Limitaciones</strong>: genera una penalización de rendimiento temporal del 10% al 30% en la velocidad de decodificación, debido a la evaluación continua de las reglas gramaticales sobre el conjunto de tokens candidatos.</li>
+</ul>
 <h3 id="3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance">3. Decodificación guiada basada en autómatas finitos (<em>Outlines</em>, <em>Guidance</em>, <em>llguidance</em>)<a class="headerlink" href="#3-decodificacion-guiada-basada-en-automatas-finitos-outlines-guidance-llguidance" title="Permanent link">&para;</a></h3>
 <p>La formalización teórica introducida por <a href="../13-REFERENCIAS.html#ref-willard-2023">Willard y Louf (2023)</a> reformula el esquema JSON o expresión regular requerida como un autómata finito determinista (DFA). Mediante el preprocesamiento del vocabulario del tokenizador, el motor indexa de manera eficiente qué tokens son admisibles para cada estado del autómata, aplicando la máscara de <em>logits</em> con una sobrecarga computacional sensiblemente menor a la evaluación de gramáticas complejas.</p>
 <p>Estudios empíricos recientes (<a href="../13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-raspanti-2025">Raspanti et al., 2025</a>) demuestran que la decodificación restringida token a token no solo erradica errores de parseo (elevando la adherencia estructural del ~73% a &gt;98%), sino que preserva e incluso optimiza la coherencia semántica en modelos pequeños, al suprimir caminos de generación dispersos o redundantes. Este enfoque constituye el núcleo del soporte de <code>response_format: {"type": "json_schema", ...}</code> implementado en el sistema (IT.8.2.1).</p>
@@ -1605,10 +1606,12 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 </ul>
 <h3 id="evaluacion-critica">Evaluación crítica<a class="headerlink" href="#evaluacion-critica" title="Permanent link">&para;</a></h3>
 <p>En términos de originalidad puramente teórica o arquitectónica, la arquitectura en lazo cerrado simple se sitúa en un nivel de madurez consolidado (patrón canónico de ingeniería). Intentar justificar la novedad de una tesis únicamente en el hecho de conectar un modelo de lenguaje a un simulador de vuelo representaría un posicionamiento metodológicamente vulnerable.</p>
-<p>Por el contrario, <strong>el verdadero aporte de ingeniería de esta tesis radica en la resolución de los cuellos de botella prácticos que la literatura suele ignorar o delegar a servidores masivos en la nube</strong>:
-1. La integración sinérgica entre <strong>percepción monocular por flujo óptico pasivo</strong> (capítulo 6) y un modelo visual compacto local (capítulo 8), delimitando cuándo se activa el razonamiento deliberativo y cuándo se recurre al control reactivo.
-2. La caracterización sistemática de los <strong>modos de fallo en tiempo real</strong> bajo presupuestos severos de cómputo y memoria (capítulo 9).
-3. La garantía de determinismo y fiabilidad operativa mediante <strong>decodificación restringida por esquemas gramaticales</strong> y arquitecturas jerárquicas de seguridad.</p>
+<p>Por el contrario, <strong>el verdadero aporte de ingeniería de esta tesis radica en la resolución de los cuellos de botella prácticos que la literatura suele ignorar o delegar a servidores masivos en la nube</strong>:</p>
+<ol>
+<li>La integración sinérgica entre <strong>percepción monocular por flujo óptico pasivo</strong> (capítulo 6) y un modelo visual compacto local (capítulo 8), delimitando cuándo se activa el razonamiento deliberativo y cuándo se recurre al control reactivo.</li>
+<li>La caracterización sistemática de los <strong>modos de fallo en tiempo real</strong> bajo presupuestos severos de cómputo y memoria (capítulo 9).</li>
+<li>La garantía de determinismo y fiabilidad operativa mediante <strong>decodificación restringida por esquemas gramaticales</strong> y arquitecturas jerárquicas de seguridad.</li>
+</ol>
 <hr />
 <h2 id="a16-vias-de-diferenciacion-e-innovacion-de-ingenieria-en-entornos-severamente-restringidos">A1.6 Vías de diferenciación e innovación de ingeniería en entornos severamente restringidos<a class="headerlink" href="#a16-vias-de-diferenciacion-e-innovacion-de-ingenieria-en-entornos-severamente-restringidos" title="Permanent link">&para;</a></h2>
 <p>Para que un sistema de navegación para cuadricópteros basado en SLMs aporte valor genuino y diferenciado en hardware de recursos limitados, es imperativo trascender el bucle elemental de control. A continuación se sintetizan las estrategias de software y procesamiento identificadas en esta exploración, contrastando su viabilidad y beneficio:</p>

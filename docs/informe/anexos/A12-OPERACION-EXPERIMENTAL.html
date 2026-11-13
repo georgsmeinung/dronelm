@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -2540,7 +2540,7 @@
 <li><strong>Análisis.</strong> <code>airsim-loop/experiments/analyze_lotes.py</code> sobre la raíz de los seis lotes (IT.10.7).</li>
 </ol>
 <h3 id="a1253-celdas-semillas-y-presupuesto-de-cada-lote">A12.5.3 Celdas, semillas y presupuesto de cada lote<a class="headerlink" href="#a1253-celdas-semillas-y-presupuesto-de-cada-lote" title="Permanent link">&para;</a></h3>
-<p>Los scripts de los lotes están versionados en <code>experiments/</code> (<code>run_lotes.ps1</code> define el diseño; cada <code>run_loteN_*.ps1</code> lo llama con su número). El diseño completo es:</p>
+<p>Los scripts de los lotes están versionados en <code>experiments/</code> (<code>run_lotes.ps1</code> define el diseño; cada <code>run_loteN_*.ps1</code> lo llama con su número). El diseño completo es (las 3 celdas comunes son <code>slm:depth</code>, <code>fsm:depth</code> y <code>reactive</code>):</p>
 <table>
 <thead>
 <tr>
@@ -2559,7 +2559,7 @@
 <td>1</td>
 <td><code>minisim_clear</code></td>
 <td>MiniSim</td>
-<td><code>slm:depth</code>, <code>fsm:depth</code>, <code>reactive</code></td>
+<td>las 3 comunes</td>
 <td>30</td>
 <td>2 3 5 7 11 13 17 19 23 29</td>
 <td>off</td>
@@ -2569,7 +2569,7 @@
 <td>2</td>
 <td><code>townsim_clear</code></td>
 <td>TownSim</td>
-<td>ídem</td>
+<td>las 3 comunes</td>
 <td>30</td>
 <td>31 37 41 43 47 53 59 61 67 71</td>
 <td>off</td>
@@ -2579,7 +2579,7 @@
 <td>3</td>
 <td><code>townsim_ini</code></td>
 <td>TownSim</td>
-<td>ídem + <code>fsm:blind</code></td>
+<td>las 3 comunes + <code>fsm:blind</code></td>
 <td>40</td>
 <td>73 79 83 89 97 101 103 107 109 113</td>
 <td>vlm</td>
@@ -2589,7 +2589,7 @@
 <td>4</td>
 <td><code>townsim_calib_cruce_frontal</code></td>
 <td>TownSim</td>
-<td>ídem + <code>fsm:blind</code></td>
+<td>las 3 comunes + <code>fsm:blind</code></td>
 <td>40</td>
 <td>127 131 137 139 149 151 157 163 167 173</td>
 <td>vlm</td>
@@ -2599,7 +2599,7 @@
 <td>5</td>
 <td><code>citysim_clear</code></td>
 <td>CitySim</td>
-<td><code>slm:depth</code>, <code>fsm:depth</code>, <code>reactive</code></td>
+<td>las 3 comunes</td>
 <td>30</td>
 <td>179 181 191 193 197 199 211 223 227 229</td>
 <td>off</td>
@@ -2609,7 +2609,7 @@
 <td>6</td>
 <td><code>citysim_pilot</code></td>
 <td>CitySim</td>
-<td>ídem + <code>fsm:blind</code></td>
+<td>las 3 comunes + <code>fsm:blind</code></td>
 <td>40</td>
 <td>233 239 241 251 257 263 269 271 277 281</td>
 <td>vlm</td>
@@ -2912,11 +2912,13 @@
 <li><strong>Resumir por sector.</strong> Sobre el recorte cuadrado central —el mismo que recibe la fuente en vuelo—, dividido en una grilla de 3×3, se toma el percentil 5 de la profundidad de cada sector: lo más cercano, sin píxeles sueltos.</li>
 <li><strong>Etiquetar.</strong> Un sector es <strong>libre</strong> si ese percentil es ≥ 15 m, la misma distancia que se le pide juzgar a la fuente y a la que se fija la sub-meta.</li>
 </ol>
-<p>De ahí salen las etiquetas de cada pregunta:
-- <em>Centro libre</em>: el estado del sector central.
-- <em>Lado por donde termina el obstáculo</em>: el lado del hueco libre más cercano al centro en la franja a la altura del dron.
-- <em>Espacio libre por encima</em>: si al menos la mitad del sector superior central está libre.
-- <em>Dirección más abierta</em>: el tercio de la franja con mayor profundidad mediana, o «ninguna» si ninguno llega a 15 m.</p>
+<p>De ahí salen las etiquetas de cada pregunta:</p>
+<ul>
+<li><em>Centro libre</em>: el estado del sector central.</li>
+<li><em>Lado por donde termina el obstáculo</em>: el lado del hueco libre más cercano al centro en la franja a la altura del dron.</li>
+<li><em>Espacio libre por encima</em>: si al menos la mitad del sector superior central está libre.</li>
+<li><em>Dirección más abierta</em>: el tercio de la franja con mayor profundidad mediana, o «ninguna» si ninguno llega a 15 m.</li>
+</ul>
 <p>Estas etiquetas solo sirven para medir: nunca entran al lazo de vuelo (IT.10.4.1, punto 3).</p>
 <h3 id="a12103-alcance-y-limites">A12.10.3 Alcance y límites<a class="headerlink" href="#a12103-alcance-y-limites" title="Permanent link">&para;</a></h3>
 <ul>

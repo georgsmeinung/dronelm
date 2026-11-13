@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1812,93 +1812,73 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 <table>
 <thead>
 <tr>
-<th>Lote</th>
-<th>Tier</th>
-<th>Entorno (proyecto UE)</th>
+<th style="text-align: center;">Lote</th>
 <th>Escenario</th>
+<th>Entorno</th>
 <th>Rol</th>
-<th>Ruta desde el <em>spawn</em></th>
-<th><span class="arithmatex">\(\ell_{\text{opt}}\)</span> (SPL)</th>
+<th>Ruta / <span class="arithmatex">\(\ell_{\text{opt}}\)</span></th>
 <th>Altitud</th>
-<th>Dificultad esperada</th>
-<th>Hipótesis que ejercita</th>
+<th>Dificultad · hipótesis</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
-<td>0</td>
-<td>MiniSim (plano sin obstáculos)</td>
+<td style="text-align: center;">1</td>
 <td><code>minisim_clear</code></td>
-<td>Control / cota inferior</td>
-<td>181 m</td>
-<td>120 m</td>
+<td>MiniSim (T0)</td>
+<td>Control: cota inferior</td>
+<td>181 / 120 m</td>
 <td>−10 m</td>
-<td>Nula</td>
-<td>H2, H3 (costo puro)</td>
+<td>Nula · H2, H3</td>
 </tr>
 <tr>
-<td>2</td>
-<td>1</td>
-<td>TownSim (<code>townsim_ortho.png</code>)</td>
+<td style="text-align: center;">2</td>
 <td><code>townsim_clear</code></td>
-<td>Control de crucero largo</td>
-<td>598 m</td>
-<td>588 m</td>
+<td>TownSim (T1)</td>
+<td>Control: crucero largo</td>
+<td>598 / 588 m</td>
 <td>−30 m</td>
-<td>Baja</td>
-<td>H2 (dilución del costo)</td>
+<td>Baja · H2</td>
 </tr>
 <tr>
-<td>3</td>
-<td>1</td>
-<td>TownSim</td>
+<td style="text-align: center;">3</td>
 <td><code>townsim_ini</code></td>
+<td>TownSim (T1)</td>
 <td>Vegetación en ruta</td>
-<td>343 m</td>
-<td>312 m</td>
-<td>−30/−22/−10 m</td>
-<td>Media-alta</td>
-<td>H1</td>
+<td>343 / 312 m</td>
+<td>−30 a −10 m</td>
+<td>Media-alta · H1</td>
 </tr>
 <tr>
-<td>4</td>
-<td>1</td>
-<td>TownSim</td>
+<td style="text-align: center;">4</td>
 <td><code>townsim_calib_cruce_frontal</code></td>
-<td>Bloqueo frontal masivo</td>
-<td>350 m</td>
-<td>320 m</td>
-<td>−30/−10 m</td>
-<td>Alta</td>
-<td><strong>H1</strong></td>
+<td>TownSim (T1)</td>
+<td>Bloqueo frontal</td>
+<td>350 / 320 m</td>
+<td>−30 a −10 m</td>
+<td>Alta · <strong>H1</strong></td>
 </tr>
 <tr>
-<td>5</td>
-<td>2</td>
-<td>CitySim (<code>citysim_ortho.png</code>)</td>
+<td style="text-align: center;">5</td>
 <td><code>citysim_clear</code></td>
-<td>Control en rampa sobre el perímetro de una manzana</td>
-<td>421 m</td>
-<td>345 m</td>
-<td>−10/−30/−50 m</td>
-<td>Baja</td>
-<td>H2, H3</td>
+<td>CitySim (T2)</td>
+<td>Control en rampa</td>
+<td>421 / 345 m</td>
+<td>−10 a −50 m</td>
+<td>Baja · H2, H3</td>
 </tr>
 <tr>
-<td>6</td>
-<td>2</td>
-<td>CitySim</td>
+<td style="text-align: center;">6</td>
 <td><code>citysim_pilot</code></td>
-<td>Rodeo de manzanas y elección de corredor</td>
-<td>391 m</td>
-<td>339 m</td>
+<td>CitySim (T2)</td>
+<td>Rodeo de manzanas</td>
+<td>391 / 339 m</td>
 <td>−10 m</td>
-<td><strong>Máxima</strong></td>
-<td><strong>H1, H3</strong></td>
+<td><strong>Máxima</strong> · <strong>H1, H3</strong></td>
 </tr>
 </tbody>
 </table>
+<p><em>Ruta: longitud desde el punto de partida, con el ascenso; <span class="arithmatex">\(\ell_{\text{opt}}\)</span>: suma de los tramos entre waypoints del manifiesto, la que usa el SPL (IT.10.6.1). T0–T2: nivel de dificultad del entorno. En los lotes 3, 4 y 6 el plan de ruta agrega puntos de paso a la ruta volada (IT.10.4.1, punto 5).</em></p>
 <p><strong>Tier 0 — MiniSim.</strong> Un plano sin estructuras verticales: mide el <strong>costo puro del brazo <code>slm</code></strong>, sin nada que decidir, y la <strong>tasa de falsos positivos de percepción</strong>, porque todo evento de evasión o deadlock es, por construcción, falso.</p>
 <p><strong>Tier 1 — TownSim.</strong> Un complejo semiurbano con pasajes arbolados, cuya particularidad son los obstáculos <strong>orgánicos y semitransparentes</strong>: una copa de árbol produce un flujo de baja coherencia y una evidencia geométrica ambigua, el régimen donde un juicio sobre el fotograma completo debería aportar. <code>townsim_clear</code> recorre el perímetro sobre los tejados con una ruta 3.3× más larga que la de MiniSim, la prueba directa de H2; <code>townsim_ini</code> cruza a nivel de calle el corredor arbolado; <code>townsim_calib_cruce_frontal</code> enfrenta al dron con una fachada continua y lo obliga a elegir entre sobrevolar y buscar un corredor lateral. Si la FSM escala el edificio y el <code>slm</code> encuentra la calle transversal, ambos llegan con SPL muy distintos: <strong>por eso la métrica primaria con obstrucción es el SPL y no el éxito</strong>.</p>
 <p><strong>Tier 2 — CitySim.</strong> Una cuadrícula regular con edificios de 50 a 100 m, donde un escape por altura ya no despeja el obstáculo y la textura repetitiva hace casi indistinguibles dos calles paralelas. <code>citysim_clear</code> es el control en rampa; <code>citysim_pilot</code>, a −10 m entre edificios, obliga a <strong>rodear manzanas y elegir corredor</strong>, y es donde H1 tiene mayor potencia y se espera la mayor tasa de fallo. La geometría de cada escenario está en el Anexo 12 (IT.A12.3) y los manifiestos, en el Anexo 6 (IT.A6.5).</p>

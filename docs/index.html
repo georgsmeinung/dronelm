@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM) en Unreal Engine." />
-  <title>Navegación Autónoma de Drones con SLM - Tesis Maestría Ciencia de Datos</title>
+    content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños, en Unreal Engine." />
+  <title>Navegación Autónoma de Drones con Visión Monocular y VLM - Tesis Maestría Ciencia de Datos</title>
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,12 +70,12 @@
     <!-- Main Content Area -->
     <main>
       <header>
-        <h1>Navegación Autónoma de Drones en Entornos Urbanos con Visión Monocular y Small Language Model (SLM)</h1>
+        <h1>Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños</h1>
         <p class="lead-subtitle">
           Documentación técnica y resumen de la tesis de posgrado de la <strong>Maestría en Ciencia de Datos</strong> de
           la <strong>Universidad Austral</strong>. El trabajo presenta un sistema integral de planificación previa,
-          percepción geométrica monocular y control táctico asistido por modelos de lenguaje pequeños (SLM) en
-          simulación urbana de alta fidelidad.
+          percepción geométrica monocular y control táctico de dos lazos, con un modelo de lenguaje visual pequeño
+          evaluado como capa de decisión, en simulación urbana de alta fidelidad.
         </p>
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
@@ -180,8 +180,9 @@
           severos desafíos derivados de la alta densidad de obstáculos, la degradación de señales satelitales (GNSS) en
           cañones urbanos y las restricciones presupuestarias que descartan sensores de alto costo como LiDAR. Para
           abordar esta problemática bajo estrictas restricciones de hardware y en conformidad con las normativas locales
-          (ANAC Res. 880/2019), esta tesis presenta un sistema integral de navegación basado exclusivamente en
-          <strong>visión monocular</strong> y <strong>modelos de lenguaje pequeños (SLM)</strong> locales.
+          (ANAC Res. 880/2019), esta tesis presenta un sistema integral de navegación basado en <strong>visión monocular</strong> y en
+          <strong>modelos de lenguaje visual pequeños</strong> ejecutados localmente, y evalúa si uno de esos modelos
+          puede actuar como capa de decisión a bordo.
         </p>
         <p>
           La arquitectura desacopla un módulo de planificación deliberativa en tierra (estación de control
@@ -236,8 +237,8 @@
           La suite incluye <strong>WebDCS (Ground Control Station Web)</strong> sobre FastAPI, que provee renderizado de
           cartas 2D en Canvas interactivo, gestión de manifiestos y edición manual de waypoints. Cada corrida del lazo
           táctico se audita <em>post-vuelo</em> mediante un visor HTML autocontenido que sincroniza el video anotado del
-          vuelo con la traza completa de decisiones (prompt, respuesta estructurada cruda y latencia de inferencia de
-          cada consulta al SLM).
+          vuelo con la traza completa de decisiones (fotogramas, respuesta cruda y latencia de
+          cada consulta del lazo lento).
         </p>
         <p>
           Antes del vuelo, la estación terrena también <strong>planifica la ruta con el VLM sobre el mapa cenital</strong>:
@@ -386,7 +387,7 @@
         <div class="card-grid">
           <div class="card">
             <h4>1. Desincronización de Esquemas (Schema Drift)</h4>
-            <p>Campos nulos por defecto (ej. listas vacías) interpretados como "espacio despejado" causan que el SLM
+            <p>Campos nulos por defecto (ej. listas vacías) interpretados como "espacio despejado" causan que el modelo de lenguaje
               razone coherentemente sobre premisas falsas y avance hacia colisiones sin generar excepciones.</p>
           </div>
           <div class="card">
@@ -429,7 +430,7 @@
             </div>
             <div class="timeline-content">
               <h4>Planificación y Revisión de Literatura</h4>
-              <p>Definición del alcance, revisión de estado del arte en navegación autónoma, SLM y visión monocular. Establecimiento de requisitos y restricciones.</p>
+              <p>Definición del alcance, revisión de estado del arte en navegación autónoma, modelos de lenguaje pequeños y visión monocular. Establecimiento de requisitos y restricciones.</p>
             </div>
           </div>
 
@@ -477,7 +478,7 @@
             </div>
             <div class="timeline-content">
               <h4>Experimentación y Análisis Comparativo</h4>
-              <p>Evaluación de tres brazos experimentales (SLM, FSM, Reactivo) bajo condiciones idénticas. Medición de métricas de rendimiento y robustez.</p>
+              <p>Evaluación de tres brazos experimentales (arquitectura de dos lazos <code>slm</code>, FSM y reactivo) bajo condiciones idénticas. Medición de métricas de rendimiento y robustez.</p>
             </div>
           </div>
 
@@ -585,7 +586,7 @@
             turbulencia atmosférica y estabilización.</li>
         </ul>
 
-        <h3>2. Benchmark de Rendimiento de SLMs Locales</h3>
+        <h3>2. Benchmark de Rendimiento de Modelos de Lenguaje Locales</h3>
         <p>
           Métricas de generación (Tokens por Segundo) y tiempos de carga medidos en local para modelos candidatos:
         </p>
@@ -724,7 +725,7 @@ conda activate airsimenv</code></pre>
         <pre><code>cd airsim-plan
 python -m uvicorn webdcs.main:app --reload</code></pre>
         <p>Acceda a <code>http://localhost:8000</code> en su navegador para planificar misiones manualmente; la
-          auditoría de las decisiones del SLM se hace post-vuelo con el visor HTML generado en cada corrida.</p>
+          auditoría de las decisiones del lazo de control se hace post-vuelo con el visor HTML generado en cada corrida.</p>
       </section>
 
       <!-- Informe de Tesis -->

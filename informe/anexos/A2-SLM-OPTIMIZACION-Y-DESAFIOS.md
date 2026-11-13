@@ -45,8 +45,13 @@ Asimismo, la sustitución o combinación de la autoatención cuadrática convenc
 El reentrenamiento completo (*full fine-tuning*) de un modelo exige almacenar en memoria los estados del optimizador, activaciones intermedias y gradientes para la totalidad de los parámetros, lo cual supera con creces la memoria disponible en GPUs de consumo. 
 
 Las técnicas de ajuste fino eficiente en parámetros (*Parameter-Efficient Fine-Tuning*, PEFT), y en particular la adaptación de bajo rango (**LoRA**; Hu et al., 2022), resuelven esta barrera:
+
 * Congelan las ponderaciones preentrenadas $W_0 \in \mathbb{R}^{d \times k}$ y modelan la actualización mediante la descomposición en dos matrices de bajo rango $B \times A$, donde $r \ll \min(d, k)$:
-  $$W = W_0 + \Delta W = W_0 + B \cdot A$$
+
+    $$
+    W = W_0 + \Delta W = W_0 + B \cdot A
+    $$
+
 * Reducen el conteo de parámetros entrenables en más de un 99%, permitiendo especializar modelos en tareas de navegación o seguimiento de formatos en pocas horas de GPU.
 * Su variante cuantizada, **QLoRA** ([Dettmers et al., 2024](../13-REFERENCIAS.md#ref-dettmers-2024)), mantiene el modelo base en precisión de 4 bits (NormalFloat4) e inserta adaptadores LoRA entrenables en precisión de 16 bits, posibilitando la especialización local sin incurrir en consumo masivo de VRAM.
 
@@ -61,11 +66,13 @@ El fenómeno de la **alucinación** —definido como la generación de informaci
 
 ### A2.3.1 Correlación entre escala de parámetros y propensión alucinatoria
 La literatura experimental documenta que los modelos de menor tamaño presentan una propensión basal más alta a generar contenido alucinatorio en comparación con modelos de frontera:
+
 * Evaluaciones sistemáticas en modelos multimodales de visión-lenguaje mediante bancos de prueba especializados como **HallusionBench** ([Guan et al., 2024](../13-REFERENCIAS.md#ref-guan-2024)) revelan que la reducción en la capacidad de la red acentúa las ilusiones visuales y los sesgos lingüísticos no fundamentados en la imagen (*language hallucination vs. visual illusion*).
 * Modelos pequeños sometidos a estímulos ambiguos o degradados tienden a completar secuencias basándose en prioris estadísticas del lenguaje más que en la evidencia visual real.
 
 ### A2.3.2 Riesgos críticos en vehículos aéreos no tripulados (UAVs)
 En una misión de navegación aérea autónoma, los efectos de una alucinación trascienden la incorrección lingüística y se traducen en amenazas cinemáticas directas:
+
 1. **Alucinación de espacio libre**: el modelo reporta erróneamente que una trayectoria está despejada al confundir sombras, reflejos o texturas complejas con áreas transitables, suprimiendo maniobras de evasión esenciales.
 2. **Alucinación de sintaxis o formato**: la emisión de etiquetas no contempladas o la deformación del esquema JSON invalida el analizador sintáctico, interrumpiendo el flujo de control y dejando al vehículo sin acción defensiva durante múltiples ciclos de muestreo.
 3. **Deriva temporal y desacoplamiento dinámico**: el modelo puede basar su razonamiento en estados superados o inventar una persistencia de obstáculos inexistente, comprometiendo la coherencia de la misión.

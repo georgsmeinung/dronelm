@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1779,9 +1779,11 @@
 <p>La transformación de coordenadas continuas normalizadas a coordenadas discretas en píxeles <span class="arithmatex">\((u, v)\)</span> en la grilla del sensor viene dada por:</p>
 <div class="arithmatex">\[u = f_x \cdot x + c_x = f_x \frac{X_c}{Z_c} + c_x\]</div>
 <div class="arithmatex">\[v = f_y \cdot y + c_y = f_y \frac{Y_c}{Z_c} + c_y\]</div>
-<p>donde:
-* <span class="arithmatex">\(f_x, f_y\)</span> son las distancias focales expresadas en unidades de píxeles en las direcciones horizontal y vertical.
-* <span class="arithmatex">\(c_x, c_y\)</span> son las coordenadas del centro óptico o punto principal en píxeles, nominalmente situadas en el centro geométrico del fotograma: <span class="arithmatex">\(c_x = \frac{W}{2}, c_y = \frac{H}{2}\)</span>.</p>
+<p>donde:</p>
+<ul>
+<li><span class="arithmatex">\(f_x, f_y\)</span> son las distancias focales expresadas en unidades de píxeles en las direcciones horizontal y vertical.</li>
+<li><span class="arithmatex">\(c_x, c_y\)</span> son las coordenadas del centro óptico o punto principal en píxeles, nominalmente situadas en el centro geométrico del fotograma: <span class="arithmatex">\(c_x = \frac{W}{2}, c_y = \frac{H}{2}\)</span>.</li>
+</ul>
 <p>En forma matricial homogénea, la proyección se expresa mediante la matriz de parámetros intrínsecos <span class="arithmatex">\(K \in \mathbb{R}^{3 \times 3}\)</span>:</p>
 <div class="arithmatex">\[\begin{pmatrix} u \\ v \\ 1 \end{pmatrix} = \frac{1}{Z_c} K \begin{pmatrix} X_c \\ Y_c \\ Z_c \end{pmatrix} = \frac{1}{Z_c} \begin{pmatrix} f_x &amp; 0 &amp; c_x \\ 0 &amp; f_y &amp; cy \\ 0 &amp; 0 &amp; 1 \end{pmatrix} \begin{pmatrix} X_c \\ Y_c \\ Z_c \end{pmatrix}\]</div>
 <h3 id="a512-parametros-intrinsecos-en-cosys-airsim-y-escalado-dinamico">A5.1.2 Parámetros intrínsecos en Cosys-AirSim y escalado dinámico<a class="headerlink" href="#a512-parametros-intrinsecos-en-cosys-airsim-y-escalado-dinamico" title="Permanent link">&para;</a></h3>
@@ -1803,9 +1805,11 @@
 <div class="arithmatex">\[\dot{x} = \underbrace{\frac{-V_x + x V_z}{Z_c}}_{\dot{x}_{\text{trans}}} + \underbrace{\left[ x y \, \Omega_x - (1 + x^2) \, \Omega_y + y \, \Omega_z \right]}_{\dot{x}_{\text{rot}}}\]</div>
 <div class="arithmatex">\[\dot{y} = \underbrace{\frac{-V_y + y V_z}{Z_c}}_{\dot{y}_{\text{trans}}} + \underbrace{\left[ (1 + y^2) \, \Omega_x - x y \, \Omega_y - x \, \Omega_z \right]}_{\dot{y}_{\text{rot}}}\]</div>
 <h3 id="a521-el-dilema-de-la-contaminacion-rotacional">A5.2.1 El dilema de la contaminación rotacional<a class="headerlink" href="#a521-el-dilema-de-la-contaminacion-rotacional" title="Permanent link">&para;</a></h3>
-<p>El análisis de estas ecuaciones revela una asimetría física crucial para la robótica aérea:
-1. <strong>Componente traslacional <span class="arithmatex">\((\dot{x}_{\text{trans}}, \dot{y}_{\text{trans}})\)</span>:</strong> es <strong>inversamente proporcional a la distancia <span class="arithmatex">\(Z_c\)</span></strong>. Contiene toda la información tridimensional sobre la proximidad de los obstáculos. Si <span class="arithmatex">\(Z_c \to \infty\)</span> (puntos en el horizonte o cielo), el flujo traslacional tiende a cero.
-2. <strong>Componente rotacional <span class="arithmatex">\((\dot{x}_{\text{rot}}, \dot{y}_{\text{rot}})\)</span>:</strong> es <strong>totalmente independiente de la distancia <span class="arithmatex">\(Z_c\)</span></strong>. Depende únicamente de las velocidades angulares del vehículo y de la posición del píxel en la imagen. Un giro sobre el eje de guiñada (<em>yaw</em>) o cabeceo (<em>pitch</em>) genera un desplazamiento visual uniforme tanto en un árbol a 2 metros como en una nube a 5 kilómetros.</p>
+<p>El análisis de estas ecuaciones revela una asimetría física crucial para la robótica aérea:</p>
+<ol>
+<li><strong>Componente traslacional <span class="arithmatex">\((\dot{x}_{\text{trans}}, \dot{y}_{\text{trans}})\)</span>:</strong> es <strong>inversamente proporcional a la distancia <span class="arithmatex">\(Z_c\)</span></strong>. Contiene toda la información tridimensional sobre la proximidad de los obstáculos. Si <span class="arithmatex">\(Z_c \to \infty\)</span> (puntos en el horizonte o cielo), el flujo traslacional tiende a cero.</li>
+<li><strong>Componente rotacional <span class="arithmatex">\((\dot{x}_{\text{rot}}, \dot{y}_{\text{rot}})\)</span>:</strong> es <strong>totalmente independiente de la distancia <span class="arithmatex">\(Z_c\)</span></strong>. Depende únicamente de las velocidades angulares del vehículo y de la posición del píxel en la imagen. Un giro sobre el eje de guiñada (<em>yaw</em>) o cabeceo (<em>pitch</em>) genera un desplazamiento visual uniforme tanto en un árbol a 2 metros como en una nube a 5 kilómetros.</li>
+</ol>
 <blockquote>
 <p>[!WARNING]
 Si no se compensa activamente el flujo rotacional, cualquier maniobra de orientación angular contamina el campo visual, provocando que regiones lejanas sin riesgo (como el cielo o edificios distantes) presenten grandes magnitudes de flujo óptico, induciendo falsos positivos masivos de proximidad y colapsando el sistema de evasión.</p>
@@ -1815,10 +1819,12 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <p>Para aislar el componente traslacional puro, DroneLM implementa una etapa de <strong>derotación analítica en bucle cerrado</strong> (<code>FlowTTCEstimator._derotate</code>).</p>
 <h3 id="a531-mapeo-cinematico-entre-marco-cuerpo-y-marco-de-camara">A5.3.1 Mapeo cinemático entre marco cuerpo y marco de cámara<a class="headerlink" href="#a531-mapeo-cinematico-entre-marco-cuerpo-y-marco-de-camara" title="Permanent link">&para;</a></h3>
 <p>El autopiloto del UAV reporta su orientación mediante ángulos de Euler en convención aeroespacial NED (North-East-Down): cabeceo (<em>pitch</em>, <span class="arithmatex">\(\theta\)</span>), guiñada (<em>yaw</em>, <span class="arithmatex">\(\psi\)</span>) y alabeo (<em>roll</em>, <span class="arithmatex">\(\phi\)</span>). </p>
-<p>Dado que la cámara monocular está rígidamente montada apuntando hacia el eje longitudinal del fuselaje (<span class="arithmatex">\(X_{\text{cuerpo}}\)</span> adelante, <span class="arithmatex">\(Y_{\text{cuerpo}}\)</span> derecha, <span class="arithmatex">\(Z_{\text{cuerpo}}\)</span> abajo), la correspondencia entre los ejes angulares del dron y los ejes de giro ópticos de la cámara es:
-* Giro en cabeceo (<span class="arithmatex">\(\Delta \text{pitch}\)</span>): rota las filas verticales de la imagen <span class="arithmatex">\(\implies \theta_x \sim \Delta \text{pitch}\)</span>.
-* Giro en guiñada (<span class="arithmatex">\(\Delta \text{yaw}\)</span>): desplaza las columnas horizontales de la imagen <span class="arithmatex">\(\implies \theta_y \sim \Delta \text{yaw}\)</span>.
-* Giro en alabeo (<span class="arithmatex">\(\Delta \text{roll}\)</span>): induce rotación pura en torno al eje óptico <span class="arithmatex">\(\implies \theta_z \sim \Delta \text{roll}\)</span>.</p>
+<p>Dado que la cámara monocular está rígidamente montada apuntando hacia el eje longitudinal del fuselaje (<span class="arithmatex">\(X_{\text{cuerpo}}\)</span> adelante, <span class="arithmatex">\(Y_{\text{cuerpo}}\)</span> derecha, <span class="arithmatex">\(Z_{\text{cuerpo}}\)</span> abajo), la correspondencia entre los ejes angulares del dron y los ejes de giro ópticos de la cámara es:</p>
+<ul>
+<li>Giro en cabeceo (<span class="arithmatex">\(\Delta \text{pitch}\)</span>): rota las filas verticales de la imagen <span class="arithmatex">\(\implies \theta_x \sim \Delta \text{pitch}\)</span>.</li>
+<li>Giro en guiñada (<span class="arithmatex">\(\Delta \text{yaw}\)</span>): desplaza las columnas horizontales de la imagen <span class="arithmatex">\(\implies \theta_y \sim \Delta \text{yaw}\)</span>.</li>
+<li>Giro en alabeo (<span class="arithmatex">\(\Delta \text{roll}\)</span>): induce rotación pura en torno al eje óptico <span class="arithmatex">\(\implies \theta_z \sim \Delta \text{roll}\)</span>.</li>
+</ul>
 <h3 id="a532-campo-de-velocidad-rotacional-en-pixeles">A5.3.2 Campo de velocidad rotacional en píxeles<a class="headerlink" href="#a532-campo-de-velocidad-rotacional-en-pixeles" title="Permanent link">&para;</a></h3>
 <p>Sea <span class="arithmatex">\((u, v)\)</span> la coordenada en píxeles y sean <span class="arithmatex">\(x = u - c_x\)</span>, <span class="arithmatex">\(y = v - c_y\)</span> los desplazamientos centrados respecto al eje óptico. Multiplicando las ecuaciones de Longuet-Higgins por las distancias focales <span class="arithmatex">\(f_x, f_y\)</span> e integrando durante el intervalo de tiempo discreto <span class="arithmatex">\(\Delta t = t_k - t_{k-1}\)</span> entre fotogramas sucesivos:</p>
 <div class="arithmatex">\[u_{\text{rot}}(x, y) = \frac{x y}{f_x} \Delta \theta_x - \left( f_x + \frac{x^2}{f_x} \right) \Delta \theta_y + y \, \Delta \theta_z\]</div>
@@ -1828,10 +1834,18 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <div class="arithmatex">\[v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)\]</div>
 <p><img src="a5-campo-de-velocidad-rotacional.png"/></p>
 <h3 id="a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion">A5.3.3 Tratamiento de discontinuidades y límite de linealización<a class="headerlink" href="#a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion" title="Permanent link">&para;</a></h3>
-<p>Durante giros bruscos, se presentan dos restricciones de ingeniería:
-1. <strong>Normalización de ángulo de guiñada:</strong> ante cruces del límite <span class="arithmatex">\(\pm 180^\circ\)</span> (<span class="arithmatex">\(\pm \pi\)</span>), el incremento se desenvuelve modularmente:
-   $<span class="arithmatex">\(\Delta \psi_{\text{norm}} = (\Delta \psi + \pi) \pmod{2\pi} - \pi\)</span>$
-2. <strong>Límite de linealización (<code>FLOW_MAX_ROTATION_DEG = 2.0°</code>):</strong> la derotación analítica asume ángulos pequeños (<span class="arithmatex">\(\sin \Delta\theta \approx \Delta\theta\)</span>, <span class="arithmatex">\(\cos \Delta\theta \approx 1\)</span>). Durante giros de evasión activos a alta velocidad angular (e.g., <span class="arithmatex">\(45^\circ/\text{s}\)</span> a 5 Hz produce <span class="arithmatex">\(\Delta\theta \approx 9^\circ\)</span>), el error de linealización y el desenfoque en zonas de baja textura (cielo) generan artefactos espurios. Si <span class="arithmatex">\(\max(|\Delta\theta_x|, |\Delta\theta_y|, |\Delta\theta_z|) &gt; 2.0^\circ\)</span>, el estimador descarta la señal y emite un estado degradado seguro en lugar de admitir datos contaminados.</p>
+<p>Durante giros bruscos, se presentan dos restricciones de ingeniería:</p>
+<ol>
+<li>
+<p><strong>Normalización de ángulo de guiñada:</strong> ante cruces del límite <span class="arithmatex">\(\pm 180^\circ\)</span> (<span class="arithmatex">\(\pm \pi\)</span>), el incremento se desenvuelve modularmente:</p>
+<div class="arithmatex">\[
+\Delta \psi_{\text{norm}} = (\Delta \psi + \pi) \pmod{2\pi} - \pi
+\]</div>
+</li>
+<li>
+<p><strong>Límite de linealización (<code>FLOW_MAX_ROTATION_DEG = 2.0°</code>):</strong> la derotación analítica asume ángulos pequeños (<span class="arithmatex">\(\sin \Delta\theta \approx \Delta\theta\)</span>, <span class="arithmatex">\(\cos \Delta\theta \approx 1\)</span>). Durante giros de evasión activos a alta velocidad angular (e.g., <span class="arithmatex">\(45^\circ/\text{s}\)</span> a 5 Hz produce <span class="arithmatex">\(\Delta\theta \approx 9^\circ\)</span>), el error de linealización y el desenfoque en zonas de baja textura (cielo) generan artefactos espurios. Si <span class="arithmatex">\(\max(|\Delta\theta_x|, |\Delta\theta_y|, |\Delta\theta_z|) &gt; 2.0^\circ\)</span>, el estimador descarta la señal y emite un estado degradado seguro en lugar de admitir datos contaminados.</p>
+</li>
+</ol>
 <hr />
 <h2 id="a54-foco-de-expansion-foe-estimacion-por-minimos-cuadrados-ponderados-y-ransac-lite">A5.4 Foco de Expansión (FOE): estimación por Mínimos Cuadrados Ponderados y RANSAC-lite<a class="headerlink" href="#a54-foco-de-expansion-foe-estimacion-por-minimos-cuadrados-ponderados-y-ransac-lite" title="Permanent link">&para;</a></h2>
 <p>En vuelo traslacional hacia adelante (<span class="arithmatex">\(V_z &gt; 0\)</span>), las líneas de flujo óptico derotado divergen radialmente desde un punto singular en el plano de la imagen denominado <strong>Foco de Expansión (<em>Focus of Expansion</em>, FOE)</strong>.</p>
@@ -1858,12 +1872,20 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <p>Si el determinante <span class="arithmatex">\(\det(A) = A_{11} A_{22} - A_{12}^2 &gt; 10^{-6}\)</span>, el sistema tiene solución única:</p>
 <div class="arithmatex">\[\text{FOE} = A^{-1} b\]</div>
 <h3 id="a543-recorte-de-valores-atipicos-ransac-lite-y-plausibilidad-fisica">A5.4.3 Recorte de valores atípicos (<em>RANSAC-lite</em>) y plausibilidad física<a class="headerlink" href="#a543-recorte-de-valores-atipicos-ransac-lite-y-plausibilidad-fisica" title="Permanent link">&para;</a></h3>
-<p>Debido a reflejos, texturas repetitivas o imprecisiones locales, una fracción de los vectores no converge al FOE. Se aplica un filtro geométrico de consistencia angular:
-1. Para cada vector <span class="arithmatex">\(v_i\)</span>, se calcula el ángulo <span class="arithmatex">\(\theta_i\)</span> entre la dirección del flujo y el vector radial <span class="arithmatex">\((p_i - \text{FOE})\)</span>:
-   $<span class="arithmatex">\(\cos \theta_i = \frac{(p_i - \text{FOE}) \cdot v_i}{\|p_i - \text{FOE}\| \cdot \|v_i\|}\)</span>$
-2. Un vector se clasifica como <em>inlier</em> si <span class="arithmatex">\(\theta_i &lt; \theta_{\text{outlier}} = 0.35\text{ rad}\)</span> (<span class="arithmatex">\(\approx 20^\circ\)</span>).
-3. Si la cantidad de <em>inliers</em> supera 30, el sistema normal <span class="arithmatex">\(A \cdot \text{FOE} = b\)</span> se re-resuelve exclusivamente sobre el subconjunto de <em>inliers</em>, refinando las coordenadas.
-4. <strong>Verificación de plausibilidad física:</strong> Si el FOE resultante queda fuera del encuadre visual (<span class="arithmatex">\(x_{\text{FOE}} &lt; 0\)</span>, <span class="arithmatex">\(x_{\text{FOE}} &gt; W'\)</span>, <span class="arithmatex">\(y_{\text{FOE}} &lt; 0\)</span> o <span class="arithmatex">\(y_{\text{FOE}} &gt; H'\)</span>), el estimado se descarta categóricamente (<span class="arithmatex">\(\text{confidence} = 0\)</span>), pues un punto de fuga fuera del sensor indica ausencia de avance frontal o dominancia de ruido cinemático.</p>
+<p>Debido a reflejos, texturas repetitivas o imprecisiones locales, una fracción de los vectores no converge al FOE. Se aplica un filtro geométrico de consistencia angular:</p>
+<ol>
+<li>
+<p>Para cada vector <span class="arithmatex">\(v_i\)</span>, se calcula el ángulo <span class="arithmatex">\(\theta_i\)</span> entre la dirección del flujo y el vector radial <span class="arithmatex">\((p_i - \text{FOE})\)</span>:</p>
+<div class="arithmatex">\[
+\cos \theta_i = \frac{(p_i - \text{FOE}) \cdot v_i}{\|p_i - \text{FOE}\| \cdot \|v_i\|}
+\]</div>
+</li>
+<li>
+<p>Un vector se clasifica como <em>inlier</em> si <span class="arithmatex">\(\theta_i &lt; \theta_{\text{outlier}} = 0.35\text{ rad}\)</span> (<span class="arithmatex">\(\approx 20^\circ\)</span>).</p>
+</li>
+<li>Si la cantidad de <em>inliers</em> supera 30, el sistema normal <span class="arithmatex">\(A \cdot \text{FOE} = b\)</span> se re-resuelve exclusivamente sobre el subconjunto de <em>inliers</em>, refinando las coordenadas.</li>
+<li><strong>Verificación de plausibilidad física:</strong> Si el FOE resultante queda fuera del encuadre visual (<span class="arithmatex">\(x_{\text{FOE}} &lt; 0\)</span>, <span class="arithmatex">\(x_{\text{FOE}} &gt; W'\)</span>, <span class="arithmatex">\(y_{\text{FOE}} &lt; 0\)</span> o <span class="arithmatex">\(y_{\text{FOE}} &gt; H'\)</span>), el estimado se descarta categóricamente (<span class="arithmatex">\(\text{confidence} = 0\)</span>), pues un punto de fuga fuera del sensor indica ausencia de avance frontal o dominancia de ruido cinemático.</li>
+</ol>
 <hr />
 <h2 id="a55-teoria-del-tau-de-lee-1976-y-deduccion-del-ttc-como-observable-optico-directo">A5.5 Teoría del <span class="arithmatex">\(\tau\)</span> de <a href="../13-REFERENCIAS.html#ref-lee-1976">Lee (1976)</a> y deducción del TTC como observable óptico directo<a class="headerlink" href="#a55-teoria-del-tau-de-lee-1976-y-deduccion-del-ttc-como-observable-optico-directo" title="Permanent link">&para;</a></h2>
 <p>La gran potencia teórica de la percepción monocular radica en que <strong>no es necesario conocer la distancia métrica <span class="arithmatex">\(Z_c\)</span> ni la velocidad absoluta <span class="arithmatex">\(V_z\)</span> para calcular el tiempo hasta el impacto</strong>.</p>
@@ -1876,10 +1898,12 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <div class="arithmatex">\[\text{TTC} = \tau = \frac{Z_c}{V_z}\]</div>
 <p>Dado que el flujo medido en píxeles representa la tasa discreta por fotograma <span class="arithmatex">\(\|v_{\text{trans}}\| = \frac{\Delta s}{\Delta t}\)</span>, se tiene:</p>
 <div class="arithmatex">\[\text{TTC}(x, y) = \frac{\|p - \text{FOE}\| \cdot \Delta t}{\|v_{\text{trans}}(x, y)\|}\]</div>
-<p>donde:
-* <span class="arithmatex">\(\|p - \text{FOE}\|\)</span> es la distancia euclidiana en píxeles desde el píxel evaluado hasta el Foco de Expansión.
-* <span class="arithmatex">\(\|v_{\text{trans}}(x, y)\|\)</span> es la magnitud del flujo traslacional en píxeles.
-* <span class="arithmatex">\(\Delta t\)</span> es el intervalo temporal medido entre fotogramas sucesivos a partir de la telemetría real.</p>
+<p>donde:</p>
+<ul>
+<li><span class="arithmatex">\(\|p - \text{FOE}\|\)</span> es la distancia euclidiana en píxeles desde el píxel evaluado hasta el Foco de Expansión.</li>
+<li><span class="arithmatex">\(\|v_{\text{trans}}(x, y)\|\)</span> es la magnitud del flujo traslacional en píxeles.</li>
+<li><span class="arithmatex">\(\Delta t\)</span> es el intervalo temporal medido entre fotogramas sucesivos a partir de la telemetría real.</li>
+</ul>
 <blockquote>
 <p>[!IMPORTANTE]
 La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</span>) se cancela formalmente en el cociente. El TTC resultante se expresa estrictamente en <strong>segundos</strong>, constituyendo un observable cinemático directo, invariante y absoluto.</p>
@@ -1898,15 +1922,30 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <p>Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y modelo de lenguaje) razonen eficazmente sin procesar decenas de miles de valores por segundo, el mapa de TTC continuo se reduce espacialmente en una estructura discreta y tipada: el <strong><code>ObstacleField</code></strong> (<code>airsim-loop/src/perception/obstacle_field.py</code>).</p>
 <p><img src="a5-agregación-espacial-robusta.png"/></p>
 <h3 id="a561-estadisticos-de-agregacion-por-celda">A5.6.1 Estadísticos de agregación por celda<a class="headerlink" href="#a561-estadisticos-de-agregacion-por-celda" title="Permanent link">&para;</a></h3>
-<p>Para cada celda <span class="arithmatex">\(C_{s,b}\)</span> (donde <span class="arithmatex">\(s \in \{\text{izquierda}, \text{centro}, \text{derecha}\}\)</span> y <span class="arithmatex">\(b \in \{\text{superior}, \text{medio}, \text{inferior}\}\)</span>):
-1. <strong>Fracción de Píxeles Válidos (Confianza):</strong>
-   $<span class="arithmatex">\(\text{conf}(C_{s,b}) = \frac{N_{\text{valid}}(C_{s,b})}{N_{\text{total}}(C_{s,b})}\)</span>$
-   donde un píxel es válido si su magnitud traslacional excede el piso de ruido.
-2. <strong>Percentil 20 de TTC (<span class="arithmatex">\(P_{20}\)</span>):</strong> en lugar de promediar el TTC de la celda (lo que diluiría el impacto de un obstáculo puntual al promediarlo con el fondo distante), se computa el <strong>percentil 20</strong>:
-   $<span class="arithmatex">\(\text{TTC}(C_{s,b}) = \text{percentile}_{20} \left( \{ \text{TTC}(x, y) \mid (x, y) \in C_{s,b}, \text{válido} \} \right)\)</span>$
-   Este estadístico de orden actúa como filtro de seguridad conservador: representa la superficie más cercana de la celda que cubre al menos el 20% del área sectorial.
-3. <strong>Tasa de Ocupación (<em>Occupancy</em>):</strong> fracción de píxeles de la celda cuyo TTC local cae por debajo del umbral de bloqueo nominal (<span class="arithmatex">\(2.5\text{ s}\)</span>):
-   $<span class="arithmatex">\(\text{occ}(C_{s,b}) = \frac{\sum_{(x,y) \in C_{s,b}} \mathbb{I}(\text{TTC}(x,y) \le 2.5\text{ s})}{N_{\text{total}}(C_{s,b})}\)</span>$</p>
+<p>Cada celda <span class="arithmatex">\(c\)</span> es una de las nueve de la grilla: tres sectores (izquierda, centro, derecha) por tres bandas (superior, medio, inferior).</p>
+<p>Sea <span class="arithmatex">\(N_c\)</span> el número de píxeles de la celda y <span class="arithmatex">\(V_c\)</span> el conjunto de los válidos, cuya magnitud traslacional supera el piso de ruido. La notación es la del capítulo 6 (IT.6.8).</p>
+<ol>
+<li>
+<p><strong>Confianza.</strong> La fracción de píxeles válidos, ponderada por la confianza global del FOE (IT.A5.4):</p>
+<div class="arithmatex">\[
+\kappa_c = \frac{|V_c|}{N_c}\, \kappa_{\text{FOE}}
+\]</div>
+</li>
+<li>
+<p><strong>TTC de celda.</strong> En lugar de promediar el TTC de la celda, lo que diluiría un obstáculo puntual con el fondo distante, se toma el percentil 20 de los TTC finitos:</p>
+<div class="arithmatex">\[
+\hat{\tau}_c = P_{20}\big\{\, \tau(p) : p \in V_c,\ \tau(p) &lt; \infty \,\big\}
+\]</div>
+<p>Este estadístico de orden es un filtro conservador: representa la superficie más cercana que cubre al menos el 20 % de los píxeles válidos de la celda. Con menos de 5 píxeles válidos, <span class="arithmatex">\(\hat{\tau}_c = \infty\)</span>.</p>
+</li>
+<li>
+<p><strong>Ocupación.</strong> La divergencia media de la celda (IT.A5.5.2), en s⁻¹, llevada a <span class="arithmatex">\([0, 1]\)</span> por una constante de escala <span class="arithmatex">\(k \approx 0.056\)</span> s calibrada contra la profundidad de referencia:</p>
+<div class="arithmatex">\[
+o_c = \min\!\big(1,\ \max(0,\ k\, \bar{d}_c)\big), \qquad \bar{d}_c = \frac{1}{|V_c|}\sum_{p \in V_c} \operatorname{div}\mathbf{v}(p)
+\]</div>
+<p>Una celda que en promedio se expande tiene ocupación proporcional a la tasa de expansión; una que se contrae, ocupación nula.</p>
+</li>
+</ol>
 <h3 id="a562-criterio-de-decision-booleana-is_blocked">A5.6.2 Criterio de decisión booleana <code>is_blocked()</code><a class="headerlink" href="#a562-criterio-de-decision-booleana-is_blocked" title="Permanent link">&para;</a></h3>
 <p>Una celda se declara formalmente bloqueada mediante una regla de decisión jerárquica:</p>
 <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -2025,10 +2064,12 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <p>El diseño como objeto inmutable (<code>@dataclass(frozen=True)</code>) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo.</p>
 <h3 id="a582-has_open_corridor-y-sector_towards_waypoint">A5.8.2 <code>has_open_corridor</code> y <code>sector_towards_waypoint</code><a class="headerlink" href="#a582-has_open_corridor-y-sector_towards_waypoint" title="Permanent link">&para;</a></h3>
 <p>Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (<code>has_open_corridor</code>, para decidir si un atasco tiene un corredor visible); el brazo <code>slm</code> detecta el atasco con el <code>StallDetector</code> (cap. 5, IT.5.3.1).</p>
-<p><strong><code>sector_towards_waypoint(bearing_err_deg)</code></strong> mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
-- Si <code>bearing_err_deg &lt; -BEARING_SECTOR_DEG</code> (default 15°) → <code>"izquierda"</code>
-- Si <code>bearing_err_deg &gt; +15°</code> → <code>"derecha"</code>
-- Caso contrario → <code>"centro"</code></p>
+<p><strong><code>sector_towards_waypoint(bearing_err_deg)</code></strong> mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:</p>
+<ul>
+<li>Si <code>bearing_err_deg &lt; -BEARING_SECTOR_DEG</code> (default 15°) → <code>"izquierda"</code></li>
+<li>Si <code>bearing_err_deg &gt; +15°</code> → <code>"derecha"</code></li>
+<li>Caso contrario → <code>"centro"</code></li>
+</ul>
 <p>Esta función conecta el espacio de guiado de <code>WaypointTracker</code> con el espacio de percepción del <code>ObstacleField</code>, permitiendo que el escape de atasco priorice el sector hacia el waypoint.</p>
 <p><strong><code>has_open_corridor(field, guidance)</code></strong> determina si la percepción tiene evidencia real de al menos un sector transitable, evaluado en el contexto del waypoint activo:</p>
 <div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="ow">not</span> <span class="n">field</span><span class="o">.</span><span class="n">has_evidence</span><span class="p">():</span>

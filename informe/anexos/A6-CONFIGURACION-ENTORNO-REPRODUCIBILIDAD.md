@@ -132,6 +132,7 @@ r.DetailMode=2
 
 ### A6.2.2 Preset de escalabilidad en el Editor de Unreal Engine
 Para las corridas de producción se configuró el siguiente perfil dentro del editor de Unreal Engine:
+
 * **Resolution Scale:** 100% (sin reescalado espacial en el motor).
 * **View Distance:** Medium (suficiente para el horizonte visual del dron).
 * **Anti-Aliasing:** TSR (Temporal Super Resolution) en Medium.

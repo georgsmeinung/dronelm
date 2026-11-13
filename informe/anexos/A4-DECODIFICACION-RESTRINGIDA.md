@@ -18,6 +18,7 @@ donde $x$ representa la secuencia del prompt de entrada e $y_{<t} = (y_1, \dots,
 
 ### A4.1.1 Modos de falla de la decodificación libre en DroneLM
 Cuando se solicita una salida JSON únicamente mediante instrucciones en el *system prompt* (*prompt engineering* puro), los modelos de 3B parámetros exhiben una tasa de incumplimiento sintáctico de entre el 20% y el 35% en condiciones de vuelo continuo ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025)). Los modos de falla de la decodificación libre incluyen:
+
 1. **Preámbulos y epílogos conversacionales:** emisión de frases introductorias (*«Sure, here is the drone decision:»*) o explicaciones finales que rompen `json.loads()`.
 2. **Encapsulamiento en Markdown irregular:** uso intermitente de triples comillas invertidas (```` ```json ... ``` ````), a menudo con saltos de línea mal posicionados.
 3. **Malformación sintáctica:** comas terminales huérfanas (*trailing commas*), omisión de llaves de cierre `}` por corte de contexto o escape defectuoso de caracteres en cadenas.
@@ -62,6 +63,7 @@ Cualquier token $v_j$ que conduzca a una violación de la gramática recibe un l
 
 ### A4.2.2 Modelado mediante Autómatas Finitos (DFA) y Autómatas de Pila (PDA)
 La complejidad del analizador depende de la expresividad de la restricción:
+
 1. **Autómatas Finitos Deterministas (DFA):** aplicables a expresiones regulares, listas cerradas de cadenas y enumeraciones fijas (`enum`). [Willard y Louf (2023)](../13-REFERENCIAS.md#ref-willard-2023) demuestran que un esquema JSON con campos de profundidad fija puede compilarse directamente en un DFA. En este caso, la transición entre estados se resuelve en tiempo constante $\mathcal{O}(1)$.
 2. **Autómatas de Pila (PDA):** requeridos para gramáticas independientes del contexto (*Context-Free Grammars*, CFG) que admiten anidamientos arbitrarios de llaves, corchetes o estructuras recursivas (formato GBNF en `llama.cpp` y SynCode; Ugare et al., 2024). El PDA mantiene una pila de símbolos para validar el balanceo estricto de la sintaxis.
 
@@ -86,6 +88,7 @@ La complejidad temporal de la generación autorregresiva escala linealmente con 
 $$T_{\text{total}} = T_{\text{prefill}} + \sum_{k=1}^K T_{\text{decode}}(k)$$
 
 En una GPU de consumo cohabitada con simulación 3D (como la NVIDIA RTX 5060 de 8 GB utilizada en DroneLM), cada paso de decodificación autorregresiva de un modelo 3B insume entre **18 ms y 25 ms**. 
+
 * En texto libre, el modelo genera preámbulos, divagaciones o razonamientos extensos de 80 a 150 tokens ($T_{\text{decode}} \approx 1.5 - 3.2\text{ s}$), violando sistemáticamente el perro guardián del sistema.
 * Con decodificación restringida estricta, la salida se acota a exactamente la estructura mínima requerida (por ejemplo, 16 a 22 tokens en DroneLM). El tiempo de decodificación colapsa a **$300 - 450\text{ ms}$**, permitiendo al lazo deliberativo operar holgadamente dentro de su ventana temporal de seguridad.
 
@@ -93,6 +96,7 @@ En una GPU de consumo cohabitada con simulación 3D (como la NVIDIA RTX 5060 de 
 Marcos de trabajo como **Guidance** ([Lundberg et al., 2023](../13-REFERENCIAS.md#ref-lundberg-2023)) y **Outlines** ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)) implementan una técnica crítica: **el salto de tokens deterministas**. 
 
 Cuando el autómata de la gramática se encuentra en un estado donde la única continuación sintáctica posible es una secuencia fija de caracteres (por ejemplo, los caracteres sintácticos `{"action":"` o la clave `, "reason":"`), **no existe incertidumbre probabilística**. El motor de inferencia omite por completo el paso hacia adelante (*forward pass*) de la red neuronal para esos tokens. En su lugar:
+
 1. Concatena directamente los tokens estáticos en la secuencia generada.
 2. Inyecta sus representaciones en la memoria caché de claves y valores (*KV Cache*).
 3. Salta la ejecución del modelo en GPU hasta el punto exacto donde el modelo debe elegir un valor semántico libre (el valor de la macro-acción o el texto de la razón).
@@ -101,6 +105,7 @@ Al saltarse entre 8 y 12 pasos de cómputo en la GPU por cada llamada deliberati
 
 ### A4.3.3 Partición de vocabulario y pre-cálculo de máscaras (XGrammar)
 El motor **XGrammar** ([Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)) optimiza la ejecución de gramáticas independientes del contexto dividiendo los tokens del vocabulario en dos categorías durante una fase de compilación inicial:
+
 * **Tokens independientes del contexto:** tokens cuyos patrones de aceptación dependen únicamente de reglas locales de caracteres y pueden precalcularse y almacenarse en mapas de bits compactos.
 * **Tokens dependientes del contexto:** aquellos que interactúan con la profundidad de la pila sintáctica (e.g., llaves y comillas anidadas).
 
@@ -123,10 +128,22 @@ En el grafo de control de DroneLM, el ciclo de LangGraph (`capture` → `percept
 <img src="a4-invariante-lazo-tactico.png"/>
 
 Al imponer decodificación restringida en la consulta al VLM, se garantizan tres invariantes operativas fundamentales:
+
 1. **Ausencia total de fallas de parseo en el lazo:** se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un **98%–100%**, como se verifica empíricamente en el informe (IT.8.2, IT.11).
 2. **Determinismo en el espacio de acción:** el campo `action` se constriñe a la enumeración canónica:
-   $$\text{action} \in \texttt{VALID\_ACTIONS} = \{\text{MANTENER\_RUMBO}, \text{EVADIR\_IZQUIERDA}, \text{EVADIR\_DERECHA}, \text{GANAR\_ALTURA}, \text{PERDER\_ALTURA}, \text{FRENAR}, \text{GIRAR\_90}, \text{RETROCEDER}\}$$
-   Esto asegura que `action_to_command()` siempre recibe un identificador registrado, eliminando ramas de ejecución indefinidas en los actuadores del dron.
+
+    $$
+    \begin{aligned}
+    \text{action} \in \mathtt{VALID\_ACTIONS} = \{
+    &\mathrm{MANTENER\_RUMBO},\ \mathrm{EVADIR\_IZQUIERDA},\\
+    &\mathrm{EVADIR\_DERECHA},\ \mathrm{GANAR\_ALTURA},\\
+    &\mathrm{PERDER\_ALTURA},\ \mathrm{FRENAR},\\
+    &\mathrm{GIRAR\_90},\ \mathrm{RETROCEDER}\}
+    \end{aligned}
+    $$
+
+    Esto asegura que `action_to_command()` siempre recibe un identificador registrado, eliminando ramas de ejecución indefinidas en los actuadores del dron.
+
 3. **Control estricto de la longitud del campo de justificación:** al restringir la longitud máxima de la cadena `reason` mediante reglas gramaticales (e.g., `maxLength: 120` o regex `[a-zA-Z0-9 _-]{1,100}`), se impide que el modelo expanda su generación más allá de los tokens estrictamente necesarios para auditoría y telemetría.
 
 ### A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo
@@ -142,6 +159,7 @@ En lugar de emplear un esquema JSON estático para todas las consultas, el decis
 | `"STANDARD_DELIB"` | Desempate táctico en corredores urbanos | las ocho de `VALID_ACTIONS` | **Espacio completo:** evaluación estándar. |
 
 **Impacto en la eficiencia del grafo:**
+
 * **Poda semántica a priori:** la gramática no solo previene errores de formato, sino que previene **decisiones tácticas incompatibles con el estado físico del sistema**.
 * **Entropía mínima en el muestreo:** al reducir las opciones admisibles a 2 alternativas críticas ante emergencias, la distribución de probabilidad se concentra masivamente, reduciendo la incertidumbre de inferencia y maximizando la reproducibilidad del control.
 
@@ -196,6 +214,7 @@ ws ::= [ \t\n]*
 ```
 
 **Ventajas operativas de GBNF:**
+
 * **Cero sobrecarga de esquemas:** no requiere motores externos de validación JSON; el propio núcleo en C++ de `llama.cpp` filtra los logits directamente en memoria compartida.
 * **Control microscópico de espacios en blanco:** `ws` puede definirse como cadena vacía (`ws ::= ""` sin espacios), obligando al modelo a generar JSON minificado compacto (`{"action":"EVADIR_DERECHA","reason":"bloqueo_centro"}`), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.
 
@@ -318,6 +337,7 @@ def _parse_decision(raw_text: str, default_action: str = "FRENAR") -> tuple[str,
 
 ### Paso 4: Sincronización con el perro guardián y continuidad del vuelo
 En el sistema, la integración con la temporalidad del lazo de control se articula con dos reglas (cap. 8, IT.8.6):
+
 * Mientras una consulta de la capa estratégica está en vuelo, el dron **no se frena**: el lazo rápido sigue volando, lo que además preserva la traslación que el flujo óptico necesita, y la respuesta se traduce con la pose del fotograma que la originó (IT.5.5.3).
 * Durante un barrido, el dron espera en el lugar bajo el perro guardián `SLM_DEEP_WATCHDOG_MS` (18 s); al expirar, cae al escape vertical. Con decodificación restringida, la consulta estratégica del VLM local tarda ~0.8 s (cuatro ciclos) y el barrido de cuatro imágenes ~3 s.
 
@@ -343,6 +363,7 @@ Para seleccionar la infraestructura de inferencia más eficiente para DroneLM en
 La decodificación restringida no constituye un mero filtro estético de salida ni una conveniencia de formateo de datos: **es el componente arquitectónico que hace viable el uso seguro de modelos de lenguaje pequeños en el lazo cerrado de control de un vehículo aéreo**.
 
 Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se resumen en tres puntos esenciales:
+
 1. **Fiabilidad operacional categórica:** erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de atascos y degradaciones espurias del sistema.
 2. **Eficiencia temporal crítica:** al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 IT.8.6), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).
 3. **Acoplamiento formal con el grafo de control:** permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.

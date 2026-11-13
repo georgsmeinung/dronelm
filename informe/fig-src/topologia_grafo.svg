@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 320" width="1100" height="320" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- Topologia del grafo LangGraph: cuatro nodos y una arista condicional. Fuente de informe/2026-1113 topologia_grafo.png (cap. 5, IT.5.1.1) -->
+  <style>
+    .bg    { fill: #FFFFFF; }
+    .frame { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card  { fill: #FFFFFF; stroke: #4A5568; stroke-width: 1.8; }
+    .acc   { fill: #E6F2FF; stroke: #0066CC; stroke-width: 2.2; }
+    .deg   { fill: #FFFFFF; stroke: #A0AEC0; stroke-width: 1.8; stroke-dasharray: 6 4; }
+    .fin   { fill: #EDF0F4; stroke: #4A5568; stroke-width: 1.5; }
+    .fns   { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.2; stroke-dasharray: 5 4; }
+    .head  { font-size: 13px; font-weight: 800; letter-spacing: .06em; fill: #2D3748; }
+    .headm { font-size: 13px; font-weight: 500; fill: #718096; }
+    .node  { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 15px; font-weight: 500; fill: #1A202C; }
+    .nodeA { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 15px; font-weight: 700; fill: #0066CC; }
+    .sub   { font-size: 12px; fill: #718096; }
+    .lab   { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11.5px; fill: #718096; }
+    .labA  { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11.5px; fill: #0066CC; }
+    .fnt   { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .arrow { fill: none; stroke: #4A5568; stroke-width: 2; }
+    .arrowD{ fill: none; stroke: #A0AEC0; stroke-width: 2; }
+    .link  { fill: none; stroke: #0066CC; stroke-width: 1.4; stroke-dasharray: 5 4; }
+    .dia   { fill: #FFFFFF; stroke: #4A5568; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" />
+    </marker>
+    <marker id="ahD" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#A0AEC0" />
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1100" height="320" />
+  <rect class="frame" x="10" y="10" width="1080" height="300" rx="10" />
+
+  <text class="head" x="30" y="38">GRAFO LANGGRAPH</text>
+  <text class="headm" x="176" y="38">· una invocación por ciclo (graph.invoke) · el ciclo lo aporta el bucle externo</text>
+
+  <!-- funciones que navigate invoca -->
+  <rect class="fns" x="418" y="66" width="414" height="38" rx="8" />
+  <text class="labA" x="625" y="60" text-anchor="middle">funciones que navigate invoca · no son nodos</text>
+  <text class="fnt" x="625" y="90" text-anchor="middle">guiado · evasión · GIRAR_90 · escape · barrido</text>
+  <path class="link" d="M625 104 L625 130" />
+
+  <!-- fila principal -->
+  <rect class="card" x="30" y="130" width="150" height="64" rx="8" />
+  <text class="node" x="105" y="157" text-anchor="middle">capture</text>
+  <text class="sub" x="105" y="178" text-anchor="middle">RGB + telemetría</text>
+
+  <path class="arrow" d="M180 162 L200 162" marker-end="url(#ah)" />
+  <polygon class="dia" points="240,128 278,162 240,196 202,162" />
+  <text class="lab" x="240" y="166" text-anchor="middle">¿img?</text>
+
+  <path class="arrow" d="M278 162 L298 162" marker-end="url(#ah)" />
+  <text class="lab" x="288" y="152" text-anchor="middle">sí</text>
+
+  <rect class="card" x="300" y="130" width="170" height="64" rx="8" />
+  <text class="node" x="385" y="157" text-anchor="middle">perception</text>
+  <text class="sub" x="385" y="178" text-anchor="middle">flujo → ObstacleField</text>
+
+  <path class="arrow" d="M470 162 L518 162" marker-end="url(#ah)" />
+
+  <rect class="acc" x="520" y="130" width="210" height="64" rx="8" />
+  <text class="nodeA" x="625" y="157" text-anchor="middle">navigate</text>
+  <text class="sub" x="625" y="178" text-anchor="middle">la política: 8 reglas en orden</text>
+
+  <path class="arrow" d="M730 162 L778 162" marker-end="url(#ah)" />
+
+  <rect class="card" x="780" y="130" width="160" height="64" rx="8" />
+  <text class="node" x="860" y="157" text-anchor="middle">motor</text>
+  <text class="sub" x="860" y="178" text-anchor="middle">acción → velocidades</text>
+
+  <path class="arrow" d="M940 162 L988 162" marker-end="url(#ah)" />
+  <rect class="fin" x="990" y="142" width="80" height="40" rx="20" />
+  <text class="node" x="1030" y="167" text-anchor="middle">FIN</text>
+
+  <!-- arista condicional: sin datos -->
+  <path class="arrowD" d="M240 196 L240 272 L468 272" marker-end="url(#ahD)" />
+  <text class="lab" x="254" y="262">no · AirSim sin datos</text>
+
+  <rect class="deg" x="470" y="240" width="220" height="64" rx="8" />
+  <text class="node" x="580" y="267" text-anchor="middle">degraded_hover</text>
+  <text class="sub" x="580" y="288" text-anchor="middle">FRENAR · sin percepción ni decisión</text>
+
+  <path class="arrowD" d="M690 272 L860 272 L860 196" marker-end="url(#ahD)" />
+</svg>

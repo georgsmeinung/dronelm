@@ -39,31 +39,31 @@ El banco (cap. 10, IT.10.2) mide qué preguntas sabe responder el modelo contra 
 
 ## 11.2 Resultados por celda
 
-Éxito con su IC de Wilson al 95 %; SPL, tiempo de las misiones exitosas y DistMin como mediana [p25, p75]; terminación de las corridas fallidas.
+Éxito con su IC de Wilson al 95 %; SPL, tiempo de las misiones exitosas y DistMin como mediana [p25, p75]; terminación de las corridas fallidas (PL: `physics_locked`; TT: tope de tiempo). El escenario de cada lote está en la tabla de IT.10.4.2.
 
-| Lote | Escenario | Celda | Éxito [IC 95 %] | SPL | Tiempo de éxito (s) | DistMin (m) | Fallas |
-|---|---|---|---|---|---|---|---|
-| 1 | `minisim_clear` | `slm:depth` | 10/10 [0.72, 1.00] | 0.54 [0.51, 0.56] | 165.1 [159.8, 171.4] | 15.51 [15.47, 15.64] | — |
-| 1 | | `fsm:depth` | 10/10 [0.72, 1.00] | 0.38 [0.35, 0.43] | 306.4 [252.9, 369.5] | 15.49 [15.44, 15.63] | — |
-| 1 | | `reactive` | 10/10 [0.72, 1.00] | 0.63 [0.63, 0.63] | 84.9 [84.7, 85.3] | 15.47 [15.46, 15.50] | — |
-| 2 | `townsim_clear` | `slm:depth` | 10/10 [0.72, 1.00] | 0.89 [0.87, 0.90] | 379.8 [366.4, 399.1] | 16.41 [12.43, 16.48] | — |
-| 2 | | `fsm:depth` | 9/10 [0.60, 0.98] | 0.76 [0.72, 0.80] | 488.6 [434.1, 516.2] | 1.55 [0.24, 3.63] | 1 `physics_locked` |
-| 2 | | `reactive` | 10/10 [0.72, 1.00] | 0.93 [0.91, 0.93] | 272.6 [272.4, 280.8] | 14.77 [7.89, 16.68] | — |
-| 5 | `citysim_clear` | `slm:depth` | 9/10 [0.60, 0.98] | 0.70 [0.68, 0.72] | 286.2 [277.1, 288.9] | 11.45 [10.38, 12.50] | 1 `physics_locked` |
-| 5 | | `fsm:depth` | 6/10 [0.31, 0.83] | 0.42 [0.00, 0.43] | 705.9 [664.8, 748.9] | 0.10 [0.10, 0.11] | 4 `physics_locked` |
-| 5 | | `reactive` | 10/10 [0.72, 1.00] | 0.79 [0.79, 0.79] | 192.3 [190.6, 194.1] | 10.85 [10.70, 10.97] | — |
-| 3 | `townsim_ini` | `slm:depth` | 9/10 [0.60, 0.98] | 0.48 [0.43, 0.48] | 519.9 [517.9, 524.3] | 0.13 [0.11, 0.37] | 1 `physics_locked` |
-| 3 | | `fsm:depth` | 9/10 [0.60, 0.98] | 0.32 [0.31, 0.37] | 805.8 [704.9, 822.1] | 0.23 [0.12, 0.38] | 1 `physics_locked` |
-| 3 | | `fsm:blind` | 9/10 [0.60, 0.98] | 0.38 [0.35, 0.40] | 625.1 [594.7, 684.6] | 0.24 [0.11, 0.38] | 1 `physics_locked` |
-| 3 | | `reactive` | 0/10 [0.00, 0.28] | 0.00 | — | 1.94 [1.35, 2.36] | 10 tope de tiempo |
-| 4 | `townsim_calib_cruce_frontal` | `slm:depth` | 5/10 [0.24, 0.76] | 0.28 [0.00, 0.58] | 479.0 [401.7, 497.0] | 0.14 [0.12, 0.36] | 5 `physics_locked` |
-| 4 | | `fsm:depth` | 8/10 [0.49, 0.94] | 0.41 [0.33, 0.43] | 608.3 [558.9, 687.1] | 0.25 [0.16, 0.34] | 2 `physics_locked` |
-| 4 | | `fsm:blind` | 9/10 [0.60, 0.98] | 0.46 [0.40, 0.49] | 492.4 [469.3, 572.7] | 0.14 [0.12, 0.26] | 1 `physics_locked` |
-| 4 | | `reactive` | 0/10 [0.00, 0.28] | 0.00 | — | 0.11 [0.10, 0.18] | 10 tope de tiempo |
-| 6 | `citysim_pilot` | `slm:depth` | 10/10 [0.72, 1.00] | 0.48 [0.46, 0.51] | 483.1 [452.7, 513.0] | 4.14 [2.32, 4.14] | — |
-| 6 | | `fsm:depth` | 9/10 [0.60, 0.98] | 0.34 [0.33, 0.37] | 805.6 [688.1, 834.7] | 1.16 [0.20, 2.63] | 1 `physics_locked` |
-| 6 | | `fsm:blind` | 5/10 [0.24, 0.76] | 0.14 [0.00, 0.34] | 712.5 [625.4, 870.8] | 0.11 [0.10, 1.28] | 3 `physics_locked`, 2 tope de tiempo |
-| 6 | | `reactive` | 10/10 [0.72, 1.00] | 0.53 [0.53, 0.53] | 313.2 [309.6, 319.4] | 4.14 [4.14, 4.14] | — |
+| Lote | Celda | Éxito [IC 95 %] | SPL | Tiempo de éxito (s) | DistMin (m) | Fallas |
+|---|---|---|---|---|---|---|
+| 1 | `slm:depth` | 10/10 [0.72, 1.00] | 0.54 [0.51, 0.56] | 165.1 [159.8, 171.4] | 15.51 [15.47, 15.64] | — |
+| 1 | `fsm:depth` | 10/10 [0.72, 1.00] | 0.38 [0.35, 0.43] | 306.4 [252.9, 369.5] | 15.49 [15.44, 15.63] | — |
+| 1 | `reactive` | 10/10 [0.72, 1.00] | 0.63 [0.63, 0.63] | 84.9 [84.7, 85.3] | 15.47 [15.46, 15.50] | — |
+| 2 | `slm:depth` | 10/10 [0.72, 1.00] | 0.89 [0.87, 0.90] | 379.8 [366.4, 399.1] | 16.41 [12.43, 16.48] | — |
+| 2 | `fsm:depth` | 9/10 [0.60, 0.98] | 0.76 [0.72, 0.80] | 488.6 [434.1, 516.2] | 1.55 [0.24, 3.63] | 1 PL |
+| 2 | `reactive` | 10/10 [0.72, 1.00] | 0.93 [0.91, 0.93] | 272.6 [272.4, 280.8] | 14.77 [7.89, 16.68] | — |
+| 5 | `slm:depth` | 9/10 [0.60, 0.98] | 0.70 [0.68, 0.72] | 286.2 [277.1, 288.9] | 11.45 [10.38, 12.50] | 1 PL |
+| 5 | `fsm:depth` | 6/10 [0.31, 0.83] | 0.42 [0.00, 0.43] | 705.9 [664.8, 748.9] | 0.10 [0.10, 0.11] | 4 PL |
+| 5 | `reactive` | 10/10 [0.72, 1.00] | 0.79 [0.79, 0.79] | 192.3 [190.6, 194.1] | 10.85 [10.70, 10.97] | — |
+| 3 | `slm:depth` | 9/10 [0.60, 0.98] | 0.48 [0.43, 0.48] | 519.9 [517.9, 524.3] | 0.13 [0.11, 0.37] | 1 PL |
+| 3 | `fsm:depth` | 9/10 [0.60, 0.98] | 0.32 [0.31, 0.37] | 805.8 [704.9, 822.1] | 0.23 [0.12, 0.38] | 1 PL |
+| 3 | `fsm:blind` | 9/10 [0.60, 0.98] | 0.38 [0.35, 0.40] | 625.1 [594.7, 684.6] | 0.24 [0.11, 0.38] | 1 PL |
+| 3 | `reactive` | 0/10 [0.00, 0.28] | 0.00 | — | 1.94 [1.35, 2.36] | 10 TT |
+| 4 | `slm:depth` | 5/10 [0.24, 0.76] | 0.28 [0.00, 0.58] | 479.0 [401.7, 497.0] | 0.14 [0.12, 0.36] | 5 PL |
+| 4 | `fsm:depth` | 8/10 [0.49, 0.94] | 0.41 [0.33, 0.43] | 608.3 [558.9, 687.1] | 0.25 [0.16, 0.34] | 2 PL |
+| 4 | `fsm:blind` | 9/10 [0.60, 0.98] | 0.46 [0.40, 0.49] | 492.4 [469.3, 572.7] | 0.14 [0.12, 0.26] | 1 PL |
+| 4 | `reactive` | 0/10 [0.00, 0.28] | 0.00 | — | 0.11 [0.10, 0.18] | 10 TT |
+| 6 | `slm:depth` | 10/10 [0.72, 1.00] | 0.48 [0.46, 0.51] | 483.1 [452.7, 513.0] | 4.14 [2.32, 4.14] | — |
+| 6 | `fsm:depth` | 9/10 [0.60, 0.98] | 0.34 [0.33, 0.37] | 805.6 [688.1, 834.7] | 1.16 [0.20, 2.63] | 1 PL |
+| 6 | `fsm:blind` | 5/10 [0.24, 0.76] | 0.14 [0.00, 0.34] | 712.5 [625.4, 870.8] | 0.11 [0.10, 1.28] | 3 PL, 2 TT |
+| 6 | `reactive` | 10/10 [0.72, 1.00] | 0.53 [0.53, 0.53] | 313.2 [309.6, 319.4] | 4.14 [4.14, 4.14] | — |
 
 **Cómo terminan las corridas que fallan.** La bandera de colisión de AirSim no se activa en ninguna de las 210. De las 23 fallas de los brazos con evasión, 21 son abortos por `physics_locked`: el dron queda apoyado o incrustado en la malla y el vigilante corta la corrida (cap. 5 IT.5.4). Son, en la práctica, contactos con la geometría que la bandera no detecta (IT.10.6.1). Las otras 2 y las 20 de `reactive` en los lotes 3 y 4 llegan al tope de tiempo. `reactive` es casi determinista —sus 10 corridas difieren en pocos segundos—, lo que confirma que el entorno aporta poca variación por sí solo (IT.10.5.1).
 
@@ -73,15 +73,15 @@ El banco (cap. 10, IT.10.2) mide qué preguntas sabe responder el modelo contra 
 
 | Lote | Comparación | n | δ de Cliff [IC 95 %] | p (permutación exacta) | p Bonferroni |
 |---|---|---|---|---|---|
-| 1 | `slm` vs. `fsm` | 10 / 10 | −1.00 [−1.00, −1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
-| 1 | `slm` vs. `reactive` | 10 / 10 | +1.00 [+1.00, +1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
-| 1 | `fsm` vs. `reactive` | 10 / 10 | +1.00 [+1.00, +1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
-| 2 | `slm` vs. `fsm` | 10 / 9 | −0.98 [−1.00, −0.87] | 4.3 × 10⁻⁵ | 7.8 × 10⁻⁴ |
-| 2 | `slm` vs. `reactive` | 10 / 10 | +1.00 [+1.00, +1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
-| 2 | `fsm` vs. `reactive` | 9 / 10 | +1.00 [+1.00, +1.00] | 2.2 × 10⁻⁵ | 3.9 × 10⁻⁴ |
-| 5 | `slm` vs. `fsm` | 9 / 6 | −1.00 [−1.00, −1.00] | 4.0 × 10⁻⁴ | 0.0072 |
-| 5 | `slm` vs. `reactive` | 9 / 10 | +1.00 [+1.00, +1.00] | 2.2 × 10⁻⁵ | 3.9 × 10⁻⁴ |
-| 5 | `fsm` vs. `reactive` | 6 / 10 | +1.00 [+1.00, +1.00] | 2.5 × 10⁻⁴ | 0.0045 |
+| 1 | `slm` vs. `fsm` | 10 / 10 | −1.00 [−1.00, −1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
+| 1 | `slm` vs. `reactive` | 10 / 10 | +1.00 [+1.00, +1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
+| 1 | `fsm` vs. `reactive` | 10 / 10 | +1.00 [+1.00, +1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
+| 2 | `slm` vs. `fsm` | 10 / 9 | −0.98 [−1.00, −0.87] | 4.3 × 10⁻⁵ | 7.8 × 10⁻⁴ |
+| 2 | `slm` vs. `reactive` | 10 / 10 | +1.00 [+1.00, +1.00] | 1.1 × 10⁻⁵ | 2.0 × 10⁻⁴ |
+| 2 | `fsm` vs. `reactive` | 9 / 10 | +1.00 [+1.00, +1.00] | 2.2 × 10⁻⁵ | 3.9 × 10⁻⁴ |
+| 5 | `slm` vs. `fsm` | 9 / 6 | −1.00 [−1.00, −1.00] | 4.0 × 10⁻⁴ | 0.0072 |
+| 5 | `slm` vs. `reactive` | 9 / 10 | +1.00 [+1.00, +1.00] | 2.2 × 10⁻⁵ | 3.9 × 10⁻⁴ |
+| 5 | `fsm` vs. `reactive` | 6 / 10 | +1.00 [+1.00, +1.00] | 2.5 × 10⁻⁴ | 0.0045 |
 
 Las nueve son significativas tras Bonferroni (α = 0.0028), con separación completa o casi: en los tres tiers el orden es **`reactive` < `slm` < `fsm`**. El orden esperado en IT.A12.8.1 era `reactive` < `fsm` < `slm`: la FSM resulta la más lenta, por las razones de IT.11.5.
 
@@ -107,15 +107,15 @@ Ordenada por longitud de ruta, la razón $t_{\text{slm}}/t_{\text{reactive}}$ de
 
 | Lote | Comparación | δ de Cliff [IC 95 %] | p | p Bonferroni | Éxito A / B |
 |---|---|---|---|---|---|
-| 3 | (i) `slm:depth` vs. `fsm:blind` | +0.73 [+0.28, +1.00] | 0.0039 | 0.071 | 9/10 / 9/10 |
-| 3 | (ii) `fsm:depth` vs. `fsm:blind` | −0.49 [−0.90, 0.00] | 0.065 | 1.00 | 9/10 / 9/10 |
-| 3 | (iii) `slm:depth` vs. `fsm:depth` | **+0.81 [+0.40, +1.00]** | 0.0011 | **0.019** | 9/10 / 9/10 |
-| 4 | (i) `slm:depth` vs. `fsm:blind` | +0.05 [−0.52, +0.62] | 0.87 | 1.00 | 5/10 / 9/10 |
-| 4 | (ii) `fsm:depth` vs. `fsm:blind` | −0.40 [−0.82, +0.12] | 0.14 | 1.00 | 8/10 / 9/10 |
-| 4 | (iii) `slm:depth` vs. `fsm:depth` | +0.10 [−0.52, +0.66] | 0.73 | 1.00 | 5/10 / 8/10 |
-| 6 | (i) `slm:depth` vs. `fsm:blind` | **+1.00 [+1.00, +1.00]** | 1.1 × 10⁻⁵ | **2.0 × 10⁻⁴** | 10/10 / 5/10 |
-| 6 | (ii) `fsm:depth` vs. `fsm:blind` | +0.39 [−0.15, +0.84] | 0.14 | 1.00 | 9/10 / 5/10 |
-| 6 | (iii) `slm:depth` vs. `fsm:depth` | **+1.00 [+1.00, +1.00]** | 1.1 × 10⁻⁵ | **2.0 × 10⁻⁴** | 10/10 / 9/10 |
+| 3 | (i) `slm:depth` vs. `fsm:blind` | +0.73 [+0.28, +1.00] | 0.0039 | 0.071 | 9/10 / 9/10 |
+| 3 | (ii) `fsm:depth` vs. `fsm:blind` | −0.49 [−0.90, 0.00] | 0.065 | 1.00 | 9/10 / 9/10 |
+| 3 | (iii) `slm:depth` vs. `fsm:depth` | **+0.81 [+0.40, +1.00]** | 0.0011 | **0.019** | 9/10 / 9/10 |
+| 4 | (i) `slm:depth` vs. `fsm:blind` | +0.05 [−0.52, +0.62] | 0.87 | 1.00 | 5/10 / 9/10 |
+| 4 | (ii) `fsm:depth` vs. `fsm:blind` | −0.40 [−0.82, +0.12] | 0.14 | 1.00 | 8/10 / 9/10 |
+| 4 | (iii) `slm:depth` vs. `fsm:depth` | +0.10 [−0.52, +0.66] | 0.73 | 1.00 | 5/10 / 8/10 |
+| 6 | (i) `slm:depth` vs. `fsm:blind` | **+1.00 [+1.00, +1.00]** | 1.1 × 10⁻⁵ | **2.0 × 10⁻⁴** | 10/10 / 5/10 |
+| 6 | (ii) `fsm:depth` vs. `fsm:blind` | +0.39 [−0.15, +0.84] | 0.14 | 1.00 | 9/10 / 5/10 |
+| 6 | (iii) `slm:depth` vs. `fsm:depth` | **+1.00 [+1.00, +1.00]** | 1.1 × 10⁻⁵ | **2.0 × 10⁻⁴** | 10/10 / 9/10 |
 
 Tres de las nueve son significativas tras Bonferroni, las tres a favor de `slm:depth`. Ninguna favorece a una FSM. Las tasas de éxito no difieren significativamente en ningún par (Fisher, secundaria), salvo (i) en el lote 6 sin corrección (p = 0.033).
 

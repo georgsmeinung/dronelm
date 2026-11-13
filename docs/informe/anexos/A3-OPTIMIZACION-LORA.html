@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1554,9 +1554,11 @@
 
 <h1 id="anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma">Anexo 3: Optimización y especialización de modelos de visión-lenguaje mediante LoRA/QLoRA para navegación aérea autónoma<a class="headerlink" href="#anexo-3-optimizacion-y-especializacion-de-modelos-de-vision-lenguaje-mediante-loraqlora-para-navegacion-aerea-autonoma" title="Permanent link">&para;</a></h1>
 <p>El modelo multimodal del sistema es <strong>LFM2.5-VL-1.6B</strong> (tag <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>), ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (IT.8.1); el otro candidato evaluado es <strong>Qwen2.5-VL-3B-Instruct</strong> (Qwen Team, 2025). Las cifras de memoria de este anexo se calcularon para el modelo de 3 B y son una cota superior para el de 1.6 B. Con la configuración por defecto el VLM no decide en vuelo, porque en el banco de prueba no distingue sectores libres de bloqueados (cap. 8; cap. 11, IT.11.0): una adaptación LoRA sería la vía para que lo haga, si el banco muestra que el modelo adaptado distingue sectores libres de bloqueados en un entorno que no vio durante el entrenamiento. Sin adaptar, el modelo opera en régimen <em>zero-shot / in-context learning</em>, guiado por prompts breves (IT.8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (IT.8.2, Anexo 4; Willard &amp; Louf, 2023).</p>
-<p>Esta configuración tiene dos limitaciones operativas para el vuelo reactivo:
-1. <strong>Capacidad de discriminación:</strong> el modelo generalista no separa sectores volables de bloqueados en la imagen de a bordo (AUC 0.53 en el banco) y responde con sesgos por posición en la grilla (Anexo 11, IT.A11.4.6).
-2. <strong>Latencia:</strong> ~0.8 s por consulta con imagen en la GPU compartida con la simulación (cap. 8, IT.8.6), cuatro ciclos del lazo, frente a ~0.1 s de la red de profundidad.</p>
+<p>Esta configuración tiene dos limitaciones operativas para el vuelo reactivo:</p>
+<ol>
+<li><strong>Capacidad de discriminación:</strong> el modelo generalista no separa sectores volables de bloqueados en la imagen de a bordo (AUC 0.53 en el banco) y responde con sesgos por posición en la grilla (Anexo 11, IT.A11.4.6).</li>
+<li><strong>Latencia:</strong> ~0.8 s por consulta con imagen en la GPU compartida con la simulación (cap. 8, IT.8.6), cuatro ciclos del lazo, frente a ~0.1 s de la red de profundidad.</li>
+</ol>
 <p>Este anexo desarrolla los fundamentos matemáticos y metodológicos de <strong>Adaptación de Bajo Rango (LoRA; <a href="../13-REFERENCIAS.html#ref-hu-2022">Hu et al., 2022</a>)</strong> y sus extensiones contemporáneas (<strong>QLoRA; Dettmers et al., 2024</strong> y <strong>DoRA; Liu et al., 2024</strong>) como línea de trabajo futuro (IT.12.4): internalizar el dominio físico-espacial y el formato estricto directamente en los tensores de ponderación de la red, habilitando respuestas en tiempo real (&lt; 500 ms) sin alterar la arquitectura base ni requerir hardware de nivel servidor.</p>
 <hr />
 <h2 id="a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft">A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT<a class="headerlink" href="#a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" title="Permanent link">&para;</a></h2>
@@ -1566,24 +1568,32 @@
 <h3 id="a311-formulacion-matematica-de-lora">A3.1.1 Formulación matemática de LoRA<a class="headerlink" href="#a311-formulacion-matematica-de-lora" title="Permanent link">&para;</a></h3>
 <p>La premisa matemática de LoRA (<a href="../13-REFERENCIAS.html#ref-hu-2022">Hu et al., 2022</a>) se basa en la hipótesis de que las actualizaciones de peso <span class="arithmatex">\(\Delta W\)</span> durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (<em>low intrinsic dimension</em>). Para una matriz lineal preentrenada <span class="arithmatex">\(W_0 \in \mathbb{R}^{d \times k}\)</span>, la actualización se descompone como el producto de dos matrices de bajo rango:</p>
 <div class="arithmatex">\[W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)\]</div>
-<p>donde:
-* <span class="arithmatex">\(r \ll \min(d, k)\)</span> es el hiperparámetro de <strong>rango intrínseco</strong> (típicamente <span class="arithmatex">\(r \in [8, 32]\)</span>).
-* <span class="arithmatex">\(B \in \mathbb{R}^{d \times r}\)</span> se inicializa estrictamente en ceros (<span class="arithmatex">\(B = 0\)</span>).
-* <span class="arithmatex">\(A \in \mathbb{R}^{r \times k}\)</span> se inicializa con una distribución normal gaussiana aleatoria <span class="arithmatex">\(A \sim \mathcal{N}(0, \sigma^2)\)</span>, con <span class="arithmatex">\(\sigma = \frac{1}{r}\)</span>.
-* <span class="arithmatex">\(\alpha \in \mathbb{R}^+\)</span> es una constante de escala que atenúa o amplifica el impacto de la adaptación sin requerir reajustar la tasa de aprendizaje (<em>learning rate</em>) al modificar <span class="arithmatex">\(r\)</span>.</p>
+<p>donde:</p>
+<ul>
+<li><span class="arithmatex">\(r \ll \min(d, k)\)</span> es el hiperparámetro de <strong>rango intrínseco</strong> (típicamente <span class="arithmatex">\(r \in [8, 32]\)</span>).</li>
+<li><span class="arithmatex">\(B \in \mathbb{R}^{d \times r}\)</span> se inicializa estrictamente en ceros (<span class="arithmatex">\(B = 0\)</span>).</li>
+<li><span class="arithmatex">\(A \in \mathbb{R}^{r \times k}\)</span> se inicializa con una distribución normal gaussiana aleatoria <span class="arithmatex">\(A \sim \mathcal{N}(0, \sigma^2)\)</span>, con <span class="arithmatex">\(\sigma = \frac{1}{r}\)</span>.</li>
+<li><span class="arithmatex">\(\alpha \in \mathbb{R}^+\)</span> es una constante de escala que atenúa o amplifica el impacto de la adaptación sin requerir reajustar la tasa de aprendizaje (<em>learning rate</em>) al modificar <span class="arithmatex">\(r\)</span>.</li>
+</ul>
 <p><strong>Propiedad de preservación funcional:</strong> gracias a la inicialización <span class="arithmatex">\(B = 0\)</span>, en el paso inicial de entrenamiento se cumple que <span class="arithmatex">\(\Delta W = 0 \cdot A = 0\)</span>. Por lo tanto, <span class="arithmatex">\(W = W_0\)</span> y el comportamiento inicial del modelo es matemáticamente idéntico al modelo preentrenado de fábrica, evitando saltos destructivos en los pesos durante las primeras iteraciones.</p>
 <h3 id="a312-seleccion-de-modulos-objetivo-en-arquitecturas-multimodales">A3.1.2 Selección de módulos objetivo en arquitecturas multimodales<a class="headerlink" href="#a312-seleccion-de-modulos-objetivo-en-arquitecturas-multimodales" title="Permanent link">&para;</a></h3>
-<p>En modelos basados en Transformer, las proyecciones lineales se dividen entre el bloque de autoatención (<em>Multi-Head Attention</em>) y el perceptrón multicapa (<em>Feed-Forward Network</em> / MLP):
-* <strong>Atención:</strong> matrices de consulta (<span class="arithmatex">\(W_q\)</span>), clave (<span class="arithmatex">\(W_k\)</span>), valor (<span class="arithmatex">\(W_v\)</span>) y proyección de salida (<span class="arithmatex">\(W_o\)</span>).
-* <strong>MLP:</strong> matrices de compuerta (<span class="arithmatex">\(W_{\text{gate}}\)</span>), subida (<span class="arithmatex">\(W_{\text{up}}\)</span>) y bajada (<span class="arithmatex">\(W_{\text{down}}\)</span>).</p>
-<p>Para modelos multimodales (sVLMs como Qwen2.5-VL), existe una disyuntiva de diseño crítica:
-1. <strong>Codificador visual (<em>Vision Transformer</em>, ViT):</strong> procesa los parches de píxeles brutos de la cámara monocular. Adaptar el ViT con LoRA introduce el riesgo de destruir filtros de detección de bordes y texturas universales ante conjuntos de datos de vuelo acotados. Por ello, la práctica recomendada consiste en <strong>mantener el ViT congelado</strong>.
-2. <strong>Proyector multimodal y capas del LLM autorregresivo:</strong> adaptar <span class="arithmatex">\(W_q, W_v\)</span> y las capas lineales del MLP permite al modelo remapear las representaciones visuales hacia la lógica de control del dron. La literatura empírica demuestra que incorporar tanto los módulos de atención como los del bloque MLP (<span class="arithmatex">\(W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}\)</span>) con rangos moderados (<span class="arithmatex">\(r=16\)</span>) supera consistentemente a adaptar únicamente <span class="arithmatex">\(W_q\)</span> con rangos mayores (<span class="arithmatex">\(r=64\)</span>).</p>
+<p>En modelos basados en Transformer, las proyecciones lineales se dividen entre el bloque de autoatención (<em>Multi-Head Attention</em>) y el perceptrón multicapa (<em>Feed-Forward Network</em> / MLP):</p>
+<ul>
+<li><strong>Atención:</strong> matrices de consulta (<span class="arithmatex">\(W_q\)</span>), clave (<span class="arithmatex">\(W_k\)</span>), valor (<span class="arithmatex">\(W_v\)</span>) y proyección de salida (<span class="arithmatex">\(W_o\)</span>).</li>
+<li><strong>MLP:</strong> matrices de compuerta (<span class="arithmatex">\(W_{\text{gate}}\)</span>), subida (<span class="arithmatex">\(W_{\text{up}}\)</span>) y bajada (<span class="arithmatex">\(W_{\text{down}}\)</span>).</li>
+</ul>
+<p>Para modelos multimodales (sVLMs como Qwen2.5-VL), existe una disyuntiva de diseño crítica:</p>
+<ol>
+<li><strong>Codificador visual (<em>Vision Transformer</em>, ViT):</strong> procesa los parches de píxeles brutos de la cámara monocular. Adaptar el ViT con LoRA introduce el riesgo de destruir filtros de detección de bordes y texturas universales ante conjuntos de datos de vuelo acotados. Por ello, la práctica recomendada consiste en <strong>mantener el ViT congelado</strong>.</li>
+<li><strong>Proyector multimodal y capas del LLM autorregresivo:</strong> adaptar <span class="arithmatex">\(W_q, W_v\)</span> y las capas lineales del MLP permite al modelo remapear las representaciones visuales hacia la lógica de control del dron. La literatura empírica demuestra que incorporar tanto los módulos de atención como los del bloque MLP (<span class="arithmatex">\(W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}\)</span>) con rangos moderados (<span class="arithmatex">\(r=16\)</span>) supera consistentemente a adaptar únicamente <span class="arithmatex">\(W_q\)</span> con rangos mayores (<span class="arithmatex">\(r=64\)</span>).</li>
+</ol>
 <h3 id="a313-qlora-cuantizacion-en-4-bits-y-optimizadores-paginados">A3.1.3 QLoRA: cuantización en 4 bits y optimizadores paginados<a class="headerlink" href="#a313-qlora-cuantizacion-en-4-bits-y-optimizadores-paginados" title="Permanent link">&para;</a></h3>
-<p>Para posibilitar la sintonización en hardware de desarrollo restringido, <a href="../13-REFERENCIAS.html#ref-dettmers-2024">Dettmers et al. (2024)</a> introdujeron <strong>QLoRA</strong>, una extensión que combina tres innovaciones clave:
-* <strong>Formato NormalFloat4 (NF4):</strong> un tipo de datos no lineal de 4 bits con espaciado óptimo para representar tensores con distribución normal estándar centrada en cero, conservando un error de cuantización teóricamente menor que el formato entero uniforme INT4.
-* <strong>Doble Cuantización (<em>Double Quantization</em>):</strong> proceso que cuantiza las propias constantes de escala de cuantización del modelo (de FP32 a FP8 en bloques de 256 elementos), ahorrando un promedio de 0.37 bits por parámetro (~370 MB en un modelo de 3B).
-* <strong>Optimizadores Paginados (<em>Paged Optimizers</em>):</strong> integración con CUDA Memory Management para trasladar dinámicamente los estados de memoria de la GPU a la memoria RAM del sistema operativo durante picos transitorios de gradientes, previniendo fallos por memoria agotada (<em>Out-Of-Memory</em>, OOM).</p>
+<p>Para posibilitar la sintonización en hardware de desarrollo restringido, <a href="../13-REFERENCIAS.html#ref-dettmers-2024">Dettmers et al. (2024)</a> introdujeron <strong>QLoRA</strong>, una extensión que combina tres innovaciones clave:</p>
+<ul>
+<li><strong>Formato NormalFloat4 (NF4):</strong> un tipo de datos no lineal de 4 bits con espaciado óptimo para representar tensores con distribución normal estándar centrada en cero, conservando un error de cuantización teóricamente menor que el formato entero uniforme INT4.</li>
+<li><strong>Doble Cuantización (<em>Double Quantization</em>):</strong> proceso que cuantiza las propias constantes de escala de cuantización del modelo (de FP32 a FP8 en bloques de 256 elementos), ahorrando un promedio de 0.37 bits por parámetro (~370 MB en un modelo de 3B).</li>
+<li><strong>Optimizadores Paginados (<em>Paged Optimizers</em>):</strong> integración con CUDA Memory Management para trasladar dinámicamente los estados de memoria de la GPU a la memoria RAM del sistema operativo durante picos transitorios de gradientes, previniendo fallos por memoria agotada (<em>Out-Of-Memory</em>, OOM).</li>
+</ul>
 <p>En este esquema, el modelo base <span class="arithmatex">\(W_0\)</span> reside en VRAM cuantizado en 4 bits NF4 (<span class="arithmatex">\(~1.8\text{ GB}\)</span> para 3B), mientras que los adaptadores <span class="arithmatex">\(A\)</span> y <span class="arithmatex">\(B\)</span> se mantienen y optimizan en precisión bfloat16 (<span class="arithmatex">\(~25\text{ MB}\)</span>).</p>
 <h3 id="a314-dora-adaptacion-desacoplada-en-magnitud-y-direccion">A3.1.4 DoRA: adaptación desacoplada en magnitud y dirección<a class="headerlink" href="#a314-dora-adaptacion-desacoplada-en-magnitud-y-direccion" title="Permanent link">&para;</a></h3>
 <p><a href="../13-REFERENCIAS.html#ref-liu-dora-2024">Liu et al. (2024)</a> observaron una discrepancia estructural en la dinámica de gradientes: mientras que el ajuste completo (FFT) modifica tanto la magnitud como la dirección de los vectores de pesos de forma desbalanceada e independiente, LoRA exhibe un acoplamiento simétrico entre ambas dimensiones.</p>
@@ -1651,18 +1661,22 @@
 <p>La integración de un adaptador LoRA en la consulta al VLM transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
 <p><img src="a3-impacto-lora.png"/></p>
 <h3 id="a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia">A3.2.1 Reducción del presupuesto de tokens y compresión de latencia<a class="headerlink" href="#a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" title="Permanent link">&para;</a></h3>
-<p>En el régimen <em>zero-shot</em> actual (IT.8.5), cada consulta de la capa estratégica reitera en el <em>system prompt</em>:
-* La definición de la grilla de 3×3 (columnas A–C, filas 1–3) y de la marca de la meta.
-* El criterio operativo: <code>free</code> si el dron puede volar 15 m en esa dirección, <code>blocked</code> si hay un edificio, muro, árbol, puente o techo más cerca.
-* La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2.1).</p>
+<p>En el régimen <em>zero-shot</em> actual (IT.8.5), cada consulta de la capa estratégica reitera en el <em>system prompt</em>:</p>
+<ul>
+<li>La definición de la grilla de 3×3 (columnas A–C, filas 1–3) y de la marca de la meta.</li>
+<li>El criterio operativo: <code>free</code> si el dron puede volar 15 m en esa dirección, <code>blocked</code> si hay un edificio, muro, árbol, puente o techo más cerca.</li>
+<li>La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2.1).</li>
+</ul>
 <p>Al especializar el modelo con LoRA, <strong>el criterio y la forma de la respuesta quedan incorporados en los pesos</strong>, y la consulta puede reducirse al <em>user prompt</em> que ya usa el sistema más la imagen con la grilla dibujada:</p>
 <div class="highlight"><pre><span></span><code>Goal WP_3: 34 m, in cell B2. Altitude 10 m.   + [Front camera, 3x3 grid]
 </code></pre></div>
 <p>El ahorro es acotado: el <em>system prompt</em> ya tiene tres o cuatro oraciones, y la mayor parte del preprocesamiento (<em>prefill</em>) la ocupan los 64–256 tokens con que el codificador visual representa la imagen (IT.8.1.2), que LoRA no reduce. La ganancia esperable de LoRA no es de latencia —la consulta ya tarda ~0.8 s, muy por debajo de la edad máxima de 10 s de una respuesta (IT.8.6)— sino de discriminación (IT.A3.2.2).</p>
 <h3 id="a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena">A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena<a class="headerlink" href="#a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena" title="Permanent link">&para;</a></h3>
-<p>El banco de prueba muestra que el modelo sin adaptar responde sobre todo a la posición del sector y no a la escena: las filas superior e inferior de la grilla salen «libres» en todas las muestras, la fila del medio depende de la columna, y los <em>logprobs</em> no rescatan la grilla (exactitud balanceada 0.53, AUC 0.53; cap. 11, IT.11.0). LoRA permite reentrenar la distribución condicional <span class="arithmatex">\(P(y \mid X)\)</span> sobre pares con etiqueta de referencia para que la respuesta dependa de lo que hay en cada sector:
-* Juzgar la distancia a lo que ocupa cada sector frente al criterio de 15 m, en lugar de reproducir un patrón fijo por fila.
-* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), el tipo de ambigüedad que el flujo monocular tampoco resuelve (IT.6.1).</p>
+<p>El banco de prueba muestra que el modelo sin adaptar responde sobre todo a la posición del sector y no a la escena: las filas superior e inferior de la grilla salen «libres» en todas las muestras, la fila del medio depende de la columna, y los <em>logprobs</em> no rescatan la grilla (exactitud balanceada 0.53, AUC 0.53; cap. 11, IT.11.0). LoRA permite reentrenar la distribución condicional <span class="arithmatex">\(P(y \mid X)\)</span> sobre pares con etiqueta de referencia para que la respuesta dependa de lo que hay en cada sector:</p>
+<ul>
+<li>Juzgar la distancia a lo que ocupa cada sector frente al criterio de 15 m, en lugar de reproducir un patrón fijo por fila.</li>
+<li>Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), el tipo de ambigüedad que el flujo monocular tampoco resuelve (IT.6.1).</li>
+</ul>
 <p>La adaptación solo se justificaría si el banco de prueba, sobre un entorno no visto en el entrenamiento, supera el criterio de pase de IT.11.0 (exactitud balanceada ≥ 0.65 con el límite inferior del IC 95 % por encima del azar).</p>
 <hr />
 <h2 id="a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea">A3.3 Pipeline de ingeniería de datos para navegación aérea<a class="headerlink" href="#a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea" title="Permanent link">&para;</a></h2>
@@ -1671,18 +1685,22 @@
 <p>Cada instancia de entrenamiento es un par supervisado <span class="arithmatex">\((X_t, Y_t)\)</span> con la misma forma que la consulta estratégica del sistema (IT.8.2.1, IT.A4.9.2):</p>
 <div class="arithmatex">\[X_t = \left\{ I_t^{\text{grilla}},\ \text{prompt}_t \right\}\]</div>
 <div class="arithmatex">\[Y_t = \left\{ \text{"cells"}: \{A1, \dots, C3\} \to \{\text{free}, \text{blocked}\} \right\}\]</div>
-<p>donde:
-* <span class="arithmatex">\(I_t^{\text{grilla}}\)</span> es el fotograma de la cámara frontal reducido a 384 px, con la grilla de 3×3 y la marca de la meta dibujadas, tal como lo recibe el modelo en vuelo.
-* <span class="arithmatex">\(\text{prompt}_t\)</span> es el <em>user prompt</em> con la distancia a la meta, su sector (o su ángulo si está fuera del recorte) y la altitud.
-* <span class="arithmatex">\(Y_t\)</span> asigna a cada uno de los nueve sectores la etiqueta de referencia: <code>free</code> si el percentil 5 de la profundidad planar del simulador en el sector es ≥ 15 m y <code>blocked</code> si no (cap. 7, IT.7.1). La profundidad del simulador solo etiqueta los datos; el modelo nunca la recibe.</p>
+<p>donde:</p>
+<ul>
+<li><span class="arithmatex">\(I_t^{\text{grilla}}\)</span> es el fotograma de la cámara frontal reducido a 384 px, con la grilla de 3×3 y la marca de la meta dibujadas, tal como lo recibe el modelo en vuelo.</li>
+<li><span class="arithmatex">\(\text{prompt}_t\)</span> es el <em>user prompt</em> con la distancia a la meta, su sector (o su ángulo si está fuera del recorte) y la altitud.</li>
+<li><span class="arithmatex">\(Y_t\)</span> asigna a cada uno de los nueve sectores la etiqueta de referencia: <code>free</code> si el percentil 5 de la profundidad planar del simulador en el sector es ≥ 15 m y <code>blocked</code> si no (cap. 7, IT.7.1). La profundidad del simulador solo etiqueta los datos; el modelo nunca la recibe.</li>
+</ul>
 <p>El mismo esquema vale para el barrido, con cuatro imágenes numeradas y la salida <code>views</code> del esquema panorámico (IT.8.2.1).</p>
 <h3 id="a332-mitigacion-de-la-deriva-cinematica-mediante-dagger">A3.3.2 Mitigación de la deriva cinemática mediante DAgger<a class="headerlink" href="#a332-mitigacion-de-la-deriva-cinematica-mediante-dagger" title="Permanent link">&para;</a></h3>
 <p>El entrenamiento mediante simple Clonación de Comportamiento (<em>Behavioral Cloning</em>, BC) a partir de vuelos nominales perfectos sufre del problema de <strong>deriva covariada (<em>Covariate Shift</em>)</strong> (<a href="../13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.</p>
-<p>Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo <strong>DAgger (<em>Dataset Aggregation</em>; <a href="../13-REFERENCIAS.html#ref-ross-2011">Ross et al., 2011</a>)</strong> adaptado a simulación en AirSim / Unreal Engine 5:
-1. <strong>Vuelo con política actual</strong> <span class="arithmatex">\(\pi_{\text{LoRA}}\)</span> en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
-2. <strong>Etiquetado por el oráculo</strong> en los estados que visita la política adaptada: la profundidad planar del simulador produce la etiqueta de referencia <span class="arithmatex">\(Y^*\)</span> de cada sector, también en las situaciones a las que el dron llega por sus propios errores.
-3. <strong>Agregación de tuplas críticas</strong> <span class="arithmatex">\(\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, Y^*_{\text{oráculo}})\}\)</span>.
-4. <strong>Reentrenamiento iterativo</strong> de los adaptadores LoRA sobre el conjunto enriquecido.</p>
+<p>Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo <strong>DAgger (<em>Dataset Aggregation</em>; <a href="../13-REFERENCIAS.html#ref-ross-2011">Ross et al., 2011</a>)</strong> adaptado a simulación en AirSim / Unreal Engine 5:</p>
+<ol>
+<li><strong>Vuelo con política actual</strong> <span class="arithmatex">\(\pi_{\text{LoRA}}\)</span> en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).</li>
+<li><strong>Etiquetado por el oráculo</strong> en los estados que visita la política adaptada: la profundidad planar del simulador produce la etiqueta de referencia <span class="arithmatex">\(Y^*\)</span> de cada sector, también en las situaciones a las que el dron llega por sus propios errores.</li>
+<li><strong>Agregación de tuplas críticas</strong> <span class="arithmatex">\(\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, Y^*_{\text{oráculo}})\}\)</span>.</li>
+<li><strong>Reentrenamiento iterativo</strong> de los adaptadores LoRA sobre el conjunto enriquecido.</li>
+</ol>
 <h3 id="a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion">A3.3.3 Aumentación sintética y métricas objetivo de evaluación<a class="headerlink" href="#a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion" title="Permanent link">&para;</a></h3>
 <p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (TownSim, CitySim; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; <a href="../13-REFERENCIAS.html#ref-marazzato-2015">Marazzato &amp; Sparavigna, 2015</a>) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
 <table>
@@ -1730,15 +1748,19 @@
 <p>Al realizar la fusión de tensores en punto flotante previo (FP16 o BF16), la matriz resultante <span class="arithmatex">\(W_{\text{despliegue}}\)</span> adquiere exactamente las mismas dimensiones y topología que la red preentrenada original. No existe ninguna bifurcación de memoria ni sobrecarga computacional adicional durante la inferencia. </p>
 <p>Posteriormente, el modelo fusionado se compila a formato <strong>GGUF</strong> cuantizado (<code>Q4_K_M</code>) mediante <code>llama.cpp</code> (<a href="../13-REFERENCIAS.html#ref-gerganov-2023">Gerganov, 2023</a>), el mismo formato y la misma cuantización que el modelo adoptado (731 MB más el codificador visual para LFM2.5-VL-1.6B, IT.8.1.2), listo para ejecución local sin dependencias de librerías de entrenamiento y servido por Ollama igual que hoy.</p>
 <h3 id="a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema">A3.4.2 Sinergia entre LoRA y decodificación restringida (<code>json_schema</code>)<a class="headerlink" href="#a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema" title="Permanent link">&para;</a></h3>
-<p>El ajuste fino no reemplaza la decodificación restringida por gramáticas (IT.8.2, Anexo 4), sino que la complementa:
-* <strong>LoRA moldea la distribución interna de logits:</strong> el modelo aprende a concentrar prácticamente toda su masa de probabilidad en las claves del esquema JSON y en los valores de sus enums (<code>free</code>/<code>blocked</code>; los seis valores de <code>view</code>).
-* <strong><code>json_schema</code> opera como barrera determinista externa:</strong> enmascara el residuo infinitesimal de probabilidad en situaciones fuera de distribución, garantizando formalmente cero violaciones de formato.
-* <strong>Aceleración de generación:</strong> al fluir la decodificación sin colisionar con tokens suprimidos por la gramática, la tasa de muestreo alcanza el máximo rendimiento teórico del motor de inferencia.</p>
+<p>El ajuste fino no reemplaza la decodificación restringida por gramáticas (IT.8.2, Anexo 4), sino que la complementa:</p>
+<ul>
+<li><strong>LoRA moldea la distribución interna de logits:</strong> el modelo aprende a concentrar prácticamente toda su masa de probabilidad en las claves del esquema JSON y en los valores de sus enums (<code>free</code>/<code>blocked</code>; los seis valores de <code>view</code>).</li>
+<li><strong><code>json_schema</code> opera como barrera determinista externa:</strong> enmascara el residuo infinitesimal de probabilidad en situaciones fuera de distribución, garantizando formalmente cero violaciones de formato.</li>
+<li><strong>Aceleración de generación:</strong> al fluir la decodificación sin colisionar con tokens suprimidos por la gramática, la tasa de muestreo alcanza el máximo rendimiento teórico del motor de inferencia.</li>
+</ul>
 <h3 id="a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia">A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia<a class="headerlink" href="#a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia" title="Permanent link">&para;</a></h3>
-<p>Un principio fundacional de DroneLM es que los modelos de lenguaje son aproximadores estocásticos y <strong>bajo ninguna circunstancia deben gobernar de forma directa los actuadores físicos sin arbitraje determinista</strong> (Gat, 1998; cap. 5 y 8). La incorporación de adaptadores LoRA preserva íntegramente las tres salvaguardas del sistema:
-1. <strong>Lazo rápido único que comanda velocidades:</strong> la capa deliberativa solo propone sub-metas ancladas al mundo; la evasión por flujo óptico y TTC sigue actuando en el mismo ciclo ante cualquier riesgo inminente (cap. 5, IT.5.3.3).
-2. <strong>Parser por modo:</strong> valida cada respuesta contra su esquema y rechaza la que no coincide, sin sustituirla por un valor por defecto (IT.8.2.2).
-3. <strong>Perro guardián temporal</strong> (<code>SLM_DEEP_WATCHDOG_MS</code>, 18 s en el barrido; edad máxima de 10 s en la capa estratégica, cap. 8, IT.8.6): una respuesta tardía se descarta y el barrido cae al escape vertical.</p>
+<p>Un principio fundacional de DroneLM es que los modelos de lenguaje son aproximadores estocásticos y <strong>bajo ninguna circunstancia deben gobernar de forma directa los actuadores físicos sin arbitraje determinista</strong> (Gat, 1998; cap. 5 y 8). La incorporación de adaptadores LoRA preserva íntegramente las tres salvaguardas del sistema:</p>
+<ol>
+<li><strong>Lazo rápido único que comanda velocidades:</strong> la capa deliberativa solo propone sub-metas ancladas al mundo; la evasión por flujo óptico y TTC sigue actuando en el mismo ciclo ante cualquier riesgo inminente (cap. 5, IT.5.3.3).</li>
+<li><strong>Parser por modo:</strong> valida cada respuesta contra su esquema y rechaza la que no coincide, sin sustituirla por un valor por defecto (IT.8.2.2).</li>
+<li><strong>Perro guardián temporal</strong> (<code>SLM_DEEP_WATCHDOG_MS</code>, 18 s en el barrido; edad máxima de 10 s en la capa estratégica, cap. 8, IT.8.6): una respuesta tardía se descarta y el barrido cae al escape vertical.</li>
+</ol>
 <p>Como línea de extensión formulada en el trabajo futuro (IT.12.4), esta especialización posibilitará la transferencia de la capa deliberativa a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.</p>
 
 

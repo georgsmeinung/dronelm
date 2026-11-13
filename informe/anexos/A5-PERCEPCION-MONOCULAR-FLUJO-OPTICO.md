@@ -28,6 +28,7 @@ $$u = f_x \cdot x + c_x = f_x \frac{X_c}{Z_c} + c_x$$
 $$v = f_y \cdot y + c_y = f_y \frac{Y_c}{Z_c} + c_y$$
 
 donde:
+
 * $f_x, f_y$ son las distancias focales expresadas en unidades de píxeles en las direcciones horizontal y vertical.
 * $c_x, c_y$ son las coordenadas del centro óptico o punto principal en píxeles, nominalmente situadas en el centro geométrico del fotograma: $c_x = \frac{W}{2}, c_y = \frac{H}{2}$.
 
@@ -72,6 +73,7 @@ $$\dot{y} = \underbrace{\frac{-V_y + y V_z}{Z_c}}_{\dot{y}_{\text{trans}}} + \un
 
 ### A5.2.1 El dilema de la contaminación rotacional
 El análisis de estas ecuaciones revela una asimetría física crucial para la robótica aérea:
+
 1. **Componente traslacional $(\dot{x}_{\text{trans}}, \dot{y}_{\text{trans}})$:** es **inversamente proporcional a la distancia $Z_c$**. Contiene toda la información tridimensional sobre la proximidad de los obstáculos. Si $Z_c \to \infty$ (puntos en el horizonte o cielo), el flujo traslacional tiende a cero.
 2. **Componente rotacional $(\dot{x}_{\text{rot}}, \dot{y}_{\text{rot}})$:** es **totalmente independiente de la distancia $Z_c$**. Depende únicamente de las velocidades angulares del vehículo y de la posición del píxel en la imagen. Un giro sobre el eje de guiñada (*yaw*) o cabeceo (*pitch*) genera un desplazamiento visual uniforme tanto en un árbol a 2 metros como en una nube a 5 kilómetros.
 
@@ -88,6 +90,7 @@ Para aislar el componente traslacional puro, DroneLM implementa una etapa de **d
 El autopiloto del UAV reporta su orientación mediante ángulos de Euler en convención aeroespacial NED (North-East-Down): cabeceo (*pitch*, $\theta$), guiñada (*yaw*, $\psi$) y alabeo (*roll*, $\phi$). 
 
 Dado que la cámara monocular está rígidamente montada apuntando hacia el eje longitudinal del fuselaje ($X_{\text{cuerpo}}$ adelante, $Y_{\text{cuerpo}}$ derecha, $Z_{\text{cuerpo}}$ abajo), la correspondencia entre los ejes angulares del dron y los ejes de giro ópticos de la cámara es:
+
 * Giro en cabeceo ($\Delta \text{pitch}$): rota las filas verticales de la imagen $\implies \theta_x \sim \Delta \text{pitch}$.
 * Giro en guiñada ($\Delta \text{yaw}$): desplaza las columnas horizontales de la imagen $\implies \theta_y \sim \Delta \text{yaw}$.
 * Giro en alabeo ($\Delta \text{roll}$): induce rotación pura en torno al eje óptico $\implies \theta_z \sim \Delta \text{roll}$.
@@ -109,8 +112,13 @@ $$v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)$$
 
 ### A5.3.3 Tratamiento de discontinuidades y límite de linealización
 Durante giros bruscos, se presentan dos restricciones de ingeniería:
+
 1. **Normalización de ángulo de guiñada:** ante cruces del límite $\pm 180^\circ$ ($\pm \pi$), el incremento se desenvuelve modularmente:
-   $$\Delta \psi_{\text{norm}} = (\Delta \psi + \pi) \pmod{2\pi} - \pi$$
+
+    $$
+    \Delta \psi_{\text{norm}} = (\Delta \psi + \pi) \pmod{2\pi} - \pi
+    $$
+
 2. **Límite de linealización (`FLOW_MAX_ROTATION_DEG = 2.0°`):** la derotación analítica asume ángulos pequeños ($\sin \Delta\theta \approx \Delta\theta$, $\cos \Delta\theta \approx 1$). Durante giros de evasión activos a alta velocidad angular (e.g., $45^\circ/\text{s}$ a 5 Hz produce $\Delta\theta \approx 9^\circ$), el error de linealización y el desenfoque en zonas de baja textura (cielo) generan artefactos espurios. Si $\max(|\Delta\theta_x|, |\Delta\theta_y|, |\Delta\theta_z|) > 2.0^\circ$, el estimador descarta la señal y emite un estado degradado seguro en lugar de admitir datos contaminados.
 
 ---
@@ -163,8 +171,13 @@ $$\text{FOE} = A^{-1} b$$
 
 ### A5.4.3 Recorte de valores atípicos (*RANSAC-lite*) y plausibilidad física
 Debido a reflejos, texturas repetitivas o imprecisiones locales, una fracción de los vectores no converge al FOE. Se aplica un filtro geométrico de consistencia angular:
+
 1. Para cada vector $v_i$, se calcula el ángulo $\theta_i$ entre la dirección del flujo y el vector radial $(p_i - \text{FOE})$:
-   $$\cos \theta_i = \frac{(p_i - \text{FOE}) \cdot v_i}{\|p_i - \text{FOE}\| \cdot \|v_i\|}$$
+
+    $$
+    \cos \theta_i = \frac{(p_i - \text{FOE}) \cdot v_i}{\|p_i - \text{FOE}\| \cdot \|v_i\|}
+    $$
+
 2. Un vector se clasifica como *inlier* si $\theta_i < \theta_{\text{outlier}} = 0.35\text{ rad}$ ($\approx 20^\circ$).
 3. Si la cantidad de *inliers* supera 30, el sistema normal $A \cdot \text{FOE} = b$ se re-resuelve exclusivamente sobre el subconjunto de *inliers*, refinando las coordenadas.
 4. **Verificación de plausibilidad física:** Si el FOE resultante queda fuera del encuadre visual ($x_{\text{FOE}} < 0$, $x_{\text{FOE}} > W'$, $y_{\text{FOE}} < 0$ o $y_{\text{FOE}} > H'$), el estimado se descarta categóricamente ($\text{confidence} = 0$), pues un punto de fuga fuera del sensor indica ausencia de avance frontal o dominancia de ruido cinemático.
@@ -193,6 +206,7 @@ Dado que el flujo medido en píxeles representa la tasa discreta por fotograma $
 $$\text{TTC}(x, y) = \frac{\|p - \text{FOE}\| \cdot \Delta t}{\|v_{\text{trans}}(x, y)\|}$$
 
 donde:
+
 * $\|p - \text{FOE}\|$ es la distancia euclidiana en píxeles desde el píxel evaluado hasta el Foco de Expansión.
 * $\|v_{\text{trans}}(x, y)\|$ es la magnitud del flujo traslacional en píxeles.
 * $\Delta t$ es el intervalo temporal medido entre fotogramas sucesivos a partir de la telemetría real.
@@ -226,15 +240,31 @@ Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y
 <img src="a5-agregación-espacial-robusta.png"/>
 
 ### A5.6.1 Estadísticos de agregación por celda
-Para cada celda $C_{s,b}$ (donde $s \in \{\text{izquierda}, \text{centro}, \text{derecha}\}$ y $b \in \{\text{superior}, \text{medio}, \text{inferior}\}$):
-1. **Fracción de Píxeles Válidos (Confianza):**
-   $$\text{conf}(C_{s,b}) = \frac{N_{\text{valid}}(C_{s,b})}{N_{\text{total}}(C_{s,b})}$$
-   donde un píxel es válido si su magnitud traslacional excede el piso de ruido.
-2. **Percentil 20 de TTC ($P_{20}$):** en lugar de promediar el TTC de la celda (lo que diluiría el impacto de un obstáculo puntual al promediarlo con el fondo distante), se computa el **percentil 20**:
-   $$\text{TTC}(C_{s,b}) = \text{percentile}_{20} \left( \{ \text{TTC}(x, y) \mid (x, y) \in C_{s,b}, \text{válido} \} \right)$$
-   Este estadístico de orden actúa como filtro de seguridad conservador: representa la superficie más cercana de la celda que cubre al menos el 20% del área sectorial.
-3. **Tasa de Ocupación (*Occupancy*):** fracción de píxeles de la celda cuyo TTC local cae por debajo del umbral de bloqueo nominal ($2.5\text{ s}$):
-   $$\text{occ}(C_{s,b}) = \frac{\sum_{(x,y) \in C_{s,b}} \mathbb{I}(\text{TTC}(x,y) \le 2.5\text{ s})}{N_{\text{total}}(C_{s,b})}$$
+Cada celda $c$ es una de las nueve de la grilla: tres sectores (izquierda, centro, derecha) por tres bandas (superior, medio, inferior).
+
+Sea $N_c$ el número de píxeles de la celda y $V_c$ el conjunto de los válidos, cuya magnitud traslacional supera el piso de ruido. La notación es la del capítulo 6 (IT.6.8).
+
+1. **Confianza.** La fracción de píxeles válidos, ponderada por la confianza global del FOE (IT.A5.4):
+
+    $$
+    \kappa_c = \frac{|V_c|}{N_c}\, \kappa_{\text{FOE}}
+    $$
+
+2. **TTC de celda.** En lugar de promediar el TTC de la celda, lo que diluiría un obstáculo puntual con el fondo distante, se toma el percentil 20 de los TTC finitos:
+
+    $$
+    \hat{\tau}_c = P_{20}\big\{\, \tau(p) : p \in V_c,\ \tau(p) < \infty \,\big\}
+    $$
+
+    Este estadístico de orden es un filtro conservador: representa la superficie más cercana que cubre al menos el 20 % de los píxeles válidos de la celda. Con menos de 5 píxeles válidos, $\hat{\tau}_c = \infty$.
+
+3. **Ocupación.** La divergencia media de la celda (IT.A5.5.2), en s⁻¹, llevada a $[0, 1]$ por una constante de escala $k \approx 0.056$ s calibrada contra la profundidad de referencia:
+
+    $$
+    o_c = \min\!\big(1,\ \max(0,\ k\, \bar{d}_c)\big), \qquad \bar{d}_c = \frac{1}{|V_c|}\sum_{p \in V_c} \operatorname{div}\mathbf{v}(p)
+    $$
+
+    Una celda que en promedio se expande tiene ocupación proporcional a la tasa de expansión; una que se contrae, ocupación nula.
 
 ### A5.6.2 Criterio de decisión booleana `is_blocked()`
 Una celda se declara formalmente bloqueada mediante una regla de decisión jerárquica:
@@ -302,6 +332,7 @@ El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ning�
 Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (`has_open_corridor`, para decidir si un atasco tiene un corredor visible); el brazo `slm` detecta el atasco con el `StallDetector` (cap. 5, IT.5.3.1).
 
 **`sector_towards_waypoint(bearing_err_deg)`** mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
+
 - Si `bearing_err_deg < -BEARING_SECTOR_DEG` (default 15°) → `"izquierda"`
 - Si `bearing_err_deg > +15°` → `"derecha"`
 - Caso contrario → `"centro"`

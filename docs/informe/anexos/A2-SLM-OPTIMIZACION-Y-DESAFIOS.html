@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -1498,25 +1498,37 @@
 <p>Asimismo, la sustitución o combinación de la autoatención cuadrática convencional <span class="arithmatex">\(\mathcal{O}(N^2)\)</span> por mecanismos de atención lineal, ventanas deslizantes (<em>sliding window attention</em>) o formulaciones basadas en modelos de espacio de estados (SSM) alivia sustancialmente la carga computacional en inferencias continuas.</p>
 <h3 id="a222-ajuste-fino-eficiente-en-parametros-peft-lora-y-qlora">A2.2.2 Ajuste fino eficiente en parámetros (PEFT, LoRA y QLoRA)<a class="headerlink" href="#a222-ajuste-fino-eficiente-en-parametros-peft-lora-y-qlora" title="Permanent link">&para;</a></h3>
 <p>El reentrenamiento completo (<em>full fine-tuning</em>) de un modelo exige almacenar en memoria los estados del optimizador, activaciones intermedias y gradientes para la totalidad de los parámetros, lo cual supera con creces la memoria disponible en GPUs de consumo. </p>
-<p>Las técnicas de ajuste fino eficiente en parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT), y en particular la adaptación de bajo rango (<strong>LoRA</strong>; Hu et al., 2022), resuelven esta barrera:
-* Congelan las ponderaciones preentrenadas <span class="arithmatex">\(W_0 \in \mathbb{R}^{d \times k}\)</span> y modelan la actualización mediante la descomposición en dos matrices de bajo rango <span class="arithmatex">\(B \times A\)</span>, donde <span class="arithmatex">\(r \ll \min(d, k)\)</span>:
-  $<span class="arithmatex">\(W = W_0 + \Delta W = W_0 + B \cdot A\)</span>$
-* Reducen el conteo de parámetros entrenables en más de un 99%, permitiendo especializar modelos en tareas de navegación o seguimiento de formatos en pocas horas de GPU.
-* Su variante cuantizada, <strong>QLoRA</strong> (<a href="../13-REFERENCIAS.html#ref-dettmers-2024">Dettmers et al., 2024</a>), mantiene el modelo base en precisión de 4 bits (NormalFloat4) e inserta adaptadores LoRA entrenables en precisión de 16 bits, posibilitando la especialización local sin incurrir en consumo masivo de VRAM.</p>
+<p>Las técnicas de ajuste fino eficiente en parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT), y en particular la adaptación de bajo rango (<strong>LoRA</strong>; Hu et al., 2022), resuelven esta barrera:</p>
+<ul>
+<li>
+<p>Congelan las ponderaciones preentrenadas <span class="arithmatex">\(W_0 \in \mathbb{R}^{d \times k}\)</span> y modelan la actualización mediante la descomposición en dos matrices de bajo rango <span class="arithmatex">\(B \times A\)</span>, donde <span class="arithmatex">\(r \ll \min(d, k)\)</span>:</p>
+<div class="arithmatex">\[
+W = W_0 + \Delta W = W_0 + B \cdot A
+\]</div>
+</li>
+<li>
+<p>Reducen el conteo de parámetros entrenables en más de un 99%, permitiendo especializar modelos en tareas de navegación o seguimiento de formatos en pocas horas de GPU.</p>
+</li>
+<li>Su variante cuantizada, <strong>QLoRA</strong> (<a href="../13-REFERENCIAS.html#ref-dettmers-2024">Dettmers et al., 2024</a>), mantiene el modelo base en precisión de 4 bits (NormalFloat4) e inserta adaptadores LoRA entrenables en precisión de 16 bits, posibilitando la especialización local sin incurrir en consumo masivo de VRAM.</li>
+</ul>
 <h3 id="a223-transferencia-y-destilacion-de-razonamiento">A2.2.3 Transferencia y destilación de razonamiento<a class="headerlink" href="#a223-transferencia-y-destilacion-de-razonamiento" title="Permanent link">&para;</a></h3>
 <p>Los modelos compactos entrenados sobre datos sintéticos curados de alta calidad pedagógica (como libros de texto sintéticos y trazas lógicas depuradas) exhiben una capacidad desproporcionada para el seguimiento de instrucciones y la descomposición algorítmica de problemas (<a href="../13-REFERENCIAS.html#ref-abdin-2024">Abdin et al., 2024</a>). Esto valida que la capacidad de razonamiento operativo de un modelo en un lazo de control no está determinada exclusivamente por el volumen bruto de parámetros, sino por la densidad informativa y estructurada del corpus con el que fue optimizado.</p>
 <hr />
 <h2 id="a23-el-desafio-de-las-alucinaciones-en-modelos-compactos-y-vision-lenguaje">A2.3 El desafío de las alucinaciones en modelos compactos y visión-lenguaje<a class="headerlink" href="#a23-el-desafio-de-las-alucinaciones-en-modelos-compactos-y-vision-lenguaje" title="Permanent link">&para;</a></h2>
 <p>El fenómeno de la <strong>alucinación</strong> —definido como la generación de información fáctica o contextualmente incorrecta, no fundamentada en la entrada sensorial ni en la evidencia provista (<a href="../13-REFERENCIAS.html#ref-ji-2023">Ji et al., 2023</a>)— adquiere una gravedad particular en sistemas de robótica móvil e interacción física con el entorno.</p>
 <h3 id="a231-correlacion-entre-escala-de-parametros-y-propension-alucinatoria">A2.3.1 Correlación entre escala de parámetros y propensión alucinatoria<a class="headerlink" href="#a231-correlacion-entre-escala-de-parametros-y-propension-alucinatoria" title="Permanent link">&para;</a></h3>
-<p>La literatura experimental documenta que los modelos de menor tamaño presentan una propensión basal más alta a generar contenido alucinatorio en comparación con modelos de frontera:
-* Evaluaciones sistemáticas en modelos multimodales de visión-lenguaje mediante bancos de prueba especializados como <strong>HallusionBench</strong> (<a href="../13-REFERENCIAS.html#ref-guan-2024">Guan et al., 2024</a>) revelan que la reducción en la capacidad de la red acentúa las ilusiones visuales y los sesgos lingüísticos no fundamentados en la imagen (<em>language hallucination vs. visual illusion</em>).
-* Modelos pequeños sometidos a estímulos ambiguos o degradados tienden a completar secuencias basándose en prioris estadísticas del lenguaje más que en la evidencia visual real.</p>
+<p>La literatura experimental documenta que los modelos de menor tamaño presentan una propensión basal más alta a generar contenido alucinatorio en comparación con modelos de frontera:</p>
+<ul>
+<li>Evaluaciones sistemáticas en modelos multimodales de visión-lenguaje mediante bancos de prueba especializados como <strong>HallusionBench</strong> (<a href="../13-REFERENCIAS.html#ref-guan-2024">Guan et al., 2024</a>) revelan que la reducción en la capacidad de la red acentúa las ilusiones visuales y los sesgos lingüísticos no fundamentados en la imagen (<em>language hallucination vs. visual illusion</em>).</li>
+<li>Modelos pequeños sometidos a estímulos ambiguos o degradados tienden a completar secuencias basándose en prioris estadísticas del lenguaje más que en la evidencia visual real.</li>
+</ul>
 <h3 id="a232-riesgos-criticos-en-vehiculos-aereos-no-tripulados-uavs">A2.3.2 Riesgos críticos en vehículos aéreos no tripulados (UAVs)<a class="headerlink" href="#a232-riesgos-criticos-en-vehiculos-aereos-no-tripulados-uavs" title="Permanent link">&para;</a></h3>
-<p>En una misión de navegación aérea autónoma, los efectos de una alucinación trascienden la incorrección lingüística y se traducen en amenazas cinemáticas directas:
-1. <strong>Alucinación de espacio libre</strong>: el modelo reporta erróneamente que una trayectoria está despejada al confundir sombras, reflejos o texturas complejas con áreas transitables, suprimiendo maniobras de evasión esenciales.
-2. <strong>Alucinación de sintaxis o formato</strong>: la emisión de etiquetas no contempladas o la deformación del esquema JSON invalida el analizador sintáctico, interrumpiendo el flujo de control y dejando al vehículo sin acción defensiva durante múltiples ciclos de muestreo.
-3. <strong>Deriva temporal y desacoplamiento dinámico</strong>: el modelo puede basar su razonamiento en estados superados o inventar una persistencia de obstáculos inexistente, comprometiendo la coherencia de la misión.</p>
+<p>En una misión de navegación aérea autónoma, los efectos de una alucinación trascienden la incorrección lingüística y se traducen en amenazas cinemáticas directas:</p>
+<ol>
+<li><strong>Alucinación de espacio libre</strong>: el modelo reporta erróneamente que una trayectoria está despejada al confundir sombras, reflejos o texturas complejas con áreas transitables, suprimiendo maniobras de evasión esenciales.</li>
+<li><strong>Alucinación de sintaxis o formato</strong>: la emisión de etiquetas no contempladas o la deformación del esquema JSON invalida el analizador sintáctico, interrumpiendo el flujo de control y dejando al vehículo sin acción defensiva durante múltiples ciclos de muestreo.</li>
+<li><strong>Deriva temporal y desacoplamiento dinámico</strong>: el modelo puede basar su razonamiento en estados superados o inventar una persistencia de obstáculos inexistente, comprometiendo la coherencia de la misión.</li>
+</ol>
 <hr />
 <h2 id="a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis">A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis<a class="headerlink" href="#a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis" title="Permanent link">&para;</a></h2>
 <p>Para hacer viable el despliegue de un modelo compacto (LFM2.5-VL-1.6B, cap. 8 IT.8.1.2) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:</p>

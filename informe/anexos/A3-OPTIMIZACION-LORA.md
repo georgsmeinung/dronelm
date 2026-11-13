@@ -3,6 +3,7 @@
 El modelo multimodal del sistema es **LFM2.5-VL-1.6B** (tag `lfm2.5-vl-1.6b:q4km-ctx8k`), ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (IT.8.1); el otro candidato evaluado es **Qwen2.5-VL-3B-Instruct** (Qwen Team, 2025). Las cifras de memoria de este anexo se calcularon para el modelo de 3 B y son una cota superior para el de 1.6 B. Con la configuración por defecto el VLM no decide en vuelo, porque en el banco de prueba no distingue sectores libres de bloqueados (cap. 8; cap. 11, IT.11.0): una adaptación LoRA sería la vía para que lo haga, si el banco muestra que el modelo adaptado distingue sectores libres de bloqueados en un entorno que no vio durante el entrenamiento. Sin adaptar, el modelo opera en régimen *zero-shot / in-context learning*, guiado por prompts breves (IT.8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (IT.8.2, Anexo 4; Willard & Louf, 2023).
 
 Esta configuración tiene dos limitaciones operativas para el vuelo reactivo:
+
 1. **Capacidad de discriminación:** el modelo generalista no separa sectores volables de bloqueados en la imagen de a bordo (AUC 0.53 en el banco) y responde con sesgos por posición en la grilla (Anexo 11, IT.A11.4.6).
 2. **Latencia:** ~0.8 s por consulta con imagen en la GPU compartida con la simulación (cap. 8, IT.8.6), cuatro ciclos del lazo, frente a ~0.1 s de la red de profundidad.
 
@@ -24,6 +25,7 @@ La premisa matemática de LoRA ([Hu et al., 2022](../13-REFERENCIAS.md#ref-hu-20
 $$W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)$$
 
 donde:
+
 * $r \ll \min(d, k)$ es el hiperparámetro de **rango intrínseco** (típicamente $r \in [8, 32]$).
 * $B \in \mathbb{R}^{d \times r}$ se inicializa estrictamente en ceros ($B = 0$).
 * $A \in \mathbb{R}^{r \times k}$ se inicializa con una distribución normal gaussiana aleatoria $A \sim \mathcal{N}(0, \sigma^2)$, con $\sigma = \frac{1}{r}$.
@@ -33,15 +35,18 @@ donde:
 
 ### A3.1.2 Selección de módulos objetivo en arquitecturas multimodales
 En modelos basados en Transformer, las proyecciones lineales se dividen entre el bloque de autoatención (*Multi-Head Attention*) y el perceptrón multicapa (*Feed-Forward Network* / MLP):
+
 * **Atención:** matrices de consulta ($W_q$), clave ($W_k$), valor ($W_v$) y proyección de salida ($W_o$).
 * **MLP:** matrices de compuerta ($W_{\text{gate}}$), subida ($W_{\text{up}}$) y bajada ($W_{\text{down}}$).
 
 Para modelos multimodales (sVLMs como Qwen2.5-VL), existe una disyuntiva de diseño crítica:
+
 1. **Codificador visual (*Vision Transformer*, ViT):** procesa los parches de píxeles brutos de la cámara monocular. Adaptar el ViT con LoRA introduce el riesgo de destruir filtros de detección de bordes y texturas universales ante conjuntos de datos de vuelo acotados. Por ello, la práctica recomendada consiste en **mantener el ViT congelado**.
 2. **Proyector multimodal y capas del LLM autorregresivo:** adaptar $W_q, W_v$ y las capas lineales del MLP permite al modelo remapear las representaciones visuales hacia la lógica de control del dron. La literatura empírica demuestra que incorporar tanto los módulos de atención como los del bloque MLP ($W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}$) con rangos moderados ($r=16$) supera consistentemente a adaptar únicamente $W_q$ con rangos mayores ($r=64$).
 
 ### A3.1.3 QLoRA: cuantización en 4 bits y optimizadores paginados
 Para posibilitar la sintonización en hardware de desarrollo restringido, [Dettmers et al. (2024)](../13-REFERENCIAS.md#ref-dettmers-2024) introdujeron **QLoRA**, una extensión que combina tres innovaciones clave:
+
 * **Formato NormalFloat4 (NF4):** un tipo de datos no lineal de 4 bits con espaciado óptimo para representar tensores con distribución normal estándar centrada en cero, conservando un error de cuantización teóricamente menor que el formato entero uniforme INT4.
 * **Doble Cuantización (*Double Quantization*):** proceso que cuantiza las propias constantes de escala de cuantización del modelo (de FP32 a FP8 en bloques de 256 elementos), ahorrando un promedio de 0.37 bits por parámetro (~370 MB en un modelo de 3B).
 * **Optimizadores Paginados (*Paged Optimizers*):** integración con CUDA Memory Management para trasladar dinámicamente los estados de memoria de la GPU a la memoria RAM del sistema operativo durante picos transitorios de gradientes, previniendo fallos por memoria agotada (*Out-Of-Memory*, OOM).
@@ -78,6 +83,7 @@ La integración de un adaptador LoRA en la consulta al VLM transforma la interfa
 
 ### A3.2.1 Reducción del presupuesto de tokens y compresión de latencia
 En el régimen *zero-shot* actual (IT.8.5), cada consulta de la capa estratégica reitera en el *system prompt*:
+
 * La definición de la grilla de 3×3 (columnas A–C, filas 1–3) y de la marca de la meta.
 * El criterio operativo: `free` si el dron puede volar 15 m en esa dirección, `blocked` si hay un edificio, muro, árbol, puente o techo más cerca.
 * La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2.1).
@@ -92,6 +98,7 @@ El ahorro es acotado: el *system prompt* ya tiene tres o cuatro oraciones, y la 
 
 ### A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena
 El banco de prueba muestra que el modelo sin adaptar responde sobre todo a la posición del sector y no a la escena: las filas superior e inferior de la grilla salen «libres» en todas las muestras, la fila del medio depende de la columna, y los *logprobs* no rescatan la grilla (exactitud balanceada 0.53, AUC 0.53; cap. 11, IT.11.0). LoRA permite reentrenar la distribución condicional $P(y \mid X)$ sobre pares con etiqueta de referencia para que la respuesta dependa de lo que hay en cada sector:
+
 * Juzgar la distancia a lo que ocupa cada sector frente al criterio de 15 m, en lugar de reproducir un patrón fijo por fila.
 * Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), el tipo de ambigüedad que el flujo monocular tampoco resuelve (IT.6.1).
 
@@ -111,6 +118,7 @@ $$X_t = \left\{ I_t^{\text{grilla}},\ \text{prompt}_t \right\}$$
 $$Y_t = \left\{ \text{"cells"}: \{A1, \dots, C3\} \to \{\text{free}, \text{blocked}\} \right\}$$
 
 donde:
+
 * $I_t^{\text{grilla}}$ es el fotograma de la cámara frontal reducido a 384 px, con la grilla de 3×3 y la marca de la meta dibujadas, tal como lo recibe el modelo en vuelo.
 * $\text{prompt}_t$ es el *user prompt* con la distancia a la meta, su sector (o su ángulo si está fuera del recorte) y la altitud.
 * $Y_t$ asigna a cada uno de los nueve sectores la etiqueta de referencia: `free` si el percentil 5 de la profundidad planar del simulador en el sector es ≥ 15 m y `blocked` si no (cap. 7, IT.7.1). La profundidad del simulador solo etiqueta los datos; el modelo nunca la recibe.
@@ -121,6 +129,7 @@ El mismo esquema vale para el barrido, con cuatro imágenes numeradas y la salid
 El entrenamiento mediante simple Clonación de Comportamiento (*Behavioral Cloning*, BC) a partir de vuelos nominales perfectos sufre del problema de **deriva covariada (*Covariate Shift*)** ([Codevilla et al., 2019](../13-REFERENCIAS.md#ref-codevilla-2019)): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.
 
 Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo **DAgger (*Dataset Aggregation*; [Ross et al., 2011](../13-REFERENCIAS.md#ref-ross-2011))** adaptado a simulación en AirSim / Unreal Engine 5:
+
 1. **Vuelo con política actual** $\pi_{\text{LoRA}}$ en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
 2. **Etiquetado por el oráculo** en los estados que visita la política adaptada: la profundidad planar del simulador produce la etiqueta de referencia $Y^*$ de cada sector, también en las situaciones a las que el dron llega por sus propios errores.
 3. **Agregación de tuplas críticas** $\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, Y^*_{\text{oráculo}})\}$.
@@ -154,12 +163,14 @@ Posteriormente, el modelo fusionado se compila a formato **GGUF** cuantizado (`Q
 
 ### A3.4.2 Sinergia entre LoRA y decodificación restringida (`json_schema`)
 El ajuste fino no reemplaza la decodificación restringida por gramáticas (IT.8.2, Anexo 4), sino que la complementa:
+
 * **LoRA moldea la distribución interna de logits:** el modelo aprende a concentrar prácticamente toda su masa de probabilidad en las claves del esquema JSON y en los valores de sus enums (`free`/`blocked`; los seis valores de `view`).
 * **`json_schema` opera como barrera determinista externa:** enmascara el residuo infinitesimal de probabilidad en situaciones fuera de distribución, garantizando formalmente cero violaciones de formato.
 * **Aceleración de generación:** al fluir la decodificación sin colisionar con tokens suprimidos por la gramática, la tasa de muestreo alcanza el máximo rendimiento teórico del motor de inferencia.
 
 ### A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia
 Un principio fundacional de DroneLM es que los modelos de lenguaje son aproximadores estocásticos y **bajo ninguna circunstancia deben gobernar de forma directa los actuadores físicos sin arbitraje determinista** (Gat, 1998; cap. 5 y 8). La incorporación de adaptadores LoRA preserva íntegramente las tres salvaguardas del sistema:
+
 1. **Lazo rápido único que comanda velocidades:** la capa deliberativa solo propone sub-metas ancladas al mundo; la evasión por flujo óptico y TTC sigue actuando en el mismo ciclo ante cualquier riesgo inminente (cap. 5, IT.5.3.3).
 2. **Parser por modo:** valida cada respuesta contra su esquema y rechaza la que no coincide, sin sustituirla por un valor por defecto (IT.8.2.2).
 3. **Perro guardián temporal** (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido; edad máxima de 10 s en la capa estratégica, cap. 8, IT.8.6): una respuesta tardía se descarta y el barrido cae al escape vertical.
