@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- A4.2: enmascaramiento de logits guiado por un automata -->
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .panel { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD5E0; stroke-width: 1.4; }
+    .card-acc { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-blue { fill: #E6F2FF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-green { fill: #EAF7EF; stroke: #259E5F; stroke-width: 1.8; }
+    .card-warn { fill: #FFF7E6; stroke: #D97706; stroke-width: 1.8; }
+    .card-red { fill: #FDECEC; stroke: #DC2626; stroke-width: 1.8; }
+    .card-gray { fill: #F1F3F5; stroke: #A0AEC0; stroke-width: 1.4; stroke-dasharray: 6 4; }
+    .head { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #0066CC; }
+    .head-ink { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #2D3748; }
+    .title { font-size: 22px; font-weight: 800; fill: #1A202C; }
+    .ttl { font-size: 15px; font-weight: 700; fill: #1A202C; }
+    .txt { font-size: 13px; fill: #4A5568; }
+    .txt-b { font-size: 13px; font-weight: 700; fill: #2D3748; }
+    .small { font-size: 11.5px; fill: #718096; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .mono-s { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #4A5568; }
+    .math { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 17px; fill: #1A202C; }
+    .math-s { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 14px; fill: #1A202C; }
+    .acc { fill: #0066CC; } .safe { fill: #259E5F; } .warn { fill: #B45309; } .crit { fill: #DC2626; }
+    .ln { stroke: #4A5568; stroke-width: 1.8; fill: none; }
+    .ln-acc { stroke: #0066CC; stroke-width: 1.8; fill: none; }
+    .ln-dash { stroke: #718096; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .grid { stroke: #2D3748; stroke-width: 1.2; fill: none; }
+    .badge { fill: #0066CC; } .badge-t { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" /></marker>
+    <marker id="aa" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="av" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="ag" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#718096" /></marker>
+    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#DC2626" /></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="600" />
+  <text class="head" x="24" y="36" text-anchor="start" >DECODIFICACIÓN RESTRINGIDA: UN PASO DE GENERACIÓN</text>
+  <text class="small" x="24" y="56" text-anchor="start" >Willard &amp; Louf, 2023; Ugare et al., 2024; Dong et al., 2024</text>
+  <rect class="panel" x="24" y="76" width="700" height="500" rx="10" />
+  <rect class="card" x="64" y="110" width="560" height="50" rx="8" />
+  <text class="ttl" x="344" y="141" text-anchor="middle" >Contexto: prompt x y tokens previos y<tspan baseline-shift="sub" font-size="72%">&lt;t</tspan></text>
+  <path class="ln" d="M344 162 L344 188" marker-end="url(#ah)" />
+  <rect class="card-blue" x="64" y="190" width="560" height="50" rx="8" />
+  <text class="ttl" x="344" y="221" text-anchor="middle" >Paso forward del transformer</text>
+  <path class="ln" d="M344 242 L344 268" marker-end="url(#ah)" />
+  <rect class="card" x="64" y="270" width="560" height="50" rx="8" />
+  <text class="ttl" x="344" y="301" text-anchor="middle" >Logits crudos z<tspan baseline-shift="sub" font-size="72%">t</tspan> ∈ ℝ<tspan baseline-shift="super" font-size="72%">|V|</tspan></text>
+  <path class="ln" d="M344 322 L344 348" marker-end="url(#ah)" />
+  <rect class="card-warn" x="64" y="350" width="560" height="50" rx="8" />
+  <text class="ttl" x="344" y="381" text-anchor="middle" >Máscara del autómata: z′<tspan baseline-shift="sub" font-size="72%">t</tspan> = z<tspan baseline-shift="sub" font-size="72%">t</tspan> + log M(s<tspan baseline-shift="sub" font-size="72%">t</tspan>),  M ∈ {0,1}<tspan baseline-shift="super" font-size="72%">|V|</tspan></text>
+  <path class="ln" d="M344 402 L344 428" marker-end="url(#ah)" />
+  <rect class="card-blue" x="64" y="430" width="560" height="50" rx="8" />
+  <text class="ttl" x="344" y="461" text-anchor="middle" >Softmax y muestreo (temperatura 0 → argmax)</text>
+  <path class="ln" d="M344 482 L344 508" marker-end="url(#ah)" />
+  <rect class="card-green" x="64" y="510" width="560" height="50" rx="8" />
+  <text class="ttl" x="344" y="541" text-anchor="middle" >Token emitido y<tspan baseline-shift="sub" font-size="72%">t</tspan> ∈ V<tspan baseline-shift="sub" font-size="72%">válidos</tspan>(s<tspan baseline-shift="sub" font-size="72%">t</tspan>)</text>
+  <path class="ln-acc" d="M626 535 L680 535 L680 135 L626 135" marker-end="url(#aa)" />
+  <text class="math-s" x="690" y="340" text-anchor="start" transform="rotate(90 690 340)">s<tspan baseline-shift="sub" font-size="72%">t+1</tspan> = δ(s<tspan baseline-shift="sub" font-size="72%">t</tspan>, y<tspan baseline-shift="sub" font-size="72%">t</tspan>)</text>
+  <rect class="panel" x="744" y="76" width="432" height="500" rx="10" />
+  <text class="head-ink" x="764" y="104" text-anchor="start" >EJEMPLO: ESQUEMA DE LA CAPA ESTRATÉGICA</text>
+  <text class="txt" x="764" y="134" text-anchor="start" >Generado hasta acá:</text>
+  <text class="mono" x="764" y="158" text-anchor="start" >{"cells": {"A1": "</text>
+  <text class="txt" x="764" y="192" text-anchor="start" >Solo dos continuaciones cumplen el esquema:</text>
+  <text class="txt-b" x="764" y="226" text-anchor="start" >token</text>
+  <text class="txt-b" x="900" y="226" text-anchor="middle" >z<tspan baseline-shift="sub" font-size="72%">t</tspan></text>
+  <text class="txt-b" x="980" y="226" text-anchor="middle" >M</text>
+  <text class="txt-b" x="1080" y="226" text-anchor="middle" >z′<tspan baseline-shift="sub" font-size="72%">t</tspan></text>
+  <text class="mono" x="764" y="256" text-anchor="start" >"free"</text>
+  <text class="mono" x="900" y="256" text-anchor="middle" >2.1</text>
+  <text class="mono" x="980" y="256" text-anchor="middle" >1</text>
+  <text class="mono" x="1080" y="256" text-anchor="middle" >2.1</text>
+  <text class="mono" x="764" y="286" text-anchor="start" >"blocked"</text>
+  <text class="mono" x="900" y="286" text-anchor="middle" >1.3</text>
+  <text class="mono" x="980" y="286" text-anchor="middle" >1</text>
+  <text class="mono" x="1080" y="286" text-anchor="middle" >1.3</text>
+  <text class="mono" x="764" y="316" text-anchor="start" >"libre"</text>
+  <text class="mono" x="900" y="316" text-anchor="middle" >1.8</text>
+  <text class="mono" x="980" y="316" text-anchor="middle" >0</text>
+  <text class="mono" x="1080" y="316" text-anchor="middle" >−∞</text>
+  <text class="mono" x="764" y="346" text-anchor="start" >{</text>
+  <text class="mono" x="900" y="346" text-anchor="middle" >0.4</text>
+  <text class="mono" x="980" y="346" text-anchor="middle" >0</text>
+  <text class="mono" x="1080" y="346" text-anchor="middle" >−∞</text>
+  <text class="mono" x="764" y="376" text-anchor="start" >"ok"</text>
+  <text class="mono" x="900" y="376" text-anchor="middle" >0.9</text>
+  <text class="mono" x="980" y="376" text-anchor="middle" >0</text>
+  <text class="mono" x="1080" y="376" text-anchor="middle" >−∞</text>
+  <line x1="764" y1="236" x2="1156" y2="236" stroke="#CBD5E0" stroke-width="1" />
+  <text class="txt" x="764" y="430" text-anchor="start" >El modelo prefería «libre» (1.8), que no está en</text>
+  <text class="txt" x="764" y="450" text-anchor="start" >la enumeración: la máscara la descarta y el</text>
+  <text class="txt" x="764" y="470" text-anchor="start" >argmax elige «free». La salida es siempre</text>
+  <text class="txt" x="764" y="490" text-anchor="start" >válida; que sea correcta depende del modelo.</text>
+  <text class="small" x="764" y="530" text-anchor="start" >Tokens ilustrativos; el tokenizador real</text>
+  <text class="small" x="764" y="548" text-anchor="start" >parte las palabras en fragmentos.</text>
+</svg>

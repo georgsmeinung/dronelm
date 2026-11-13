@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- A8.1: capas de control y lugar del brazo rl -->
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .panel { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD5E0; stroke-width: 1.4; }
+    .card-acc { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-blue { fill: #E6F2FF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-green { fill: #EAF7EF; stroke: #259E5F; stroke-width: 1.8; }
+    .card-warn { fill: #FFF7E6; stroke: #D97706; stroke-width: 1.8; }
+    .card-red { fill: #FDECEC; stroke: #DC2626; stroke-width: 1.8; }
+    .card-gray { fill: #F1F3F5; stroke: #A0AEC0; stroke-width: 1.4; stroke-dasharray: 6 4; }
+    .head { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #0066CC; }
+    .head-ink { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #2D3748; }
+    .title { font-size: 22px; font-weight: 800; fill: #1A202C; }
+    .ttl { font-size: 15px; font-weight: 700; fill: #1A202C; }
+    .txt { font-size: 13px; fill: #4A5568; }
+    .txt-b { font-size: 13px; font-weight: 700; fill: #2D3748; }
+    .small { font-size: 11.5px; fill: #718096; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .mono-s { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #4A5568; }
+    .math { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 17px; fill: #1A202C; }
+    .math-s { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 14px; fill: #1A202C; }
+    .acc { fill: #0066CC; } .safe { fill: #259E5F; } .warn { fill: #B45309; } .crit { fill: #DC2626; }
+    .ln { stroke: #4A5568; stroke-width: 1.8; fill: none; }
+    .ln-acc { stroke: #0066CC; stroke-width: 1.8; fill: none; }
+    .ln-dash { stroke: #718096; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .grid { stroke: #2D3748; stroke-width: 1.2; fill: none; }
+    .badge { fill: #0066CC; } .badge-t { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" /></marker>
+    <marker id="aa" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="av" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="ag" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#718096" /></marker>
+    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#DC2626" /></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="640" />
+  <text class="head" x="24" y="36" text-anchor="start" >CAPAS DE DECISIÓN DEL SISTEMA Y LUGAR DEL BRAZO rl PROPUESTO</text>
+  <text class="small" x="24" y="56" text-anchor="start" >Anexo 8, IT.A8.1 · de la escala de la misión a la del controlador de vuelo</text>
+  <rect class="card" x="24" y="76" width="1152" height="116" rx="10" />
+  <text class="head-ink" x="44" y="104" text-anchor="start" >EN TIERRA · UNA VEZ POR MISIÓN</text>
+  <text class="txt" x="44" y="132" text-anchor="start" >Manifiesto de misión (WebDCS) y plan de ruta con el VLM sobre el mapa cenital (cap. 4)</text>
+  <rect class="card" x="800" y="92" width="356" height="84" rx="8" />
+  <text class="txt" x="816" y="122" text-anchor="start" >LFM2.5-VL-1.6B: clasifica parches del mapa</text>
+  <text class="txt" x="816" y="144" text-anchor="start" >en los escenarios con obstrucción</text>
+  <path class="ln" d="M400 194 L400 216" marker-end="url(#ah)" />
+  <text class="small" x="412" y="210" text-anchor="start" >manifiesto con los puntos de paso</text>
+  <rect class="card-blue" x="24" y="216" width="1152" height="116" rx="10" />
+  <text class="head-ink" x="44" y="244" text-anchor="start" >CAPA ESTRATÉGICA · LAZO LENTO, ~1 Hz, HILO APARTE</text>
+  <text class="txt" x="44" y="272" text-anchor="start" >Qué sectores del fotograma están libres a 15 m → sub-meta en coordenadas del mundo;</text>
+  <text class="txt" x="44" y="292" text-anchor="start" >en deadlock, barrido de 4 rumbos (cap. 5, IT.5.10 e IT.5.12)</text>
+  <rect class="card" x="800" y="232" width="356" height="84" rx="8" />
+  <text class="txt" x="816" y="262" text-anchor="start" >fuente: profundidad estimada (Depth Anything V2);</text>
+  <text class="txt" x="816" y="284" text-anchor="start" >nunca comanda velocidades</text>
+  <path class="ln" d="M400 334 L400 356" marker-end="url(#ah)" />
+  <text class="small" x="412" y="350" text-anchor="start" >sub-meta (x, y, z)</text>
+  <rect class="card-green" x="24" y="356" width="1152" height="116" rx="10" />
+  <text class="head-ink" x="44" y="384" text-anchor="start" >CAPA TÁCTICA · LAZO RÁPIDO, 5 Hz</text>
+  <text class="txt" x="44" y="412" text-anchor="start" >ObstacleField + guiado → macro-acción → action_to_command() → velocidades (cap. 5)</text>
+  <rect class="card" x="800" y="372" width="356" height="84" rx="8" />
+  <text class="txt-b" x="816" y="402" text-anchor="start" >implementados: slm, fsm, reactive</text>
+  <text class="txt-b" x="816" y="424" text-anchor="start" >propuesto: rl, política neuronal (este anexo)</text>
+  <path class="ln" d="M400 474 L400 496" marker-end="url(#ah)" />
+  <text class="small" x="412" y="490" text-anchor="start" >comando de velocidad</text>
+  <rect class="card" x="24" y="496" width="1152" height="116" rx="10" />
+  <text class="head-ink" x="44" y="524" text-anchor="start" >CONTROL DE VUELO</text>
+  <text class="txt" x="44" y="552" text-anchor="start" >Velocidades → actitud y motores: controlador del simulador (Cosys-AirSim);</text>
+  <text class="txt" x="44" y="572" text-anchor="start" >en hardware real, el autopiloto (por ejemplo, PX4). No lo modifica ningún brazo.</text>
+  <rect class="card" x="800" y="512" width="356" height="84" rx="8" />
+  <text class="txt" x="816" y="542" text-anchor="start" >fuera del alcance de la tesis</text>
+</svg>

@@ -76,7 +76,7 @@ En una misión de navegación aérea autónoma, los efectos de una alucinación 
 
 Para hacer viable el despliegue de un modelo compacto (LFM2.5-VL-1.6B, cap. 8 IT.8.1.2) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:
 
-<img src="a2-estrategias-mitigacion.jpg">
+<img src="a2-estrategias-mitigacion.png">
 
 1. **Decodificación restringida a nivel de logits (`json_schema`)**:
    En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025); [Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (IT.8.2.1).

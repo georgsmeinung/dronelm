@@ -1537,7 +1537,7 @@
 <hr />
 <h2 id="a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim">A5.1 Modelo geométrico de cámara pin-hole y calibración en AirSim<a class="headerlink" href="#a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim" title="Permanent link">&para;</a></h2>
 <p>Se modela la cámara monocular frontal del dron mediante la aproximación de cámara oscura o estenopeica (<em>pin-hole camera model</em>) con proyección en perspectiva central.</p>
-<p><img src="a5-modelo-geometrico-de-camara.jpg"></p>
+<p><img src="a5-modelo-geometrico-de-camara.png"></p>
 <h3 id="a511-sistemas-de-coordenadas-y-matriz-intrinseca">A5.1.1 Sistemas de coordenadas y matriz intrínseca<a class="headerlink" href="#a511-sistemas-de-coordenadas-y-matriz-intrinseca" title="Permanent link">&para;</a></h3>
 <p>Sea <span class="arithmatex">\(P_c = (X_c, Y_c, Z_c)^T \in \mathbb{R}^3\)</span> la posición de un punto del entorno físico en el sistema de coordenadas de la cámara, donde el eje <span class="arithmatex">\(Z_c\)</span> coincide con el eje óptico apuntando hacia adelante, <span class="arithmatex">\(X_c\)</span> apunta hacia la derecha del dron e <span class="arithmatex">\(Y_c\)</span> apunta hacia abajo (convención visual estándar).</p>
 <p>La proyección en perspectiva de <span class="arithmatex">\(P_c\)</span> sobre el plano de imagen produce coordenadas métricas normalizadas <span class="arithmatex">\((x, y)\)</span>:</p>
@@ -1554,7 +1554,7 @@
 <p>En la configuración nominal de vuelo de DroneLM, la cámara frontal captura a resolución completa de <span class="arithmatex">\(1080 \times 720\)</span> píxeles con un campo de visión horizontal (<span class="arithmatex">\(\text{FOV}_h\)</span>) de <span class="arithmatex">\(90^\circ\)</span>. A partir de la relación trigonométrica:</p>
 <div class="arithmatex">\[\text{FOV}_h = 2 \arctan\left( \frac{W}{2 f_x} \right) \implies f_x = \frac{W}{2 \tan(\text{FOV}_h / 2)}\]</div>
 <p>Para <span class="arithmatex">\(W = 1080\text{ px}\)</span> y <span class="arithmatex">\(\text{FOV}_h = 90^\circ\)</span> (<span class="arithmatex">\(\tan(45^\circ) = 1\)</span>), se obtiene <span class="arithmatex">\(f_x = \frac{1080}{2} = 540\text{ px}\)</span>. El estimador de flujo utiliza el valor calibrado <span class="arithmatex">\(f_x = f_y = 554.0\text{ px}\)</span> (<code>CAMERA_FX</code>, <code>CAMERA_FY</code>), absorbiendo la leve distorsión radial modelada por el plugin.</p>
-<p>Para reducir la latencia de cómputo en CPU/GPU sin alterar la geometría visual, los fotogramas se reescalan a un ancho de procesamiento <span class="arithmatex">\(W' = 320\text{ px}\)</span> (<code>FLOW_DOWNSCALE_WIDTH</code>) con un factor de escala <span class="arithmatex">\(s = \frac{W'}{W} = \frac{320}{1080} \approx 0.2963\)</span>. Las distancias focales y el centro óptico se escalan homólogamente:</p>
+<p>Para acotar la latencia de cómputo sin alterar la geometría visual, los fotogramas se reescalan a un ancho de procesamiento <span class="arithmatex">\(W' = 640\text{ px}\)</span> (<code>FLOW_DOWNSCALE_WIDTH</code> en <code>config/.env</code>) con un factor de escala <span class="arithmatex">\(s = \frac{W'}{W} = \frac{640}{1080} \approx 0.5926\)</span>. El valor por defecto del código es 320 px (<span class="arithmatex">\(s \approx 0.2963\)</span>), el ancho con el que se hizo la validación del TTC del capítulo 7; el vuelo usa 640 px porque a 320 px los objetos finos, como las ramas, quedan bajo el piso de ruido (IT.6.3). Las distancias focales y el centro óptico se escalan homólogamente:</p>
 <div class="arithmatex">\[f_x' = f_x \cdot s, \quad f_y' = f_y \cdot s, \quad c_x' = \frac{W'}{2}, \quad c_y' = \frac{H'}{2}\]</div>
 <hr />
 <h2 id="a52-ecuaciones-del-flujo-optico-continuo-descomposicion-traslacional-y-rotacional">A5.2 Ecuaciones del flujo óptico continuo: descomposición traslacional y rotacional<a class="headerlink" href="#a52-ecuaciones-del-flujo-optico-continuo-descomposicion-traslacional-y-rotacional" title="Permanent link">&para;</a></h2>
@@ -1592,7 +1592,7 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <p>El campo traslacional puro se obtiene restando algebraicamente el campo teórico rotacional del flujo total calculado por el algoritmo de visión:</p>
 <div class="arithmatex">\[u_{\text{trans}}(x, y) = u_{\text{raw}}(x, y) - u_{\text{rot}}(x, y)\]</div>
 <div class="arithmatex">\[v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)\]</div>
-<p><img src="a5-campo-de-velocidad-rotacional.jpg"/></p>
+<p><img src="a5-campo-de-velocidad-rotacional.png"/></p>
 <h3 id="a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion">A5.3.3 Tratamiento de discontinuidades y límite de linealización<a class="headerlink" href="#a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion" title="Permanent link">&para;</a></h3>
 <p>Durante giros bruscos, se presentan dos restricciones de ingeniería:
 1. <strong>Normalización de ángulo de guiñada:</strong> ante cruces del límite <span class="arithmatex">\(\pm 180^\circ\)</span> (<span class="arithmatex">\(\pm \pi\)</span>), el incremento se desenvuelve modularmente:
@@ -1662,7 +1662,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <hr />
 <h2 id="a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield">A5.6 Agregación espacial robusta y contrato de percepción <code>ObstacleField</code><a class="headerlink" href="#a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield" title="Permanent link">&para;</a></h2>
 <p>Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y modelo de lenguaje) razonen eficazmente sin procesar decenas de miles de valores por segundo, el mapa de TTC continuo se reduce espacialmente en una estructura discreta y tipada: el <strong><code>ObstacleField</code></strong> (<code>airsim-loop/src/perception/obstacle_field.py</code>).</p>
-<p><img src="a5-agregación-espacial-robusta.jpg"/></p>
+<p><img src="a5-agregación-espacial-robusta.png"/></p>
 <h3 id="a561-estadisticos-de-agregacion-por-celda">A5.6.1 Estadísticos de agregación por celda<a class="headerlink" href="#a561-estadisticos-de-agregacion-por-celda" title="Permanent link">&para;</a></h3>
 <p>Para cada celda <span class="arithmatex">\(C_{s,b}\)</span> (donde <span class="arithmatex">\(s \in \{\text{izquierda}, \text{centro}, \text{derecha}\}\)</span> y <span class="arithmatex">\(b \in \{\text{superior}, \text{medio}, \text{inferior}\}\)</span>):
 1. <strong>Fracción de Píxeles Válidos (Confianza):</strong>
@@ -1709,7 +1709,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <td>Baja a Media (acelerada por descenso de gradiente inverso)</td>
 </tr>
 <tr>
-<td><strong>Latencia CPU (320×180 px)</strong></td>
+<td><strong>Latencia CPU orientativa (320×180 px)</strong></td>
 <td>35–50 ms</td>
 <td><strong>12–18 ms</strong></td>
 </tr>
@@ -1735,7 +1735,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 </tr>
 </tbody>
 </table>
-<p>El motor <strong>DIS (Preset MEDIUM)</strong> permite ejecutar el pipeline de percepción completo (escalado, cálculo de flujo, derotación, FOE, TTC e instanciación de <code>ObstacleField</code>) en menos de <strong>25 ms por ciclo</strong> en la CPU del sistema, permitiendo operar con soltura dentro del período nominal del lazo táctico de control a 5 Hz (<span class="arithmatex">\(200\text{ ms}\)</span>).</p>
+<p>Las latencias de la tabla son orientativas para 320×180 px; en vuelo el flujo se calcula a 640×360 px, con cuatro veces más píxeles, y el costo de DIS crece aproximadamente en proporción. El sistema no registra por separado la latencia de la etapa de flujo: lo que se mide es el período del ciclo completo (escalado, flujo, derotación, FOE, TTC e instanciación de <code>ObstacleField</code>, más guiado y comando), que se audita contra el período nominal de 0.2 s del lazo a 5 Hz (NB2).</p>
 
 
 

@@ -887,10 +887,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra" class="md-nav__link">
+  <a href="#a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A3.2.2 Alineación causal directa: de la imagen a la maniobra
+        A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena
       
     </span>
   </a>
@@ -1308,10 +1308,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra" class="md-nav__link">
+  <a href="#a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A3.2.2 Alineación causal directa: de la imagen a la maniobra
+        A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena
       
     </span>
   </a>
@@ -1450,7 +1450,7 @@
 <h2 id="a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft">A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT<a class="headerlink" href="#a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" title="Permanent link">&para;</a></h2>
 <p>El ajuste fino completo (<em>Full Fine-Tuning</em>, FFT) de una red neuronal profunda requiere actualizar y almacenar en memoria los gradientes y momentos del optimizador (e.g., AdamW en precisión simple FP32) para la totalidad de los parámetros entrenables <span class="arithmatex">\(\Phi_0\)</span>. Para un modelo de 3B parámetros, esto demanda más de 24 GB de VRAM únicamente para el estado del optimizador, tornando inviable el entrenamiento en GPUs de escritorio (tales como la NVIDIA RTX 5060 de 8 GB utilizada en este proyecto).</p>
 <p>Las técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT; <a href="../13-REFERENCIAS.html#ref-mangrulkar-2022">Mangrulkar et al., 2022</a>) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.</p>
-<p><img src="a3-fundamentos-de-peft.jpg"/></p>
+<p><img src="a3-fundamentos-de-peft.png"/></p>
 <h3 id="a311-formulacion-matematica-de-lora">A3.1.1 Formulación matemática de LoRA<a class="headerlink" href="#a311-formulacion-matematica-de-lora" title="Permanent link">&para;</a></h3>
 <p>La premisa matemática de LoRA (<a href="../13-REFERENCIAS.html#ref-hu-2022">Hu et al., 2022</a>) se basa en la hipótesis de que las actualizaciones de peso <span class="arithmatex">\(\Delta W\)</span> durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (<em>low intrinsic dimension</em>). Para una matriz lineal preentrenada <span class="arithmatex">\(W_0 \in \mathbb{R}^{d \times k}\)</span>, la actualización se descompone como el producto de dos matrices de bajo rango:</p>
 <div class="arithmatex">\[W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)\]</div>
@@ -1537,88 +1537,89 @@
 <hr />
 <h2 id="a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm">A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM<a class="headerlink" href="#a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" title="Permanent link">&para;</a></h2>
 <p>La integración de un adaptador LoRA en la consulta al VLM transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
-<p><img src="a3-impacto-lora.jpg"/></p>
+<p><img src="a3-impacto-lora.png"/></p>
 <h3 id="a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia">A3.2.1 Reducción del presupuesto de tokens y compresión de latencia<a class="headerlink" href="#a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" title="Permanent link">&para;</a></h3>
-<p>En una implementación <em>zero-shot</em> (IT.8.5), el prompt debe reiterar en cada invocación:
-* La definición de la grilla de sectores y del criterio «libre a 15 m».
-* La sintaxis exacta y el orden de los campos del esquema JSON.
-* Los valores admisibles de cada campo.</p>
-<p>Este contexto insume cientos de tokens de procesamiento previo (<em>prefill</em>). Al especializar el modelo con LoRA, <strong>la gramática de salida y las reglas de dominio quedan cristalizadas en los tensores de ponderación</strong>. El prompt de entrada puede simplificarse a una codificación tabular mínima:</p>
-<div class="highlight"><pre><span></span><code>[ESTADO: Vz=-0.1, Vh=3.2 | TTC: F=1.4s, L=inf, R=4.1s | HIST: keep_going(x3) | REASON: TTC_CRITICO]
+<p>En el régimen <em>zero-shot</em> actual (IT.8.5), cada consulta de la capa estratégica reitera en el <em>system prompt</em>:
+* La definición de la grilla de 3×3 (columnas A–C, filas 1–3) y de la marca de la meta.
+* El criterio operativo: <code>free</code> si el dron puede volar 15 m en esa dirección, <code>blocked</code> si hay un edificio, muro, árbol, puente o techo más cerca.
+* La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2.1).</p>
+<p>Al especializar el modelo con LoRA, <strong>el criterio y la forma de la respuesta quedan incorporados en los pesos</strong>, y la consulta puede reducirse al <em>user prompt</em> que ya usa el sistema más la imagen con la grilla dibujada:</p>
+<div class="highlight"><pre><span></span><code>Goal WP_3: 34 m, in cell B2. Altitude 10 m.   + [Front camera, 3x3 grid]
 </code></pre></div>
-<p>Esta reducción comprime la ventana de entrada de ~500 a menos de 100 tokens, acelerando el tiempo de respuesta del modelo en un 60%, con la inferencia por debajo del período de consulta de la capa estratégica.</p>
-<h3 id="a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra">A3.2.2 Alineación causal directa: de la imagen a la maniobra<a class="headerlink" href="#a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra" title="Permanent link">&para;</a></h3>
-<p>Un modelo generalista tiende a verbalizar descripciones visuales pasivas (<em>«Veo un muro con sombras proyectadas»</em>). LoRA permite reentrenar la distribución de probabilidad condicional <span class="arithmatex">\(P(y \mid X)\)</span> para que el modelo efectúe una <strong>asociación sensoriomotora directa</strong>:
-* Reconocer cómo el patrón de divergencia óptica entre <span class="arithmatex">\(I_t\)</span> e <span class="arithmatex">\(I_{t-1}\)</span> anticipa colisiones inminentes.
-* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), suprimiendo alucinaciones visuales que el flujo monocular no logra desagregar (IT.6.1).</p>
+<p>El ahorro es acotado: el <em>system prompt</em> ya tiene tres o cuatro oraciones, y la mayor parte del preprocesamiento (<em>prefill</em>) la ocupan los 64–256 tokens con que el codificador visual representa la imagen (IT.8.1.2), que LoRA no reduce. La ganancia esperable de LoRA no es de latencia —la consulta ya tarda ~0.8 s, muy por debajo de la edad máxima de 10 s de una respuesta (IT.8.6)— sino de discriminación (IT.A3.2.2).</p>
+<h3 id="a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena">A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena<a class="headerlink" href="#a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena" title="Permanent link">&para;</a></h3>
+<p>El banco de prueba muestra que el modelo sin adaptar responde sobre todo a la posición del sector y no a la escena: las filas superior e inferior de la grilla salen «libres» en todas las muestras, la fila del medio depende de la columna, y los <em>logprobs</em> no rescatan la grilla (exactitud balanceada 0.53, AUC 0.53; cap. 11, IT.11.0). LoRA permite reentrenar la distribución condicional <span class="arithmatex">\(P(y \mid X)\)</span> sobre pares con etiqueta de referencia para que la respuesta dependa de lo que hay en cada sector:
+* Juzgar la distancia a lo que ocupa cada sector frente al criterio de 15 m, en lugar de reproducir un patrón fijo por fila.
+* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), el tipo de ambigüedad que el flujo monocular tampoco resuelve (IT.6.1).</p>
+<p>La adaptación solo se justificaría si el banco de prueba, sobre un entorno no visto en el entrenamiento, supera el criterio de pase de IT.11.0 (exactitud balanceada ≥ 0.65 con el límite inferior del IC 95 % por encima del azar).</p>
 <hr />
 <h2 id="a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea">A3.3 Pipeline de ingeniería de datos para navegación aérea<a class="headerlink" href="#a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea" title="Permanent link">&para;</a></h2>
 <p>El factor determinante del éxito de la adaptación no radica en el volumen de parámetros, sino en la calidad informativa y la diversidad topológica del conjunto de datos de entrenamiento.</p>
 <h3 id="a331-estructura-del-dataset-multimodal-de-navegacion">A3.3.1 Estructura del dataset multimodal de navegación<a class="headerlink" href="#a331-estructura-del-dataset-multimodal-de-navegacion" title="Permanent link">&para;</a></h3>
-<p>Cada instancia de entrenamiento se define como un par supervisado <span class="arithmatex">\((X_t, Y_t)\)</span> estructurado de la siguiente forma:</p>
-<div class="arithmatex">\[X_t = \left\{ I_t, I_{t-1}, \text{telemetry}_t, \text{obstacle\_field}_t, \text{reason\_note}_t \right\}\]</div>
-<div class="arithmatex">\[Y_t = \left\{ \text{"action"}: a_t^*, \text{"reason"}: r_t^* \right\}\]</div>
+<p>Cada instancia de entrenamiento es un par supervisado <span class="arithmatex">\((X_t, Y_t)\)</span> con la misma forma que la consulta estratégica del sistema (IT.8.2.1, IT.8.5.2):</p>
+<div class="arithmatex">\[X_t = \left\{ I_t^{\text{grilla}},\ \text{prompt}_t \right\}\]</div>
+<div class="arithmatex">\[Y_t = \left\{ \text{"cells"}: \{A1, \dots, C3\} \to \{\text{free}, \text{blocked}\} \right\}\]</div>
 <p>donde:
-* <span class="arithmatex">\(I_t, I_{t-1}\)</span> son los dos fotogramas RGB monoculares recientes capturados a 640×360 píxeles.
-* <span class="arithmatex">\(\text{telemetry}_t\)</span> incluye el vector de velocidad tridimensional, ángulo de cabeceo (<em>pitch</em>), alabeo (<em>roll</em>) y distancia al waypoint activo.
-* <span class="arithmatex">\(\text{obstacle\_field}_t\)</span> codifica el TTC estimado y la tasa de ocupación por sector angular (cap. 6 y 7).
-* <span class="arithmatex">\(a_t^* \in \mathcal{A}_{\text{whitelist}}\)</span> es la macro-acción supervisada óptima.
-* <span class="arithmatex">\(r_t^*\)</span> es una cadena de justificación condensada (&lt; 120 caracteres) que verbaliza el razonamiento causal subyacente (e.g., <code>"TTC crítico de 1.2s en cuadrante frontal-izquierdo; espacio despejado a la derecha; iniciar maniobra evasiva"</code>).</p>
+* <span class="arithmatex">\(I_t^{\text{grilla}}\)</span> es el fotograma de la cámara frontal reducido a 384 px, con la grilla de 3×3 y la marca de la meta dibujadas, tal como lo recibe el modelo en vuelo.
+* <span class="arithmatex">\(\text{prompt}_t\)</span> es el <em>user prompt</em> con la distancia a la meta, su sector (o su ángulo si está fuera del recorte) y la altitud.
+* <span class="arithmatex">\(Y_t\)</span> asigna a cada uno de los nueve sectores la etiqueta de referencia: <code>free</code> si el percentil 5 de la profundidad planar del simulador en el sector es ≥ 15 m y <code>blocked</code> si no (cap. 7, IT.7.1). La profundidad del simulador solo etiqueta los datos; el modelo nunca la recibe.</p>
+<p>El mismo esquema vale para el barrido, con cuatro imágenes numeradas y la salida <code>views</code> del esquema panorámico (IT.8.2.1).</p>
 <h3 id="a332-mitigacion-de-la-deriva-cinematica-mediante-dagger">A3.3.2 Mitigación de la deriva cinemática mediante DAgger<a class="headerlink" href="#a332-mitigacion-de-la-deriva-cinematica-mediante-dagger" title="Permanent link">&para;</a></h3>
 <p>El entrenamiento mediante simple Clonación de Comportamiento (<em>Behavioral Cloning</em>, BC) a partir de vuelos nominales perfectos sufre del problema de <strong>deriva covariada (<em>Covariate Shift</em>)</strong> (<a href="../13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.</p>
 <p>Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo <strong>DAgger (<em>Dataset Aggregation</em>; <a href="../13-REFERENCIAS.html#ref-ross-2011">Ross et al., 2011</a>)</strong> adaptado a simulación en AirSim / Unreal Engine 5:
 1. <strong>Vuelo con política actual</strong> <span class="arithmatex">\(\pi_{\text{LoRA}}\)</span> en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
-2. <strong>Consulta al oráculo experto</strong> (FSM determinista o supervisor experto) ante desvíos: determinación de la acción correctiva óptima <span class="arithmatex">\(a^*\)</span>.
-3. <strong>Agregación de tuplas críticas</strong> <span class="arithmatex">\(\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, a^*_{\text{experto}})\}\)</span>.
+2. <strong>Etiquetado por el oráculo</strong> en los estados que visita la política adaptada: la profundidad planar del simulador produce la etiqueta de referencia <span class="arithmatex">\(Y^*\)</span> de cada sector, también en las situaciones a las que el dron llega por sus propios errores.
+3. <strong>Agregación de tuplas críticas</strong> <span class="arithmatex">\(\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, Y^*_{\text{oráculo}})\}\)</span>.
 4. <strong>Reentrenamiento iterativo</strong> de los adaptadores LoRA sobre el conjunto enriquecido.</p>
 <h3 id="a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion">A3.3.3 Aumentación sintética y métricas objetivo de evaluación<a class="headerlink" href="#a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion" title="Permanent link">&para;</a></h3>
-<p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; <a href="../13-REFERENCIAS.html#ref-marazzato-2015">Marazzato &amp; Sparavigna, 2015</a>) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
+<p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (TownSim, CitySim; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; <a href="../13-REFERENCIAS.html#ref-marazzato-2015">Marazzato &amp; Sparavigna, 2015</a>) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
 <table>
 <thead>
 <tr>
-<th>Métrica de Validación</th>
-<th>Meta Operativa (Zero-Shot Actual)</th>
-<th>Meta Objetivo (LoRA / QLoRA)</th>
+<th>Métrica de validación</th>
+<th><em>Zero-shot</em> actual (LFM2.5-VL-1.6B)</th>
+<th>Objetivo con LoRA / QLoRA</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Cumplimiento de Esquema JSON</strong></td>
-<td>99.8% (gracias a gramática forzada)</td>
-<td><strong>100% nativo</strong> (verificación pasiva)</td>
+<td><strong>Exactitud balanceada de la grilla</strong> (banco, IT.11.0)</td>
+<td>0.53</td>
+<td><strong>≥ 0.65</strong>, IC 95 % sobre el azar, en un entorno no visto</td>
 </tr>
 <tr>
-<td><strong>Latencia media de inferencia</strong></td>
-<td>~1100 ms (límite de watchdog)</td>
-<td><strong>&lt; 450 ms</strong> (margen amplio)</td>
+<td><strong>AUC de la grilla con <em>logprobs</em></strong> (diagnóstico)</td>
+<td>0.53</td>
+<td>&gt; 0.75</td>
 </tr>
 <tr>
-<td><strong>Tokens de entrada promedio</strong></td>
-<td>480–520 tokens</td>
-<td><strong>&lt; 100 tokens</strong></td>
+<td><strong>Barrido: rumbo transitable</strong> (banco, IT.11.0)</td>
+<td>no pasa el criterio</td>
+<td>pasa el criterio</td>
 </tr>
 <tr>
-<td><strong>Tasa de resolución de atasco</strong></td>
-<td>60.0% (Tier 3, cap. 10)</td>
-<td><strong>&gt; 85.0%</strong></td>
+<td><strong>Adherencia al esquema JSON</strong> (IT.8.2.1)</td>
+<td>~98 % con decodificación restringida</td>
+<td>~100 %</td>
 </tr>
 <tr>
-<td><strong>Tasa de colisiones evitables</strong></td>
-<td>20.0% en Tier 3</td>
-<td><strong>&lt; 5.0%</strong></td>
+<td><strong>Latencia de la consulta estratégica</strong> (IT.8.6)</td>
+<td>~0.8 s</td>
+<td>sin cambio (&lt; 10 s de edad máxima)</td>
 </tr>
 </tbody>
 </table>
+<p>Las cifras objetivo son criterios de pase, no resultados: ninguna adaptación se entrenó en esta tesis (IT.8.8).</p>
 <hr />
 <h2 id="a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida">A3.4 Fusión de pesos, despliegue y preservación de la seguridad híbrida<a class="headerlink" href="#a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida" title="Permanent link">&para;</a></h2>
 <h3 id="a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion">A3.4.1 Fusión algebraica de pesos (<em>Weight Merging</em>) y exportación<a class="headerlink" href="#a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion" title="Permanent link">&para;</a></h3>
 <p>Una de las ventajas arquitectónicas centrales de LoRA frente a otros esquemas modulares radica en la posibilidad de <strong>fusionar algebraicamente los adaptadores con los pesos base preentrenados</strong> antes del despliegue en el vehículo:</p>
 <div class="arithmatex">\[W_{\text{despliegue}} = W_0 + \frac{\alpha}{r} (B \cdot A)\]</div>
 <p>Al realizar la fusión de tensores en punto flotante previo (FP16 o BF16), la matriz resultante <span class="arithmatex">\(W_{\text{despliegue}}\)</span> adquiere exactamente las mismas dimensiones y topología que la red preentrenada original. No existe ninguna bifurcación de memoria ni sobrecarga computacional adicional durante la inferencia. </p>
-<p>Posteriormente, el modelo fusionado se compila a formato <strong>GGUF</strong> cuantizado (<code>Q4_K_M</code>) mediante <code>llama.cpp</code> (<a href="../13-REFERENCIAS.html#ref-gerganov-2023">Gerganov, 2023</a>), produciendo un binario de ~2.0 GB listo para ejecución local embebida sin dependencias de librerías de entrenamiento.</p>
+<p>Posteriormente, el modelo fusionado se compila a formato <strong>GGUF</strong> cuantizado (<code>Q4_K_M</code>) mediante <code>llama.cpp</code> (<a href="../13-REFERENCIAS.html#ref-gerganov-2023">Gerganov, 2023</a>), el mismo formato y la misma cuantización que el modelo adoptado (731 MB más el codificador visual para LFM2.5-VL-1.6B, IT.8.1.2), listo para ejecución local sin dependencias de librerías de entrenamiento y servido por Ollama igual que hoy.</p>
 <h3 id="a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema">A3.4.2 Sinergia entre LoRA y decodificación restringida (<code>json_schema</code>)<a class="headerlink" href="#a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema" title="Permanent link">&para;</a></h3>
 <p>El ajuste fino no reemplaza la decodificación restringida por gramáticas (IT.8.2, Anexo 4), sino que la complementa:
-* <strong>LoRA moldea la distribución interna de logits:</strong> el modelo aprende a concentrar prácticamente el 100% de su masa de probabilidad en las palabras clave del esquema JSON y la lista blanca de macro-acciones.
+* <strong>LoRA moldea la distribución interna de logits:</strong> el modelo aprende a concentrar prácticamente toda su masa de probabilidad en las claves del esquema JSON y en los valores de sus enums (<code>free</code>/<code>blocked</code>; los seis valores de <code>view</code>).
 * <strong><code>json_schema</code> opera como barrera determinista externa:</strong> enmascara el residuo infinitesimal de probabilidad en situaciones fuera de distribución, garantizando formalmente cero violaciones de formato.
 * <strong>Aceleración de generación:</strong> al fluir la decodificación sin colisionar con tokens suprimidos por la gramática, la tasa de muestreo alcanza el máximo rendimiento teórico del motor de inferencia.</p>
 <h3 id="a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia">A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia<a class="headerlink" href="#a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia" title="Permanent link">&para;</a></h3>

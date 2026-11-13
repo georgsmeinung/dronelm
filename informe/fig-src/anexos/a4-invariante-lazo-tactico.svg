@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- A4.4.1: que garantiza la gramatica en el sistema implementado -->
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .panel { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD5E0; stroke-width: 1.4; }
+    .card-acc { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-blue { fill: #E6F2FF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-green { fill: #EAF7EF; stroke: #259E5F; stroke-width: 1.8; }
+    .card-warn { fill: #FFF7E6; stroke: #D97706; stroke-width: 1.8; }
+    .card-red { fill: #FDECEC; stroke: #DC2626; stroke-width: 1.8; }
+    .card-gray { fill: #F1F3F5; stroke: #A0AEC0; stroke-width: 1.4; stroke-dasharray: 6 4; }
+    .head { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #0066CC; }
+    .head-ink { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #2D3748; }
+    .title { font-size: 22px; font-weight: 800; fill: #1A202C; }
+    .ttl { font-size: 15px; font-weight: 700; fill: #1A202C; }
+    .txt { font-size: 13px; fill: #4A5568; }
+    .txt-b { font-size: 13px; font-weight: 700; fill: #2D3748; }
+    .small { font-size: 11.5px; fill: #718096; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .mono-s { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #4A5568; }
+    .math { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 17px; fill: #1A202C; }
+    .math-s { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 14px; fill: #1A202C; }
+    .acc { fill: #0066CC; } .safe { fill: #259E5F; } .warn { fill: #B45309; } .crit { fill: #DC2626; }
+    .ln { stroke: #4A5568; stroke-width: 1.8; fill: none; }
+    .ln-acc { stroke: #0066CC; stroke-width: 1.8; fill: none; }
+    .ln-dash { stroke: #718096; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .grid { stroke: #2D3748; stroke-width: 1.2; fill: none; }
+    .badge { fill: #0066CC; } .badge-t { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" /></marker>
+    <marker id="aa" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="av" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="ag" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#718096" /></marker>
+    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#DC2626" /></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="640" />
+  <text class="head" x="24" y="36" text-anchor="start" >QUÉ GARANTIZA LA DECODIFICACIÓN RESTRINGIDA EN EL SISTEMA IMPLEMENTADO</text>
+  <text class="small" x="24" y="56" text-anchor="start" >Anexo 4, IT.A4.4.1 · el decisor de acciones de IT.A4.4–IT.A4.6 es ilustrativo y no está en el código</text>
+  <rect class="panel" x="24" y="76" width="560" height="300" rx="10" />
+  <text class="head-ink" x="44" y="104" text-anchor="start" >LOS TRES ESQUEMAS DEL CÓDIGO</text>
+  <rect class="card-blue" x="44" y="120" width="520" height="76" rx="8" />
+  <text class="ttl" x="58" y="144" text-anchor="start" >Capa estratégica (vlm_strategic.py)</text>
+  <text class="mono" x="58" y="166" text-anchor="start" >{"cells": {"A1" … "C3": "free" | "blocked"}}</text>
+  <rect class="card-blue" x="44" y="206" width="520" height="76" rx="8" />
+  <text class="ttl" x="58" y="230" text-anchor="start" >Barrido de deadlock (deep_scan.py)</text>
+  <text class="mono" x="58" y="252" text-anchor="start" >{"views": [{"img": n, "view": …, "free": bool}]}</text>
+  <rect class="card-blue" x="44" y="292" width="520" height="76" rx="8" />
+  <text class="ttl" x="58" y="316" text-anchor="start" >Plan de ruta (route_planner.py)</text>
+  <text class="mono" x="58" y="338" text-anchor="start" >{"answer": street | building | trees | parking | …}</text>
+  <rect class="panel" x="604" y="76" width="572" height="300" rx="10" />
+  <text class="head-ink" x="624" y="104" text-anchor="start" >DE LA RESPUESTA A LA ACCIÓN</text>
+  <rect class="card-blue" x="624" y="120" width="300" height="44" rx="8" />
+  <text class="ttl" x="774" y="148" text-anchor="middle" >VLM + json_schema</text>
+  <path class="ln" d="M774 166 L774 180" marker-end="url(#ah)" />
+  <rect class="card-warn" x="624" y="182" width="300" height="44" rx="8" />
+  <text class="ttl" x="774" y="210" text-anchor="middle" >parser estricto del modo</text>
+  <path class="ln" d="M774 228 L774 242" marker-end="url(#ah)" />
+  <rect class="card-green" x="624" y="244" width="300" height="44" rx="8" />
+  <text class="ttl" x="774" y="272" text-anchor="middle" >sub-meta en el mundo o puntaje</text>
+  <path class="ln" d="M774 290 L774 304" marker-end="url(#ah)" />
+  <rect class="card" x="624" y="306" width="300" height="44" rx="8" />
+  <text class="ttl" x="774" y="334" text-anchor="middle" >WaypointTracker</text>
+  <text class="small" x="944" y="208" text-anchor="start" >si no coincide: no_parseable,</text>
+  <text class="small" x="944" y="224" text-anchor="start" >sin acción por defecto</text>
+  <text class="small" x="944" y="290" text-anchor="start" >decide_subgoal, panorama_to_subgoal</text>
+  <text class="small" x="944" y="306" text-anchor="start" >o elección de la ruta (choose)</text>
+  <rect class="card-acc" x="24" y="396" width="1152" height="96" rx="10" />
+  <text class="head" x="44" y="424" text-anchor="start" >LAZO RÁPIDO (5 Hz) · EL ÚNICO QUE COMANDA VELOCIDADES</text>
+  <rect class="card" x="44" y="438" width="250" height="40" rx="8" />
+  <text class="txt-b" x="169" y="463" text-anchor="middle" >guiado al objetivo activo</text>
+  <path class="ln" d="M296 458 L326 458" marker-end="url(#ah)" />
+  <rect class="card" x="328" y="438" width="250" height="40" rx="8" />
+  <text class="txt-b" x="453" y="463" text-anchor="middle" >navigate: 8 reglas</text>
+  <path class="ln" d="M580 458 L610 458" marker-end="url(#ah)" />
+  <rect class="card" x="612" y="438" width="250" height="40" rx="8" />
+  <text class="txt-b" x="737" y="463" text-anchor="middle" >action_to_command()</text>
+  <path class="ln" d="M864 458 L894 458" marker-end="url(#ah)" />
+  <rect class="card" x="896" y="438" width="250" height="40" rx="8" />
+  <text class="txt-b" x="1021" y="463" text-anchor="middle" >motor → AirSim</text>
+  <rect class="card-gray" x="24" y="512" width="1152" height="108" rx="10" />
+  <text class="head-ink" x="44" y="540" text-anchor="start" >INVARIANTES</text>
+  <circle cx="47" cy="562" r="2.4" fill="#0066CC" />
+  <text class="txt" x="56" y="566" text-anchor="start" >Toda respuesta del modelo cumple su esquema, o se descarta sin reemplazarla por un valor por defecto.</text>
+  <circle cx="47" cy="583" r="2.4" fill="#0066CC" />
+  <text class="txt" x="56" y="587" text-anchor="start" >Los campos son enumeraciones cerradas: el modelo describe sectores, imágenes o parches; nunca elige una maniobra ni da velocidades.</text>
+  <circle cx="47" cy="604" r="2.4" fill="#0066CC" />
+  <text class="txt" x="56" y="608" text-anchor="start" >La cinemática de cada macro-acción tiene una sola definición, action_to_command(), la misma para los tres brazos (IT.5.14).</text>
+</svg>

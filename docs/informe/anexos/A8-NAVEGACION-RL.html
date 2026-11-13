@@ -1245,13 +1245,15 @@ mismo nivel de abstracción que ocupa actualmente <code>evasive_node</code> + <c
 <h2 id="a81-posicion-en-la-arquitectura-jerarquica">A8.1 Posición en la arquitectura jerárquica<a class="headerlink" href="#a81-posicion-en-la-arquitectura-jerarquica" title="Permanent link">&para;</a></h2>
 <p>El sistema implementado en esta tesis opera en tres capas de abstracción temporal
 diferenciada:</p>
-<p><img src="a8-tres-capas-control.jpg"></p>
+<p><img src="a8-tres-capas-control.png"></p>
 <p>El brazo <code>rl</code> ocupa la <strong>capa táctica</strong>: recibe el frame RGB actual, el <code>ObstacleField</code>
 producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>waypoint_guidance</code>), y
 produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
-<code>evasive_node</code>. La capa estratégica del VLM sigue activa en modo jerárquico: puede inyectar sub-metas en
-coordenadas del mundo (<code>inject_corner</code>) y resolver atascos duros con el barrido <code>deep_vlm</code>,
-igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).</p>
+<code>evasive_node</code>. La capa estratégica sigue activa en modo jerárquico, con la profundidad
+estimada como fuente (<code>STRATEGIC_SOURCE=depth</code>): propone sub-metas en coordenadas del
+mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
+(<code>DEADLOCK_STRATEGY=depth</code>) resuelve los atascos duros e inyecta un desvío
+(<code>inject_corner</code>), igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).</p>
 <p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
 <code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
 seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
@@ -1293,8 +1295,10 @@ dependencia del estimador de flujo óptico — relevante si se quiere transferir
 real donde la calibración del flujo es incierta.</p>
 <hr />
 <h2 id="a83-espacio-de-acciones">A8.3 Espacio de acciones<a class="headerlink" href="#a83-espacio-de-acciones" title="Permanent link">&para;</a></h2>
-<p>Se propone un espacio discreto de seis acciones, alineado con <code>PROMPT_ACTIONS</code> del nodo
-deliberativo (IT.8.3, IT.5.14):</p>
+<p>Se propone un espacio discreto de seis acciones, tomadas del vocabulario fijo del sistema
+(<code>VALID_ACTIONS</code>, <code>action_map.py</code>; IT.8.3.4, IT.5.14). Quedan fuera <code>GIRAR_90</code>, que el
+lazo rápido aplica como regla de seguridad, y <code>RETROCEDER</code>, que ningún comportamiento
+emite:</p>
 <table>
 <thead>
 <tr>
@@ -1439,22 +1443,22 @@ parcialmente por tres decisiones de diseño:</p>
 </li>
 <li>
 <p><strong>Currículo de escenarios por Tier</strong>: el agente se expone a tres niveles de dificultad
-   (Tier 0 → 1 → 2) y cinco mapas diferentes durante el entrenamiento, forzando
+   (Tier 0 → 1 → 2) y los tres mapas de la tesis (MiniSim, TownSim y CitySim) durante el entrenamiento, forzando
    generalización a geometrías urbanas variadas en lugar de memorizar un circuito.</p>
 </li>
 <li>
 <p><strong>Capa deliberativa activa</strong>: cuando la política RL entra en un estado no representado
    en el entrenamiento (alta entropía de acción, múltiples ciclos de <code>FRENAR</code>), el barrido
-   <code>deep_vlm</code> puede resolver el atasco y proponer una salida, igual que con el brazo <code>fsm</code>. Esto limita la región de fallo catastrófico de la política
+   con profundidad estimada puede resolver el atasco y proponer una salida, igual que con el brazo <code>fsm</code>. Esto limita la región de fallo catastrófico de la política
    neuronal.</p>
 </li>
 </ol>
 <p>La validación en escenarios no vistos durante el entrenamiento —especialmente
-<code>citymap_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
+<code>citysim_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
 una de las incógnitas clave del protocolo de evaluación de IT.A8.6.</p>
 <h3 id="arquitectura-de-la-politica">Arquitectura de la política<a class="headerlink" href="#arquitectura-de-la-politica" title="Permanent link">&para;</a></h3>
 <p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales paralelos:</p>
-<p><img src="a8-arquitectura-dos-cabezales.jpg"></p>
+<p><img src="a8-arquitectura-dos-cabezales.png"></p>
 <p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella fuerza la política a integrar información visual y geométrica antes de tomar la decisión. Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
 <hr />
 <h2 id="a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>

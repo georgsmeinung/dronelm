@@ -5379,7 +5379,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <hr />
 <h2 id="anexos-a2-slm-optimizacion-y-desafios-a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis">A2.4 Estrategias de mitigación implementadas en la arquitectura de la tesis<a class="headerlink" href="#anexos-a2-slm-optimizacion-y-desafios-a24-estrategias-de-mitigacion-implementadas-en-la-arquitectura-de-la-tesis" title="Permanent link">&para;</a></h2>
 <p>Para hacer viable el despliegue de un modelo compacto (LFM2.5-VL-1.6B, cap. 8 IT.8.1.2) bajo hardware severamente restringido sin comprometer la seguridad física del vehículo, esta tesis implementa un conjunto coordinado de salvaguardas de software e ingeniería:</p>
-<p><img src="anexos/a2-estrategias-mitigacion.jpg"></p>
+<p><img src="anexos/a2-estrategias-mitigacion.png"></p>
 <ol>
 <li>
 <p><strong>Decodificación restringida a nivel de logits (<code>json_schema</code>)</strong>:
@@ -5409,7 +5409,7 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <h2 id="anexos-a3-optimizacion-lora-a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft">A3.1 Fundamentos matemáticos y variantes avanzadas de PEFT<a class="headerlink" href="#anexos-a3-optimizacion-lora-a31-fundamentos-matematicos-y-variantes-avanzadas-de-peft" title="Permanent link">&para;</a></h2>
 <p>El ajuste fino completo (<em>Full Fine-Tuning</em>, FFT) de una red neuronal profunda requiere actualizar y almacenar en memoria los gradientes y momentos del optimizador (e.g., AdamW en precisión simple FP32) para la totalidad de los parámetros entrenables <span class="arithmatex">\(\Phi_0\)</span>. Para un modelo de 3B parámetros, esto demanda más de 24 GB de VRAM únicamente para el estado del optimizador, tornando inviable el entrenamiento en GPUs de escritorio (tales como la NVIDIA RTX 5060 de 8 GB utilizada en este proyecto).</p>
 <p>Las técnicas de Ajuste Fino Eficiente en Parámetros (<em>Parameter-Efficient Fine-Tuning</em>, PEFT; <a href="#13-referencias-ref-mangrulkar-2022">Mangrulkar et al., 2022</a>) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.</p>
-<p><img src="anexos/a3-fundamentos-de-peft.jpg"/></p>
+<p><img src="anexos/a3-fundamentos-de-peft.png"/></p>
 <h3 id="anexos-a3-optimizacion-lora-a311-formulacion-matematica-de-lora">A3.1.1 Formulación matemática de LoRA<a class="headerlink" href="#anexos-a3-optimizacion-lora-a311-formulacion-matematica-de-lora" title="Permanent link">&para;</a></h3>
 <p>La premisa matemática de LoRA (<a href="#13-referencias-ref-hu-2022">Hu et al., 2022</a>) se basa en la hipótesis de que las actualizaciones de peso <span class="arithmatex">\(\Delta W\)</span> durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (<em>low intrinsic dimension</em>). Para una matriz lineal preentrenada <span class="arithmatex">\(W_0 \in \mathbb{R}^{d \times k}\)</span>, la actualización se descompone como el producto de dos matrices de bajo rango:</p>
 <div class="arithmatex">\[W = W_0 + \Delta W = W_0 + \frac{\alpha}{r} (B \cdot A)\]</div>
@@ -5496,88 +5496,89 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 <hr />
 <h2 id="anexos-a3-optimizacion-lora-a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm">A3.2 Justificación técnica: impacto de LoRA en el lazo táctico de DroneLM<a class="headerlink" href="#anexos-a3-optimizacion-lora-a32-justificacion-tecnica-impacto-de-lora-en-el-lazo-tactico-de-dronelm" title="Permanent link">&para;</a></h2>
 <p>La integración de un adaptador LoRA en la consulta al VLM transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:</p>
-<p><img src="anexos/a3-impacto-lora.jpg"/></p>
+<p><img src="anexos/a3-impacto-lora.png"/></p>
 <h3 id="anexos-a3-optimizacion-lora-a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia">A3.2.1 Reducción del presupuesto de tokens y compresión de latencia<a class="headerlink" href="#anexos-a3-optimizacion-lora-a321-reduccion-del-presupuesto-de-tokens-y-compresion-de-latencia" title="Permanent link">&para;</a></h3>
-<p>En una implementación <em>zero-shot</em> (IT.8.5), el prompt debe reiterar en cada invocación:
-* La definición de la grilla de sectores y del criterio «libre a 15 m».
-* La sintaxis exacta y el orden de los campos del esquema JSON.
-* Los valores admisibles de cada campo.</p>
-<p>Este contexto insume cientos de tokens de procesamiento previo (<em>prefill</em>). Al especializar el modelo con LoRA, <strong>la gramática de salida y las reglas de dominio quedan cristalizadas en los tensores de ponderación</strong>. El prompt de entrada puede simplificarse a una codificación tabular mínima:</p>
-<div class="highlight"><pre><span></span><code>[ESTADO: Vz=-0.1, Vh=3.2 | TTC: F=1.4s, L=inf, R=4.1s | HIST: keep_going(x3) | REASON: TTC_CRITICO]
+<p>En el régimen <em>zero-shot</em> actual (IT.8.5), cada consulta de la capa estratégica reitera en el <em>system prompt</em>:
+* La definición de la grilla de 3×3 (columnas A–C, filas 1–3) y de la marca de la meta.
+* El criterio operativo: <code>free</code> si el dron puede volar 15 m en esa dirección, <code>blocked</code> si hay un edificio, muro, árbol, puente o techo más cerca.
+* La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2.1).</p>
+<p>Al especializar el modelo con LoRA, <strong>el criterio y la forma de la respuesta quedan incorporados en los pesos</strong>, y la consulta puede reducirse al <em>user prompt</em> que ya usa el sistema más la imagen con la grilla dibujada:</p>
+<div class="highlight"><pre><span></span><code>Goal WP_3: 34 m, in cell B2. Altitude 10 m.   + [Front camera, 3x3 grid]
 </code></pre></div>
-<p>Esta reducción comprime la ventana de entrada de ~500 a menos de 100 tokens, acelerando el tiempo de respuesta del modelo en un 60%, con la inferencia por debajo del período de consulta de la capa estratégica.</p>
-<h3 id="anexos-a3-optimizacion-lora-a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra">A3.2.2 Alineación causal directa: de la imagen a la maniobra<a class="headerlink" href="#anexos-a3-optimizacion-lora-a322-alineacion-causal-directa-de-la-imagen-a-la-maniobra" title="Permanent link">&para;</a></h3>
-<p>Un modelo generalista tiende a verbalizar descripciones visuales pasivas (<em>«Veo un muro con sombras proyectadas»</em>). LoRA permite reentrenar la distribución de probabilidad condicional <span class="arithmatex">\(P(y \mid X)\)</span> para que el modelo efectúe una <strong>asociación sensoriomotora directa</strong>:
-* Reconocer cómo el patrón de divergencia óptica entre <span class="arithmatex">\(I_t\)</span> e <span class="arithmatex">\(I_{t-1}\)</span> anticipa colisiones inminentes.
-* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), suprimiendo alucinaciones visuales que el flujo monocular no logra desagregar (IT.6.1).</p>
+<p>El ahorro es acotado: el <em>system prompt</em> ya tiene tres o cuatro oraciones, y la mayor parte del preprocesamiento (<em>prefill</em>) la ocupan los 64–256 tokens con que el codificador visual representa la imagen (IT.8.1.2), que LoRA no reduce. La ganancia esperable de LoRA no es de latencia —la consulta ya tarda ~0.8 s, muy por debajo de la edad máxima de 10 s de una respuesta (IT.8.6)— sino de discriminación (IT.A3.2.2).</p>
+<h3 id="anexos-a3-optimizacion-lora-a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena">A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena<a class="headerlink" href="#anexos-a3-optimizacion-lora-a322-discriminacion-de-sectores-de-la-posicion-en-la-imagen-a-la-escena" title="Permanent link">&para;</a></h3>
+<p>El banco de prueba muestra que el modelo sin adaptar responde sobre todo a la posición del sector y no a la escena: las filas superior e inferior de la grilla salen «libres» en todas las muestras, la fila del medio depende de la columna, y los <em>logprobs</em> no rescatan la grilla (exactitud balanceada 0.53, AUC 0.53; cap. 11, IT.11.0). LoRA permite reentrenar la distribución condicional <span class="arithmatex">\(P(y \mid X)\)</span> sobre pares con etiqueta de referencia para que la respuesta dependa de lo que hay en cada sector:
+* Juzgar la distancia a lo que ocupa cada sector frente al criterio de 15 m, en lugar de reproducir un patrón fijo por fila.
+* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), el tipo de ambigüedad que el flujo monocular tampoco resuelve (IT.6.1).</p>
+<p>La adaptación solo se justificaría si el banco de prueba, sobre un entorno no visto en el entrenamiento, supera el criterio de pase de IT.11.0 (exactitud balanceada ≥ 0.65 con el límite inferior del IC 95 % por encima del azar).</p>
 <hr />
 <h2 id="anexos-a3-optimizacion-lora-a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea">A3.3 Pipeline de ingeniería de datos para navegación aérea<a class="headerlink" href="#anexos-a3-optimizacion-lora-a33-pipeline-de-ingenieria-de-datos-para-navegacion-aerea" title="Permanent link">&para;</a></h2>
 <p>El factor determinante del éxito de la adaptación no radica en el volumen de parámetros, sino en la calidad informativa y la diversidad topológica del conjunto de datos de entrenamiento.</p>
 <h3 id="anexos-a3-optimizacion-lora-a331-estructura-del-dataset-multimodal-de-navegacion">A3.3.1 Estructura del dataset multimodal de navegación<a class="headerlink" href="#anexos-a3-optimizacion-lora-a331-estructura-del-dataset-multimodal-de-navegacion" title="Permanent link">&para;</a></h3>
-<p>Cada instancia de entrenamiento se define como un par supervisado <span class="arithmatex">\((X_t, Y_t)\)</span> estructurado de la siguiente forma:</p>
-<div class="arithmatex">\[X_t = \left\{ I_t, I_{t-1}, \text{telemetry}_t, \text{obstacle\_field}_t, \text{reason\_note}_t \right\}\]</div>
-<div class="arithmatex">\[Y_t = \left\{ \text{"action"}: a_t^*, \text{"reason"}: r_t^* \right\}\]</div>
+<p>Cada instancia de entrenamiento es un par supervisado <span class="arithmatex">\((X_t, Y_t)\)</span> con la misma forma que la consulta estratégica del sistema (IT.8.2.1, IT.8.5.2):</p>
+<div class="arithmatex">\[X_t = \left\{ I_t^{\text{grilla}},\ \text{prompt}_t \right\}\]</div>
+<div class="arithmatex">\[Y_t = \left\{ \text{"cells"}: \{A1, \dots, C3\} \to \{\text{free}, \text{blocked}\} \right\}\]</div>
 <p>donde:
-* <span class="arithmatex">\(I_t, I_{t-1}\)</span> son los dos fotogramas RGB monoculares recientes capturados a 640×360 píxeles.
-* <span class="arithmatex">\(\text{telemetry}_t\)</span> incluye el vector de velocidad tridimensional, ángulo de cabeceo (<em>pitch</em>), alabeo (<em>roll</em>) y distancia al waypoint activo.
-* <span class="arithmatex">\(\text{obstacle\_field}_t\)</span> codifica el TTC estimado y la tasa de ocupación por sector angular (cap. 6 y 7).
-* <span class="arithmatex">\(a_t^* \in \mathcal{A}_{\text{whitelist}}\)</span> es la macro-acción supervisada óptima.
-* <span class="arithmatex">\(r_t^*\)</span> es una cadena de justificación condensada (&lt; 120 caracteres) que verbaliza el razonamiento causal subyacente (e.g., <code>"TTC crítico de 1.2s en cuadrante frontal-izquierdo; espacio despejado a la derecha; iniciar maniobra evasiva"</code>).</p>
+* <span class="arithmatex">\(I_t^{\text{grilla}}\)</span> es el fotograma de la cámara frontal reducido a 384 px, con la grilla de 3×3 y la marca de la meta dibujadas, tal como lo recibe el modelo en vuelo.
+* <span class="arithmatex">\(\text{prompt}_t\)</span> es el <em>user prompt</em> con la distancia a la meta, su sector (o su ángulo si está fuera del recorte) y la altitud.
+* <span class="arithmatex">\(Y_t\)</span> asigna a cada uno de los nueve sectores la etiqueta de referencia: <code>free</code> si el percentil 5 de la profundidad planar del simulador en el sector es ≥ 15 m y <code>blocked</code> si no (cap. 7, IT.7.1). La profundidad del simulador solo etiqueta los datos; el modelo nunca la recibe.</p>
+<p>El mismo esquema vale para el barrido, con cuatro imágenes numeradas y la salida <code>views</code> del esquema panorámico (IT.8.2.1).</p>
 <h3 id="anexos-a3-optimizacion-lora-a332-mitigacion-de-la-deriva-cinematica-mediante-dagger">A3.3.2 Mitigación de la deriva cinemática mediante DAgger<a class="headerlink" href="#anexos-a3-optimizacion-lora-a332-mitigacion-de-la-deriva-cinematica-mediante-dagger" title="Permanent link">&para;</a></h3>
 <p>El entrenamiento mediante simple Clonación de Comportamiento (<em>Behavioral Cloning</em>, BC) a partir de vuelos nominales perfectos sufre del problema de <strong>deriva covariada (<em>Covariate Shift</em>)</strong> (<a href="#13-referencias-ref-codevilla-2019">Codevilla et al., 2019</a>): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.</p>
 <p>Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo <strong>DAgger (<em>Dataset Aggregation</em>; <a href="#13-referencias-ref-ross-2011">Ross et al., 2011</a>)</strong> adaptado a simulación en AirSim / Unreal Engine 5:
 1. <strong>Vuelo con política actual</strong> <span class="arithmatex">\(\pi_{\text{LoRA}}\)</span> en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
-2. <strong>Consulta al oráculo experto</strong> (FSM determinista o supervisor experto) ante desvíos: determinación de la acción correctiva óptima <span class="arithmatex">\(a^*\)</span>.
-3. <strong>Agregación de tuplas críticas</strong> <span class="arithmatex">\(\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, a^*_{\text{experto}})\}\)</span>.
+2. <strong>Etiquetado por el oráculo</strong> en los estados que visita la política adaptada: la profundidad planar del simulador produce la etiqueta de referencia <span class="arithmatex">\(Y^*\)</span> de cada sector, también en las situaciones a las que el dron llega por sus propios errores.
+3. <strong>Agregación de tuplas críticas</strong> <span class="arithmatex">\(\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, Y^*_{\text{oráculo}})\}\)</span>.
 4. <strong>Reentrenamiento iterativo</strong> de los adaptadores LoRA sobre el conjunto enriquecido.</p>
 <h3 id="anexos-a3-optimizacion-lora-a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion">A3.3.3 Aumentación sintética y métricas objetivo de evaluación<a class="headerlink" href="#anexos-a3-optimizacion-lora-a333-aumentacion-sintetica-y-metricas-objetivo-de-evaluacion" title="Permanent link">&para;</a></h3>
-<p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; <a href="#13-referencias-ref-marazzato-2015">Marazzato &amp; Sparavigna, 2015</a>) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
+<p>Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (TownSim, CitySim; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; <a href="#13-referencias-ref-marazzato-2015">Marazzato &amp; Sparavigna, 2015</a>) y desenfoque por movimiento angular (<em>motion blur</em>).</p>
 <table>
 <thead>
 <tr>
-<th>Métrica de Validación</th>
-<th>Meta Operativa (Zero-Shot Actual)</th>
-<th>Meta Objetivo (LoRA / QLoRA)</th>
+<th>Métrica de validación</th>
+<th><em>Zero-shot</em> actual (LFM2.5-VL-1.6B)</th>
+<th>Objetivo con LoRA / QLoRA</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Cumplimiento de Esquema JSON</strong></td>
-<td>99.8% (gracias a gramática forzada)</td>
-<td><strong>100% nativo</strong> (verificación pasiva)</td>
+<td><strong>Exactitud balanceada de la grilla</strong> (banco, IT.11.0)</td>
+<td>0.53</td>
+<td><strong>≥ 0.65</strong>, IC 95 % sobre el azar, en un entorno no visto</td>
 </tr>
 <tr>
-<td><strong>Latencia media de inferencia</strong></td>
-<td>~1100 ms (límite de watchdog)</td>
-<td><strong>&lt; 450 ms</strong> (margen amplio)</td>
+<td><strong>AUC de la grilla con <em>logprobs</em></strong> (diagnóstico)</td>
+<td>0.53</td>
+<td>&gt; 0.75</td>
 </tr>
 <tr>
-<td><strong>Tokens de entrada promedio</strong></td>
-<td>480–520 tokens</td>
-<td><strong>&lt; 100 tokens</strong></td>
+<td><strong>Barrido: rumbo transitable</strong> (banco, IT.11.0)</td>
+<td>no pasa el criterio</td>
+<td>pasa el criterio</td>
 </tr>
 <tr>
-<td><strong>Tasa de resolución de atasco</strong></td>
-<td>60.0% (Tier 3, cap. 10)</td>
-<td><strong>&gt; 85.0%</strong></td>
+<td><strong>Adherencia al esquema JSON</strong> (IT.8.2.1)</td>
+<td>~98 % con decodificación restringida</td>
+<td>~100 %</td>
 </tr>
 <tr>
-<td><strong>Tasa de colisiones evitables</strong></td>
-<td>20.0% en Tier 3</td>
-<td><strong>&lt; 5.0%</strong></td>
+<td><strong>Latencia de la consulta estratégica</strong> (IT.8.6)</td>
+<td>~0.8 s</td>
+<td>sin cambio (&lt; 10 s de edad máxima)</td>
 </tr>
 </tbody>
 </table>
+<p>Las cifras objetivo son criterios de pase, no resultados: ninguna adaptación se entrenó en esta tesis (IT.8.8).</p>
 <hr />
 <h2 id="anexos-a3-optimizacion-lora-a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida">A3.4 Fusión de pesos, despliegue y preservación de la seguridad híbrida<a class="headerlink" href="#anexos-a3-optimizacion-lora-a34-fusion-de-pesos-despliegue-y-preservacion-de-la-seguridad-hibrida" title="Permanent link">&para;</a></h2>
 <h3 id="anexos-a3-optimizacion-lora-a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion">A3.4.1 Fusión algebraica de pesos (<em>Weight Merging</em>) y exportación<a class="headerlink" href="#anexos-a3-optimizacion-lora-a341-fusion-algebraica-de-pesos-weight-merging-y-exportacion" title="Permanent link">&para;</a></h3>
 <p>Una de las ventajas arquitectónicas centrales de LoRA frente a otros esquemas modulares radica en la posibilidad de <strong>fusionar algebraicamente los adaptadores con los pesos base preentrenados</strong> antes del despliegue en el vehículo:</p>
 <div class="arithmatex">\[W_{\text{despliegue}} = W_0 + \frac{\alpha}{r} (B \cdot A)\]</div>
 <p>Al realizar la fusión de tensores en punto flotante previo (FP16 o BF16), la matriz resultante <span class="arithmatex">\(W_{\text{despliegue}}\)</span> adquiere exactamente las mismas dimensiones y topología que la red preentrenada original. No existe ninguna bifurcación de memoria ni sobrecarga computacional adicional durante la inferencia. </p>
-<p>Posteriormente, el modelo fusionado se compila a formato <strong>GGUF</strong> cuantizado (<code>Q4_K_M</code>) mediante <code>llama.cpp</code> (<a href="#13-referencias-ref-gerganov-2023">Gerganov, 2023</a>), produciendo un binario de ~2.0 GB listo para ejecución local embebida sin dependencias de librerías de entrenamiento.</p>
+<p>Posteriormente, el modelo fusionado se compila a formato <strong>GGUF</strong> cuantizado (<code>Q4_K_M</code>) mediante <code>llama.cpp</code> (<a href="#13-referencias-ref-gerganov-2023">Gerganov, 2023</a>), el mismo formato y la misma cuantización que el modelo adoptado (731 MB más el codificador visual para LFM2.5-VL-1.6B, IT.8.1.2), listo para ejecución local sin dependencias de librerías de entrenamiento y servido por Ollama igual que hoy.</p>
 <h3 id="anexos-a3-optimizacion-lora-a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema">A3.4.2 Sinergia entre LoRA y decodificación restringida (<code>json_schema</code>)<a class="headerlink" href="#anexos-a3-optimizacion-lora-a342-sinergia-entre-lora-y-decodificacion-restringida-json_schema" title="Permanent link">&para;</a></h3>
 <p>El ajuste fino no reemplaza la decodificación restringida por gramáticas (IT.8.2, Anexo 4), sino que la complementa:
-* <strong>LoRA moldea la distribución interna de logits:</strong> el modelo aprende a concentrar prácticamente el 100% de su masa de probabilidad en las palabras clave del esquema JSON y la lista blanca de macro-acciones.
+* <strong>LoRA moldea la distribución interna de logits:</strong> el modelo aprende a concentrar prácticamente toda su masa de probabilidad en las claves del esquema JSON y en los valores de sus enums (<code>free</code>/<code>blocked</code>; los seis valores de <code>view</code>).
 * <strong><code>json_schema</code> opera como barrera determinista externa:</strong> enmascara el residuo infinitesimal de probabilidad en situaciones fuera de distribución, garantizando formalmente cero violaciones de formato.
 * <strong>Aceleración de generación:</strong> al fluir la decodificación sin colisionar con tokens suprimidos por la gramática, la tasa de muestreo alcanza el máximo rendimiento teórico del motor de inferencia.</p>
 <h3 id="anexos-a3-optimizacion-lora-a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia">A3.4.3 Salvaguardas inalteradas y hoja de ruta de transferencia<a class="headerlink" href="#anexos-a3-optimizacion-lora-a343-salvaguardas-inalteradas-y-hoja-de-ruta-de-transferencia" title="Permanent link">&para;</a></h3>
@@ -5599,21 +5600,21 @@ No incluyas introducciones, markdown (```), ni texto posterior.
 1. <strong>Preámbulos y epílogos conversacionales:</strong> emisión de frases introductorias (<em>«Sure, here is the drone decision:»</em>) o explicaciones finales que rompen <code>json.loads()</code>.
 2. <strong>Encapsulamiento en Markdown irregular:</strong> uso intermitente de triples comillas invertidas (<code>```json ... ```</code>), a menudo con saltos de línea mal posicionados.
 3. <strong>Malformación sintáctica:</strong> comas terminales huérfanas (<em>trailing commas</em>), omisión de llaves de cierre <code>}</code> por corte de contexto o escape defectuoso de caracteres en cadenas.
-4. <strong>Alucinación de macro-acciones fuera de lista blanca:</strong> emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., <code>"girar_rapido"</code>, <code>"subir_diagonal"</code>, <code>"stop"</code> en lugar de <code>keep_going</code>, <code>evasive</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>).
+4. <strong>Alucinación de macro-acciones fuera de lista blanca:</strong> emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., <code>"GIRAR_RAPIDO"</code>, <code>"SUBIR_DIAGONAL"</code>, <code>"stop"</code> en lugar de las ocho de <code>VALID_ACTIONS</code>: <code>MANTENER_RUMBO</code>, <code>EVADIR_IZQUIERDA</code>, <code>EVADIR_DERECHA</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>, <code>GIRAR_90</code>, <code>RETROCEDER</code>; IT.8.3.4).
 5. <strong>Latencia descontrolada por verbosidad:</strong> generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (<code>SLM_DEEP_WATCHDOG_MS</code>, 18 s en el barrido, cap. 8, IT.8.6) y forzando la caída al escape de respaldo.</p>
 <div class="highlight"><pre><span></span><code>Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
 &quot;Based on the camera feed showing an obstacle ahead, the drone should initiate an evasive 
- maneuver to the right corridor. Action: evasive_right, reason: obstacle in front.&quot;
+ maneuver to the right corridor. Action: evade_right, reason: obstacle in front.&quot;
  ❌ Falla sintáctica: no es JSON parseable, rompe action_to_command(), timeout &gt; 1.5 s.
 
 Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
-{&quot;action&quot;:&quot;evasive&quot;,&quot;reason&quot;:&quot;bloqueo centro&quot;}
+{&quot;action&quot;:&quot;EVADIR_DERECHA&quot;,&quot;reason&quot;:&quot;bloqueo centro&quot;}
  ✔ Estructura exacta, enum validado por gramática, latencia mínima, 100% parseable.
 </code></pre></div>
 <hr />
 <h2 id="anexos-a4-decodificacion-restringida-a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida">A4.2 Fundamentos matemáticos y formales de la decodificación restringida<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida" title="Permanent link">&para;</a></h2>
 <p>La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (<em>logits</em>) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible (<a href="#13-referencias-ref-willard-2023">Willard &amp; Louf, 2023</a>; <a href="#13-referencias-ref-ugare-2024">Ugare et al., 2024</a>; <a href="#13-referencias-ref-dong-2024">Dong et al., 2024</a>).</p>
-<p><img src="anexos/a4-decodificacion-restringida.jpg"/></p>
+<p><img src="anexos/a4-decodificacion-restringida.png"/></p>
 <h3 id="anexos-a4-decodificacion-restringida-a421-formulacion-del-enmascaramiento-de-logits">A4.2.1 Formulación del enmascaramiento de logits<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a421-formulacion-del-enmascaramiento-de-logits" title="Permanent link">&para;</a></h3>
 <p>Sea <span class="arithmatex">\(z_t \in \mathbb{R}^{|V|}\)</span> el vector de <em>logits</em> no normalizados producido por la última capa lineal del transformer en el paso <span class="arithmatex">\(t\)</span>. Sea <span class="arithmatex">\(s_t \in \mathcal{S}\)</span> el estado actual del analizador sintáctico o autómata formal.</p>
 <p>La gramática define una función de transición de estados <span class="arithmatex">\(\delta: \mathcal{S} \times V \to \mathcal{S} \cup \{\text{error}\}\)</span> y una función de aceptación que determina qué tokens del vocabulario son continuaciones válidas:</p>
@@ -5654,7 +5655,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 * <strong>Tokens dependientes del contexto:</strong> aquellos que interactúan con la profundidad de la pila sintáctica (e.g., llaves y comillas anidadas).</p>
 <p>Durante la inferencia en tiempo real, XGrammar ejecuta el filtrado de máscaras en paralelo con el cómputo de la GPU o durante la fase de pre-llenado (<em>pre-fill</em>), reduciendo la sobrecarga de CPU a <strong>menos de 0.05 ms por token</strong> (prácticamente nula).</p>
 <h3 id="anexos-a4-decodificacion-restringida-a434-decodificacion-especulativa-basada-en-gramaticas">A4.3.4 Decodificación especulativa basada en gramáticas<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a434-decodificacion-especulativa-basada-en-gramaticas" title="Permanent link">&para;</a></h3>
-<p>En sistemas avanzados, las restricciones gramaticales se combinan con <strong>decodificación especulativa</strong> (<a href="#13-referencias-ref-leviathan-2023">Leviathan et al., 2023</a>; <a href="#13-referencias-ref-dong-2024">Dong et al., 2024</a>). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo <code>action</code>, solo 5 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de <span class="arithmatex">\(2\times\)</span> a <span class="arithmatex">\(3\times\)</span>.</p>
+<p>En sistemas avanzados, las restricciones gramaticales se combinan con <strong>decodificación especulativa</strong> (<a href="#13-referencias-ref-leviathan-2023">Leviathan et al., 2023</a>; <a href="#13-referencias-ref-dong-2024">Dong et al., 2024</a>). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo <code>action</code>, solo 8 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de <span class="arithmatex">\(2\times\)</span> a <span class="arithmatex">\(3\times\)</span>.</p>
 <hr />
 <h2 id="anexos-a4-decodificacion-restringida-a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida">A4.4 Optimización del Grafo de Control (<code>StateGraph</code>) mediante Decodificación Restringida<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida" title="Permanent link">&para;</a></h2>
 <blockquote>
@@ -5662,50 +5663,50 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 </blockquote>
 <p>La interacción entre el modelo de lenguaje y el grafo de control táctico (<code>src/agents/graph.py</code>) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una <strong>arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo</strong>.</p>
 <h3 id="anexos-a4-decodificacion-restringida-a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica">A4.4.1 Invariantes del lazo táctico garantizados por la gramática<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica" title="Permanent link">&para;</a></h3>
-<p>En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los comportamientos de la capa de decisión (<code>reactive_node</code>, <code>evasive_node</code>, el giro de 90° y el barrido) convergen en una interfaz estricta gobernada por <code>action_to_command()</code> (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:</p>
-<p><img src="anexos/a4-invariante-lazo-tactico.jpg"/></p>
+<p>En el grafo de control de DroneLM, el ciclo de LangGraph (<code>capture</code> → <code>perception</code> → <code>navigate</code> → <code>motor</code>) se ejecuta a 5 Hz. Los comportamientos de la capa de decisión (el guiado de <code>reactive_node</code>, <code>evasive_node</code>, el giro de 90°, el barrido y la FSM) convergen en una interfaz estricta gobernada por <code>action_to_command()</code> (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:</p>
+<p><img src="anexos/a4-invariante-lazo-tactico.png"/></p>
 <p>Al imponer decodificación restringida en la consulta al VLM, se garantizan tres invariantes operativas fundamentales:
 1. <strong>Ausencia total de fallas de parseo en el lazo:</strong> se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un <strong>98%–100%</strong>, como se verifica empíricamente en el informe (IT.8.2, IT.11).
 2. <strong>Determinismo en el espacio de acción:</strong> el campo <code>action</code> se constriñe a la enumeración canónica:
-   $<span class="arithmatex">\(\text{action} \in \{\text{"keep\_going"}, \text{"evasive"}, \text{"girar\_90"}, \text{"fsm"}, \text{"degraded"}\}\)</span>$
+   $<span class="arithmatex">\(\text{action} \in \texttt{VALID\_ACTIONS} = \{\text{MANTENER\_RUMBO}, \text{EVADIR\_IZQUIERDA}, \text{EVADIR\_DERECHA}, \text{GANAR\_ALTURA}, \text{PERDER\_ALTURA}, \text{FRENAR}, \text{GIRAR\_90}, \text{RETROCEDER}\}\)</span>$
    Esto asegura que <code>action_to_command()</code> siempre recibe un identificador registrado, eliminando ramas de ejecución indefinidas en los actuadores del dron.
 3. <strong>Control estricto de la longitud del campo de justificación:</strong> al restringir la longitud máxima de la cadena <code>reason</code> mediante reglas gramaticales (e.g., <code>maxLength: 120</code> o regex <code>[a-zA-Z0-9 _-]{1,100}</code>), se impide que el modelo expanda su generación más allá de los tokens estrictamente necesarios para auditoría y telemetría.</p>
 <h3 id="anexos-a4-decodificacion-restringida-a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo">A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo" title="Permanent link">&para;</a></h3>
 <p>Una de las innovaciones de mayor impacto para optimizar el lazo deliberativo consiste en la <strong>parametrización dinámica de la gramática en función del estado de vuelo actual</strong>.</p>
-<p>En lugar de emplear un esquema JSON estático para todas las consultas, la consulta al VLM selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (<code>reason_note</code>, IT.8.5):</p>
+<p>En lugar de emplear un esquema JSON estático para todas las consultas, el decisor ilustrativo selecciona en tiempo de ejecución una gramática especializada según el motivo de la consulta (<code>reason_note</code>, un campo del decisor ilustrativo que el sistema no tiene), derivado del estado del grafo:</p>
 <table>
 <thead>
 <tr>
-<th>Motivo de Consulta (<code>reason_note</code>)</th>
-<th>Condición de Activación en Grafo</th>
-<th>Gramática / Restricción Dinámica del Enum <code>action</code></th>
-<th>Racionalidad Operativa y Beneficio</th>
+<th>Motivo de consulta (<code>reason_note</code>)</th>
+<th>Condición de activación en el grafo</th>
+<th>Restricción dinámica del enum <code>action</code></th>
+<th>Racionalidad operativa y beneficio</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>"TTC_CRITICO"</code></td>
-<td><span class="arithmatex">\(\text{TTC} \le 3.2\text{ s}\)</span> en sector central</td>
-<td><code>enum: ["evasive", "girar_90"]</code></td>
-<td><strong>Poda de acciones pasivas:</strong> se prohíbe sintácticamente que el SLM elija <code>keep_going</code> o <code>fsm</code> ante una colisión inminente. El espacio de búsqueda colapsa a solo 2 tokens de decisión.</td>
+<td><span class="arithmatex">\(\text{TTC} \le 3.2\text{ s}\)</span> en el sector central (regla 7 de <code>navigate</code>, IT.5.3.2)</td>
+<td><code>enum: ["EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GANAR_ALTURA", "GIRAR_90"]</code></td>
+<td><strong>Poda de acciones pasivas:</strong> se prohíbe sintácticamente que el modelo elija <code>MANTENER_RUMBO</code> o <code>FRENAR</code> ante una colisión inminente.</td>
 </tr>
 <tr>
 <td><code>"DEADLOCK_ESCAPE"</code></td>
-<td><code>evasion_stuck_cycles &gt;= threshold</code> (atasco cinemático prolongado)</td>
-<td><code>enum: ["girar_90", "fsm", "degraded"]</code></td>
-<td><strong>Ruptura forzada de bucles:</strong> el dron lleva múltiples ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente (<code>evasive</code>) o insistir de frente (<code>keep_going</code>).</td>
+<td><code>evasion_stuck_cycles</code> sobre el umbral (atasco prolongado)</td>
+<td><code>enum: ["GIRAR_90", "GANAR_ALTURA", "RETROCEDER"]</code></td>
+<td><strong>Ruptura forzada de bucles:</strong> el dron lleva varios ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente o insistir de frente.</td>
 </tr>
 <tr>
 <td><code>"FALTA_EVIDENCIA"</code></td>
-<td>Pérdida de textura o colapso de flujo óptico en hover</td>
-<td><code>enum: ["keep_going", "girar_90"]</code></td>
-<td><strong>Preservación de movimiento:</strong> se impide al modelo frenar (<code>degraded</code>), forzándolo a generar traslación o rotación para reactivar el campo de divergencia visual.</td>
+<td>Flujo sin traslación suficiente (fuente distinta de <code>flow</code>)</td>
+<td><code>enum: ["MANTENER_RUMBO", "GIRAR_90"]</code></td>
+<td><strong>Preservación de movimiento:</strong> se impide al modelo frenar (<code>FRENAR</code>), forzándolo a generar traslación o rotación para que el flujo vuelva a tener evidencia.</td>
 </tr>
 <tr>
 <td><code>"STANDARD_DELIB"</code></td>
 <td>Desempate táctico en corredores urbanos</td>
-<td><code>enum: ["keep_going", "evasive", "girar_90", "fsm", "degraded"]</code></td>
-<td><strong>Espacio completo:</strong> evaluación deliberativa estándar con ponderación semántica.</td>
+<td>las ocho de <code>VALID_ACTIONS</code></td>
+<td><strong>Espacio completo:</strong> evaluación estándar.</td>
 </tr>
 </tbody>
 </table>
@@ -5724,7 +5725,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 <span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;keep_going&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;evasive&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;girar_90&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;fsm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;degraded&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;GIRAR_90&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;RETROCEDER&quot;</span><span class="p">],</span>
 <span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Macro-accion seleccionada para el ciclo actual de control.&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -5745,7 +5746,8 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 
 root <span class="o">::=</span> &quot;{&quot; ws &quot;\&quot;action\&quot;:&quot; ws action-enum &quot;,&quot; ws &quot;\&quot;reason\&quot;:&quot; ws string-value &quot;}&quot;
 
-action-enum <span class="o">::=</span> &quot;\&quot;keep_going\&quot;&quot; | &quot;\&quot;evasive\&quot;&quot; | &quot;\&quot;girar_90\&quot;&quot; | &quot;\&quot;fsm\&quot;&quot; | &quot;\&quot;degraded\&quot;&quot;
+action-enum <span class="o">::=</span> &quot;\&quot;MANTENER_RUMBO\&quot;&quot; | &quot;\&quot;EVADIR_IZQUIERDA\&quot;&quot; | &quot;\&quot;EVADIR_DERECHA\&quot;&quot; | &quot;\&quot;GANAR_ALTURA\&quot;&quot;
+              | &quot;\&quot;PERDER_ALTURA\&quot;&quot; | &quot;\&quot;FRENAR\&quot;&quot; | &quot;\&quot;GIRAR_90\&quot;&quot; | &quot;\&quot;RETROCEDER\&quot;&quot;
 
 # Restricción estricta de la justificación: máximo 80 caracteres alfanuméricos seguros
 string-value <span class="o">::=</span> &quot;\&quot;&quot; [a-zA-Z0-9 _.,áéíóúÁÉÍÓÚñÑ-]{1,80} &quot;\&quot;&quot;
@@ -5754,7 +5756,7 @@ ws <span class="o">::=</span> [ \t\n]*
 </code></pre></div>
 <p><strong>Ventajas operativas de GBNF:</strong>
 * <strong>Cero sobrecarga de esquemas:</strong> no requiere motores externos de validación JSON; el propio núcleo en C++ de <code>llama.cpp</code> filtra los logits directamente en memoria compartida.
-* <strong>Control microscópico de espacios en blanco:</strong> <code>ws</code> puede definirse como cadena vacía (<code>ws ::= ""</code> sin espacios), obligando al modelo a generar JSON minificado compacto (<code>{"action":"evasive","reason":"bloqueo_centro"}</code>), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.</p>
+* <strong>Control microscópico de espacios en blanco:</strong> <code>ws</code> puede definirse como cadena vacía (<code>ws ::= ""</code> sin espacios), obligando al modelo a generar JSON minificado compacto (<code>{"action":"EVADIR_DERECHA","reason":"bloqueo_centro"}</code>), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.</p>
 <hr />
 <h2 id="anexos-a4-decodificacion-restringida-a46-procedimiento-ilustrativo-de-implementacion-paso-a-paso">A4.6 Procedimiento ilustrativo de implementación paso a paso<a class="headerlink" href="#anexos-a4-decodificacion-restringida-a46-procedimiento-ilustrativo-de-implementacion-paso-a-paso" title="Permanent link">&para;</a></h2>
 <p>A continuación se detalla, sobre el decisor de acciones ilustrativo de IT.A4.4, la metodología para integrar la decodificación restringida en un lazo como el de DroneLM, desde la definición de tipos hasta la ejecución asincrónica. El código del sistema sigue el mismo patrón con los esquemas descriptivos del capítulo 8 (<code>vlm_client.py</code>, <code>vlm_strategic.py</code>, <code>deep_scan.py</code>).</p>
@@ -5769,20 +5771,23 @@ ws <span class="o">::=</span> [ \t\n]*
     <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">DroneEmergencyDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
-    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;evasive&quot;</span><span class="p">,</span> <span class="s2">&quot;girar_90&quot;</span><span class="p">]</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span> <span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span> <span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;GIRAR_90&quot;</span><span class="p">]</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">DroneDeadlockDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
-    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;girar_90&quot;</span><span class="p">,</span> <span class="s2">&quot;fsm&quot;</span><span class="p">,</span> <span class="s2">&quot;degraded&quot;</span><span class="p">]</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;GIRAR_90&quot;</span><span class="p">,</span> <span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;RETROCEDER&quot;</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DroneEvidenceDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span> <span class="s2">&quot;GIRAR_90&quot;</span><span class="p">]</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">DroneStandardDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
-    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;keep_going&quot;</span><span class="p">,</span> <span class="s2">&quot;evasive&quot;</span><span class="p">,</span> <span class="s2">&quot;girar_90&quot;</span><span class="p">,</span> <span class="s2">&quot;fsm&quot;</span><span class="p">,</span> <span class="s2">&quot;degraded&quot;</span><span class="p">]</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span> <span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span> <span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span> <span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span> <span class="s2">&quot;GIRAR_90&quot;</span><span class="p">,</span> <span class="s2">&quot;RETROCEDER&quot;</span><span class="p">]</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">get_decision_schema</span><span class="p">(</span><span class="n">reason_note</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Retorna el esquema JSON óptimo condicionado por el estado del grafo.&quot;&quot;&quot;</span>
     <span class="n">model_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseDroneDecision</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;TTC_CRITICO&quot;</span><span class="p">:</span> <span class="n">DroneEmergencyDecision</span><span class="p">,</span>
         <span class="s2">&quot;DEADLOCK_ESCAPE&quot;</span><span class="p">:</span> <span class="n">DroneDeadlockDecision</span><span class="p">,</span>
-        <span class="s2">&quot;FALTA_EVIDENCIA&quot;</span><span class="p">:</span> <span class="n">DroneStandardDecision</span><span class="p">,</span>
+        <span class="s2">&quot;FALTA_EVIDENCIA&quot;</span><span class="p">:</span> <span class="n">DroneEvidenceDecision</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="n">target_cls</span> <span class="o">=</span> <span class="n">model_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reason_note</span><span class="p">,</span> <span class="n">DroneStandardDecision</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span>
@@ -5824,7 +5829,7 @@ ws <span class="o">::=</span> [ \t\n]*
 <div class="highlight"><pre><span></span><code><span class="c1"># ejemplo ilustrativo (decisor de acciones)</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span><span class="o">,</span><span class="w"> </span><span class="nn">re</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_parse_decision</span><span class="p">(</span><span class="n">raw_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;keep_going&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_decision</span><span class="p">(</span><span class="n">raw_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;FRENAR&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Jerarquía de tres niveles para extracción segura de macro-acciones:</span>
 <span class="sd">    1. Parseo directo con json.loads() (camino nominal con decodificación restringida).</span>
@@ -5932,7 +5937,7 @@ ws <span class="o">::=</span> [ \t\n]*
 <hr />
 <h2 id="anexos-a5-percepcion-monocular-flujo-optico-a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim">A5.1 Modelo geométrico de cámara pin-hole y calibración en AirSim<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a51-modelo-geometrico-de-camara-pin-hole-y-calibracion-en-airsim" title="Permanent link">&para;</a></h2>
 <p>Se modela la cámara monocular frontal del dron mediante la aproximación de cámara oscura o estenopeica (<em>pin-hole camera model</em>) con proyección en perspectiva central.</p>
-<p><img src="anexos/a5-modelo-geometrico-de-camara.jpg"></p>
+<p><img src="anexos/a5-modelo-geometrico-de-camara.png"></p>
 <h3 id="anexos-a5-percepcion-monocular-flujo-optico-a511-sistemas-de-coordenadas-y-matriz-intrinseca">A5.1.1 Sistemas de coordenadas y matriz intrínseca<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a511-sistemas-de-coordenadas-y-matriz-intrinseca" title="Permanent link">&para;</a></h3>
 <p>Sea <span class="arithmatex">\(P_c = (X_c, Y_c, Z_c)^T \in \mathbb{R}^3\)</span> la posición de un punto del entorno físico en el sistema de coordenadas de la cámara, donde el eje <span class="arithmatex">\(Z_c\)</span> coincide con el eje óptico apuntando hacia adelante, <span class="arithmatex">\(X_c\)</span> apunta hacia la derecha del dron e <span class="arithmatex">\(Y_c\)</span> apunta hacia abajo (convención visual estándar).</p>
 <p>La proyección en perspectiva de <span class="arithmatex">\(P_c\)</span> sobre el plano de imagen produce coordenadas métricas normalizadas <span class="arithmatex">\((x, y)\)</span>:</p>
@@ -5949,7 +5954,7 @@ ws <span class="o">::=</span> [ \t\n]*
 <p>En la configuración nominal de vuelo de DroneLM, la cámara frontal captura a resolución completa de <span class="arithmatex">\(1080 \times 720\)</span> píxeles con un campo de visión horizontal (<span class="arithmatex">\(\text{FOV}_h\)</span>) de <span class="arithmatex">\(90^\circ\)</span>. A partir de la relación trigonométrica:</p>
 <div class="arithmatex">\[\text{FOV}_h = 2 \arctan\left( \frac{W}{2 f_x} \right) \implies f_x = \frac{W}{2 \tan(\text{FOV}_h / 2)}\]</div>
 <p>Para <span class="arithmatex">\(W = 1080\text{ px}\)</span> y <span class="arithmatex">\(\text{FOV}_h = 90^\circ\)</span> (<span class="arithmatex">\(\tan(45^\circ) = 1\)</span>), se obtiene <span class="arithmatex">\(f_x = \frac{1080}{2} = 540\text{ px}\)</span>. El estimador de flujo utiliza el valor calibrado <span class="arithmatex">\(f_x = f_y = 554.0\text{ px}\)</span> (<code>CAMERA_FX</code>, <code>CAMERA_FY</code>), absorbiendo la leve distorsión radial modelada por el plugin.</p>
-<p>Para reducir la latencia de cómputo en CPU/GPU sin alterar la geometría visual, los fotogramas se reescalan a un ancho de procesamiento <span class="arithmatex">\(W' = 320\text{ px}\)</span> (<code>FLOW_DOWNSCALE_WIDTH</code>) con un factor de escala <span class="arithmatex">\(s = \frac{W'}{W} = \frac{320}{1080} \approx 0.2963\)</span>. Las distancias focales y el centro óptico se escalan homólogamente:</p>
+<p>Para acotar la latencia de cómputo sin alterar la geometría visual, los fotogramas se reescalan a un ancho de procesamiento <span class="arithmatex">\(W' = 640\text{ px}\)</span> (<code>FLOW_DOWNSCALE_WIDTH</code> en <code>config/.env</code>) con un factor de escala <span class="arithmatex">\(s = \frac{W'}{W} = \frac{640}{1080} \approx 0.5926\)</span>. El valor por defecto del código es 320 px (<span class="arithmatex">\(s \approx 0.2963\)</span>), el ancho con el que se hizo la validación del TTC del capítulo 7; el vuelo usa 640 px porque a 320 px los objetos finos, como las ramas, quedan bajo el piso de ruido (IT.6.3). Las distancias focales y el centro óptico se escalan homólogamente:</p>
 <div class="arithmatex">\[f_x' = f_x \cdot s, \quad f_y' = f_y \cdot s, \quad c_x' = \frac{W'}{2}, \quad c_y' = \frac{H'}{2}\]</div>
 <hr />
 <h2 id="anexos-a5-percepcion-monocular-flujo-optico-a52-ecuaciones-del-flujo-optico-continuo-descomposicion-traslacional-y-rotacional">A5.2 Ecuaciones del flujo óptico continuo: descomposición traslacional y rotacional<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a52-ecuaciones-del-flujo-optico-continuo-descomposicion-traslacional-y-rotacional" title="Permanent link">&para;</a></h2>
@@ -5987,7 +5992,7 @@ Si no se compensa activamente el flujo rotacional, cualquier maniobra de orienta
 <p>El campo traslacional puro se obtiene restando algebraicamente el campo teórico rotacional del flujo total calculado por el algoritmo de visión:</p>
 <div class="arithmatex">\[u_{\text{trans}}(x, y) = u_{\text{raw}}(x, y) - u_{\text{rot}}(x, y)\]</div>
 <div class="arithmatex">\[v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)\]</div>
-<p><img src="anexos/a5-campo-de-velocidad-rotacional.jpg"/></p>
+<p><img src="anexos/a5-campo-de-velocidad-rotacional.png"/></p>
 <h3 id="anexos-a5-percepcion-monocular-flujo-optico-a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion">A5.3.3 Tratamiento de discontinuidades y límite de linealización<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a533-tratamiento-de-discontinuidades-y-limite-de-linealizacion" title="Permanent link">&para;</a></h3>
 <p>Durante giros bruscos, se presentan dos restricciones de ingeniería:
 1. <strong>Normalización de ángulo de guiñada:</strong> ante cruces del límite <span class="arithmatex">\(\pm 180^\circ\)</span> (<span class="arithmatex">\(\pm \pi\)</span>), el incremento se desenvuelve modularmente:
@@ -6057,7 +6062,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <hr />
 <h2 id="anexos-a5-percepcion-monocular-flujo-optico-a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield">A5.6 Agregación espacial robusta y contrato de percepción <code>ObstacleField</code><a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a56-agregacion-espacial-robusta-y-contrato-de-percepcion-obstaclefield" title="Permanent link">&para;</a></h2>
 <p>Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y modelo de lenguaje) razonen eficazmente sin procesar decenas de miles de valores por segundo, el mapa de TTC continuo se reduce espacialmente en una estructura discreta y tipada: el <strong><code>ObstacleField</code></strong> (<code>airsim-loop/src/perception/obstacle_field.py</code>).</p>
-<p><img src="anexos/a5-agregación-espacial-robusta.jpg"/></p>
+<p><img src="anexos/a5-agregación-espacial-robusta.png"/></p>
 <h3 id="anexos-a5-percepcion-monocular-flujo-optico-a561-estadisticos-de-agregacion-por-celda">A5.6.1 Estadísticos de agregación por celda<a class="headerlink" href="#anexos-a5-percepcion-monocular-flujo-optico-a561-estadisticos-de-agregacion-por-celda" title="Permanent link">&para;</a></h3>
 <p>Para cada celda <span class="arithmatex">\(C_{s,b}\)</span> (donde <span class="arithmatex">\(s \in \{\text{izquierda}, \text{centro}, \text{derecha}\}\)</span> y <span class="arithmatex">\(b \in \{\text{superior}, \text{medio}, \text{inferior}\}\)</span>):
 1. <strong>Fracción de Píxeles Válidos (Confianza):</strong>
@@ -6104,7 +6109,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 <td>Baja a Media (acelerada por descenso de gradiente inverso)</td>
 </tr>
 <tr>
-<td><strong>Latencia CPU (320×180 px)</strong></td>
+<td><strong>Latencia CPU orientativa (320×180 px)</strong></td>
 <td>35–50 ms</td>
 <td><strong>12–18 ms</strong></td>
 </tr>
@@ -6130,7 +6135,7 @@ La variable métrica desconocida de escala (<span class="arithmatex">\(Z_c\)</sp
 </tr>
 </tbody>
 </table>
-<p>El motor <strong>DIS (Preset MEDIUM)</strong> permite ejecutar el pipeline de percepción completo (escalado, cálculo de flujo, derotación, FOE, TTC e instanciación de <code>ObstacleField</code>) en menos de <strong>25 ms por ciclo</strong> en la CPU del sistema, permitiendo operar con soltura dentro del período nominal del lazo táctico de control a 5 Hz (<span class="arithmatex">\(200\text{ ms}\)</span>).</p></section><section class="print-page" id="anexos-a6-configuracion-entorno-reproducibilidad" heading-number="15.6"><h1 id="anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad">Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" title="Permanent link">&para;</a></h1>
+<p>Las latencias de la tabla son orientativas para 320×180 px; en vuelo el flujo se calcula a 640×360 px, con cuatro veces más píxeles, y el costo de DIS crece aproximadamente en proporción. El sistema no registra por separado la latencia de la etapa de flujo: lo que se mide es el período del ciclo completo (escalado, flujo, derotación, FOE, TTC e instanciación de <code>ObstacleField</code>, más guiado y comando), que se audita contra el período nominal de 0.2 s del lazo a 5 Hz (NB2).</p></section><section class="print-page" id="anexos-a6-configuracion-entorno-reproducibilidad" heading-number="15.6"><h1 id="anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad">Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad<a class="headerlink" href="#anexos-a6-configuracion-entorno-reproducibilidad-anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" title="Permanent link">&para;</a></h1>
 <p>La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (IT.10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / <code>llama.cpp</code>)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.</p>
 <p>Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (IT.10.3).</p>
 <hr />
@@ -6907,7 +6912,7 @@ Anexo 5 (flujo óptico, FOE, TTC): mientras el Anexo 5 formaliza <em>cómo</em> 
 profundidad relativa a partir de una sola cámara, este anexo formaliza <em>por qué</em> esa estimación
 colapsa estructuralmente en ciertas geometrías de escena, y qué alternativa de bajo costo resuelve
 el colapso sin abandonar el principio de percepción pasiva declarado en IT.1.2.</p>
-<p><img src="anexos/a7-maldicion-monocular.jpg"/></p>
+<p><img src="anexos/a7-maldicion-monocular.png"/></p>
 <h2 id="anexos-a7-maldicion-monocular-estereo-a71-la-maldicion-monocular-dos-componentes-distintos">A7.1 La maldición monocular: dos componentes distintos<a class="headerlink" href="#anexos-a7-maldicion-monocular-estereo-a71-la-maldicion-monocular-dos-componentes-distintos" title="Permanent link">&para;</a></h2>
 <p>El término coloquial "maldición monocular" (<em>monocular curse</em>) agrupa dos limitaciones físicas
 independientes de la reconstrucción de profundidad a partir de una única cámara. Es importante
@@ -7156,13 +7161,15 @@ mismo nivel de abstracción que ocupa actualmente <code>evasive_node</code> + <c
 <h2 id="anexos-a8-navegacion-rl-a81-posicion-en-la-arquitectura-jerarquica">A8.1 Posición en la arquitectura jerárquica<a class="headerlink" href="#anexos-a8-navegacion-rl-a81-posicion-en-la-arquitectura-jerarquica" title="Permanent link">&para;</a></h2>
 <p>El sistema implementado en esta tesis opera en tres capas de abstracción temporal
 diferenciada:</p>
-<p><img src="anexos/a8-tres-capas-control.jpg"></p>
+<p><img src="anexos/a8-tres-capas-control.png"></p>
 <p>El brazo <code>rl</code> ocupa la <strong>capa táctica</strong>: recibe el frame RGB actual, el <code>ObstacleField</code>
 producido por <code>FlowTTCEstimator</code> y la telemetría de guiado (<code>waypoint_guidance</code>), y
 produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_node</code> y
-<code>evasive_node</code>. La capa estratégica del VLM sigue activa en modo jerárquico: puede inyectar sub-metas en
-coordenadas del mundo (<code>inject_corner</code>) y resolver atascos duros con el barrido <code>deep_vlm</code>,
-igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).</p>
+<code>evasive_node</code>. La capa estratégica sigue activa en modo jerárquico, con la profundidad
+estimada como fuente (<code>STRATEGIC_SOURCE=depth</code>): propone sub-metas en coordenadas del
+mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
+(<code>DEADLOCK_STRATEGY=depth</code>) resuelve los atascos duros e inyecta un desvío
+(<code>inject_corner</code>), igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).</p>
 <p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
 <code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
 seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
@@ -7204,8 +7211,10 @@ dependencia del estimador de flujo óptico — relevante si se quiere transferir
 real donde la calibración del flujo es incierta.</p>
 <hr />
 <h2 id="anexos-a8-navegacion-rl-a83-espacio-de-acciones">A8.3 Espacio de acciones<a class="headerlink" href="#anexos-a8-navegacion-rl-a83-espacio-de-acciones" title="Permanent link">&para;</a></h2>
-<p>Se propone un espacio discreto de seis acciones, alineado con <code>PROMPT_ACTIONS</code> del nodo
-deliberativo (IT.8.3, IT.5.14):</p>
+<p>Se propone un espacio discreto de seis acciones, tomadas del vocabulario fijo del sistema
+(<code>VALID_ACTIONS</code>, <code>action_map.py</code>; IT.8.3.4, IT.5.14). Quedan fuera <code>GIRAR_90</code>, que el
+lazo rápido aplica como regla de seguridad, y <code>RETROCEDER</code>, que ningún comportamiento
+emite:</p>
 <table>
 <thead>
 <tr>
@@ -7350,22 +7359,22 @@ parcialmente por tres decisiones de diseño:</p>
 </li>
 <li>
 <p><strong>Currículo de escenarios por Tier</strong>: el agente se expone a tres niveles de dificultad
-   (Tier 0 → 1 → 2) y cinco mapas diferentes durante el entrenamiento, forzando
+   (Tier 0 → 1 → 2) y los tres mapas de la tesis (MiniSim, TownSim y CitySim) durante el entrenamiento, forzando
    generalización a geometrías urbanas variadas en lugar de memorizar un circuito.</p>
 </li>
 <li>
 <p><strong>Capa deliberativa activa</strong>: cuando la política RL entra en un estado no representado
    en el entrenamiento (alta entropía de acción, múltiples ciclos de <code>FRENAR</code>), el barrido
-   <code>deep_vlm</code> puede resolver el atasco y proponer una salida, igual que con el brazo <code>fsm</code>. Esto limita la región de fallo catastrófico de la política
+   con profundidad estimada puede resolver el atasco y proponer una salida, igual que con el brazo <code>fsm</code>. Esto limita la región de fallo catastrófico de la política
    neuronal.</p>
 </li>
 </ol>
 <p>La validación en escenarios no vistos durante el entrenamiento —especialmente
-<code>citymap_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
+<code>citysim_pilot</code>— es la prueba empírica más directa de generalización, y su resultado es
 una de las incógnitas clave del protocolo de evaluación de IT.A8.6.</p>
 <h3 id="anexos-a8-navegacion-rl-arquitectura-de-la-politica">Arquitectura de la política<a class="headerlink" href="#anexos-a8-navegacion-rl-arquitectura-de-la-politica" title="Permanent link">&para;</a></h3>
 <p>Para la observación mixta <code>{rgb, ttc_field, nav}</code> se propone una política de dos cabezales paralelos:</p>
-<p><img src="anexos/a8-arquitectura-dos-cabezales.jpg"></p>
+<p><img src="anexos/a8-arquitectura-dos-cabezales.png"></p>
 <p>La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella fuerza la política a integrar información visual y geométrica antes de tomar la decisión. Esta arquitectura es directamente compatible con <code>CnnPolicy</code> de Stable-Baselines3 cuando se define el espacio de observación como <code>gym.spaces.Dict</code>.</p>
 <hr />
 <h2 id="anexos-a8-navegacion-rl-a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#anexos-a8-navegacion-rl-a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
@@ -7508,7 +7517,7 @@ con AirSim corriendo en paralelo.</p>
 informe. La evaluación cuantitativa del brazo <code>rl</code> y su comparación con los tres brazos
 implementados forma parte del trabajo futuro descrito en IT.12.4.</em></p></section><section class="print-page" id="anexos-a9-modelos-de-mundo-latentes-edge" heading-number="15.9"><h1 id="anexos-a9-modelos-de-mundo-latentes-edge-anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge">Anexo 9: Modelos de Mundo Latentes (LeWorldModel) como Alternativa al SLM — Trade-offs y Viabilidad en Hardware Edge<a class="headerlink" href="#anexos-a9-modelos-de-mundo-latentes-edge-anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge" title="Permanent link">&para;</a></h1>
 <p>Este anexo analiza, como línea de trabajo futuro (IT.12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, cap. 8) por un <strong>modelo de mundo latente</strong> del tipo <em>Joint-Embedding Predictive Architecture</em> (JEPA), tomando como caso de estudio <strong>LeWorldModel</strong> (LeWM; <a href="#13-referencias-ref-maes-2026">Maes et al., 2026</a>). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo <code>slm</code>, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una <em>companion computer</em> como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).</p>
-<p><img src="anexos/a9-alternativa-con-lewm.jpg"/></p>
+<p><img src="anexos/a9-alternativa-con-lewm.png"/></p>
 <p><strong>Alcance y convención de rigor.</strong> Nada de lo aquí descrito está implementado ni medido en el sistema evaluado en el capítulo 11. Las cifras se rotulan según su origen:</p>
 <ul>
 <li><strong>[P]</strong> — reportada por el paper de LeWM u otra fuente citada.</li>

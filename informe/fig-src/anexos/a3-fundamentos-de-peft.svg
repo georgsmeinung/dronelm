@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- A3.1: ajuste fino completo frente a LoRA -->
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .panel { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD5E0; stroke-width: 1.4; }
+    .card-acc { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-blue { fill: #E6F2FF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-green { fill: #EAF7EF; stroke: #259E5F; stroke-width: 1.8; }
+    .card-warn { fill: #FFF7E6; stroke: #D97706; stroke-width: 1.8; }
+    .card-red { fill: #FDECEC; stroke: #DC2626; stroke-width: 1.8; }
+    .card-gray { fill: #F1F3F5; stroke: #A0AEC0; stroke-width: 1.4; stroke-dasharray: 6 4; }
+    .head { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #0066CC; }
+    .head-ink { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #2D3748; }
+    .title { font-size: 22px; font-weight: 800; fill: #1A202C; }
+    .ttl { font-size: 15px; font-weight: 700; fill: #1A202C; }
+    .txt { font-size: 13px; fill: #4A5568; }
+    .txt-b { font-size: 13px; font-weight: 700; fill: #2D3748; }
+    .small { font-size: 11.5px; fill: #718096; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .mono-s { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #4A5568; }
+    .math { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 17px; fill: #1A202C; }
+    .math-s { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 14px; fill: #1A202C; }
+    .acc { fill: #0066CC; } .safe { fill: #259E5F; } .warn { fill: #B45309; } .crit { fill: #DC2626; }
+    .ln { stroke: #4A5568; stroke-width: 1.8; fill: none; }
+    .ln-acc { stroke: #0066CC; stroke-width: 1.8; fill: none; }
+    .ln-dash { stroke: #718096; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .grid { stroke: #2D3748; stroke-width: 1.2; fill: none; }
+    .badge { fill: #0066CC; } .badge-t { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" /></marker>
+    <marker id="aa" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="av" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="ag" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#718096" /></marker>
+    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#DC2626" /></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="600" />
+  <text class="head" x="24" y="36" text-anchor="start" >AJUSTE FINO COMPLETO FRENTE A ADAPTACIÓN DE BAJO RANGO (LoRA)</text>
+  <text class="small" x="24" y="56" text-anchor="start" >Mangrulkar et al., 2022; Hu et al., 2022 · cifras de memoria para un modelo de 3 B, cota superior del VLM de vuelo (1.6 B)</text>
+  <rect class="panel" x="24" y="76" width="1152" height="150" rx="10" />
+  <text class="head-ink" x="44" y="104" text-anchor="start" >AJUSTE FINO COMPLETO (FFT)</text>
+  <rect class="card-red" x="44" y="120" width="560" height="46" rx="8" />
+  <text class="txt-b" x="324" y="149" text-anchor="middle" >gradientes + momentos de AdamW para los 3 B parámetros</text>
+  <text class="ttl" x="44" y="200" text-anchor="start" >Memoria para el estado del optimizador: más de 24 GB de VRAM</text>
+  <text class="txt" x="660" y="149" text-anchor="middle" >frente a</text>
+  <rect class="card" x="716" y="120" width="440" height="46" rx="8" />
+  <text class="txt-b" x="936" y="149" text-anchor="middle" >RTX 5060 de 8 GB, compartida con Unreal Engine</text>
+  <text class="ttl" x="716" y="200" text-anchor="start" >Inviable en la estación de la tesis</text>
+  <text class="ttl crit" x="1156" y="200" text-anchor="end">×</text>
+  <rect class="panel" x="24" y="246" width="520" height="330" rx="10" />
+  <text class="head-ink" x="44" y="274" text-anchor="start" >CAPA LINEAL PREENTRENADA</text>
+  <text class="math" x="70" y="402" text-anchor="start" >x</text>
+  <path class="ln" d="M86 397 L166 397" marker-end="url(#ah)" />
+  <rect class="card-blue" x="170" y="340" width="200" height="114" rx="8" />
+  <text class="math" x="270" y="382" text-anchor="middle" >W<tspan baseline-shift="sub" font-size="72%">0</tspan> ∈ ℝ<tspan baseline-shift="super" font-size="72%">d×k</tspan></text>
+  <text class="txt" x="270" y="410" text-anchor="middle" >congelada</text>
+  <path class="ln" d="M372 397 L450 397" marker-end="url(#ah)" />
+  <text class="math" x="460" y="402" text-anchor="start" >h</text>
+  <text class="math" x="284" y="520" text-anchor="middle" >h = W<tspan baseline-shift="sub" font-size="72%">0</tspan> x</text>
+  <rect class="panel" x="564" y="246" width="612" height="330" rx="10" />
+  <text class="head-ink" x="584" y="274" text-anchor="start" >LoRA: SE ENTRENAN SOLO A Y B</text>
+  <text class="math" x="594" y="402" text-anchor="start" >x</text>
+  <path class="ln" d="M610 397 L660 397 L660 345 L690 345" marker-end="url(#ah)" />
+  <path class="ln" d="M660 397 L660 449 L690 449" marker-end="url(#ah)" />
+  <rect class="card-blue" x="694" y="310" width="180" height="70" rx="8" />
+  <text class="math" x="784" y="341" text-anchor="middle" >W<tspan baseline-shift="sub" font-size="72%">0</tspan> ∈ ℝ<tspan baseline-shift="super" font-size="72%">d×k</tspan></text>
+  <text class="txt" x="784" y="364" text-anchor="middle" >congelada</text>
+  <rect class="card-green" x="694" y="414" width="180" height="70" rx="8" />
+  <text class="math" x="784" y="445" text-anchor="middle" >A ∈ ℝ<tspan baseline-shift="super" font-size="72%">r×k</tspan></text>
+  <text class="math-s" x="784" y="468" text-anchor="middle" >A ~ 𝒩(0, σ²)</text>
+  <path class="ln" d="M876 449 L910 449" marker-end="url(#ah)" />
+  <rect class="card-green" x="914" y="414" width="160" height="70" rx="8" />
+  <text class="math" x="994" y="445" text-anchor="middle" >B ∈ ℝ<tspan baseline-shift="super" font-size="72%">d×r</tspan></text>
+  <text class="txt" x="994" y="468" text-anchor="middle" >B = 0 al inicio</text>
+  <circle cx="1110" cy="397" r="16" fill="#FFFFFF" stroke="#4A5568" stroke-width="1.8" />
+  <text class="ttl" x="1110" y="403" text-anchor="middle" >+</text>
+  <path class="ln" d="M876 345 L1110 345 L1110 378" marker-end="url(#ah)" />
+  <path class="ln" d="M1076 449 L1110 449 L1110 416" marker-end="url(#ah)" />
+  <text class="math" x="1150" y="403" text-anchor="start" >h</text>
+  <text class="math" x="870" y="526" text-anchor="middle" >h = W<tspan baseline-shift="sub" font-size="72%">0</tspan> x + (α / r) · B A x,   r ≪ min(d, k)</text>
+  <text class="small" x="870" y="554" text-anchor="middle" >se entrena ~0.15–0.30 % de los parámetros; tras fusionar ΔW en W<tspan baseline-shift="sub" font-size="72%">0</tspan> no hay costo extra en inferencia</text>
+</svg>

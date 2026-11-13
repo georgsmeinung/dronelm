@@ -1,0 +1,307 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- A5.3: derotacion del flujo optico -->
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .panel { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD5E0; stroke-width: 1.4; }
+    .card-acc { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-blue { fill: #E6F2FF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-green { fill: #EAF7EF; stroke: #259E5F; stroke-width: 1.8; }
+    .card-warn { fill: #FFF7E6; stroke: #D97706; stroke-width: 1.8; }
+    .card-red { fill: #FDECEC; stroke: #DC2626; stroke-width: 1.8; }
+    .card-gray { fill: #F1F3F5; stroke: #A0AEC0; stroke-width: 1.4; stroke-dasharray: 6 4; }
+    .head { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #0066CC; }
+    .head-ink { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #2D3748; }
+    .title { font-size: 22px; font-weight: 800; fill: #1A202C; }
+    .ttl { font-size: 15px; font-weight: 700; fill: #1A202C; }
+    .txt { font-size: 13px; fill: #4A5568; }
+    .txt-b { font-size: 13px; font-weight: 700; fill: #2D3748; }
+    .small { font-size: 11.5px; fill: #718096; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .mono-s { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #4A5568; }
+    .math { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 17px; fill: #1A202C; }
+    .math-s { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 14px; fill: #1A202C; }
+    .acc { fill: #0066CC; } .safe { fill: #259E5F; } .warn { fill: #B45309; } .crit { fill: #DC2626; }
+    .ln { stroke: #4A5568; stroke-width: 1.8; fill: none; }
+    .ln-acc { stroke: #0066CC; stroke-width: 1.8; fill: none; }
+    .ln-dash { stroke: #718096; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .grid { stroke: #2D3748; stroke-width: 1.2; fill: none; }
+    .badge { fill: #0066CC; } .badge-t { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" /></marker>
+    <marker id="aa" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="av" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="ag" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#718096" /></marker>
+    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#DC2626" /></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="600" />
+  <text class="head" x="24" y="36" text-anchor="start" >DEROTACIÓN: RESTAR EL FLUJO QUE PRODUCE LA ROTACIÓN PROPIA DEL DRON</text>
+  <text class="small" x="24" y="56" text-anchor="start" >Anexo 5, IT.A5.3 · x = u − c<tspan baseline-shift="sub" font-size="72%">x</tspan>, y = v − c<tspan baseline-shift="sub" font-size="72%">y</tspan>; Δθ de la telemetría entre fotogramas (Δt real); flow_ttc.py, _derotate()</text>
+  <rect class="panel" x="24" y="76" width="1152" height="130" rx="10" />
+  <text class="math" x="600" y="120" text-anchor="middle" >u<tspan baseline-shift="sub" font-size="72%">rot</tspan>(x, y) = (x y / f<tspan baseline-shift="sub" font-size="72%">x</tspan>) Δθ<tspan baseline-shift="sub" font-size="72%">x</tspan> − (f<tspan baseline-shift="sub" font-size="72%">x</tspan> + x² / f<tspan baseline-shift="sub" font-size="72%">x</tspan>) Δθ<tspan baseline-shift="sub" font-size="72%">y</tspan> + y Δθ<tspan baseline-shift="sub" font-size="72%">z</tspan></text>
+  <text class="math" x="600" y="158" text-anchor="middle" >v<tspan baseline-shift="sub" font-size="72%">rot</tspan>(x, y) = (f<tspan baseline-shift="sub" font-size="72%">y</tspan> + y² / f<tspan baseline-shift="sub" font-size="72%">y</tspan>) Δθ<tspan baseline-shift="sub" font-size="72%">x</tspan> − (x y / f<tspan baseline-shift="sub" font-size="72%">y</tspan>) Δθ<tspan baseline-shift="sub" font-size="72%">y</tspan> − x Δθ<tspan baseline-shift="sub" font-size="72%">z</tspan></text>
+  <text class="small" x="600" y="190" text-anchor="middle" >Δθ<tspan baseline-shift="sub" font-size="72%">x</tspan>: cabeceo · Δθ<tspan baseline-shift="sub" font-size="72%">y</tspan>: guiñada · Δθ<tspan baseline-shift="sub" font-size="72%">z</tspan>: alabeo</text>
+  <rect class="card" x="64" y="250" width="292" height="230" rx="4" />
+  <line x1="92.2" y1="269.8" x2="68.3" y2="255.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="293.6" x2="68.3" y2="283.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="317.4" x2="68.3" y2="310.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="341.2" x2="68.3" y2="337.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="365.0" x2="68.3" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="388.8" x2="68.3" y2="392.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="412.6" x2="68.3" y2="419.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="436.4" x2="68.3" y2="446.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="92.2" y1="460.2" x2="68.3" y2="474.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="269.6" x2="102.6" y2="256.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="293.5" x2="102.6" y2="283.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="317.3" x2="102.6" y2="310.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="341.2" x2="102.6" y2="337.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="365.0" x2="102.6" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="388.8" x2="102.6" y2="392.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="412.7" x2="102.6" y2="419.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="436.5" x2="102.6" y2="446.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="122.7" y1="460.4" x2="102.6" y2="474.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="269.4" x2="136.9" y2="256.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="293.3" x2="136.9" y2="283.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="317.2" x2="136.9" y2="310.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="341.1" x2="136.9" y2="337.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="365.0" x2="136.9" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="388.9" x2="136.9" y2="392.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="412.8" x2="136.9" y2="419.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="436.7" x2="136.9" y2="446.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="153.4" y1="460.6" x2="136.9" y2="473.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="269.2" x2="171.0" y2="256.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="293.2" x2="171.0" y2="283.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="317.1" x2="171.0" y2="310.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="341.1" x2="171.0" y2="337.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="365.0" x2="171.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="388.9" x2="171.0" y2="392.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="412.9" x2="171.0" y2="419.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="436.8" x2="171.0" y2="446.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="184.1" y1="460.8" x2="171.0" y2="473.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="269.0" x2="205.1" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="293.0" x2="205.1" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="317.0" x2="205.1" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="341.0" x2="205.1" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="365.0" x2="205.1" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="389.0" x2="205.1" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="413.0" x2="205.1" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="437.0" x2="205.1" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="214.9" y1="461.0" x2="205.1" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="268.8" x2="239.0" y2="256.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="292.8" x2="239.0" y2="283.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="316.9" x2="239.0" y2="310.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="340.9" x2="239.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="365.0" x2="239.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="389.1" x2="239.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="413.1" x2="239.0" y2="419.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="437.2" x2="239.0" y2="446.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="245.9" y1="461.2" x2="239.0" y2="473.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="268.6" x2="272.9" y2="257.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="292.7" x2="272.9" y2="284.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="316.8" x2="272.9" y2="311.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="340.9" x2="272.9" y2="338.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="365.0" x2="272.9" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="389.1" x2="272.9" y2="392.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="413.2" x2="272.9" y2="419.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="437.3" x2="272.9" y2="446.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="276.9" y1="461.4" x2="272.9" y2="473.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="268.4" x2="306.6" y2="257.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="292.5" x2="306.6" y2="284.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="316.7" x2="306.6" y2="311.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="340.8" x2="306.6" y2="338.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="365.0" x2="306.6" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="389.2" x2="306.6" y2="392.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="413.3" x2="306.6" y2="418.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="437.5" x2="306.6" y2="445.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="308.0" y1="461.6" x2="306.6" y2="472.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="268.2" x2="340.3" y2="257.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="292.4" x2="340.3" y2="284.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="316.6" x2="340.3" y2="311.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="340.8" x2="340.3" y2="338.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="389.2" x2="340.3" y2="391.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="413.4" x2="340.3" y2="418.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="437.6" x2="340.3" y2="445.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="339.3" y1="461.8" x2="340.3" y2="472.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <text class="ttl" x="210" y="238" text-anchor="middle" >flujo medido (u<tspan baseline-shift="sub" font-size="72%">raw</tspan>, v<tspan baseline-shift="sub" font-size="72%">raw</tspan>)</text>
+  <rect class="card" x="454" y="250" width="292" height="230" rx="4" />
+  <line x1="476.0" y1="263.6" x2="464.5" y2="262.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="288.9" x2="464.5" y2="287.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="314.3" x2="464.5" y2="313.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="339.6" x2="464.5" y2="339.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="365.0" x2="464.5" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="390.4" x2="464.5" y2="390.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="415.7" x2="464.5" y2="416.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="441.1" x2="464.5" y2="442.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="476.0" y1="466.4" x2="464.5" y2="468.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="263.4" x2="497.3" y2="262.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="288.8" x2="497.3" y2="287.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="314.2" x2="497.3" y2="313.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="339.6" x2="497.3" y2="339.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="365.0" x2="497.3" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="390.4" x2="497.3" y2="390.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="415.8" x2="497.3" y2="416.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="441.2" x2="497.3" y2="442.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="508.0" y1="466.6" x2="497.3" y2="467.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="263.2" x2="530.0" y2="262.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="288.6" x2="530.0" y2="288.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="314.1" x2="530.0" y2="313.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="339.5" x2="530.0" y2="339.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="365.0" x2="530.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="390.5" x2="530.0" y2="390.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="415.9" x2="530.0" y2="416.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="441.4" x2="530.0" y2="442.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="540.2" y1="466.8" x2="530.0" y2="467.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="263.0" x2="562.6" y2="262.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="288.5" x2="562.6" y2="288.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="314.0" x2="562.6" y2="313.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="339.5" x2="562.6" y2="339.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="365.0" x2="562.6" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="390.5" x2="562.6" y2="390.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="416.0" x2="562.6" y2="416.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="441.5" x2="562.6" y2="441.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="572.5" y1="467.0" x2="562.6" y2="467.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="262.8" x2="595.1" y2="262.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="288.3" x2="595.1" y2="288.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="313.9" x2="595.1" y2="313.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="339.4" x2="595.1" y2="339.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="365.0" x2="595.1" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="390.6" x2="595.1" y2="390.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="416.1" x2="595.1" y2="416.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="441.7" x2="595.1" y2="441.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="604.9" y1="467.2" x2="595.1" y2="467.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="262.6" x2="627.5" y2="263.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="288.2" x2="627.5" y2="288.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="313.8" x2="627.5" y2="314.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="339.4" x2="627.5" y2="339.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="365.0" x2="627.5" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="390.6" x2="627.5" y2="390.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="416.2" x2="627.5" y2="416.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="441.8" x2="627.5" y2="441.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="637.4" y1="467.4" x2="627.5" y2="467.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="262.4" x2="659.8" y2="263.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="288.0" x2="659.8" y2="288.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="313.7" x2="659.8" y2="314.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="339.3" x2="659.8" y2="339.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="365.0" x2="659.8" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="390.7" x2="659.8" y2="390.5" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="416.3" x2="659.8" y2="415.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="442.0" x2="659.8" y2="441.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="670.0" y1="467.6" x2="659.8" y2="466.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="262.2" x2="692.0" y2="263.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="287.9" x2="692.0" y2="288.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="313.6" x2="692.0" y2="314.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="339.3" x2="692.0" y2="339.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="365.0" x2="692.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="390.7" x2="692.0" y2="390.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="416.4" x2="692.0" y2="415.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="442.1" x2="692.0" y2="441.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="702.7" y1="467.8" x2="692.0" y2="466.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="262.0" x2="724.0" y2="263.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="287.7" x2="724.0" y2="288.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="313.5" x2="724.0" y2="314.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="339.2" x2="724.0" y2="339.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="365.0" x2="724.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="390.8" x2="724.0" y2="390.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="416.5" x2="724.0" y2="415.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="442.3" x2="724.0" y2="441.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="735.5" y1="468.0" x2="724.0" y2="466.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <text class="ttl" x="600" y="238" text-anchor="middle" >campo rotacional (u<tspan baseline-shift="sub" font-size="72%">rot</tspan>, v<tspan baseline-shift="sub" font-size="72%">rot</tspan>)</text>
+  <rect class="card" x="844" y="250" width="292" height="230" rx="4" />
+  <line x1="866.4" y1="269.0" x2="854.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="293.0" x2="854.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="317.0" x2="854.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="341.0" x2="854.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="365.0" x2="854.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="389.0" x2="854.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="413.0" x2="854.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="437.0" x2="854.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="866.4" y1="461.0" x2="854.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="269.0" x2="888.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="293.0" x2="888.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="317.0" x2="888.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="341.0" x2="888.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="365.0" x2="888.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="389.0" x2="888.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="413.0" x2="888.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="437.0" x2="888.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="897.3" y1="461.0" x2="888.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="269.0" x2="922.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="293.0" x2="922.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="317.0" x2="922.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="341.0" x2="922.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="365.0" x2="922.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="389.0" x2="922.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="413.0" x2="922.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="437.0" x2="922.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="928.2" y1="461.0" x2="922.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="269.0" x2="956.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="293.0" x2="956.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="317.0" x2="956.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="341.0" x2="956.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="365.0" x2="956.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="389.0" x2="956.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="413.0" x2="956.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="437.0" x2="956.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="959.1" y1="461.0" x2="956.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="269.0" x2="990.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="293.0" x2="990.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="317.0" x2="990.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="341.0" x2="990.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="389.0" x2="990.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="413.0" x2="990.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="437.0" x2="990.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="990.0" y1="461.0" x2="990.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="269.0" x2="1024.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="293.0" x2="1024.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="317.0" x2="1024.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="341.0" x2="1024.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="365.0" x2="1024.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="389.0" x2="1024.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="413.0" x2="1024.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="437.0" x2="1024.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1020.9" y1="461.0" x2="1024.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="269.0" x2="1058.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="293.0" x2="1058.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="317.0" x2="1058.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="341.0" x2="1058.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="365.0" x2="1058.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="389.0" x2="1058.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="413.0" x2="1058.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="437.0" x2="1058.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1051.8" y1="461.0" x2="1058.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="269.0" x2="1092.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="293.0" x2="1092.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="317.0" x2="1092.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="341.0" x2="1092.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="365.0" x2="1092.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="389.0" x2="1092.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="413.0" x2="1092.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="437.0" x2="1092.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1082.7" y1="461.0" x2="1092.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="269.0" x2="1126.0" y2="256.6" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="293.0" x2="1126.0" y2="283.7" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="317.0" x2="1126.0" y2="310.8" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="341.0" x2="1126.0" y2="337.9" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="365.0" x2="1126.0" y2="365.0" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="389.0" x2="1126.0" y2="392.1" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="413.0" x2="1126.0" y2="419.2" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="437.0" x2="1126.0" y2="446.3" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <line x1="1113.6" y1="461.0" x2="1126.0" y2="473.4" stroke="#0066CC" stroke-width="1.4" marker-end="url(#av)" />
+  <text class="ttl" x="990" y="238" text-anchor="middle" >campo traslacional (u<tspan baseline-shift="sub" font-size="72%">trans</tspan>, v<tspan baseline-shift="sub" font-size="72%">trans</tspan>)</text>
+  <text class="title" x="410" y="372" text-anchor="middle" >−</text>
+  <text class="title" x="800" y="372" text-anchor="middle" >=</text>
+  <circle cx="990" cy="365" r="4" fill="#DC2626" />
+  <text class="small" x="998" y="360" text-anchor="start" >FOE</text>
+  <text class="math" x="470" y="516" text-anchor="middle" >u<tspan baseline-shift="sub" font-size="72%">trans</tspan> = u<tspan baseline-shift="sub" font-size="72%">raw</tspan> − u<tspan baseline-shift="sub" font-size="72%">rot</tspan></text>
+  <text class="math" x="730" y="516" text-anchor="middle" >v<tspan baseline-shift="sub" font-size="72%">trans</tspan> = v<tspan baseline-shift="sub" font-size="72%">raw</tspan> − v<tspan baseline-shift="sub" font-size="72%">rot</tspan></text>
+  <text class="txt" x="600" y="552" text-anchor="middle" >Ejemplo: avance con guiñada a la derecha. Tras restar la rotación queda la expansión radial desde el FOE.</text>
+  <text class="small" x="600" y="576" text-anchor="middle" >Con más de 2° de rotación entre fotogramas (FLOW_MAX_ROTATION_DEG) no se estima: se sostiene el campo anterior o sale degradado.</text>
+</svg>

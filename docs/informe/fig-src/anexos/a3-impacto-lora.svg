@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- A3.2: el VLM hoy y con un adaptador LoRA (trabajo futuro) -->
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .panel { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD5E0; stroke-width: 1.4; }
+    .card-acc { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-blue { fill: #E6F2FF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-green { fill: #EAF7EF; stroke: #259E5F; stroke-width: 1.8; }
+    .card-warn { fill: #FFF7E6; stroke: #D97706; stroke-width: 1.8; }
+    .card-red { fill: #FDECEC; stroke: #DC2626; stroke-width: 1.8; }
+    .card-gray { fill: #F1F3F5; stroke: #A0AEC0; stroke-width: 1.4; stroke-dasharray: 6 4; }
+    .head { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #0066CC; }
+    .head-ink { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #2D3748; }
+    .title { font-size: 22px; font-weight: 800; fill: #1A202C; }
+    .ttl { font-size: 15px; font-weight: 700; fill: #1A202C; }
+    .txt { font-size: 13px; fill: #4A5568; }
+    .txt-b { font-size: 13px; font-weight: 700; fill: #2D3748; }
+    .small { font-size: 11.5px; fill: #718096; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .mono-s { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #4A5568; }
+    .math { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 17px; fill: #1A202C; }
+    .math-s { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 14px; fill: #1A202C; }
+    .acc { fill: #0066CC; } .safe { fill: #259E5F; } .warn { fill: #B45309; } .crit { fill: #DC2626; }
+    .ln { stroke: #4A5568; stroke-width: 1.8; fill: none; }
+    .ln-acc { stroke: #0066CC; stroke-width: 1.8; fill: none; }
+    .ln-dash { stroke: #718096; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .grid { stroke: #2D3748; stroke-width: 1.2; fill: none; }
+    .badge { fill: #0066CC; } .badge-t { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" /></marker>
+    <marker id="aa" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="av" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="ag" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#718096" /></marker>
+    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#DC2626" /></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="640" />
+  <text class="head" x="24" y="36" text-anchor="start" >QUÉ CAMBIARÍA UN ADAPTADOR LoRA EN LA CONSULTA AL VLM</text>
+  <text class="small" x="24" y="56" text-anchor="start" >Anexo 3 · trabajo futuro (IT.12.4): nada de la columna derecha está implementado ni medido</text>
+  <rect class="panel" x="24" y="76" width="564" height="526" rx="10" />
+  <text class="head-ink" x="44" y="104" text-anchor="start" >HOY: ZERO-SHOT + json_schema</text>
+  <text class="small" x="44" y="124" text-anchor="start" >medido en el banco a bordo (IT.11.0)</text>
+  <rect class="panel" x="612" y="76" width="564" height="526" rx="10" />
+  <text class="head-ink" x="632" y="104" text-anchor="start" >PROPUESTA: ADAPTADOR LoRA</text>
+  <text class="small" x="632" y="124" text-anchor="start" >objetivo a verificar con el mismo banco</text>
+  <rect class="card" x="44" y="140" width="524" height="92" rx="8" />
+  <text class="ttl" x="58" y="164" text-anchor="start" >Entrada</text>
+  <text class="txt" x="58" y="186" text-anchor="start" >fotograma frontal recortado (384 px) con la grilla 3×3 y la marca GOAL</text>
+  <text class="txt" x="58" y="204" text-anchor="start" >+ «Goal WP_3: 42 m, in cell C2. Altitude 10 m.»</text>
+  <path class="ln" d="M306 234 L306 254" marker-end="url(#ah)" />
+  <rect class="card-blue" x="44" y="256" width="524" height="92" rx="8" />
+  <text class="ttl" x="58" y="280" text-anchor="start" >LFM2.5-VL-1.6B Q4_K_M · pesos genéricos congelados</text>
+  <text class="txt" x="58" y="302" text-anchor="start" >decodificación restringida: la salida cumple el esquema</text>
+  <text class="txt" x="58" y="320" text-anchor="start" >{"cells": {"A1": "free" | "blocked", …, "C3": …}}</text>
+  <path class="ln" d="M306 350 L306 370" marker-end="url(#ah)" />
+  <rect class="card-red" x="44" y="372" width="524" height="210" rx="8" />
+  <text class="ttl" x="58" y="396" text-anchor="start" >Resultado medido</text>
+  <text class="txt" x="58" y="418" text-anchor="start" >exactitud balanceada 53 % [50–55 %], AUC 0.53: no separa</text>
+  <text class="txt" x="58" y="436" text-anchor="start" >sectores libres de bloqueados</text>
+  <text class="txt" x="58" y="454" text-anchor="start" >responde según la posición del sector en la imagen:</text>
+  <text class="txt" x="58" y="472" text-anchor="start" >filas 1 y 3 «libre» en el 100 % de las muestras</text>
+  <text class="txt" x="58" y="490" text-anchor="start" >latencia: 0.34–0.88 s por pregunta (0.88 s la grilla)</text>
+  <text class="txt" x="58" y="508" text-anchor="start" >→ la pregunta del lazo lento la responde la profundidad</text>
+  <text class="txt" x="58" y="526" text-anchor="start" >    estimada; el VLM no vuela</text>
+  <rect class="card" x="632" y="140" width="524" height="92" rx="8" />
+  <text class="ttl" x="646" y="164" text-anchor="start" >Datos de entrenamiento</text>
+  <text class="txt" x="646" y="186" text-anchor="start" >fotogramas que registra la capa estratégica (&gt; 7500 consultas en la v4),</text>
+  <text class="txt" x="646" y="204" text-anchor="start" >etiquetados offline con la profundidad del simulador (p5 por sector)</text>
+  <path class="ln" d="M894 234 L894 254" marker-end="url(#ah)" />
+  <rect class="card-green" x="632" y="256" width="524" height="92" rx="8" />
+  <text class="ttl" x="646" y="280" text-anchor="start" >Mismo modelo + adaptador LoRA</text>
+  <text class="txt" x="646" y="302" text-anchor="start" >matrices de atención (W<tspan baseline-shift="sub" font-size="72%">q</tspan>, W<tspan baseline-shift="sub" font-size="72%">v</tspan>) y proyecciones MLP del LLM;</text>
+  <text class="txt" x="646" y="320" text-anchor="start" >el codificador visual (ViT) queda congelado</text>
+  <path class="ln" d="M894 350 L894 370" marker-end="url(#ah)" />
+  <rect class="card-warn" x="632" y="372" width="524" height="210" rx="8" />
+  <text class="ttl" x="646" y="396" text-anchor="start" >Qué habría que demostrar</text>
+  <text class="txt" x="646" y="418" text-anchor="start" >misma salida y mismo esquema: free / blocked por sector</text>
+  <text class="txt" x="646" y="436" text-anchor="start" >pasar el criterio del banco: exactitud balanceada ≥ 0.65</text>
+  <text class="txt" x="646" y="454" text-anchor="start" >y límite inferior del IC 95 % por encima del azar</text>
+  <text class="txt" x="646" y="472" text-anchor="start" >en un entorno que el adaptador no vio al entrenar</text>
+  <text class="txt" x="646" y="490" text-anchor="start" >prompt más corto (las reglas quedan en los pesos):</text>
+  <text class="txt" x="646" y="508" text-anchor="start" >menos tokens de entrada; la ganancia de latencia</text>
+  <text class="txt" x="646" y="526" text-anchor="start" >es una hipótesis, no una medición</text>
+  <text class="small" x="600" y="628" text-anchor="middle" >La profundidad del simulador solo etiqueta los datos de entrenamiento; nunca entra al lazo de vuelo.</text>
+</svg>

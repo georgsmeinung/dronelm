@@ -2,7 +2,7 @@
 
 Este anexo analiza, como línea de trabajo futuro (IT.12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, `lfm2.5-vl-1.6b:q4km-ctx8k`, cap. 8) por un **modelo de mundo latente** del tipo *Joint-Embedding Predictive Architecture* (JEPA), tomando como caso de estudio **LeWorldModel** (LeWM; [Maes et al., 2026](../13-REFERENCIAS.md#ref-maes-2026)). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo `slm`, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una *companion computer* como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).
 
-<img src="a9-alternativa-con-lewm.jpg"/>
+<img src="a9-alternativa-con-lewm.png"/>
 
 **Alcance y convención de rigor.** Nada de lo aquí descrito está implementado ni medido en el sistema evaluado en el capítulo 11. Las cifras se rotulan según su origen:
 

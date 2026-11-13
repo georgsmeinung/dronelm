@@ -21,17 +21,17 @@ Cuando se solicita una salida JSON únicamente mediante instrucciones en el *sys
 1. **Preámbulos y epílogos conversacionales:** emisión de frases introductorias (*«Sure, here is the drone decision:»*) o explicaciones finales que rompen `json.loads()`.
 2. **Encapsulamiento en Markdown irregular:** uso intermitente de triples comillas invertidas (```` ```json ... ``` ````), a menudo con saltos de línea mal posicionados.
 3. **Malformación sintáctica:** comas terminales huérfanas (*trailing commas*), omisión de llaves de cierre `}` por corte de contexto o escape defectuoso de caracteres en cadenas.
-4. **Alucinación de macro-acciones fuera de lista blanca:** emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., `"girar_rapido"`, `"subir_diagonal"`, `"stop"` en lugar de `keep_going`, `evasive`, `girar_90`, `fsm`, `degraded`).
+4. **Alucinación de macro-acciones fuera de lista blanca:** emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., `"GIRAR_RAPIDO"`, `"SUBIR_DIAGONAL"`, `"stop"` en lugar de las ocho de `VALID_ACTIONS`: `MANTENER_RUMBO`, `EVADIR_IZQUIERDA`, `EVADIR_DERECHA`, `GANAR_ALTURA`, `PERDER_ALTURA`, `FRENAR`, `GIRAR_90`, `RETROCEDER`; IT.8.3.4).
 5. **Latencia descontrolada por verbosidad:** generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido, cap. 8, IT.8.6) y forzando la caída al escape de respaldo.
 
 ```
 Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
 "Based on the camera feed showing an obstacle ahead, the drone should initiate an evasive 
- maneuver to the right corridor. Action: evasive_right, reason: obstacle in front."
+ maneuver to the right corridor. Action: evade_right, reason: obstacle in front."
  ❌ Falla sintáctica: no es JSON parseable, rompe action_to_command(), timeout > 1.5 s.
 
 Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
-{"action":"evasive","reason":"bloqueo centro"}
+{"action":"EVADIR_DERECHA","reason":"bloqueo centro"}
  ✔ Estructura exacta, enum validado por gramática, latencia mínima, 100% parseable.
 ```
 
@@ -41,7 +41,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 
 La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (*logits*) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible ([Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023); [Ugare et al., 2024](../13-REFERENCIAS.md#ref-ugare-2024); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)).
 
-<img src="a4-decodificacion-restringida.jpg"/>
+<img src="a4-decodificacion-restringida.png"/>
 
 ### A4.2.1 Formulación del enmascaramiento de logits
 Sea $z_t \in \mathbb{R}^{|V|}$ el vector de *logits* no normalizados producido por la última capa lineal del transformer en el paso $t$. Sea $s_t \in \mathcal{S}$ el estado actual del analizador sintáctico o autómata formal.
@@ -107,7 +107,7 @@ El motor **XGrammar** ([Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)) 
 Durante la inferencia en tiempo real, XGrammar ejecuta el filtrado de máscaras en paralelo con el cómputo de la GPU o durante la fase de pre-llenado (*pre-fill*), reduciendo la sobrecarga de CPU a **menos de 0.05 ms por token** (prácticamente nula).
 
 ### A4.3.4 Decodificación especulativa basada en gramáticas
-En sistemas avanzados, las restricciones gramaticales se combinan con **decodificación especulativa** ([Leviathan et al., 2023](../13-REFERENCIAS.md#ref-leviathan-2023); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo `action`, solo 5 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de $2\times$ a $3\times$.
+En sistemas avanzados, las restricciones gramaticales se combinan con **decodificación especulativa** ([Leviathan et al., 2023](../13-REFERENCIAS.md#ref-leviathan-2023); [Dong et al., 2024](../13-REFERENCIAS.md#ref-dong-2024)). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo `action`, solo 8 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de $2\times$ a $3\times$.
 
 ---
 
@@ -118,28 +118,28 @@ En sistemas avanzados, las restricciones gramaticales se combinan con **decodifi
 La interacción entre el modelo de lenguaje y el grafo de control táctico (`src/agents/graph.py`) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una **arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo**.
 
 ### A4.4.1 Invariantes del lazo táctico garantizados por la gramática
-En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los comportamientos de la capa de decisión (`reactive_node`, `evasive_node`, el giro de 90° y el barrido) convergen en una interfaz estricta gobernada por `action_to_command()` (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:
+En el grafo de control de DroneLM, el ciclo de LangGraph (`capture` → `perception` → `navigate` → `motor`) se ejecuta a 5 Hz. Los comportamientos de la capa de decisión (el guiado de `reactive_node`, `evasive_node`, el giro de 90°, el barrido y la FSM) convergen en una interfaz estricta gobernada por `action_to_command()` (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:
 
-<img src="a4-invariante-lazo-tactico.jpg"/>
+<img src="a4-invariante-lazo-tactico.png"/>
 
 Al imponer decodificación restringida en la consulta al VLM, se garantizan tres invariantes operativas fundamentales:
 1. **Ausencia total de fallas de parseo en el lazo:** se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un **98%–100%**, como se verifica empíricamente en el informe (IT.8.2, IT.11).
 2. **Determinismo en el espacio de acción:** el campo `action` se constriñe a la enumeración canónica:
-   $$\text{action} \in \{\text{"keep\_going"}, \text{"evasive"}, \text{"girar\_90"}, \text{"fsm"}, \text{"degraded"}\}$$
+   $$\text{action} \in \texttt{VALID\_ACTIONS} = \{\text{MANTENER\_RUMBO}, \text{EVADIR\_IZQUIERDA}, \text{EVADIR\_DERECHA}, \text{GANAR\_ALTURA}, \text{PERDER\_ALTURA}, \text{FRENAR}, \text{GIRAR\_90}, \text{RETROCEDER}\}$$
    Esto asegura que `action_to_command()` siempre recibe un identificador registrado, eliminando ramas de ejecución indefinidas en los actuadores del dron.
 3. **Control estricto de la longitud del campo de justificación:** al restringir la longitud máxima de la cadena `reason` mediante reglas gramaticales (e.g., `maxLength: 120` o regex `[a-zA-Z0-9 _-]{1,100}`), se impide que el modelo expanda su generación más allá de los tokens estrictamente necesarios para auditoría y telemetría.
 
 ### A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo
 Una de las innovaciones de mayor impacto para optimizar el lazo deliberativo consiste en la **parametrización dinámica de la gramática en función del estado de vuelo actual**.
 
-En lugar de emplear un esquema JSON estático para todas las consultas, la consulta al VLM selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (`reason_note`, IT.8.5):
+En lugar de emplear un esquema JSON estático para todas las consultas, el decisor ilustrativo selecciona en tiempo de ejecución una gramática especializada según el motivo de la consulta (`reason_note`, un campo del decisor ilustrativo que el sistema no tiene), derivado del estado del grafo:
 
-| Motivo de Consulta (`reason_note`) | Condición de Activación en Grafo | Gramática / Restricción Dinámica del Enum `action` | Racionalidad Operativa y Beneficio |
+| Motivo de consulta (`reason_note`) | Condición de activación en el grafo | Restricción dinámica del enum `action` | Racionalidad operativa y beneficio |
 |---|---|---|---|
-| `"TTC_CRITICO"` | $\text{TTC} \le 3.2\text{ s}$ en sector central | `enum: ["evasive", "girar_90"]` | **Poda de acciones pasivas:** se prohíbe sintácticamente que el SLM elija `keep_going` o `fsm` ante una colisión inminente. El espacio de búsqueda colapsa a solo 2 tokens de decisión. |
-| `"DEADLOCK_ESCAPE"` | `evasion_stuck_cycles >= threshold` (atasco cinemático prolongado) | `enum: ["girar_90", "fsm", "degraded"]` | **Ruptura forzada de bucles:** el dron lleva múltiples ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente (`evasive`) o insistir de frente (`keep_going`). |
-| `"FALTA_EVIDENCIA"` | Pérdida de textura o colapso de flujo óptico en hover | `enum: ["keep_going", "girar_90"]` | **Preservación de movimiento:** se impide al modelo frenar (`degraded`), forzándolo a generar traslación o rotación para reactivar el campo de divergencia visual. |
-| `"STANDARD_DELIB"` | Desempate táctico en corredores urbanos | `enum: ["keep_going", "evasive", "girar_90", "fsm", "degraded"]` | **Espacio completo:** evaluación deliberativa estándar con ponderación semántica. |
+| `"TTC_CRITICO"` | $\text{TTC} \le 3.2\text{ s}$ en el sector central (regla 7 de `navigate`, IT.5.3.2) | `enum: ["EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GANAR_ALTURA", "GIRAR_90"]` | **Poda de acciones pasivas:** se prohíbe sintácticamente que el modelo elija `MANTENER_RUMBO` o `FRENAR` ante una colisión inminente. |
+| `"DEADLOCK_ESCAPE"` | `evasion_stuck_cycles` sobre el umbral (atasco prolongado) | `enum: ["GIRAR_90", "GANAR_ALTURA", "RETROCEDER"]` | **Ruptura forzada de bucles:** el dron lleva varios ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente o insistir de frente. |
+| `"FALTA_EVIDENCIA"` | Flujo sin traslación suficiente (fuente distinta de `flow`) | `enum: ["MANTENER_RUMBO", "GIRAR_90"]` | **Preservación de movimiento:** se impide al modelo frenar (`FRENAR`), forzándolo a generar traslación o rotación para que el flujo vuelva a tener evidencia. |
+| `"STANDARD_DELIB"` | Desempate táctico en corredores urbanos | las ocho de `VALID_ACTIONS` | **Espacio completo:** evaluación estándar. |
 
 **Impacto en la eficiencia del grafo:**
 * **Poda semántica a priori:** la gramática no solo previene errores de formato, sino que previene **decisiones tácticas incompatibles con el estado físico del sistema**.
@@ -162,7 +162,7 @@ Para servidores de inferencia que exponen APIs compatibles con OpenAI/vLLM/LM St
   "properties": {
     "action": {
       "type": "string",
-      "enum": ["keep_going", "evasive", "girar_90", "fsm", "degraded"],
+      "enum": ["MANTENER_RUMBO", "EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GANAR_ALTURA", "PERDER_ALTURA", "FRENAR", "GIRAR_90", "RETROCEDER"],
       "description": "Macro-accion seleccionada para el ciclo actual de control."
     },
     "reason": {
@@ -186,7 +186,8 @@ En entornos basados directamente en `llama.cpp` ([Gerganov, 2023](../13-REFERENC
 
 root ::= "{" ws "\"action\":" ws action-enum "," ws "\"reason\":" ws string-value "}"
 
-action-enum ::= "\"keep_going\"" | "\"evasive\"" | "\"girar_90\"" | "\"fsm\"" | "\"degraded\""
+action-enum ::= "\"MANTENER_RUMBO\"" | "\"EVADIR_IZQUIERDA\"" | "\"EVADIR_DERECHA\"" | "\"GANAR_ALTURA\""
+              | "\"PERDER_ALTURA\"" | "\"FRENAR\"" | "\"GIRAR_90\"" | "\"RETROCEDER\""
 
 # Restricción estricta de la justificación: máximo 80 caracteres alfanuméricos seguros
 string-value ::= "\"" [a-zA-Z0-9 _.,áéíóúÁÉÍÓÚñÑ-]{1,80} "\""
@@ -196,7 +197,7 @@ ws ::= [ \t\n]*
 
 **Ventajas operativas de GBNF:**
 * **Cero sobrecarga de esquemas:** no requiere motores externos de validación JSON; el propio núcleo en C++ de `llama.cpp` filtra los logits directamente en memoria compartida.
-* **Control microscópico de espacios en blanco:** `ws` puede definirse como cadena vacía (`ws ::= ""` sin espacios), obligando al modelo a generar JSON minificado compacto (`{"action":"evasive","reason":"bloqueo_centro"}`), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.
+* **Control microscópico de espacios en blanco:** `ws` puede definirse como cadena vacía (`ws ::= ""` sin espacios), obligando al modelo a generar JSON minificado compacto (`{"action":"EVADIR_DERECHA","reason":"bloqueo_centro"}`), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.
 
 ---
 
@@ -217,20 +218,23 @@ class BaseDroneDecision(BaseModel):
     reason: str = Field(..., max_length=100)
 
 class DroneEmergencyDecision(BaseDroneDecision):
-    action: Literal["evasive", "girar_90"]
+    action: Literal["EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GANAR_ALTURA", "GIRAR_90"]
 
 class DroneDeadlockDecision(BaseDroneDecision):
-    action: Literal["girar_90", "fsm", "degraded"]
+    action: Literal["GIRAR_90", "GANAR_ALTURA", "RETROCEDER"]
+
+class DroneEvidenceDecision(BaseDroneDecision):
+    action: Literal["MANTENER_RUMBO", "GIRAR_90"]
 
 class DroneStandardDecision(BaseDroneDecision):
-    action: Literal["keep_going", "evasive", "girar_90", "fsm", "degraded"]
+    action: Literal["MANTENER_RUMBO", "EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GANAR_ALTURA", "PERDER_ALTURA", "FRENAR", "GIRAR_90", "RETROCEDER"]
 
 def get_decision_schema(reason_note: str) -> dict:
     """Retorna el esquema JSON óptimo condicionado por el estado del grafo."""
     model_map: dict[str, Type[BaseDroneDecision]] = {
         "TTC_CRITICO": DroneEmergencyDecision,
         "DEADLOCK_ESCAPE": DroneDeadlockDecision,
-        "FALTA_EVIDENCIA": DroneStandardDecision,
+        "FALTA_EVIDENCIA": DroneEvidenceDecision,
     }
     target_cls = model_map.get(reason_note, DroneStandardDecision)
     return {
@@ -278,7 +282,7 @@ A pesar de la garantía matemática de la decodificación restringida, las buena
 # ejemplo ilustrativo (decisor de acciones)
 import json, re
 
-def _parse_decision(raw_text: str, default_action: str = "keep_going") -> tuple[str, str, bool]:
+def _parse_decision(raw_text: str, default_action: str = "FRENAR") -> tuple[str, str, bool]:
     """
     Jerarquía de tres niveles para extracción segura de macro-acciones:
     1. Parseo directo con json.loads() (camino nominal con decodificación restringida).

@@ -12,7 +12,7 @@ Este anexo formaliza la matemática subyacente al pipeline de percepción implem
 
 Se modela la cámara monocular frontal del dron mediante la aproximación de cámara oscura o estenopeica (*pin-hole camera model*) con proyección en perspectiva central.
 
-<img src="a5-modelo-geometrico-de-camara.jpg">
+<img src="a5-modelo-geometrico-de-camara.png">
 
 ### A5.1.1 Sistemas de coordenadas y matriz intrínseca
 Sea $P_c = (X_c, Y_c, Z_c)^T \in \mathbb{R}^3$ la posición de un punto del entorno físico en el sistema de coordenadas de la cámara, donde el eje $Z_c$ coincide con el eje óptico apuntando hacia adelante, $X_c$ apunta hacia la derecha del dron e $Y_c$ apunta hacia abajo (convención visual estándar).
@@ -42,7 +42,7 @@ $$\text{FOV}_h = 2 \arctan\left( \frac{W}{2 f_x} \right) \implies f_x = \frac{W}
 
 Para $W = 1080\text{ px}$ y $\text{FOV}_h = 90^\circ$ ($\tan(45^\circ) = 1$), se obtiene $f_x = \frac{1080}{2} = 540\text{ px}$. El estimador de flujo utiliza el valor calibrado $f_x = f_y = 554.0\text{ px}$ (`CAMERA_FX`, `CAMERA_FY`), absorbiendo la leve distorsión radial modelada por el plugin.
 
-Para reducir la latencia de cómputo en CPU/GPU sin alterar la geometría visual, los fotogramas se reescalan a un ancho de procesamiento $W' = 320\text{ px}$ (`FLOW_DOWNSCALE_WIDTH`) con un factor de escala $s = \frac{W'}{W} = \frac{320}{1080} \approx 0.2963$. Las distancias focales y el centro óptico se escalan homólogamente:
+Para acotar la latencia de cómputo sin alterar la geometría visual, los fotogramas se reescalan a un ancho de procesamiento $W' = 640\text{ px}$ (`FLOW_DOWNSCALE_WIDTH` en `config/.env`) con un factor de escala $s = \frac{W'}{W} = \frac{640}{1080} \approx 0.5926$. El valor por defecto del código es 320 px ($s \approx 0.2963$), el ancho con el que se hizo la validación del TTC del capítulo 7; el vuelo usa 640 px porque a 320 px los objetos finos, como las ramas, quedan bajo el piso de ruido (IT.6.3). Las distancias focales y el centro óptico se escalan homólogamente:
 
 $$f_x' = f_x \cdot s, \quad f_y' = f_y \cdot s, \quad c_x' = \frac{W'}{2}, \quad c_y' = \frac{H'}{2}$$
 
@@ -105,7 +105,7 @@ $$u_{\text{trans}}(x, y) = u_{\text{raw}}(x, y) - u_{\text{rot}}(x, y)$$
 
 $$v_{\text{trans}}(x, y) = v_{\text{raw}}(x, y) - v_{\text{rot}}(x, y)$$
 
-<img src="a5-campo-de-velocidad-rotacional.jpg"/>
+<img src="a5-campo-de-velocidad-rotacional.png"/>
 
 ### A5.3.3 Tratamiento de discontinuidades y límite de linealización
 Durante giros bruscos, se presentan dos restricciones de ingeniería:
@@ -223,7 +223,7 @@ sirviendo como canal de auditoría cruzada contra colapsos locales de la estimac
 
 Para permitir que los algoritmos de control táctico (FSM, agentes de evasión y modelo de lenguaje) razonen eficazmente sin procesar decenas de miles de valores por segundo, el mapa de TTC continuo se reduce espacialmente en una estructura discreta y tipada: el **`ObstacleField`** (`airsim-loop/src/perception/obstacle_field.py`).
 
-<img src="a5-agregación-espacial-robusta.jpg"/>
+<img src="a5-agregación-espacial-robusta.png"/>
 
 ### A5.6.1 Estadísticos de agregación por celda
 Para cada celda $C_{s,b}$ (donde $s \in \{\text{izquierda}, \text{centro}, \text{derecha}\}$ y $b \in \{\text{superior}, \text{medio}, \text{inferior}\}$):
@@ -263,10 +263,10 @@ El pipeline permite seleccionar dinámicamente el backend algorítmico mediante 
 |---|---|---|
 | **Principio Algorítmico** | Expansión cuadrática polinómica por ventanas | Búsqueda inversa en parches con refinamiento variacional |
 | **Complejidad Computacional** | Alta ($O(W \cdot H \cdot \text{iter})$) | Baja a Media (acelerada por descenso de gradiente inverso) |
-| **Latencia CPU (320×180 px)** | 35–50 ms | **12–18 ms** |
+| **Latencia CPU orientativa (320×180 px)** | 35–50 ms | **12–18 ms** |
 | **Latencia GPU / Preset** | ~15 ms (CUDA) | **~6–8 ms** (Preset `MEDIUM`) |
 | **Precisión en Bordes Finos** | Suavizado difuso en discontinuidades | **Preservación nítida de contornos** |
 | **Sensibilidad a Ruido en Cielo** | Media-Alta | **Baja** (el piso de ruido de 0.35 px filtra variaciones térmicas) |
 | **Rol en DroneLM** | Fallback de compatibilidad | **Motor de producción primario** |
 
-El motor **DIS (Preset MEDIUM)** permite ejecutar el pipeline de percepción completo (escalado, cálculo de flujo, derotación, FOE, TTC e instanciación de `ObstacleField`) en menos de **25 ms por ciclo** en la CPU del sistema, permitiendo operar con soltura dentro del período nominal del lazo táctico de control a 5 Hz ($200\text{ ms}$).
+Las latencias de la tabla son orientativas para 320×180 px; en vuelo el flujo se calcula a 640×360 px, con cuatro veces más píxeles, y el costo de DIS crece aproximadamente en proporción. El sistema no registra por separado la latencia de la etapa de flujo: lo que se mide es el período del ciclo completo (escalado, flujo, derotación, FOE, TTC e instanciación de `ObstacleField`, más guiado y comando), que se audita contra el período nominal de 0.2 s del lazo a 5 Hz (NB2).

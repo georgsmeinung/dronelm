@@ -21,14 +21,16 @@ mismo nivel de abstracción que ocupa actualmente `evasive_node` + `reactive_nod
 El sistema implementado en esta tesis opera en tres capas de abstracción temporal
 diferenciada:
 
-<img src="a8-tres-capas-control.jpg">
+<img src="a8-tres-capas-control.png">
 
 El brazo `rl` ocupa la **capa táctica**: recibe el frame RGB actual, el `ObstacleField`
 producido por `FlowTTCEstimator` y la telemetría de guiado (`waypoint_guidance`), y
 produce directamente una macro-acción del mismo vocabulario que usan `fsm_node` y
-`evasive_node`. La capa estratégica del VLM sigue activa en modo jerárquico: puede inyectar sub-metas en
-coordenadas del mundo (`inject_corner`) y resolver atascos duros con el barrido `deep_vlm`,
-igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).
+`evasive_node`. La capa estratégica sigue activa en modo jerárquico, con la profundidad
+estimada como fuente (`STRATEGIC_SOURCE=depth`): propone sub-metas en coordenadas del
+mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
+(`DEADLOCK_STRATEGY=depth`) resuelve los atascos duros e inyecta un desvío
+(`inject_corner`), igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).
 
 Esta posición garantiza que la comparación de los cuatro brazos (`reactive`, `fsm`, `slm`,
 `rl`) mida exclusivamente **quién elige mejor la táctica**, no quién tiene mejor lógica de
@@ -82,8 +84,10 @@ real donde la calibración del flujo es incierta.
 
 ## A8.3 Espacio de acciones
 
-Se propone un espacio discreto de seis acciones, alineado con `PROMPT_ACTIONS` del nodo
-deliberativo (IT.8.3, IT.5.14):
+Se propone un espacio discreto de seis acciones, tomadas del vocabulario fijo del sistema
+(`VALID_ACTIONS`, `action_map.py`; IT.8.3.4, IT.5.14). Quedan fuera `GIRAR_90`, que el
+lazo rápido aplica como regla de seguridad, y `RETROCEDER`, que ningún comportamiento
+emite:
 
 | Índice | Macro-acción | Semántica |
 |---|---|---|
@@ -178,23 +182,23 @@ parcialmente por tres decisiones de diseño:
    "incorrectos" aprendibles a aquellos que el sistema ya sabe ejecutar con seguridad.
 
 2. **Currículo de escenarios por Tier**: el agente se expone a tres niveles de dificultad
-   (Tier 0 → 1 → 2) y cinco mapas diferentes durante el entrenamiento, forzando
+   (Tier 0 → 1 → 2) y los tres mapas de la tesis (MiniSim, TownSim y CitySim) durante el entrenamiento, forzando
    generalización a geometrías urbanas variadas en lugar de memorizar un circuito.
 
 3. **Capa deliberativa activa**: cuando la política RL entra en un estado no representado
    en el entrenamiento (alta entropía de acción, múltiples ciclos de `FRENAR`), el barrido
-   `deep_vlm` puede resolver el atasco y proponer una salida, igual que con el brazo `fsm`. Esto limita la región de fallo catastrófico de la política
+   con profundidad estimada puede resolver el atasco y proponer una salida, igual que con el brazo `fsm`. Esto limita la región de fallo catastrófico de la política
    neuronal.
 
 La validación en escenarios no vistos durante el entrenamiento —especialmente
-`citymap_pilot`— es la prueba empírica más directa de generalización, y su resultado es
+`citysim_pilot`— es la prueba empírica más directa de generalización, y su resultado es
 una de las incógnitas clave del protocolo de evaluación de IT.A8.6.
 
 ### Arquitectura de la política
 
 Para la observación mixta `{rgb, ttc_field, nav}` se propone una política de dos cabezales paralelos:
 
-<img src="a8-arquitectura-dos-cabezales.jpg">
+<img src="a8-arquitectura-dos-cabezales.png">
 
 La rama CNN extrae características visuales del frame RGB. La rama FC procesa el campo de obstáculos serializado y el estado de guiado. La concatenación en el cuello de botella fuerza la política a integrar información visual y geométrica antes de tomar la decisión. Esta arquitectura es directamente compatible con `CnnPolicy` de Stable-Baselines3 cuando se define el espacio de observación como `gym.spaces.Dict`.
 

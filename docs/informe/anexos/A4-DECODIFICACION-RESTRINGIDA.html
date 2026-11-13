@@ -1632,21 +1632,21 @@
 1. <strong>Preámbulos y epílogos conversacionales:</strong> emisión de frases introductorias (<em>«Sure, here is the drone decision:»</em>) o explicaciones finales que rompen <code>json.loads()</code>.
 2. <strong>Encapsulamiento en Markdown irregular:</strong> uso intermitente de triples comillas invertidas (<code>```json ... ```</code>), a menudo con saltos de línea mal posicionados.
 3. <strong>Malformación sintáctica:</strong> comas terminales huérfanas (<em>trailing commas</em>), omisión de llaves de cierre <code>}</code> por corte de contexto o escape defectuoso de caracteres en cadenas.
-4. <strong>Alucinación de macro-acciones fuera de lista blanca:</strong> emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., <code>"girar_rapido"</code>, <code>"subir_diagonal"</code>, <code>"stop"</code> en lugar de <code>keep_going</code>, <code>evasive</code>, <code>girar_90</code>, <code>fsm</code>, <code>degraded</code>).
+4. <strong>Alucinación de macro-acciones fuera de lista blanca:</strong> emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., <code>"GIRAR_RAPIDO"</code>, <code>"SUBIR_DIAGONAL"</code>, <code>"stop"</code> en lugar de las ocho de <code>VALID_ACTIONS</code>: <code>MANTENER_RUMBO</code>, <code>EVADIR_IZQUIERDA</code>, <code>EVADIR_DERECHA</code>, <code>GANAR_ALTURA</code>, <code>PERDER_ALTURA</code>, <code>FRENAR</code>, <code>GIRAR_90</code>, <code>RETROCEDER</code>; IT.8.3.4).
 5. <strong>Latencia descontrolada por verbosidad:</strong> generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (<code>SLM_DEEP_WATCHDOG_MS</code>, 18 s en el barrido, cap. 8, IT.8.6) y forzando la caída al escape de respaldo.</p>
 <div class="highlight"><pre><span></span><code>Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
 &quot;Based on the camera feed showing an obstacle ahead, the drone should initiate an evasive 
- maneuver to the right corridor. Action: evasive_right, reason: obstacle in front.&quot;
+ maneuver to the right corridor. Action: evade_right, reason: obstacle in front.&quot;
  ❌ Falla sintáctica: no es JSON parseable, rompe action_to_command(), timeout &gt; 1.5 s.
 
 Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
-{&quot;action&quot;:&quot;evasive&quot;,&quot;reason&quot;:&quot;bloqueo centro&quot;}
+{&quot;action&quot;:&quot;EVADIR_DERECHA&quot;,&quot;reason&quot;:&quot;bloqueo centro&quot;}
  ✔ Estructura exacta, enum validado por gramática, latencia mínima, 100% parseable.
 </code></pre></div>
 <hr />
 <h2 id="a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida">A4.2 Fundamentos matemáticos y formales de la decodificación restringida<a class="headerlink" href="#a42-fundamentos-matematicos-y-formales-de-la-decodificacion-restringida" title="Permanent link">&para;</a></h2>
 <p>La decodificación restringida interviene directamente en la distribución de muestreo de la capa de salida (<em>logits</em>) del modelo durante cada paso de la generación autorregresiva, guiada por un autómata formal que modela la sintaxis admisible (<a href="../13-REFERENCIAS.html#ref-willard-2023">Willard &amp; Louf, 2023</a>; <a href="../13-REFERENCIAS.html#ref-ugare-2024">Ugare et al., 2024</a>; <a href="../13-REFERENCIAS.html#ref-dong-2024">Dong et al., 2024</a>).</p>
-<p><img src="a4-decodificacion-restringida.jpg"/></p>
+<p><img src="a4-decodificacion-restringida.png"/></p>
 <h3 id="a421-formulacion-del-enmascaramiento-de-logits">A4.2.1 Formulación del enmascaramiento de logits<a class="headerlink" href="#a421-formulacion-del-enmascaramiento-de-logits" title="Permanent link">&para;</a></h3>
 <p>Sea <span class="arithmatex">\(z_t \in \mathbb{R}^{|V|}\)</span> el vector de <em>logits</em> no normalizados producido por la última capa lineal del transformer en el paso <span class="arithmatex">\(t\)</span>. Sea <span class="arithmatex">\(s_t \in \mathcal{S}\)</span> el estado actual del analizador sintáctico o autómata formal.</p>
 <p>La gramática define una función de transición de estados <span class="arithmatex">\(\delta: \mathcal{S} \times V \to \mathcal{S} \cup \{\text{error}\}\)</span> y una función de aceptación que determina qué tokens del vocabulario son continuaciones válidas:</p>
@@ -1687,7 +1687,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 * <strong>Tokens dependientes del contexto:</strong> aquellos que interactúan con la profundidad de la pila sintáctica (e.g., llaves y comillas anidadas).</p>
 <p>Durante la inferencia en tiempo real, XGrammar ejecuta el filtrado de máscaras en paralelo con el cómputo de la GPU o durante la fase de pre-llenado (<em>pre-fill</em>), reduciendo la sobrecarga de CPU a <strong>menos de 0.05 ms por token</strong> (prácticamente nula).</p>
 <h3 id="a434-decodificacion-especulativa-basada-en-gramaticas">A4.3.4 Decodificación especulativa basada en gramáticas<a class="headerlink" href="#a434-decodificacion-especulativa-basada-en-gramaticas" title="Permanent link">&para;</a></h3>
-<p>En sistemas avanzados, las restricciones gramaticales se combinan con <strong>decodificación especulativa</strong> (<a href="../13-REFERENCIAS.html#ref-leviathan-2023">Leviathan et al., 2023</a>; <a href="../13-REFERENCIAS.html#ref-dong-2024">Dong et al., 2024</a>). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo <code>action</code>, solo 5 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de <span class="arithmatex">\(2\times\)</span> a <span class="arithmatex">\(3\times\)</span>.</p>
+<p>En sistemas avanzados, las restricciones gramaticales se combinan con <strong>decodificación especulativa</strong> (<a href="../13-REFERENCIAS.html#ref-leviathan-2023">Leviathan et al., 2023</a>; <a href="../13-REFERENCIAS.html#ref-dong-2024">Dong et al., 2024</a>). Dado que la gramática restringe drásticamente el abanico de tokens legales (en el campo <code>action</code>, solo 8 opciones son posibles), un modelo borrador ultraligero o un generador heurístico de gramática puede proponer múltiples tokens simultáneamente. El modelo principal en la GPU valida o rechaza el bloque completo en una única pasada paralela, logrando tasas de aceleración de <span class="arithmatex">\(2\times\)</span> a <span class="arithmatex">\(3\times\)</span>.</p>
 <hr />
 <h2 id="a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida">A4.4 Optimización del Grafo de Control (<code>StateGraph</code>) mediante Decodificación Restringida<a class="headerlink" href="#a44-optimizacion-del-grafo-de-control-stategraph-mediante-decodificacion-restringida" title="Permanent link">&para;</a></h2>
 <blockquote>
@@ -1695,50 +1695,50 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 </blockquote>
 <p>La interacción entre el modelo de lenguaje y el grafo de control táctico (<code>src/agents/graph.py</code>) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una <strong>arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo</strong>.</p>
 <h3 id="a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica">A4.4.1 Invariantes del lazo táctico garantizados por la gramática<a class="headerlink" href="#a441-invariantes-del-lazo-tactico-garantizados-por-la-gramatica" title="Permanent link">&para;</a></h3>
-<p>En el grafo de control de DroneLM, la máquina de estados acíclica de LangGraph se ejecuta a una frecuencia de 5 a 10 Hz. Los comportamientos de la capa de decisión (<code>reactive_node</code>, <code>evasive_node</code>, el giro de 90° y el barrido) convergen en una interfaz estricta gobernada por <code>action_to_command()</code> (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:</p>
-<p><img src="a4-invariante-lazo-tactico.jpg"/></p>
+<p>En el grafo de control de DroneLM, el ciclo de LangGraph (<code>capture</code> → <code>perception</code> → <code>navigate</code> → <code>motor</code>) se ejecuta a 5 Hz. Los comportamientos de la capa de decisión (el guiado de <code>reactive_node</code>, <code>evasive_node</code>, el giro de 90°, el barrido y la FSM) convergen en una interfaz estricta gobernada por <code>action_to_command()</code> (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:</p>
+<p><img src="a4-invariante-lazo-tactico.png"/></p>
 <p>Al imponer decodificación restringida en la consulta al VLM, se garantizan tres invariantes operativas fundamentales:
 1. <strong>Ausencia total de fallas de parseo en el lazo:</strong> se elimina el riesgo de que una respuesta corrupta obligue a descartar el ciclo de control. La tasa de adherencia al esquema sube de un ~73% (con prompt libre y parser tolerante) a un <strong>98%–100%</strong>, como se verifica empíricamente en el informe (IT.8.2, IT.11).
 2. <strong>Determinismo en el espacio de acción:</strong> el campo <code>action</code> se constriñe a la enumeración canónica:
-   $<span class="arithmatex">\(\text{action} \in \{\text{"keep\_going"}, \text{"evasive"}, \text{"girar\_90"}, \text{"fsm"}, \text{"degraded"}\}\)</span>$
+   $<span class="arithmatex">\(\text{action} \in \texttt{VALID\_ACTIONS} = \{\text{MANTENER\_RUMBO}, \text{EVADIR\_IZQUIERDA}, \text{EVADIR\_DERECHA}, \text{GANAR\_ALTURA}, \text{PERDER\_ALTURA}, \text{FRENAR}, \text{GIRAR\_90}, \text{RETROCEDER}\}\)</span>$
    Esto asegura que <code>action_to_command()</code> siempre recibe un identificador registrado, eliminando ramas de ejecución indefinidas en los actuadores del dron.
 3. <strong>Control estricto de la longitud del campo de justificación:</strong> al restringir la longitud máxima de la cadena <code>reason</code> mediante reglas gramaticales (e.g., <code>maxLength: 120</code> o regex <code>[a-zA-Z0-9 _-]{1,100}</code>), se impide que el modelo expanda su generación más allá de los tokens estrictamente necesarios para auditoría y telemetría.</p>
 <h3 id="a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo">A4.4.2 Gramáticas acotadas dinámicas condicionadas por el estado del grafo<a class="headerlink" href="#a442-gramaticas-acotadas-dinamicas-condicionadas-por-el-estado-del-grafo" title="Permanent link">&para;</a></h3>
 <p>Una de las innovaciones de mayor impacto para optimizar el lazo deliberativo consiste en la <strong>parametrización dinámica de la gramática en función del estado de vuelo actual</strong>.</p>
-<p>En lugar de emplear un esquema JSON estático para todas las consultas, la consulta al VLM selecciona en tiempo de compilación/ejecución una gramática especializada según el motivo de consulta (<code>reason_note</code>, IT.8.5):</p>
+<p>En lugar de emplear un esquema JSON estático para todas las consultas, el decisor ilustrativo selecciona en tiempo de ejecución una gramática especializada según el motivo de la consulta (<code>reason_note</code>, un campo del decisor ilustrativo que el sistema no tiene), derivado del estado del grafo:</p>
 <table>
 <thead>
 <tr>
-<th>Motivo de Consulta (<code>reason_note</code>)</th>
-<th>Condición de Activación en Grafo</th>
-<th>Gramática / Restricción Dinámica del Enum <code>action</code></th>
-<th>Racionalidad Operativa y Beneficio</th>
+<th>Motivo de consulta (<code>reason_note</code>)</th>
+<th>Condición de activación en el grafo</th>
+<th>Restricción dinámica del enum <code>action</code></th>
+<th>Racionalidad operativa y beneficio</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>"TTC_CRITICO"</code></td>
-<td><span class="arithmatex">\(\text{TTC} \le 3.2\text{ s}\)</span> en sector central</td>
-<td><code>enum: ["evasive", "girar_90"]</code></td>
-<td><strong>Poda de acciones pasivas:</strong> se prohíbe sintácticamente que el SLM elija <code>keep_going</code> o <code>fsm</code> ante una colisión inminente. El espacio de búsqueda colapsa a solo 2 tokens de decisión.</td>
+<td><span class="arithmatex">\(\text{TTC} \le 3.2\text{ s}\)</span> en el sector central (regla 7 de <code>navigate</code>, IT.5.3.2)</td>
+<td><code>enum: ["EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GANAR_ALTURA", "GIRAR_90"]</code></td>
+<td><strong>Poda de acciones pasivas:</strong> se prohíbe sintácticamente que el modelo elija <code>MANTENER_RUMBO</code> o <code>FRENAR</code> ante una colisión inminente.</td>
 </tr>
 <tr>
 <td><code>"DEADLOCK_ESCAPE"</code></td>
-<td><code>evasion_stuck_cycles &gt;= threshold</code> (atasco cinemático prolongado)</td>
-<td><code>enum: ["girar_90", "fsm", "degraded"]</code></td>
-<td><strong>Ruptura forzada de bucles:</strong> el dron lleva múltiples ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente (<code>evasive</code>) o insistir de frente (<code>keep_going</code>).</td>
+<td><code>evasion_stuck_cycles</code> sobre el umbral (atasco prolongado)</td>
+<td><code>enum: ["GIRAR_90", "GANAR_ALTURA", "RETROCEDER"]</code></td>
+<td><strong>Ruptura forzada de bucles:</strong> el dron lleva varios ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente o insistir de frente.</td>
 </tr>
 <tr>
 <td><code>"FALTA_EVIDENCIA"</code></td>
-<td>Pérdida de textura o colapso de flujo óptico en hover</td>
-<td><code>enum: ["keep_going", "girar_90"]</code></td>
-<td><strong>Preservación de movimiento:</strong> se impide al modelo frenar (<code>degraded</code>), forzándolo a generar traslación o rotación para reactivar el campo de divergencia visual.</td>
+<td>Flujo sin traslación suficiente (fuente distinta de <code>flow</code>)</td>
+<td><code>enum: ["MANTENER_RUMBO", "GIRAR_90"]</code></td>
+<td><strong>Preservación de movimiento:</strong> se impide al modelo frenar (<code>FRENAR</code>), forzándolo a generar traslación o rotación para que el flujo vuelva a tener evidencia.</td>
 </tr>
 <tr>
 <td><code>"STANDARD_DELIB"</code></td>
 <td>Desempate táctico en corredores urbanos</td>
-<td><code>enum: ["keep_going", "evasive", "girar_90", "fsm", "degraded"]</code></td>
-<td><strong>Espacio completo:</strong> evaluación deliberativa estándar con ponderación semántica.</td>
+<td>las ocho de <code>VALID_ACTIONS</code></td>
+<td><strong>Espacio completo:</strong> evaluación estándar.</td>
 </tr>
 </tbody>
 </table>
@@ -1757,7 +1757,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 <span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;keep_going&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;evasive&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;girar_90&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;fsm&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;degraded&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;GIRAR_90&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;RETROCEDER&quot;</span><span class="p">],</span>
 <span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Macro-accion seleccionada para el ciclo actual de control.&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1778,7 +1778,8 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 
 root <span class="o">::=</span> &quot;{&quot; ws &quot;\&quot;action\&quot;:&quot; ws action-enum &quot;,&quot; ws &quot;\&quot;reason\&quot;:&quot; ws string-value &quot;}&quot;
 
-action-enum <span class="o">::=</span> &quot;\&quot;keep_going\&quot;&quot; | &quot;\&quot;evasive\&quot;&quot; | &quot;\&quot;girar_90\&quot;&quot; | &quot;\&quot;fsm\&quot;&quot; | &quot;\&quot;degraded\&quot;&quot;
+action-enum <span class="o">::=</span> &quot;\&quot;MANTENER_RUMBO\&quot;&quot; | &quot;\&quot;EVADIR_IZQUIERDA\&quot;&quot; | &quot;\&quot;EVADIR_DERECHA\&quot;&quot; | &quot;\&quot;GANAR_ALTURA\&quot;&quot;
+              | &quot;\&quot;PERDER_ALTURA\&quot;&quot; | &quot;\&quot;FRENAR\&quot;&quot; | &quot;\&quot;GIRAR_90\&quot;&quot; | &quot;\&quot;RETROCEDER\&quot;&quot;
 
 # Restricción estricta de la justificación: máximo 80 caracteres alfanuméricos seguros
 string-value <span class="o">::=</span> &quot;\&quot;&quot; [a-zA-Z0-9 _.,áéíóúÁÉÍÓÚñÑ-]{1,80} &quot;\&quot;&quot;
@@ -1787,7 +1788,7 @@ ws <span class="o">::=</span> [ \t\n]*
 </code></pre></div>
 <p><strong>Ventajas operativas de GBNF:</strong>
 * <strong>Cero sobrecarga de esquemas:</strong> no requiere motores externos de validación JSON; el propio núcleo en C++ de <code>llama.cpp</code> filtra los logits directamente en memoria compartida.
-* <strong>Control microscópico de espacios en blanco:</strong> <code>ws</code> puede definirse como cadena vacía (<code>ws ::= ""</code> sin espacios), obligando al modelo a generar JSON minificado compacto (<code>{"action":"evasive","reason":"bloqueo_centro"}</code>), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.</p>
+* <strong>Control microscópico de espacios en blanco:</strong> <code>ws</code> puede definirse como cadena vacía (<code>ws ::= ""</code> sin espacios), obligando al modelo a generar JSON minificado compacto (<code>{"action":"EVADIR_DERECHA","reason":"bloqueo_centro"}</code>), ahorrando tokens de espaciado y reduciendo la latencia de transmisión a cero.</p>
 <hr />
 <h2 id="a46-procedimiento-ilustrativo-de-implementacion-paso-a-paso">A4.6 Procedimiento ilustrativo de implementación paso a paso<a class="headerlink" href="#a46-procedimiento-ilustrativo-de-implementacion-paso-a-paso" title="Permanent link">&para;</a></h2>
 <p>A continuación se detalla, sobre el decisor de acciones ilustrativo de IT.A4.4, la metodología para integrar la decodificación restringida en un lazo como el de DroneLM, desde la definición de tipos hasta la ejecución asincrónica. El código del sistema sigue el mismo patrón con los esquemas descriptivos del capítulo 8 (<code>vlm_client.py</code>, <code>vlm_strategic.py</code>, <code>deep_scan.py</code>).</p>
@@ -1802,20 +1803,23 @@ ws <span class="o">::=</span> [ \t\n]*
     <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">DroneEmergencyDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
-    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;evasive&quot;</span><span class="p">,</span> <span class="s2">&quot;girar_90&quot;</span><span class="p">]</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span> <span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span> <span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;GIRAR_90&quot;</span><span class="p">]</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">DroneDeadlockDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
-    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;girar_90&quot;</span><span class="p">,</span> <span class="s2">&quot;fsm&quot;</span><span class="p">,</span> <span class="s2">&quot;degraded&quot;</span><span class="p">]</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;GIRAR_90&quot;</span><span class="p">,</span> <span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;RETROCEDER&quot;</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DroneEvidenceDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span> <span class="s2">&quot;GIRAR_90&quot;</span><span class="p">]</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">DroneStandardDecision</span><span class="p">(</span><span class="n">BaseDroneDecision</span><span class="p">):</span>
-    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;keep_going&quot;</span><span class="p">,</span> <span class="s2">&quot;evasive&quot;</span><span class="p">,</span> <span class="s2">&quot;girar_90&quot;</span><span class="p">,</span> <span class="s2">&quot;fsm&quot;</span><span class="p">,</span> <span class="s2">&quot;degraded&quot;</span><span class="p">]</span>
+    <span class="n">action</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;MANTENER_RUMBO&quot;</span><span class="p">,</span> <span class="s2">&quot;EVADIR_IZQUIERDA&quot;</span><span class="p">,</span> <span class="s2">&quot;EVADIR_DERECHA&quot;</span><span class="p">,</span> <span class="s2">&quot;GANAR_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;PERDER_ALTURA&quot;</span><span class="p">,</span> <span class="s2">&quot;FRENAR&quot;</span><span class="p">,</span> <span class="s2">&quot;GIRAR_90&quot;</span><span class="p">,</span> <span class="s2">&quot;RETROCEDER&quot;</span><span class="p">]</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">get_decision_schema</span><span class="p">(</span><span class="n">reason_note</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Retorna el esquema JSON óptimo condicionado por el estado del grafo.&quot;&quot;&quot;</span>
     <span class="n">model_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseDroneDecision</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;TTC_CRITICO&quot;</span><span class="p">:</span> <span class="n">DroneEmergencyDecision</span><span class="p">,</span>
         <span class="s2">&quot;DEADLOCK_ESCAPE&quot;</span><span class="p">:</span> <span class="n">DroneDeadlockDecision</span><span class="p">,</span>
-        <span class="s2">&quot;FALTA_EVIDENCIA&quot;</span><span class="p">:</span> <span class="n">DroneStandardDecision</span><span class="p">,</span>
+        <span class="s2">&quot;FALTA_EVIDENCIA&quot;</span><span class="p">:</span> <span class="n">DroneEvidenceDecision</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="n">target_cls</span> <span class="o">=</span> <span class="n">model_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reason_note</span><span class="p">,</span> <span class="n">DroneStandardDecision</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span>
@@ -1857,7 +1861,7 @@ ws <span class="o">::=</span> [ \t\n]*
 <div class="highlight"><pre><span></span><code><span class="c1"># ejemplo ilustrativo (decisor de acciones)</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span><span class="o">,</span><span class="w"> </span><span class="nn">re</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_parse_decision</span><span class="p">(</span><span class="n">raw_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;keep_going&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_decision</span><span class="p">(</span><span class="n">raw_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;FRENAR&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Jerarquía de tres niveles para extracción segura de macro-acciones:</span>
 <span class="sd">    1. Parseo directo con json.loads() (camino nominal con decodificación restringida).</span>

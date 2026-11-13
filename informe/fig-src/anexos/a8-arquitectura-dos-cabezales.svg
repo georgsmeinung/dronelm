@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" width="1200" height="620" font-family="Inter, 'Segoe UI', sans-serif">
+  <!-- A8: politica de dos cabezales propuesta para el brazo rl -->
+
+  <style>
+    .bg { fill: #FFFFFF; }
+    .panel { fill: #F6F8FA; stroke: #E2E8F0; stroke-width: 1.2; }
+    .card { fill: #FFFFFF; stroke: #CBD5E0; stroke-width: 1.4; }
+    .card-acc { fill: #FFFFFF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-blue { fill: #E6F2FF; stroke: #0066CC; stroke-width: 1.8; }
+    .card-green { fill: #EAF7EF; stroke: #259E5F; stroke-width: 1.8; }
+    .card-warn { fill: #FFF7E6; stroke: #D97706; stroke-width: 1.8; }
+    .card-red { fill: #FDECEC; stroke: #DC2626; stroke-width: 1.8; }
+    .card-gray { fill: #F1F3F5; stroke: #A0AEC0; stroke-width: 1.4; stroke-dasharray: 6 4; }
+    .head { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #0066CC; }
+    .head-ink { font-size: 14px; font-weight: 800; letter-spacing: .05em; fill: #2D3748; }
+    .title { font-size: 22px; font-weight: 800; fill: #1A202C; }
+    .ttl { font-size: 15px; font-weight: 700; fill: #1A202C; }
+    .txt { font-size: 13px; fill: #4A5568; }
+    .txt-b { font-size: 13px; font-weight: 700; fill: #2D3748; }
+    .small { font-size: 11.5px; fill: #718096; }
+    .mono { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 12px; fill: #1A202C; }
+    .mono-s { font-family: 'Noto Sans Mono', ui-monospace, monospace; font-size: 11px; fill: #4A5568; }
+    .math { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 17px; fill: #1A202C; }
+    .math-s { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 14px; fill: #1A202C; }
+    .acc { fill: #0066CC; } .safe { fill: #259E5F; } .warn { fill: #B45309; } .crit { fill: #DC2626; }
+    .ln { stroke: #4A5568; stroke-width: 1.8; fill: none; }
+    .ln-acc { stroke: #0066CC; stroke-width: 1.8; fill: none; }
+    .ln-dash { stroke: #718096; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+    .grid { stroke: #2D3748; stroke-width: 1.2; fill: none; }
+    .badge { fill: #0066CC; } .badge-t { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#4A5568" /></marker>
+    <marker id="aa" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="9" markerHeight="8" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="av" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#0066CC" /></marker>
+    <marker id="ag" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#718096" /></marker>
+    <marker id="ar" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#DC2626" /></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="620" />
+  <text class="head" x="24" y="36" text-anchor="start" >POLÍTICA PROPUESTA PARA EL BRAZO rl: DOS RAMAS Y UN ACTOR-CRÍTICO</text>
+  <text class="small" x="24" y="56" text-anchor="start" >Anexo 8 · observación {rgb, ttc_field, nav}; PPO con Stable-Baselines3; no implementada</text>
+  <rect class="panel" x="24" y="76" width="560" height="380" rx="10" />
+  <text class="head-ink" x="44" y="104" text-anchor="start" >RAMA CNN · FOTOGRAMA RGB</text>
+  <rect class="card" x="64" y="120" width="480" height="44" rx="8" />
+  <text class="ttl" x="304" y="148" text-anchor="middle" >rgb: 84 × 84 × 3</text>
+  <path class="ln" d="M304 166 L304 182" marker-end="url(#ah)" />
+  <rect class="card-blue" x="64" y="184" width="480" height="44" rx="8" />
+  <text class="ttl" x="304" y="212" text-anchor="middle" >Conv 32 filtros 8 × 8, paso 4 · ReLU</text>
+  <path class="ln" d="M304 230 L304 246" marker-end="url(#ah)" />
+  <rect class="card-blue" x="64" y="248" width="480" height="44" rx="8" />
+  <text class="ttl" x="304" y="276" text-anchor="middle" >Conv 64 filtros 4 × 4, paso 2 · ReLU</text>
+  <path class="ln" d="M304 294 L304 310" marker-end="url(#ah)" />
+  <rect class="card-blue" x="64" y="312" width="480" height="44" rx="8" />
+  <text class="ttl" x="304" y="340" text-anchor="middle" >Conv 64 filtros 3 × 3, paso 1 · ReLU</text>
+  <path class="ln" d="M304 358 L304 374" marker-end="url(#ah)" />
+  <rect class="card-blue" x="64" y="376" width="480" height="44" rx="8" />
+  <text class="ttl" x="304" y="404" text-anchor="middle" >Flatten (3136) → Linear 512 · ReLU</text>
+  <rect class="panel" x="604" y="76" width="572" height="380" rx="10" />
+  <text class="head-ink" x="624" y="104" text-anchor="start" >RAMA DENSA · DATOS DEL LAZO</text>
+  <rect class="card" x="624" y="120" width="260" height="100" rx="8" />
+  <text class="ttl" x="638" y="144" text-anchor="start" >ttc_field (3, 3, 3) → 27</text>
+  <text class="txt" x="638" y="166" text-anchor="start" >[ttc, ocupación, confianza]</text>
+  <text class="txt" x="638" y="184" text-anchor="start" >de las 9 celdas</text>
+  <rect class="card" x="896" y="120" width="260" height="100" rx="8" />
+  <text class="ttl" x="910" y="144" text-anchor="start" >nav (6)</text>
+  <text class="txt" x="910" y="166" text-anchor="start" >dist_wp, bearing_err,</text>
+  <text class="txt" x="910" y="184" text-anchor="start" >vx, vy, vz, alt</text>
+  <path class="ln" d="M754 222 V250 H1026 V222" />
+  <path class="ln" d="M890 250 L890 262" marker-end="url(#ah)" />
+  <rect class="card-blue" x="740" y="264" width="300" height="44" rx="8" />
+  <text class="ttl" x="890" y="292" text-anchor="middle" >33 → Linear 64 · ReLU</text>
+  <rect class="card-acc" x="330" y="476" width="540" height="44" rx="8" />
+  <text class="ttl" x="600" y="504" text-anchor="middle" >Concatenación (512 + 64 = 576) → Linear 256 · ReLU</text>
+  <path class="ln" d="M304 440 L304 460 L450 460 L450 474" marker-end="url(#ah)" />
+  <path class="ln" d="M890 310 L890 460 L750 460 L750 474" marker-end="url(#ah)" />
+  <rect class="card-green" x="214" y="552" width="360" height="52" rx="8" />
+  <text class="ttl" x="394" y="576" text-anchor="middle" >Actor: softmax sobre 6 macro-acciones</text>
+  <text class="small" x="394" y="595" text-anchor="middle" >MANTENER_RUMBO … FRENAR → action_to_command()</text>
+  <rect class="card-warn" x="626" y="552" width="360" height="52" rx="8" />
+  <text class="ttl" x="806" y="576" text-anchor="middle" >Crítico: V(s), un valor</text>
+  <text class="small" x="806" y="595" text-anchor="middle" >solo durante el entrenamiento</text>
+  <path class="ln" d="M520 522 L520 536 L394 536 L394 550" marker-end="url(#ah)" />
+  <path class="ln" d="M680 522 L680 536 L806 536 L806 550" marker-end="url(#ah)" />
+</svg>

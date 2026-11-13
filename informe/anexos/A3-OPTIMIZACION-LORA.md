@@ -16,7 +16,7 @@ El ajuste fino completo (*Full Fine-Tuning*, FFT) de una red neuronal profunda r
 
 Las técnicas de Ajuste Fino Eficiente en Parámetros (*Parameter-Efficient Fine-Tuning*, PEFT; [Mangrulkar et al., 2022](../13-REFERENCIAS.md#ref-mangrulkar-2022)) resuelven este cuello de botella congelando la red preentrenada y acoplando un conjunto microscópico de parámetros adaptativos.
 
-<img src="a3-fundamentos-de-peft.jpg"/>
+<img src="a3-fundamentos-de-peft.png"/>
 
 ### A3.1.1 Formulación matemática de LoRA
 La premisa matemática de LoRA ([Hu et al., 2022](../13-REFERENCIAS.md#ref-hu-2022)) se basa en la hipótesis de que las actualizaciones de peso $\Delta W$ durante la adaptación a una tarea especializada exhiben un «rango intrínseco» muy bajo (*low intrinsic dimension*). Para una matriz lineal preentrenada $W_0 \in \mathbb{R}^{d \times k}$, la actualización se descompone como el producto de dos matrices de bajo rango:
@@ -74,26 +74,28 @@ donde $\| \cdot \|_c$ denota la norma $L_2$ a lo largo de las columnas y $\Delta
 
 La integración de un adaptador LoRA en la consulta al VLM transforma la interfaz entre el modelo de lenguaje y el sistema ciberfísico:
 
-<img src="a3-impacto-lora.jpg"/>
+<img src="a3-impacto-lora.png"/>
 
 ### A3.2.1 Reducción del presupuesto de tokens y compresión de latencia
-En una implementación *zero-shot* (IT.8.5), el prompt debe reiterar en cada invocación:
-* La definición de la grilla de sectores y del criterio «libre a 15 m».
-* La sintaxis exacta y el orden de los campos del esquema JSON.
-* Los valores admisibles de cada campo.
+En el régimen *zero-shot* actual (IT.8.5), cada consulta de la capa estratégica reitera en el *system prompt*:
+* La definición de la grilla de 3×3 (columnas A–C, filas 1–3) y de la marca de la meta.
+* El criterio operativo: `free` si el dron puede volar 15 m en esa dirección, `blocked` si hay un edificio, muro, árbol, puente o techo más cerca.
+* La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2.1).
 
-Este contexto insume cientos de tokens de procesamiento previo (*prefill*). Al especializar el modelo con LoRA, **la gramática de salida y las reglas de dominio quedan cristalizadas en los tensores de ponderación**. El prompt de entrada puede simplificarse a una codificación tabular mínima:
+Al especializar el modelo con LoRA, **el criterio y la forma de la respuesta quedan incorporados en los pesos**, y la consulta puede reducirse al *user prompt* que ya usa el sistema más la imagen con la grilla dibujada:
 
 ```
-[ESTADO: Vz=-0.1, Vh=3.2 | TTC: F=1.4s, L=inf, R=4.1s | HIST: keep_going(x3) | REASON: TTC_CRITICO]
+Goal WP_3: 34 m, in cell B2. Altitude 10 m.   + [Front camera, 3x3 grid]
 ```
 
-Esta reducción comprime la ventana de entrada de ~500 a menos de 100 tokens, acelerando el tiempo de respuesta del modelo en un 60%, con la inferencia por debajo del período de consulta de la capa estratégica.
+El ahorro es acotado: el *system prompt* ya tiene tres o cuatro oraciones, y la mayor parte del preprocesamiento (*prefill*) la ocupan los 64–256 tokens con que el codificador visual representa la imagen (IT.8.1.2), que LoRA no reduce. La ganancia esperable de LoRA no es de latencia —la consulta ya tarda ~0.8 s, muy por debajo de la edad máxima de 10 s de una respuesta (IT.8.6)— sino de discriminación (IT.A3.2.2).
 
-### A3.2.2 Alineación causal directa: de la imagen a la maniobra
-Un modelo generalista tiende a verbalizar descripciones visuales pasivas (*«Veo un muro con sombras proyectadas»*). LoRA permite reentrenar la distribución de probabilidad condicional $P(y \mid X)$ para que el modelo efectúe una **asociación sensoriomotora directa**:
-* Reconocer cómo el patrón de divergencia óptica entre $I_t$ e $I_{t-1}$ anticipa colisiones inminentes.
-* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), suprimiendo alucinaciones visuales que el flujo monocular no logra desagregar (IT.6.1).
+### A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena
+El banco de prueba muestra que el modelo sin adaptar responde sobre todo a la posición del sector y no a la escena: las filas superior e inferior de la grilla salen «libres» en todas las muestras, la fila del medio depende de la columna, y los *logprobs* no rescatan la grilla (exactitud balanceada 0.53, AUC 0.53; cap. 11, IT.11.0). LoRA permite reentrenar la distribución condicional $P(y \mid X)$ sobre pares con etiqueta de referencia para que la respuesta dependa de lo que hay en cada sector:
+* Juzgar la distancia a lo que ocupa cada sector frente al criterio de 15 m, en lugar de reproducir un patrón fijo por fila.
+* Discriminar si una región oscura corresponde a una sombra sobre el pavimento (transitable) o a un obstáculo sólido en el volumen de vuelo (no transitable), el tipo de ambigüedad que el flujo monocular tampoco resuelve (IT.6.1).
+
+La adaptación solo se justificaría si el banco de prueba, sobre un entorno no visto en el entrenamiento, supera el criterio de pase de IT.11.0 (exactitud balanceada ≥ 0.65 con el límite inferior del IC 95 % por encima del azar).
 
 ---
 
@@ -102,38 +104,40 @@ Un modelo generalista tiende a verbalizar descripciones visuales pasivas (*«Veo
 El factor determinante del éxito de la adaptación no radica en el volumen de parámetros, sino en la calidad informativa y la diversidad topológica del conjunto de datos de entrenamiento.
 
 ### A3.3.1 Estructura del dataset multimodal de navegación
-Cada instancia de entrenamiento se define como un par supervisado $(X_t, Y_t)$ estructurado de la siguiente forma:
+Cada instancia de entrenamiento es un par supervisado $(X_t, Y_t)$ con la misma forma que la consulta estratégica del sistema (IT.8.2.1, IT.8.5.2):
 
-$$X_t = \left\{ I_t, I_{t-1}, \text{telemetry}_t, \text{obstacle\_field}_t, \text{reason\_note}_t \right\}$$
+$$X_t = \left\{ I_t^{\text{grilla}},\ \text{prompt}_t \right\}$$
 
-$$Y_t = \left\{ \text{"action"}: a_t^*, \text{"reason"}: r_t^* \right\}$$
+$$Y_t = \left\{ \text{"cells"}: \{A1, \dots, C3\} \to \{\text{free}, \text{blocked}\} \right\}$$
 
 donde:
-* $I_t, I_{t-1}$ son los dos fotogramas RGB monoculares recientes capturados a 640×360 píxeles.
-* $\text{telemetry}_t$ incluye el vector de velocidad tridimensional, ángulo de cabeceo (*pitch*), alabeo (*roll*) y distancia al waypoint activo.
-* $\text{obstacle\_field}_t$ codifica el TTC estimado y la tasa de ocupación por sector angular (cap. 6 y 7).
-* $a_t^* \in \mathcal{A}_{\text{whitelist}}$ es la macro-acción supervisada óptima.
-* $r_t^*$ es una cadena de justificación condensada (< 120 caracteres) que verbaliza el razonamiento causal subyacente (e.g., `"TTC crítico de 1.2s en cuadrante frontal-izquierdo; espacio despejado a la derecha; iniciar maniobra evasiva"`).
+* $I_t^{\text{grilla}}$ es el fotograma de la cámara frontal reducido a 384 px, con la grilla de 3×3 y la marca de la meta dibujadas, tal como lo recibe el modelo en vuelo.
+* $\text{prompt}_t$ es el *user prompt* con la distancia a la meta, su sector (o su ángulo si está fuera del recorte) y la altitud.
+* $Y_t$ asigna a cada uno de los nueve sectores la etiqueta de referencia: `free` si el percentil 5 de la profundidad planar del simulador en el sector es ≥ 15 m y `blocked` si no (cap. 7, IT.7.1). La profundidad del simulador solo etiqueta los datos; el modelo nunca la recibe.
+
+El mismo esquema vale para el barrido, con cuatro imágenes numeradas y la salida `views` del esquema panorámico (IT.8.2.1).
 
 ### A3.3.2 Mitigación de la deriva cinemática mediante DAgger
 El entrenamiento mediante simple Clonación de Comportamiento (*Behavioral Cloning*, BC) a partir de vuelos nominales perfectos sufre del problema de **deriva covariada (*Covariate Shift*)** ([Codevilla et al., 2019](../13-REFERENCIAS.md#ref-codevilla-2019)): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.
 
 Para inmunizar al modelo frente a este fenómeno, se define la aplicación del algoritmo **DAgger (*Dataset Aggregation*; [Ross et al., 2011](../13-REFERENCIAS.md#ref-ross-2011))** adaptado a simulación en AirSim / Unreal Engine 5:
 1. **Vuelo con política actual** $\pi_{\text{LoRA}}$ en AirSim UE5.5 bajo perturbaciones controladas (ráfagas de viento sintéticas, desviaciones forzadas).
-2. **Consulta al oráculo experto** (FSM determinista o supervisor experto) ante desvíos: determinación de la acción correctiva óptima $a^*$.
-3. **Agregación de tuplas críticas** $\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, a^*_{\text{experto}})\}$.
+2. **Etiquetado por el oráculo** en los estados que visita la política adaptada: la profundidad planar del simulador produce la etiqueta de referencia $Y^*$ de cada sector, también en las situaciones a las que el dron llega por sus propios errores.
+3. **Agregación de tuplas críticas** $\mathcal{D}_{\text{total}} = \mathcal{D}_{\text{previo}} \cup \{(X_{\text{perturbado}}, Y^*_{\text{oráculo}})\}$.
 4. **Reentrenamiento iterativo** de los adaptadores LoRA sobre el conjunto enriquecido.
 
 ### A3.3.3 Aumentación sintética y métricas objetivo de evaluación
-Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (Neighborhood, Manhattan; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; [Marazzato & Sparavigna, 2015](../13-REFERENCIAS.md#ref-marazzato-2015)) y desenfoque por movimiento angular (*motion blur*).
+Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unreal Engine (TownSim, CitySim; cap. 3 y 10), el conjunto de datos se somete a aumentaciones dinámicas: variación de la hora solar en UE5, degradación atmosférica sintética (niebla y dispersión lumínica; [Marazzato & Sparavigna, 2015](../13-REFERENCIAS.md#ref-marazzato-2015)) y desenfoque por movimiento angular (*motion blur*).
 
-| Métrica de Validación | Meta Operativa (Zero-Shot Actual) | Meta Objetivo (LoRA / QLoRA) |
+| Métrica de validación | *Zero-shot* actual (LFM2.5-VL-1.6B) | Objetivo con LoRA / QLoRA |
 |---|---|---|
-| **Cumplimiento de Esquema JSON** | 99.8% (gracias a gramática forzada) | **100% nativo** (verificación pasiva) |
-| **Latencia media de inferencia** | ~1100 ms (límite de watchdog) | **< 450 ms** (margen amplio) |
-| **Tokens de entrada promedio** | 480–520 tokens | **< 100 tokens** |
-| **Tasa de resolución de atasco** | 60.0% (Tier 3, cap. 10) | **> 85.0%** |
-| **Tasa de colisiones evitables** | 20.0% en Tier 3 | **< 5.0%** |
+| **Exactitud balanceada de la grilla** (banco, IT.11.0) | 0.53 | **≥ 0.65**, IC 95 % sobre el azar, en un entorno no visto |
+| **AUC de la grilla con *logprobs*** (diagnóstico) | 0.53 | > 0.75 |
+| **Barrido: rumbo transitable** (banco, IT.11.0) | no pasa el criterio | pasa el criterio |
+| **Adherencia al esquema JSON** (IT.8.2.1) | ~98 % con decodificación restringida | ~100 % |
+| **Latencia de la consulta estratégica** (IT.8.6) | ~0.8 s | sin cambio (< 10 s de edad máxima) |
+
+Las cifras objetivo son criterios de pase, no resultados: ninguna adaptación se entrenó en esta tesis (IT.8.8).
 
 ---
 
@@ -146,11 +150,11 @@ $$W_{\text{despliegue}} = W_0 + \frac{\alpha}{r} (B \cdot A)$$
 
 Al realizar la fusión de tensores en punto flotante previo (FP16 o BF16), la matriz resultante $W_{\text{despliegue}}$ adquiere exactamente las mismas dimensiones y topología que la red preentrenada original. No existe ninguna bifurcación de memoria ni sobrecarga computacional adicional durante la inferencia. 
 
-Posteriormente, el modelo fusionado se compila a formato **GGUF** cuantizado (`Q4_K_M`) mediante `llama.cpp` ([Gerganov, 2023](../13-REFERENCIAS.md#ref-gerganov-2023)), produciendo un binario de ~2.0 GB listo para ejecución local embebida sin dependencias de librerías de entrenamiento.
+Posteriormente, el modelo fusionado se compila a formato **GGUF** cuantizado (`Q4_K_M`) mediante `llama.cpp` ([Gerganov, 2023](../13-REFERENCIAS.md#ref-gerganov-2023)), el mismo formato y la misma cuantización que el modelo adoptado (731 MB más el codificador visual para LFM2.5-VL-1.6B, IT.8.1.2), listo para ejecución local sin dependencias de librerías de entrenamiento y servido por Ollama igual que hoy.
 
 ### A3.4.2 Sinergia entre LoRA y decodificación restringida (`json_schema`)
 El ajuste fino no reemplaza la decodificación restringida por gramáticas (IT.8.2, Anexo 4), sino que la complementa:
-* **LoRA moldea la distribución interna de logits:** el modelo aprende a concentrar prácticamente el 100% de su masa de probabilidad en las palabras clave del esquema JSON y la lista blanca de macro-acciones.
+* **LoRA moldea la distribución interna de logits:** el modelo aprende a concentrar prácticamente toda su masa de probabilidad en las claves del esquema JSON y en los valores de sus enums (`free`/`blocked`; los seis valores de `view`).
 * **`json_schema` opera como barrera determinista externa:** enmascara el residuo infinitesimal de probabilidad en situaciones fuera de distribución, garantizando formalmente cero violaciones de formato.
 * **Aceleración de generación:** al fluir la decodificación sin colisionar con tokens suprimidos por la gramática, la tasa de muestreo alcanza el máximo rendimiento teórico del motor de inferencia.
 
