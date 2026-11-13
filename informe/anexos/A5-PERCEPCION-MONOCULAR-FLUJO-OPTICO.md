@@ -270,3 +270,84 @@ El pipeline permite seleccionar dinámicamente el backend algorítmico mediante 
 | **Rol en DroneLM** | Fallback de compatibilidad | **Motor de producción primario** |
 
 Las latencias de la tabla son orientativas para 320×180 px; en vuelo el flujo se calcula a 640×360 px, con cuatro veces más píxeles, y el costo de DIS crece aproximadamente en proporción. El sistema no registra por separado la latencia de la etapa de flujo: lo que se mide es el período del ciclo completo (escalado, flujo, derotación, FOE, TTC e instanciación de `ObstacleField`, más guiado y comando), que se audita contra el período nominal de 0.2 s del lazo a 5 Hz (NB2).
+
+---
+
+## A5.8 La API de `ObstacleField` y las consultas de alto nivel
+
+Este apartado y los dos siguientes documentan la interfaz del campo de obstáculos y los parámetros del estimador que el capítulo 6 resume.
+
+### A5.8.1 Métodos públicos
+
+Todos los consumidores del sistema de percepción — `navigate_node` (lazo rápido), `evasive_node`, `fsm_node`, el gobernador de velocidad de `motor_node` y `FlightLogger` — acceden al campo de obstáculos **únicamente** a través de esta interfaz. La capa estratégica **no** recibe el `ObstacleField`: mira el fotograma directamente (cap. 5, IT.5.5). Ningún módulo de control lee campos crudos de flujo ni coordenadas del FOE.
+
+| Método | Descripción |
+|---|---|
+| `is_blocked(sector)` | `True` si alguna celda del sector está bloqueada según IT.6.9 |
+| `sector_ttc(sector)` | Mínimo TTC del sector, sobre celdas con confianza ≥ 0.15 |
+| `sector_occupancy(sector)` | Máxima ocupación del sector, sobre celdas con confianza ≥ 0.15 |
+| `sector_confidence(sector)` | Máxima confianza del sector |
+| `blocked_fraction()` | Fracción de celdas bloqueadas sobre el total de la grilla 3×3 |
+| `min_ttc()` | TTC mínimo global, sobre todas las celdas con confianza suficiente |
+| `has_evidence()` | `True` si `source == "flow"` y `foe_confidence > 0.0` |
+| `summary_text()` | Texto compacto por sector para el overlay y el logging (`scene_summary`), p. ej. "CENTRO: BLOQUEADO (TTC=3.2s, fuente: flujo óptico)" |
+| `to_dict()` | Representación serializable para el JSONL de auditoría |
+
+El campo `source` del `ObstacleField` indica el origen de la evidencia: `"flow"` (solo flujo óptico), `"degraded"` (ciclo con rotación alta o sin flujo), `"holdover"` (campo del ciclo anterior por degradación temporal), `"none"` (sin datos). El gobernador de velocidad usa `source` para limitar el avance cuando no hay evidencia (cap. 5, IT.5.4).
+
+El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo.
+
+### A5.8.2 `has_open_corridor` y `sector_towards_waypoint`
+
+Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (`has_open_corridor`, para decidir si un atasco tiene un corredor visible); el brazo `slm` detecta el atasco con el `StallDetector` (cap. 5, IT.5.3.1).
+
+**`sector_towards_waypoint(bearing_err_deg)`** mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
+- Si `bearing_err_deg < -BEARING_SECTOR_DEG` (default 15°) → `"izquierda"`
+- Si `bearing_err_deg > +15°` → `"derecha"`
+- Caso contrario → `"centro"`
+
+Esta función conecta el espacio de guiado de `WaypointTracker` con el espacio de percepción del `ObstacleField`, permitiendo que el escape de atasco priorice el sector hacia el waypoint.
+
+**`has_open_corridor(field, guidance)`** determina si la percepción tiene evidencia real de al menos un sector transitable, evaluado en el contexto del waypoint activo:
+
+```python
+if not field.has_evidence():
+    return False          # sin flujo ≠ "despejado"
+for sector in (target, otros_sectores):
+    if confidence(sector) >= MIN_CONFIDENCE y not is_blocked(sector):
+        return True
+return False
+```
+
+La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual: un dron en hover puede subir 12 m seguidos mientras el `ObstacleField` reporta `DERECHA: DESPEJADO` ciclo tras ciclo.
+
+---
+
+## A5.9 Memoria corta del TTC y supresión de guiñada
+
+**Holdover temporal del TTC (P2).** Cuando un frame aislado devuelve `foe_confidence = 0` (guiñada, textura baja), `FlowTTCEstimator` no vacía el campo de inmediato: devuelve el último campo válido con el TTC decrementado en el tiempo transcurrido (`ObstacleField.decay_ttc()`, copia inmutable con `source = "holdover"`) durante hasta `FLOW_HOLDOVER_MAX_FRAMES = 3` frames (0.6 s a 5 Hz). Superado ese límite el estimador vuelve al campo vacío, de modo que la memoria del obstáculo nunca se prolonga indefinidamente y el origen queda auditable en los logs.
+
+**Supresión activa de guiñada cerca de obstáculos (P3).** En lugar de solo inhibir el estimador cuando el giro ya ocurrió, el nodo reactivo limita la guiñada del guiado a `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE = 5 °/s` mientras el TTC del sector central esté por debajo del umbral de bloqueo (`safe_yaw_rate()`), un valor dentro del rango en que la derotación opera (≈ 10 °/s a 5 Hz). No aplica a `GIRAR_90` ni a `EVADIR_*`, cuya guiñada es intencional.
+
+---
+
+## A5.10 Variables de entorno del estimador
+
+El estimador expone todos sus parámetros clave a través de variables de entorno (versionadas en `config/.env`):
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `FLOW_ALGORITHM` | `"dis"` | Backend de flujo: `"dis"` o `"farneback"` |
+| `FLOW_DOWNSCALE_WIDTH` | 320 (código) · **640** (`config/.env`) | Ancho de trabajo para flujo óptico (px) |
+| `CAMERA_FX` / `CAMERA_FY` | 554.0 | Distancia focal a resolución de captura (px) |
+| `FLOW_NOISE_FLOOR_PX` | 0.35 | Piso de ruido: vectores más pequeños se descartan |
+| `MIN_VALID_FRACTION_FOR_FOE` | 0.01 | Fracción mínima de píxeles válidos para estimar FOE |
+| `FOE_OUTLIER_ANGLE_RAD` | 0.35 | Umbral de ángulo para RANSAC-lite (rad, ≈ 20°) |
+| `TTC_AGGREGATION_PERCENTILE` | 20 | Percentil de TTC usado como estimado por celda |
+| `FLOW_MAX_ROTATION_DEG` | 2.0 | Rotación máxima (°) para la que la derotación es confiable |
+| `OBSTACLE_OCCUPANCY_BLOCKED` | 0.011 | Umbral de ocupación para declarar celda bloqueada (calibrado por ROC/Youden, IT.6.9 y IT.7.5) |
+| `FLOW_HOLDOVER_MAX_FRAMES` | 3 | Frames máximos de holdover del TTC ante un frame sin evidencia (P2) |
+| `FLOW_MAX_YAW_DPS_NEAR_OBSTACLE` | 5.0 | Tope de guiñada (°/s) del guiado cerca de un obstáculo (P3) |
+| `OBSTACLE_TTC_BLOCKED_S` | 2.5 | Umbral de TTC para declarar celda bloqueada (s) |
+| `OBSTACLE_MIN_CONFIDENCE` | 0.15 | Confianza mínima para que ocupación vote bloqueo |
+| `OBSTACLE_MIN_CONFIDENCE_TTC` | 0.35 | Confianza mínima para que TTC vote bloqueo solo |

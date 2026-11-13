@@ -18,6 +18,8 @@
         <link rel="prev" href="A8-NAVEGACION-RL.html">
       
       
+        <link rel="next" href="A10-ESPECIFICACION-LAZO-TACTICO.html">
+      
       
         
       
@@ -1115,6 +1117,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A10-ESPECIFICACION-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A10. Especificación del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A11-CATALOGO-INCIDENTES-INTEGRACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A11. Catálogo de Incidentes de Integración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A12-OPERACION-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A12. Operación del Experimento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A13-ESTACION-TERRENA-DATASET.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A13. Estación Terrena y Dataset de Corridas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1373,7 +1487,7 @@
 <p><strong>Trabajos de contexto aéreo.</strong> El antecedente más cercano al dominio de esta tesis es SkyJEPA (<a href="../13-REFERENCIAS.html#ref-rao-2026">Rao et al., 2026</a>), que aplica un modelo de dinámica latente de estilo JEPA al control de cuadrirrotores con transferencia <em>sim-to-real</em> y optimización por muestreo en hardware embebido; según su resumen opera sobre <strong>estado</strong>, no sobre imágenes, por lo que no valida el caso visual monocular. En navegación con imagen objetivo, <a href="../13-REFERENCIAS.html#ref-chahe-2026">Chahe et al. (2026)</a> muestran que el costo de planificación en el espacio latente requiere diseño explícito (monotonía respecto del progreso). No se realizó un relevamiento exhaustivo de esta literatura, muy activa en 2026.</p>
 <hr />
 <h2 id="a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente">A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente<a class="headerlink" href="#a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente" title="Permanent link">&para;</a></h2>
-<p>El VLM del sistema es un <strong>perceptor semántico de escala de segundos</strong>: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, IT.5.10), con una latencia de ~0,8 s con el modelo local [T] (cap. 8, IT.8.6). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, IT.6.14) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
+<p>El VLM del sistema es un <strong>perceptor semántico de escala de segundos</strong>: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, IT.5.5), con una latencia de ~0,8 s con el modelo local [T] (cap. 8, IT.8.6). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, IT.6.12) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
 <table>
 <thead>
 <tr>

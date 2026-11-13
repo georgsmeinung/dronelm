@@ -83,7 +83,7 @@ frontal, y no colisiona precisamente porque esa falta de confianza lo mantiene e
 barrido puede resolver cada deadlock individual, pero si la tasa de generación de nuevos deadlocks
 excede la capacidad de avance neto, ningún ajuste de la capa deliberativa (Anexos 3 y 4) lo resuelve,
 porque el cuello de botella está en la capa de percepción, no en la de decisión. El lote 3 del diseño
-experimental (cap. 10, IT.10.5.3) mide si este régimen aparece y si la profundidad estimada lo atenúa.
+experimental (Anexo 12, IT.A12.5.3) mide si este régimen aparece y si la profundidad estimada lo atenúa.
 
 ### A7.2.1 ¿Ayudaría SLAM monocular disperso o semi-denso?
 
@@ -154,7 +154,7 @@ problema menos frágil que en flujo óptico, porque no depende de que exista mov
 del vehículo para generar paralaje utilizable: la línea de base está siempre presente, sea que el
 dron esté en hover, girando o avanzando lentamente. Esto es relevante porque el régimen de "cautela
 extrema → movimiento mínimo → menos evidencia" (el ciclo de retroalimentación negativa que
-agrava el deadlock, con el gobernador de velocidad limitando el avance, cap. 5 IT.5.13) deja de aplicar: el par estéreo entrega profundidad
+agrava el deadlock, con el gobernador de velocidad limitando el avance, cap. 5 IT.5.4) deja de aplicar: el par estéreo entrega profundidad
 métrica incluso cuando el vehículo está casi detenido.
 
 ---

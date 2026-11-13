@@ -92,3 +92,7 @@ nav:
     - "A7. Maldición Monocular y Mitigación Estéreo": anexos/A7-MALDICION-MONOCULAR-ESTEREO.md
     - "A8. Navegación por Aprendizaje por Refuerzo (Propuesta)": anexos/A8-NAVEGACION-RL.md
     - "A9. Modelos de Mundo Latentes en Edge (Propuesta)": anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.md
+    - "A10. Especificación del Lazo Táctico": anexos/A10-ESPECIFICACION-LAZO-TACTICO.md
+    - "A11. Catálogo de Incidentes de Integración": anexos/A11-CATALOGO-INCIDENTES-INTEGRACION.md
+    - "A12. Operación del Experimento": anexos/A12-OPERACION-EXPERIMENTAL.md
+    - "A13. Estación Terrena y Dataset de Corridas": anexos/A13-ESTACION-TERRENA-DATASET.md

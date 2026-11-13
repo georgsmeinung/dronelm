@@ -497,7 +497,7 @@ def main():
     )
     parser.add_argument(
         "--cells", nargs="+", default=None,
-        help="2026-10-15 (lotes D/E/F, informe IT.10.12.2): celdas brazo:estrategia a correr, p. ej. "
+        help="2026-10-15 (lotes D/E/F, informe IT.10.3.3): celdas brazo:estrategia a correr, p. ej. "
              "'slm:depth fsm:depth fsm:blind reactive'. Reemplaza el producto --arms x --deadlock-strategies: "
              "solo se corren esas celdas y se ALTERNAN dentro de cada semilla (con el orden rotado por "
              "semilla), para repartir entre ellas la deriva del simulador en el tiempo.",
@@ -505,7 +505,7 @@ def main():
     parser.add_argument("--seeds", nargs="+", type=int, default=[1, 2, 3])
     parser.add_argument("--allow-dirty", action="store_true",
                          help="Correr aunque el arbol tenga cambios sin commitear (code_version '-dirty'). "
-                              "Por defecto el lote no arranca: esas corridas se descartan (informe IT.10.12.2).")
+                              "Por defecto el lote no arranca: esas corridas se descartan (informe IT.A12.7.2).")
     parser.add_argument("--allow-any-python", action="store_true",
                          help="Correr aunque el interprete no sea el de AIRSIM_ENV_DIR (config/.env). Por defecto "
                               "el lote no arranca: todas las corridas deben salir del mismo entorno.")
@@ -663,7 +663,7 @@ def _cell(deadlock_strategy: str, strategic_source: Optional[str]) -> str:
 
 ARMS = ("slm", "fsm", "reactive")
 DEADLOCK_STRATEGIES = ("depth", "deep_vlm", "blind")
-# Corridas con menos ciclos son fallas de infraestructura, no del dron (informe IT.10.12.2).
+# Corridas con menos ciclos son fallas de infraestructura, no del dron (informe IT.A12.7.2).
 MIN_VALID_CYCLES = 50
 
 

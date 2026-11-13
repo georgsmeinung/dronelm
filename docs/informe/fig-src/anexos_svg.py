@@ -138,7 +138,7 @@ def a2():
         ("1", "Gramática en los logits", ["Se enmascaran los tokens que", "violan el esquema JSON: el 100 %", "de las respuestas tiene formato", "válido (IT.8.2.1)."]),
         ("2", "Describir, no decidir", ["Respuestas en enumeraciones", "cerradas; la geometría y la", "cinemática son funciones", "deterministas (IT.8.3, IT.8.4)."]),
         ("3", "Un solo lazo comanda", ["Solo el lazo rápido comanda", "velocidades; una respuesta", "inválida, tardía u obsoleta", "se descarta (IT.5.1.2)."]),
-        ("4", "Medir antes de confiar", ["Cada pregunta se mide contra", "etiquetas de referencia antes", "del vuelo; la que no pasa el", "criterio no vuela (IT.10.13)."]),
+        ("4", "Medir antes de confiar", ["Cada pregunta se mide contra", "etiquetas de referencia antes", "del vuelo; la que no pasa el", "criterio no vuela (IT.10.2)."]),
     ]
     for i, (n, t, b) in enumerate(items):
         x = 24 + i * 292
@@ -337,7 +337,7 @@ def a4_invariante():
     f.bullets(44, 566, [
         "Toda respuesta del modelo cumple su esquema, o se descarta sin reemplazarla por un valor por defecto.",
         "Los campos son enumeraciones cerradas: el modelo describe sectores, imágenes o parches; nunca elige una maniobra ni da velocidades.",
-        "La cinemática de cada macro-acción tiene una sola definición, action_to_command(), la misma para los tres brazos (IT.5.14).",
+        "La cinemática de cada macro-acción tiene una sola definición, action_to_command(), la misma para los tres brazos (IT.5.4).",
     ], "txt", 21)
     return f.save()
 
@@ -604,7 +604,7 @@ def a8_capas():
     layers = [
         ("EN TIERRA · UNA VEZ POR MISIÓN", "card", ["Manifiesto de misión (WebDCS) y plan de ruta con el VLM sobre el mapa cenital (cap. 4)"],
          ["LFM2.5-VL-1.6B: clasifica parches del mapa", "en los escenarios con obstrucción"]),
-        ("CAPA ESTRATÉGICA · LAZO LENTO, ~1 Hz, HILO APARTE", "card-blue", ["Qué sectores del fotograma están libres a 15 m → sub-meta en coordenadas del mundo;", "en deadlock, barrido de 4 rumbos (cap. 5, IT.5.10 e IT.5.12)"],
+        ("CAPA ESTRATÉGICA · LAZO LENTO, ~1 Hz, HILO APARTE", "card-blue", ["Qué sectores del fotograma están libres a 15 m → sub-meta en coordenadas del mundo;", "en deadlock, barrido de 4 rumbos (cap. 5, IT.5.5 e IT.5.6)"],
          ["fuente: profundidad estimada (Depth Anything V2);", "nunca comanda velocidades"]),
         ("CAPA TÁCTICA · LAZO RÁPIDO, 5 Hz", "card-green", ["ObstacleField + guiado → macro-acción → action_to_command() → velocidades (cap. 5)"],
          ["implementados: slm, fsm, reactive", "propuesto: rl, política neuronal (este anexo)"]),

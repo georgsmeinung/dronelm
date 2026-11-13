@@ -93,5 +93,5 @@
   <circle cx="47" cy="583" r="2.4" fill="#0066CC" />
   <text class="txt" x="56" y="587" text-anchor="start" >Los campos son enumeraciones cerradas: el modelo describe sectores, imágenes o parches; nunca elige una maniobra ni da velocidades.</text>
   <circle cx="47" cy="604" r="2.4" fill="#0066CC" />
-  <text class="txt" x="56" y="608" text-anchor="start" >La cinemática de cada macro-acción tiene una sola definición, action_to_command(), la misma para los tres brazos (IT.5.14).</text>
+  <text class="txt" x="56" y="608" text-anchor="start" >La cinemática de cada macro-acción tiene una sola definición, action_to_command(), la misma para los tres brazos (IT.5.4).</text>
 </svg>

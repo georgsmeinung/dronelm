@@ -87,7 +87,7 @@ Para hacer viable el despliegue de un modelo compacto (LFM2.5-VL-1.6B, cap. 8 IT
 3. **Arquitectura de dos lazos con un lazo rápido determinista (IT.5.1.2 y IT.8.2.2)**:
    La capa deliberativa no ejerce control directo sobre los actuadores. El lazo rápido de flujo óptico y TTC es el único que comanda velocidades y reacciona a lo inminente en el mismo ciclo; una respuesta inválida, tardía u obsoleta se descarta sin sustituirse por una decisión inventada, y un barrido sin respuesta válida cae a un escape vertical determinista.
 
-4. **Medición contra etiquetas de referencia antes del vuelo (IT.10.13)**:
+4. **Medición contra etiquetas de referencia antes del vuelo (IT.10.2)**:
    Cada pregunta que se le hace al modelo se evalúa fuera de vuelo contra una etiqueta independiente; la que no supera el criterio no se lleva al lazo. Por eso, con la configuración por defecto, las preguntas del lazo lento las responde una red de profundidad estimada y el VLM queda en el plan de ruta, donde sí aporta señal.
 
 ### Conclusión sintética

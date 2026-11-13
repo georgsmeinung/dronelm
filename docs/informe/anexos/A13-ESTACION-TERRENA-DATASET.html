@@ -1,0 +1,1636 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A13-ESTACION-TERRENA-DATASET.html">
+      
+      
+        <link rel="prev" href="A12-OPERACION-EXPERIMENTAL.html">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A13. Estación Terrena y Dataset de Corridas - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-13-estacion-terrena-webdcs-plan-de-ruta-y-dataset-de-corridas" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A13. Estación Terrena y Dataset de Corridas
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A7-MALDICION-MONOCULAR-ESTEREO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Modelos de Mundo Latentes en Edge (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A10-ESPECIFICACION-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A10. Especificación del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A11-CATALOGO-INCIDENTES-INTEGRACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A11. Catálogo de Incidentes de Integración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A12-OPERACION-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A12. Operación del Experimento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A13. Estación Terrena y Dataset de Corridas
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A13-ESTACION-TERRENA-DATASET.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A13. Estación Terrena y Dataset de Corridas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a131-plan-de-ruta-detalle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1 Plan de ruta: detalle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A13.1 Plan de ruta: detalle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1311-juicio-por-imagen-alternativa-de-contraste" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1.1 Juicio por imagen (alternativa de contraste)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1312-construccion-del-mapa-cenital-registrado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1.2 Construcción del mapa cenital registrado
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a132-interfaz-webdcs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.2 Interfaz WebDCS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a133-dataset-de-corridas-estructura-de-airsim-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.3 Dataset de corridas: estructura de airsim-runs/
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A13.3 Dataset de corridas: estructura de airsim-runs/">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1331-archivos-de-una-corrida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.3.1 Archivos de una corrida
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a134-visor-de-auditoria-viewerhtml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.4 Visor de auditoría (.viewer.html)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A13.4 Visor de auditoría (.viewer.html)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1341-anotaciones-del-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.4.1 Anotaciones del video
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a131-plan-de-ruta-detalle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1 Plan de ruta: detalle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A13.1 Plan de ruta: detalle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1311-juicio-por-imagen-alternativa-de-contraste" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1.1 Juicio por imagen (alternativa de contraste)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1312-construccion-del-mapa-cenital-registrado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1.2 Construcción del mapa cenital registrado
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a132-interfaz-webdcs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.2 Interfaz WebDCS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a133-dataset-de-corridas-estructura-de-airsim-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.3 Dataset de corridas: estructura de airsim-runs/
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A13.3 Dataset de corridas: estructura de airsim-runs/">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1331-archivos-de-una-corrida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.3.1 Archivos de una corrida
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a134-visor-de-auditoria-viewerhtml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.4 Visor de auditoría (.viewer.html)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A13.4 Visor de auditoría (.viewer.html)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1341-anotaciones-del-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.4.1 Anotaciones del video
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="anexo-13-estacion-terrena-webdcs-plan-de-ruta-y-dataset-de-corridas">Anexo 13: Estación terrena WebDCS, plan de ruta y dataset de corridas<a class="headerlink" href="#anexo-13-estacion-terrena-webdcs-plan-de-ruta-y-dataset-de-corridas" title="Permanent link">&para;</a></h1>
+<p>El capítulo 4 presenta la arquitectura de dos cerebros, el manifiesto de misión, el plan de ruta con el VLM sobre el mapa cenital y el rol de la estación terrena en la auditoría. Este anexo reúne el detalle de implementación: la alternativa de juicio por imagen del planificador, la construcción del mapa cenital registrado, la interfaz WebDCS, la estructura completa del dataset de corridas y el visor de auditoría con las anotaciones del video.</p>
+<hr />
+<h2 id="a131-plan-de-ruta-detalle">A13.1 Plan de ruta: detalle<a class="headerlink" href="#a131-plan-de-ruta-detalle" title="Permanent link">&para;</a></h2>
+<h3 id="a1311-juicio-por-imagen-alternativa-de-contraste">A13.1.1 Juicio por imagen (alternativa de contraste)<a class="headerlink" href="#a1311-juicio-por-imagen-alternativa-de-contraste" title="Permanent link">&para;</a></h3>
+<p>El código conserva una alternativa, <code>ROUTE_JUDGE=image</code>, que sirve de contraste para justificar la elección: dibuja cada candidata como un <strong>pasillo</strong> del ancho que necesita el dron (<code>ROUTE_RENDER=corridor</code>, <code>ROUTE_CORRIDOR_M</code> = 10 m) o como una línea (<code>ROUTE_RENDER=line</code>), sobre su propio recorte del mapa. El recorte se rota para que la ruta vaya del inicio (abajo, verde) al destino (arriba, azul), se acerca a la candidata (672 × 672 px) y fuera del pasillo el mapa se oscurece. Se le pregunta al modelo si todo el pasillo es calle o terreno abierto, con este prompt de sistema:</p>
+<blockquote>
+<p>You see a top-down city map. The bright strip outlined in red is a drone path from the green dot (bottom) to the blue dot; the rest is darkened. Answer yes only if the whole strip covers street or open ground, with no building, trees or elevated road inside it. Reply with JSON only.</p>
+</blockquote>
+<p>y el mensaje, <code>Drone altitude 10 m. Is the whole bright strip street or open ground? yes or no.</code> La respuesta se fuerza a <code>yes</code>/<code>no</code> y la probabilidad de <code>yes</code> se lee de los <em>logprobs</em> del token de la respuesta.</p>
+<h3 id="a1312-construccion-del-mapa-cenital-registrado">A13.1.2 Construcción del mapa cenital registrado<a class="headerlink" href="#a1312-construccion-del-mapa-cenital-registrado" title="Permanent link">&para;</a></h3>
+<p>El plan de ruta solo tiene sentido si el mapa coincide con el mundo de vuelo. Los mapas de CitySim y TownSim se construyen con el propio simulador (<code>airsim-plan/scripts/capture_ortho_map.py</code>): el dron se reubica sobre una grilla de puntos a 1000 m de altura con la cámara frontal apuntando 90° hacia abajo y un campo visual de 15°, de modo que la vista es casi ortográfica. De cada toma se usa la mitad central y se la pega en el lienzo a 2 px/m en CitySim y 4 px/m en TownSim, con el origen NED en el centro de la imagen, el norte arriba y el este a la derecha. La orientación y la escala se verifican en el arranque desplazando el dron 20 m al norte y 20 m al este y midiendo el corrimiento de la imagen por correlación de fase.</p>
+<p>Unreal Engine carga el escenario por zonas alrededor del punto de vista, y desde 1000 m no carga la zona de abajo: la imagen muestra solo calles y bases vacías. Por eso, antes de cada toma el dron baja a 40 m sobre el punto (la carga se completa en unos 3 s), vuelve a subir y captura enseguida. La toma se acepta cuando la fracción de píxeles de edificio, medida con la profundidad, deja de crecer entre dos capturas; un criterio por color no sirve, porque el agua animada nunca se estabiliza y una zona sin cargar está quieta. El resultado, <code>citysim_ortho.png</code>, cubre la ciudad completa (1920 m norte-sur por 1640 m este-oeste) y es el mapa de todas las misiones de CitySim. El de TownSim, <code>townsim_ortho.png</code> (24 tomas, 4 px/m), cubre 500 × 500 m alrededor del origen; superpuestas las trayectorias voladas, ninguna muestra de casi-contacto cae sobre pasto sin obstáculo. Las demás imágenes de esos niveles (<code>citymap.png</code>, <code>citysim_calib.png</code>, <code>townsim.png</code>, <code>townsim_calib.png</code>) no están registradas con el mundo y <code>airsim-plan/missions/maps/map_scales.json</code> las marca así.</p>
+<hr />
+<h2 id="a132-interfaz-webdcs">A13.2 Interfaz WebDCS<a class="headerlink" href="#a132-interfaz-webdcs" title="Permanent link">&para;</a></h2>
+<p><strong>WebDCS</strong> (<em>Web-based Drone Control Station</em>) es la interfaz de control en tierra, construida sobre <strong>FastAPI</strong> con frontend en HTML5, CSS y JavaScript. Expone su API REST en <code>http://localhost:8000</code> y sirve el panel de operación como aplicación web estática.</p>
+<p><img alt="Interfaz de la Estación Terrena WebDCS" src="../2026-0903%20Nueva%20UX%20WebDCS.png" /></p>
+<ol>
+<li>
+<p><strong>Gestión interactiva de cartas y waypoints:</strong>
+   El panel incorpora un visor Canvas 2D que superpone la trayectoria del manifiesto sobre la carta del entorno urbano (<code>CitySim</code>). El operador puede cargar manifiestos existentes desde <code>airsim-plan/missions/flightplans/</code>, visualizar la ruta proyectada y editar waypoints interactivamente sobre la carta — agregar, reordenar, eliminar y ajustar altitud — antes de guardar o lanzar.</p>
+</li>
+<li>
+<p><strong>Lanzamiento y detención de misión:</strong>
+   El botón <em>Lanzar</em> invoca <code>POST /api/launch</code>, que persiste el manifiesto y arranca <code>airsim-loop</code> en un hilo de fondo sin bloquear la interfaz. <code>POST /api/stop</code> detiene todos los runners activos. <code>POST /api/reset</code> reinicia el simulador AirSim y libera el control de la API.</p>
+</li>
+</ol>
+<hr />
+<h2 id="a133-dataset-de-corridas-estructura-de-airsim-runs">A13.3 Dataset de corridas: estructura de <code>airsim-runs/</code><a class="headerlink" href="#a133-dataset-de-corridas-estructura-de-airsim-runs" title="Permanent link">&para;</a></h2>
+<p>Cada ejecución de una misión escribe una carpeta autocontenida en <code>airsim-runs/</code>. Desde <code>main.py</code> (WebDCS), el nombre de la carpeta y el prefijo común (<code>&lt;stem&gt;</code>) de sus archivos es <code>&lt;MISSION_ID&gt;-&lt;YYYYMMDDTHHMMSSZ&gt;</code>: el <code>mission_id</code> del manifiesto más la hora de inicio en UTC, en ISO 8601 compacto (por ejemplo, <code>CITYSIM_CLEAR-20260907T191226Z</code>). El ejecutor de experimentos (<code>experiments/runner.py</code>) ubica cada corrida en una jerarquía por celda experimental, <code>&lt;escenario&gt;/&lt;brazo&gt;/&lt;celda&gt;/seed_&lt;N&gt;_&lt;timestamp&gt;/</code>, con <code>&lt;stem&gt;</code> = <code>seed_&lt;N&gt;_&lt;timestamp&gt;</code>; la celda es la estrategia de deadlock (<code>depth</code>, <code>deep_vlm</code>, <code>blind</code>) o, si el lote varía la fuente de la capa estratégica, <code>strat_&lt;fuente&gt;__&lt;estrategia&gt;</code> (Anexo 12, IT.A12.9.1). En ningún caso una corrida sobrescribe a otra.</p>
+<h3 id="a1331-archivos-de-una-corrida">A13.3.1 Archivos de una corrida<a class="headerlink" href="#a1331-archivos-de-una-corrida" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Lo escribe</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;stem&gt;.jsonl</code></td>
+<td><code>FlightLogger</code>, ciclo a ciclo</td>
+<td>Traza completa: un objeto JSON por ciclo, con el <code>DroneState</code> serializado</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.csv</code></td>
+<td><code>FlightLogger</code></td>
+<td>La misma traza en columnas, más el <code>DroneState</code> aplanado en columnas <code>state.&lt;ruta&gt;</code></td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.summary.json</code></td>
+<td><code>FlightLogger.close()</code> y <code>finalize_run</code></td>
+<td>Indicadores de la corrida: éxito, colisiones, DistMin, recorrido, consultas, deadlocks, plan de ruta, versión del código</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.summary_by_wp.csv</code></td>
+<td><code>FlightLogger.close()</code></td>
+<td>Ciclos, duración, ciclos de barrido y eventos de barrido por objetivo</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.distmin.ndjson</code></td>
+<td>hilo de auditoría (<code>distmin_audit.py</code>)</td>
+<td>Muestras de distancia mínima a obstáculo, una por segundo</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.console.log</code></td>
+<td>runner</td>
+<td>Copia de la salida de consola de la corrida (stdout y stderr)</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.webm</code></td>
+<td><code>FlightVideoRecorder</code></td>
+<td>Video de la cámara frontal, un cuadro por ciclo, con overlay</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.follow.webm</code></td>
+<td><code>follow_cam.py</code></td>
+<td>Video de la cámara externa <code>FollowCam</code> (si está definida en <code>settings.json</code>), un cuadro por ciclo</td>
+</tr>
+<tr>
+<td><code>&lt;stem&gt;.viewer.html</code></td>
+<td><code>flight_viewer.py</code></td>
+<td>Visor de auditoría autocontenido</td>
+</tr>
+<tr>
+<td><code>photo-&lt;ISO_UTC&gt;.png</code></td>
+<td><code>FlightLogger</code></td>
+<td>Fotogramas de cada consulta del lazo lento (capa estratégica y barrido), a resolución completa</td>
+</tr>
+</tbody>
+</table>
+<p>Además, a nivel de escenario, el runner deja <code>route_plan/</code> con el plan de ruta y sus imágenes (cap. 4 IT.4.3.1), y <code>batch_runner.py</code> agrega en la raíz <code>RESULTS_SUMMARY.json</code> (una fila por corrida) y <code>RESULTS_SUMMARY.batch_version.txt</code>.</p>
+<p><strong>Traza por ciclo (<code>.jsonl</code>).</strong> Cada línea es un ciclo del lazo y tiene estos campos:</p>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Contenido</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>t</code>, <code>cycle</code></td>
+<td>Segundos desde el inicio de la corrida y número de ciclo</td>
+</tr>
+<tr>
+<td><code>arm</code>, <code>scenario</code>, <code>seed</code></td>
+<td>Celda de la corrida</td>
+</tr>
+<tr>
+<td><code>pos</code>, <code>vel</code>, <code>yaw_deg</code>, <code>pitch_deg</code>, <code>roll_deg</code></td>
+<td>Posición NED, velocidad (<code>vx</code>, <code>vy</code>, <code>vz</code>) y actitud</td>
+</tr>
+<tr>
+<td><code>route</code>, <code>action</code></td>
+<td>Ruta que decidió el ciclo y macro-acción emitida (cap. 5 IT.5.3)</td>
+</tr>
+<tr>
+<td><code>obstacle_field</code></td>
+<td><code>ObstacleField</code> completo: por sector, ocupación, TTC, confianza y bloqueo; fuente (<code>flow</code>, <code>holdover</code>, <code>degraded</code>) y confianza del FOE (cap. 6)</td>
+</tr>
+<tr>
+<td><code>latency_ms</code></td>
+<td>Duración del ciclo del grafo (<code>graph</code>) y de la lectura de telemetría (<code>telemetry</code>)</td>
+</tr>
+<tr>
+<td><code>slm</code></td>
+<td>Presente en los ciclos con una consulta del lazo lento: identificador, latencia, <em>fallback</em>, <em>timeout</em>, adherencia al esquema, prompt (vacío con la profundidad), respuesta cruda (con la profundidad, el p5 estimado por sector en metros) y rutas de los fotogramas (<code>frame_paths</code>)</td>
+</tr>
+<tr>
+<td><code>collision</code></td>
+<td>Colisión y objeto contra el que ocurrió</td>
+</tr>
+<tr>
+<td><code>wp_index</code>, <code>dist_to_wp_m</code></td>
+<td>Objetivo activo y distancia horizontal a él</td>
+</tr>
+<tr>
+<td><code>degraded</code></td>
+<td>AirSim no respondió en el ciclo (cap. 5 IT.5.4)</td>
+</tr>
+<tr>
+<td><code>deadlock_event</code></td>
+<td>Solo en el ciclo en que un deadlock se resuelve o cae al escape: estrategia, si lo resolvió el barrido, ciclos que llevó, si cayó al escape vertical, la macro, la respuesta cruda y la selección del rumbo de salida (<code>scan_selection</code>: candidatos, descartados con su motivo, rumbo que falló, modo y rumbo elegido; cap. 5 IT.5.6)</td>
+</tr>
+<tr>
+<td><code>perception</code></td>
+<td>Señales del <code>StallDetector</code> (contacto por IMU, avance sin movimiento, nivel de vibración, ciclos detenido)</td>
+</tr>
+<tr>
+<td><code>state</code></td>
+<td>El <code>DroneState</code> completo del ciclo</td>
+</tr>
+<tr>
+<td><code>min_obstacle_dist_m</code></td>
+<td>Siempre vacío: la distancia mínima la mide la auditoría aparte (<code>.distmin.ndjson</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>El campo <code>state</code> hace que la traza no dependa de haber previsto qué registrar: guarda todas las claves del estado (cap. 5 IT.5.2) con reglas fijas (<code>state_serializer.py</code>). Las imágenes y los búferes de fotogramas se reemplazan por su forma (<code>&lt;ndarray shape=(720, 1080, 3)&gt;</code>); <code>deliberations</code> se resume en su cantidad y la última entrada, sin prompts (que ya están en el bloque <code>slm</code>); los textos se cortan a 600 caracteres, las listas a 40 elementos y el anidamiento a 6 niveles, y los valores no finitos se escriben como texto (<code>"inf"</code>, <code>"nan"</code>) para que cada línea sea JSON válido. La serialización nunca detiene el vuelo: si falla, el ciclo registra el error en lugar del estado.</p>
+<p><strong>Traza plana (<code>.csv</code>).</strong> Durante el vuelo se escribe en <em>streaming</em> con un conjunto fijo de columnas, que sirve de respaldo si el proceso muere: identificación (<code>t</code>, <code>cycle</code>, <code>arm</code>, <code>scenario</code>, <code>seed</code>, <code>route</code>, <code>action</code>, <code>wp_index</code>, <code>dist_to_wp_m</code>, <code>degraded</code>), cinemática (<code>pos_*</code>, <code>vel_*</code>, actitud), colisión, latencias, la consulta del ciclo (<code>slm_invoked</code>, <code>slm_latency_ms</code>, <code>slm_fallback</code>, <code>slm_timeout</code>, <code>slm_adherent</code>, <code>slm_prompt</code>, <code>slm_raw_response</code>, <code>slm_delib_id</code>, <code>slm_frame_paths</code>), estado de control (<code>ctrl_*</code>: contador de atasco, maniobra comprometida y ciclos restantes, señales del <code>StallDetector</code>, ciclos sin progreso) y el campo de obstáculos por sector (<code>field_&lt;sector&gt;_occ</code>, <code>_ttc_s</code>, <code>_conf</code>, <code>_blocked</code>, <code>field_source</code>). Algunas columnas <code>ctrl_*</code> (<code>ctrl_depth_m</code>, <code>ctrl_traj_*</code>, <code>ctrl_stuck_invisible</code>) quedan siempre vacías: el grafo no las llena, pero forman parte del esquema fijo de columnas que esperan las herramientas de análisis. Al cerrar la corrida, el CSV se reescribe agregando el <code>DroneState</code> aplanado: una columna <code>state.&lt;ruta&gt;</code> por cada valor escalar del árbol (por ejemplo <code>state._vlm_strategic.outcome</code>). El prompt y la respuesta completos están en el CSV, y no solo en el JSONL, para poder analizar las consultas sin cruzar archivos.</p>
+<p><strong>Resumen de corrida (<code>.summary.json</code>).</strong> Lo consumen <code>analyze_lotes.py</code> (cap. 10 IT.10.7), <code>analyze.py</code>, <code>analyze_tesis_results.py</code> y <code>analyze_strategic_batch.py</code>. Campos:</p>
+<ul>
+<li><strong>Identificación:</strong> <code>scenario</code>, <code>seed</code>, <code>arm</code>, <code>code_version</code> (hash del commit, con sufijo <code>-dirty</code> si había cambios sin confirmar; Anexo 12, IT.A12.9.3), <code>deadlock_strategy</code>, <code>strategic_source</code> y <code>route_plan</code> (modo y plan con el que voló).</li>
+<li><strong>Misión:</strong> <code>success</code>, <code>cycles</code>, <code>duration_s</code>, <code>path_length_m</code> y, cuando corresponde, <code>termination_reason</code> (por ejemplo <code>physics_locked</code>) y <code>freeze_recoveries</code>.</li>
+<li><strong>Seguridad:</strong> <code>collisions</code> y DistMin (<code>min_obstacle_dist_m</code>, con <code>min_obstacle_dist_t</code>, <code>min_obstacle_dist_source</code> y <code>min_obstacle_dist_samples</code>).</li>
+<li><strong>Lazo lento:</strong> <code>slm_invocations</code> (consultas nuevas, contadas una vez por identificador), <code>deliberation_rate</code>, <code>slm_fallback_rate</code>, <code>slm_timeout_rate</code>.</li>
+<li><strong>Rutas:</strong> <code>route_histogram</code>, ciclos por ruta.</li>
+<li><strong>Atascos:</strong> <code>deadlock_events</code>, <code>deep_scan_events</code>, <code>deep_scan_resolution_rate</code>, <code>deep_scan_avg_cycles_to_resolve</code>, <code>deep_scan_fallback_rate</code>, <code>deep_scan_futile_rate</code>, <code>vertical_escapes</code>.</li>
+</ul>
+<p><strong>Resumen por objetivo (<code>.summary_by_wp.csv</code>).</strong> Columnas <code>wp_index</code>, <code>wp_label</code>, <code>cycles</code>, <code>duration_s</code>, <code>deliberative_cycles</code>, <code>deliberative_rate</code> y <code>deep_scan_events</code>. El índice cuenta los objetivos tal como los recorrió el tracker, incluidas las sub-metas insertadas, y la etiqueta es la del waypoint de misión al que pertenecen: varias filas pueden tener la misma etiqueta. Sirve para ver en qué tramo se concentra la dificultad sin abrir la traza.</p>
+<p><strong>Auditoría de DistMin (<code>.distmin.ndjson</code>).</strong> Una línea por muestra, cada <code>DISTMIN_TRACK_PERIOD_S</code> (1 s): <code>t</code> (hora epoch), <code>dist_m</code> (percentil 5 del tercio central de la profundidad de la cámara frontal) y la posición <code>x</code>, <code>y</code>, <code>z</code> en el instante de la muestra. La escribe un hilo aislado, con su propia conexión al simulador, que no comparte nada con el grafo (cap. 5 IT.5.8); <code>finalize_run</code> consolida el mínimo en el resumen. Como cada muestra lleva su posición, se puede calcular DistMin por tramo; su <code>t</code> es hora epoch, distinta del <code>t</code> relativo de la traza.</p>
+<p><strong>Fotogramas (<code>photo-&lt;ISO&gt;.png</code>).</strong> Cada consulta del lazo lento guarda el fotograma crudo que le dio origen, a resolución completa (no la versión reducida que viaja en el pedido), nombrado con su hora de captura en UTC con milisegundos; un barrido guarda sus cuatro imágenes. La columna <code>slm_frame_paths</code> de la traza enlaza cada consulta con sus archivos. Con la capa estratégica de profundidad hay del orden de un fotograma por segundo de vuelo.</p>
+<p><strong>Cierre y reparación (<code>finalize_run</code>).</strong> Es el último paso de toda corrida del runner y es idempotente: consolida DistMin en el resumen y, si el proceso murió antes de cerrar, reconstruye el CSV con las columnas <code>state.*</code> a partir del JSONL (que se vacía a disco ciclo a ciclo), repara el índice de los videos y regenera el visor. Una corrida interrumpida se cierra a mano con <code>python experiments/finalize_run.py &lt;carpeta&gt;</code> (o <code>--all &lt;raíz&gt;</code> para todas las incompletas).</p>
+<hr />
+<h2 id="a134-visor-de-auditoria-viewerhtml">A13.4 Visor de auditoría (<code>.viewer.html</code>)<a class="headerlink" href="#a134-visor-de-auditoria-viewerhtml" title="Permanent link">&para;</a></h2>
+<p>NB2 es su equivalente en Python: abre una corrida de la v4, recalcula desde el registro por ciclo las métricas del <code>summary.json</code> y grafica la traza de decisión, el <code>ObstacleField</code>, la capa estratégica y la trayectoria sobre el mapa.</p>
+<p><img src="../2026-1028 visor_auditoria.png"/></p>
+<p><em>Visor de una corrida <code>slm:depth</code> de <code>townsim_ini</code> (corrida v4, lote 3, semilla 89) en el ciclo 398: un muro cubre el campo, el lazo rápido gira 90° y adelanta la consulta estratégica #40.</em></p>
+<p>El visor es un único archivo HTML que se genera al cerrar cada corrida. Lleva la traza embebida como JSON dentro de la página, de modo que se abre con doble clic, sin servidor: un navegador bloquea, desde <code>file://</code>, la lectura de otro archivo local con <code>fetch</code>, pero sí reproduce un video de la misma carpeta. Tiene cuatro partes:</p>
+<ol>
+<li><strong>Videos sincronizados.</strong> El video frontal (lo que ve el grafo) y, si existe, el de la cámara externa <code>FollowCam</code>, uno al lado del otro. El externo sigue al frontal en reproducción, pausa, velocidad y saltos. Los dos tienen un cuadro por ciclo, de modo que la correspondencia entre video y traza es por número de ciclo y no por tiempo: el período real del lazo varía y el tiempo derivaría.</li>
+<li><strong>Barra de ciclos.</strong> Un control deslizante sobre todos los ciclos, sincronizado en ambos sentidos con el video, con el ciclo y el tiempo actuales.</li>
+<li><strong>Panel de detalle del ciclo.</strong> Todas las columnas del CSV del ciclo; los tres sectores del <code>ObstacleField</code> como recuadros (ocupación, TTC, confianza, resaltados si están bloqueados); el prompt y la respuesta cruda si en ese ciclo llegó una consulta; las imágenes exactas de esa consulta, y el <code>DroneState</code> completo como árbol desplegable.</li>
+<li><strong>Tabla de ciclos.</strong> Una fila por ciclo con ciclo, tiempo, ruta, acción, objetivo, distancia, TTC y bloqueo del sector central, colisión e identificador de consulta. La fila actual se resalta y se centra al avanzar el video; un clic en una fila lleva el video a ese ciclo.</li>
+</ol>
+<p>El uso típico es partir de un evento del resumen —un deadlock, una colisión, la muestra de DistMin más baja— y llevar el visor a ese ciclo: el video muestra la escena, el panel muestra qué percibió el sistema y qué decidió, y el árbol del estado muestra por qué (contadores de atasco, sub-meta activa, resultado de la capa estratégica). Así se auditaron los modos de falla del capítulo 9.</p>
+<h3 id="a1341-anotaciones-del-video">A13.4.1 Anotaciones del video<a class="headerlink" href="#a1341-anotaciones-del-video" title="Permanent link">&para;</a></h3>
+<p>El video (<code>.webm</code>) registra un fotograma por ciclo del lazo, a la misma cadencia de <code>LOOP_HZ</code>. Cada fotograma lleva un overlay de cuatro líneas superpuesto <strong>sobre una copia del fotograma</strong>; el original, que usan la percepción y la capa estratégica y que se guarda como <code>.png</code> de auditoría, queda sin modificar para no contaminar la evidencia perceptual.</p>
+<p><strong>Línea 1 — ruta activa y macro-acción</strong> (texto grande, color codificado):</p>
+<div class="highlight"><pre><span></span><code>[KEEP_GOING] ACT: MANTENER_RUMBO  WP 3/7 (42m)
+</code></pre></div>
+<ul>
+<li>El tag entre corchetes es la <strong>ruta</strong> (<code>route</code>) del comportamiento que resolvió el ciclo (cap. 5 IT.5.3): <code>REACTIVE</code> (crucero sin novedad, vuelo bajo el piso óptico o descenso bajo un techo), <code>EVASIVE</code> (evasión reactiva o continuación de una maniobra comprometida), <code>GIRAR_90</code> (giro ante un frente bloqueado), <code>DELIBERATIVE</code> (barrido de resolución de atasco en curso o resuelto), <code>TACTICAL</code> (escape vertical cuando el barrido no resolvió o con <code>blind</code>), <code>FSM</code> (brazo FSM) o <code>DEGRADED</code> (modo degradado, cap. 5 IT.5.4).</li>
+<li><code>ACT:</code> es la <strong>macro-acción</strong> traducida a comando cinemático por el nodo <code>motor</code>.</li>
+<li><code>WP X/N (Ym)</code> indica el objetivo activo y la distancia restante según <code>WaypointTracker</code> (cap. 5 IT.5.4). <code>N</code> cuenta también las sub-metas insertadas en vuelo, de modo que crece durante la misión.</li>
+<li><strong>Color:</strong> verde para <code>MANTENER_RUMBO</code>, naranja para maniobras de evasión, giro o escape vertical, rosa para <code>FRENAR</code>.</li>
+</ul>
+<p><strong>Línea 2 — TTC frontal y estado de vuelo</strong> (derecha del fotograma):</p>
+<div class="highlight"><pre><span></span><code>TTC: 3.2s | vuelo
+</code></pre></div>
+<ul>
+<li><code>TTC</code> es el tiempo estimado a colisión del sector frontal según el <code>ObstacleField</code> del ciclo (cap. 6); <code>inf</code> significa sector despejado.</li>
+<li>El campo de texto refleja el estado general de la misión (<code>vuelo</code>, <code>completada</code>, <code>colisión</code>).</li>
+</ul>
+<p><strong>Línea 3 — telemetría del ciclo:</strong></p>
+<div class="highlight"><pre><span></span><code>t= 18.4s cy=92 | pos=(+26.1,-78.2,-10.0) | v=2.31m/s pitch=-3.2deg roll=+0.8deg
+</code></pre></div>
+<ul>
+<li><code>t</code> y <code>cy</code> permiten cruzar el fotograma con la fila exacta del CSV por número de ciclo (la sincronización por tiempo es aproximada, la de ciclo es exacta; ver <code>flight_video.py</code>).</li>
+<li><code>pos</code> es la posición 3D en el marco NED del simulador; si el guiado detectó un techo (IT.A10.8.3), se agrega <code>ceil=&lt;cota&gt;</code> a continuación.</li>
+<li><code>v</code>, <code>pitch</code>, <code>roll</code> son la velocidad horizontal y la actitud del vehículo en ese instante.</li>
+</ul>
+<p><strong>Línea 4 — estado del ObstacleField por sector</strong> (cap. 6):</p>
+<div class="highlight"><pre><span></span><code>C occ=0.62 ttc=3.2s! | I occ=0.11 ttc=inf | D occ=0.08 ttc=inf
+</code></pre></div>
+<ul>
+<li>Los tres sectores son <code>C</code> (centro / frente), <code>I</code> (izquierda) y <code>D</code> (derecha).</li>
+<li><code>occ</code> es la fracción de ocupación estimada por flujo óptico monocular; <code>ttc</code> es el tiempo a colisión estimado del sector; <code>!</code> marca el sector como bloqueado según el umbral de <code>is_blocked()</code>.</li>
+<li>Estos valores son los mismos que usa el lazo rápido de <code>navigate</code> (cap. 5 IT.5.3): el overlay permite ver, ciclo a ciclo, qué evidencia perceptual motivó la decisión visible en la línea 1. La capa estratégica no los recibe: mira el fotograma directamente (cap. 5 IT.5.5).</li>
+</ul>
+<p>La combinación de estas cuatro líneas permite reconstruir, para cualquier instante del vuelo, exactamente qué percibió el sistema, por qué se activó el comportamiento que aparece en el tag, y qué orden cinemática emitió — sin necesidad de cruzar a mano el video con el CSV.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

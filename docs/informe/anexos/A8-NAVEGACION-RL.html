@@ -1073,6 +1073,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A10-ESPECIFICACION-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A10. Especificación del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A11-CATALOGO-INCIDENTES-INTEGRACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A11. Catálogo de Incidentes de Integración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A12-OPERACION-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A12. Operación del Experimento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A13-ESTACION-TERRENA-DATASET.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A13. Estación Terrena y Dataset de Corridas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1253,7 +1365,7 @@ produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_
 estimada como fuente (<code>STRATEGIC_SOURCE=depth</code>): propone sub-metas en coordenadas del
 mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
 (<code>DEADLOCK_STRATEGY=depth</code>) resuelve los atascos duros e inyecta un desvío
-(<code>inject_corner</code>), igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).</p>
+(<code>inject_corner</code>), igual que con los brazos existentes (cap. 5, IT.5.5, IT.5.6).</p>
 <p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
 <code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
 seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
@@ -1296,7 +1408,7 @@ real donde la calibración del flujo es incierta.</p>
 <hr />
 <h2 id="a83-espacio-de-acciones">A8.3 Espacio de acciones<a class="headerlink" href="#a83-espacio-de-acciones" title="Permanent link">&para;</a></h2>
 <p>Se propone un espacio discreto de seis acciones, tomadas del vocabulario fijo del sistema
-(<code>VALID_ACTIONS</code>, <code>action_map.py</code>; IT.8.3.4, IT.5.14). Quedan fuera <code>GIRAR_90</code>, que el
+(<code>VALID_ACTIONS</code>, <code>action_map.py</code>; IT.8.3.4, IT.5.4). Quedan fuera <code>GIRAR_90</code>, que el
 lazo rápido aplica como regla de seguridad, y <code>RETROCEDER</code>, que ningún comportamiento
 emite:</p>
 <table>
@@ -1341,7 +1453,7 @@ emite:</p>
 </tbody>
 </table>
 <p>La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
-(<code>action_to_command()</code>, IT.5.14): la política neuronal nunca genera velocidades directamente,
+(<code>action_to_command()</code>, IT.5.4): la política neuronal nunca genera velocidades directamente,
 lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
 saturaciones y convenciones de Body Frame que los brazos <code>fsm</code> y <code>slm</code>.</p>
 <p><strong>Espacio continuo (extensión futura).</strong> Una vez que el brazo discreto haya convergido, se
@@ -1463,11 +1575,11 @@ una de las incógnitas clave del protocolo de evaluación de IT.A8.6.</p>
 <hr />
 <h2 id="a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
 <p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
-los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, IT.10.2), para que la comparación sea válida:</p>
+los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, IT.10.3), para que la comparación sea válida:</p>
 <div class="highlight"><pre><span></span><code>K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
 </code></pre></div>
 <p>Los escenarios propuestos para la evaluación del brazo <code>rl</code> son los seis de la
-tesis (cap. 10, IT.10.3.4):</p>
+tesis (cap. 10, IT.10.4.2):</p>
 <table>
 <thead>
 <tr>
@@ -1554,7 +1666,7 @@ distancia mínima, tasa de consulta) más dos métricas específicas del brazo <
 <td>Latencia de decisión</td>
 <td>~0.1 ms</td>
 <td>~0.2 ms</td>
-<td>~0.1 s por consulta del lazo lento (profundidad; cap. 6, IT.6.14.3)</td>
+<td>~0.1 s por consulta del lazo lento (profundidad; cap. 6, IT.6.12.3)</td>
 <td>&lt; 5 ms (estimado)</td>
 </tr>
 <tr>
@@ -1580,7 +1692,7 @@ sistema.</p>
 <p>La implementación del brazo <code>rl</code> tiene las siguientes dependencias sobre el trabajo ya
 realizado:</p>
 <ul>
-<li><strong>Seis lotes completados</strong> (cap. 10, IT.10.5.3): la comparación <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
+<li><strong>Seis lotes completados</strong> (Anexo 12, IT.A12.5.3): la comparación <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.</li>
 <li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=depth</code>: la política RL se entrenará

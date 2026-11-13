@@ -37,7 +37,7 @@ El paper también reporta que el espacio latente codifica cantidades físicas re
 
 ## A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente
 
-El VLM del sistema es un **perceptor semántico de escala de segundos**: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, IT.5.10), con una latencia de ~0,8 s con el modelo local [T] (cap. 8, IT.8.6). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, IT.6.14) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
+El VLM del sistema es un **perceptor semántico de escala de segundos**: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, IT.5.5), con una latencia de ~0,8 s con el modelo local [T] (cap. 8, IT.8.6). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, IT.6.12) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un **predictor de consecuencias**: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.
 
 | Dimensión | VLM (LFM2.5-VL-1.6B, IT.8) | LeWM-like (15 M) |
 |---|---|---|

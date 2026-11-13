@@ -3,7 +3,7 @@
 # El hash de HEAD solo identifica el codigo si el arbol esta limpio. El piloto v3 193631Z corrio con
 # cambios sin commitear (grilla 3x3, aceptacion del WP real, ...) y quedo con el mismo code_version
 # que la corrida anterior, que usaba otro codigo: el criterio de descarte por code_version de los lotes
-# (informe IT.10.12) no lo habria detectado. Con cambios sin commitear en el codigo, la configuracion o
+# (informe IT.A12.7.2) no lo habria detectado. Con cambios sin commitear en el codigo, la configuracion o
 # los manifiestos, la version lleva el sufijo "-dirty" y no coincide con la de ninguna corrida limpia.
 from __future__ import annotations
 

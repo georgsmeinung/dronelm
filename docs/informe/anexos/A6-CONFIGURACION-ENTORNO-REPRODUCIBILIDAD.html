@@ -1312,6 +1312,118 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A10-ESPECIFICACION-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A10. Especificación del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A11-CATALOGO-INCIDENTES-INTEGRACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A11. Catálogo de Incidentes de Integración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A12-OPERACION-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A12. Operación del Experimento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A13-ESTACION-TERRENA-DATASET.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A13. Estación Terrena y Dataset de Corridas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1707,8 +1819,8 @@
 
 
 <h1 id="anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad">Anexo 6: Configuración del entorno de simulación, variables de sistema y protocolo de reproducibilidad<a class="headerlink" href="#anexo-6-configuracion-del-entorno-de-simulacion-variables-de-sistema-y-protocolo-de-reproducibilidad" title="Permanent link">&para;</a></h1>
-<p>La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (IT.10.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / <code>llama.cpp</code>)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.</p>
-<p>Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (IT.10.3).</p>
+<p>La reproducibilidad empírica constituye un pilar metodológico indispensable para la investigación en robótica aérea y sistemas ciberfísicos guiados por inteligencia artificial (IT.A12.9). En arquitecturas híbridas como DroneLM —donde interactúan un motor de simulación física en tiempo real (Unreal Engine 5.5 + Cosys-AirSim), un grafo de decisión táctico asíncrono (LangGraph) y un servidor local de inferencia para modelos de lenguaje y visión (LM Studio / <code>llama.cpp</code>)—, garantizar que un evaluador independiente pueda replicar con fidelidad idéntica los resultados experimentales exige documentar exhaustivamente los archivos de configuración, los perfiles de escalabilidad gráfica, el diccionario completo de variables de entorno y los manifiestos de misión.</p>
+<p>Este anexo consolida todos los parámetros operativos y el procedimiento de despliegue paso a paso que hicieron posible la batería de vuelos evaluada a lo largo de los tres Tiers de experimentación (IT.10.4).</p>
 <hr />
 <h2 id="a61-archivo-de-configuracion-de-airsim-settingsjson-anotado">A6.1 Archivo de configuración de AirSim (<code>settings.json</code>) anotado<a class="headerlink" href="#a61-archivo-de-configuracion-de-airsim-settingsjson-anotado" title="Permanent link">&para;</a></h2>
 <p>El plugin Cosys-AirSim lee su configuración al inicio desde el archivo <code>settings.json</code>, ubicado en Windows en la carpeta <code>Documents\AirSim</code> del usuario: <code>%USERPROFILE%\Documents\AirSim\settings.json</code>, o <code>%USERPROFILE%\OneDrive\Documents\AirSim\settings.json</code> si la carpeta Documentos está redirigida a OneDrive, como en la estación de esta tesis. La siguiente es la configuración vigente, utilizada en las corridas de octubre de 2026:</p>
@@ -1800,8 +1912,8 @@
 <li><strong><code>ClockType: "SteppableClock"</code></strong>: sincroniza el paso temporal de la simulación física con las consultas RPC de la API. A diferencia de <code>ScalableClock</code> o el reloj de pared del sistema, <code>SteppableClock</code> garantiza que cuando la GPU experimenta caídas momentáneas de tasa de cuadros por la inferencia del modelo multimodal, la física de vuelo no sufra aceleraciones destructivas ni inestabilidades de integración numérica en el estimador inercial.</li>
 <li><strong><code>ApiServerPort: 41451</code></strong>: puerto TCP de enlace Msgpack-RPC por el que se comunican <code>AirSimClient</code> y el motor de Unreal Engine.</li>
 <li><strong><code>CameraDefaults.CaptureSettings</code></strong>:</li>
-<li><code>ImageType 0</code> (<code>Scene</code>): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (<code>FlowTTCEstimator</code>) y por la red de profundidad estimada de la capa estratégica (cap. 6, IT.6.14); con <code>STRATEGIC_SOURCE = vlm</code>, por el VLM. La cámara frontal no se declara: se usa la del vehículo por defecto (<code>AIRSIM_CAMERA_NAME = "0"</code>), con el campo visual horizontal por defecto de 90°.</li>
-<li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, IT.10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, IT.5.16).</li>
+<li><code>ImageType 0</code> (<code>Scene</code>): captura RGB del fotograma en color natural, utilizada por el estimador de flujo óptico (<code>FlowTTCEstimator</code>) y por la red de profundidad estimada de la capa estratégica (cap. 6, IT.6.12); con <code>STRATEGIC_SOURCE = vlm</code>, por el VLM. La cámara frontal no se declara: se usa la del vehículo por defecto (<code>AIRSIM_CAMERA_NAME = "0"</code>), con el campo visual horizontal por defecto de 90°.</li>
+<li><code>ImageType 3</code> (<code>DepthPlanar</code>) / <code>ImageType 1</code> (<code>DepthPerspective</code>): canal de profundidad en punto flotante utilizado exclusivamente en los scripts offline de validación del TTC monocular (cap. 7) y en el hilo de auditoría de DistMin (cap. 10, IT.10.6.1); ningún componente del lazo de vuelo lo solicita (cap. 5, IT.5.8).</li>
 <li><code>ImageType 5</code> (<code>Segmentation</code>): canal de segmentación semántica de mallas para auditoría visual.</li>
 <li><code>Width: 1080, Height: 720</code>: resolución nativa del render target frontal.</li>
 <li><strong><code>Vehicles.Drone1.Cameras.FollowCam</code></strong>: cámara externa de seguimiento, 4 m detrás, 2.5 m a la izquierda y 1.5 m arriba del dron, inclinada 15° hacia abajo, sin estabilización. Solo la usa la auditoría: produce el video <code>.follow.webm</code> que el visor sincroniza con el frontal (cap. 4, IT.4.4). Ningún componente del lazo la lee; si no está declarada, la corrida se graba sin ese video.</li>
@@ -1939,12 +2051,12 @@
 <tr>
 <td><code>DEADLOCK_STRATEGY</code></td>
 <td><code>"depth"</code></td>
-<td>Resolución de atascos: <code>"depth"</code> (barrido juzgado por la profundidad estimada, cap. 5 IT.5.12), <code>"deep_vlm"</code> (barrido + VLM; ablación) o <code>"blind"</code> (escape vertical sin barrido). Cualquier otro valor aborta el arranque.</td>
+<td>Resolución de atascos: <code>"depth"</code> (barrido juzgado por la profundidad estimada, cap. 5 IT.5.6), <code>"deep_vlm"</code> (barrido + VLM; ablación) o <code>"blind"</code> (escape vertical sin barrido). Cualquier otro valor aborta el arranque.</td>
 </tr>
 <tr>
 <td><code>STRATEGIC_SOURCE</code></td>
 <td><code>"depth"</code></td>
-<td>Fuente de la capa estratégica: <code>"depth"</code> (profundidad monocular estimada, cap. 5 IT.5.10.6), <code>"vlm"</code> (grilla del VLM) u <code>"off"</code> (sin capa). Con <code>depth</code>/<code>depth</code> el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 5 IT.5.10.7; cap. 11 IT.11.0).</td>
+<td>Fuente de la capa estratégica: <code>"depth"</code> (profundidad monocular estimada, cap. 5 IT.5.5.4), <code>"vlm"</code> (grilla del VLM) u <code>"off"</code> (sin capa). Con <code>depth</code>/<code>depth</code> el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 5 IT.5.5.4; cap. 11 IT.11.0).</td>
 </tr>
 <tr>
 <td><code>DEPTH_MODEL</code></td>
@@ -1974,7 +2086,7 @@
 <tr>
 <td><code>CAMERA_HFOV_DEG</code></td>
 <td><code>90.0</code></td>
-<td>Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, IT.5.10.3).</td>
+<td>Campo visual horizontal con el que se calculan las direcciones de los sectores de la grilla de 3×3 (cap. 5, IT.5.5.3).</td>
 </tr>
 <tr>
 <td><code>VLM_SUBGOAL_DIST_M</code> / <code>VLM_SUBGOAL_MIN_AHEAD_M</code></td>
@@ -1989,7 +2101,7 @@
 <tr>
 <td><code>VLM_SUBGOAL_TIE_DEG</code></td>
 <td><code>10.0</code></td>
-<td>Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio &gt; arriba &gt; abajo) (cap. 5, IT.5.10.3).</td>
+<td>Margen angular dentro del cual dos sectores libres empatan y decide la fila (medio &gt; arriba &gt; abajo) (cap. 5, IT.5.5.3).</td>
 </tr>
 <tr>
 <td><code>VLM_NEAR_WP_M</code></td>
@@ -1999,12 +2111,12 @@
 <tr>
 <td><code>SCAN_FAILED_SECTOR_DEG</code> / <code>SCAN_REPEAT_RADIUS_M</code> / <code>SCAN_HISTORY_MAX</code></td>
 <td><code>45.0</code> / <code>10.0</code> / <code>12</code></td>
-<td>Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, IT.5.12).</td>
+<td>Salida de deadlock: sector alrededor del rumbo que falló o de un rumbo ya probado que se descarta, radio en el que un deadlock anterior cuenta como «la misma zona» y deadlocks recordados (cap. 5, IT.5.6).</td>
 </tr>
 <tr>
 <td><code>ROUTE_PLAN_MODE</code></td>
 <td><code>vlm</code></td>
-<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>vlm</code>) o manifiesto tal cual (<code>off</code>). Activado con el juez por parches (AUC 0.81 en el banco, cap. 4 IT.4.3.1); requiere un mapa registrado con el mundo (<code>citysim_ortho.png</code>, <code>townsim_ortho.png</code>). El lote de MiniSim, sin obstáculos, vuela con <code>--route-plan off</code> (cap. 10, IT.10.5.3).</td>
+<td>Plan de ruta con el VLM sobre el mapa cenital antes del vuelo (<code>vlm</code>) o manifiesto tal cual (<code>off</code>). Activado con el juez por parches (AUC 0.81 en el banco, cap. 4 IT.4.3.1); requiere un mapa registrado con el mundo (<code>citysim_ortho.png</code>, <code>townsim_ortho.png</code>). El lote de MiniSim, sin obstáculos, vuela con <code>--route-plan off</code> (Anexo 12, IT.A12.5.3).</td>
 </tr>
 <tr>
 <td><code>ROUTE_JUDGE</code> / <code>ROUTE_PATCH_STEP_M</code> / <code>ROUTE_PATCH_M</code> / <code>ROUTE_PATCH_CONTEXT_M</code></td>
@@ -2039,12 +2151,12 @@
 <tr>
 <td><code>VLM_STUCK_QUERY_CYCLES</code></td>
 <td><code>15</code></td>
-<td>Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, IT.5.10.1).</td>
+<td>Ciclos sin acercarse al objetivo a partir de los cuales se consulta aunque la meta esté fuera de cuadro (cap. 5, IT.5.5.1).</td>
 </tr>
 <tr>
 <td><code>VLM_MAX_TOKENS_STRATEGIC</code> / <code>VLM_MAX_TOKENS_DEEP</code></td>
 <td><code>384</code> / <code>512</code></td>
-<td>Tope de tokens de la respuesta por modo; una respuesta cortada por el tope se reporta como <code>respuesta_truncada</code> (cap. 8, IT.8.5.4).</td>
+<td>Tope de tokens de la respuesta por modo; una respuesta cortada por el tope se reporta como <code>respuesta_truncada</code> (Anexo 4, IT.A4.9.4).</td>
 </tr>
 <tr>
 <td><code>CEILING_SIDEWAYS_STUCK_M</code></td>
@@ -2227,22 +2339,22 @@
 <tr>
 <td><code>EVASION_STUCK_THRESHOLD</code> / <code>STUCK_HARD_FACTOR</code> / <code>MAX_CONSECUTIVE_ESCAPES</code></td>
 <td><code>10</code> / <code>1.5</code> / <code>2</code></td>
-<td>Umbrales de atasco y de escape del brazo <code>fsm</code> (cap. 5, IT.5.11, IT.5.15.2).</td>
+<td>Umbrales de atasco y de escape del brazo <code>fsm</code> (cap. 5, IT.5.7, IT.A10.8.2).</td>
 </tr>
 <tr>
 <td><code>CEILING_DETECT_CYCLES</code> / <code>CEILING_DETECT_DZ_M</code> / <code>CEILING_MARGIN_M</code> / <code>CEILING_SAFE_GAP_M</code> / <code>CEILING_RELEASE_M</code></td>
 <td><code>10</code> / <code>0.15</code> / <code>0.8</code> / <code>3.0</code> / <code>15.0</code></td>
-<td>Detección de techo del guiado (cap. 5, IT.5.15.3).</td>
+<td>Detección de techo del guiado (Anexo 10, IT.A10.8.3).</td>
 </tr>
 <tr>
 <td><code>GOV_ENABLED</code></td>
 <td><code>true</code></td>
-<td>Gobernador de velocidad (cap. 5, IT.5.13).</td>
+<td>Gobernador de velocidad (cap. 5, IT.5.4).</td>
 </tr>
 <tr>
 <td><code>FREEZE_CYCLES</code> / <code>FREEZE_RECOVERY</code></td>
 <td><code>25</code> / <code>abort</code></td>
-<td>Ciclos con estado físico idéntico para declarar <code>physics_locked</code>, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, IT.5.19).</td>
+<td>Ciclos con estado físico idéntico para declarar <code>physics_locked</code>, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, IT.5.4).</td>
 </tr>
 <tr>
 <td><code>LAND_DESCENT_SPEED_MPS</code></td>
@@ -2257,12 +2369,12 @@
 <tr>
 <td><code>TAKEOFF_VERTICAL</code> / <code>TAKEOFF_ALT_TOL_M</code></td>
 <td><code>true</code> / <code>1.0</code></td>
-<td>Despegue vertical hasta la altitud del primer objetivo antes de avanzar (cap. 5, IT.5.15).</td>
+<td>Despegue vertical hasta la altitud del primer objetivo antes de avanzar (cap. 5, IT.5.4).</td>
 </tr>
 <tr>
 <td><code>FLOW_HOLDOVER_MAX_FRAMES</code> / <code>FLOW_MAX_YAW_DPS_NEAR_OBSTACLE</code></td>
 <td><code>3</code> / <code>5.0</code></td>
-<td>Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, IT.6.12).</td>
+<td>Holdover del TTC y tope de guiñada cerca de un obstáculo (cap. 6, IT.6.11).</td>
 </tr>
 </tbody>
 </table>
@@ -2281,7 +2393,7 @@
 <td><code>FLIGHT_VIDEO_SCALE</code> / <code>FLIGHT_VIDEO_QUEUE_MAX</code></td>
 <td><code>0.6</code> / <code>300</code></td>
 <td><code>0.6</code> / <code>300</code></td>
-<td>Escala del video respecto del cuadro de la cámara y tamaño de la cola del hilo codificador (la codificación corre fuera del lazo de control, cap. 5, IT.5.18).</td>
+<td>Escala del video respecto del cuadro de la cámara y tamaño de la cola del hilo codificador (la codificación corre fuera del lazo de control, cap. 5, IT.5.8).</td>
 </tr>
 <tr>
 <td><code>FLIGHT_RECORD_VIDEO</code></td>
@@ -2311,7 +2423,7 @@
 </table>
 <hr />
 <h2 id="a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs">A6.4 Estructura del repositorio y artefactos de corrida (<code>airsim-runs/</code>)<a class="headerlink" href="#a64-estructura-del-repositorio-y-artefactos-de-corrida-airsim-runs" title="Permanent link">&para;</a></h2>
-<p>Cada vuelo ejecutado en simulación genera una carpeta autocontenida que ninguna otra corrida sobrescribe. Desde WebDCS (<code>main.py</code>), la carpeta es <code>airsim-runs/&lt;MISSION_ID&gt;-&lt;TIMESTAMP&gt;/</code>; el runner experimental la ubica en la jerarquía del diseño, <code>&lt;lote&gt;/&lt;escenario&gt;/&lt;brazo&gt;/&lt;estrategia&gt;/seed_&lt;N&gt;_&lt;timestamp&gt;/</code> (cap. 10, IT.10.9.1). La lista completa de archivos y campos está en el capítulo 4 (IT.4.4); los principales son:</p>
+<p>Cada vuelo ejecutado en simulación genera una carpeta autocontenida que ninguna otra corrida sobrescribe. Desde WebDCS (<code>main.py</code>), la carpeta es <code>airsim-runs/&lt;MISSION_ID&gt;-&lt;TIMESTAMP&gt;/</code>; el runner experimental la ubica en la jerarquía del diseño, <code>&lt;lote&gt;/&lt;escenario&gt;/&lt;brazo&gt;/&lt;estrategia&gt;/seed_&lt;N&gt;_&lt;timestamp&gt;/</code> (Anexo 12, IT.A12.9.1). La lista completa de archivos y campos está en el capítulo 4 (IT.4.4); los principales son:</p>
 <div class="highlight"><pre><span></span><code>seed_&lt;N&gt;_&lt;ts&gt;/
 ├── seed_&lt;N&gt;_&lt;ts&gt;.summary.json      &lt;- Indicadores consolidados de la corrida
 ├── seed_&lt;N&gt;_&lt;ts&gt;.summary_by_wp.csv &lt;- Indicadores por objetivo
@@ -2353,7 +2465,7 @@
 <span class="w">  </span><span class="nt">&quot;freeze_recoveries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="p">}</span>
 </code></pre></div>
-<p><em>Nota sobre trazabilidad:</em> el campo <code>code_version</code> almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en <code>airsim-loop/</code>, <code>config/</code>, <code>airsim-plan/</code> o <code>experiments/</code>, lleva el sufijo <code>-dirty</code> (<code>src/logging/code_version.py</code>): el hash solo identifica el código con el árbol limpio. El runner no arranca un lote con el árbol sucio, y una corrida <code>-dirty</code> no entra al análisis (cap. 10, IT.10.9.3 y IT.10.12.2).</p>
+<p><em>Nota sobre trazabilidad:</em> el campo <code>code_version</code> almacena el hash de Git del commit sobre el que se ejecutó el vuelo. Si había cambios sin commitear en <code>airsim-loop/</code>, <code>config/</code>, <code>airsim-plan/</code> o <code>experiments/</code>, lleva el sufijo <code>-dirty</code> (<code>src/logging/code_version.py</code>): el hash solo identifica el código con el árbol limpio. El runner no arranca un lote con el árbol sucio, y una corrida <code>-dirty</code> no entra al análisis (Anexo 12, IT.A12.9.3 y IT.A12.7.2).</p>
 <h3 id="a642-estructura-de-la-traza-ciclo-a-ciclo-jsonl">A6.4.2 Estructura de la traza ciclo a ciclo (<code>.jsonl</code>)<a class="headerlink" href="#a642-estructura-de-la-traza-ciclo-a-ciclo-jsonl" title="Permanent link">&para;</a></h3>
 <p>Cada línea del archivo es un registro JSON por ciclo del lazo (5 Hz), escrito por <code>FlightLogger</code>. Los campos principales son <code>t</code> y <code>cycle</code>; <code>arm</code>, <code>scenario</code> y <code>seed</code>; posición NED, velocidad y actitud; <code>route</code> y <code>action</code>; el <code>obstacle_field</code> completo por sector; latencias del ciclo; el bloque <code>slm</code> en los ciclos con una consulta del lazo lento; colisión; objetivo activo y distancia; y <code>state</code>, el <code>DroneState</code> completo serializado (cap. 4, IT.4.4).</p>
 <hr />
@@ -2403,7 +2515,7 @@
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson">A6.5.4 Manifiesto Tier 1: Travesía del corredor arbolado (<code>townsim_ini.json</code>)<a class="headerlink" href="#a654-manifiesto-tier-1-travesia-del-corredor-arbolado-townsim_inijson" title="Permanent link">&para;</a></h3>
-<p>Ocho waypoints, ~340 m. Incluye <code>WP_0b_SOBRE_PLAZA</code> (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y <code>WP_1b_PASO_MOLDURA</code> (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el cap. 10, IT.10.3.2.</p>
+<p>Ocho waypoints, ~340 m. Incluye <code>WP_0b_SOBRE_PLAZA</code> (cruza la plaza a −22 m para evitar la canopy de los árboles del patio) y <code>WP_1b_PASO_MOLDURA</code> (desvía 8 m al este del saliente de cornisa del edificio oeste). Justificación en el Anexo 12, IT.A12.3.2.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mission_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOWNSIM_INI&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;map&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;townsim_ortho.png&quot;</span><span class="p">,</span>
@@ -2452,7 +2564,7 @@
 <li>Constatar que en la esquina superior aparezca la notificación de conexión de AirSim en el puerto 41451.</li>
 </ol>
 <h3 id="paso-5-ejecucion-de-los-lotes-runner">Paso 5: Ejecución de los lotes (<em>Runner</em>)<a class="headerlink" href="#paso-5-ejecucion-de-los-lotes-runner" title="Permanent link">&para;</a></h3>
-<p>Los seis lotes del diseño experimental (cap. 10, IT.10.5.3) se lanzan con los scripts versionados en <code>experiments/</code>, que fijan escenario, celdas, semillas, presupuesto (1200 s / 6000 ciclos) y modo del plan de ruta, y usan el intérprete de <code>AIRSIM_ENV_DIR</code>:
+<p>Los seis lotes del diseño experimental (Anexo 12, IT.A12.5.3) se lanzan con los scripts versionados en <code>experiments/</code>, que fijan escenario, celdas, semillas, presupuesto (1200 s / 6000 ciclos) y modo del plan de ruta, y usan el intérprete de <code>AIRSIM_ENV_DIR</code>:
 <div class="highlight"><pre><span></span><code><span class="nb">cd </span><span class="n">experiments</span>
 <span class="p">.\</span><span class="n">run_lote3_townsim_ini</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Pilot</span>    <span class="c"># piloto de validación</span>
 <span class="p">.\</span><span class="n">run_lote3_townsim_ini</span><span class="p">.</span><span class="n">ps1</span>           <span class="c"># lote completo</span>

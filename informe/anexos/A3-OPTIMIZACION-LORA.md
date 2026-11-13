@@ -3,7 +3,7 @@
 El modelo multimodal del sistema es **LFM2.5-VL-1.6B** (tag `lfm2.5-vl-1.6b:q4km-ctx8k`), ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (IT.8.1); el otro candidato evaluado es **Qwen2.5-VL-3B-Instruct** (Qwen Team, 2025). Las cifras de memoria de este anexo se calcularon para el modelo de 3 B y son una cota superior para el de 1.6 B. Con la configuración por defecto el VLM no decide en vuelo, porque en el banco de prueba no distingue sectores libres de bloqueados (cap. 8; cap. 11, IT.11.0): una adaptación LoRA sería la vía para que lo haga, si el banco muestra que el modelo adaptado distingue sectores libres de bloqueados en un entorno que no vio durante el entrenamiento. Sin adaptar, el modelo opera en régimen *zero-shot / in-context learning*, guiado por prompts breves (IT.8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (IT.8.2, Anexo 4; Willard & Louf, 2023).
 
 Esta configuración tiene dos limitaciones operativas para el vuelo reactivo:
-1. **Capacidad de discriminación:** el modelo generalista no separa sectores volables de bloqueados en la imagen de a bordo (AUC 0.53 en el banco) y responde con sesgos por posición en la grilla (cap. 9, IT.9.8.10).
+1. **Capacidad de discriminación:** el modelo generalista no separa sectores volables de bloqueados en la imagen de a bordo (AUC 0.53 en el banco) y responde con sesgos por posición en la grilla (Anexo 11, IT.A11.4.6).
 2. **Latencia:** ~0.8 s por consulta con imagen en la GPU compartida con la simulación (cap. 8, IT.8.6), cuatro ciclos del lazo, frente a ~0.1 s de la red de profundidad.
 
 Este anexo desarrolla los fundamentos matemáticos y metodológicos de **Adaptación de Bajo Rango (LoRA; [Hu et al., 2022](../13-REFERENCIAS.md#ref-hu-2022))** y sus extensiones contemporáneas (**QLoRA; Dettmers et al., 2024** y **DoRA; Liu et al., 2024**) como línea de trabajo futuro (IT.12.4): internalizar el dominio físico-espacial y el formato estricto directamente en los tensores de ponderación de la red, habilitando respuestas en tiempo real (< 500 ms) sin alterar la arquitectura base ni requerir hardware de nivel servidor.
@@ -104,7 +104,7 @@ La adaptación solo se justificaría si el banco de prueba, sobre un entorno no 
 El factor determinante del éxito de la adaptación no radica en el volumen de parámetros, sino en la calidad informativa y la diversidad topológica del conjunto de datos de entrenamiento.
 
 ### A3.3.1 Estructura del dataset multimodal de navegación
-Cada instancia de entrenamiento es un par supervisado $(X_t, Y_t)$ con la misma forma que la consulta estratégica del sistema (IT.8.2.1, IT.8.5.2):
+Cada instancia de entrenamiento es un par supervisado $(X_t, Y_t)$ con la misma forma que la consulta estratégica del sistema (IT.8.2.1, IT.A4.9.2):
 
 $$X_t = \left\{ I_t^{\text{grilla}},\ \text{prompt}_t \right\}$$
 
@@ -137,7 +137,7 @@ Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unr
 | **Adherencia al esquema JSON** (IT.8.2.1) | ~98 % con decodificación restringida | ~100 % |
 | **Latencia de la consulta estratégica** (IT.8.6) | ~0.8 s | sin cambio (< 10 s de edad máxima) |
 
-Las cifras objetivo son criterios de pase, no resultados: ninguna adaptación se entrenó en esta tesis (IT.8.8).
+Las cifras objetivo son criterios de pase, no resultados: ninguna adaptación se entrenó en esta tesis (IT.8.7).
 
 ---
 

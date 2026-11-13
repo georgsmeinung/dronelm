@@ -1,0 +1,1715 @@
+
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Small Language Model (SLM)">
+      
+      
+        <meta name="author" content="Jorge Nicolau">
+      
+      
+        <link rel="canonical" href="https://jorgenicolau.ar/dronelm/anexos/A11-CATALOGO-INCIDENTES-INTEGRACION.html">
+      
+      
+        <link rel="prev" href="A10-ESPECIFICACION-LAZO-TACTICO.html">
+      
+      
+        <link rel="next" href="A12-OPERACION-EXPERIMENTAL.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>A11. Catálogo de Incidentes de Integración - Tesis MCD — Navegación Autónoma de Drones</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/print-site.css">
+    
+      <link rel="stylesheet" href="../css/print-site-material.css">
+    
+      <link rel="stylesheet" href="../css/austral.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#anexo-11-catalogo-de-incidentes-de-integracion" class="md-skip">
+          Saltar a contenido
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabecera">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-header__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tesis MCD — Navegación Autónoma de Drones
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              A11. Catálogo de Incidentes de Integración
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo oscuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo oscuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Cambiar a modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Cambiar a modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Búsqueda" placeholder="Búsqueda" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Buscar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpiar" aria-label="Limpiar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando búsqueda
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navegación" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Tesis MCD — Navegación Autónoma de Drones" class="md-nav__button md-logo" aria-label="Tesis MCD — Navegación Autónoma de Drones" data-md-component="logo">
+      
+  <img src="../img/logo-austral-horizontal.png" alt="logo">
+
+    </a>
+    Tesis MCD — Navegación Autónoma de Drones
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-COVER.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Carátula y Resumen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-INTRODUCCION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Introducción
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-ESTADO-DEL-ARTE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Estado del Arte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-ENTORNO-SIMULACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Entorno de Simulación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-PLANIFICACION-MISION-GCS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Planificación de Misión (WebDCS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-ARQUITECTURA-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Arquitectura del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-PERCEPCION-MONOCULAR.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Percepción Monocular
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-ESTIMACION-TTC.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Estimación TTC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-DECISIONES-SLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Decisiones SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-MODOS-DE-FALLA-LLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Modos de Falla LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-METODOLOGIA-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    10. Metodología Experimental
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-RESULTADOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11. Resultados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-CONCLUSIONES.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    12. Conclusiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-REFERENCIAS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13. Referencias
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anexos
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Anexos
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A1-EXPLORACION-SLM-GGUF.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A1. Exploración SLM / GGUF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A2-SLM-OPTIMIZACION-Y-DESAFIOS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A2. Técnicas de Optimización en SLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A3-OPTIMIZACION-LORA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A3. Optimización LoRA / QLoRA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A4-DECODIFICACION-RESTRINGIDA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A4. Decodificación Restringida
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A5. Percepción Monocular y Flujo Óptico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A6-CONFIGURACION-ENTORNO-REPRODUCIBILIDAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A6. Entorno y Reproducibilidad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A7-MALDICION-MONOCULAR-ESTEREO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A7. Maldición Monocular y Mitigación Estéreo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A8-NAVEGACION-RL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A8. Navegación por Aprendizaje por Refuerzo (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A9. Modelos de Mundo Latentes en Edge (Propuesta)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A10-ESPECIFICACION-LAZO-TACTICO.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A10. Especificación del Lazo Táctico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A11. Catálogo de Incidentes de Integración
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="A11-CATALOGO-INCIDENTES-INTEGRACION.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A11. Catálogo de Incidentes de Integración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a111-falla-4-en-detalle-vulnerabilidades-de-estado-y-ciclos-limite-en-langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.1 Falla 4 en detalle: vulnerabilidades de estado y ciclos límite en LangGraph
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A11.1 Falla 4 en detalle: vulnerabilidades de estado y ciclos límite en LangGraph">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1111-cuatro-vulnerabilidades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.1.1 Cuatro vulnerabilidades
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1112-el-ascenso-acumulado-como-sintoma-compuesto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.1.2 El ascenso acumulado como síntoma compuesto
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a112-falla-4-instancias-adicionales-de-estado-descartado-y-precedencia-entre-rutas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.2 Falla 4: instancias adicionales de estado descartado y precedencia entre rutas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a113-falla-5-en-detalle-degradaciones-sensoriales-silenciosas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3 Falla 5 en detalle: degradaciones sensoriales silenciosas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A11.3 Falla 5 en detalle: degradaciones sensoriales silenciosas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1131-inversion-de-canales-de-color-rgbbgr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3.1 Inversión de canales de color RGB/BGR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1132-contaminacion-por-primitivas-de-depuracion-persistentes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3.2 Contaminación por primitivas de depuración persistentes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1133-supresion-de-angulos-de-actitud-en-la-telemetria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3.3 Supresión de ángulos de actitud en la telemetría
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a114-falla-6-incidentes-de-integracion-del-vlm-y-del-lazo-rapido" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4 Falla 6: incidentes de integración del VLM y del lazo rápido
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A11.4 Falla 6: incidentes de integración del VLM y del lazo rápido">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1141-deadlock-falso-en-el-despegue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.1 Deadlock falso en el despegue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1142-una-senal-de-referencia-dentro-del-brazo-evaluado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.2 Una señal de referencia dentro del brazo evaluado
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1143-la-causa-fisica-de-los-physics_locked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.3 La causa física de los physics_locked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1144-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.4 Señales que se tapan entre sí: un techo inventado y una velocidad que no existe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1145-sub-metas-que-ocultan-al-waypoint-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.5 Sub-metas que ocultan al waypoint real
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1146-una-respuesta-cortada-y-una-capa-sin-voz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.6 Una respuesta cortada y una capa sin voz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1147-un-barrido-que-no-describe-la-escena" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.7 Un barrido que no describe la escena
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A12-OPERACION-EXPERIMENTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A12. Operación del Experimento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A13-ESTACION-TERRENA-DATASET.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A13. Estación Terrena y Dataset de Corridas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Tabla de contenidos">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Tabla de contenidos
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a111-falla-4-en-detalle-vulnerabilidades-de-estado-y-ciclos-limite-en-langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.1 Falla 4 en detalle: vulnerabilidades de estado y ciclos límite en LangGraph
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A11.1 Falla 4 en detalle: vulnerabilidades de estado y ciclos límite en LangGraph">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1111-cuatro-vulnerabilidades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.1.1 Cuatro vulnerabilidades
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1112-el-ascenso-acumulado-como-sintoma-compuesto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.1.2 El ascenso acumulado como síntoma compuesto
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a112-falla-4-instancias-adicionales-de-estado-descartado-y-precedencia-entre-rutas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.2 Falla 4: instancias adicionales de estado descartado y precedencia entre rutas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a113-falla-5-en-detalle-degradaciones-sensoriales-silenciosas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3 Falla 5 en detalle: degradaciones sensoriales silenciosas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A11.3 Falla 5 en detalle: degradaciones sensoriales silenciosas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1131-inversion-de-canales-de-color-rgbbgr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3.1 Inversión de canales de color RGB/BGR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1132-contaminacion-por-primitivas-de-depuracion-persistentes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3.2 Contaminación por primitivas de depuración persistentes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1133-supresion-de-angulos-de-actitud-en-la-telemetria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.3.3 Supresión de ángulos de actitud en la telemetría
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a114-falla-6-incidentes-de-integracion-del-vlm-y-del-lazo-rapido" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4 Falla 6: incidentes de integración del VLM y del lazo rápido
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A11.4 Falla 6: incidentes de integración del VLM y del lazo rápido">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1141-deadlock-falso-en-el-despegue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.1 Deadlock falso en el despegue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1142-una-senal-de-referencia-dentro-del-brazo-evaluado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.2 Una señal de referencia dentro del brazo evaluado
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1143-la-causa-fisica-de-los-physics_locked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.3 La causa física de los physics_locked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1144-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.4 Señales que se tapan entre sí: un techo inventado y una velocidad que no existe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1145-sub-metas-que-ocultan-al-waypoint-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.5 Sub-metas que ocultan al waypoint real
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1146-una-respuesta-cortada-y-una-capa-sin-voz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.6 Una respuesta cortada y una capa sin voz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1147-un-barrido-que-no-describe-la-escena" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.4.7 Un barrido que no describe la escena
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="anexo-11-catalogo-de-incidentes-de-integracion">Anexo 11: Catálogo de incidentes de integración<a class="headerlink" href="#anexo-11-catalogo-de-incidentes-de-integracion" title="Permanent link">&para;</a></h1>
+<p>El capítulo 9 presenta seis familias de fallas estructurales en la integración de percepción, grafo de control y modelo de lenguaje, con los casos necesarios para sostener su argumento central: las fallas más costosas estuvieron en los contratos de interfaz, no en las respuestas del modelo, y ninguna produjo una excepción. Este anexo reúne el resto de la evidencia: el detalle de las vulnerabilidades de estado y precedencia del grafo (Falla 4), las degradaciones sensoriales (Falla 5) y los incidentes de corridas de diagnóstico y piloto que el capítulo 9 resume en una tabla (Falla 6). Como en el capítulo, los casos provienen de corridas con configuraciones anteriores a la evaluada en el capítulo 11, y se documentan como casos, sin una medición de su frecuencia.</p>
+<hr />
+<h2 id="a111-falla-4-en-detalle-vulnerabilidades-de-estado-y-ciclos-limite-en-langgraph">A11.1 Falla 4 en detalle: vulnerabilidades de estado y ciclos límite en LangGraph<a class="headerlink" href="#a111-falla-4-en-detalle-vulnerabilidades-de-estado-y-ciclos-limite-en-langgraph" title="Permanent link">&para;</a></h2>
+<h3 id="a1111-cuatro-vulnerabilidades">A11.1.1 Cuatro vulnerabilidades<a class="headerlink" href="#a1111-cuatro-vulnerabilidades" title="Permanent link">&para;</a></h3>
+<p><strong>Vulnerabilidad A — Claves de control no declaradas.</strong></p>
+<p>En corridas de diagnóstico, tres claves de control cruzaban la frontera entre nodo y lazo sin estar declaradas en <code>DroneState</code>:</p>
+<ul>
+<li><code>_reset_stall_counter</code>: debía reiniciar el contador de progreso estancado al llegar a un waypoint. No declarada, el contador crece monótonamente desde el inicio de la misión, independientemente del progreso real.</li>
+<li><code>_delib_memory</code>: debía acumular un historial corto de resultados de la consulta al VLM. No declarada, el historial está siempre vacío y el VLM se consulta sin contexto de lo que decidió un ciclo antes.</li>
+<li><code>_corner_wp</code>: debía inyectar un sub-waypoint de esquina para la maniobra <code>GIRAR_90</code>. No declarada, el decisor la lee en el ciclo siguiente como el valor inicial (<code>None</code>), nunca como el punto calculado.</li>
+</ul>
+<p>Ningún log de nivel de aplicación muestra el descarte; diagnosticarlo exige comparar el estado completo antes y después de cada invocación. El mecanismo específico importa: el <code>TypedDict</code> de Python es una anotación de tipos, no una estructura de datos con validación en tiempo de ejecución. <code>state["clave_nueva"] = valor</code> no falla aunque <code>clave_nueva</code> no esté en el <code>TypedDict</code>; simplemente el runtime de LangGraph no la persiste en el canal de estado entre invocaciones (cap. 5, IT.5.2).</p>
+<p><strong>Vulnerabilidad B — Ciclo límite de período 3 en la red de seguridad.</strong></p>
+<p>Un mecanismo de escape que se resetea a sí mismo,</p>
+<div class="highlight"><pre><span></span><code>si stall_count &gt; hard_threshold:
+    activar FRENAR (ciclo 1)
+    si stall_count &gt; hard_threshold + N:
+        resetear stall_count = 0  ← la red de seguridad se resetea a sí misma
+</code></pre></div>
+<p>convierte el estado "atasco severo → acción de escape" en un estado transitorio: al ciclo siguiente, <code>stall_count = 0 &lt; hard_threshold</code> y el sistema vuelve a crucero; tres ciclos después, el atasco se re-detecta y el ciclo se repite. El período 3 (crucero → pre-stall → escape → reseteo → crucero) no es observable como un error: en el visor se ve como "el dron frena ocasionalmente sin razón aparente".</p>
+<p><strong>Vulnerabilidad C — Métrica de progreso auto-inconsistente.</strong></p>
+<p>Un predicado de atasco <code>ciclos_sin_progreso &gt; effective_stall_threshold</code>, con <code>effective_stall_threshold = max(10, eps_m / (min_speed / loop_hz))</code>, combina <code>eps_m</code> (distancia mínima de avance por ciclo) y <code>min_speed</code> (velocidad mínima de crucero), definidos en unidades y archivos distintos. Con <code>eps_m = 0.5 m</code>, <code>min_speed = 2.0 m/s</code> y <code>loop_hz = 5 Hz</code>, la velocidad de avance implícita es 2.5 m/s, mientras que en un giro de 90° la velocidad de aproximación al waypoint oscila entre 0 y <code>vx · cos(θ)</code>, con media ≈ 1.25 m/s. El resultado es un detector de atasco que se dispara prácticamente al inicio de cada waypoint que requiera maniobra.</p>
+<p><strong>Vulnerabilidad D — Escape ciego a la percepción.</strong></p>
+<p>Si el decisor evalúa las condiciones de escape de atasco <em>antes</em> de leer el <code>ObstacleField</code>,</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;stall_count&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">hard_threshold</span><span class="p">:</span>
+    <span class="k">return</span> <span class="s2">&quot;deadlock_escape&quot;</span>   <span class="c1"># ← sin verificar percepción</span>
+<span class="k">if</span> <span class="n">field</span><span class="o">.</span><span class="n">is_blocked</span><span class="p">(</span><span class="s2">&quot;centro&quot;</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;evasive&quot;</span>
+</code></pre></div>
+<p>el dron asciende aunque el estimador de flujo tenga evidencia válida de un sector lateral despejado.</p>
+<h3 id="a1112-el-ascenso-acumulado-como-sintoma-compuesto">A11.1.2 El ascenso acumulado como síntoma compuesto<a class="headerlink" href="#a1112-el-ascenso-acumulado-como-sintoma-compuesto" title="Permanent link">&para;</a></h3>
+<p>La combinación de las cuatro vulnerabilidades produjo, en una corrida de diagnóstico, un ascenso acumulado de ~356 m en una sola misión:</p>
+<ol>
+<li><code>_reset_stall_counter</code> no declarada → <code>stall_count</code> creció desde el ciclo 1 sin resetearse al llegar a cada waypoint.</li>
+<li>A los ~8 ciclos de misión, <code>stall_count &gt; hard_threshold</code> a pesar de que el dron avanzaba normalmente.</li>
+<li>El decisor activó el escape (ciego a la percepción), que ejecutaba <code>GANAR_ALTURA</code> con deriva lateral.</li>
+<li><code>stall_count</code> se reseteó (ciclo límite B) → al ciclo siguiente, el decisor volvió a crucero.</li>
+<li><code>stall_count</code> volvió a crecer rápidamente (umbral demasiado bajo por la métrica inconsistente C).</li>
+<li>El ciclo se repitió centenares de veces, con un ascenso neto acumulado.</li>
+</ol>
+<p>Desde el exterior, la corrida registraba una misión "sin errores" (no hay excepciones en el log) que simplemente "no llegó a destino". Sin el análisis del visor cuadro a cuadro y la lectura del JSONL de auditoría, el patrón es opaco.</p>
+<hr />
+<h2 id="a112-falla-4-instancias-adicionales-de-estado-descartado-y-precedencia-entre-rutas">A11.2 Falla 4: instancias adicionales de estado descartado y precedencia entre rutas<a class="headerlink" href="#a112-falla-4-instancias-adicionales-de-estado-descartado-y-precedencia-entre-rutas" title="Permanent link">&para;</a></h2>
+<p>Otras tres situaciones comparten la propiedad que organiza el capítulo 9: el sistema produce respuestas válidas y plausibles, sin excepciones en el log, y aun así no las ejecuta.</p>
+<p><strong>(a) Un flag descartado por LangGraph.</strong> Un indicador que difería la inyección de un desvío hasta el escaneo siguiente se escribía correctamente pero no estaba declarado en <code>DroneState</code>; desaparecía entre invocaciones y el desvío nunca se inyectaba, de modo que el dron volvía a la misma fachada. Es otra instancia de la Vulnerabilidad A.</p>
+<p><strong>(b) Resultados válidos del VLM que nunca se ejecutan.</strong> Dos errores de <em>precedencia</em> entre rutas, no de estado descartado, con el mismo síntoma:</p>
+<ul>
+<li><em>Maniobra cancelada por un disparador de atasco.</em> Si al despachar <code>EVADIR_DERECHA</code> no se reinicia el contador de atasco, en el ciclo siguiente un disparador basado en ese contador vuelve a enrutar hacia una nueva consulta, cuyo resultado sobrescribe la maniobra comprometida antes de que se ejecute. En una corrida de diagnóstico, el VLM devolvió <code>EVADIR_DERECHA</code> durante 200 ciclos consecutivos sin que la maniobra se ejecutara una sola vez.</li>
+<li><em>Resultado huérfano por el camino de deadlock.</em> Si la rama de escape por deadlock se evalúa antes que la lectura del pedido pendiente, y el contador de progreso queda congelado por encima del umbral, la rama intercepta todos los ciclos y el resultado nunca se lee: durante 80 ciclos, el log del VLM contenía la respuesta correcta y la acción ejecutada era <code>MANTENER_RUMBO</code> o <code>FRENAR</code>.</li>
+</ul>
+<p>Ninguno de los dos se ve en las métricas agregadas; los muestra la comparación, ciclo a ciclo, del campo <code>slm.raw_response</code> de la traza JSONL con la acción realmente ejecutada (técnica 2 de IT.9.7).</p>
+<p><strong>(c) Un pedido pendiente que nunca se cierra.</strong> Si la consulta estratégica y el barrido comparten la cola del servicio (tamaño 1), un barrido que se encola mientras hay una consulta estratégica en vuelo la invalida. Si el sistema solo cerrara el pedido al llegar un resultado con <em>ese</em> identificador, el pedido quedaría activo indefinidamente, y un detector de atasco que interpretara la espera como intencional detendría sus contadores.</p>
+<p><strong>Contención, en detalle.</strong></p>
+<ul>
+<li><strong>Estado declarado y verificado sobre el grafo compilado.</strong> Todo campo que cruza la frontera entre invocaciones está declarado en <code>DroneState</code>, los contadores de atasco y el estado de la capa estratégica viven en objetos de proceso (<code>StallDetector</code>, <code>StrategicLayer</code>) y no en el estado, y los tests de integración corren el <strong>grafo compilado</strong> y verifican que las claves de control (<code>inject_corner</code>, <code>_escape_reset</code>, <code>_deadlock_event</code>, <code>_vlm_strategic</code>) cruzan la frontera (cap. 5, IT.5.2; <code>tests/test_graph_integration.py</code>, <code>tests/test_vlm_strategic_graph.py</code>).</li>
+<li><strong>Escape absorbente.</strong> Un barrido en curso es dueño del dron hasta resolver o caer por sus watchdogs, y el deadlock se reinicia solo cuando se resuelve (<code>_escape_reset</code>), nunca dentro de su propia rama (cap. 5, IT.5.3.2, IT.5.3.4).</li>
+<li><strong>Progreso físicamente alcanzable.</strong> El progreso se mide como distancia horizontal al objetivo, y los umbrales de atasco se derivan del avance mínimo demostrable a la velocidad mínima (cap. 5, IT.5.3.1, IT.A10.8.2).</li>
+<li><strong>Precedencia explícita.</strong> El orden de las reglas de <code>navigate</code> es fijo y está justificado (cap. 5, IT.5.3.2): barrido en curso, deadlock, maniobra comprometida, contacto, piso óptico y TTC. El resultado de cada consulta se recupera por su identificador (<code>get_result</code>) al inicio de cada ciclo, de modo que no depende de qué ruta tome el ciclo. En la FSM, el escape exige además que la percepción no muestre un corredor libre (<code>has_open_corridor()</code>, cap. 6, IT.6.10).</li>
+<li><strong>Pedidos perdidos.</strong> La capa estratégica da por perdido un pedido reemplazado si el servicio no tiene resultado ni pedido pendiente durante 3 s, o al cumplir 10 s, y el deadlock cancela explícitamente la consulta estratégica en vuelo (cap. 5, IT.5.5.3, IT.5.3.4).</li>
+</ul>
+<hr />
+<h2 id="a113-falla-5-en-detalle-degradaciones-sensoriales-silenciosas">A11.3 Falla 5 en detalle: degradaciones sensoriales silenciosas<a class="headerlink" href="#a113-falla-5-en-detalle-degradaciones-sensoriales-silenciosas" title="Permanent link">&para;</a></h2>
+<h3 id="a1131-inversion-de-canales-de-color-rgbbgr">A11.3.1 Inversión de canales de color RGB/BGR<a class="headerlink" href="#a1131-inversion-de-canales-de-color-rgbbgr" title="Permanent link">&para;</a></h3>
+<p><code>simGetImages</code> entrega el buffer de imagen en el orden RGB del motor, mientras que OpenCV y el resto del pipeline asumen la convención BGR, en la que el canal azul ocupa el índice 0. Sin conversión, cada píxel tiene los canales rojo y azul invertidos: fachadas de ladrillo rojo en tonos azulados, cielo amarillento, vegetación de colores no naturales. Un VLM entrenado sobre datos fotométricamente correctos delibera sobre esas imágenes sin emitir ninguna queja sobre su calidad ni reducir su confianza: no tiene cómo detectar que la imagen recibida está fuera de distribución por inversión de canal.</p>
+<p>Detectarlo exige guardar en disco las imágenes exactas enviadas al VLM y abrirlas en un visor externo — el análogo de "mirar los datos crudos", primer paso de depuración en visión por computadora pero fácil de omitir en un sistema integrado cuando el modelo "parece razonar correctamente".</p>
+<p><strong>Mecanismo de contención.</strong> <code>AirSimClient.capture()</code> invierte el orden de canales en el punto de captura (cap. 3, IT.3.3), y cada consulta del lazo lento guarda sus fotogramas exactos como <code>photo-*.png</code> de auditoría (cap. 4, IT.4.4).</p>
+<h3 id="a1132-contaminacion-por-primitivas-de-depuracion-persistentes">A11.3.2 Contaminación por primitivas de depuración persistentes<a class="headerlink" href="#a1132-contaminacion-por-primitivas-de-depuracion-persistentes" title="Permanent link">&para;</a></h3>
+<p>El simulador AirSim/cosysairsim permite dibujar primitivas geométricas en el mundo virtual (<code>simPlotLineStrip</code>, <code>simPlotPoints</code>, <code>simPlotArrows</code>) para visualización durante el desarrollo: trayectorias planificadas, sectores del <code>ObstacleField</code>, vectores de flujo. Estas primitivas son <em>persistentes</em> en la sesión del simulador: no se borran al reiniciar el script de control, solo al llamar explícitamente <code>simFlushPersistentMarkers()</code>.</p>
+<p>Al relanzar un vuelo sin reiniciar AirSim, las primitivas de la sesión anterior permanecen en el mundo virtual y la cámara a bordo las captura como geometría física: franjas de colores brillantes que el VLM interpreta como cables, estructuras metálicas o señales de tráfico. El comportamiento depende entonces del historial de la sesión: un vuelo iniciado tras reiniciar AirSim se comporta normalmente, y el mismo vuelo sin reiniciar produce evasiones espurias repetidas. <a href="../13-REFERENCIAS.html#ref-jansen-2023">Jansen et al. (2023)</a> documentan comportamientos similares de estado persistente en CosysAirSim como fuente de irreproducibilidad entre corridas.</p>
+<p><strong>Mecanismo de contención.</strong> Cada sesión de conexión empieza con <code>AirSimClient.clear_debug_markers()</code>, que invoca <code>simFlushPersistentMarkers()</code> (cap. 3, IT.3.3).</p>
+<h3 id="a1133-supresion-de-angulos-de-actitud-en-la-telemetria">A11.3.3 Supresión de ángulos de actitud en la telemetría<a class="headerlink" href="#a1133-supresion-de-angulos-de-actitud-en-la-telemetria" title="Permanent link">&para;</a></h3>
+<p>El binding <code>cosysairsim</code> (fork de AirSim con soporte UE5 — Jansen et al., 2023) no implementa el método <code>to_eularian_angles()</code> del binding oficial de Microsoft AirSim. Un fallback que no lo note reporta pitch y roll en <code>0.0°</code> en cada ciclo, independientemente de la inclinación física del vehículo. Durante maniobras de aceleración (pitch de −8° a −12°), descenso agresivo o giros, el sistema recibe la información de que el dron está perfectamente nivelado: la derotación del flujo óptico pierde dos de sus tres ejes y cualquier consumidor de la actitud queda desalineado con la imagen.</p>
+<p><strong>Mecanismo de contención.</strong> El cliente convierte directamente el cuaternión de orientación, disponible en la telemetría de CosysAirSim, a ángulos de Euler (roll, pitch, yaw) con las fórmulas estándar de <a href="../13-REFERENCIAS.html#ref-wahba-1965">Wahba (1965)</a>, sin depender del método del binding:</p>
+<div class="arithmatex">\[\phi = \arctan2(2(q_w q_x + q_y q_z),\ 1 - 2(q_x^2 + q_y^2))$$
+$$\theta = \arcsin(2(q_w q_y - q_z q_x))$$
+$$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))\]</div>
+<p>Un test unitario (<code>tests/test_airsim_client_telemetry.py</code>) verifica la conversión contra cuaterniones conocidos.</p>
+<hr />
+<h2 id="a114-falla-6-incidentes-de-integracion-del-vlm-y-del-lazo-rapido">A11.4 Falla 6: incidentes de integración del VLM y del lazo rápido<a class="headerlink" href="#a114-falla-6-incidentes-de-integracion-del-vlm-y-del-lazo-rapido" title="Permanent link">&para;</a></h2>
+<p>Los casos de esta sección provienen de las mismas auditorías que los de IT.9.8 —corridas de diagnóstico y piloto sobre <code>citysim_pilot</code>, comparando ciclo a ciclo la respuesta cruda del modelo con la acción ejecutada y con la profundidad de referencia del simulador, consultada a posteriori solo para la auditoría—. El capítulo 9 los resume en una tabla (IT.9.8.5).</p>
+<h3 id="a1141-deadlock-falso-en-el-despegue">A11.4.1 Deadlock falso en el despegue<a class="headerlink" href="#a1141-deadlock-falso-en-el-despegue" title="Permanent link">&para;</a></h3>
+<p>En todas las corridas de diagnóstico, el primer deadlock se declaró en los ciclos 17–18, con el dron todavía subiendo a la altitud de crucero. Durante el despegue el guiado ordena subir y girar en el lugar hacia el primer waypoint con <code>vx = 0</code>; un contador de «detenido» que suma esos ciclos dispara la resolución de atasco al cruzar el piso óptico de 4.5 m.</p>
+<p><strong>Mecanismo de contención.</strong> «Detenido» se define como «se ordenó avanzar y el dron no se movió», y no se cuenta bajo el piso óptico ni durante el despegue (cap. 5, IT.5.3.1). Aplicada sobre la telemetría registrada, esa definición no declara el deadlock en ninguna de las tres corridas.</p>
+<h3 id="a1142-una-senal-de-referencia-dentro-del-brazo-evaluado">A11.4.2 Una señal de referencia dentro del brazo evaluado<a class="headerlink" href="#a1142-una-senal-de-referencia-dentro-del-brazo-evaluado" title="Permanent link">&para;</a></h3>
+<p>Un runner que captura el canal de profundidad del simulador «solo como métrica» puede terminar alimentando al brazo evaluado: en una configuración de diagnóstico, esa captura armaba un freno de proximidad que el grafo consumía, cancelaba maniobras, inyectaba retrocesos y registraba puntos de contacto que el tracker usaba para validar desvíos. El brazo evaluado tenía así acceso indirecto a la profundidad exacta del simulador, lo que invalida su comparación con un sistema monocular, y una guardia estática limitada a <code>src/</code> no lo detecta porque el runner está fuera de su alcance.</p>
+<p><strong>Mecanismo de contención.</strong> Ningún componente del lazo de vuelo lee el canal de profundidad, tampoco como métrica, y la guardia (<code>test_no_depth_in_flight_path.py</code>) cubre el runner, <code>main.py</code> y todos los módulos de vuelo, incluido el canal indirecto; la distancia mínima a obstáculo la mide un hilo de auditoría aislado (cap. 5, IT.5.8; cap. 10, IT.10.4.1, punto 3).</p>
+<h3 id="a1143-la-causa-fisica-de-los-physics_locked">A11.4.3 La causa física de los <code>physics_locked</code><a class="headerlink" href="#a1143-la-causa-fisica-de-los-physics_locked" title="Permanent link">&para;</a></h3>
+<p>En las tres corridas de diagnóstico que terminaron por <code>physics_locked</code>, el dron no chocó de frente: quedó apoyado sobre una <strong>superficie horizontal a la altura de crucero</strong> —el tablero de una autopista elevada (dos corridas) y la cornisa de un edificio (una)—, con los sectores frontales del flujo libres (<code>occ = 0</code>, TTC infinito). En una corrida, un <code>GANAR_ALTURA</code> liberó al dron hasta −12.2 m y el guiado de altitud lo devolvió a −10 m, sobre la cornisa. Ni el flujo óptico ni una descripción por columnas representan ese tipo de obstáculo.</p>
+<p><strong>Mecanismo de contención.</strong> El manifiesto evita la autopista (<code>WP_0_SUR</code>, Anexo 12, IT.A12.3.3); la capa estratégica juzga el fotograma en una grilla de 3×3, de modo que un obstáculo a la altura del dron puede rodearse por la fila de arriba; y el escape determinista ante falla de la fuente es <code>GANAR_ALTURA</code> (cap. 5, IT.5.3.4, IT.5.5).</p>
+<h3 id="a1144-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe">A11.4.4 Señales que se tapan entre sí: un techo inventado y una velocidad que no existe<a class="headerlink" href="#a1144-senales-que-se-tapan-entre-si-un-techo-inventado-y-una-velocidad-que-no-existe" title="Permanent link">&para;</a></h3>
+<p>En una corrida piloto sobre <code>citysim_pilot</code>, el dron quedó 220 ciclos apoyado sobre el parapeto de la autopista elevada, pegada al punto de partida, sin que se declarara un solo deadlock. Tres mecanismos, cada uno razonable por separado, se encadenaron:</p>
+<ol>
+<li><strong>Avance durante el ascenso.</strong> El guiado avanzaba hacia el primer waypoint mientras subía; a 7.4 m, todavía por debajo del borde del parapeto, el TTC frontal cayó a 0.23 s y el lazo ejecutó <code>GIRAR_90</code>.</li>
+<li><strong>Un techo inventado.</strong> La detección de techo contaba los ciclos en que el <em>guiado</em> pedía subir sin que la cota cambiara. Durante el giro el comando vertical era cero, de modo que diez ciclos de giro se leyeron como diez ciclos empujando contra una losa: techo en z = −7.44. Con ese techo, el waypoint a −10 m quedó «bloqueado verticalmente» y el lazo ordenó <code>PERDER_ALTURA</code> en cada ciclo, contra el parapeto.</li>
+<li><strong>Una velocidad que no existe.</strong> Con el dron apoyado en la estructura, AirSim reportaba 0.31 m/s horizontales y 0.75 m/s verticales con la posición inmóvil. El contador de «detenido» leía esa velocidad y nunca avanzó; el de «sin progreso» sí llegó a 200 ciclos, pero la regla de descenso por techo se evaluaba antes que la de deadlock y tomaba el ciclo.</li>
+</ol>
+<p>Ninguna de las tres produjo un error: cada ciclo tenía una acción válida y una justificación registrada. Es la misma clase de falla que IT.9.5 y IT.9.7 —el sistema «funciona» mientras repite indefinidamente una acción inútil—, en este caso entre señales del lazo rápido y no entre el modelo y el lazo.</p>
+<p><strong>Mecanismo de contención.</strong> El despegue es vertical hasta la altitud del primer objetivo (cap. 5, IT.5.4); la detección de techo usa el comando efectivamente ejecutado, no la demanda del guiado (IT.A10.8.3); el <code>StallDetector</code> mide la velocidad por desplazamiento entre ciclos (IT.5.3.1); y el deadlock se evalúa antes que cualquier otra regla salvo el barrido en curso (IT.5.3.2), de modo que ninguna acción que se repita sin mover al dron puede taparlo. Un test reproduce la secuencia sobre el grafo compilado (<code>tests/test_pilot_seed99_regressions.py</code>).</p>
+<h3 id="a1145-sub-metas-que-ocultan-al-waypoint-real">A11.4.5 Sub-metas que ocultan al waypoint real<a class="headerlink" href="#a1145-sub-metas-que-ocultan-al-waypoint-real" title="Permanent link">&para;</a></h3>
+<p>En otra corrida piloto, el dron llegó a la zona del primer waypoint a los 40 s y pasó el resto de la corrida —más de cuatro minutos— pegado a la fachada vidriada del edificio contiguo. Estuvo <strong>573 ciclos a menos de 3.5 m del waypoint</strong>, el radio de aceptación, sin aceptarlo nunca. Cinco mecanismos se encadenaron:</p>
+<ol>
+<li><strong>La sub-meta ocultaba al waypoint.</strong> El tracker solo medía la llegada al objetivo activo. En los 573 ciclos el objetivo activo era una sub-meta del VLM (332 de la capa estratégica, 241 del barrido), de modo que pasar por encima del waypoint no contaba.</li>
+<li><strong>Sub-metas más lejos que el waypoint.</strong> La sub-meta se fijaba siempre a 15 m. Con el waypoint a 6 m, una sub-meta a 15 m queda 9 m más allá: en este caso, dentro del edificio. A 1 m del waypoint, el rumbo hacia la meta que usa el barrido es casi ruido, y la sub-meta lo amplifica.</li>
+<li><strong>Sin re-planificación.</strong> La capa estratégica solo consultaba con un waypoint real como objetivo. Con una sub-meta mala activa quedaba muda, y el lazo rápido entraba en un ciclo límite: el guiado apuntaba a la sub-meta dentro del edificio, el TTC caía a 0–0.2 s, <code>GIRAR_90</code> desviaba un segundo y el guiado volvía a apuntar a la fachada (cinco giros en 55 ciclos, seis en 50). Solo un deadlock, 10 s después, reemplazaba la sub-meta.</li>
+<li><strong>Respuestas casi constantes, incluso sobre imágenes del interior del edificio.</strong> La capa estratégica, con una partición en columnas, respondió «la primera columna bloqueada, las demás libres» en 5 de 6 consultas, incluida una con la fachada ocupando casi todo el cuadro, y marcó «estructura debajo» en 5 de 6, lo que subía todas las sub-metas 4 m. En los 8 barridos, las imágenes 2 y 4 salieron libres y la 1 y la 3 bloqueadas, sin importar hacia dónde miraba el dron. Con el dron pegado a la fachada, la cámara quedó dentro de la malla del edificio en dos barridos: el modelo marcó el interior de una oficina como <code>libre, ok: true</code> y, como apuntaba hacia el waypoint, el barrido lo eligió.</li>
+<li><strong>Un techo inventado por una pared.</strong> Con el dron trabado contra la fachada, el roce impedía subir y la detección de techo declaró una losa a −11.8 m; los escapes <code>GANAR_ALTURA</code> subieron después hasta −16 m sin obstáculo, y la regla de techo los devolvía hacia abajo.</li>
+</ol>
+<p>Además, el waypoint mismo estaba mal ubicado: sus coordenadas se habían tomado del mapa y caían sobre la fachada, en contra del principio de derivar coordenadas solo de posiciones ya voladas (cap. 10, IT.10.4.1).</p>
+<p><strong>Mecanismo de contención.</strong> El tracker acepta el waypoint real aunque haya una sub-meta activa y descarta los desvíos pendientes (cap. 5, IT.5.5.3); ninguna sub-meta queda más lejos que el waypoint real, y a menos de 8 m del waypoint no se consulta a la capa estratégica ni se barre (IT.5.5.1, IT.5.6); la capa estratégica re-planifica con una sub-meta activa, y si ve libre el camino directo descarta el desvío (IT.5.5.3); el barrido no usa entradas que se contradicen (<code>free: true</code> con una vista distinta de <code>open</code>), lo que no reemplaza la decisión de la fuente sino que descarta respuestas internamente inconsistentes, igual que una respuesta mal formada (IT.5.6); la capa estratégica juzga una grilla de 3×3 en lugar de columnas, de modo que el eje vertical sale de la descripción y no de una pregunta abstracta (cap. 8, IT.8.3.2); la detección de techo no cuenta los ciclos en que el dron está trabado de costado (IT.A10.8.3); y los waypoints de los manifiestos están en puntos ya volados. Los tests <code>tests/test_pilot_190842z_regressions.py</code> reproducen cada mecanismo.</p>
+<p>Estas medidas no corrigen el punto 4: que el modelo casi no distinga escenas. Con ellas, una respuesta mala deja de atrapar al dron; que la fuente aporte información es la pregunta de IT.9.9, riesgo D.</p>
+<h3 id="a1146-una-respuesta-cortada-y-una-capa-sin-voz">A11.4.6 Una respuesta cortada y una capa sin voz<a class="headerlink" href="#a1146-una-respuesta-cortada-y-una-capa-sin-voz" title="Permanent link">&para;</a></h3>
+<p>En una tercera corrida piloto, el dron llegó a los tres primeros waypoints —incluido el que está detrás de una manzana— y quedó trabado en el tramo hacia el cuarto, contra la fachada de un edificio que la recta atraviesa. Tres mecanismos lo dejaron sin salida:</p>
+<ol>
+<li><strong>El modelo marcó libres los costados de una fachada.</strong> En las cinco consultas del tramo marcó bloqueado el sector de frente —lo correcto— y libres los demás, incluso en fotogramas en los que la fachada ocupaba todo el cuadro. En las 28 consultas de la corrida, el sector de la izquierda a la altura del dron salió libre las 28 veces y el de arriba a la izquierda, bloqueado 24: un sesgo por posición en la grilla, no una descripción de la escena. La sub-meta elegida quedó del otro lado de la fachada, y el dron se deslizó a lo largo de ella unos 180 ciclos.</li>
+<li><strong>La capa estratégica no consultó en todo ese tiempo.</strong> El dron miraba a lo largo de la pared, con la meta fuera de los ±40° del eje óptico, la condición para consultar: justo cuando hacía falta replanificar, la capa no tenía cómo hacerlo.</li>
+<li><strong>Los barridos se perdían por el tope de tokens.</strong> Un tope de 160 tokens cortaba la respuesta del barrido —un JSON con indentación— antes de la llave final, en 5 de 12 barridos; esos barridos caían al escape vertical sin usar la respuesta del modelo. La falla no se veía: el registro la clasificaba como «sin formato válido», igual que una respuesta mal formada.</li>
+</ol>
+<p>La corrida terminó por <code>physics_locked</code>, con el dron apoyado en la baranda de un balcón (IT.A11.4.3). Además, se ejecutó con cambios sin commitear y quedó registrada con el mismo <code>code_version</code> que otra corrida con distinto código: un criterio de descarte por versión basado solo en el hash no la distingue.</p>
+<p><strong>Mecanismo de contención.</strong> Los topes de tokens son 384 (estratégico) y 512 (barrido), y una respuesta cortada se reporta como <code>respuesta_truncada</code>, separada de las respuestas mal formadas (Anexo 10, IT.A10.6.2); la capa estratégica consulta con la meta fuera de cuadro cuando el dron lleva <code>VLM_STUCK_QUERY_CYCLES</code> (15 ciclos, 3 s) sin acercarse a su objetivo, sin interpretar nunca esa respuesta como «camino directo libre» (IT.5.5.1); y <code>code_version</code> lleva el sufijo <code>-dirty</code> si hay cambios sin commitear, lo que excluye la corrida de un lote (Anexo 12, IT.A12.7.2). Los tests <code>tests/test_pilot_193631z_regressions.py</code> reproducen cada caso. El punto 1 —que el modelo describa la grilla por posición y no por contenido— no tiene mecanismo de contención dentro del VLM: es la pregunta de IT.9.9, riesgo D, y la medición que la responde es la comparación sector por sector contra una etiqueta de referencia (cap. 10, IT.10.2).</p>
+<h3 id="a1147-un-barrido-que-no-describe-la-escena">A11.4.7 Un barrido que no describe la escena<a class="headerlink" href="#a1147-un-barrido-que-no-describe-la-escena" title="Permanent link">&para;</a></h3>
+<p>Con las respuestas del barrido completas, tres corridas piloto suman 19 respuestas utilizables. En las 19 el patrón de transitabilidad fue el mismo: las imágenes 2 y 4 —a 90° a cada lado del rumbo inicial— transitables, y la 1 y la 3 —el frente y la dirección de la que venía el dron— bloqueadas, sin importar dónde estaba el dron ni qué mostraban las imágenes. La dirección de la que venía el dron, casi siempre libre, salió bloqueada las 19 veces. Además, el modelo marcó todas las respuestas como degradadas, incluidas imágenes nítidas de calle abierta, y en varias asignó <code>ok: true</code> a imágenes de tipo <code>fachada</code> o <code>interior</code>. Medido contra el avance hacia el waypoint real, las sub-metas del barrido no mostraron efecto: en la mayoría de los casos el avance a los 20 s fue nulo, y en dos el dron se alejó más de 5 m.</p>
+<p>La consecuencia de diseño es doble. Primero, una respuesta constante convierte al barrido, en la práctica, en una regla fija («girar 90° hacia el lado más cercano a la meta»), y una regla de falla basada en el indicador de imagen degradada lo convertiría en un escape vertical ciego (en una de esas corridas habría descartado los 8 barridos). Segundo, elegir el rumbo transitable más cercano a la meta devuelve al dron, deadlock tras deadlock, contra el mismo obstáculo.</p>
+<p><strong>Mecanismo de contención.</strong> El esquema no pide indicador de imagen degradada ni certeza (cap. 8, IT.8.2.1); y la salida del deadlock descarta el rumbo que falló y los rumbos ya probados en la zona, y con deadlocks repetidos explora el rumbo libre más distinto de lo ya probado (cap. 5, IT.5.6). Esto no corrige que el modelo responda lo mismo siempre: con una respuesta constante, la salida queda determinada por la historia del dron y no por la imagen. El registro de la selección permite separar ambos efectos.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Volver al principio
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado al portapapeles", "clipboard.copy": "Copiar al portapapeles", "search.result.more.one": "1 m\u00e1s en esta p\u00e1gina", "search.result.more.other": "# m\u00e1s en esta p\u00e1gina", "search.result.none": "No se encontraron documentos", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Teclee para comenzar b\u00fasqueda", "search.result.term.missing": "Falta", "select.version": "Seleccionar versi\u00f3n"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../js/print-site.js"></script>
+      
+        <script src="../js/logo-link.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

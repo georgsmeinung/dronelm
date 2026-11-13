@@ -124,7 +124,7 @@ FOV_BLOCKED_THRESHOLD=0.6
 REACTIVE_FORWARD_SPEED=2.0
 SLM_WATCHDOG_MS=6000         # calibrado sobre latencias reales (regimen 2-3.5s, cold-start 8s+)
 
-# Atasco y escape de deadlock (el umbral EFECTIVO se deriva, ver informe IT.5.15.2)
+# Atasco y escape de deadlock (el umbral EFECTIVO se deriva, ver informe IT.A10.8.2)
 EVASION_STUCK_THRESHOLD=10
 WAYPOINT_PROGRESS_EPS_M=0.5
 MIN_PROGRESS_SPEED_MPS=0.25

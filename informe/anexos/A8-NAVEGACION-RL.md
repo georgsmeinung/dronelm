@@ -30,7 +30,7 @@ produce directamente una macro-acción del mismo vocabulario que usan `fsm_node`
 estimada como fuente (`STRATEGIC_SOURCE=depth`): propone sub-metas en coordenadas del
 mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
 (`DEADLOCK_STRATEGY=depth`) resuelve los atascos duros e inyecta un desvío
-(`inject_corner`), igual que con los brazos existentes (cap. 5, IT.5.10, IT.5.12).
+(`inject_corner`), igual que con los brazos existentes (cap. 5, IT.5.5, IT.5.6).
 
 Esta posición garantiza que la comparación de los cuatro brazos (`reactive`, `fsm`, `slm`,
 `rl`) mida exclusivamente **quién elige mejor la táctica**, no quién tiene mejor lógica de
@@ -85,7 +85,7 @@ real donde la calibración del flujo es incierta.
 ## A8.3 Espacio de acciones
 
 Se propone un espacio discreto de seis acciones, tomadas del vocabulario fijo del sistema
-(`VALID_ACTIONS`, `action_map.py`; IT.8.3.4, IT.5.14). Quedan fuera `GIRAR_90`, que el
+(`VALID_ACTIONS`, `action_map.py`; IT.8.3.4, IT.5.4). Quedan fuera `GIRAR_90`, que el
 lazo rápido aplica como regla de seguridad, y `RETROCEDER`, que ningún comportamiento
 emite:
 
@@ -99,7 +99,7 @@ emite:
 | 5 | `FRENAR` | Detener el drone (hover) |
 
 La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
-(`action_to_command()`, IT.5.14): la política neuronal nunca genera velocidades directamente,
+(`action_to_command()`, IT.5.4): la política neuronal nunca genera velocidades directamente,
 lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
 saturaciones y convenciones de Body Frame que los brazos `fsm` y `slm`.
 
@@ -207,14 +207,14 @@ La rama CNN extrae características visuales del frame RGB. La rama FC procesa e
 ## A8.6 Protocolo de evaluación comparativa
 
 El brazo `rl`, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
-los brazos `slm`, `fsm` y `reactive` (cap. 10, IT.10.2), para que la comparación sea válida:
+los brazos `slm`, `fsm` y `reactive` (cap. 10, IT.10.3), para que la comparación sea válida:
 
 ```
 K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
 ```
 
 Los escenarios propuestos para la evaluación del brazo `rl` son los seis de la
-tesis (cap. 10, IT.10.3.4):
+tesis (cap. 10, IT.10.4.2):
 
 | Escenario | Tier | Tipo |
 |---|---|---|
@@ -240,7 +240,7 @@ La tabla de comparación propuesta para el capítulo 11 sería:
 | Tasa de éxito — tránsito libre | ref | ref | ref | ? |
 | Tasa de éxito — obstrucción densa | ref | ref | ref | ? |
 | Ratio tiempo vs. `reactive` | 1.0× | ? | ? | ? |
-| Latencia de decisión | ~0.1 ms | ~0.2 ms | ~0.1 s por consulta del lazo lento (profundidad; cap. 6, IT.6.14.3) | < 5 ms (estimado) |
+| Latencia de decisión | ~0.1 ms | ~0.2 ms | ~0.1 s por consulta del lazo lento (profundidad; cap. 6, IT.6.12.3) | < 5 ms (estimado) |
 | Consumo adicional de VRAM | — | — | ~440 MiB (red de profundidad) | < 50 MB (CNN pequeña) |
 
 La hipótesis de trabajo es que el brazo `rl` superará al brazo `reactive` en escenarios de
@@ -260,7 +260,7 @@ sistema.
 La implementación del brazo `rl` tiene las siguientes dependencias sobre el trabajo ya
 realizado:
 
-- **Seis lotes completados** (cap. 10, IT.10.5.3): la comparación `slm` vs. `fsm` vs. `reactive`
+- **Seis lotes completados** (Anexo 12, IT.A12.5.3): la comparación `slm` vs. `fsm` vs. `reactive`
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.
 - **Brazo `slm` validado** con `DEADLOCK_STRATEGY=depth`: la política RL se entrenará

@@ -2,7 +2,7 @@
 
 La incorporación de modelos de lenguaje pequeños (*Small Language Models*, SLMs) y modelos multimodales compactos (*Small Vision-Language Models*, sVLMs) en el lazo de control táctico de un vehículo aéreo no tripulado (UAV) introduce una paradoja arquitectónica fundamental: **la naturaleza probabilística y estocástica de los modelos neuronales frente a los requerimientos deterministas, de baja latencia y tolerancia cero a fallas de sintaxis propios de la robótica aérea**.
 
-En DroneLM, el VLM juzga rutas candidatas sobre el mapa cenital antes del vuelo (IT.4.3.1) y, como fuente alternativa del lazo lento (IT.5.10), describe qué sectores del fotograma o qué rumbos de un barrido son volables. Si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador falla y la consulta se pierde: en vuelo, eso significa ciclos de control sin la información que se pidió (IT.8.2, IT.9.1).
+En DroneLM, el VLM juzga rutas candidatas sobre el mapa cenital antes del vuelo (IT.4.3.1) y, como fuente alternativa del lazo lento (IT.5.5), describe qué sectores del fotograma o qué rumbos de un barrido son volables. Si el modelo emite respuestas en texto libre, explicaciones conversacionales no solicitadas, bloques Markdown envolventes o JSONs con claves malformadas o ausentes, el analizador falla y la consulta se pierde: en vuelo, eso significa ciclos de control sin la información que se pidió (IT.8.2, IT.9.1).
 
 Este anexo desarrolla los fundamentos teóricos, los mecanismos algorítmicos y el procedimiento exhaustivo de ingeniería para implementar **decodificación restringida (*constrained decoding*) basada en gramáticas formales y esquemas estrictos (`json_schema` / GBNF)**. Se demuestra cómo esta técnica erradica las alucinaciones estructurales, comprime el tiempo de inferencia hasta en un 60–80% y optimiza el grafo de control (`StateGraph`) de DroneLM mediante gramáticas acotadas dinámicas adaptadas al contexto de vuelo.
 
@@ -248,7 +248,7 @@ def get_decision_schema(reason_note: str) -> dict:
 ```
 
 ### Paso 2: Configuración del cliente en el servicio asincrónico
-El servicio asincrónico (en el sistema, `DeliberationService`, IT.5.10.5) despacha la petición al backend local (Ollama, vLLM o llama-server) inyectando el esquema restringido:
+El servicio asincrónico (en el sistema, `DeliberationService`, IT.A10.6.2) despacha la petición al backend local (Ollama, vLLM o llama-server) inyectando el esquema restringido:
 
 ```python
 # ejemplo ilustrativo: worker del servicio asincrónico
@@ -318,7 +318,7 @@ def _parse_decision(raw_text: str, default_action: str = "FRENAR") -> tuple[str,
 
 ### Paso 4: Sincronización con el perro guardián y continuidad del vuelo
 En el sistema, la integración con la temporalidad del lazo de control se articula con dos reglas (cap. 8, IT.8.6):
-* Mientras una consulta de la capa estratégica está en vuelo, el dron **no se frena**: el lazo rápido sigue volando, lo que además preserva la traslación que el flujo óptico necesita, y la respuesta se traduce con la pose del fotograma que la originó (IT.5.10.3).
+* Mientras una consulta de la capa estratégica está en vuelo, el dron **no se frena**: el lazo rápido sigue volando, lo que además preserva la traslación que el flujo óptico necesita, y la respuesta se traduce con la pose del fotograma que la originó (IT.5.5.3).
 * Durante un barrido, el dron espera en el lugar bajo el perro guardián `SLM_DEEP_WATCHDOG_MS` (18 s); al expirar, cae al escape vertical. Con decodificación restringida, la consulta estratégica del VLM local tarda ~0.8 s (cuatro ciclos) y el barrido de cuatro imágenes ~3 s.
 
 ---
@@ -346,3 +346,61 @@ Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se res
 1. **Fiabilidad operacional categórica:** erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de atascos y degradaciones espurias del sistema.
 2. **Eficiencia temporal crítica:** al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 IT.8.6), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).
 3. **Acoplamiento formal con el grafo de control:** permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.
+
+---
+
+## A4.9 Esquemas, prompts y parámetros de inferencia del sistema evaluado
+
+El capítulo 8 enuncia los principios con que se escriben los prompts y los esquemas del VLM (IT.8.2, IT.8.5). Esta sección los documenta tal como están en el código (`vlm_strategic.py`, `deep_scan.py`).
+
+### A4.9.1 Esquemas de respuesta
+
+**Esquema estratégico** (`RESPONSE_JSON_SCHEMA_STRATEGIC`, `vlm_strategic.py`): una entrada por sector de la grilla de 3×3 del fotograma con valor `free` o `blocked` (enum cerrado); los nueve sectores son obligatorios. El parser los traduce a los valores internos `libre` y `bloqueado`, que son los que usan la sub-meta, los registros y el banco de prueba.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "cells": {
+      "type": "object",
+      "properties": {"A1": {"enum": ["free", "blocked"]}, "B1": {...}, ..., "C3": {...}},
+      "required": ["A1", "B1", "C1", "A2", "B2", "C2", "A3", "B3", "C3"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["cells"],
+  "additionalProperties": false
+}
+```
+
+**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `views` de objetos `{img, view, free}`: número de imagen, lo que hay delante a la altura del dron (enum de seis valores: `open`, `facade`, `wall`, `vegetation`, `inside`, `unclear`) y si se puede volar recto 15 m. El parser los traduce a los valores internos (`libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`; `transitable`). El esquema no pide certeza ni un indicador de imagen degradada: el modelo los rellena con valores fijos (el mismo `0.95, 0.92, 0.89, 0.86` en tres de cuatro barridos de un piloto; `degradada: true` en todas las respuestas) y ninguno decide nada. Una entrada `free: true` cuya vista no es `open` se contradice a sí misma y no cuenta como transitable (cap. 5, IT.5.6). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (IT.8.3.3).
+
+### A4.9.2 Prompt de la capa estratégica
+
+**System prompt** (`SYSTEM_PROMPT_STRATEGIC`), completo:
+
+> You see the front camera of a drone flying low in a city, split into a 3x3 grid: columns A B C (left to right), rows 1 2 3 (top, drone height, bottom). The red GOAL mark is the destination.
+> For each cell: "free" if the drone can fly 15 m that way, "blocked" if a building, wall, tree, bridge or roof is closer than 15 m. Reply with JSON only.
+
+**User prompt** (`strategic_prompt`): `Goal WP_3: 34 m, in cell B2. Altitude 10 m.` Si la meta está fuera del recorte: `Goal WP_3: 34 m, outside the image, 97 deg to the left (GOAL mark on the edge). Altitude 10 m.` Le sigue una única imagen de 384 px con la grilla y la marca de la meta dibujadas, rotulada `[Front camera, 3x3 grid]`.
+
+### A4.9.3 Prompt del barrido
+
+**System prompt** (`SYSTEM_PROMPT_DEEP_SCAN`), completo:
+
+> You see numbered images from a drone flying low in a city; it turned in place and each image faces a different direction. For each image give:
+> - view: what is ahead at drone height within 15 m: open (street, square, sky), facade, wall, vegetation, inside (dark or uniform, inside a building) or unclear.
+> - free: true only if the drone can fly straight 15 m without hitting anything.
+> Reply with JSON only.
+
+**User prompt** (`_build_panorama_prompt`): `4 images. Altitude 10 m.`, seguido de hasta cinco imágenes de 256 px rotuladas `[Image 1]` … `[Image N]`. El prompt no da ángulos, meta ni duración del atasco: el modelo solo describe cada imagen, y el rumbo de cada una y la elección los resuelve el código (cap. 5, IT.5.6).
+
+### A4.9.4 Parámetros de inferencia
+
+`temperature = 0.2`; tope de 384 tokens en el modo estratégico (nueve valores de enum) y 512 en el barrido. El tope no fija la longitud de la respuesta —con decodificación restringida, la generación termina al cerrar el esquema—: solo corta una generación desbocada, y una respuesta cortada se reporta como falla (`respuesta_truncada`), nunca se interpreta. Las respuestas no tienen campos de texto libre: no hay razonamiento que generar, lo que acota la latencia de decodificación.
+
+Los system prompts están en el código (`vlm_strategic.py`, `deep_scan.py`).
+
+### A4.9.5 Nombres de campo compactos
+
+Cada token de la respuesta cuesta tiempo de decodificación: en un servidor que genera ~15 tokens/s, ~67 ms por token. El esquema panorámico usa tres campos cortos por imagen (`img`, `view`, `free`), sin certeza, sin indicador de imagen degradada y sin campo de razonamiento; con nombres descriptivos (`relativo_deg`, `transitable`, `confianza`) una respuesta de cuatro imágenes llega a ~80–95 tokens. El esquema estratégico lleva la idea al extremo: nueve valores de enum y ningún texto libre. Los parsers aceptan también los nombres largos y normalizan a los nombres internos.

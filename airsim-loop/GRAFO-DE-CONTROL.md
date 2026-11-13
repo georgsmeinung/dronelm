@@ -1,6 +1,6 @@
 # Grafo de control
 
-> Estado del lazo de `airsim-loop` al **2026-10-14**. Describe la configuracion **tal como esta en el codigo** ([`src/agents/graph.py`](src/agents/graph.py)) y en [`config/.env`](../config/.env): `STRATEGIC_SOURCE=depth`, `DEADLOCK_STRATEGY=depth`, `ROUTE_PLAN_MODE=vlm`. La version anterior de este documento (policy_router de 5 ramas, nodo deliberativo, `slam_assess`) corresponde a codigo hoy congelado en [`src/agents/legacy/`](src/agents/legacy/). Version extendida: informe, cap. 5 (arquitectura), cap. 6 IT.6.14 (profundidad estimada) y cap. 4 IT.4.4 (registro de corrida y visor).
+> Estado del lazo de `airsim-loop` al **2026-10-14**. Describe la configuracion **tal como esta en el codigo** ([`src/agents/graph.py`](src/agents/graph.py)) y en [`config/.env`](../config/.env): `STRATEGIC_SOURCE=depth`, `DEADLOCK_STRATEGY=depth`, `ROUTE_PLAN_MODE=vlm`. La version anterior de este documento (policy_router de 5 ramas, nodo deliberativo, `slam_assess`) corresponde a codigo hoy congelado en [`src/agents/legacy/`](src/agents/legacy/). Version extendida: informe, cap. 5 (arquitectura), cap. 6 IT.6.12 (profundidad estimada) y cap. 4 IT.4.4 (registro de corrida y visor).
 
 ---
 
