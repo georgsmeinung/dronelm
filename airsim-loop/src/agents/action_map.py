@@ -115,7 +115,7 @@ def action_to_command(
         # justificacion en una macro-accion de ASCENSO) y `yaw_rate=0.0`.
         # Juntas producian el peor caso medido en vuelo: el dron subia 12m
         # derivando 0.5 m/s de costado -- lo que ALEJABA el waypoint en el
-        # plano XY, la misma metrica que decide si el atasco se resolvio, y
+        # plano XY, la misma metrica que decide si el bloqueo se resolvio, y
         # con el rumbo congelado en -5.3 grados mientras el objetivo estaba a
         # -67 grados. El escape se alimentaba a si mismo. Ahora sube en el
         # lugar y aprovecha el ascenso para alinear el rumbo al waypoint.

@@ -619,10 +619,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1032-factores-secundarios-resolucion-de-atascos-y-fuente-de-la-capa-estrategica" class="md-nav__link">
+  <a href="#1032-factores-secundarios-resolucion-de-bloqueos-y-fuente-de-la-capa-estrategica" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.3.2 Factores secundarios: resolución de atascos y fuente de la capa estratégica
+        10.3.2 Factores secundarios: resolución de bloqueos y fuente de la capa estratégica
       
     </span>
   </a>
@@ -758,10 +758,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1063-lazo-lento-y-resolucion-de-atascos" class="md-nav__link">
+  <a href="#1063-lazo-lento-y-resolucion-de-bloqueos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.6.3 Lazo lento y resolución de atascos
+        10.6.3 Lazo lento y resolución de bloqueos
       
     </span>
   </a>
@@ -1431,10 +1431,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1032-factores-secundarios-resolucion-de-atascos-y-fuente-de-la-capa-estrategica" class="md-nav__link">
+  <a href="#1032-factores-secundarios-resolucion-de-bloqueos-y-fuente-de-la-capa-estrategica" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.3.2 Factores secundarios: resolución de atascos y fuente de la capa estratégica
+        10.3.2 Factores secundarios: resolución de bloqueos y fuente de la capa estratégica
       
     </span>
   </a>
@@ -1570,10 +1570,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#1063-lazo-lento-y-resolucion-de-atascos" class="md-nav__link">
+  <a href="#1063-lazo-lento-y-resolucion-de-bloqueos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        10.6.3 Lazo lento y resolución de atascos
+        10.6.3 Lazo lento y resolución de bloqueos
       
     </span>
   </a>
@@ -1691,7 +1691,7 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 <hr />
 <h2 id="102-banco-de-prueba-a-bordo-vlm_bench">10.2 Banco de prueba a bordo (<code>vlm_bench</code>)<a class="headerlink" href="#102-banco-de-prueba-a-bordo-vlm_bench" title="Permanent link">&para;</a></h2>
 <p>El banco es una medición <strong>fuera de vuelo</strong> que responde una pregunta previa a cualquier lote: <strong>¿la fuente del lazo lento sabe responder la pregunta que el lazo le hace?</strong> —si un sector de la imagen está libre a 15 m, si un rumbo del barrido es transitable, si un tramo de ruta sobre el mapa va por la calle—. Compara, muestra por muestra, la respuesta de la fuente con una <strong>etiqueta de referencia</strong> calculada con la profundidad del simulador en la misma pose (cap. 7, IT.7.1): un sector es libre si el percentil 5 de su profundidad es ≥ 15 m. Las muestras son poses registradas en corridas reales, y las etiquetas nunca entran al lazo de vuelo (IT.10.4.1, punto 3).</p>
-<p>Un lote de vuelo no puede responder esa pregunta: el resultado de una misión mezcla la percepción con el guiado, el lazo rápido, los atascos y el azar del simulador, y con pocas semillas una fuente que responde al azar puede empatar con una que acierta. El banco aísla el juicio. Una fuente que no lo supera no se lleva al vuelo; una que lo supera se juzga después en los lotes. Tres reglas lo mantienen como medición <strong>generalista</strong> y no como ajuste a un escenario: prompts y preguntas fijos, iguales a los de vuelo, que no nombran objetos de un entorno; la respuesta se lee tal como sale, sin umbrales calibrados sobre los datos; y el criterio de pase —exactitud balanceada ≥ 0.65 con el intervalo de confianza del 95 % por encima del azar, con <em>bootstrap</em> por corrida— debe cumplirse en todos los entornos medidos. Una pregunta que no pasa se descarta: adaptarla al escenario sería un entrenamiento manual por entorno.</p>
+<p>Un lote de vuelo no puede responder esa pregunta: el resultado de una misión mezcla la percepción con el guiado, el lazo rápido, los bloqueos y el azar del simulador, y con pocas semillas una fuente que responde al azar puede empatar con una que acierta. El banco aísla el juicio. Una fuente que no lo supera no se lleva al vuelo; una que lo supera se juzga después en los lotes. Tres reglas lo mantienen como medición <strong>generalista</strong> y no como ajuste a un escenario: prompts y preguntas fijos, iguales a los de vuelo, que no nombran objetos de un entorno; la respuesta se lee tal como sale, sin umbrales calibrados sobre los datos; y el criterio de pase —exactitud balanceada ≥ 0.65 con el intervalo de confianza del 95 % por encima del azar, con <em>bootstrap</em> por corrida— debe cumplirse en todos los entornos medidos. Una pregunta que no pasa se descarta: adaptarla al escenario sería un entrenamiento manual por entorno.</p>
 <table>
 <thead>
 <tr>
@@ -1745,14 +1745,14 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 <p>Los tres brazos comparten <strong>el mismo <code>ObstacleField</code></strong> (cap. 6), <strong>el mismo vocabulario de macro-acciones</strong> y <strong>el mismo traductor a cinemática</strong>: la diferencia entre ellos es <em>quién elige la macro-acción y quién decide los rodeos</em>. Elegir la macro-acción incluye las reglas del lazo rápido, que no son las mismas en los tres brazos (cap. 5, IT.5.3.3), de modo que cada comparación mide el brazo completo, no la capa deliberativa sola.</p>
 <ul>
 <li><strong><code>slm</code></strong> — el grafo con sus dos lazos (cap. 5): el lazo lento juzga, cada ≥ 1 s o de inmediato ante un muro, qué sectores de una grilla de 3×3 son volables y traduce la respuesta a una sub-meta anclada a la pose del fotograma; ante un deadlock, un barrido de 4 rumbos produce la sub-meta de salida. Con el resultado del banco, la fuente es la red de profundidad estimada (cap. 6, IT.6.12): pese al nombre, heredado de versiones anteriores, <strong>ningún modelo de lenguaje decide en vuelo</strong>, y el VLM solo planifica la ruta antes del despegue (cap. 4, IT.4.3.1). Los nombres heredados se explican en el Anexo 12 (IT.A12.1).</li>
-<li><strong><code>fsm</code></strong> — una máquina de estados explícita (<code>CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE</code>) con umbrales fijos sobre el mismo <code>ObstacleField</code> y su propia lógica de atasco (cap. 5, IT.5.7): la línea de base directa, predecible y de costo mínimo.</li>
-<li><strong><code>reactive</code></strong> — solo guiado al waypoint, <strong>sin evasión</strong>, sin deliberación y sin resolución de atascos: la <strong>cota inferior de rendimiento</strong>. Lo que lo separa de los otros brazos es a la vez la evasión del lazo rápido y la resolución de atascos. Su varianza entre semillas es el control negativo del diseño (IT.10.5.1).</li>
+<li><strong><code>fsm</code></strong> — una máquina de estados explícita (<code>CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE</code>) con umbrales fijos sobre el mismo <code>ObstacleField</code> y su propia lógica de bloqueo (cap. 5, IT.5.7): la línea de base directa, predecible y de costo mínimo.</li>
+<li><strong><code>reactive</code></strong> — solo guiado al waypoint, <strong>sin evasión</strong>, sin deliberación y sin resolución de bloqueos: la <strong>cota inferior de rendimiento</strong>. Lo que lo separa de los otros brazos es a la vez la evasión del lazo rápido y la resolución de bloqueos. Su varianza entre semillas es el control negativo del diseño (IT.10.5.1).</li>
 </ul>
-<h3 id="1032-factores-secundarios-resolucion-de-atascos-y-fuente-de-la-capa-estrategica">10.3.2 Factores secundarios: resolución de atascos y fuente de la capa estratégica<a class="headerlink" href="#1032-factores-secundarios-resolucion-de-atascos-y-fuente-de-la-capa-estrategica" title="Permanent link">&para;</a></h3>
-<p><strong>Resolución de atascos.</strong> Ante un deadlock, un barrido panorámico dentro del lazo y una única consulta que juzga cada rumbo (cap. 5, IT.5.6); sin respuesta válida, escape vertical. Valores: <strong><code>depth</code></strong> (por defecto; los rumbos los juzga la profundidad estimada), <strong><code>deep_vlm</code></strong> (los juzga el VLM; evaluado en el banco, no en los lotes) y <strong><code>blind</code></strong> (sin barrido, escape determinista). <strong>Fuente de la capa estratégica</strong> (solo <code>slm</code>): <code>depth</code>, <code>vlm</code> u <code>off</code>; los lotes la fijan en <code>depth</code>.</p>
-<p><strong>El barrido es común a <code>slm</code> y <code>fsm</code>.</strong> Con <code>depth</code>, la FSM delega sus deadlocks en el mismo barrido, de modo que <code>slm:depth</code> vs. <code>fsm:depth</code> aísla la capa estratégica y la política del lazo rápido, no la resolución de atascos. El brazo sin barrido es <code>fsm:blind</code>.</p>
+<h3 id="1032-factores-secundarios-resolucion-de-bloqueos-y-fuente-de-la-capa-estrategica">10.3.2 Factores secundarios: resolución de bloqueos y fuente de la capa estratégica<a class="headerlink" href="#1032-factores-secundarios-resolucion-de-bloqueos-y-fuente-de-la-capa-estrategica" title="Permanent link">&para;</a></h3>
+<p><strong>Resolución de bloqueos.</strong> Ante un deadlock, un barrido panorámico dentro del lazo y una única consulta que juzga cada rumbo (cap. 5, IT.5.6); sin respuesta válida, escape vertical. Valores: <strong><code>depth</code></strong> (por defecto; los rumbos los juzga la profundidad estimada), <strong><code>deep_vlm</code></strong> (los juzga el VLM; evaluado en el banco, no en los lotes) y <strong><code>blind</code></strong> (sin barrido, escape determinista). <strong>Fuente de la capa estratégica</strong> (solo <code>slm</code>): <code>depth</code>, <code>vlm</code> u <code>off</code>; los lotes la fijan en <code>depth</code>.</p>
+<p><strong>El barrido es común a <code>slm</code> y <code>fsm</code>.</strong> Con <code>depth</code>, la FSM delega sus deadlocks en el mismo barrido, de modo que <code>slm:depth</code> vs. <code>fsm:depth</code> aísla la capa estratégica y la política del lazo rápido, no la resolución de bloqueos. El brazo sin barrido es <code>fsm:blind</code>.</p>
 <h3 id="1033-celdas-y-comparaciones-planificadas">10.3.3 Celdas y comparaciones planificadas<a class="headerlink" href="#1033-celdas-y-comparaciones-planificadas" title="Permanent link">&para;</a></h3>
-<p>La celda es la tupla (escenario × brazo × estrategia de atasco), replicada con <span class="arithmatex">\(K = 10\)</span> semillas (IT.10.5.1):</p>
+<p>La celda es la tupla (escenario × brazo × estrategia de bloqueo), replicada con <span class="arithmatex">\(K = 10\)</span> semillas (IT.10.5.1):</p>
 <table>
 <thead>
 <tr>
@@ -1771,7 +1771,7 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 </tr>
 <tr>
 <td><code>fsm:depth</code></td>
-<td>La misma resolución de atascos con profundidad, sin capa estratégica y con política FSM</td>
+<td>La misma resolución de bloqueos con profundidad, sin capa estratégica y con política FSM</td>
 <td>✓</td>
 <td>✓</td>
 </tr>
@@ -1783,7 +1783,7 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 </tr>
 <tr>
 <td><code>reactive</code></td>
-<td>Solo guiado: sin evasión, sin deliberación y sin resolución de atascos</td>
+<td>Solo guiado: sin evasión, sin deliberación y sin resolución de bloqueos</td>
 <td>✓</td>
 <td>✓</td>
 </tr>
@@ -1795,7 +1795,7 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 </tr>
 </tbody>
 </table>
-<p><code>fsm:blind</code> solo se corre donde hay atascos que resolver. En los lotes con obstrucción, las tres comparaciones planificadas son: (i) <code>slm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) <code>fsm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el barrido con profundidad? (iii) <code>slm:depth</code> vs. <code>fsm:depth</code>: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo <code>slm</code>? La pregunta «¿aporta el VLM en vuelo?» la responde el banco (IT.10.2), no los lotes.</p>
+<p><code>fsm:blind</code> solo se corre donde hay bloqueos que resolver. En los lotes con obstrucción, las tres comparaciones planificadas son: (i) <code>slm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) <code>fsm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el barrido con profundidad? (iii) <code>slm:depth</code> vs. <code>fsm:depth</code>: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo <code>slm</code>? La pregunta «¿aporta el VLM en vuelo?» la responde el banco (IT.10.2), no los lotes.</p>
 <hr />
 <h2 id="104-escenarios">10.4 Escenarios<a class="headerlink" href="#104-escenarios" title="Permanent link">&para;</a></h2>
 <p>Tres niveles crecientes de dificultad ambiental, cada uno sobre un <strong>proyecto de Unreal Engine distinto</strong> (cap. 3), con un escenario de control despejado por nivel y uno o dos con obstrucción en los niveles 1 y 2.</p>
@@ -1906,11 +1906,11 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 <li><strong>Histograma de rutas</strong>: la distribución de ciclos entre los comportamientos del grafo, que caracteriza el vuelo mejor que el éxito.</li>
 <li><strong>Tasa de deliberación</strong>: fracción de ciclos con una consulta nueva del lazo lento.</li>
 </ul>
-<h3 id="1063-lazo-lento-y-resolucion-de-atascos">10.6.3 Lazo lento y resolución de atascos<a class="headerlink" href="#1063-lazo-lento-y-resolucion-de-atascos" title="Permanent link">&para;</a></h3>
+<h3 id="1063-lazo-lento-y-resolucion-de-bloqueos">10.6.3 Lazo lento y resolución de bloqueos<a class="headerlink" href="#1063-lazo-lento-y-resolucion-de-bloqueos" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Resultados de la capa estratégica</strong>: fracción de consultas que proponen sub-meta, que declaran libre el camino directo o que no encuentran sector libre; una capa que declara libre el camino en casi todas las consultas, incluso cuando el dron termina en deadlock, no aporta información.</li>
 <li><strong>Avance hacia el waypoint real tras cada sub-meta</strong>, a los 20 s: la medida directa de si las sub-metas ayudan.</li>
-<li><strong>Atascos</strong>: número de deadlocks, fracción resuelta por el barrido y fracción que cae al escape vertical. «Resuelto» significa que se fijó una sub-meta, <strong>no</strong> que el dron haya salido del atasco.</li>
+<li><strong>Bloqueos</strong>: número de deadlocks, fracción resuelta por el barrido y fracción que cae al escape vertical. «Resuelto» significa que se fijó una sub-meta, <strong>no</strong> que el dron haya salido del bloqueo.</li>
 <li><strong>Desglose por waypoint</strong>, para no atribuir a todo el escenario la dificultad de un solo tramo.</li>
 </ul>
 <hr />

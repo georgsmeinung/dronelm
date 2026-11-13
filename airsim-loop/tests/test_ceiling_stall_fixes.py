@@ -125,7 +125,7 @@ def test_scan_in_progress_owns_the_drone_until_resolved(nodes):
     """2026-0930: reemplaza la deteccion de escaneo "huerfano" (71 descartes en las corridas v2): un
     barrido en curso tiene prioridad en navigate_node hasta resolver o caer por sus watchdogs."""
     state = _state(z=-10.0, ceiling=None)
-    state["telemetry"]["velocity"]["vx"] = 2.0                        # volando: ningun detector de atasco activo
+    state["telemetry"]["velocity"]["vx"] = 2.0                        # volando: ningun detector de bloqueo activo
     state.update({"_scan_phase": "rotando", "_scan_started_ts": time.time(), "_scan_start_yaw_deg": 0.0,
                   "_scan_heading_index": 1, "_deliberation_pending": True})
     state = nodes["navigate"](state)

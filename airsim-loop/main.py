@@ -322,7 +322,7 @@ def main() -> None:
             # Fix 1 (2026-0824): esperar al SLM dentro del watchdog no cuenta
             # como "sin progresar" (ver _deliberation_pending en deliberative.py).
             # Fix 2: distancia HORIZONTAL, no 3D -- subir para escapar de un
-            # atasco no debe empeorar la metrica que decide si se resolvio.
+            # bloqueo no debe empeorar la metrica que decide si se resolvio.
             if not drone_state.get("_deliberation_pending", False):
                 waypoint_tracker.record_progress(
                     guidance.get("dist_xy", guidance.get("distance", 0.0)),
@@ -366,10 +366,10 @@ def main() -> None:
             if drone_state.pop("_escape_reset", False):
                 # Escape de deadlock forzado: el progreso medido (xy) puede no
                 # reflejar la subida vertical, asi que se resetea manualmente
-                # el contador de atasco de la ruta para no re-disparar de inmediato.
+                # el contador de bloqueo de la ruta para no re-disparar de inmediato.
                 waypoint_tracker.reset_progress()
 
-            # Evento de resolucion de atasco (deep_scan
+            # Evento de resolucion de bloqueo (deep_scan
             # o escape ciego), consumido por FlightLogger para el ablation
             # blind vs. deep_vlm. Mismo patron que _escape_reset arriba: se
             # consume con pop() en el lazo, nunca queda pisando el estado.

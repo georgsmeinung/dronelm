@@ -1,6 +1,6 @@
 # 6. Percepción monocular: flujo óptico, TTC, campo de obstáculos y profundidad estimada
 
-La percepción usa una sola cámara RGB y tiene dos canales, uno por lazo de control (cap. 5, IT.5.1.2): el **flujo óptico** (IT.6.1–IT.6.11), que alimenta al lazo rápido cada 0.2 s, y la **profundidad monocular estimada** con Depth Anything V2 (IT.6.12), que alimenta al lazo lento y al barrido de resolución de atascos. IT.6.13 explica cómo se complementan. El desarrollo matemático, la interfaz completa del campo de obstáculos y los parámetros del estimador están en el [Anexo 5](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md).
+La percepción usa una sola cámara RGB y tiene dos canales, uno por lazo de control (cap. 5, IT.5.1.2): el **flujo óptico** (IT.6.1–IT.6.11), que alimenta al lazo rápido cada 0.2 s, y la **profundidad monocular estimada** con Depth Anything V2 (IT.6.12), que alimenta al lazo lento y al barrido de resolución de bloqueos. IT.6.13 explica cómo se complementan. El desarrollo matemático, la interfaz completa del campo de obstáculos y los parámetros del estimador están en el [Anexo 5](anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.md).
 
 ## 6.1 Fundamentos de diseño: percepción geométrica sin redes neuronales en el lazo rápido
 
@@ -100,7 +100,7 @@ Una celda está bloqueada si tiene evidencia mínima de percepción **y** la ocu
 
 ## 6.10 El contrato `ObstacleField` y la ausencia de evidencia
 
-Todos los consumidores de la percepción —lazo rápido, evasión, FSM, gobernador de velocidad y registro— acceden al campo de obstáculos **solo** a través de su interfaz pública, un objeto inmutable que ninguno puede modificar; la capa estratégica no lo recibe, porque mira el fotograma (cap. 5, IT.5.5). El campo distingue el origen de su evidencia —flujo, degradado, retenido o sin datos—, y `has_evidence()` solo es verdadero con flujo y confianza positiva. Ese es el contrato que evita la Falla 1 del capítulo 9: **la falta de evidencia no es espacio libre**. Un hover produce un campo sin evidencia, y tratarlo como camino despejado desactivaría el escape de atasco justo cuando el dron está atrapado; por eso la consulta de corredor libre de la FSM devuelve falso sin evidencia y el gobernador limita el avance (cap. 5, IT.5.4). La interfaz completa está en el Anexo 5 (IT.A5.8).
+Todos los consumidores de la percepción —lazo rápido, evasión, FSM, gobernador de velocidad y registro— acceden al campo de obstáculos **solo** a través de su interfaz pública, un objeto inmutable que ninguno puede modificar; la capa estratégica no lo recibe, porque mira el fotograma (cap. 5, IT.5.5). El campo distingue el origen de su evidencia —flujo, degradado, retenido o sin datos—, y `has_evidence()` solo es verdadero con flujo y confianza positiva. Ese es el contrato que evita la Falla 1 del capítulo 9: **la falta de evidencia no es espacio libre**. Un hover produce un campo sin evidencia, y tratarlo como camino despejado desactivaría el escape de bloqueo justo cuando el dron está atrapado; por eso la consulta de corredor libre de la FSM devuelve falso sin evidencia y el gobernador limita el avance (cap. 5, IT.5.4). La interfaz completa está en el Anexo 5 (IT.A5.8).
 
 ## 6.11 Comportamiento bajo condiciones extremas
 

@@ -1,3 +1,54 @@
+# 2026-11-13 - Informe reducido a ~30.000 palabras, anexos A10-A13, titulo nuevo y "bloqueo" por "atasco"
+
+Sin cambios de comportamiento del codigo de vuelo (solo comentarios y textos). Los 321 tests pasan.
+Registro detallado del recorte en `follow-up/2026-1113 - Plan reduccion informe a 30k palabras.md`.
+
+**Extension del informe.** El cuerpo (caps. 01-12, prosa + tablas) pasa de 65.088 a ~30.600 palabras; los
+anexos, de 24.546 a ~47.400. Conteo sin portada, referencias, codigo ni formulas en bloque (el conteo inicial
+de 54.700 estaba mal: la regex de etiquetas HTML cruzaba lineas y descontaba prosa).
+- Detalle movido a anexos nuevos: **A10** especificacion del lazo tactico (desde el cap. 5: `DroneState`,
+  `StallDetector`, nodos, macro-acciones, gobernador, `DeliberationService`, maquina de estados del barrido,
+  `WaypointTracker`, registro y cierre de mision); **A11** catalogo de incidentes de integracion (desde el
+  cap. 9: vulnerabilidades de LangGraph, degradaciones sensoriales y 7 casos de la Falla 6); **A12** operacion
+  del experimento (desde el cap. 10: nombres heredados, escenarios, semillas, lotes, metricas, resultados
+  esperados, artefactos, construccion del banco y plan extendido); **A13** estacion terrena WebDCS, mapa
+  cenital y dataset de corridas (desde el cap. 4). A4 suma A4.9 (esquemas, prompts y parametros del VLM) y A5
+  suma A5.8-A5.10 (API de `ObstacleField`, holdover, variables del estimador).
+- Segunda pasada en todos los capitulos: prosa condensada sin renumerar. Parte de lo condensado en los caps.
+  1, 2, 3, 7, 11 y 12 (detalle de dominios de aplicacion, casos de uso de AirSim, tabla de campos del dataset
+  de TTC, cifras secundarias, listas de limitaciones y trabajo futuro) no paso a un anexo: queda en git.
+- Referencias `IT.x` de los caps. 5, 6, 8, 9 y 10 reasignadas con tablas de correspondencia en el informe,
+  los README, NB1-NB5, los SVG de `fig-src/anexos/`, `docs/index.html`, `docs/grafo-de-control.html`,
+  `GRAFO-DE-CONTROL.md` y comentarios de `runner.py` y `code_version.py`; 0 referencias sin destino y todas las
+  citas bibliograficas se siguen citando. `mkdocs.yml` y `informe/README.md` incluyen A10-A13.
+
+**Figuras, formulas y tablas.**
+- Diagramas de texto reemplazados por figuras con el estilo de las demas: topologia del grafo (cap. 5,
+  Figura 5.1; el grafo en tres capas pasa a Figura 5.2) y pipeline de cinco etapas (cap. 6, Figura 6.1).
+  Fuentes en `informe/fig-src/topologia_grafo.svg` y `pipeline_cinco_etapas.svg`.
+- Cap. 6 §6.8: confianza, TTC y ocupacion de celda con notacion de conjuntos. La ocupacion se describia como
+  "media de la divergencia positiva"; el codigo promedia la divergencia con signo y despues recorta a [0, 1].
+  Se corrigio, con k ~ 0.056 s y el umbral 0.011 equivalente a ~0.2 1/s. A5.6.1 definia la ocupacion como
+  fraccion de pixeles con TTC <= 2.5 s; corregido igual que §6.8.
+- Formulas que no se renderizaban: `\_` dentro de `\text{}` (cap. 9 §9.4, A4.4.1), listas pegadas al parrafo
+  y formulas pegadas al texto del item (43 casos en siete anexos), formulas que desbordaban la columna.
+- Tablas para el PDF: 10.4.2 de 10 a 7 columnas; 11.2 sin la columna Escenario e intervalos sin cortes;
+  A1 sin la columna de repositorios; A12 con la columna de celdas compacta. `informe/css/austral.css`: en
+  impresion, el codigo de las tablas ya no se parte a mitad de palabra y las celdas tienen menos relleno.
+
+**Titulo.** "Navegacion Autonoma de Drones Urbanos con Vision Monocular y Modelos de Lenguaje Visual
+Pequenos" (antes "... y Small Language Model (SLM)"), en la portada, el resumen, las palabras clave,
+`mkdocs.yml`, los README y `docs/index.html`; el cuerpo de `docs/index.html` deja de presentar al SLM como
+capa de decision. El plan aprobado conserva su titulo; el cambio requiere el visto bueno de los directores.
+
+**Terminologia.** "atasco" pasa a "bloqueo" (y "atascado" a "bloqueado") en el informe, los anexos, los README,
+`docs/`, los cuadernos y el codigo (comentarios, docstrings, mensajes y prompts de `legacy/`): 264 lugares.
+Dos frases ambiguas con la celda "bloqueada" del `ObstacleField` se reescribieron (cap. 9 §9.5, A11.1.1).
+Este CHANGELOG, `follow-up/` y `plan-tesis/` conservan "atasco" como registro historico.
+
+- `.claude/launch.json`: configuracion `informe` (`mkdocs serve` en el puerto 8766) para revisar el render.
+- Pendiente: regenerar `docs/informe/` y el PDF (`informe/make_pdf.py`).
+
 # 2026-10-28 (b) - Cuadernos de airsim-loop: grafo, telemetria, estadistica, planificacion VLM y banco
 
 Sin cambios de codigo de vuelo. Los cinco cuadernos corren sin AirSim, Ollama ni GPU (kernel `airsimenv`,

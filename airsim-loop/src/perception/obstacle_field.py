@@ -318,7 +318,7 @@ def has_open_corridor(field: ObstacleField, guidance: Optional[dict] = None) -> 
     target = sector_towards_waypoint(float(guidance.get("bearing_err_deg", 0.0)))
 
     # Se prioriza el sector hacia el waypoint, pero cualquier sector lateral
-    # con evidencia y libre tambien rompe el atasco mejor que subir en el lugar.
+    # con evidencia y libre tambien rompe el bloqueo mejor que subir en el lugar.
     for sector in (target, *(s for s in SECTORS if s != target)):
         if field.sector_confidence(sector) < MIN_CONFIDENCE_FOR_BLOCKED:
             continue

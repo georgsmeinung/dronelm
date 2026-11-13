@@ -2004,7 +2004,7 @@ Generación Restringida (Determinista, ~18 tokens, ~0.35 s):
 </tr>
 <tr>
 <td><code>"DEADLOCK_ESCAPE"</code></td>
-<td><code>evasion_stuck_cycles</code> sobre el umbral (atasco prolongado)</td>
+<td><code>evasion_stuck_cycles</code> sobre el umbral (bloqueo prolongado)</td>
 <td><code>enum: ["GIRAR_90", "GANAR_ALTURA", "RETROCEDER"]</code></td>
 <td><strong>Ruptura forzada de bucles:</strong> el dron lleva varios ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente o insistir de frente.</td>
 </tr>
@@ -2247,7 +2247,7 @@ ws <span class="o">::=</span> [ \t\n]*
 <p>La decodificación restringida no constituye un mero filtro estético de salida ni una conveniencia de formateo de datos: <strong>es el componente arquitectónico que hace viable el uso seguro de modelos de lenguaje pequeños en el lazo cerrado de control de un vehículo aéreo</strong>.</p>
 <p>Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se resumen en tres puntos esenciales:</p>
 <ol>
-<li><strong>Fiabilidad operacional categórica:</strong> erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de atascos y degradaciones espurias del sistema.</li>
+<li><strong>Fiabilidad operacional categórica:</strong> erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de bloqueos y degradaciones espurias del sistema.</li>
 <li><strong>Eficiencia temporal crítica:</strong> al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 IT.8.6), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).</li>
 <li><strong>Acoplamiento formal con el grafo de control:</strong> permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.</li>
 </ol>
@@ -2286,7 +2286,7 @@ For each cell: "free" if the drone can fly 15 m that way, "blocked" if a buildin
 - free: true only if the drone can fly straight 15 m without hitting anything.
 Reply with JSON only.</p>
 </blockquote>
-<p><strong>User prompt</strong> (<code>_build_panorama_prompt</code>): <code>4 images. Altitude 10 m.</code>, seguido de hasta cinco imágenes de 256 px rotuladas <code>[Image 1]</code> … <code>[Image N]</code>. El prompt no da ángulos, meta ni duración del atasco: el modelo solo describe cada imagen, y el rumbo de cada una y la elección los resuelve el código (cap. 5, IT.5.6).</p>
+<p><strong>User prompt</strong> (<code>_build_panorama_prompt</code>): <code>4 images. Altitude 10 m.</code>, seguido de hasta cinco imágenes de 256 px rotuladas <code>[Image 1]</code> … <code>[Image N]</code>. El prompt no da ángulos, meta ni duración del bloqueo: el modelo solo describe cada imagen, y el rumbo de cada una y la elección los resuelve el código (cap. 5, IT.5.6).</p>
 <h3 id="a494-parametros-de-inferencia">A4.9.4 Parámetros de inferencia<a class="headerlink" href="#a494-parametros-de-inferencia" title="Permanent link">&para;</a></h3>
 <p><code>temperature = 0.2</code>; tope de 384 tokens en el modo estratégico (nueve valores de enum) y 512 en el barrido. El tope no fija la longitud de la respuesta —con decodificación restringida, la generación termina al cerrar el esquema—: solo corta una generación desbocada, y una respuesta cortada se reporta como falla (<code>respuesta_truncada</code>), nunca se interpreta. Las respuestas no tienen campos de texto libre: no hay razonamiento que generar, lo que acota la latencia de decodificación.</p>
 <p>Los system prompts están en el código (<code>vlm_strategic.py</code>, <code>deep_scan.py</code>).</p>

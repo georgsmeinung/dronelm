@@ -62,7 +62,7 @@ _STATE_TO_ACTION = {
     STATE_BRAKE: "FRENAR",
 }
 
-# Secuencia de estrategias de escape por atasco/bloqueo total (2026-0827, ver
+# Secuencia de estrategias de escape por bloqueo/bloqueo total (2026-0827, ver
 # CHANGELOG.md). Antes "todo bloqueado" siempre devolvia STATE_CLIMB -- sin
 # alternativa si arriba tampoco habia salida (confirmado visualmente en UE:
 # el dron quedaba insistiendo dentro de la copa de un arbol, subiendo mas
@@ -95,8 +95,8 @@ def _decide_state(
     pero sin invocar ningun modelo: es la maquina de estados clasica contra la
     que se compara el brazo SLM.
     """
-    # El escape vertical por atasco ya no es ciego: no dispara si la
-    # percepcion ve un corredor transitable (salvo atasco duro) ni si el
+    # El escape vertical por bloqueo ya no es ciego: no dispara si la
+    # percepcion ve un corredor transitable (salvo bloqueo duro) ni si el
     # escape esta enclavado por haberse agotado. Mismo criterio que
     # policy_router/deliberative, para que la comparacion SLM vs FSM siga
     # siendo sobre quien elige la accion y no sobre quien tiene la
@@ -157,7 +157,7 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
 
     # Red de seguridad (2026-0824, mismo mecanismo que deliberative.py):
     # tope de intentos de CLIMB consecutivos. Sin esto, subir para escapar
-    # de un atasco puede no resolverlo nunca (obstaculo genuinamente
+    # de un bloqueo puede no resolverlo nunca (obstaculo genuinamente
     # imposible de superar subiendo) y el estado quedaria disparando CLIMB
     # sin techo. Se cuenta CUALQUIER CLIMB (por stuck_cycles o por bloqueo
     # lateral en ambos sectores), no solo el de stuck_cycles.
@@ -166,9 +166,9 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
     # contador en cero y el ciclo siguiente volvia a subir -- la red de
     # seguridad se reseteaba a si misma y producia un ciclo limite
     # (CLIMB, CLIMB, CLIMB, BRAKE, CLIMB, ...) en vez de un estado terminal.
-    # El enclavamiento se levanta solo cuando el atasco se resuelve de verdad
+    # El enclavamiento se levanta solo cuando el bloqueo se resuelve de verdad
     # (stuck_cycles vuelve por debajo del umbral). A diferencia del brazo SLM,
-    # aca el contador de atasco no se fuerza a cero desde el nodo, asi que
+    # aca el contador de bloqueo no se fuerza a cero desde el nodo, asi que
     # `stuck_cycles < stuck_threshold` ya es evidencia de progreso real.
     escape_locked = bool(state.get("_escape_locked", False))
     consecutive_escapes = int(state.get("_consecutive_escapes", 0))
@@ -225,7 +225,7 @@ def fsm_node(state: Dict[str, Any], service: Optional[DeliberationService] = Non
             # para buscar un corredor lateral. GANAR_ALTURA queda descartada
             # (enclavada) hasta que haya progreso real; los ciclos siguientes
             # caen a la evaluacion normal por TTC (_decide_state con
-            # escape_locked=True se salta el bloque de atasco).
+            # escape_locked=True se salta el bloque de bloqueo).
             escape_locked = True
             state["_consecutive_escapes"] = consecutive_escapes
             state["_escape_locked"] = escape_locked

@@ -329,7 +329,7 @@ El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ning�
 
 ### A5.8.2 `has_open_corridor` y `sector_towards_waypoint`
 
-Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (`has_open_corridor`, para decidir si un atasco tiene un corredor visible); el brazo `slm` detecta el atasco con el `StallDetector` (cap. 5, IT.5.3.1).
+Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (`has_open_corridor`, para decidir si un bloqueo tiene un corredor visible); el brazo `slm` detecta el bloqueo con el `StallDetector` (cap. 5, IT.5.3.1).
 
 **`sector_towards_waypoint(bearing_err_deg)`** mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
 
@@ -337,7 +337,7 @@ Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa
 - Si `bearing_err_deg > +15°` → `"derecha"`
 - Caso contrario → `"centro"`
 
-Esta función conecta el espacio de guiado de `WaypointTracker` con el espacio de percepción del `ObstacleField`, permitiendo que el escape de atasco priorice el sector hacia el waypoint.
+Esta función conecta el espacio de guiado de `WaypointTracker` con el espacio de percepción del `ObstacleField`, permitiendo que el escape de bloqueo priorice el sector hacia el waypoint.
 
 **`has_open_corridor(field, guidance)`** determina si la percepción tiene evidencia real de al menos un sector transitable, evaluado en el contexto del waypoint activo:
 
@@ -350,7 +350,7 @@ for sector in (target, otros_sectores):
 return False
 ```
 
-La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual: un dron en hover puede subir 12 m seguidos mientras el `ObstacleField` reporta `DERECHA: DESPEJADO` ciclo tras ciclo.
+La condición `has_evidence()` es crítica: un hover puro produce un `ObstacleField` con `foe_confidence = 0`, y tratar esa situación como "camino despejado" desactivaría el escape de bloqueo precisamente cuando el dron está parado y atrapado. Tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual: un dron en hover puede subir 12 m seguidos mientras el `ObstacleField` reporta `DERECHA: DESPEJADO` ciclo tras ciclo.
 
 ---
 

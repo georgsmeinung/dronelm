@@ -79,7 +79,7 @@ def test_record_progress_increments_when_stalled():
 def test_long_correct_manhattan_detour_does_not_count_as_stuck():
     """Regresion: un desvio largo pero que sigue acercando al waypoint
 
-    (aunque tome muchos ciclos) no debe contar como atasco.
+    (aunque tome muchos ciclos) no debe contar como bloqueo.
     """
     tracker = WaypointTracker([{"x": 200, "y": 0, "z": -10, "label": "WP1"}])
     distances = [200 - i for i in range(0, 60, 2)]  # progreso monotono, de a 2m
@@ -114,7 +114,7 @@ def test_effective_stall_threshold_is_coherent_with_the_progress_epsilon(monkeyp
     configuraban por separado, produciendo combinaciones imposibles.
 
     Con eps=0.5m, umbral=5 ciclos y LOOP_HZ=5 hacia falta acercarse a 0.5 m/s
-    sostenidos para no acumular atasco; durante un giro cerrado el guiado da
+    sostenidos para no acumular bloqueo; durante un giro cerrado el guiado da
     ~0.25 m/s reales, asi que el escape por altura se disparaba solo a los 5
     ciclos de arrancar la mision, sin ningun obstaculo.
     """
@@ -141,8 +141,8 @@ def test_effective_stall_threshold_never_lowers_the_configured_value(monkeypatch
 
 def test_sharp_turn_gets_more_yaw_authority():
     """Regresion 2026-0824: con un tope unico de 15 deg/s, realinear un desvio
-    de ~70 grados tardaba mas que lo que tarda el contador de atasco en
-    dispararse -- el dron se declaraba atascado por no terminar un giro que el
+    de ~70 grados tardaba mas que lo que tarda el contador de bloqueo en
+    dispararse -- el dron se declaraba bloqueado por no terminar un giro que el
     propio limitador le impedia terminar a tiempo.
     """
     tracker = WaypointTracker([{"x": 100, "y": 0, "z": -10, "label": "WP1"}])

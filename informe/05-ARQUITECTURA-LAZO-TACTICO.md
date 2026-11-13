@@ -22,29 +22,29 @@ El grafo se compila **una vez** y el bucle externo (`main.py` o `experiments/run
 
 ### 5.1.2 Dos lazos desacoplados
 
-La organización responde a un hecho medido: la consulta al VLM local tarda ~0.8 s (IT.8.6), cuatro ciclos del lazo, y la de la red de profundidad ~0.1 s. Una respuesta expresada **en el marco del cuerpo** del dron («el frente está libre») describe un fotograma que ya no existe cuando llega: el dron giró y avanzó, y usarla produce maniobras hacia el lado equivocado (cap. 9, IT.9.8). El sistema separa entonces dos escalas de tiempo. El **lazo rápido** (5 Hz) —guiado, evasión por flujo óptico, reacción a contacto y detección de atasco— es el **único** que comanda velocidades. El **lazo lento**, asíncrono, mira un fotograma y responde una pregunta **válida en el mundo**: por cuál dirección se puede volar hacia la meta; cada pedido guarda la pose del fotograma, y la respuesta se traduce con esa pose a una **sub-meta en coordenadas del mundo**, que sigue siendo correcta aunque el dron haya girado mientras la fuente procesaba (IT.5.5). La fuente por defecto es una red de profundidad monocular estimada desde el mismo RGB (IT.5.5.4).
+La organización responde a un hecho medido: la consulta al VLM local tarda ~0.8 s (IT.8.6), cuatro ciclos del lazo, y la de la red de profundidad ~0.1 s. Una respuesta expresada **en el marco del cuerpo** del dron («el frente está libre») describe un fotograma que ya no existe cuando llega: el dron giró y avanzó, y usarla produce maniobras hacia el lado equivocado (cap. 9, IT.9.8). El sistema separa entonces dos escalas de tiempo. El **lazo rápido** (5 Hz) —guiado, evasión por flujo óptico, reacción a contacto y detección de bloqueo— es el **único** que comanda velocidades. El **lazo lento**, asíncrono, mira un fotograma y responde una pregunta **válida en el mundo**: por cuál dirección se puede volar hacia la meta; cada pedido guarda la pose del fotograma, y la respuesta se traduce con esa pose a una **sub-meta en coordenadas del mundo**, que sigue siendo correcta aunque el dron haya girado mientras la fuente procesaba (IT.5.5). La fuente por defecto es una red de profundidad monocular estimada desde el mismo RGB (IT.5.5.4).
 
 Es el patrón de las arquitecturas de capas para robots móviles, con un controlador reactivo inmediato y una capa deliberativa a otra escala temporal ([Gat, 1998](13-REFERENCIAS.md#ref-gat-1998)), en la que las capas inferiores conservan siempre la capacidad de actuar ([Brooks, 1986](13-REFERENCIAS.md#ref-brooks-1986)). La particularidad es la interfaz: la capa lenta no emite acciones sino **metas geométricas ancladas**, que la rápida persigue con su guiado normal.
 
 Tres principios de diseño acompañan esta separación:
 
 - **La fuente decide; las reglas no la reescriben.** No hay reglas deterministas que corrijan la respuesta de la fuente: una capa de reglas sobre su decisión haría que la comparación entre brazos midiera esas reglas y no a la fuente (cap. 9, IT.9.8.4). El fallback determinista existe solo ante **falla**: timeout, formato inválido o rotación imposible durante un barrido.
-- **El dron nunca espera al lazo lento en vuelo normal.** La capa estratégica no frena al vehículo; solo el barrido de resolución de atasco (IT.5.6) mantiene al dron en el lugar, porque ese es justamente el momento en que avanzar ya no es posible.
+- **El dron nunca espera al lazo lento en vuelo normal.** La capa estratégica no frena al vehículo; solo el barrido de resolución de bloqueo (IT.5.6) mantiene al dron en el lugar, porque ese es justamente el momento en que avanzar ya no es posible.
 - **Sin profundidad del simulador.** Ni el grafo, ni `main.py`, ni `experiments/runner.py` leen el canal de profundidad de AirSim, ni para control ni como métrica (IT.5.8). La profundidad **estimada** desde el RGB de la cámara (IT.5.5.4) sí se usa: equivale a una red a bordo de un dron sin sensor de profundidad.
 
 ## 5.2 El estado compartido: `DroneState`
 
-`DroneState` es el único canal de comunicación entre nodos y entre el grafo y el bucle externo. Agrupa los datos sensoriales y el `ObstacleField` (cap. 6), la misión y el guiado que escribe el bucle externo, la decisión del ciclo (macro-acción, comando de velocidad, ruta que lo originó y maniobra comprometida), los canales del lazo lento hacia el bucle externo (la sub-meta a insertar, el registro de consultas) y el estado del barrido de atascos. La lista de campos está en el Anexo 10 (IT.A10.2).
+`DroneState` es el único canal de comunicación entre nodos y entre el grafo y el bucle externo. Agrupa los datos sensoriales y el `ObstacleField` (cap. 6), la misión y el guiado que escribe el bucle externo, la decisión del ciclo (macro-acción, comando de velocidad, ruta que lo originó y maniobra comprometida), los canales del lazo lento hacia el bucle externo (la sub-meta a insertar, el registro de consultas) y el estado del barrido de bloqueos. La lista de campos está en el Anexo 10 (IT.A10.2).
 
-**Regla de diseño crítica.** Todo campo que cruce la frontera entre invocaciones de `graph.invoke()` debe estar declarado en este `TypedDict`: LangGraph no lanza error si un nodo escribe una clave no declarada, la descarta en silencio (cap. 9, IT.9.5). Dos decisiones reducen esa superficie: los contadores de atasco y el estado de la capa estratégica viven en objetos de proceso (`StallDetector`, `StrategicLayer`) y no en el estado, y los tests de integración corren el **grafo compilado** y verifican que las claves de control cruzan la frontera.
+**Regla de diseño crítica.** Todo campo que cruce la frontera entre invocaciones de `graph.invoke()` debe estar declarado en este `TypedDict`: LangGraph no lanza error si un nodo escribe una clave no declarada, la descarta en silencio (cap. 9, IT.9.5). Dos decisiones reducen esa superficie: los contadores de bloqueo y el estado de la capa estratégica viven en objetos de proceso (`StallDetector`, `StrategicLayer`) y no en el estado, y los tests de integración corren el **grafo compilado** y verifican que las claves de control cruzan la frontera.
 
 ## 5.3 La política del brazo `slm`: nodo `navigate`
 
-`navigate` recibe el estado enriquecido por `perception` y produce un comando de velocidad. Durante el despegue vertical (IT.5.4), los tres brazos delegan en el guiado reactivo: el dron sube en el lugar y el flujo óptico de un ascenso puro no es válido para evadir. Fuera del despegue, los brazos de comparación delegan de inmediato en su propio nodo (`reactive` o `fsm`, IT.5.7). Para el brazo `slm`, `navigate` ejecuta dos pasos previos en cada ciclo —actualizar las señales de atasco y dar un paso de la capa estratégica, que nunca comanda velocidades— y luego una cascada de ocho reglas en orden estricto: **la primera que se cumple decide el ciclo**.
+`navigate` recibe el estado enriquecido por `perception` y produce un comando de velocidad. Durante el despegue vertical (IT.5.4), los tres brazos delegan en el guiado reactivo: el dron sube en el lugar y el flujo óptico de un ascenso puro no es válido para evadir. Fuera del despegue, los brazos de comparación delegan de inmediato en su propio nodo (`reactive` o `fsm`, IT.5.7). Para el brazo `slm`, `navigate` ejecuta dos pasos previos en cada ciclo —actualizar las señales de bloqueo y dar un paso de la capa estratégica, que nunca comanda velocidades— y luego una cascada de ocho reglas en orden estricto: **la primera que se cumple decide el ciclo**.
 
-### 5.3.1 Señales de atasco
+### 5.3.1 Señales de bloqueo
 
-Los contadores de atasco viven en un objeto `StallDetector` que persiste entre invocaciones y produce cuatro señales: **contacto** detectado por la IMU, **muro ciego** (se ordena avanzar, el dron no avanza y el flujo no ve obstáculo), **detenido** durante 10 ciclos y **sin progreso** hacia el objetivo durante 50 ciclos (10 s). Las dos primeras disparan una evasión inmediata; las dos últimas, la resolución de deadlock. Tres decisiones las protegen de falsos positivos observados en corridas de diagnóstico: «detenido» significa «se le ordenó avanzar y no se movió», de modo que girar o subir a propósito no es estar trabado; la velocidad se mide por desplazamiento entre ciclos, porque con el dron apoyado en una estructura la telemetría reporta una velocidad que no existe; y el objetivo se identifica por etiqueta y posición, no por índice, para que una sub-meta nueva no herede la «mejor distancia» de la anterior. Los umbrales y su justificación están en el Anexo 10 (IT.A10.3).
+Los contadores de bloqueo viven en un objeto `StallDetector` que persiste entre invocaciones y produce cuatro señales: **contacto** detectado por la IMU, **muro ciego** (se ordena avanzar, el dron no avanza y el flujo no ve obstáculo), **detenido** durante 10 ciclos y **sin progreso** hacia el objetivo durante 50 ciclos (10 s). Las dos primeras disparan una evasión inmediata; las dos últimas, la resolución de deadlock. Tres decisiones las protegen de falsos positivos observados en corridas de diagnóstico: «detenido» significa «se le ordenó avanzar y no se movió», de modo que girar o subir a propósito no es estar trabado; la velocidad se mide por desplazamiento entre ciclos, porque con el dron apoyado en una estructura la telemetría reporta una velocidad que no existe; y el objetivo se identifica por etiqueta y posición, no por índice, para que una sub-meta nueva no herede la «mejor distancia» de la anterior. Los umbrales y su justificación están en el Anexo 10 (IT.A10.3).
 
 ### 5.3.2 Orden de evaluación
 
@@ -60,7 +60,7 @@ Los contadores de atasco viven en un objeto `StallDetector` que persiste entre i
 | 7b | Centro bloqueado o TTC mínimo ≤ 4.6 s | Evasión lateral | Ventana de advertencia |
 | 8 | — | Guiado reactivo | Camino despejado: guiado nominal |
 
-Los umbrales de TTC provienen de la calibración del capítulo 7. El orden tiene tres justificaciones: el barrido (1) precede a todo porque, una vez iniciado, es dueño del dron hasta resolver; el deadlock (2) precede a toda otra regla porque cualquier acción que se repita sin mover al dron —una maniobra comprometida, una evasión por contacto, un descenso hacia un techo— taparía al detector de atasco indefinidamente (Anexo 11, IT.A11.4.4); y el contacto físico (4) precede al piso óptico y al TTC porque no depende del sensado visual.
+Los umbrales de TTC provienen de la calibración del capítulo 7. El orden tiene tres justificaciones: el barrido (1) precede a todo porque, una vez iniciado, es dueño del dron hasta resolver; el deadlock (2) precede a toda otra regla porque cualquier acción que se repita sin mover al dron —una maniobra comprometida, una evasión por contacto, un descenso hacia un techo— taparía al detector de bloqueo indefinidamente (Anexo 11, IT.A11.4.4); y el contacto físico (4) precede al piso óptico y al TTC porque no depende del sensado visual.
 
 ### 5.3.3 Lazo rápido: reacción sin el lazo lento
 
@@ -68,7 +68,7 @@ Las reglas 3, 4, 5, 7 y 8 forman el lazo rápido: actúan en el mismo ciclo, sin
 
 ### 5.3.4 Resolución de deadlock
 
-Al entrar en deadlock, el sistema cancela cualquier consulta estratégica en vuelo —el barrido es más reciente y su sub-meta no debe ser pisada por una respuesta más vieja— y, con la estrategia por defecto, ejecuta el barrido panorámico (IT.5.6). Si el barrido no resuelve —estrategia `blind`, ningún rumbo transitable, o falla por watchdog, formato inválido o rotación imposible—, cae al escape determinista: `GANAR_ALTURA` durante 1.6 s, o `GIRAR_90` hacia el waypoint si el dron ya supera los 30 m. Al resolverse, el sistema reinicia los contadores de atasco.
+Al entrar en deadlock, el sistema cancela cualquier consulta estratégica en vuelo —el barrido es más reciente y su sub-meta no debe ser pisada por una respuesta más vieja— y, con la estrategia por defecto, ejecuta el barrido panorámico (IT.5.6). Si el barrido no resuelve —estrategia `blind`, ningún rumbo transitable, o falla por watchdog, formato inválido o rotación imposible—, cae al escape determinista: `GANAR_ALTURA` durante 1.6 s, o `GIRAR_90` hacia el waypoint si el dron ya supera los 30 m. Al resolverse, el sistema reinicia los contadores de bloqueo.
 
 `GANAR_ALTURA` es el escape determinista porque es la maniobra que libera al dron de una estructura en la que quedó apoyado (una cornisa, en `citysim_pilot`); un retroceso, en cambio, tiene un avance mediano negativo hacia el waypoint (cap. 9, IT.9.8.4). Por eso el lazo no emite `RETROCEDER`.
 
@@ -97,7 +97,7 @@ La capa estratégica no es un nodo del grafo: `navigate` le da un paso por ciclo
 
 La capa consulta cada 1 s con la profundidad (3 s con el VLM), o de inmediato cuando la regla 7 lo pide, siempre que no haya un barrido en curso, que el dron esté a 8 m de altura o más, que el waypoint real esté a más de 8 m —más cerca, una sub-meta lo saltearía— y que la meta caiga dentro del recorte que analiza la fuente. La excepción es un dron que lleva 3 s sin acercarse a su objetivo, por ejemplo deslizándose a lo largo de una fachada: entonces se consulta igual, y la respuesta nunca se interpreta como «camino directo libre».
 
-La consulta se hace **también con una sub-meta activa**. La pregunta es siempre sobre el waypoint real, y una respuesta nueva reemplaza a la sub-meta pendiente: así una sub-meta mala se corrige en la consulta siguiente, en lugar de persistir hasta que el detector de atasco la saque (Anexo 11, IT.A11.4.5).
+La consulta se hace **también con una sub-meta activa**. La pregunta es siempre sobre el waypoint real, y una respuesta nueva reemplaza a la sub-meta pendiente: así una sub-meta mala se corrige en la consulta siguiente, en lugar de persistir hasta que el detector de bloqueo la saque (Anexo 11, IT.A11.4.5).
 
 ### 5.5.2 Qué ve la fuente y qué responde
 
@@ -144,12 +144,12 @@ La FSM usa el mismo `ObstacleField`, el mismo vocabulario de macro-acciones y el
 |---|---|---|
 | `CRUISE` | `MANTENER_RUMBO` | Centro despejado (default) |
 | `AVOID_LEFT` / `AVOID_RIGHT` | `EVADIR_*` | Centro bloqueado o TTC ≤ 3.5 s; lado menos ocupado |
-| `CLIMB` / `DESCEND` | `GANAR_ALTURA` / `PERDER_ALTURA` | Atasco con todos los sectores bloqueados (alternados) |
+| `CLIMB` / `DESCEND` | `GANAR_ALTURA` / `PERDER_ALTURA` | Bloqueo con todos los sectores bloqueados (alternados) |
 | `BRAKE` | `FRENAR` | TTC central ≤ 1.5 s con un lateral libre |
 
-Detecta el atasco con el contador de progreso del tracker y, ante un atasco, delega en el mismo barrido panorámico del brazo `slm`, o, con la estrategia `blind`, alterna ascenso y descenso y luego gira con una esquina de desvío propia (IT.A10.4.8).
+Detecta el bloqueo con el contador de progreso del tracker y, ante un bloqueo, delega en el mismo barrido panorámico del brazo `slm`, o, con la estrategia `blind`, alterna ascenso y descenso y luego gira con una esquina de desvío propia (IT.A10.4.8).
 
-**Dos asimetrías con el brazo `slm` que deben tenerse en cuenta al comparar.** Primero, el brazo `fsm` resuelve los deadlocks con el **mismo barrido** que `slm`: la comparación `slm:depth` vs. `fsm:depth` aísla la capa estratégica y la política del lazo rápido, no el barrido; el brazo sin barrido es `fsm:blind` (cap. 10 IT.10.3.3). Segundo, la FSM tiene su propia lógica de atasco y escape, distinta de la del brazo `slm`.
+**Dos asimetrías con el brazo `slm` que deben tenerse en cuenta al comparar.** Primero, el brazo `fsm` resuelve los deadlocks con el **mismo barrido** que `slm`: la comparación `slm:depth` vs. `fsm:depth` aísla la capa estratégica y la política del lazo rápido, no el barrido; el brazo sin barrido es `fsm:blind` (cap. 10 IT.10.3.3). Segundo, la FSM tiene su propia lógica de bloqueo y escape, distinta de la del brazo `slm`.
 
 ## 5.8 Salvaguardas, contratos de diseño y registro
 

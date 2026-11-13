@@ -159,7 +159,7 @@
 
   <rect class="col" x="606" y="444" width="570" height="146" rx="10" />
   <text class="head t-safe" x="624" y="470">CÓMO SE CUBREN</text>
-  <text class="bul" x="624" y="496">• StallDetector: contacto IMU y muro ciego (regla 4), atasco (regla 2)</text>
+  <text class="bul" x="624" y="496">• StallDetector: contacto IMU y muro ciego (regla 4), bloqueo (regla 2)</text>
   <text class="bul" x="624" y="520">• Profundidad estimada en el lazo lento (Depth Anything V2): sale</text>
   <text class="bul" x="636" y="538">del mismo RGB y no necesita traslación (~110 ms, AUC 0.83–0.87)</text>
   <text class="bul" x="624" y="568">• Piso óptico: debajo de 4.5 m, guiado sin evasión por flujo (regla 5)</text>

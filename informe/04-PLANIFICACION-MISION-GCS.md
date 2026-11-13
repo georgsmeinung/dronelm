@@ -40,7 +40,7 @@ El producto del planificador es un archivo JSON, el **`MissionManifest`**: un co
 
 El contrato tiene pocos campos: un identificador de misión, validado por el esquema, que aparece en los nombres de las carpetas de telemetría; la lista ordenada de **waypoints** tridimensionales en el marco **NED** (*North-East-Down*: $z < 0$ es altitud sobre el punto de despegue), cada uno con una etiqueta para identificarlo en la traza; el nombre de la **imagen cenital** del escenario, que WebDCS usa para mostrar la ruta y el planificador de ruta para decidir por dónde va cada tramo; y, opcionalmente, una pose de partida que solo se usa con la perturbación de la pose inicial (Anexo 12, IT.A12.4.3).
 
-**Separación entre manifiesto y consultas en vuelo.** El manifiesto entrega únicamente metas geométricas. Las consultas del lazo lento —la capa estratégica y el barrido de atascos (cap. 5, IT.5.5, IT.5.6)— no forman parte de él, porque dependen del fotograma, la pose y el waypoint activo de ese instante. En los dos casos el código convierte la respuesta en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.
+**Separación entre manifiesto y consultas en vuelo.** El manifiesto entrega únicamente metas geométricas. Las consultas del lazo lento —la capa estratégica y el barrido de bloqueos (cap. 5, IT.5.5, IT.5.6)— no forman parte de él, porque dependen del fotograma, la pose y el waypoint activo de ese instante. En los dos casos el código convierte la respuesta en una sub-meta en coordenadas del mundo, que el `WaypointTracker` inserta delante del waypoint del manifiesto como un waypoint temporal.
 
 ### 4.3.1 Plan de ruta con el VLM sobre el mapa cenital
 

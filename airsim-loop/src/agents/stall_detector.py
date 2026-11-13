@@ -1,4 +1,4 @@
-"""Deteccion de atasco a nivel de proceso (persiste entre graph.invoke()).
+"""Deteccion de bloqueo a nivel de proceso (persiste entre graph.invoke()).
 
 2026-0930 -- de 5 senales solapadas quedan 4, cada una con un uso concreto en navigate_node:
   - imu_contact / blind_wall: reaccion inmediata (evasion lateral) ante un contacto que el flujo
@@ -45,7 +45,7 @@ _LOOP_HZ = max(0.1, float(os.getenv("LOOP_HZ", "5.0")))
 
 def _below_optical_floor(state: Dict[str, Any]) -> bool:
     """Despegue/aterrizaje: bajo el piso optico y sin techo detectado (con techo el dron vuela bajo
-    a proposito y si debe poder marcar atasco)."""
+    a proposito y si debe poder marcar bloqueo)."""
     alt_m = abs(float(((state.get("telemetry") or {}).get("position") or {}).get("z", 0.0)))
     guidance = state.get("waypoint_guidance") or {}
     if guidance.get("takeoff"):

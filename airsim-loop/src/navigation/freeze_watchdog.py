@@ -2,7 +2,7 @@
 #
 # Cuando el dron queda incrustado en la malla (balcones/balaustradas sin colision) AirSim deja
 # pos, yaw, pitch, roll y velocidad IDENTICOS ciclo tras ciclo (un vuelo real siempre tiene ruido)
-# y `has_collided` sigue en False. Los detectores de atasco no lo distinguen de un hover y el
+# y `has_collided` sigue en False. Los detectores de bloqueo no lo distinguen de un hover y el
 # grafo repite escaneo/evasion/retroceso sin efecto (135 ciclos perdidos en seed 99 02:32, 876 en
 # 00:19). `landed_state == 0` (en el suelo) NO cuenta: ese caso lo cubre la guarda de despegue.
 from __future__ import annotations

@@ -1364,7 +1364,7 @@ produce directamente una macro-acción del mismo vocabulario que usan <code>fsm_
 <code>evasive_node</code>. La capa estratégica sigue activa en modo jerárquico, con la profundidad
 estimada como fuente (<code>STRATEGIC_SOURCE=depth</code>): propone sub-metas en coordenadas del
 mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
-(<code>DEADLOCK_STRATEGY=depth</code>) resuelve los atascos duros e inyecta un desvío
+(<code>DEADLOCK_STRATEGY=depth</code>) resuelve los bloqueos duros e inyecta un desvío
 (<code>inject_corner</code>), igual que con los brazos existentes (cap. 5, IT.5.5, IT.5.6).</p>
 <p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
 <code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
@@ -1398,7 +1398,7 @@ significado de cada componente durante el entrenamiento, igual que el VLM lo apr
 texto de <code>summary_text()</code>.</p>
 <p><strong><code>nav</code> (estado de guiado).</strong> Distancia al waypoint activo, error de rumbo (<code>bearing_err_deg</code>),
 velocidades actuales y altitud. Estos seis escalares proporcionan el contexto cinemático
-necesario para que la política distinga "atascado contra obstáculo frontal" de "girando
+necesario para que la política distinga "bloqueado contra obstáculo frontal" de "girando
 hacia el waypoint".</p>
 <p><strong>Opción B — end-to-end puro.</strong> Una alternativa más ajustada al objetivo de bajo costo de
 sensor es usar solo <code>rgb</code> como observación. Es más difícil de entrenar (la política debe
@@ -1561,7 +1561,7 @@ parcialmente por tres decisiones de diseño:</p>
 <li>
 <p><strong>Capa deliberativa activa</strong>: cuando la política RL entra en un estado no representado
    en el entrenamiento (alta entropía de acción, múltiples ciclos de <code>FRENAR</code>), el barrido
-   con profundidad estimada puede resolver el atasco y proponer una salida, igual que con el brazo <code>fsm</code>. Esto limita la región de fallo catastrófico de la política
+   con profundidad estimada puede resolver el bloqueo y proponer una salida, igual que con el brazo <code>fsm</code>. Esto limita la región de fallo catastrófico de la política
    neuronal.</p>
 </li>
 </ol>

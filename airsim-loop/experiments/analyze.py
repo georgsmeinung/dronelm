@@ -132,14 +132,14 @@ def main():
         p50, p95 = np.percentile(lats, 50), np.percentile(lats, 95)
         print(f"  {arm:<10} {route or '(vacio)':<14} N={len(lats):<6} p50={p50:.1f}ms p95={p95:.1f}ms")
 
-    # Tabla de resolucion de atascos desagregada por
+    # Tabla de resolucion de bloqueos desagregada por
     # AGENT_ARM x DEADLOCK_STRATEGY. deadlock_strategy default a "blind" para
     # corridas anteriores a ese campo del summary.json.
     by_arm_strategy = defaultdict(list)
     for r in rows:
         by_arm_strategy[(r["arm"], r.get("deadlock_strategy", "blind"))].append(r)
     if any(strategy == "deep_vlm" for _arm, strategy in by_arm_strategy):
-        print(f"\n{'Arm':<10} {'Estrategia':<10} {'N':<4} {'Atascos':<9} {'Tasa resol. escaneo':<20} {'Ciclos prom. resol.':<20} {'Tasa fallback':<14}")
+        print(f"\n{'Arm':<10} {'Estrategia':<10} {'N':<4} {'Bloqueos':<9} {'Tasa resol. escaneo':<20} {'Ciclos prom. resol.':<20} {'Tasa fallback':<14}")
         for (arm, strategy), runs in sorted(by_arm_strategy.items()):
             n = len(runs)
             deadlock_events = sum(r.get("deadlock_events") or 0 for r in runs)

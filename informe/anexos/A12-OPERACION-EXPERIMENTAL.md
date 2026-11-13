@@ -6,11 +6,11 @@ El capítulo 10 especifica el diseño experimental —hipótesis, banco de prueb
 
 ## A12.1 Nombres heredados
 
-En las primeras versiones del sistema, la capa estratégica y el barrido de atascos se los preguntaban a un modelo de visión-lenguaje, y de ahí vienen el nombre del brazo (`slm`) y los de varios módulos, variables y campos del registro. El banco de prueba a bordo mostró después que el modelo no distingue sectores volables de bloqueados (cap. 11, IT.11.0), y la misma pregunta pasó a responderla la red de profundidad estimada, con la misma interfaz. Los nombres se conservan porque son los que figuran en el código, en la configuración y en los datos de la corrida v4 —carpetas, resúmenes y análisis—, y cambiarlos rompería la trazabilidad entre el informe y los resultados. La tabla siguiente indica qué designa hoy cada uno; el informe los usa con ese significado.
+En las primeras versiones del sistema, la capa estratégica y el barrido de bloqueos se los preguntaban a un modelo de visión-lenguaje, y de ahí vienen el nombre del brazo (`slm`) y los de varios módulos, variables y campos del registro. El banco de prueba a bordo mostró después que el modelo no distingue sectores volables de bloqueados (cap. 11, IT.11.0), y la misma pregunta pasó a responderla la red de profundidad estimada, con la misma interfaz. Los nombres se conservan porque son los que figuran en el código, en la configuración y en los datos de la corrida v4 —carpetas, resúmenes y análisis—, y cambiarlos rompería la trazabilidad entre el informe y los resultados. La tabla siguiente indica qué designa hoy cada uno; el informe los usa con ese significado.
 
 | Nombre en el código y en los datos | Qué designa en la configuración evaluada |
 |---|---|
-| Brazo `slm` (`AGENT_ARM=slm`); celda `slm:depth`, carpetas `slm/depth/`, `slm x depth` en `analisis_lotes.md` | La arquitectura de dos lazos con capa estratégica y barrido de atascos, ambos respondidos por la red de profundidad estimada. Sin modelo de lenguaje en vuelo |
+| Brazo `slm` (`AGENT_ARM=slm`); celda `slm:depth`, carpetas `slm/depth/`, `slm x depth` en `analisis_lotes.md` | La arquitectura de dos lazos con capa estratégica y barrido de bloqueos, ambos respondidos por la red de profundidad estimada. Sin modelo de lenguaje en vuelo |
 | `src/agents/vlm_strategic.py` (`StrategicLayer`) y la clave de estado `_vlm_strategic` | La capa estratégica, cualquiera sea su fuente (`STRATEGIC_SOURCE`: `depth` en los lotes) |
 | Parámetros `VLM_STRATEGIC_*`, `VLM_SUBGOAL_*`, `VLM_MAX_DZ_M`, `VLM_NEAR_WP_M`, `VLM_STUCK_QUERY_CYCLES` | Umbrales de la capa estratégica y del barrido; valen igual con la profundidad. La excepción es `VLM_STRATEGIC_PERIOD_S`, que solo rige con el VLM (con la profundidad, `DEPTH_STRATEGIC_PERIOD_S`) |
 | `SLM_DEEP_WATCHDOG_MS`, `SLM_MIN_ALT_M` | Tiempo máximo de espera del barrido y altitud mínima de consulta de la capa estratégica, con cualquier fuente |
@@ -20,7 +20,7 @@ En las primeras versiones del sistema, la capa estratégica y el barrido de atas
 
 **Selección del brazo e intérprete por corrida.** El brazo se selecciona por variable de entorno `AGENT_ARM`, leída **a nivel de módulo** en `src/agents/graph.py`. Los tres brazos comparten el mismo bucle externo, el mismo `WaypointTracker` y el mismo nodo `motor` (ancla de altitud y gobernador de velocidad). Esta decisión de implementación tiene una consecuencia metodológica directa: **cada corrida debe correr en un intérprete propio**, porque reutilizar el proceso arrastraría el primer valor leído. El runner lanza por eso un subproceso por corrida, lo que además aísla el fallo de una corrida del resto del lote.
 
-**Parámetros del barrido y de la fuente estratégica.** El barrido de atascos usa `SCAN_HEADING_COUNT_DEEP = 4` rumbos, `SCAN_SETTLE_CYCLES_DEEP = 2` ciclos de asentamiento por rumbo y hasta `MAX_DEEP_SCAN_IMAGES = 5` imágenes, con una única consulta que juzga cada imagen (cap. 5, IT.5.6). La fuente de la capa estratégica se selecciona con `--strategic-sources` (`depth`, `vlm` u `off`); con el argumento, las celdas se nombran `strat_<fuente>__<estrategia>`.
+**Parámetros del barrido y de la fuente estratégica.** El barrido de bloqueos usa `SCAN_HEADING_COUNT_DEEP = 4` rumbos, `SCAN_SETTLE_CYCLES_DEEP = 2` ciclos de asentamiento por rumbo y hasta `MAX_DEEP_SCAN_IMAGES = 5` imágenes, con una única consulta que juzga cada imagen (cap. 5, IT.5.6). La fuente de la capa estratégica se selecciona con `--strategic-sources` (`depth`, `vlm` u `off`); con el argumento, las celdas se nombran `strat_<fuente>__<estrategia>`.
 
 ---
 
@@ -31,7 +31,7 @@ El capítulo 10 (IT.10.4.1) enuncia cinco principios comunes a todos los escenar
 1. **Prohibición de teletransporte cinemático.** El campo `start_pose` está inhabilitado en la ruta de producción: todas las misiones despegan desde el *PlayerStart* nativo del nivel de Unreal Engine y ejecutan un ascenso vertical controlado previo a la navegación horizontal. La razón es que `simSetVehiclePose(ignore_collision=True)` es un reposicionamiento instantáneo que **no verifica colisión**, con lo que un escenario podría materializar el dron dentro de un edificio o a centímetros de un tronco, generando variación entre corridas que nada tiene que ver con la política de control evaluada. La consecuencia de diseño es que un escenario que necesita empezar lejos del *spawn* se arma como **misión de varios tramos**: un tramo de tránsito a altitud validada hasta el punto de interés, y recién allí el tramo de prueba a nivel de calle.
 2. **Ninguna coordenada se inventa sobre el PNG del mapa.** Los mapas registrados de TownSim y CitySim (cap. 4, IT.4.3.2) sirven para planificar la ruta y ubicar waypoints candidatos, pero no reemplazan la verificación en vuelo. Toda coordenada nueva se deriva **por interpolación de coordenadas ya voladas y confirmadas**, o se verifica ubicando el dron en ella; la imagen se usa sólo cualitativamente (disposición relativa de plaza, bloques, corredor, avenida). Las coordenadas obtenidas por subdivisión geométrica —no por vuelo— se marcan explícitamente como **PROVISORIAS** y no entran a un lote sin pasar el protocolo de validación del punto 4.
 3. **Exclusión total de profundidad del lazo de vuelo.** Ni el grafo, ni `main.py`, ni el runner leen el canal de profundidad del simulador: ni como entrada de control, ni como freno, ni como criterio de aborto. Cualquier uso de esa señal dentro del lazo, aun «solo para observabilidad», abre un canal por el que la profundidad del simulador —de la que salen las etiquetas de referencia— puede terminar alimentando al brazo evaluado (Anexo 11, IT.A11.4.2). Una guardia automatizada (`tests/test_no_depth_in_flight_path.py`) cubre el runner, `main.py` y todos los módulos de vuelo. La única lectura de profundidad de una corrida es la **auditoría de la distancia mínima a obstáculo** (IT.10.6.1, IT.A12.6.1): un hilo aislado, con su propia conexión al simulador, que solo escribe un archivo de muestras; la misma guardia verifica que no importe ningún módulo del grafo y que el runner se limite a arrancarlo y detenerlo.
-4. **Protocolo de validación previo obligatorio.** Antes de que un escenario entre a un lote: (a) se redacta el manifiesto en `airsim-plan/missions/flightplans/`; (b) se dibuja la ruta con `scripts/plot_mission_route.py` y se confirma en el *viewport* de UE que la línea cruza donde el escenario pretende (fachada para los de obstrucción, calle abierta para los de control); (c) se corre una **misión piloto** (`slm:depth`, una semilla) y se exige el criterio de pase del escenario (IT.A12.7.2) —o, si no completa, que el motivo sea instructivo (atasco genuino) y no un error de geometría; (d) recién entonces se lanza el lote completo. El criterio es explícito: *si ninguna celda puede tener éxito en el escenario, no tiene sentido gastar el presupuesto del lote*.
+4. **Protocolo de validación previo obligatorio.** Antes de que un escenario entre a un lote: (a) se redacta el manifiesto en `airsim-plan/missions/flightplans/`; (b) se dibuja la ruta con `scripts/plot_mission_route.py` y se confirma en el *viewport* de UE que la línea cruza donde el escenario pretende (fachada para los de obstrucción, calle abierta para los de control); (c) se corre una **misión piloto** (`slm:depth`, una semilla) y se exige el criterio de pase del escenario (IT.A12.7.2) —o, si no completa, que el motivo sea instructivo (bloqueo genuino) y no un error de geometría; (d) recién entonces se lanza el lote completo. El criterio es explícito: *si ninguna celda puede tener éxito en el escenario, no tiene sentido gastar el presupuesto del lote*.
 5. **Los escenarios de control vuelan una ruta fija.** Los tres `*_clear` (lotes 1, 2 y 5) son la línea de base de cada tier: miden el costo de la arquitectura en tránsito libre, y para eso la ruta tiene que ser la misma que define el manifiesto. Vuelan sin plan de ruta (`--route-plan off`). El plan con el VLM (cap. 4, IT.4.3.1) se usa solo en los escenarios con obstrucción (lotes 3, 4 y 6), donde elegir el corredor es parte de lo que se evalúa. Sobre un control, el plan reemplaza la ruta de base por una que decide el modelo: en `townsim_clear` desvía 3 de los 5 tramos aunque la recta es libre y alarga la ruta un 35 %; en `citysim_clear` elige en el tramo WP_3 (−50 m) → WP_4 (−10 m) un desvío lateral cuyo primer punto de paso, con la altitud del destino, queda 40 m más abajo y pegado a los edificios, y los tres brazos, incluido `reactive`, quedan apoyados sobre la estructura en el mismo punto. En los escenarios con obstrucción el plan también cambia la ruta que se vuela, y lo hace igual para las cuatro celdas: en `townsim_ini` desvía 3 de 7 tramos (hacia WP_0b, WP_3 y WP_4), en `townsim_calib_cruce_frontal` 2 de 3 (hacia WP_1 y hacia WP_3, el tramo de cruce) y en `citysim_pilot` 4 de 8. El obstáculo que enfrenta cada brazo es, por lo tanto, el de la ruta planificada, no el de la recta del manifiesto.
 
 Una consecuencia práctica del punto 4 es la limpieza obligatoria de estado antes de cada corrida: el runner invoca `client.reset()` (que devuelve el vehículo a la pose de *spawn* de `settings.json` y limpia colisión/velocidad del controlador interno) y `client.clear_debug_markers()` (que descarta las primitivas persistentes dibujadas por `plot_mission_route.py`, las cuales de otro modo aparecen en el fotograma que recibe la capa estratégica, Anexo 11, IT.A11.3.2).
@@ -99,11 +99,11 @@ Travesía norte–sur del corredor peatonal arbolado central de TownSim, arranca
 | WP_2 | −150.0 | 0.4 | −10.0 | Descenso **fuera** del complejo, en bosque abierto |
 | WP_3 | 0.0 | 0.4 | −10.0 | **Cruce real a nivel de calle** contra la fila de edificios oeste |
 
-**Qué se quiere probar.** Este es el escenario diseñado explícitamente para **forzar la activación de la capa estratégica y de la resolución de atascos**. El tramo WP_2→WP_3 pone al dron a nivel de calle frente a una fachada continua, obligándolo a elegir entre `GANAR_ALTURA` (sobrevolar) y un corredor lateral. La estructura de tres tramos no es arbitraria: los dos primeros son **tránsito a geometría ya verificada**, necesarios sólo porque el teletransporte está prohibido; el único tramo sin verificar —y el único que efectivamente prueba algo— es el tercero.
+**Qué se quiere probar.** Este es el escenario diseñado explícitamente para **forzar la activación de la capa estratégica y de la resolución de bloqueos**. El tramo WP_2→WP_3 pone al dron a nivel de calle frente a una fachada continua, obligándolo a elegir entre `GANAR_ALTURA` (sobrevolar) y un corredor lateral. La estructura de tres tramos no es arbitraria: los dos primeros son **tránsito a geometría ya verificada**, necesarios sólo porque el teletransporte está prohibido; el único tramo sin verificar —y el único que efectivamente prueba algo— es el tercero.
 
 **Particularidad.** Es el escenario donde H1 se manifiesta más claramente: si la FSM resuelve el bloqueo escalando por encima del edificio y el `slm` lo resuelve encontrando la calle transversal, ambos tendrán `success = True` pero con SPL muy distintos. **Por eso la métrica primaria de los escenarios con obstrucción no es el éxito sino el SPL** — la diferencia de calidad entre soluciones aparece en la longitud de la trayectoria, no en el binario de llegada.
 
-**Dificultad.** Alta y deliberada: se espera una tasa de atascos apreciable en `slm` y `fsm`, lo que ejercita el barrido de resolución de bloqueos.
+**Dificultad.** Alta y deliberada: se espera una tasa de bloqueos apreciable en `slm` y `fsm`, lo que ejercita el barrido de resolución de bloqueos.
 
 ### A12.3.3 Tier 2 — CitySim (`citysim_ortho.png`): cañones urbanos
 
@@ -117,7 +117,7 @@ Perímetro de una manzana del grid regular, **4 waypoints**, ~420 m. La altitud 
 
 Como todo control, vuela el manifiesto sin plan de ruta (IT.A12.2, punto 5). El desvío que el plan elige en el tramo WP_3 → WP_4 es el que el banco registra como bloqueado con la recta libre (cap. 11, IT.11.0).
 
-**Qué se quiere probar.** Rol de control del tier, análogo a `minisim_clear` y `townsim_clear`: el costo de la arquitectura en tránsito libre, ahora entre edificios altos y con cambios de altitud en cada tramo. Si los tres brazos lo completan sin colisiones, la ruta no presenta obstrucciones a esas altitudes y cualquier atasco en el escenario de corredores de este tier es atribuible a la geometría del corredor.
+**Qué se quiere probar.** Rol de control del tier, análogo a `minisim_clear` y `townsim_clear`: el costo de la arquitectura en tránsito libre, ahora entre edificios altos y con cambios de altitud en cada tramo. Si los tres brazos lo completan sin colisiones, la ruta no presenta obstrucciones a esas altitudes y cualquier bloqueo en el escenario de corredores de este tier es atribuible a la geometría del corredor.
 
 #### Escenario 2.B — `citysim_pilot` (circuito de corredores, lote 6)
 
@@ -254,12 +254,12 @@ D:\TesisMCD\airsimenv\python.exe ..\airsim-loop\experiments\analyze_lotes.py ..\
 - **`deliberation_rate`** se contabiliza por **transición de identificador único de deliberación**, cualquiera sea la ruta del ciclo; sin esa distinción, una consulta que abarca varios ciclos de espera se contaría múltiples veces. Incluye las consultas de la capa estratégica, que se resuelven mientras el dron vuela por la ruta reactiva o evasiva.
 - El **escaneo espacial pre-vuelo** (`spatial_scan`, Anexo 10, IT.A10.1) solo lo ejecuta `main.py`; el runner no lo corre, de modo que no interviene en ninguna corrida experimental.
 
-### A12.6.4 Lazo lento y resolución de atascos
+### A12.6.4 Lazo lento y resolución de bloqueos
 
 - **Consultas efectivas por misión** (`slm_invocations`), **tasa de *fallback*** (`slm_fallback_rate`) ante respuestas inválidas o fuera de esquema, y **tasa de *timeout*** (`slm_timeout_rate`).
 - **Distribución de resultados de la capa estratégica**, a partir de las entradas `arm = "depth_strategic"` de `deliberations[]`: fracción de respuestas que proponen sub-meta, que declaran el camino directo libre (`directo_libre`), sin sector libre, vencidas, superadas o no parseables.
 - **Avance en waypoints del plan a tiempos de referencia** y **segundos a menos de 1 m de un obstáculo** por tramo (con la posición de cada muestra de DistMin), calculados por `analyze_strategic_batch.py`.
-- **Atascos**: `deadlock_events` (número de atascos declarados), `deep_scan_resolution_rate` (fracción resuelta por el barrido), `deep_scan_avg_cycles_to_resolve` (costo medio en ciclos de una resolución exitosa) y `deep_scan_fallback_rate` (fracción donde el barrido no resolvió y se cayó al escape vertical). Estas cuatro métricas solo tienen valor conjunto: una tasa de resolución alta con un costo de ciclos desmesurado no describe un mecanismo exitoso sino uno caro.
+- **Bloqueos**: `deadlock_events` (número de bloqueos declarados), `deep_scan_resolution_rate` (fracción resuelta por el barrido), `deep_scan_avg_cycles_to_resolve` (costo medio en ciclos de una resolución exitosa) y `deep_scan_fallback_rate` (fracción donde el barrido no resolvió y se cayó al escape vertical). Estas cuatro métricas solo tienen valor conjunto: una tasa de resolución alta con un costo de ciclos desmesurado no describe un mecanismo exitoso sino uno caro.
 
 ### A12.6.5 Desglose espacial por waypoint
 
@@ -271,14 +271,14 @@ Cada corrida emite `<stem>.summary_by_wp.csv` con ciclos consumidos, duración, 
 
 ### A12.7.1 Componentes del sistema que ejercen los escenarios con obstrucción
 
-Los escenarios despejados apenas ejercen la capa táctica: el TTC rara vez baja del umbral y los detectores de atasco no disparan. Los escenarios con obstrucción (lotes 3, 4 y 6) sí, y son los que permiten evaluar los componentes del sistema:
+Los escenarios despejados apenas ejercen la capa táctica: el TTC rara vez baja del umbral y los detectores de bloqueo no disparan. Los escenarios con obstrucción (lotes 3, 4 y 6) sí, y son los que permiten evaluar los componentes del sistema:
 
 | Componente | Comportamiento que se evalúa | Referencia |
 |---|---|---|
 | Capa estratégica con profundidad estimada | Sub-metas ancladas a la pose del fotograma; si las sub-metas acercan al waypoint real y si alejan al dron de los obstáculos | IT.5.5, IT.6.12 |
 | Consulta inmediata ante un muro (`GIRAR_90` + `expedite`) | Que el rodeo se decida con el fotograma que ve el muro | IT.5.4 |
-| Barrido en marco mundo (`depth`) | Que la sub-meta de salida apunte a un rumbo transitable y que el dron salga del atasco | IT.5.6 |
-| Detección de atasco de dos señales | Ausencia de deadlocks falsos (despegue, sub-metas nuevas) y presencia de los reales | IT.5.3.1 |
+| Barrido en marco mundo (`depth`) | Que la sub-meta de salida apunte a un rumbo transitable y que el dron salga del bloqueo | IT.5.6 |
+| Detección de bloqueo de dos señales | Ausencia de deadlocks falsos (despegue, sub-metas nuevas) y presencia de los reales | IT.5.3.1 |
 | Escape vertical cuando el barrido no resuelve | Que libere al dron de estructuras horizontales | IT.5.3.4 |
 | Detección de techo | Altitud limitada bajo estructuras horizontales | IT.A10.8.3 |
 | Gobernador de velocidad | Avance limitado sin evidencia perceptual | IT.5.4 |
@@ -292,7 +292,7 @@ Los umbrales de la capa estratégica (período de 1 s con la profundidad, edad m
 
 **Pilotos y criterios de pase.** Cada lote con obstrucción va precedido por un piloto de validación (`slm:depth`, semilla 99, guardado en `airsim-runs/produccion/v4/pilotos/`). Criterios: en el lote 3, el dron cruza el corredor arbolado; en el 4, rodea el edificio o al menos lo bordea; en el 6, alcanza WP_0_SUR y WP_1 sin quedar trabado sobre la autopista. Un piloto que no cumple su criterio indica una regresión que se diagnostica antes de lanzar el lote.
 
-**Métricas adicionales.** Además de las de IT.10.6: la distribución de resultados de la capa estratégica y el avance hacia el waypoint real tras cada sub-meta (IT.10.6.3); las señales del `StallDetector` (`_stopped_cycles`, `_wp_no_progress_cycles`, `imu_contact_event`, `blind_wall_event`) y qué señal disparó cada deadlock; los deadlocks en los primeros 30 ciclos (deben ser cero: el despegue no es un atasco, cap. 5 IT.5.3.1); y la fracción de ciclos con el gobernador de velocidad activo (`_speed_cap`).
+**Métricas adicionales.** Además de las de IT.10.6: la distribución de resultados de la capa estratégica y el avance hacia el waypoint real tras cada sub-meta (IT.10.6.3); las señales del `StallDetector` (`_stopped_cycles`, `_wp_no_progress_cycles`, `imu_contact_event`, `blind_wall_event`) y qué señal disparó cada deadlock; los deadlocks en los primeros 30 ciclos (deben ser cero: el despegue no es un bloqueo, cap. 5 IT.5.3.1); y la fracción de ciclos con el gobernador de velocidad activo (`_speed_cap`).
 
 **Condiciones de descarte y de invalidación** (para los seis lotes). Se descarta una corrida individual si su `code_version` difiere del de referencia del lote, si termina en `-dirty`, o si tiene menos de 50 ciclos (falla de infraestructura, no del dron); los pilotos no entran al análisis. Se invalida un lote si contiene corridas con hashes distintos que no puedan reemplazarse. Una corrida terminada por `physics_locked` termina con éxito falso y se cuenta como falla de misión, al igual que una colisión.
 
@@ -309,17 +309,17 @@ El resultado esperado es **desfavorable al brazo `slm` y favorable a la hipótes
 - Orden esperado de tiempo de misión: `reactive` < `fsm` < `slm`, con $\delta$ grande en la comparación `reactive` vs. `slm` en MiniSim.
 - Ratio $t_{\text{slm}}/t_{\text{reactive}}$ decreciente con la longitud de la ruta: mayor en `minisim_clear` (~180 m) que en `townsim_clear` (~600 m). **Ésta es la prueba directa de H2**, y su forma es una comparación de razones, no de valores absolutos.
 - Sin diferencias de seguridad: en un campo despejado, ningún brazo puede ser más seguro que otro.
-- En `citysim_clear`, cero atascos en las tres celdas confirma que la ruta en rampa (−10 a −50 m) no presenta obstrucciones y que las altitudes son adecuadas.
+- En `citysim_clear`, cero bloqueos en las tres celdas confirma que la ruta en rampa (−10 a −50 m) no presenta obstrucciones y que las altitudes son adecuadas.
 
 **Qué invalida la lectura:** cualquier fallo de misión en el lote 1. Sin obstáculos, un fallo indica un problema del sistema (percepción, guiado o infraestructura), no del escenario, y obliga a diagnosticarlo antes de continuar.
 
 ### A12.8.2 Lotes con obstrucción (3, 4 y 6)
 
 - **`townsim_ini`**: se espera la primera aparición de una ventaja del `slm` en SPL, concentrada según `summary_by_wp.csv` en los tramos con follaje (corredor y paso de la moldura). Si la ventaja aparece pero está distribuida uniformemente entre tramos, la explicación no es la capa estratégica sino un sesgo sistemático del guiado, y debe investigarse como tal.
-- **`townsim_calib_cruce_frontal`**: se espera una tasa de atascos apreciable en `slm` y `fsm`. La lectura esperada es que el `slm` produzca el mejor SPL al resolver el bloqueo lateralmente, mientras la FSM recurre al escape por altura; `fsm:depth` frente a `fsm:blind` mide cuánto aporta el barrido por sí solo.
+- **`townsim_calib_cruce_frontal`**: se espera una tasa de bloqueos apreciable en `slm` y `fsm`. La lectura esperada es que el `slm` produzca el mejor SPL al resolver el bloqueo lateralmente, mientras la FSM recurre al escape por altura; `fsm:depth` frente a `fsm:blind` mide cuánto aporta el barrido por sí solo.
 - **`citysim_pilot`**: es el escenario terminal y el de mayor incertidumbre. Se esperan **tasas de éxito inferiores a 1.0 en todas las celdas** —es el único escenario donde el fracaso es un resultado esperado y no un síntoma— y una mayor dispersión entre semillas. Si la capa estratégica no discrimina entre corredores de textura uniforme, `slm:depth` y `fsm:depth` empatarán, y ese empate es un resultado sustantivo.
 
-**Qué invalida la lectura:** cero atascos en `townsim_calib_cruce_frontal`. Significaría que el tramo de cruce no está encontrando la fachada —error de geometría, no de política— y obligaría a re-validar el manifiesto con `plot_mission_route.py`.
+**Qué invalida la lectura:** cero bloqueos en `townsim_calib_cruce_frontal`. Significaría que el tramo de cruce no está encontrando la fachada —error de geometría, no de política— y obligaría a re-validar el manifiesto con `plot_mission_route.py`.
 
 ---
 

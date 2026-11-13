@@ -174,7 +174,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `VLM_USE_JSON_SCHEMA` | `true` | Decodificación restringida por esquema JSON (Anexo 4; cap. 8, IT.8.2). |
 | `SLM_HTTP_TIMEOUT_S` / `SLM_DEEP_HTTP_TIMEOUT_S` | `15.0` / `20.0` | Timeout del cliente HTTP en la consulta estratégica y en el barrido. |
 | `SLM_DEEP_WATCHDOG_MS` | `18000` | Watchdog del barrido panorámico; debe ser menor que `SLM_DEEP_HTTP_TIMEOUT_S` para que gane siempre al corte HTTP. |
-| `DEADLOCK_STRATEGY` | `"depth"` | Resolución de atascos: `"depth"` (barrido juzgado por la profundidad estimada, cap. 5 IT.5.6), `"deep_vlm"` (barrido + VLM; ablación) o `"blind"` (escape vertical sin barrido). Cualquier otro valor aborta el arranque. |
+| `DEADLOCK_STRATEGY` | `"depth"` | Resolución de bloqueos: `"depth"` (barrido juzgado por la profundidad estimada, cap. 5 IT.5.6), `"deep_vlm"` (barrido + VLM; ablación) o `"blind"` (escape vertical sin barrido). Cualquier otro valor aborta el arranque. |
 | `STRATEGIC_SOURCE` | `"depth"` | Fuente de la capa estratégica: `"depth"` (profundidad monocular estimada, cap. 5 IT.5.5.4), `"vlm"` (grilla del VLM) u `"off"` (sin capa). Con `depth`/`depth` el VLM no corre en vuelo y el runner no exige el servidor de inferencia (cap. 5 IT.5.5.4; cap. 11 IT.11.0). |
 | `DEPTH_MODEL` | `depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf` | Red de profundidad métrica (~25 M parámetros, ~110 ms con la GPU compartida, ~440 MiB de VRAM). Se descarga de Hugging Face la primera vez. |
 | `DEPTH_FREE_M` | `15.0` | Un sector (o un rumbo del barrido) es libre si el percentil 5 de su profundidad estimada es ≥ este valor; igual a `VLM_SUBGOAL_DIST_M`. |
@@ -226,19 +226,19 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | `OBSTACLE_MIN_CONFIDENCE` | `0.15` | Piso de píxeles válidos para que una celda participe en la votación. |
 | `OBSTACLE_MIN_CONFIDENCE_TTC`| `0.35` | Piso de confianza exigido para que el TTC por sí solo bloquee una celda sin apoyo de ocupación. |
 
-### 5b. Detección de atasco, escape y cierre de misión
+### 5b. Detección de bloqueo, escape y cierre de misión
 | Variable | Valor nominal | Justificación y efecto |
 |---|---|---|
 | `STOPPED_DELIBERATIVE_CYCLES` / `STOPPED_MIN_CMD_MPS` | `10` / `0.30` | Ciclos con avance comandado (≥ 0.30 m/s) sin movimiento real antes de declarar deadlock por dron trabado (cap. 5, IT.5.3.1). |
 | `WP_NO_PROGRESS_MIN_M` / `WP_NO_PROGRESS_THRESHOLD` | `2.0` / `50` | Mejora mínima de la distancia al objetivo actual y ciclos (10 s) sin ella antes de declarar deadlock. |
-| `OPTICAL_MIN_ALT_M` | `4.5` | Piso óptico: por debajo, el flujo no es válido y no se cuentan señales de atasco. |
+| `OPTICAL_MIN_ALT_M` | `4.5` | Piso óptico: por debajo, el flujo no es válido y no se cuentan señales de bloqueo. |
 | `MAX_ESCAPE_ALT_M` | `30.0` | Por encima de esta altitud, el escape determinista es `GIRAR_90` en lugar de `GANAR_ALTURA`. |
 | `SCAN_HEADING_COUNT_DEEP` / `SCAN_SETTLE_CYCLES_DEEP` / `MAX_DEEP_SCAN_IMAGES` | `4` / `2` / `5` | Rumbos del barrido panorámico, ciclos de asentamiento por rumbo e imágenes máximas por consulta. |
 | `SCAN_ROT_TIMEOUT_CYCLES` | `10` | Timeout de rotación del barrido (2 s): si el dron no alcanza el rumbo, el barrido se abandona. |
 | `CORNER_OFFSET_M` | `15.0` | Distancia del desvío determinista del brazo `fsm`. El barrido usa `VLM_SUBGOAL_DIST_M`, igual que la capa estratégica. |
 | `SUBGOAL_DEDUP_M` | `10.0` | Una sub-meta a menos de esta distancia de la pendiente se ignora. |
 | `MANEUVER_DURATION_S` / `ESCAPE_MANEUVER_DURATION_S` / `GIRAR90_DURATION_S` | `2.0` / `1.6` / `1.0` | Duración de las maniobras comprometidas: evasión lateral, escape vertical y giro de 90°. |
-| `EVASION_STUCK_THRESHOLD` / `STUCK_HARD_FACTOR` / `MAX_CONSECUTIVE_ESCAPES` | `10` / `1.5` / `2` | Umbrales de atasco y de escape del brazo `fsm` (cap. 5, IT.5.7, IT.A10.8.2). |
+| `EVASION_STUCK_THRESHOLD` / `STUCK_HARD_FACTOR` / `MAX_CONSECUTIVE_ESCAPES` | `10` / `1.5` / `2` | Umbrales de bloqueo y de escape del brazo `fsm` (cap. 5, IT.5.7, IT.A10.8.2). |
 | `CEILING_DETECT_CYCLES` / `CEILING_DETECT_DZ_M` / `CEILING_MARGIN_M` / `CEILING_SAFE_GAP_M` / `CEILING_RELEASE_M` | `10` / `0.15` / `0.8` / `3.0` / `15.0` | Detección de techo del guiado (Anexo 10, IT.A10.8.3). |
 | `GOV_ENABLED` | `true` | Gobernador de velocidad (cap. 5, IT.5.4). |
 | `FREEZE_CYCLES` / `FREEZE_RECOVERY` | `25` / `abort` | Ciclos con estado físico idéntico para declarar `physics_locked`, y acción: abortar la corrida o teletransportar a la última pose libre (cap. 5, IT.5.4). |

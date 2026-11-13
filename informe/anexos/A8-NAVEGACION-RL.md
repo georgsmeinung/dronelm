@@ -29,7 +29,7 @@ produce directamente una macro-acción del mismo vocabulario que usan `fsm_node`
 `evasive_node`. La capa estratégica sigue activa en modo jerárquico, con la profundidad
 estimada como fuente (`STRATEGIC_SOURCE=depth`): propone sub-metas en coordenadas del
 mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
-(`DEADLOCK_STRATEGY=depth`) resuelve los atascos duros e inyecta un desvío
+(`DEADLOCK_STRATEGY=depth`) resuelve los bloqueos duros e inyecta un desvío
 (`inject_corner`), igual que con los brazos existentes (cap. 5, IT.5.5, IT.5.6).
 
 Esta posición garantiza que la comparación de los cuatro brazos (`reactive`, `fsm`, `slm`,
@@ -71,7 +71,7 @@ texto de `summary_text()`.
 
 **`nav` (estado de guiado).** Distancia al waypoint activo, error de rumbo (`bearing_err_deg`),
 velocidades actuales y altitud. Estos seis escalares proporcionan el contexto cinemático
-necesario para que la política distinga "atascado contra obstáculo frontal" de "girando
+necesario para que la política distinga "bloqueado contra obstáculo frontal" de "girando
 hacia el waypoint".
 
 **Opción B — end-to-end puro.** Una alternativa más ajustada al objetivo de bajo costo de
@@ -187,7 +187,7 @@ parcialmente por tres decisiones de diseño:
 
 3. **Capa deliberativa activa**: cuando la política RL entra en un estado no representado
    en el entrenamiento (alta entropía de acción, múltiples ciclos de `FRENAR`), el barrido
-   con profundidad estimada puede resolver el atasco y proponer una salida, igual que con el brazo `fsm`. Esto limita la región de fallo catastrófico de la política
+   con profundidad estimada puede resolver el bloqueo y proponer una salida, igual que con el brazo `fsm`. Esto limita la región de fallo catastrófico de la política
    neuronal.
 
 La validación en escenarios no vistos durante el entrenamiento —especialmente

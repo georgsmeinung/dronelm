@@ -130,8 +130,8 @@ class FlightLogger:
         self._slm_timeouts = 0
         self._success = False
         self._route_histogram: Dict[str, int] = {}  # Contar por tipo de ruta
-        # Eventos de resolucion de atasco (blind vs.
-        # deep_vlm, ver src/agents/deep_scan.py), para el ablation de la estrategia de atasco.
+        # Eventos de resolucion de bloqueo (blind vs.
+        # deep_vlm, ver src/agents/deep_scan.py), para el ablation de la estrategia de bloqueo.
         self._deadlock_events: list = []
         # Resumen por waypoint (2026-0903, pedido explicito): ciclos
         # consumidos y uso del nodo deliberativo/escaneo profundo por cada

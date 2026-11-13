@@ -1010,10 +1010,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#a103-stalldetector-senales-de-atasco" class="md-nav__link">
+  <a href="#a103-stalldetector-senales-de-bloqueo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A10.3 StallDetector: señales de atasco
+        A10.3 StallDetector: señales de bloqueo
       
     </span>
   </a>
@@ -1232,10 +1232,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a1082-umbrales-de-atasco" class="md-nav__link">
+  <a href="#a1082-umbrales-de-bloqueo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A10.8.2 Umbrales de atasco
+        A10.8.2 Umbrales de bloqueo
       
     </span>
   </a>
@@ -1457,10 +1457,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#a103-stalldetector-senales-de-atasco" class="md-nav__link">
+  <a href="#a103-stalldetector-senales-de-bloqueo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A10.3 StallDetector: señales de atasco
+        A10.3 StallDetector: señales de bloqueo
       
     </span>
   </a>
@@ -1679,10 +1679,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#a1082-umbrales-de-atasco" class="md-nav__link">
+  <a href="#a1082-umbrales-de-bloqueo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A10.8.2 Umbrales de atasco
+        A10.8.2 Umbrales de bloqueo
       
     </span>
   </a>
@@ -1773,7 +1773,7 @@
 
 
 <h1 id="anexo-10-especificacion-del-lazo-tactico-estado-nodos-maquinas-de-estado-y-umbrales">Anexo 10: Especificación del lazo táctico: estado, nodos, máquinas de estado y umbrales<a class="headerlink" href="#anexo-10-especificacion-del-lazo-tactico-estado-nodos-maquinas-de-estado-y-umbrales" title="Permanent link">&para;</a></h1>
-<p>El capítulo 5 presenta la arquitectura del lazo táctico en el nivel necesario para seguir el argumento de la tesis: los dos lazos desacoplados, la política de <code>navigate</code>, la capa estratégica con sus sub-metas ancladas, el barrido de atascos y las salvaguardas. Este anexo reúne la especificación de implementación que lo sostiene: los campos del estado compartido, las señales de atasco con sus umbrales, el detalle de cada nodo y comportamiento, el mapa de macro-acciones, el gobernador de velocidad, el servicio de deliberación, la máquina de estados del barrido, el <code>WaypointTracker</code>, el registro de vuelo y el cierre de misión. Los valores de las variables de entorno están en el Anexo 6 (IT.A6.3). NB3 ejecuta este código sin AirSim: compila el grafo, dispara cada regla de <code>navigate</code> con un estado construido a mano y reproduce las decisiones de una corrida de la v4 desde su registro.</p>
+<p>El capítulo 5 presenta la arquitectura del lazo táctico en el nivel necesario para seguir el argumento de la tesis: los dos lazos desacoplados, la política de <code>navigate</code>, la capa estratégica con sus sub-metas ancladas, el barrido de bloqueos y las salvaguardas. Este anexo reúne la especificación de implementación que lo sostiene: los campos del estado compartido, las señales de bloqueo con sus umbrales, el detalle de cada nodo y comportamiento, el mapa de macro-acciones, el gobernador de velocidad, el servicio de deliberación, la máquina de estados del barrido, el <code>WaypointTracker</code>, el registro de vuelo y el cierre de misión. Los valores de las variables de entorno están en el Anexo 6 (IT.A6.3). NB3 ejecuta este código sin AirSim: compila el grafo, dispara cada regla de <code>navigate</code> con un estado construido a mano y reproduce las decisiones de una corrida de la v4 desde su registro.</p>
 <hr />
 <h2 id="a101-escaneo-espacial-pre-vuelo-spatial_scan">A10.1 Escaneo espacial pre-vuelo (<code>spatial_scan</code>)<a class="headerlink" href="#a101-escaneo-espacial-pre-vuelo-spatial_scan" title="Permanent link">&para;</a></h2>
 <p>Antes de entrar al lazo, <code>main.py</code> llama de forma bloqueante a <code>run_initial_scan()</code> (<code>src/agents/spatial_scan.py</code>). No es un nodo del <code>StateGraph</code>: se ejecuta una sola vez, entre la conexión con AirSim y la compilación del grafo. Realiza un barrido de yaw en el lugar hacia <code>SCAN_HEADING_COUNT</code> (6) rumbos equiespaciados, captura un fotograma por rumbo y envía todas las imágenes en una única consulta al VLM, que devuelve un contexto cualitativo de la escena y un rumbo recomendado.</p>
@@ -1962,8 +1962,8 @@
 </table>
 <p><strong>Señales del <code>StallDetector</code></strong> (publicadas solo para logging, IT.A10.3): <code>imu_jitter_level</code>, <code>imu_contact_event</code>, <code>blind_wall_event</code>, <code>_stopped_cycles</code>, <code>_wp_no_progress_cycles</code>. El bucle externo agrega <code>_freeze_cycles</code> (vigilante de congelamiento físico, IT.A10.9.2).</p>
 <hr />
-<h2 id="a103-stalldetector-senales-de-atasco">A10.3 <code>StallDetector</code>: señales de atasco<a class="headerlink" href="#a103-stalldetector-senales-de-atasco" title="Permanent link">&para;</a></h2>
-<p>Los contadores de atasco viven en un objeto <code>StallDetector</code> (<code>src/agents/stall_detector.py</code>) que persiste entre invocaciones. En cada ciclo, <code>update(state)</code> actualiza cuatro señales y <code>publish(state)</code> las escribe en el estado solo para logging.</p>
+<h2 id="a103-stalldetector-senales-de-bloqueo">A10.3 <code>StallDetector</code>: señales de bloqueo<a class="headerlink" href="#a103-stalldetector-senales-de-bloqueo" title="Permanent link">&para;</a></h2>
+<p>Los contadores de bloqueo viven en un objeto <code>StallDetector</code> (<code>src/agents/stall_detector.py</code>) que persiste entre invocaciones. En cada ciclo, <code>update(state)</code> actualiza cuatro señales y <code>publish(state)</code> las escribe en el estado solo para logging.</p>
 <table>
 <thead>
 <tr>
@@ -2101,10 +2101,10 @@
 </tr>
 </tbody>
 </table>
-<p><code>RETROCEDER</code> forma parte del vocabulario, pero <strong>ningún comportamiento del brazo <code>slm</code> lo emite</strong> (IT.5.3.4). <code>GANAR_ALTURA</code> asciende en el lugar y sin deriva lateral: una deriva alejaría el waypoint en el plano XY, la métrica que decide si el atasco se resolvió.</p>
+<p><code>RETROCEDER</code> forma parte del vocabulario, pero <strong>ningún comportamiento del brazo <code>slm</code> lo emite</strong> (IT.5.3.4). <code>GANAR_ALTURA</code> asciende en el lugar y sin deriva lateral: una deriva alejaría el waypoint en el plano XY, la métrica que decide si el bloqueo se resolvió.</p>
 <p>Las duraciones de las maniobras comprometidas del brazo <code>slm</code> son: <code>MANEUVER_DURATION_S</code> (2.0 s en producción) para la macro resuelta por el barrido; <code>ESCAPE_MANEUVER_DURATION_S</code> (1.6 s) para el escape vertical; <code>GIRAR90_DURATION_S</code> (1.0 s) para el giro. Las evasiones laterales de <code>evasive_node</code> no se comprometen (IT.A10.4.5): la entrada <code>EVADIR_*</code> de <code>_MANEUVER_DURATION</code> en <code>graph.py</code> solo se usaría si la decidiera <code>_dispatch</code>, y en la configuración evaluada ninguna regla lo hace. El brazo <code>fsm</code>, en cambio, compromete <code>EVADIR_*</code>, <code>GANAR_ALTURA</code> y <code>PERDER_ALTURA</code> durante <code>FSM_MANEUVER_DURATION_S</code> (1.5 s).</p>
 <h3 id="a1048-detalle-del-brazo-fsm">A10.4.8 Detalle del brazo <code>fsm</code><a class="headerlink" href="#a1048-detalle-del-brazo-fsm" title="Permanent link">&para;</a></h3>
-<p>Su detección de atasco usa el contador de progreso del tracker (<code>evasion_stuck_cycles</code>) con los umbrales efectivo y duro (IT.A10.8.2). Ante un atasco, si <code>DEADLOCK_STRATEGY</code> es <code>depth</code> o <code>deep_vlm</code>, delega en el mismo barrido panorámico del brazo <code>slm</code> (IT.5.6); si no, alterna <code>CLIMB</code>/<code>DESCEND</code> hasta <code>MAX_CONSECUTIVE_ESCAPES</code> (2) y luego cambia de estrategia con <code>GIRAR_90</code> y una esquina de desvío propia.</p>
+<p>Su detección de bloqueo usa el contador de progreso del tracker (<code>evasion_stuck_cycles</code>) con los umbrales efectivo y duro (IT.A10.8.2). Ante un bloqueo, si <code>DEADLOCK_STRATEGY</code> es <code>depth</code> o <code>deep_vlm</code>, delega en el mismo barrido panorámico del brazo <code>slm</code> (IT.5.6); si no, alterna <code>CLIMB</code>/<code>DESCEND</code> hasta <code>MAX_CONSECUTIVE_ESCAPES</code> (2) y luego cambia de estrategia con <code>GIRAR_90</code> y una esquina de desvío propia.</p>
 <hr />
 <h2 id="a105-nodo-motor">A10.5 Nodo <code>motor</code><a class="headerlink" href="#a105-nodo-motor" title="Permanent link">&para;</a></h2>
 <p>Único nodo que interactúa con el actuador. Lee <code>velocity_command</code> y aplica, en orden:</p>
@@ -2127,7 +2127,7 @@
 <p>NB4.9 recalcula, con el ancla y la respuesta registradas, las sub-metas de una corrida del lote 6 y obtiene los mismos puntos que se inyectaron en vuelo. El ancla guarda posición (x, y, z) y yaw del fotograma, timestamp, etiqueta del waypoint real y su distancia horizontal, la dirección de la meta (azimut y elevación respecto del eje óptico) y el sector en el que cae. El rumbo de cada sector es el yaw del ancla más el azimut del centro del sector, y su elevación la del centro del sector, ambos calculados con proyección <em>pinhole</em> sobre los tercios del recorte, con la focal del fotograma completo: para un fotograma de 3:2 y 90° de campo horizontal, el recorte abarca ±33.7° y los centros de los sectores quedan a ±24.0° tanto en azimut como en elevación. La altitud de la sub-meta cambia <code>d · tan(elevación del sector)</code>, acotada a ±<code>VLM_MAX_DZ_M</code> (4 m) y sin bajar de <code>VLM_SUBGOAL_MIN_ALT_M</code> (6 m); una sub-meta que el dron ya superó (a menos de <code>VLM_SUBGOAL_MIN_AHEAD_M</code> = 4 m) se descarta.</p>
 <hr />
 <h2 id="a107-barrido-panoramico-en-deadlock-deep_scan-maquina-de-estados">A10.7 Barrido panorámico en deadlock (<code>deep_scan</code>): máquina de estados<a class="headerlink" href="#a107-barrido-panoramico-en-deadlock-deep_scan-maquina-de-estados" title="Permanent link">&para;</a></h2>
-<p><strong>Archivo:</strong> <code>src/agents/deep_scan.py</code>. <strong>Activación:</strong> regla 2 (o el atasco de la FSM) con <code>DEADLOCK_STRATEGY</code> en <code>depth</code> o <code>deep_vlm</code>. La estrategia <code>blind</code> no ejecuta barrido (IT.5.3.4). Valores admitidos: <code>depth</code> (default en <code>config/.env</code> y en el runner), <code>deep_vlm</code> (ablación) y <code>blind</code>; cualquier otro valor aborta el arranque. La máquina de estados es la misma para las dos fuentes; solo cambia quién juzga cada imagen en la fase <code>capturado</code>. La sostienen entre ciclos los campos <code>_scan_*</code>:</p>
+<p><strong>Archivo:</strong> <code>src/agents/deep_scan.py</code>. <strong>Activación:</strong> regla 2 (o el bloqueo de la FSM) con <code>DEADLOCK_STRATEGY</code> en <code>depth</code> o <code>deep_vlm</code>. La estrategia <code>blind</code> no ejecuta barrido (IT.5.3.4). Valores admitidos: <code>depth</code> (default en <code>config/.env</code> y en el runner), <code>deep_vlm</code> (ablación) y <code>blind</code>; cualquier otro valor aborta el arranque. La máquina de estados es la misma para las dos fuentes; solo cambia quién juzga cada imagen en la fase <code>capturado</code>. La sostienen entre ciclos los campos <code>_scan_*</code>:</p>
 <p><strong>Inicio.</strong> Si el waypoint real está a menos de <code>VLM_NEAR_WP_M</code> (8 m) en horizontal, no barre: desde tan cerca el rumbo a la meta es casi ruido y una sub-meta la saltearía; devuelve <code>False</code> (escape de IT.5.3.4). Si no, <code>_scan_phase = "rotando"</code>, <code>_scan_start_yaw_deg = yaw actual</code>, cancela cualquier maniobra activa. Durante todo el barrido, <code>_deliberation_pending = True</code> evita que el bucle externo cuente el giro en el lugar como falta de progreso.</p>
 <p><strong><code>rotando</code>.</strong> Comanda <code>target_yaw = yaw_inicial + i × 360° / SCAN_HEADING_COUNT_DEEP</code> (4 rumbos: 0°, +90°, +180°, +270°), sin traslación. Al llegar a <code>SCAN_YAW_TOLERANCE_DEG</code> (5°) pasa a <code>asentando</code>. Si en <code>SCAN_ROT_TIMEOUT_CYCLES</code> (10) ciclos no alcanza el rumbo —dron trabado en una malla—, abandona el barrido y devuelve <code>False</code>.</p>
 <p><strong><code>asentando</code>.</strong> Hover durante <code>SCAN_SETTLE_CYCLES_DEEP</code> (2) ciclos; luego guarda <code>(rumbo_medido, frame, capture_ts)</code> con el <strong>yaw medido</strong> en ese ciclo (no el objetivo del giro) y el fotograma que <code>capture_node</code> ya produjo (nunca una captura adicional).</p>
@@ -2142,15 +2142,15 @@
 <hr />
 <h2 id="a108-guiado-a-waypoint-waypointtracker">A10.8 Guiado a waypoint: <code>WaypointTracker</code><a class="headerlink" href="#a108-guiado-a-waypoint-waypointtracker" title="Permanent link">&para;</a></h2>
 <p><code>WaypointTracker</code> (<code>src/navigation/waypoint_tracker.py</code>) corre en el bucle externo, <strong>fuera del grafo</strong>, una vez por ciclo antes de <code>graph.invoke()</code>. <code>update(pos)</code> avanza el waypoint activo al entrar en el radio de aceptación (3.5 m; bajo un techo detectado, por distancia horizontal) y <code>compute_guidance()</code> produce <code>vx</code>, <code>vy</code>, <code>vz</code>, <code>yaw_rate</code> en marco del cuerpo, con corrección de <em>cross-track</em>, zona muerta angular, tope de guiñada diferenciado (15°/s, 45°/s con desvío &gt; 60°), histéresis entre regímenes, suavizado EMA y el modo <code>near_vertical</code> (<code>vx = 0</code> si <code>dist_xy &lt; 1 m</code> y <code>|dz| &gt; 0.3 m</code>, necesario para el patrón <em>climb-first</em> de Tier 2).</p>
-<p><strong>Despegue vertical.</strong> Hasta que el dron llega a <code>TAKEOFF_ALT_TOL_M</code> (1 m) de la altitud del primer objetivo, <code>compute_guidance()</code> no avanza en horizontal (<code>vx = 0</code>): sube en el lugar mientras alinea el rumbo, y exporta <code>takeoff = True</code>. La fase ocurre una vez por misión y termina antes si se detecta un techo. Avanzar mientras se sube puede llevar al dron contra una estructura más baja que la altitud de crucero pero más alta que la altitud de ese momento (Anexo 11, IT.A11.4.4). Durante la fase, los tres brazos usan <code>reactive_node</code> y el <code>StallDetector</code> no cuenta atasco.</p>
+<p><strong>Despegue vertical.</strong> Hasta que el dron llega a <code>TAKEOFF_ALT_TOL_M</code> (1 m) de la altitud del primer objetivo, <code>compute_guidance()</code> no avanza en horizontal (<code>vx = 0</code>): sube en el lugar mientras alinea el rumbo, y exporta <code>takeoff = True</code>. La fase ocurre una vez por misión y termina antes si se detecta un techo. Avanzar mientras se sube puede llevar al dron contra una estructura más baja que la altitud de crucero pero más alta que la altitud de ese momento (Anexo 11, IT.A11.4.4). Durante la fase, los tres brazos usan <code>reactive_node</code> y el <code>StallDetector</code> no cuenta bloqueo.</p>
 <h3 id="a1081-contador-de-progreso">A10.8.1 Contador de progreso<a class="headerlink" href="#a1081-contador-de-progreso" title="Permanent link">&para;</a></h3>
 <p><code>record_progress(dist_xy, bearing_err_deg)</code> mantiene <code>evasion_stuck_cycles</code>: se reinicia cuando la distancia mejora <code>WAYPOINT_PROGRESS_EPS_M</code> (0.5 m) sobre la mínima vista; se exime al dron que gira activamente (error de rumbo &gt; 30°) hasta 15 ciclos consecutivos; en otro caso, se incrementa. Este contador lo consume el brazo <code>fsm</code>; el brazo <code>slm</code> usa las señales del <code>StallDetector</code> (IT.A10.3).</p>
-<h3 id="a1082-umbrales-de-atasco">A10.8.2 Umbrales de atasco<a class="headerlink" href="#a1082-umbrales-de-atasco" title="Permanent link">&para;</a></h3>
+<h3 id="a1082-umbrales-de-bloqueo">A10.8.2 Umbrales de bloqueo<a class="headerlink" href="#a1082-umbrales-de-bloqueo" title="Permanent link">&para;</a></h3>
 <p><code>effective_stall_threshold()</code> es el mínimo de ciclos sin progreso físicamente demostrable: con <code>eps = 0.5 m</code>, velocidad mínima 0.25 m/s y 5 Hz, 10 ciclos. <code>hard_stall_threshold()</code> lo multiplica por <code>STUCK_HARD_FACTOR</code> (1.5 en producción: 15 ciclos). Ambos los usa la FSM.</p>
 <h3 id="a1083-deteccion-de-techo">A10.8.3 Detección de techo<a class="headerlink" href="#a1083-deteccion-de-techo" title="Permanent link">&para;</a></h3>
 <p>Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja al dron contra la losa. El tracker lo detecta: si durante 10 ciclos, con el dron libre en horizontal, se <strong>ordena</strong> ascenso (<code>vz &lt; −0.3 m/s</code> en el comando efectivamente ejecutado, que el bucle externo le informa con <code>note_executed_command()</code>; altitud ≥ 3 m) sin que la cota varíe más de 0.15 m, declara un techo (<code>ceiling_z</code>), liberado al alejarse 15 m o al cambiar de waypoint. Con techo, <code>compute_guidance()</code> limita la altitud objetivo a <code>ceiling_z + CEILING_MARGIN_M</code> (0.8 m) y, si el waypoint cae dentro de <code>CEILING_SAFE_GAP_M</code> (3 m) del techo, lo baja a esa banda y exporta <code>z_path_blocked = True</code>, que <code>navigate</code> resuelve con <code>PERDER_ALTURA</code> (regla 6). Usar el comando ejecutado y no la demanda del guiado importa: durante un <code>GIRAR_90</code> o un <code>FRENAR</code> el comando vertical es cero aunque el guiado pida subir, y esos ciclos no prueban que haya una losa encima. Por la misma razón no cuentan los ciclos en que el dron está trabado de costado —se ordenó avanzar y no se desplazó más de <code>CEILING_SIDEWAYS_STUCK_M</code> (3 cm por ciclo)—: el roce contra una pared también impide subir, y ese caso lo resuelve el deadlock.</p>
 <h3 id="a1084-sub-metas-del-lazo-lento">A10.8.4 Sub-metas del lazo lento<a class="headerlink" href="#a1084-sub-metas-del-lazo-lento" title="Permanent link">&para;</a></h3>
-<p><code>inject_corner_waypoint(x, y, z, label)</code> inserta una sub-meta temporal delante del waypoint activo. Todas las sub-metas del brazo <code>slm</code> provienen del lazo lento (capa estratégica o barrido, con la red de profundidad o con el VLM) y se insertan <strong>tal cual</strong>: una sub-meta nueva reemplaza a las temporales pendientes y reinicia el contador de progreso. La única condición es la deduplicación: si la sub-meta pendiente está a menos de <code>SUBGOAL_DEDUP_M</code> (10 m) de la nueva, la nueva se ignora; reemplazarla por otra casi igual reiniciaría el contador de progreso y un dron atascado nunca declararía el deadlock.</p>
+<p><code>inject_corner_waypoint(x, y, z, label)</code> inserta una sub-meta temporal delante del waypoint activo. Todas las sub-metas del brazo <code>slm</code> provienen del lazo lento (capa estratégica o barrido, con la red de profundidad o con el VLM) y se insertan <strong>tal cual</strong>: una sub-meta nueva reemplaza a las temporales pendientes y reinicia el contador de progreso. La única condición es la deduplicación: si la sub-meta pendiente está a menos de <code>SUBGOAL_DEDUP_M</code> (10 m) de la nueva, la nueva se ignora; reemplazarla por otra casi igual reiniciaría el contador de progreso y un dron bloqueado nunca declararía el deadlock.</p>
 <p><code>update()</code> mide en cada ciclo la distancia al waypoint <strong>real</strong> aunque el objetivo activo sea una sub-meta: si el dron entra en el radio de aceptación del waypoint real, descarta las sub-metas pendientes (<code>drop_temporary()</code>) y lo acepta. El bucle externo también las descarta cuando la capa estratégica marca <code>_clear_subgoals</code>.</p>
 <hr />
 <h2 id="a109-registro-de-vuelo-y-cierre-de-mision">A10.9 Registro de vuelo y cierre de misión<a class="headerlink" href="#a109-registro-de-vuelo-y-cierre-de-mision" title="Permanent link">&para;</a></h2>

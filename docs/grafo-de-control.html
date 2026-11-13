@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Configuración del grafo de control táctico de airsim-loop: topología LangGraph de cuatro nodos, lazo rápido a 5 Hz, capa estratégica asíncrona con sub-metas ancladas a la pose (profundidad monocular estimada por defecto), detección de atasco, barrido panorámico, cinemática y umbrales." />
+    content="Configuración del grafo de control táctico de airsim-loop: topología LangGraph de cuatro nodos, lazo rápido a 5 Hz, capa estratégica asíncrona con sub-metas ancladas a la pose (profundidad monocular estimada por defecto), detección de bloqueo, barrido panorámico, cinemática y umbrales." />
   <title>Grafo de Control Táctico — Navegación Autónoma de Drones con SLM/VLM</title>
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -74,7 +74,7 @@
         <p class="lead-subtitle">
           Referencia técnica del lazo de navegación autónoma <strong>tal como está en el código</strong>: topología,
           esquema de estado, lazo rápido de 8 reglas, capa estratégica asíncrona con sub-metas ancladas a la
-          pose del fotograma (fuente por defecto: profundidad monocular estimada), detección de atasco, barrido
+          pose del fotograma (fuente por defecto: profundidad monocular estimada), detección de bloqueo, barrido
           panorámico juzgado por la misma red, cinemática por macro-acción y la tabla de umbrales.
         </p>
         <dl class="readout">
@@ -112,7 +112,7 @@
         <p>Cuatro principios estructuran la configuración:</p>
         <ol>
           <li><strong>Dos lazos desacoplados.</strong> El lazo rápido (guiado, evasión por flujo óptico,
-            <code>GIRAR_90</code>, detección de atasco) es el <strong>único</strong> que comanda velocidades. La capa
+            <code>GIRAR_90</code>, detección de bloqueo) es el <strong>único</strong> que comanda velocidades. La capa
             estratégica corre en un lazo lento y asíncrono (~110 ms con la profundidad, ~0.8 s con el VLM local) y
             nunca detiene al dron en vuelo normal.</li>
           <li><strong>La respuesta es válida cuando llega.</strong> Cada pedido guarda la pose del fotograma
@@ -131,7 +131,7 @@
         <p>
           El brazo se selecciona con <code>AGENT_ARM</code> (<code>slm</code> · <code>fsm</code> ·
           <code>reactive</code>) sobre <strong>el mismo pipeline de percepción y la misma cinemática</strong>; la
-          estrategia de resolución de atascos, con <code>DEADLOCK_STRATEGY</code> (<code>depth</code> ·
+          estrategia de resolución de bloqueos, con <code>DEADLOCK_STRATEGY</code> (<code>depth</code> ·
           <code>deep_vlm</code> · <code>blind</code>); la fuente de la capa estratégica, con
           <code>STRATEGIC_SOURCE</code> (<code>depth</code> · <code>vlm</code> · <code>off</code>). Con
           <code>depth</code>/<code>depth</code> el VLM no corre durante el vuelo.
@@ -773,7 +773,7 @@
           <code>StrategicLayer.tick()</code>. El segundo nunca comanda velocidades: envía un pedido si corresponde, o
           procesa una respuesta y deposita una sub-meta en <code>inject_corner</code>. Durante el
           <strong>despegue vertical</strong> (<code>guidance.takeoff</code>) los tres brazos usan
-          <code>reactive_node</code>: el dron sube en el lugar, sin evasión por flujo ni conteo de atasco. Fuera del
+          <code>reactive_node</code>: el dron sube en el lugar, sin evasión por flujo ni conteo de bloqueo. Fuera del
           despegue se evalúa, en orden, la primera regla que aplica:</p>
 
         <div class="table-container">
@@ -848,7 +848,7 @@
           </table>
         </div>
 
-        <h3><code>StallDetector</code>: señales de atasco</h3>
+        <h3><code>StallDetector</code>: señales de bloqueo</h3>
         <div class="table-container">
           <table>
             <thead>
@@ -885,7 +885,7 @@
           </table>
         </div>
         <div class="note">
-          <span class="tag">El despegue no es un atasco</span>
+          <span class="tag">El despegue no es un bloqueo</span>
           <p>El despegue es vertical hasta 1 m de la altitud del primer objetivo (<code>TAKEOFF_VERTICAL</code>): el
             guiado sube y alinea el rumbo con <code>vx = 0</code>, y ninguna señal de deadlock acumula. La velocidad
             de «detenido» se mide por desplazamiento entre ciclos: apoyado contra una malla, AirSim reporta la
@@ -1122,7 +1122,7 @@
           </table>
         </div>
 
-        <h4 class="label">Atasco y escape</h4>
+        <h4 class="label">Bloqueo y escape</h4>
         <div class="table-container">
           <table>
             <thead>
@@ -1236,7 +1236,7 @@
                 <td class="mono wrap">test_annotation_never_touches_the_flow_frame</td>
               </tr>
               <tr>
-                <td>El despegue y el giro en el lugar no son atasco; avanzar sin moverse sí</td>
+                <td>El despegue y el giro en el lugar no son bloqueo; avanzar sin moverse sí</td>
                 <td class="mono wrap">test_takeoff_climb_and_rotation_is_not_a_stall<br />
                   test_rotation_in_place_at_cruise_is_not_a_stall<br />
                   test_commanded_forward_without_motion_still_counts</td>
@@ -1255,7 +1255,7 @@
                 <td class="mono wrap">test_pilot_seed99_regressions.py</td>
               </tr>
               <tr>
-                <td>El despegue es vertical hasta la altitud de crucero y no cuenta como atasco</td>
+                <td>El despegue es vertical hasta la altitud de crucero y no cuenta como bloqueo</td>
                 <td class="mono wrap">test_takeoff_climbs_in_place_until_cruise_altitude<br />test_takeoff_is_not_a_stall</td>
               </tr>
               <tr>
@@ -1303,7 +1303,7 @@
             rumbos del barrido. Por eso la capa y el barrido usan la profundidad estimada; el VLM aporta solo en el
             plan de ruta sobre el mapa cenital (AUC 0.81).</li>
           <li><strong>Punto ciego del foco de expansión.</strong> El flujo óptico traslacional se anula en los
-            obstáculos centrados en la trayectoria. Las señales de contacto, la detección de atasco y la
+            obstáculos centrados en la trayectoria. Las señales de contacto, la detección de bloqueo y la
             profundidad estimada del lazo lento lo mitigan; la solución estructural sigue siendo un canal de
             profundidad instantánea (Anexo 7).</li>
           <li><strong>El TTC no es confiable durante el propio escape.</strong> <code>FRENAR</code> no produce
@@ -1330,7 +1330,7 @@
           <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/deep_scan.py"><code>src/agents/deep_scan.py</code></a>
             — barrido panorámico en marco mundo (sección 8).</li>
           <li><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/src/agents/stall_detector.py"><code>src/agents/stall_detector.py</code></a>
-            — señales de atasco (sección 6).</li>
+            — señales de bloqueo (sección 6).</li>
           <li><a href="https://arxiv.org/abs/2406.09414">Yang et al. (2024), Depth Anything V2</a> — red de profundidad
             de la capa estratégica y del barrido; <a href="informe/06-PERCEPCION-MONOCULAR.html">capítulo 6 del informe</a>, IT.6.12.</li>
           <li><a href="informe/05-ARQUITECTURA-LAZO-TACTICO.html">Informe, capítulo 5</a> — arquitectura del lazo
@@ -1502,11 +1502,11 @@
         }
         if (s.takeoff) {
           return { path: fast, rule: 'despegue', action: 'MANTENER_RUMBO', checked: 0,
-            why: 'Despegue vertical: los tres brazos usan reactive_node; el dron sube en el lugar con vx = 0, sin evasión por flujo ni conteo de atasco.' };
+            why: 'Despegue vertical: los tres brazos usan reactive_node; el dron sube en el lugar con vx = 0, sin evasión por flujo ni conteo de bloqueo.' };
         }
         if (s.arm === 'reactive') {
           return { path: fast, rule: 'reactive', action: 'MANTENER_RUMBO', checked: 0,
-            why: 'El brazo reactive delega siempre en reactive_node: guiado nominal con la guiñada acotada a 5 °/s cerca de un obstáculo. No evade, no detecta atascos y no consulta a la capa estratégica.' };
+            why: 'El brazo reactive delega siempre en reactive_node: guiado nominal con la guiñada acotada a 5 °/s cerca de un obstáculo. No evade, no detecta bloqueos y no consulta a la capa estratégica.' };
         }
         const tests = [
           () => s.scan && { action: 'BARRIDO', why: 'Un barrido es dueño del dron hasta resolver o caer por sus watchdogs.' },

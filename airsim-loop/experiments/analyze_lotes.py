@@ -1,6 +1,6 @@
 """Analisis de los lotes finales de la tesis (cap. 10 Sec. 10.12.2; lanzados con experiments/run_lotes.ps1).
 
-Por lote (escenario) y celda (brazo x estrategia de atasco):
+Por lote (escenario) y celda (brazo x estrategia de bloqueo):
 - tasa de exito con IC de Wilson 95 %;
 - SPL, tiempo de mision (solo corridas exitosas) y distancia minima al obstaculo: mediana [p25, p75].
 

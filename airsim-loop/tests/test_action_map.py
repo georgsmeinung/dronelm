@@ -45,7 +45,7 @@ def test_ganar_altura_has_no_lateral_drift_and_keeps_aligning():
     """Regresion 2026-0824: GANAR_ALTURA llevaba `vy=0.5` (deriva lateral
     constante en una macro-accion de ascenso) y `yaw_rate=0`. En vuelo real
     eso ALEJABA el waypoint en el plano XY -- la misma metrica que decide si
-    el atasco se resolvio -- y congelaba el rumbo a 60 grados del objetivo,
+    el bloqueo se resolvio -- y congelaba el rumbo a 60 grados del objetivo,
     de modo que el escape se alimentaba a si mismo.
     """
     cmd = action_to_command("GANAR_ALTURA", guidance={"yaw_rate": -12.0})

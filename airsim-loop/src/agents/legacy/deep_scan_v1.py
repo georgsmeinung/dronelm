@@ -1,7 +1,7 @@
-# Escaneo espacial profundo en atasco duro.
+# Escaneo espacial profundo en bloqueo duro.
 #
 # Compartido entre el brazo SLM (deliberative.py) y el brazo FSM (fsm.py):
-# ambos comparten el mismo mecanismo raiz de escape sincronico por atasco
+# ambos comparten el mismo mecanismo raiz de escape sincronico por bloqueo
 # ("mismo fix que fsm.py", ver deliberative.py). DEADLOCK_STRATEGY selecciona
 # si, antes de forzar el escape ciego (GANAR_ALTURA/PERDER_ALTURA alternado),
 # se intenta un barrido de rumbos + una unica consulta al VLM con el panorama
@@ -71,11 +71,11 @@ PROMPT_ACTIONS = {
 # ciclo actual MÁS el historial de trayectoria acumulado (en texto).
 # El VLM razona sobre historia de intentos + vista actual, sin maniobra extra.
 SYSTEM_PROMPT_SLAM_ASSESS = (
-    "Sos el cerebro deliberativo de un dron autónomo en un atasco genuino.\n"
+    "Sos el cerebro deliberativo de un dron autónomo en un bloqueo genuino.\n"
     "Se te provee el HISTORIAL DE TRAYECTORIA (qué acciones se intentaron, cuáles "
     "produjeron avance y cuáles terminaron en stall) más el frame frontal del ciclo actual.\n"
     "Usá el historial para identificar qué direcciones están cronicamente bloqueadas y "
-    "cuáles no se han explorado. Elegí UNA macro-acción que resuelva el atasco.\n\n"
+    "cuáles no se han explorado. Elegí UNA macro-acción que resuelva el bloqueo.\n\n"
     "PRIORIDAD DE EXPLORACIÓN:\n"
     "1. Si el historial marca FRENTE como 'Zona probable de bloqueo' y hay zonas con "
     "'No explorado', DEBES elegir EVADIR hacia la zona no explorada — incluso si la imagen "
@@ -85,7 +85,7 @@ SYSTEM_PROMPT_SLAM_ASSESS = (
     "3. RETROCEDER aplica cuando FRENTE y ambas laterales están bloqueadas — alejarse del "
     "obstáculo crea margen para que el siguiente EVADIR tenga espacio de maniobra.\n\n"
     "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: el frente está despejado según lo que ves ahora (falso atasco).\n"
+    "- MANTENER_RUMBO: el frente está despejado según lo que ves ahora (falso bloqueo).\n"
     "- EVADIR_IZQUIERDA / EVADIR_DERECHA: esa dirección no fue intentada o tuvo menor tasa de stall.\n"
     "- RETROCEDER: el dron está pegado al obstáculo; retroceder 3-4m para ganar margen antes de evadir.\n"
     "- GANAR_ALTURA: el historial muestra bloqueo en todos los rumbos laterales; el obstáculo es sólido.\n"
@@ -96,15 +96,15 @@ SYSTEM_PROMPT_SLAM_ASSESS = (
 )
 
 SYSTEM_PROMPT_DEEP_SCAN = (
-    "Sos el cerebro deliberativo de un dron autonomo en un atasco genuino: los intentos previos de "
+    "Sos el cerebro deliberativo de un dron autonomo en un bloqueo genuino: los intentos previos de "
     "avanzar no progresaron y no hay corredor visible desde el rumbo actual.\n"
     "Se te muestran varias imagenes tomadas girando en el lugar, cada una hacia un rumbo distinto "
     "(NO son fotogramas consecutivos en el tiempo -- son direcciones distintas vistas desde el mismo "
     "punto). La primera imagen corresponde al rumbo que viene fallando.\n"
     "Evalua el panorama completo (los rumbos mostrados, no solo el frente) y elegi UNA macro-accion "
-    "para resolver el atasco.\n\n"
+    "para resolver el bloqueo.\n\n"
     "Valores permitidos para macro_action:\n"
-    "- MANTENER_RUMBO: el rumbo que viene fallando en realidad esta despejado (falso atasco).\n"
+    "- MANTENER_RUMBO: el rumbo que viene fallando en realidad esta despejado (falso bloqueo).\n"
     "- EVADIR_IZQUIERDA / EVADIR_DERECHA: hay una calle o pasaje despejado en alguno de los rumbos "
     "mostrados a la izquierda o derecha del rumbo actual.\n"
     "- RETROCEDER: todos los rumbos muestran obstaculos y el dron esta embebido en la malla de "
@@ -194,14 +194,14 @@ def _build_deep_scan_prompt(
     else:
         imu_line = "- IMU: normal."
 
-    # Advertencia de obstáculo invisible: cuando hay atasco confirmado pero el
+    # Advertencia de obstáculo invisible: cuando hay bloqueo confirmado pero el
     # flujo óptico ve corredor libre, la causa más probable es una malla de
     # colisión convexa invisible (árbol UE5, cartel, etc.).
     # MANTENER_RUMBO en ese estado empuja al drone contra la malla repetidamente.
     if deadlock_cycles >= 3:
         invisible_warning = (
             "\nATENCION — POSIBLE OBSTÁCULO INVISIBLE AL SENSOR ÓPTICO:\n"
-            f"El tracker lleva {deadlock_cycles} ciclos confirmando atasco (avance < 0.5m/ciclo).\n"
+            f"El tracker lleva {deadlock_cycles} ciclos confirmando bloqueo (avance < 0.5m/ciclo).\n"
             "Si el historial de FRENTE muestra \"con progreso\" o \"sin stalls\", ese progreso\n"
             "es MARGINAL — firma típica de colisión con malla convexa (árbol UE5) que el\n"
             "flujo óptico no puede detectar porque no genera movimiento aparente en imagen.\n"
@@ -213,22 +213,22 @@ def _build_deep_scan_prompt(
 
     instruccion = (
         "INSTRUCCION:\n"
-        f"Hay {deadlock_cycles} ciclos de atasco confirmado. "
+        f"Hay {deadlock_cycles} ciclos de bloqueo confirmado. "
         + (
             "NO elijas MANTENER_RUMBO si FRENTE ya fue intentado múltiples veces "
             "con progreso marginal.\n"
             if deadlock_cycles >= 3
             else "\n"
         )
-        + "Elegi la macro_action que mejor resuelva el atasco a partir del panorama mostrado.\n"
+        + "Elegi la macro_action que mejor resuelva el bloqueo a partir del panorama mostrado.\n"
         "Responde SOLO con este JSON:\n"
         '{"macro_action": "<ACCION>", "rationale": "<motivo corto citando el rumbo>"}'
     )
 
     return (
         f"{field.summary_text()}\n\n"
-        f"ATASCO: {deadlock_cycles} ciclos sin progresar hacia el waypoint.\n"
-        f"Escapes verticales ya intentados en este atasco: {consecutive_escapes}.\n"
+        f"BLOQUEO: {deadlock_cycles} ciclos sin progresar hacia el waypoint.\n"
+        f"Escapes verticales ya intentados en este bloqueo: {consecutive_escapes}.\n"
         f"OBJETIVO Y ALTITUD:\n"
         f"- {wp_str}\n"
         f"- Altitud actual: {altitude:.1f}m (Cota maxima de escape: {max_escape_alt:.1f}m)\n"
@@ -628,7 +628,7 @@ def deep_scan_cycle(
 ) -> bool:
     """Ejecuta un paso del escaneo profundo.
 
-    Debe llamarse SOLO cuando ya se determino que hay atasco duro sin
+    Debe llamarse SOLO cuando ya se determino que hay bloqueo duro sin
     corredor (misma condicion que dispara el escape sincronico existente).
 
     Devuelve True si el ciclo quedo totalmente resuelto por esta funcion (el
@@ -982,7 +982,7 @@ def _apply_scan_resolution(
     }
     state["_deadlock_cycles"] = 0
     # Igual que el escape sincronico existente: pedir el reseteo del contador
-    # de atasco a traves del lazo (WaypointTracker.reset_progress(), ver
+    # de bloqueo a traves del lazo (WaypointTracker.reset_progress(), ver
     # main.py) -- el escaneo resuelto no debe re-disparar de inmediato.
     state["_escape_reset"] = True
     state["evasion_stuck_cycles"] = 0

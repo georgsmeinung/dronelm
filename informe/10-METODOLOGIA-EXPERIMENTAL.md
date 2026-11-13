@@ -27,7 +27,7 @@ H3 dicta la arquitectura de escenarios en tres niveles, cada uno con un control 
 
 El banco es una medición **fuera de vuelo** que responde una pregunta previa a cualquier lote: **¿la fuente del lazo lento sabe responder la pregunta que el lazo le hace?** —si un sector de la imagen está libre a 15 m, si un rumbo del barrido es transitable, si un tramo de ruta sobre el mapa va por la calle—. Compara, muestra por muestra, la respuesta de la fuente con una **etiqueta de referencia** calculada con la profundidad del simulador en la misma pose (cap. 7, IT.7.1): un sector es libre si el percentil 5 de su profundidad es ≥ 15 m. Las muestras son poses registradas en corridas reales, y las etiquetas nunca entran al lazo de vuelo (IT.10.4.1, punto 3).
 
-Un lote de vuelo no puede responder esa pregunta: el resultado de una misión mezcla la percepción con el guiado, el lazo rápido, los atascos y el azar del simulador, y con pocas semillas una fuente que responde al azar puede empatar con una que acierta. El banco aísla el juicio. Una fuente que no lo supera no se lleva al vuelo; una que lo supera se juzga después en los lotes. Tres reglas lo mantienen como medición **generalista** y no como ajuste a un escenario: prompts y preguntas fijos, iguales a los de vuelo, que no nombran objetos de un entorno; la respuesta se lee tal como sale, sin umbrales calibrados sobre los datos; y el criterio de pase —exactitud balanceada ≥ 0.65 con el intervalo de confianza del 95 % por encima del azar, con *bootstrap* por corrida— debe cumplirse en todos los entornos medidos. Una pregunta que no pasa se descarta: adaptarla al escenario sería un entrenamiento manual por entorno.
+Un lote de vuelo no puede responder esa pregunta: el resultado de una misión mezcla la percepción con el guiado, el lazo rápido, los bloqueos y el azar del simulador, y con pocas semillas una fuente que responde al azar puede empatar con una que acierta. El banco aísla el juicio. Una fuente que no lo supera no se lleva al vuelo; una que lo supera se juzga después en los lotes. Tres reglas lo mantienen como medición **generalista** y no como ajuste a un escenario: prompts y preguntas fijos, iguales a los de vuelo, que no nombran objetos de un entorno; la respuesta se lee tal como sale, sin umbrales calibrados sobre los datos; y el criterio de pase —exactitud balanceada ≥ 0.65 con el intervalo de confianza del 95 % por encima del azar, con *bootstrap* por corrida— debe cumplirse en todos los entornos medidos. Una pregunta que no pasa se descarta: adaptarla al escenario sería un entrenamiento manual por entorno.
 
 | Medición | Resultado | Consecuencia de diseño |
 |---|---|---|
@@ -50,28 +50,28 @@ Las cifras completas están en el capítulo 11 (IT.11.0) y NB5 recalcula cada fi
 Los tres brazos comparten **el mismo `ObstacleField`** (cap. 6), **el mismo vocabulario de macro-acciones** y **el mismo traductor a cinemática**: la diferencia entre ellos es *quién elige la macro-acción y quién decide los rodeos*. Elegir la macro-acción incluye las reglas del lazo rápido, que no son las mismas en los tres brazos (cap. 5, IT.5.3.3), de modo que cada comparación mide el brazo completo, no la capa deliberativa sola.
 
 - **`slm`** — el grafo con sus dos lazos (cap. 5): el lazo lento juzga, cada ≥ 1 s o de inmediato ante un muro, qué sectores de una grilla de 3×3 son volables y traduce la respuesta a una sub-meta anclada a la pose del fotograma; ante un deadlock, un barrido de 4 rumbos produce la sub-meta de salida. Con el resultado del banco, la fuente es la red de profundidad estimada (cap. 6, IT.6.12): pese al nombre, heredado de versiones anteriores, **ningún modelo de lenguaje decide en vuelo**, y el VLM solo planifica la ruta antes del despegue (cap. 4, IT.4.3.1). Los nombres heredados se explican en el Anexo 12 (IT.A12.1).
-- **`fsm`** — una máquina de estados explícita (`CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE`) con umbrales fijos sobre el mismo `ObstacleField` y su propia lógica de atasco (cap. 5, IT.5.7): la línea de base directa, predecible y de costo mínimo.
-- **`reactive`** — solo guiado al waypoint, **sin evasión**, sin deliberación y sin resolución de atascos: la **cota inferior de rendimiento**. Lo que lo separa de los otros brazos es a la vez la evasión del lazo rápido y la resolución de atascos. Su varianza entre semillas es el control negativo del diseño (IT.10.5.1).
+- **`fsm`** — una máquina de estados explícita (`CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE`) con umbrales fijos sobre el mismo `ObstacleField` y su propia lógica de bloqueo (cap. 5, IT.5.7): la línea de base directa, predecible y de costo mínimo.
+- **`reactive`** — solo guiado al waypoint, **sin evasión**, sin deliberación y sin resolución de bloqueos: la **cota inferior de rendimiento**. Lo que lo separa de los otros brazos es a la vez la evasión del lazo rápido y la resolución de bloqueos. Su varianza entre semillas es el control negativo del diseño (IT.10.5.1).
 
-### 10.3.2 Factores secundarios: resolución de atascos y fuente de la capa estratégica
+### 10.3.2 Factores secundarios: resolución de bloqueos y fuente de la capa estratégica
 
-**Resolución de atascos.** Ante un deadlock, un barrido panorámico dentro del lazo y una única consulta que juzga cada rumbo (cap. 5, IT.5.6); sin respuesta válida, escape vertical. Valores: **`depth`** (por defecto; los rumbos los juzga la profundidad estimada), **`deep_vlm`** (los juzga el VLM; evaluado en el banco, no en los lotes) y **`blind`** (sin barrido, escape determinista). **Fuente de la capa estratégica** (solo `slm`): `depth`, `vlm` u `off`; los lotes la fijan en `depth`.
+**Resolución de bloqueos.** Ante un deadlock, un barrido panorámico dentro del lazo y una única consulta que juzga cada rumbo (cap. 5, IT.5.6); sin respuesta válida, escape vertical. Valores: **`depth`** (por defecto; los rumbos los juzga la profundidad estimada), **`deep_vlm`** (los juzga el VLM; evaluado en el banco, no en los lotes) y **`blind`** (sin barrido, escape determinista). **Fuente de la capa estratégica** (solo `slm`): `depth`, `vlm` u `off`; los lotes la fijan en `depth`.
 
-**El barrido es común a `slm` y `fsm`.** Con `depth`, la FSM delega sus deadlocks en el mismo barrido, de modo que `slm:depth` vs. `fsm:depth` aísla la capa estratégica y la política del lazo rápido, no la resolución de atascos. El brazo sin barrido es `fsm:blind`.
+**El barrido es común a `slm` y `fsm`.** Con `depth`, la FSM delega sus deadlocks en el mismo barrido, de modo que `slm:depth` vs. `fsm:depth` aísla la capa estratégica y la política del lazo rápido, no la resolución de bloqueos. El brazo sin barrido es `fsm:blind`.
 
 ### 10.3.3 Celdas y comparaciones planificadas
 
-La celda es la tupla (escenario × brazo × estrategia de atasco), replicada con $K = 10$ semillas (IT.10.5.1):
+La celda es la tupla (escenario × brazo × estrategia de bloqueo), replicada con $K = 10$ semillas (IT.10.5.1):
 
 | Celda | Qué aísla | Escenarios despejados | Escenarios con obstrucción |
 |---|---|---|---|
 | `slm:depth` | El sistema completo: capa estratégica + política del lazo rápido del brazo `slm` + barrido | ✓ | ✓ |
-| `fsm:depth` | La misma resolución de atascos con profundidad, sin capa estratégica y con política FSM | ✓ | ✓ |
+| `fsm:depth` | La misma resolución de bloqueos con profundidad, sin capa estratégica y con política FSM | ✓ | ✓ |
 | `fsm:blind` | La FSM sin barrido (escape determinista) | — | ✓ |
-| `reactive` | Solo guiado: sin evasión, sin deliberación y sin resolución de atascos | ✓ | ✓ |
+| `reactive` | Solo guiado: sin evasión, sin deliberación y sin resolución de bloqueos | ✓ | ✓ |
 | **Corridas por escenario** | | **30** | **40** |
 
-`fsm:blind` solo se corre donde hay atascos que resolver. En los lotes con obstrucción, las tres comparaciones planificadas son: (i) `slm:depth` vs. `fsm:blind`: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) `fsm:depth` vs. `fsm:blind`: ¿aporta el barrido con profundidad? (iii) `slm:depth` vs. `fsm:depth`: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo `slm`? La pregunta «¿aporta el VLM en vuelo?» la responde el banco (IT.10.2), no los lotes.
+`fsm:blind` solo se corre donde hay bloqueos que resolver. En los lotes con obstrucción, las tres comparaciones planificadas son: (i) `slm:depth` vs. `fsm:blind`: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) `fsm:depth` vs. `fsm:blind`: ¿aporta el barrido con profundidad? (iii) `slm:depth` vs. `fsm:depth`: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo `slm`? La pregunta «¿aporta el VLM en vuelo?» la responde el banco (IT.10.2), no los lotes.
 
 ---
 
@@ -142,11 +142,11 @@ Todas se derivan del registro por ciclo y se consolidan en el resumen de cada co
 - **Histograma de rutas**: la distribución de ciclos entre los comportamientos del grafo, que caracteriza el vuelo mejor que el éxito.
 - **Tasa de deliberación**: fracción de ciclos con una consulta nueva del lazo lento.
 
-### 10.6.3 Lazo lento y resolución de atascos
+### 10.6.3 Lazo lento y resolución de bloqueos
 
 - **Resultados de la capa estratégica**: fracción de consultas que proponen sub-meta, que declaran libre el camino directo o que no encuentran sector libre; una capa que declara libre el camino en casi todas las consultas, incluso cuando el dron termina en deadlock, no aporta información.
 - **Avance hacia el waypoint real tras cada sub-meta**, a los 20 s: la medida directa de si las sub-metas ayudan.
-- **Atascos**: número de deadlocks, fracción resuelta por el barrido y fracción que cae al escape vertical. «Resuelto» significa que se fijó una sub-meta, **no** que el dron haya salido del atasco.
+- **Bloqueos**: número de deadlocks, fracción resuelta por el barrido y fracción que cae al escape vertical. «Resuelto» significa que se fijó una sub-meta, **no** que el dron haya salido del bloqueo.
 - **Desglose por waypoint**, para no atribuir a todo el escenario la dificultad de un solo tramo.
 
 ---

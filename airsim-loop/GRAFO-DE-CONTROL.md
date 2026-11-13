@@ -32,7 +32,7 @@ Servicios (un hilo cada uno, creados solo si alguna capa los usa): profundidad (
 
 ## 3. `navigate_node` (brazo `slm`) — cascada de 8 reglas
 
-Antes de la cascada, cada ciclo: `StallDetector.update()` y `StrategicLayer.tick()` (capa estrategica, no bloqueante; no existe con `STRATEGIC_SOURCE=off`). Durante el **despegue vertical** (`guidance.takeoff`, hasta 1 m de la altitud del primer objetivo) los tres brazos usan `reactive_node`: sube en el lugar, sin evasion por flujo ni conteo de atasco.
+Antes de la cascada, cada ciclo: `StallDetector.update()` y `StrategicLayer.tick()` (capa estrategica, no bloqueante; no existe con `STRATEGIC_SOURCE=off`). Durante el **despegue vertical** (`guidance.takeoff`, hasta 1 m de la altitud del primer objetivo) los tres brazos usan `reactive_node`: sube en el lugar, sin evasion por flujo ni conteo de bloqueo.
 
 La velocidad de "detenido" se mide por desplazamiento entre ciclos (AirSim reporta la comandada con el dron apoyado en una malla), y la deteccion de techo usa el comando ejecutado (`note_executed_command`), no la demanda del guiado.
 
@@ -90,4 +90,4 @@ Toda sub-meta viene del lazo lento (capa estrategica o barrido) y se inserta tal
 python -m pytest tests -q
 ```
 
-299 tests. Los que cubren la frontera del grafo corren el **grafo compilado**: [`test_graph_integration.py`](tests/test_graph_integration.py) (atasco real -> barrido -> sub-meta), [`test_vlm_strategic_graph.py`](tests/test_vlm_strategic_graph.py) (servicios segun fuente y estrategia, incluido depth sin servicio del VLM), [`test_deep_vlm_world_frame.py`](tests/test_deep_vlm_world_frame.py) (regresion del marco de referencia), [`test_takeoff_no_false_deadlock.py`](tests/test_takeoff_no_false_deadlock.py). La fuente de profundidad: [`test_depth_strategic.py`](tests/test_depth_strategic.py) (geometria de sectores, forma de las respuestas, umbral; los tests no cargan la red). La guardia de profundidad: [`test_no_depth_in_flight_path.py`](tests/test_no_depth_in_flight_path.py); la auditoria de DistMin: [`test_distmin_audit.py`](tests/test_distmin_audit.py).
+299 tests. Los que cubren la frontera del grafo corren el **grafo compilado**: [`test_graph_integration.py`](tests/test_graph_integration.py) (bloqueo real -> barrido -> sub-meta), [`test_vlm_strategic_graph.py`](tests/test_vlm_strategic_graph.py) (servicios segun fuente y estrategia, incluido depth sin servicio del VLM), [`test_deep_vlm_world_frame.py`](tests/test_deep_vlm_world_frame.py) (regresion del marco de referencia), [`test_takeoff_no_false_deadlock.py`](tests/test_takeoff_no_false_deadlock.py). La fuente de profundidad: [`test_depth_strategic.py`](tests/test_depth_strategic.py) (geometria de sectores, forma de las respuestas, umbral; los tests no cargan la red). La guardia de profundidad: [`test_no_depth_in_flight_path.py`](tests/test_no_depth_in_flight_path.py); la auditoria de DistMin: [`test_distmin_audit.py`](tests/test_distmin_audit.py).

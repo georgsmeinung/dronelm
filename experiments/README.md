@@ -1,7 +1,7 @@
 # Corrida productiva v4: lotes finales de la tesis
 
 Seis lotes, uno por escenario, que evalúan el sistema descrito en los capítulos 5–8 del informe:
-capa estratégica y barrido de atascos con profundidad monocular estimada (`STRATEGIC_SOURCE=depth`,
+capa estratégica y barrido de bloqueos con profundidad monocular estimada (`STRATEGIC_SOURCE=depth`,
 `DEADLOCK_STRATEGY=depth`); el VLM solo planifica la ruta, antes del vuelo, en los escenarios con obstrucción. Regeneran la
 línea base completa, incluidos los tres escenarios despejados: los resultados de lotes anteriores (septiembre
 y octubre) no se usan, porque corrieron con otras configuraciones.
@@ -29,8 +29,8 @@ y octubre) no se usan, porque corrieron con otras configuraciones.
 Qué aísla cada celda:
 
 - `slm:depth`: el sistema completo (capa estratégica + política del lazo rápido del brazo `slm` + barrido).
-- `fsm:depth`: la misma resolución de atascos con profundidad, sin capa estratégica y con política FSM.
-- `fsm:blind`: la FSM sin barrido (escape determinista). Solo en obstrucción, donde hay atascos que resolver.
+- `fsm:depth`: la misma resolución de bloqueos con profundidad, sin capa estratégica y con política FSM.
+- `fsm:blind`: la FSM sin barrido (escape determinista). Solo en obstrucción, donde hay bloqueos que resolver.
 - `reactive`: flujo óptico + TTC, sin deliberación; su varianza entre semillas es el control negativo del diseño.
 
 ## Los lotes

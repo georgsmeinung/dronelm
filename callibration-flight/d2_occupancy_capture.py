@@ -54,7 +54,7 @@ AIRSIM_PORT = int(os.getenv("AIRSIM_PORT", "41451"))
 CMD_DURATION_S = 120.0
 
 # Timeout máximo por pase: si en este tiempo no se alcanza min_dist
-# (p.ej. el dron chocó con un árbol y quedó atascado), se aborta y
+# (p.ej. el dron chocó con un árbol y quedó bloqueado), se aborta y
 # se pasa a la siguiente velocidad sin perder los frames ya capturados.
 MAX_PASS_TIME_S = 60.0
 

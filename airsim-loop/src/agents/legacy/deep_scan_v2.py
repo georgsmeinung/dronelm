@@ -2,10 +2,10 @@
 # deep_scan con slam_assess, scene_to_action, _apply_trajectory_overrides (1a/1b/1c/2/3), Fix L/L2/14/11/17. Evidencia slam_assess: 5 corridas truncadas, sin control.
 # Se conserva solo como referencia para reproducir corridas anteriores; sus imports relativos
 # apuntan a modulos que ya no existen en src/agents/. Usar el commit original para ejecutarlo.
-# Escaneo espacial profundo en atasco duro.
+# Escaneo espacial profundo en bloqueo duro.
 #
 # Compartido entre el brazo SLM (deliberative.py) y el brazo FSM (fsm.py):
-# ambos comparten el mismo mecanismo raiz de escape sincronico por atasco
+# ambos comparten el mismo mecanismo raiz de escape sincronico por bloqueo
 # ("mismo fix que fsm.py", ver deliberative.py). DEADLOCK_STRATEGY selecciona
 # si, antes de forzar el escape ciego (GANAR_ALTURA/PERDER_ALTURA alternado),
 # se intenta un barrido de rumbos + una unica consulta al VLM con el panorama
@@ -166,7 +166,7 @@ RESPONSE_JSON_SCHEMA_SCENE = {
 # sino que describe la escena; la capa de navegacion decide a partir de la
 # descripcion + las estadisticas de trayectoria.
 SYSTEM_PROMPT_SLAM_ASSESS = (
-    "Sos el sistema de percepcion semantica de un dron autonomo en un atasco.\n"
+    "Sos el sistema de percepcion semantica de un dron autonomo en un bloqueo.\n"
     "Recibes el frame frontal del ciclo actual (y el historial de trayectoria como contexto).\n"
     "Describe lo que ves en cada sector de la imagen. NO decides acciones.\n\n"
     "Para cada sector (frente, izquierda, derecha) indica:\n"
@@ -627,14 +627,14 @@ def _build_deep_scan_prompt(
     else:
         imu_line = "- IMU: normal."
 
-    # Advertencia de obstáculo invisible: cuando hay atasco confirmado pero el
+    # Advertencia de obstáculo invisible: cuando hay bloqueo confirmado pero el
     # flujo óptico ve corredor libre, la causa más probable es una malla de
     # colisión convexa invisible (árbol UE5, cartel, etc.).
     # MANTENER_RUMBO en ese estado empuja al drone contra la malla repetidamente.
     if deadlock_cycles >= 3:
         invisible_warning = (
             "\nATENCION — POSIBLE OBSTÁCULO INVISIBLE AL SENSOR ÓPTICO:\n"
-            f"El tracker lleva {deadlock_cycles} ciclos confirmando atasco (avance < 0.5m/ciclo).\n"
+            f"El tracker lleva {deadlock_cycles} ciclos confirmando bloqueo (avance < 0.5m/ciclo).\n"
             "Si el historial de FRENTE muestra \"con progreso\" o \"sin stalls\", ese progreso\n"
             "es MARGINAL — firma típica de colisión con malla convexa (árbol UE5) que el\n"
             "flujo óptico no puede detectar porque no genera movimiento aparente en imagen.\n"
@@ -646,7 +646,7 @@ def _build_deep_scan_prompt(
 
     instruccion = (
         "INSTRUCCION:\n"
-        f"Hay {deadlock_cycles} ciclos de atasco confirmado. "
+        f"Hay {deadlock_cycles} ciclos de bloqueo confirmado. "
         "Describe cada sector/rumbo con su tipo de obstaculo y si el dron puede avanzar.\n"
         "La capa de navegacion decidira la accion a partir de tu descripcion.\n"
         "Responde SOLO con este JSON (sin texto adicional):\n"
@@ -655,8 +655,8 @@ def _build_deep_scan_prompt(
 
     return (
         f"{field.summary_text()}\n\n"
-        f"ATASCO: {deadlock_cycles} ciclos sin progresar hacia el waypoint.\n"
-        f"Escapes verticales ya intentados en este atasco: {consecutive_escapes}.\n"
+        f"BLOQUEO: {deadlock_cycles} ciclos sin progresar hacia el waypoint.\n"
+        f"Escapes verticales ya intentados en este bloqueo: {consecutive_escapes}.\n"
         f"OBJETIVO Y ALTITUD:\n"
         f"- {wp_str}\n"
         f"- Altitud actual: {altitude:.1f}m (Cota maxima de escape: {max_escape_alt:.1f}m)\n"
@@ -1108,7 +1108,7 @@ def deep_scan_cycle(
 ) -> bool:
     """Ejecuta un paso del escaneo profundo.
 
-    Debe llamarse SOLO cuando ya se determino que hay atasco duro sin
+    Debe llamarse SOLO cuando ya se determino que hay bloqueo duro sin
     corredor (misma condicion que dispara el escape sincronico existente).
 
     Devuelve True si el ciclo quedo totalmente resuelto por esta funcion (el
@@ -1406,7 +1406,7 @@ def _apply_scan_resolution(
     }
     state["_deadlock_cycles"] = 0
     # Igual que el escape sincronico existente: pedir el reseteo del contador
-    # de atasco a traves del lazo (WaypointTracker.reset_progress(), ver
+    # de bloqueo a traves del lazo (WaypointTracker.reset_progress(), ver
     # main.py) -- el escaneo resuelto no debe re-disparar de inmediato.
     state["_escape_reset"] = True
     state["evasion_stuck_cycles"] = 0

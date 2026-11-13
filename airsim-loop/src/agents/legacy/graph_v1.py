@@ -153,7 +153,7 @@ class DroneState(TypedDict, total=False):
     # Corrigen el bug de escape por altura descontrolado (ver CHANGELOG.md
     # 2026-0824). _deliberation_pending: True mientras se espera al SLM
     # dentro del watchdog -- el caller se salta record_progress() para que
-    # esperar una respuesta no cuente como "atascado". _consecutive_escapes:
+    # esperar una respuesta no cuente como "bloqueado". _consecutive_escapes:
     # cuenta disparos seguidos del escape sincrono (GANAR_ALTURA/CLIMB); al
     # superar MAX_CONSECUTIVE_ESCAPES se frena en el lugar en vez de seguir
     # subiendo sin techo.
@@ -166,7 +166,7 @@ class DroneState(TypedDict, total=False):
     # sin declarar, asi que nunca sobrevivian a `graph.invoke()`:
     #   - _escape_reset: el nodo deliberativo lo marca para que el lazo llame
     #     a WaypointTracker.reset_progress(). Al perderse, el contador de
-    #     atasco NUNCA se reiniciaba: crecia monotono (5, 6, 8, 9, 11, ...
+    #     bloqueo NUNCA se reiniciaba: crecia monotono (5, 6, 8, 9, 11, ...
     #     medidos en vuelo), el router quedaba clavado en "deliberative" y el
     #     nodo deliberativo en su rama de escape -- el SLM no se consultaba
     #     ni una vez en 76 ciclos. Este era el deadlock duro.
@@ -181,7 +181,7 @@ class DroneState(TypedDict, total=False):
     _delib_baseline: Optional[Dict[str, Any]]
     _delib_last_baselined_id: Optional[int]
     inject_corner: Optional[Dict[str, Any]]
-    # Escaneo espacial profundo en atasco duro
+    # Escaneo espacial profundo en bloqueo duro
     # (DEADLOCK_STRATEGY=deep_vlm, ver src/agents/deep_scan.py). Mismo motivo
     # que el bloque de arriba: cruzan la frontera nodo <-> lazo via multiples
     # invocaciones de graph.invoke() (el barrido dura varios ciclos), asi que
@@ -803,7 +803,7 @@ def policy_router(state: DroneState) -> str:
     # nada vuelve a entrar a deliberative_node para resolverlo,
     # state["_deliberation_pending"] nunca vuelve a False, y el guard de
     # runner.py/main.py que salta record_progress() mientras se espera al SLM
-    # queda activado para siempre -- desactivando el detector de atasco por
+    # queda activado para siempre -- desactivando el detector de bloqueo por
     # el resto de la mision. Confirmado con una corrida real de townsim_a
     # (replay offline de compute_guidance()/record_progress() contra las
     # posiciones reales del log): 528 ciclos seguidos de keep_going sin
@@ -875,7 +875,7 @@ def policy_router(state: DroneState) -> str:
     # — incluyendo los ciclos normales de subida donde vx=0 es intencional.
     # Tanto el escape de deadlock como el trigger de trayectoria se suprimen
     # hasta que el drone supere OPTICAL_MIN_ALT_M: la fase de ascenso genera
-    # "atasco" ficticio porque el drone aún no está navegando en XY.
+    # "bloqueo" ficticio porque el drone aún no está navegando en XY.
     # blind_wall / imu_contact (arriba) siguen activos a cualquier altitud.
     if below_optical_floor:
         return "keep_going"

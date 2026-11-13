@@ -5,7 +5,7 @@ Pinta la linea de trayectoria, un marcador en cada waypoint y su etiqueta
 (simPlotLineStrip/simPlotPoints/simPlotStrings). No arma ni despega el
 vehiculo -- es un chequeo visual previo al vuelo, para detectar a simple
 vista si la ruta cruza un obstaculo evidente (ver CHANGELOG.md 2026-0827:
-el atasco de townsim_a en la copa de un arbol hubiera sido obvio con esto
+el bloqueo de townsim_a en la copa de un arbol hubiera sido obvio con esto
 antes de gastar ciclos de vuelo descubriendolo).
 
 Formato unico de mision (2026-0828, ver CHANGELOG.md): todas las misiones

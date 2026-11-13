@@ -10,7 +10,7 @@
 # 2026-0930 -- simplificacion por evidencia (12 corridas citysim_pilot con este grafo):
 #   - navigate_node: de ~15 reglas a 8. Se quitaron la consulta tactica por sector, el escape
 #     vertical forzado, los eventos de "frentes bloqueados", el disparador por FlightTrajectory,
-#     el contador de atasco del tracker como disparador, la deteccion de escaneo huerfano, el
+#     el contador de bloqueo del tracker como disparador, la deteccion de escaneo huerfano, el
 #     freno por profundidad y la profundidad monocular (desactivada). Ver stall_detector.py.
 #   - GIRAR_90 ya no inyecta una esquina determinista (74 esquinas: mediana 0.35 m de avance al WP
 #     real en 20 s). En su lugar adelanta la consulta al VLM estrategico con el frame que ve el muro.
@@ -307,7 +307,7 @@ def _build_nodes(airsim_client: Any) -> Dict[str, Any]:
         # PERDER_ALTURA contra el parapeto de la autopista se repitio 220 ciclos sin que el deadlock
         # llegara a evaluarse, y con la velocidad medida las evasiones por blind_wall (regla 4) y la
         # maniobra comprometida (regla 3) lo tapaban igual. Una maniobra que no mueve al dron en 2 s
-        # no es una decision en curso: es un atasco.
+        # no es una decision en curso: es un bloqueo.
         if stall.stopped_prolonged or stall.wp_no_progress:
             return _deadlock_resolve(state, field, guidance, telem)
 

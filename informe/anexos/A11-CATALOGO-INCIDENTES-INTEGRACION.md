@@ -29,15 +29,15 @@ si stall_count > hard_threshold:
         resetear stall_count = 0  ← la red de seguridad se resetea a sí misma
 ```
 
-convierte el estado "atasco severo → acción de escape" en un estado transitorio: al ciclo siguiente, `stall_count = 0 < hard_threshold` y el sistema vuelve a crucero; tres ciclos después, el atasco se re-detecta y el ciclo se repite. El período 3 (crucero → pre-stall → escape → reseteo → crucero) no es observable como un error: en el visor se ve como "el dron frena ocasionalmente sin razón aparente".
+convierte el estado "bloqueo severo → acción de escape" en un estado transitorio: al ciclo siguiente, `stall_count = 0 < hard_threshold` y el sistema vuelve a crucero; tres ciclos después, el bloqueo se re-detecta y el ciclo se repite. El período 3 (crucero → pre-stall → escape → reseteo → crucero) no es observable como un error: en el visor se ve como "el dron frena ocasionalmente sin razón aparente".
 
 **Vulnerabilidad C — Métrica de progreso auto-inconsistente.**
 
-Un predicado de atasco `ciclos_sin_progreso > effective_stall_threshold`, con `effective_stall_threshold = max(10, eps_m / (min_speed / loop_hz))`, combina `eps_m` (distancia mínima de avance por ciclo) y `min_speed` (velocidad mínima de crucero), definidos en unidades y archivos distintos. Con `eps_m = 0.5 m`, `min_speed = 2.0 m/s` y `loop_hz = 5 Hz`, la velocidad de avance implícita es 2.5 m/s, mientras que en un giro de 90° la velocidad de aproximación al waypoint oscila entre 0 y `vx · cos(θ)`, con media ≈ 1.25 m/s. El resultado es un detector de atasco que se dispara prácticamente al inicio de cada waypoint que requiera maniobra.
+Un detector de bloqueo `ciclos_sin_progreso > effective_stall_threshold`, con `effective_stall_threshold = max(10, eps_m / (min_speed / loop_hz))`, combina `eps_m` (distancia mínima de avance por ciclo) y `min_speed` (velocidad mínima de crucero), definidos en unidades y archivos distintos. Con `eps_m = 0.5 m`, `min_speed = 2.0 m/s` y `loop_hz = 5 Hz`, la velocidad de avance implícita es 2.5 m/s, mientras que en un giro de 90° la velocidad de aproximación al waypoint oscila entre 0 y `vx · cos(θ)`, con media ≈ 1.25 m/s. El resultado es un detector de bloqueo que se dispara prácticamente al inicio de cada waypoint que requiera maniobra.
 
 **Vulnerabilidad D — Escape ciego a la percepción.**
 
-Si el decisor evalúa las condiciones de escape de atasco *antes* de leer el `ObstacleField`,
+Si el decisor evalúa las condiciones de escape de bloqueo *antes* de leer el `ObstacleField`,
 
 ```python
 if state["stall_count"] > hard_threshold:
@@ -71,18 +71,18 @@ Otras tres situaciones comparten la propiedad que organiza el capítulo 9: el si
 
 **(b) Resultados válidos del VLM que nunca se ejecutan.** Dos errores de *precedencia* entre rutas, no de estado descartado, con el mismo síntoma:
 
-- *Maniobra cancelada por un disparador de atasco.* Si al despachar `EVADIR_DERECHA` no se reinicia el contador de atasco, en el ciclo siguiente un disparador basado en ese contador vuelve a enrutar hacia una nueva consulta, cuyo resultado sobrescribe la maniobra comprometida antes de que se ejecute. En una corrida de diagnóstico, el VLM devolvió `EVADIR_DERECHA` durante 200 ciclos consecutivos sin que la maniobra se ejecutara una sola vez.
+- *Maniobra cancelada por un disparador de bloqueo.* Si al despachar `EVADIR_DERECHA` no se reinicia el contador de bloqueo, en el ciclo siguiente un disparador basado en ese contador vuelve a enrutar hacia una nueva consulta, cuyo resultado sobrescribe la maniobra comprometida antes de que se ejecute. En una corrida de diagnóstico, el VLM devolvió `EVADIR_DERECHA` durante 200 ciclos consecutivos sin que la maniobra se ejecutara una sola vez.
 - *Resultado huérfano por el camino de deadlock.* Si la rama de escape por deadlock se evalúa antes que la lectura del pedido pendiente, y el contador de progreso queda congelado por encima del umbral, la rama intercepta todos los ciclos y el resultado nunca se lee: durante 80 ciclos, el log del VLM contenía la respuesta correcta y la acción ejecutada era `MANTENER_RUMBO` o `FRENAR`.
 
 Ninguno de los dos se ve en las métricas agregadas; los muestra la comparación, ciclo a ciclo, del campo `slm.raw_response` de la traza JSONL con la acción realmente ejecutada (técnica 2 de IT.9.7).
 
-**(c) Un pedido pendiente que nunca se cierra.** Si la consulta estratégica y el barrido comparten la cola del servicio (tamaño 1), un barrido que se encola mientras hay una consulta estratégica en vuelo la invalida. Si el sistema solo cerrara el pedido al llegar un resultado con *ese* identificador, el pedido quedaría activo indefinidamente, y un detector de atasco que interpretara la espera como intencional detendría sus contadores.
+**(c) Un pedido pendiente que nunca se cierra.** Si la consulta estratégica y el barrido comparten la cola del servicio (tamaño 1), un barrido que se encola mientras hay una consulta estratégica en vuelo la invalida. Si el sistema solo cerrara el pedido al llegar un resultado con *ese* identificador, el pedido quedaría activo indefinidamente, y un detector de bloqueo que interpretara la espera como intencional detendría sus contadores.
 
 **Contención, en detalle.**
 
-- **Estado declarado y verificado sobre el grafo compilado.** Todo campo que cruza la frontera entre invocaciones está declarado en `DroneState`, los contadores de atasco y el estado de la capa estratégica viven en objetos de proceso (`StallDetector`, `StrategicLayer`) y no en el estado, y los tests de integración corren el **grafo compilado** y verifican que las claves de control (`inject_corner`, `_escape_reset`, `_deadlock_event`, `_vlm_strategic`) cruzan la frontera (cap. 5, IT.5.2; `tests/test_graph_integration.py`, `tests/test_vlm_strategic_graph.py`).
+- **Estado declarado y verificado sobre el grafo compilado.** Todo campo que cruza la frontera entre invocaciones está declarado en `DroneState`, los contadores de bloqueo y el estado de la capa estratégica viven en objetos de proceso (`StallDetector`, `StrategicLayer`) y no en el estado, y los tests de integración corren el **grafo compilado** y verifican que las claves de control (`inject_corner`, `_escape_reset`, `_deadlock_event`, `_vlm_strategic`) cruzan la frontera (cap. 5, IT.5.2; `tests/test_graph_integration.py`, `tests/test_vlm_strategic_graph.py`).
 - **Escape absorbente.** Un barrido en curso es dueño del dron hasta resolver o caer por sus watchdogs, y el deadlock se reinicia solo cuando se resuelve (`_escape_reset`), nunca dentro de su propia rama (cap. 5, IT.5.3.2, IT.5.3.4).
-- **Progreso físicamente alcanzable.** El progreso se mide como distancia horizontal al objetivo, y los umbrales de atasco se derivan del avance mínimo demostrable a la velocidad mínima (cap. 5, IT.5.3.1, IT.A10.8.2).
+- **Progreso físicamente alcanzable.** El progreso se mide como distancia horizontal al objetivo, y los umbrales de bloqueo se derivan del avance mínimo demostrable a la velocidad mínima (cap. 5, IT.5.3.1, IT.A10.8.2).
 - **Precedencia explícita.** El orden de las reglas de `navigate` es fijo y está justificado (cap. 5, IT.5.3.2): barrido en curso, deadlock, maniobra comprometida, contacto, piso óptico y TTC. El resultado de cada consulta se recupera por su identificador (`get_result`) al inicio de cada ciclo, de modo que no depende de qué ruta tome el ciclo. En la FSM, el escape exige además que la percepción no muestre un corredor libre (`has_open_corridor()`, cap. 6, IT.6.10).
 - **Pedidos perdidos.** La capa estratégica da por perdido un pedido reemplazado si el servicio no tiene resultado ni pedido pendiente durante 3 s, o al cumplir 10 s, y el deadlock cancela explícitamente la consulta estratégica en vuelo (cap. 5, IT.5.5.3, IT.5.3.4).
 
@@ -126,7 +126,7 @@ Los casos de esta sección provienen de las mismas auditorías que los de IT.9.8
 
 ### A11.4.1 Deadlock falso en el despegue
 
-En todas las corridas de diagnóstico, el primer deadlock se declaró en los ciclos 17–18, con el dron todavía subiendo a la altitud de crucero. Durante el despegue el guiado ordena subir y girar en el lugar hacia el primer waypoint con `vx = 0`; un contador de «detenido» que suma esos ciclos dispara la resolución de atasco al cruzar el piso óptico de 4.5 m.
+En todas las corridas de diagnóstico, el primer deadlock se declaró en los ciclos 17–18, con el dron todavía subiendo a la altitud de crucero. Durante el despegue el guiado ordena subir y girar en el lugar hacia el primer waypoint con `vx = 0`; un contador de «detenido» que suma esos ciclos dispara la resolución de bloqueo al cruzar el piso óptico de 4.5 m.
 
 **Mecanismo de contención.** «Detenido» se define como «se ordenó avanzar y el dron no se movió», y no se cuenta bajo el piso óptico ni durante el despegue (cap. 5, IT.5.3.1). Aplicada sobre la telemetría registrada, esa definición no declara el deadlock en ninguna de las tres corridas.
 

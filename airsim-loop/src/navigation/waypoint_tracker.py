@@ -9,7 +9,7 @@ DEFAULT_ACCEPTANCE_RADIUS = float(os.getenv("WAYPOINT_ACCEPTANCE_RADIUS", "3.5")
 DEFAULT_CRUISE_SPEED = float(os.getenv("REACTIVE_FORWARD_SPEED", "5.0"))
 # Margen (metros) para considerar que hubo progreso real hacia el
 # waypoint activo. Un desvio Manhattan largo pero que reduce distancia no
-# cuenta como atasco; solo cuenta la falta de progreso sostenida.
+# cuenta como bloqueo; solo cuenta la falta de progreso sostenida.
 PROGRESS_EPS_M = float(os.getenv("WAYPOINT_PROGRESS_EPS_M", "0.5"))
 # Umbral (metros) por debajo del cual la distancia horizontal al waypoint es
 # demasiado chica para que atan2(dy,dx) devuelva un rumbo fisicamente
@@ -41,12 +41,12 @@ GUIDANCE_SMOOTHING_ALPHA = float(os.getenv("GUIDANCE_SMOOTHING_ALPHA", "0.5"))
 # EVASION_STUCK_THRESHOLD (ciclos) -- ver effective_stall_threshold().
 MIN_PROGRESS_SPEED_MPS = float(os.getenv("MIN_PROGRESS_SPEED_MPS", "0.25"))
 # Error de rumbo (grados) por encima del cual un ciclo se considera "girando
-# activamente hacia el waypoint" y se excluye del contador de atasco
+# activamente hacia el waypoint" y se excluye del contador de bloqueo
 # (2026-0826, ver CHANGELOG.md). record_progress() media el progreso solo por
 # distancia radial al waypoint; al completar un tramo y arrancar el
 # siguiente, la distancia apenas baja mientras el dron gira para encarar el
 # nuevo rumbo (avance casi nulo por diseno, no por obstaculo), y el contador
-# de atasco se disparaba en cada esquina -- confundiendo un giro normal con
+# de bloqueo se disparaba en cada esquina -- confundiendo un giro normal con
 # un deadlock real. Un obstaculo genuino se sigue detectando aparte via
 # ObstacleField/TTC (policy_router), independiente de este contador.
 PROGRESS_STALL_BEARING_EXEMPT_DEG = float(os.getenv("PROGRESS_STALL_BEARING_EXEMPT_DEG", "30.0"))
@@ -55,15 +55,15 @@ PROGRESS_STALL_BEARING_EXEMPT_DEG = float(os.getenv("PROGRESS_STALL_BEARING_EXEM
 # distingue un giro normal que progresa de uno que nunca converge -- si el
 # dron queda fisicamente trabado (p. ej. enganchado en ramas, colision que no
 # dispara has_collided) mientras intenta un giro grande, bearing_err_deg se
-# mantiene sobre el umbral indefinidamente y el contador de atasco queda
+# mantiene sobre el umbral indefinidamente y el contador de bloqueo queda
 # congelado para siempre, desactivando el escape de seguridad existente
-# (GANAR_ALTURA por atasco en fsm.py/deliberative.py). Pasado este tope, se
+# (GANAR_ALTURA por bloqueo en fsm.py/deliberative.py). Pasado este tope, se
 # deja de eximir y el contador vuelve a acumular normalmente.
 PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES = int(os.getenv("PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES", "15"))
 # Topes de yaw_rate (grados/s) de compute_guidance(). El tope de giro brusco
 # es mayor: con un solo tope de 15 deg/s, realinear un desvio de 70 grados
-# tomaba 6-8s de giro (mas todavia por el EMA), mientras el reloj de atasco
-# vencia en 1-2s -- el dron se declaraba atascado por no haber terminado un
+# tomaba 6-8s de giro (mas todavia por el EMA), mientras el reloj de bloqueo
+# vencia en 1-2s -- el dron se declaraba bloqueado por no haber terminado un
 # giro que el propio limitador le impedia terminar a tiempo.
 YAW_RATE_MAX_DPS = float(os.getenv("GUIDANCE_YAW_RATE_MAX_DPS", "15.0"))
 YAW_RATE_SHARP_MAX_DPS = float(os.getenv("GUIDANCE_YAW_RATE_SHARP_MAX_DPS", "45.0"))
@@ -90,7 +90,7 @@ CEILING_DETECT_CYCLES = int(os.getenv("CEILING_DETECT_CYCLES", "10"))
 CEILING_DETECT_DZ_M = float(os.getenv("CEILING_DETECT_DZ_M", "0.15"))
 CEILING_MIN_ALT_M = float(os.getenv("CEILING_MIN_ALT_M", "3.0"))
 # 0.8 (antes 1.0): con techo a 5.8 m el objetivo queda a ~5.0 m, holgado sobre el piso optico de 4.5 m
-# (con 1.0 quedaba a 4.83 m y el dron oscilaba por debajo, perdiendo el manejo de atasco).
+# (con 1.0 quedaba a 4.83 m y el dron oscilaba por debajo, perdiendo el manejo de bloqueo).
 CEILING_MARGIN_M = float(os.getenv("CEILING_MARGIN_M", "0.8"))
 CEILING_RELEASE_M = float(os.getenv("CEILING_RELEASE_M", "15.0"))
 # Margen de navegacion bajo techo (2026-0929): cuando el WP cae dentro de
@@ -117,18 +117,18 @@ CEILING_SIDEWAYS_STUCK_M = float(os.getenv("CEILING_SIDEWAYS_STUCK_M", "0.03"))
 
 
 def effective_stall_threshold() -> int:
-    """Ciclos sin progreso antes de declarar atasco, coherente con la metrica.
+    """Ciclos sin progreso antes de declarar bloqueo, coherente con la metrica.
 
     `record_progress()` solo resetea el contador cuando la distancia al
     waypoint mejora en PROGRESS_EPS_M metros. Declarar el umbral en CICLOS y
     el epsilon en METROS de forma independiente produce combinaciones
-    imposibles: para nunca acumular atasco hace falta una velocidad de
+    imposibles: para nunca acumular bloqueo hace falta una velocidad de
     acercamiento de al menos `PROGRESS_EPS_M * LOOP_HZ / umbral`.
 
     Con los valores de .env del 2026-0824 (eps=0.5m, umbral=5 ciclos, 5Hz) eso
     exigia 0.5 m/s sostenidos. Durante un giro cerrado el guiado limita vx a
     `max(0.5, cruise*0.4)` = 0.8 m/s y el rumbo esta a ~70 grados del objetivo,
-    o sea ~0.25 m/s de acercamiento real: el atasco se declaraba solo, sin
+    o sea ~0.25 m/s de acercamiento real: el bloqueo se declaraba solo, sin
     ningun obstaculo, a los 5 ciclos de arrancar la mision (ver el vuelo del
     2026-0824, ciclos 1-5). Esta funcion eleva el umbral configurado hasta el
     minimo que hace fisicamente demostrable el progreso.
@@ -146,7 +146,7 @@ def effective_stall_threshold() -> int:
 
 
 def hard_stall_threshold() -> int:
-    """Umbral de "atasco duro": a partir de aca el escape se fuerza aunque la
+    """Umbral de "bloqueo duro": a partir de aca el escape se fuerza aunque la
     percepcion crea ver un corredor libre.
 
     Es el techo del bypass por percepcion de policy_router/deliberative: un
@@ -177,7 +177,7 @@ class WaypointTracker:
         # activo) en lugar de contar ciclos en rutas evasivas/deliberativas.
         self._min_dist_seen: Optional[float] = None
         self.progress_stall_cycles: int = 0
-        # Ciclos consecutivos eximidos del contador de atasco por estar
+        # Ciclos consecutivos eximidos del contador de bloqueo por estar
         # "girando activamente" (ver PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES).
         self._bearing_exempt_streak: int = 0
         # Enclavamiento de "ya pase el waypoint activo por el eje del
@@ -275,11 +275,11 @@ class WaypointTracker:
         Si ``bearing_err_deg`` supera ``PROGRESS_STALL_BEARING_EXEMPT_DEG``,
         el dron esta girando activamente hacia el rumbo objetivo: el ciclo se
         excluye del conteo (ni incrementa ni resetea la distancia minima
-        vista) en lugar de contarlo como atasco -- pero solo hasta
+        vista) en lugar de contarlo como bloqueo -- pero solo hasta
         ``PROGRESS_STALL_BEARING_EXEMPT_MAX_CYCLES`` ciclos consecutivos. Un
         giro que nunca converge (p. ej. el dron fisicamente trabado contra un
         obstaculo que no dispara colision) no debe poder eximirse para
-        siempre: pasado el tope, se cuenta como atasco real para que el
+        siempre: pasado el tope, se cuenta como bloqueo real para que el
         escape de seguridad existente pueda activarse.
         """
         if abs(bearing_err_deg) > PROGRESS_STALL_BEARING_EXEMPT_DEG:
@@ -287,7 +287,7 @@ class WaypointTracker:
                 self._bearing_exempt_streak += 1
                 return self.progress_stall_cycles
             # Tope agotado: el giro no convergio en el plazo esperado, tratar
-            # como atasco real (cae al conteo normal de abajo).
+            # como bloqueo real (cae al conteo normal de abajo).
         # Fix T: NO resetear _bearing_exempt_streak aqui. El reset va en la
         # rama de progreso real (dist_to_wp mejora) mas abajo. Resetear al
         # ver bearing_err < umbral permitia que GIRAR_90 refrescara el cap
@@ -307,7 +307,7 @@ class WaypointTracker:
         return self.progress_stall_cycles
 
     def reset_progress(self) -> None:
-        """Reinicio manual del contador de atasco (p. ej. tras un escape forzado)."""
+        """Reinicio manual del contador de bloqueo (p. ej. tras un escape forzado)."""
         self._min_dist_seen = None
         self.progress_stall_cycles = 0
         self._bearing_exempt_streak = 0
@@ -327,7 +327,7 @@ class WaypointTracker:
         if self.is_completed or self.current_index >= len(self.waypoints):
             return False
         # Duplicado de la sub-meta pendiente: se ignora. Reemplazarla por otra casi igual reiniciaria el
-        # contador de progreso y un dron atascado nunca declararia el deadlock.
+        # contador de progreso y un dron bloqueado nunca declararia el deadlock.
         current = self.current_waypoint
         if current and current.get("is_temporary") and math.hypot(
                 float(current.get("x", 0.0)) - x, float(current.get("y", 0.0)) - y) < SUBGOAL_DEDUP_M:
@@ -583,7 +583,7 @@ class WaypointTracker:
             kp_yaw = 0.35
             # Mas autoridad de giro cuando el desvio es grande: con el tope
             # unico de 15 deg/s un desvio de 70 grados tardaba mas en
-            # corregirse que lo que tarda el contador de atasco en dispararse.
+            # corregirse que lo que tarda el contador de bloqueo en dispararse.
             cap = YAW_RATE_SHARP_MAX_DPS if self._sharp_turn_active else YAW_RATE_MAX_DPS
             yaw_rate = max(-cap, min(cap, kp_yaw * delta_yaw_deg))
 
@@ -608,7 +608,7 @@ class WaypointTracker:
         elif self._final_approach_active:
             vx = 1.2 * math.cos(delta_yaw)  # Aproximación suave en metros finales
         else:
-            # Crucero lineal continuo: nunca bajar de 0.5 para que no parezca atascado
+            # Crucero lineal continuo: nunca bajar de 0.5 para que no parezca bloqueado
             vx = max(0.5, cruise_speed * math.cos(delta_yaw))
 
         # Suavizado exponencial (EMA): vx/yaw_rate se recalculan desde cero
@@ -627,11 +627,11 @@ class WaypointTracker:
         # peor: la rampa de despegue tan lenta no cubria PROGRESS_EPS_M
         # dentro de effective_stall_threshold(), disparando escapes
         # GANAR_ALTURA espurios a los pocos segundos de cada mision (falso
-        # atasco). Conclusion: cada reemision real de comando (cambie mucho o
+        # bloqueo). Conclusion: cada reemision real de comando (cambie mucho o
         # poco el valor) parece tener un costo de perturbacion fijo -- estirar
         # el cambio en mas ciclos mas chicos no reduce el total, solo lo
         # reparte, y en este caso ademas creaba una interaccion nueva con el
-        # detector de atasco. El EMA solo (alpha=0.5) queda como esta.
+        # detector de bloqueo. El EMA solo (alpha=0.5) queda como esta.
         if self._smoothed_vx is None:
             self._smoothed_vx = vx
         else:

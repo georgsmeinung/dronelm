@@ -1288,7 +1288,7 @@ const INSPECT = {
   navigate: (s) => ({
     kicker: 'nodo · política', title: `navigate (brazo ${s.opts.arm})`,
     body: s.opts.arm === 'reactive'
-      ? '<p>El brazo <code>reactive</code> solo guía hacia el objetivo (<code>MANTENER_RUMBO</code>), con la tasa de guiñada acotada cerca de un obstáculo. No evade ni detecta atascos: es la línea de base.</p>'
+      ? '<p>El brazo <code>reactive</code> solo guía hacia el objetivo (<code>MANTENER_RUMBO</code>), con la tasa de guiñada acotada cerca de un obstáculo. No evade ni detecta bloqueos: es la línea de base.</p>'
       : `<p>Antes de la cascada: <code>StallDetector.update()</code>${s.opts.arm === 'slm' ? ' y <code>StrategicLayer.tick()</code>' : ''}. Luego gana la primera regla que aplica:</p>
          <ul class="rules">${RULES.map(([n, c, a]) => `<li class="${s.dec.rule === n ? 'hit' : ''}${n === '6' ? ' na' : ''}"><b>${n}</b><span>${c} → ${a}</span></li>`).join('')}</ul>`,
     live: kv([['regla', s.dec.rule], ['comportamiento', s.dec.behaviour || '—'], ['macro-acción', s.dec.action]]),
@@ -1401,12 +1401,12 @@ function buildLessons(app) {
         <div class="stat-row">
           <div class="stat"><b>1.4–2×</b><span>tiempo de slm frente a reactive en ruta libre</span></div>
           <div class="stat"><b>0 / 20</b><span>reactive con obstrucción en TownSim</span></div>
-          <div class="stat"><b>5–9 / 10</b><span>las celdas con evasión y salida de atascos</span></div>
+          <div class="stat"><b>5–9 / 10</b><span>las celdas con evasión y salida de bloqueos</span></div>
           <div class="stat"><b>9 / 10</b><span>fsm:blind, sin profundidad ni capa</span></div>
         </div>
         <ul>
           <li><b>En ruta libre, la arquitectura solo cuesta tiempo:</b> <code>reactive &lt; slm &lt; fsm</code>. No lo pone la red, que no frena al dron, sino las sub-metas y el gobernador de velocidad.</li>
-          <li><b>Con obstrucción, deciden la evasión por flujo y una salida de los atascos.</b> <code>reactive</code> no tiene ninguna de las dos y no completa; la profundidad estimada no es necesaria para eso.</li>
+          <li><b>Con obstrucción, deciden la evasión por flujo y una salida de los bloqueos.</b> <code>reactive</code> no tiene ninguna de las dos y no completa; la profundidad estimada no es necesaria para eso.</li>
           <li><b>La ventaja de slm sobre la FSM no se puede atribuir a la capa estratégica:</b> la FSM evaluada tiene dos defectos que la hacen más lenta.</li>
           <li><b>La seguridad no está medida:</b> la bandera de colisión de AirSim no detecta follaje ni apoyos, y con vegetación el dron pasa a ~0.1 m de las copas.</li>
         </ul>
@@ -1613,7 +1613,7 @@ class App {
     const meter = (name, v, max) => `<div><div class="meter-top"><span><code>${name}</code></span><span>${v} / ${max}</span></div>
       <div class="bar"><i class="${v >= max * 0.7 ? 'hot' : ''}" style="width:${Math.min(100, (v / max) * 100)}%"></i></div></div>`;
     $('hud-stall').innerHTML = this.sim.opts.arm === 'reactive'
-      ? '<p class="small-note">El brazo reactive no detecta atascos.</p>'
+      ? '<p class="small-note">El brazo reactive no detecta bloqueos.</p>'
       : meter('stopped_prolonged', s.stopped, CFG.STOP_CYCLES) + meter('wp_no_progress', s.noprog, CFG.NOPROG_CYCLES) +
         `<div class="flags"><span class="flag ${s.imuContact ? 'on' : ''}">imu_contact</span><span class="flag ${s.blindWall ? 'on' : ''}">blind_wall</span><span class="flag ${this.sim.scan ? 'on' : ''}">barrido ${this.sim.scan ? `${this.sim.scan.i + 1}/4` : ''}</span></div>`;
   }
@@ -1636,7 +1636,7 @@ class App {
     const picks = ['drone', 'capture', 'perception', 'navigate', 'motor', 'strategic', 'tracker', 'stall'];
     $('inspector').innerHTML = `<div class="kicker">${d.kicker}</div><h2>${d.title}</h2>${d.body}
       <h3>Valores actuales</h3>${d.live || ''}<div class="src">${d.src}</div>
-      <div class="pick-list">${picks.map((p) => `<button data-pick="${p}" class="${p === this.selected ? 'on' : ''}">${p === 'drone' ? 'dron' : p === 'strategic' ? 'estratégica' : p === 'stall' ? 'atasco' : p}</button>`).join('')}</div>`;
+      <div class="pick-list">${picks.map((p) => `<button data-pick="${p}" class="${p === this.selected ? 'on' : ''}">${p === 'drone' ? 'dron' : p === 'strategic' ? 'estratégica' : p === 'stall' ? 'bloqueo' : p}</button>`).join('')}</div>`;
     $('inspector').querySelectorAll('[data-pick]').forEach((b) => { b.onclick = () => this.inspect(b.dataset.pick); });
   }
 

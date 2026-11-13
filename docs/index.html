@@ -106,12 +106,12 @@
             <p>En los tres controles el orden de tiempo es <code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code>, con las nueve comparaciones significativas. La razón <code>slm</code>/<code>reactive</code> baja con la longitud de la ruta (1.95, 1.49 y 1.39 en ~180, ~420 y ~600 m): un costo aproximadamente aditivo. No lo pone la inferencia, que no frena al dron, sino las sub-metas en ruta libre y el gobernador de velocidad.</p>
           </div>
           <div class="card">
-            <h4>Obstrucción: Deciden la Evasión y la Salida de Atascos</h4>
-            <p>En el corredor arbolado y en el bloqueo frontal de TownSim, el control reactivo no completa ninguna de sus 20 corridas; las celdas con evasión por flujo y alguna salida de los atascos completan entre 5 y 9 de cada 10, y <code>fsm:blind</code>, sin profundidad ni capa estratégica, 9 de 10 en los dos lotes. La profundidad estimada no es necesaria para completar. Frente a la FSM, <code>slm:depth</code> la supera en SPL en <code>townsim_ini</code> y <code>citysim_pilot</code> (δ = +0.81 y +1.00), pero la ventaja no se puede atribuir a la capa estratégica.</p>
+            <h4>Obstrucción: Deciden la Evasión y la Salida de Bloqueos</h4>
+            <p>En el corredor arbolado y en el bloqueo frontal de TownSim, el control reactivo no completa ninguna de sus 20 corridas; las celdas con evasión por flujo y alguna salida de los bloqueos completan entre 5 y 9 de cada 10, y <code>fsm:blind</code>, sin profundidad ni capa estratégica, 9 de 10 en los dos lotes. La profundidad estimada no es necesaria para completar. Frente a la FSM, <code>slm:depth</code> la supera en SPL en <code>townsim_ini</code> y <code>citysim_pilot</code> (δ = +0.81 y +1.00), pero la ventaja no se puede atribuir a la capa estratégica.</p>
           </div>
           <div class="card">
             <h4>Dos Defectos del Brazo FSM</h4>
-            <p>El análisis de las corridas encontró que la FSM declara un deadlock falso al terminar el despegue vertical (el contador de atasco sube durante el ascenso) y que su techo de escape de 30 m convierte cada escape vertical en un giro en las rutas altas. Ambos la hacen más lenta y la exponen a más fallas: las comparaciones contra la FSM favorecen a <code>slm</code>.</p>
+            <p>El análisis de las corridas encontró que la FSM declara un deadlock falso al terminar el despegue vertical (el contador de bloqueo sube durante el ascenso) y que su techo de escape de 30 m convierte cada escape vertical en un giro en las rutas altas. Ambos la hacen más lenta y la exponen a más fallas: las comparaciones contra la FSM favorecen a <code>slm</code>.</p>
           </div>
           <div class="card">
             <h4>Controles sin Plan de Ruta</h4>
@@ -147,7 +147,7 @@
           </div>
           <div class="card">
             <h4>Dos Lazos Desacoplados</h4>
-            <p>El lazo rápido (5 Hz: guiado, evasión por flujo óptico, <code>GIRAR_90</code>, detección de atasco) es el único que comanda velocidades. La capa estratégica opera en un lazo lento y asíncrono que nunca detiene al dron en vuelo normal.</p>
+            <p>El lazo rápido (5 Hz: guiado, evasión por flujo óptico, <code>GIRAR_90</code>, detección de bloqueo) es el único que comanda velocidades. La capa estratégica opera en un lazo lento y asíncrono que nunca detiene al dron en vuelo normal.</p>
           </div>
           <div class="card">
             <h4>Capa Estratégica Anclada a la Pose</h4>
@@ -162,8 +162,8 @@
             <p>La respuesta de la red o del modelo se traduce a geometría y se aplica sin reglas deterministas encima; solo se descartan respuestas obsoletas o no parseables. Así, la comparación mide a la fuente y no a una capa de correcciones.</p>
           </div>
           <div class="card">
-            <h4>Detección de Atasco de Dos Señales</h4>
-            <p><code>StallDetector</code>: <em>dron trabado</em> (se ordenó avanzar ≥ 0.3 m/s y el dron no se movió durante 10 ciclos, nunca bajo el piso óptico de 4.5 m) y <em>sin progreso</em> (10 s sin acercarse 2 m al objetivo actual). El despegue no es un atasco.</p>
+            <h4>Detección de Bloqueo de Dos Señales</h4>
+            <p><code>StallDetector</code>: <em>dron trabado</em> (se ordenó avanzar ≥ 0.3 m/s y el dron no se movió durante 10 ciclos, nunca bajo el piso óptico de 4.5 m) y <em>sin progreso</em> (10 s sin acercarse 2 m al objetivo actual). El despegue no es un bloqueo.</p>
           </div>
           <div class="card">
             <h4>Sin Profundidad del Simulador en el Lazo</h4>
@@ -260,7 +260,7 @@
             grafo accede a datos crudos de flujo óptico ni al canal de profundidad del simulador.</li>
           <li><strong>Lazo rápido en <code>navigate</code>:</strong> Un único nodo evalúa en orden fijo la continuación
             de barridos y maniobras comprometidas, el contacto no visible al flujo (<code>imu_contact</code>,
-            <code>blind_wall</code>), el piso óptico, el atasco (<code>StallDetector</code>) y el TTC: guiado nominal,
+            <code>blind_wall</code>), el piso óptico, el bloqueo (<code>StallDetector</code>) y el TTC: guiado nominal,
             evasión lateral o <code>GIRAR_90</code> ante un muro que ocupa el campo visual.</li>
           <li><strong>Capa estratégica asíncrona:</strong> Consulta periódica e inmediata tras un
             <code>GIRAR_90</code>. La fuente (<code>STRATEGIC_SOURCE</code>: profundidad estimada por defecto, VLM u
@@ -407,7 +407,7 @@
           </div>
           <div class="card">
             <h4>5. Punto Ciego Estructural del Sensor Monocular (FOE)</h4>
-            <p>El flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión). En el corredor arbolado de <code>townsim_ini</code>, el control reactivo, que solo usa flujo óptico, no completa ninguna de sus 10 corridas. Mitigación: profundidad monocular estimada en el lazo lento (los brazos con evasión completan 9 de 10, aunque pasan a ~0.1 m de las copas), señales de contacto (<code>imu_contact</code>, <code>blind_wall</code>) y detección de atasco. Solución estructural: cámara estéreo (Anexo 7).</p>
+            <p>El flujo óptico traslacional se anula exactamente en los obstáculos centrados en la trayectoria de avance (Foco de Expansión). En el corredor arbolado de <code>townsim_ini</code>, el control reactivo, que solo usa flujo óptico, no completa ninguna de sus 10 corridas. Mitigación: profundidad monocular estimada en el lazo lento (los brazos con evasión completan 9 de 10, aunque pasan a ~0.1 m de las copas), señales de contacto (<code>imu_contact</code>, <code>blind_wall</code>) y detección de bloqueo. Solución estructural: cámara estéreo (Anexo 7).</p>
           </div>
           <div class="card">
             <h4>6. Integración del VLM</h4>
@@ -661,7 +661,7 @@
               </tr>
               <tr>
                 <td><strong><a href="https://github.com/georgsmeinung/dronelm/blob/main/airsim-loop/NB2_auditoria_interactiva_telemetria.ipynb">NB2</a></strong></td>
-                <td>Una corrida por dentro: archivos, <code>summary.json</code> recalculado desde la traza, ritmo del lazo, traza de decisión, <code>ObstacleField</code>, capa estratégica, atascos y gobernador, trayectoria sobre el mapa cenital y la misma semilla en los cuatro brazos.</td>
+                <td>Una corrida por dentro: archivos, <code>summary.json</code> recalculado desde la traza, ritmo del lazo, traza de decisión, <code>ObstacleField</code>, capa estratégica, bloqueos y gobernador, trayectoria sobre el mapa cenital y la misma semilla en los cuatro brazos.</td>
                 <td>IT.4.4, IT.10.6, IT.11.6</td>
               </tr>
               <tr>

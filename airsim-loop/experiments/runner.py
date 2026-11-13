@@ -334,8 +334,8 @@ def run_one(
             # Fix 1 (2026-0824): frenar a proposito mientras se espera al SLM
             # (dentro del watchdog) no cuenta como "sin progresar" -- ver
             # _deliberation_pending en deliberative.py. Fix 2: distancia
-            # HORIZONTAL, no 3D -- subir para escapar de un atasco no debe
-            # empeorar mecanicamente la metrica que decide si el atasco se
+            # HORIZONTAL, no 3D -- subir para escapar de un bloqueo no debe
+            # empeorar mecanicamente la metrica que decide si el bloqueo se
             # resolvio (los waypoints estan a altitud constante).
             if not state.get("_deliberation_pending", False):
                 tracker.record_progress(
@@ -365,7 +365,7 @@ def run_one(
                 tracker.drop_temporary("VLM: camino directo libre")
             if state.pop("_escape_reset", False):
                 tracker.reset_progress()
-            # Evento de resolucion de atasco (blind vs. deep_vlm),
+            # Evento de resolucion de bloqueo (blind vs. deep_vlm),
             # consumido por FlightLogger para el ablation (mismo patron que
             # main.py: se saca del estado con pop(), nunca queda pisandolo).
             deadlock_event = state.pop("_deadlock_event", None)

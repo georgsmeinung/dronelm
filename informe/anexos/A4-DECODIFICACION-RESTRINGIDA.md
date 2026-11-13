@@ -154,7 +154,7 @@ En lugar de emplear un esquema JSON estático para todas las consultas, el decis
 | Motivo de consulta (`reason_note`) | Condición de activación en el grafo | Restricción dinámica del enum `action` | Racionalidad operativa y beneficio |
 |---|---|---|---|
 | `"TTC_CRITICO"` | $\text{TTC} \le 3.2\text{ s}$ en el sector central (regla 7 de `navigate`, IT.5.3.2) | `enum: ["EVADIR_IZQUIERDA", "EVADIR_DERECHA", "GANAR_ALTURA", "GIRAR_90"]` | **Poda de acciones pasivas:** se prohíbe sintácticamente que el modelo elija `MANTENER_RUMBO` o `FRENAR` ante una colisión inminente. |
-| `"DEADLOCK_ESCAPE"` | `evasion_stuck_cycles` sobre el umbral (atasco prolongado) | `enum: ["GIRAR_90", "GANAR_ALTURA", "RETROCEDER"]` | **Ruptura forzada de bucles:** el dron lleva varios ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente o insistir de frente. |
+| `"DEADLOCK_ESCAPE"` | `evasion_stuck_cycles` sobre el umbral (bloqueo prolongado) | `enum: ["GIRAR_90", "GANAR_ALTURA", "RETROCEDER"]` | **Ruptura forzada de bucles:** el dron lleva varios ciclos sin avanzar hacia el waypoint; la gramática veta seguir evadiendo lateralmente o insistir de frente. |
 | `"FALTA_EVIDENCIA"` | Flujo sin traslación suficiente (fuente distinta de `flow`) | `enum: ["MANTENER_RUMBO", "GIRAR_90"]` | **Preservación de movimiento:** se impide al modelo frenar (`FRENAR`), forzándolo a generar traslación o rotación para que el flujo vuelva a tener evidencia. |
 | `"STANDARD_DELIB"` | Desempate táctico en corredores urbanos | las ocho de `VALID_ACTIONS` | **Espacio completo:** evaluación estándar. |
 
@@ -364,7 +364,7 @@ La decodificación restringida no constituye un mero filtro estético de salida 
 
 Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se resumen en tres puntos esenciales:
 
-1. **Fiabilidad operacional categórica:** erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de atascos y degradaciones espurias del sistema.
+1. **Fiabilidad operacional categórica:** erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de bloqueos y degradaciones espurias del sistema.
 2. **Eficiencia temporal crítica:** al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 IT.8.6), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).
 3. **Acoplamiento formal con el grafo de control:** permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.
 
@@ -414,7 +414,7 @@ El capítulo 8 enuncia los principios con que se escriben los prompts y los esqu
 > - free: true only if the drone can fly straight 15 m without hitting anything.
 > Reply with JSON only.
 
-**User prompt** (`_build_panorama_prompt`): `4 images. Altitude 10 m.`, seguido de hasta cinco imágenes de 256 px rotuladas `[Image 1]` … `[Image N]`. El prompt no da ángulos, meta ni duración del atasco: el modelo solo describe cada imagen, y el rumbo de cada una y la elección los resuelve el código (cap. 5, IT.5.6).
+**User prompt** (`_build_panorama_prompt`): `4 images. Altitude 10 m.`, seguido de hasta cinco imágenes de 256 px rotuladas `[Image 1]` … `[Image N]`. El prompt no da ángulos, meta ni duración del bloqueo: el modelo solo describe cada imagen, y el rumbo de cada una y la elección los resuelve el código (cap. 5, IT.5.6).
 
 ### A4.9.4 Parámetros de inferencia
 

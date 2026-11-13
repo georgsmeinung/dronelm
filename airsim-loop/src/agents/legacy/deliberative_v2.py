@@ -631,7 +631,7 @@ def _escape_resolved_the_stall(state: Dict[str, Any], guidance: Dict[str, Any]) 
     El contador de escapes consecutivos no puede colgarse de
     `evasion_stuck_cycles`: el propio escape pide `_escape_reset`, que pone
     ese contador en cero en el ciclo siguiente. Si se usara esa senal, cada
-    escape "pareceria" haber resuelto el atasco y MAX_CONSECUTIVE_ESCAPES
+    escape "pareceria" haber resuelto el bloqueo y MAX_CONSECUTIVE_ESCAPES
     nunca se alcanzaria. La unica evidencia valida de que subir sirvio es que
     la distancia horizontal al waypoint bajo de verdad.
     """
@@ -682,7 +682,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
         # que juntas explican el vuelo en el que el dron subio 12m sin
         # consultar al SLM ni una vez (ver CHANGELOG.md):
         #   1. Umbral coherente con la metrica que lo alimenta
-        #      (effective_stall_threshold): antes se declaraba atasco a los 5
+        #      (effective_stall_threshold): antes se declaraba bloqueo a los 5
         #      ciclos, mas rapido de lo que era fisicamente demostrable el
         #      progreso durante un giro.
         #   2. No se sube a ciegas si la percepcion ve corredor transitable.
@@ -693,7 +693,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
         loop_hz = float(os.getenv("LOOP_HZ", "5.0"))
 
         # El escape solo se "perdona" con progreso horizontal medido, nunca
-        # por el mero hecho de que el contador de atasco se haya reseteado.
+        # por el mero hecho de que el contador de bloqueo se haya reseteado.
         if _escape_resolved_the_stall(state, guidance):
             state["_consecutive_escapes"] = 0
             state["_escape_locked"] = False
@@ -705,7 +705,7 @@ def make_deliberative_node(service: DeliberationService, trajectory: "Any | None
         escape_locked = bool(state.get("_escape_locked", False))
         hard_stuck = stuck_cycles >= hard_stall_threshold()
         # Mismo criterio que policy_router: no se sube a ciegas si la
-        # percepcion ve un corredor transitable (salvo atasco duro).
+        # percepcion ve un corredor transitable (salvo bloqueo duro).
         corridor_open = (not hard_stuck) and has_open_corridor(field, guidance)
 
         # Fix I: si hay un resultado VLM regular listo, procesarlo ANTES de

@@ -434,7 +434,7 @@ def _build_panorama_prompt(
 ) -> str:
     """Mensaje del barrido: solo lo que el modelo necesita para describir las imagenes.
 
-    2026-10-02: sin angulos, meta ni ciclos de atasco. El modelo solo describe cada imagen; el rumbo
+    2026-10-02: sin angulos, meta ni ciclos de bloqueo. El modelo solo describe cada imagen; el rumbo
     de cada una y la eleccion los resuelve el codigo (panorama_to_subgoal). Los argumentos quedan
     por compatibilidad con los llamadores."""
     pos = telemetry.get("position", {}) if isinstance(telemetry, dict) else {}
@@ -455,7 +455,7 @@ def deep_scan_cycle(
 ) -> bool:
     """Ejecuta un paso del escaneo profundo.
 
-    Debe llamarse SOLO cuando ya se determino que hay atasco duro sin
+    Debe llamarse SOLO cuando ya se determino que hay bloqueo duro sin
     corredor (misma condicion que dispara el escape sincronico existente).
 
     Devuelve True si el ciclo quedo totalmente resuelto por esta funcion (el
@@ -785,7 +785,7 @@ def _apply_scan_resolution(
         "vlm_raw_response": (raw_response or "")[:2000],
     }
     state["_deadlock_cycles"] = 0
-    # Reinicia el contador de atasco del tracker a traves del lazo (runner/main): el escaneo
+    # Reinicia el contador de bloqueo del tracker a traves del lazo (runner/main): el escaneo
     # resuelto no debe re-disparar de inmediato.
     state["_escape_reset"] = True
     state["evasion_stuck_cycles"] = 0

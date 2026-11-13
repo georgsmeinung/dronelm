@@ -2063,14 +2063,14 @@ o_c = \min\!\big(1,\ \max(0,\ k\, \bar{d}_c)\big), \qquad \bar{d}_c = \frac{1}{|
 <p>El campo <code>source</code> del <code>ObstacleField</code> indica el origen de la evidencia: <code>"flow"</code> (solo flujo óptico), <code>"degraded"</code> (ciclo con rotación alta o sin flujo), <code>"holdover"</code> (campo del ciclo anterior por degradación temporal), <code>"none"</code> (sin datos). El gobernador de velocidad usa <code>source</code> para limitar el avance cuando no hay evidencia (cap. 5, IT.5.4).</p>
 <p>El diseño como objeto inmutable (<code>@dataclass(frozen=True)</code>) garantiza que ningún consumidor pueda modificar el estado de percepción: los nodos solo pueden leer el campo, no escribirlo.</p>
 <h3 id="a582-has_open_corridor-y-sector_towards_waypoint">A5.8.2 <code>has_open_corridor</code> y <code>sector_towards_waypoint</code><a class="headerlink" href="#a582-has_open_corridor-y-sector_towards_waypoint" title="Permanent link">&para;</a></h3>
-<p>Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (<code>has_open_corridor</code>, para decidir si un atasco tiene un corredor visible); el brazo <code>slm</code> detecta el atasco con el <code>StallDetector</code> (cap. 5, IT.5.3.1).</p>
+<p>Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (<code>has_open_corridor</code>, para decidir si un bloqueo tiene un corredor visible); el brazo <code>slm</code> detecta el bloqueo con el <code>StallDetector</code> (cap. 5, IT.5.3.1).</p>
 <p><strong><code>sector_towards_waypoint(bearing_err_deg)</code></strong> mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:</p>
 <ul>
 <li>Si <code>bearing_err_deg &lt; -BEARING_SECTOR_DEG</code> (default 15°) → <code>"izquierda"</code></li>
 <li>Si <code>bearing_err_deg &gt; +15°</code> → <code>"derecha"</code></li>
 <li>Caso contrario → <code>"centro"</code></li>
 </ul>
-<p>Esta función conecta el espacio de guiado de <code>WaypointTracker</code> con el espacio de percepción del <code>ObstacleField</code>, permitiendo que el escape de atasco priorice el sector hacia el waypoint.</p>
+<p>Esta función conecta el espacio de guiado de <code>WaypointTracker</code> con el espacio de percepción del <code>ObstacleField</code>, permitiendo que el escape de bloqueo priorice el sector hacia el waypoint.</p>
 <p><strong><code>has_open_corridor(field, guidance)</code></strong> determina si la percepción tiene evidencia real de al menos un sector transitable, evaluado en el contexto del waypoint activo:</p>
 <div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="ow">not</span> <span class="n">field</span><span class="o">.</span><span class="n">has_evidence</span><span class="p">():</span>
     <span class="k">return</span> <span class="kc">False</span>          <span class="c1"># sin flujo ≠ &quot;despejado&quot;</span>
@@ -2079,7 +2079,7 @@ o_c = \min\!\big(1,\ \max(0,\ k\, \bar{d}_c)\big), \qquad \bar{d}_c = \frac{1}{|
         <span class="k">return</span> <span class="kc">True</span>
 <span class="k">return</span> <span class="kc">False</span>
 </code></pre></div>
-<p>La condición <code>has_evidence()</code> es crítica: un hover puro produce un <code>ObstacleField</code> con <code>foe_confidence = 0</code>, y tratar esa situación como "camino despejado" desactivaría el escape de atasco precisamente cuando el dron está parado y atrapado. Tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual: un dron en hover puede subir 12 m seguidos mientras el <code>ObstacleField</code> reporta <code>DERECHA: DESPEJADO</code> ciclo tras ciclo.</p>
+<p>La condición <code>has_evidence()</code> es crítica: un hover puro produce un <code>ObstacleField</code> con <code>foe_confidence = 0</code>, y tratar esa situación como "camino despejado" desactivaría el escape de bloqueo precisamente cuando el dron está parado y atrapado. Tratar la falta de evidencia como corredor libre lleva a decisiones de escape sin fundamento perceptual: un dron en hover puede subir 12 m seguidos mientras el <code>ObstacleField</code> reporta <code>DERECHA: DESPEJADO</code> ciclo tras ciclo.</p>
 <hr />
 <h2 id="a59-memoria-corta-del-ttc-y-supresion-de-guinada">A5.9 Memoria corta del TTC y supresión de guiñada<a class="headerlink" href="#a59-memoria-corta-del-ttc-y-supresion-de-guinada" title="Permanent link">&para;</a></h2>
 <p><strong>Holdover temporal del TTC (P2).</strong> Cuando un frame aislado devuelve <code>foe_confidence = 0</code> (guiñada, textura baja), <code>FlowTTCEstimator</code> no vacía el campo de inmediato: devuelve el último campo válido con el TTC decrementado en el tiempo transcurrido (<code>ObstacleField.decay_ttc()</code>, copia inmutable con <code>source = "holdover"</code>) durante hasta <code>FLOW_HOLDOVER_MAX_FRAMES = 3</code> frames (0.6 s a 5 Hz). Superado ese límite el estimador vuelve al campo vacío, de modo que la memoria del obstáculo nunca se prolonga indefinidamente y el origen queda auditable en los logs.</p>
