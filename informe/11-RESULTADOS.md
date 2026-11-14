@@ -2,7 +2,7 @@
 
 Este capítulo reporta dos instrumentos. El banco de prueba a bordo (IT.11.0) mide, fuera de vuelo, qué preguntas sabe responder cada fuente del lazo lento, y es el que fija la configuración que vuela. La corrida productiva v4 (IT.11.1–IT.11.7) evalúa esa configuración en vuelo: seis lotes, uno por escenario, con 10 semillas por celda y 210 corridas en total, analizadas con el protocolo del capítulo 10 (IT.10.7).
 
-Todos los datos analizados en este capítulo puede accederse en crudo en https://bit.ly/dlm-data. 
+Todos los datos analizados en este capítulo puede accederse en crudo en <https://bit.ly/dlm-data>. 
 
 **Qué responde cada instrumento.** El objetivo 3 (cap. 1, IT.1.2) —un modelo de lenguaje pequeño como capa de decisión a bordo— lo responde el banco, y la respuesta es negativa. Por eso en la corrida v4 **ningún modelo de lenguaje decide en vuelo**: el brazo que conserva el nombre `slm` es la arquitectura de dos lazos con la capa estratégica respondida por la red de profundidad estimada (Anexo 12, IT.A12.1), y el VLM solo interviene antes del despegue, en el plan de ruta de los lotes 3, 4 y 6. Las comparaciones de IT.11.3–IT.11.7 miden esa arquitectura, no al VLM.
 
