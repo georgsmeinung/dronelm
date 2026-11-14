@@ -12,7 +12,7 @@ Cosys-AirSim agrega al AirSim original sensores basados en GPU y CPU —LiDAR, s
 
 El plan de trabajo aprobado preveía un entorno virtual *personalizado* de Buenos Aires, reconstruido por fotogrametría a partir de videos públicos de drones y de OpenStreetMap, con anotación de obstáculos y optimización de las mallas antes de importarlas a AirSim (`plan_tesis/plan-tesis.md`).
 
-La implementación efectivamente construida sustituyó ese pipeline de fotogrametría por activos urbanos y suburbanos ya disponibles para Unreal Engine (marketplace de Fab/Epic Games y paquetes de terceros), configurados con el plugin de Cosys-AirSim en lugar de reconstruidos a partir de video real de Buenos Aires (disponibles en el repositorio compartido de Google Drive: <https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7>).
+La implementación efectivamente construida sustituyó ese pipeline de fotogrametría por activos urbanos y suburbanos ya disponibles para Unreal Engine (marketplace de Fab/Epic Games y paquetes de terceros), configurados con el plugin de Cosys-AirSim en lugar de reconstruidos a partir de video real de Buenos Aires (disponibles en el repositorio compartido de Google Drive: <https://bit.ly/dlm-ueenv>).
 
 ### Entornos principales estructurados por Tiers de evaluación
 

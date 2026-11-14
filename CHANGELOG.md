@@ -49,6 +49,10 @@ Este CHANGELOG, `follow-up/` y `plan-tesis/` conservan "atasco" como registro hi
 - `.claude/launch.json`: configuracion `informe` (`mkdocs serve` en el puerto 8766) para revisar el render.
 - Pendiente: regenerar `docs/informe/` y el PDF (`informe/make_pdf.py`).
 
+**URL shortening**: generado las siguiente URLs cortas para el informe:
+- https://bit.ly/dlm-ueenv redirige a https://drive.google.com/drive/folders/1roLmbGFNsHXZyT3NaNzNYMuaBQ8CulX7
+- https://bit.ly/dlm-data redirige a https://drive.google.com/drive/folders/1xl-qkndGj1enm_0uCI8r0l6gCOzUfy7S
+
 # 2026-10-28 (b) - Cuadernos de airsim-loop: grafo, telemetria, estadistica, planificacion VLM y banco
 
 Sin cambios de codigo de vuelo. Los cinco cuadernos corren sin AirSim, Ollama ni GPU (kernel `airsimenv`,
