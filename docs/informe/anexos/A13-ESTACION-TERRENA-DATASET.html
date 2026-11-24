@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -17,6 +17,8 @@
       
         <link rel="prev" href="A12-OPERACION-EXPERIMENTAL.html">
       
+      
+        <link rel="next" href="A14-DOMINIOS-APLICACION.html">
       
       
         
@@ -465,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -492,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1103,6 +1105,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#a1313-candidatas-juicio-por-parches-y-eleccion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1.3 Candidatas, juicio por parches y elección
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1184,6 +1197,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1245,6 +1342,17 @@
     <span class="md-ellipsis">
       
         A13.1.2 Construcción del mapa cenital registrado
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a1313-candidatas-juicio-por-parches-y-eleccion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A13.1.3 Candidatas, juicio por parches y elección
       
     </span>
   </a>
@@ -1353,6 +1461,15 @@
 <h3 id="a1312-construccion-del-mapa-cenital-registrado">A13.1.2 Construcción del mapa cenital registrado<a class="headerlink" href="#a1312-construccion-del-mapa-cenital-registrado" title="Permanent link">&para;</a></h3>
 <p>El plan de ruta solo tiene sentido si el mapa coincide con el mundo de vuelo. Los mapas de CitySim y TownSim se construyen con el propio simulador (<code>airsim-plan/scripts/capture_ortho_map.py</code>): el dron se reubica sobre una grilla de puntos a 1000 m de altura con la cámara frontal apuntando 90° hacia abajo y un campo visual de 15°, de modo que la vista es casi ortográfica. De cada toma se usa la mitad central y se la pega en el lienzo a 2 px/m en CitySim y 4 px/m en TownSim, con el origen NED en el centro de la imagen, el norte arriba y el este a la derecha. La orientación y la escala se verifican en el arranque desplazando el dron 20 m al norte y 20 m al este y midiendo el corrimiento de la imagen por correlación de fase.</p>
 <p>Unreal Engine carga el escenario por zonas alrededor del punto de vista, y desde 1000 m no carga la zona de abajo: la imagen muestra solo calles y bases vacías. Por eso, antes de cada toma el dron baja a 40 m sobre el punto (la carga se completa en unos 3 s), vuelve a subir y captura enseguida. La toma se acepta cuando la fracción de píxeles de edificio, medida con la profundidad, deja de crecer entre dos capturas; un criterio por color no sirve, porque el agua animada nunca se estabiliza y una zona sin cargar está quieta. El resultado, <code>citysim_ortho.png</code>, cubre la ciudad completa (1920 m norte-sur por 1640 m este-oeste) y es el mapa de todas las misiones de CitySim. El de TownSim, <code>townsim_ortho.png</code> (24 tomas, 4 px/m), cubre 500 × 500 m alrededor del origen; superpuestas las trayectorias voladas, ninguna muestra de casi-contacto cae sobre pasto sin obstáculo. Las demás imágenes de esos niveles (<code>citymap.png</code>, <code>citysim_calib.png</code>, <code>townsim.png</code>, <code>townsim_calib.png</code>) no están registradas con el mundo y <code>airsim-plan/missions/maps/map_scales.json</code> las marca así.</p>
+<h3 id="a1313-candidatas-juicio-por-parches-y-eleccion">A13.1.3 Candidatas, juicio por parches y elección<a class="headerlink" href="#a1313-candidatas-juicio-por-parches-y-eleccion" title="Permanent link">&para;</a></h3>
+<p>El planificador (<code>src/planning/route_planner.py</code>) corre una sola vez por misión, antes del despegue:</p>
+<ol>
+<li><strong>Candidatas geométricas.</strong> Para cada tramo A → B (incluido el tramo desde el <em>spawn</em> al primer waypoint) se generan rutas sin mirar el mapa: la recta, las dos rutas en L (primero norte-sur o primero este-oeste) y desvíos paralelos a ±25 y ±50 m a cada lado.</li>
+<li><strong>Juicio del VLM por parches.</strong> El modelo no juzga la ruta entera, sino lo que hay debajo de ella: cada 8 m de la candidata se recorta un parche del mapa, con contexto alrededor, y el modelo lo clasifica en una de cinco clases (calle, edificio, árboles, estacionamiento, autopista elevada) con decodificación restringida. La puntuación de la candidata es la probabilidad media de «calle», leída de los <em>logprobs</em>. El modelo es el mismo de vuelo.</li>
+<li><strong>Elección.</strong> Gana la candidata de mayor puntuación; a menos de 0.05 de la mejor, la más corta. Si no aprobó ninguna, queda la recta. Los vértices intermedios de la elegida se insertan en el manifiesto como waypoints, con la altura del waypoint de destino.</li>
+</ol>
+<p>El modelo evalúa; el código solo genera las opciones y toma la mejor según el propio modelo. El plan se calcula una vez por escenario, antes de la primera corrida, y se guarda completo —cada candidata con su respuesta y probabilidad—, de modo que todas las semillas y brazos de un lote vuelan el mismo plan.</p>
+<p><strong>Por qué parches.</strong> Juzgar la ruta entera, dibujada sobre el mapa, no funciona con los modelos pequeños (IT.A13.1.1). En el banco sobre <code>citysim_pilot</code>, ninguno de los dos modelos candidatos (cap. 8, IT.8.1) distinguió una candidata por la calle de una que cruza el techo de un edificio: con la ruta dibujada como línea, uno rechazó las 37 candidatas y el otro aprobó todas; dibujada como pasillo, ambos aprobaron todas; con la pregunta invertida («¿el pasillo cruza algún techo?»), ambos respondieron «sí» a todas. La respuesta depende de la forma de la pregunta y no de la imagen. Los parches le piden al modelo lo que sí hace bien, reconocer qué hay en una imagen, en lugar de juzgar una ruta entera.</p>
 <hr />
 <h2 id="a132-interfaz-webdcs">A13.2 Interfaz WebDCS<a class="headerlink" href="#a132-interfaz-webdcs" title="Permanent link">&para;</a></h2>
 <p><strong>WebDCS</strong> (<em>Web-based Drone Control Station</em>) es la interfaz de control en tierra, construida sobre <strong>FastAPI</strong> con frontend en HTML5, CSS y JavaScript. Expone su API REST en <code>http://localhost:8000</code> y sirve el panel de operación como aplicación web estática.</p>
@@ -1519,7 +1636,7 @@
 <h2 id="a134-visor-de-auditoria-viewerhtml">A13.4 Visor de auditoría (<code>.viewer.html</code>)<a class="headerlink" href="#a134-visor-de-auditoria-viewerhtml" title="Permanent link">&para;</a></h2>
 <p>NB2 es su equivalente en Python: abre una corrida de la v4, recalcula desde el registro por ciclo las métricas del <code>summary.json</code> y grafica la traza de decisión, el <code>ObstacleField</code>, la capa estratégica y la trayectoria sobre el mapa.</p>
 <p><img src="../2026-1028 visor_auditoria.png"/></p>
-<p><em>Visor de una corrida <code>slm:depth</code> de <code>townsim_ini</code> (corrida v4, lote 3, semilla 89) en el ciclo 398: un muro cubre el campo, el lazo rápido gira 90° y adelanta la consulta estratégica #40.</em></p>
+<p><em>Visor de una corrida <code>depth2loop</code> de <code>townsim_ini</code> (corrida v4, lote 3, semilla 89; en los datos, <code>arm = slm</code>) en el ciclo 398: un muro cubre el campo, el lazo rápido gira 90° y adelanta la consulta estratégica #40.</em></p>
 <p>El visor es un único archivo HTML que se genera al cerrar cada corrida. Lleva la traza embebida como JSON dentro de la página, de modo que se abre con doble clic, sin servidor: un navegador bloquea, desde <code>file://</code>, la lectura de otro archivo local con <code>fetch</code>, pero sí reproduce un video de la misma carpeta. Tiene cuatro partes:</p>
 <ol>
 <li><strong>Videos sincronizados.</strong> El video frontal (lo que ve el grafo) y, si existe, el de la cámara externa <code>FollowCam</code>, uno al lado del otro. El externo sigue al frontal en reproducción, pausa, velocidad y saltos. Los dos tienen un cuadro por ciclo, de modo que la correspondencia entre video y traza es por número de ciclo y no por tiempo: el período real del lazo varía y el tiempo derivaría.</li>

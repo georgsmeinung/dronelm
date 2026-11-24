@@ -1,3 +1,91 @@
+# 2026-11-24 - Revision de cierre: titulo y objetivos acotados, brazo `depth2loop`, avance a 20 s e informe a ~24.200 palabras
+
+Sin cambios de comportamiento del codigo de vuelo. La tesis se cierra en su estado actual, sin campanas nuevas de
+vuelo: los defectos de la FSM quedan como limitacion declarada. Registro del recorte en
+`follow-up/2026-1124 - Plan reduccion informe a 25k palabras.md`.
+
+**Titulo, resumen y objetivos alineados con el cap. 12.**
+- Titulo nuevo: "Navegacion Autonoma de Drones en Entornos Urbanos Simulados con Vision Monocular: Flujo Optico,
+  Profundidad Estimada y los Limites de un Modelo de Vision-Lenguaje Pequeno", en la portada, `mkdocs.yml`, los
+  README y `docs/index.html`. El plan aprobado conserva su titulo; el cambio requiere el visto bueno formal.
+- Objetivo general acotado a la evaluacion en simulacion (MiniSim, TownSim y CitySim), sin logistica, agricultura
+  ni emergencias. Objetivo 1: dinamica "comparada" (no "calibrada") con telemetria real. Objetivo 3 en dos
+  partes: (a) si un VLM pequeno responde, fuera de vuelo, las preguntas de la capa tactica; (b) la arquitectura
+  de dos lazos frente a la FSM y al control reactivo. Objetivo 4 sin dominios de aplicacion. Caps. 11 y 12
+  citan "objetivo 3a" y "3b".
+- Resumen: "presenta y evalua en simulacion"; WebDCS con waypoints que define el operador (no "compila
+  directivas en lenguaje natural", cap. 4 §4.2); dinamica "comparada con" la telemetria DJI; el AUC 0.96-0.97
+  del TTC junto con la auditoria en vuelo (centro bloqueado en el 23 % de los positivos y el 17 % de los
+  negativos); resultado del avance a 20 s; palabras clave con profundidad estimada.
+- Cap. 1: sin "GPU dedicada" (todo comparte una RTX 5060 de 8 GB); §1.3 agrega el alcance experimental (solo
+  simulacion, dominios como motivacion, ningun modelo de lenguaje decide en vuelo en la v4); el parrafo de
+  §1.4 que proyectaba el resultado a otros dominios queda como hipotesis no verificada.
+
+**Brazo `slm` renombrado `depth2loop`** en el informe, los anexos, el texto de NB1, NB2, NB3 y NB5 y
+`docs/index.html` (169 reemplazos en el informe). En el codigo, la configuracion (`AGENT_ARM=slm`), las carpetas
+(`slm/depth/`), los campos (`slm_*`, bloque `slm` de la traza) y `analisis_lotes.md` sigue siendo `slm`: la
+correspondencia esta en §10.3.1 y A12.1, y cada cuaderno lleva una nota "Nombre del brazo". Cap. 9 retitulado
+"Modos de falla en un lazo de control hibrido con un modelo de vision-lenguaje"; nav de `mkdocs.yml` con "8.
+Ingenieria del VLM" y "9. Modos de falla de la integracion" (los nombres de archivo no cambian).
+
+**Resultados y limitaciones.**
+- H1 en la tabla de §11.7: "Parcial" pasa a **"No atribuible"**, como en §12.2.
+- Percepcion: §7.7 ("Que dispara la evasion en vuelo y alcance de la validacion") es la explicacion unica de los
+  tres disparadores (contacto, ocupacion, TTC con confianza >= 0.15) y de por que difieren de lo validado (FOE
+  invertido, umbrales calibrados a 320 px y volados a 640, giros sin estimacion); los caps. 5, 6 y 12 remiten ahi.
+- §3.4 "Comparacion con telemetria de vuelos reales": comparacion, no calibracion; la dinamica no se reajusto.
+- La aclaracion de que la bandera de colision no ve follaje ni apoyos va junto a cada "sin colisiones" (§11.1,
+  §11.3, §11.4, §12.2), con DistMin ~0.1 m y las 21 terminaciones `physics_locked` (6 en controles, 15 con
+  obstruccion).
+- Limitaciones nuevas en §12.3 (con eco en §10.8 y §11.0): las 10 semillas son replicas de una misma sesion y
+  pose; los tiempos se comparan solo entre misiones exitosas (lote 5: 9 frente a 6); el AUC 0.81 del plan sale
+  de 59 candidatas dependientes en 11 tramos.
+
+**Avance hacia el waypoint a 20 s de cada sub-meta** (metrica declarada en §10.6.3 y no calculada): nuevo
+`airsim-loop/experiments/analyze_subgoal_progress.py`, que la calcula de las trazas `.jsonl` de las 210 corridas,
+sin volar. Avance sobre la ruta restante del manifiesto, comparado con las respuestas `directo_libre` y con
+ventanas cada 2 s de todos los brazos, IC por bootstrap sobre corridas. Resultado: las sub-metas no frenan al
+dron, pero solo en el corredor arbolado avanzan mas que el camino directo (20.3 frente a 14.1 m); en el bloqueo
+frontal avanzan menos (12.0 frente a 15.7 m). Sin contrafactual (ninguna celda vuela sin la capa): la capa no
+estorba, pero su aporte no se distingue. Va a §10.6.3, §11.4, §11.7, §12.2 y §12.3. Salidas en
+`notebooks/output/v4_avance_submeta_20s.csv`, `v4_avance_submeta_eventos_20s.csv` (13 MB, regenerable) y
+`figures/v4_avance_submeta.png`.
+
+**Cuadernos.**
+- NB1.13 nueva: el avance a 20 s con las funciones del script, verificada contra su CSV.
+- NB5: "objetivo 3a"; NB5.10 suma el alcance de los umbrales de TTC (320/640 px, FOE invertido, 23 % frente a
+  17 % en vuelo). NB1.11: corregido "no esta en este cuaderno" (esta en NB1.12). NB4.11: AUC 0.81 sobre
+  candidatas dependientes.
+- Referencias a contenido movido a anexos (NB1, NB3, NB5) apuntan al anexo. Las tablas de NB1.1-NB1.12 siguen
+  mostrando `slm x depth` (vienen de `analyze_lotes.py`).
+
+**Extension del informe.** El cuerpo (caps. 01-12, prosa + tablas) pasa de 32.339 a **24.187 palabras**. Se
+conserva la numeracion de casi todos los capitulos; el detalle va a anexos:
+- Anexos nuevos: **A14** dominios de aplicacion (desde §2.4, con sus 9 referencias propias), **A15** comparacion
+  de la dinamica con telemetria real (desde §3.4, con las figuras) y **A16** ingenieria del VLM (desde el cap. 8:
+  parser, geometria de la grilla, barrido, vocabulario, `action_to_command`, prompts, latencia, LoRA).
+- Secciones agregadas: A5.11-A5.12 (decisiones del estimador; profundidad estimada), A10.4.8 (tabla de la FSM),
+  A10.6.5-A10.6.6 (cuando se consulta la capa; formato y validacion de la respuesta), A11.5-A11.8 (fallas 1-3 en
+  detalle; reglas apiladas), A12.6.4 (metodo del avance a 20 s), A12.10.4 (reglas del banco), A12.12 (resultados
+  de la v4 por lote) y A13.1.3 (candidatas y juicio por parches).
+- Cap. 8 renumerado: §8.2.1 -> §8.2, §8.3.3-§8.7 -> A16; referencias `IT.8.x` reasignadas en el informe, los
+  anexos, `fig-src/anexos_svg.py` y el SVG/PNG de A2. "IT.10.4.1, punto N" pasa a "IT.10.4.1".
+- 0 referencias `IT.x` sin destino en el informe, NB1-NB5, `docs/index.html` y 24 archivos de codigo; mkdocs sin
+  advertencias nuevas. Kruskal (1952) estaba sin cita antes de este cambio.
+- `mkdocs.yml` y `informe/README.md` incluyen A14-A16; §1.5 los menciona.
+
+**Figuras.**
+- Arquitectura en tres fases (cap. 4, `dos_cerebros.svg`): "Compilar la mision / LLM local compila" pasa a
+  "Definir la mision: el operador define los waypoints a mano en WebDCS"; el AUC del TTC dice "guiado; en vuelo,
+  ~azar".
+- Figura 5.2 (grafo en tres capas, SVG en `docs/grafo-de-control.html`): "navigate · brazo depth2loop (slm)";
+  el pie vuelve a explicar la fila de abajo (VLM opcional, no usado en la v4).
+- A8 (`a8-tres-capas-control.svg` y `anexos_svg.py`): "implementados: depth2loop (slm), fsm, reactive".
+- Pie del visor de auditoria (cap. 4 y A13): "en los datos, `arm = slm`".
+- Las demas figuras se revisaron (texto de los SVG y referencias `IT.x`) y siguen siendo validas.
+
+- `docs/informe/` y el PDF regenerados con `informe/build.ps1` (incluye A14-A16 y las figuras corregidas).
+
 # 2026-11-13 - Informe reducido a ~30.000 palabras, anexos A10-A13, titulo nuevo y "bloqueo" por "atasco"
 
 Sin cambios de comportamiento del codigo de vuelo (solo comentarios y textos). Los 321 tests pasan.

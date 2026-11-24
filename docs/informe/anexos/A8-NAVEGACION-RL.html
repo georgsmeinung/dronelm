@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -467,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -494,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1185,6 +1185,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1366,7 +1450,7 @@ estimada como fuente (<code>STRATEGIC_SOURCE=depth</code>): propone sub-metas en
 mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
 (<code>DEADLOCK_STRATEGY=depth</code>) resuelve los bloqueos duros e inyecta un desvío
 (<code>inject_corner</code>), igual que con los brazos existentes (cap. 5, IT.5.5, IT.5.6).</p>
-<p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>slm</code>,
+<p>Esta posición garantiza que la comparación de los cuatro brazos (<code>reactive</code>, <code>fsm</code>, <code>depth2loop</code>,
 <code>rl</code>) mida exclusivamente <strong>quién elige mejor la táctica</strong>, no quién tiene mejor lógica de
 seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:</p>
 <ul>
@@ -1408,7 +1492,7 @@ real donde la calibración del flujo es incierta.</p>
 <hr />
 <h2 id="a83-espacio-de-acciones">A8.3 Espacio de acciones<a class="headerlink" href="#a83-espacio-de-acciones" title="Permanent link">&para;</a></h2>
 <p>Se propone un espacio discreto de seis acciones, tomadas del vocabulario fijo del sistema
-(<code>VALID_ACTIONS</code>, <code>action_map.py</code>; IT.8.3.4, IT.5.4). Quedan fuera <code>GIRAR_90</code>, que el
+(<code>VALID_ACTIONS</code>, <code>action_map.py</code>; IT.A16.4, IT.5.4). Quedan fuera <code>GIRAR_90</code>, que el
 lazo rápido aplica como regla de seguridad, y <code>RETROCEDER</code>, que ningún comportamiento
 emite:</p>
 <table>
@@ -1455,7 +1539,7 @@ emite:</p>
 <p>La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
 (<code>action_to_command()</code>, IT.5.4): la política neuronal nunca genera velocidades directamente,
 lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
-saturaciones y convenciones de Body Frame que los brazos <code>fsm</code> y <code>slm</code>.</p>
+saturaciones y convenciones de Body Frame que los brazos <code>fsm</code> y <code>depth2loop</code>.</p>
 <p><strong>Espacio continuo (extensión futura).</strong> Una vez que el brazo discreto haya convergido, se
 puede reemplazar el cabezal de política por un <code>Box(low=-1, high=1, shape=(4,))</code>
 correspondiente a <span class="arithmatex">\([v_x, v_y, v_z, \dot\psi]\)</span> normalizados. El espacio continuo permite
@@ -1575,7 +1659,7 @@ una de las incógnitas clave del protocolo de evaluación de IT.A8.6.</p>
 <hr />
 <h2 id="a86-protocolo-de-evaluacion-comparativa">A8.6 Protocolo de evaluación comparativa<a class="headerlink" href="#a86-protocolo-de-evaluacion-comparativa" title="Permanent link">&para;</a></h2>
 <p>El brazo <code>rl</code>, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
-los brazos <code>slm</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, IT.10.3), para que la comparación sea válida:</p>
+los brazos <code>depth2loop</code>, <code>fsm</code> y <code>reactive</code> (cap. 10, IT.10.3), para que la comparación sea válida:</p>
 <div class="highlight"><pre><span></span><code>K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
 </code></pre></div>
 <p>Los escenarios propuestos para la evaluación del brazo <code>rl</code> son los seis de la
@@ -1636,7 +1720,7 @@ distancia mínima, tasa de consulta) más dos métricas específicas del brazo <
 <th>Métrica</th>
 <th><code>reactive</code></th>
 <th><code>fsm</code></th>
-<th><code>slm</code></th>
+<th><code>depth2loop</code></th>
 <th><code>rl</code></th>
 </tr>
 </thead>
@@ -1683,7 +1767,7 @@ obstrucción densa (<code>townsim_ini</code>) donde el flujo óptico colapsa —
 neuronal puede aprender a actuar con observación visual directa, sin depender de la
 divergencia del flujo — y competirá con <code>fsm</code> en tránsito libre, donde la política debería
 aprender a elegir <code>MANTENER_RUMBO</code> de forma casi perfecta. Su comparación más relevante
-para la tesis es contra el brazo <code>slm</code>: ambos usan visión directa, pero <code>slm</code> juzga el espacio
+para la tesis es contra el brazo <code>depth2loop</code>: ambos usan visión directa, pero <code>depth2loop</code> juzga el espacio
 libre con una red de profundidad pre-entrenada de propósito general y traduce ese juicio a
 sub-metas, mientras que <code>rl</code> es una política especializada en el espacio de maniobras de este
 sistema.</p>
@@ -1692,11 +1776,11 @@ sistema.</p>
 <p>La implementación del brazo <code>rl</code> tiene las siguientes dependencias sobre el trabajo ya
 realizado:</p>
 <ul>
-<li><strong>Seis lotes completados</strong> (Anexo 12, IT.A12.5.3): la comparación <code>slm</code> vs. <code>fsm</code> vs. <code>reactive</code>
+<li><strong>Seis lotes completados</strong> (Anexo 12, IT.A12.5.3): la comparación <code>depth2loop</code> vs. <code>fsm</code> vs. <code>reactive</code>
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.</li>
-<li><strong>Brazo <code>slm</code> validado</strong> con <code>DEADLOCK_STRATEGY=depth</code>: la política RL se entrenará
-  en el mismo entorno de simulación en el que se midió el <code>slm</code>; si ese entorno cambia
+<li><strong>Brazo <code>depth2loop</code> validado</strong> con <code>DEADLOCK_STRATEGY=depth</code>: la política RL se entrenará
+  en el mismo entorno de simulación en el que se midió el <code>depth2loop</code>; si ese entorno cambia
   durante el entrenamiento, los resultados no son comparables.</li>
 </ul>
 <p>Las dependencias de software son mínimas (sobre el entorno conda <code>airsimenv</code> existente):</p>

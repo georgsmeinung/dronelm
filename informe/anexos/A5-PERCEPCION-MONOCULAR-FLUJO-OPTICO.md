@@ -329,7 +329,7 @@ El diseño como objeto inmutable (`@dataclass(frozen=True)`) garantiza que ning�
 
 ### A5.8.2 `has_open_corridor` y `sector_towards_waypoint`
 
-Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (`has_open_corridor`, para decidir si un bloqueo tiene un corredor visible); el brazo `slm` detecta el bloqueo con el `StallDetector` (cap. 5, IT.5.3.1).
+Dos funciones de módulo sirven como interfaz de alto nivel. Solo la FSM las usa (`has_open_corridor`, para decidir si un bloqueo tiene un corredor visible); el brazo `depth2loop` detecta el bloqueo con el `StallDetector` (cap. 5, IT.5.3.1).
 
 **`sector_towards_waypoint(bearing_err_deg)`** mapea el error de rumbo al waypoint activo a uno de los tres sectores visuales:
 
@@ -382,3 +382,33 @@ El estimador expone todos sus parámetros clave a través de variables de entorn
 | `OBSTACLE_TTC_BLOCKED_S` | 2.5 | Umbral de TTC para declarar celda bloqueada (s) |
 | `OBSTACLE_MIN_CONFIDENCE` | 0.15 | Confianza mínima para que ocupación vote bloqueo |
 | `OBSTACLE_MIN_CONFIDENCE_TTC` | 0.35 | Confianza mínima para que TTC vote bloqueo solo |
+
+---
+
+## A5.11 Decisiones de implementación del estimador de flujo
+
+**Guard de rotación.** Antes de computar el flujo, el estimador verifica que la rotación entre fotogramas no exceda 2°. Durante maniobras activas (`GIRAR_90`, `EVADIR_*`) el yaw cambia 4–9° por ciclo; en esas condiciones el modelo de derotación de primer orden (IT.A5.3.3) introduce errores de linealización y las regiones de baja textura generan flujo esencialmente aleatorio. Sin este guard, cada giro produce «nubes» de falsos obstáculos. La solución conservadora es descartar el ciclo y declarar el campo degradado: es mejor declarar incertidumbre que producir un falso positivo que cancele una maniobra en ejecución.
+
+**Ancho de trabajo.** Los fotogramas se convierten a escala de grises y se escalan a 640 px de ancho, con la distancia focal escalada en proporción; a 320 px, el valor usado en la validación del capítulo 7, los objetos finos como las ramas quedan bajo el piso de ruido.
+
+**Giroscopio.** Cuando la telemetría trae la velocidad angular del giroscopio, el estimador la integra en el intervalo entre fotogramas; en AirSim, cuyo IMU es ideal, es equivalente a restar los ángulos de dos ciclos, pero el diseño queda preparado para hardware real. El mismo principio de derotación se usa en visión activa para vehículos terrestres ([Dickmanns, 2024](../13-REFERENCIAS.md#ref-dickmanns-2024)) y en SLAM monocular ([Chen et al., 2022](../13-REFERENCIAS.md#ref-chen-w-2022)).
+
+**Constante de ocupación.** La constante $k$ (en el código, $0.450/8 \approx 0.056$ s) se determinó empíricamente contra la profundidad de referencia del simulador: es un factor de escala, no un valor físicamente derivado. Como la ocupación es lineal en la divergencia media por debajo de 1, el umbral de bloqueo de 0.011 equivale a pedir una divergencia media de al menos ~0.2 s⁻¹ en la celda.
+
+**Calibrador de `main.py`.** `main.py` incorpora un calibrador que ajusta el umbral de ocupación al ruido del entorno en los primeros ciclos; el ejecutor de experimentos no lo usa, de modo que las corridas en lote operan con el valor fijo de 0.011 (cap. 7, IT.7.5).
+
+**Umbrales diferenciados de confianza.** La ocupación puede votar bloqueo con confianza 0.15, pero el TTC solo, sin apoyo de la ocupación, necesita 0.35: el camino de «pocos inliers» del FOE produce una confianza de 0.3 como señal de evidencia degradada, que supera el piso general, y con un único umbral el TTC degradado votaría con la misma autoridad que un FOE robusto.
+
+## A5.12 Profundidad monocular estimada: del fotograma a la decisión y limitaciones
+
+**Del fotograma a la decisión.** La red procesa el fotograma crudo del ciclo, el mismo que usa el flujo óptico, y produce una matriz de profundidades en metros. Sobre el recorte cuadrado central del fotograma —el mismo que recibiría el VLM—, dividido en una grilla de 3×3, se toma el **percentil 5** de la profundidad de cada sector: lo más cercano, sin que lo decidan píxeles sueltos. Un sector es libre si ese valor es ≥ 15 m, la misma distancia a la que se fija la sub-meta. Es el estadístico con el que se construyen las etiquetas de referencia del banco (cap. 7, IT.7.1), de modo que la exactitud medida allí es la del juicio que usa el vuelo. El servicio devuelve la misma estructura que el VLM —el estado de los nueve sectores para la capa estratégica, y si cada rumbo es transitable para el barrido (cap. 5, IT.5.5.3, IT.5.6)—, y la auditoría guarda el p5 de cada sector en metros.
+
+**Dónde corre.** En un hilo de servicio (Anexo 10, IT.A10.6.2), con ~110 ms en vuelo con la GPU compartida y ~440 MiB de VRAM. No lee el canal de profundidad del simulador: recibe el mismo fotograma RGB que el flujo, y una guardia automatizada verifica que ese canal siga fuera del lazo (cap. 5, IT.5.8).
+
+**Limitaciones.**
+
+- **Dominio.** Depth Anything V2 se entrenó en parte con imágenes sintéticas, y la etiqueta del banco sale del mismo render que la red ve. En una cámara real el desempeño puede ser menor; la validación en imágenes reales está pendiente.
+- **Escala métrica.** La variante para exteriores se ajustó con datos de conducción, a la altura de un auto. Las distancias absolutas a 10–30 m de altura no están calibradas: el umbral de 15 m funciona como corte de clasificación validado en el banco, no como una medición en metros.
+- **Objetos finos y follaje.** Ramas, cables y copas semitransparentes son el caso más difícil para cualquier estimador denso; el lote del corredor arbolado de TownSim (Anexo 12, IT.A12.3.2) lo pone a prueba.
+- **Sin memoria.** Cada consulta juzga un fotograma aislado, sin fusión temporal ni mapa.
+- **Campo de visión.** Solo se analiza el recorte central; lo que queda a los costados del fotograma no participa del juicio.

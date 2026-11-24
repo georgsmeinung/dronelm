@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños, en Unreal Engine." />
-  <title>Navegación Autónoma de Drones con Visión Monocular y VLM - Tesis Maestría Ciencia de Datos</title>
+    content="Documentación web de la tesis de Maestría en Ciencia de Datos: Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño, en Unreal Engine." />
+  <title>Navegación Autónoma de Drones con Visión Monocular en Simulación - Tesis Maestría Ciencia de Datos</title>
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,7 +71,7 @@
     <!-- Main Content Area -->
     <main>
       <header>
-        <h1>Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños</h1>
+        <h1>Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño</h1>
         <p class="lead-subtitle">
           Documentación técnica y resumen de la tesis de posgrado de la <strong>Maestría en Ciencia de Datos</strong> de
           la <strong>Universidad Austral</strong>. El trabajo presenta un sistema integral de planificación previa,
@@ -81,7 +81,7 @@
         <div class="badges-row">
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/LICENSE.md"
             class="badge-pill badge-blue">Licencia: MIT</a>
-          <span class="badge-pill badge-teal">Versión: 2026-11-12</span>
+          <span class="badge-pill badge-teal">Versión: 2026-11-24</span>
           <a href="https://github.com/georgsmeinung/dronelm/blob/main/plan-tesis/plan-tesis.md"
             class="badge-pill badge-gray">Plan: Aprobado (2025-08-29)</a>
           <span class="badge-pill badge-orange">Plataforma: Python 3.10+ / UE 5.5 / Cosys-AirSim</span>
@@ -100,19 +100,19 @@
           </div>
           <div class="card">
             <h4>Corrida Productiva v4: 210 Corridas</h4>
-            <p>Seis lotes, uno por escenario (MiniSim, TownSim y CitySim; tres de control y tres con obstrucción), 10 semillas por celda, techo de 1200 s por corrida. Celdas <code>slm:depth</code>, <code>fsm:depth</code> y <code>reactive</code>, más <code>fsm:blind</code> en los lotes con obstrucción. La bandera de colisión de AirSim no se activó, pero no detecta follaje ni apoyos: la seguridad queda sin medir. Análisis con <code>analyze_lotes.py</code>: permutación exacta sobre rangos, delta de Cliff con IC bootstrap y Bonferroni sobre 18 comparaciones (capítulos 11 y 12 del informe).</p>
+            <p>Seis lotes, uno por escenario (MiniSim, TownSim y CitySim; tres de control y tres con obstrucción), 10 semillas por celda, techo de 1200 s por corrida. Celdas <code>depth2loop</code>, <code>fsm:depth</code> y <code>reactive</code>, más <code>fsm:blind</code> en los lotes con obstrucción. La bandera de colisión de AirSim no se activó, pero no detecta follaje ni apoyos: la seguridad queda sin medir. Análisis con <code>analyze_lotes.py</code>: permutación exacta sobre rangos, delta de Cliff con IC bootstrap y Bonferroni sobre 18 comparaciones (capítulos 11 y 12 del informe).</p>
           </div>
           <div class="card">
             <h4>Ruta Libre: la Capa Deliberativa Solo Cuesta</h4>
-            <p>En los tres controles el orden de tiempo es <code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code>, con las nueve comparaciones significativas. La razón <code>slm</code>/<code>reactive</code> baja con la longitud de la ruta (1.95, 1.49 y 1.39 en ~180, ~420 y ~600 m): un costo aproximadamente aditivo. No lo pone la inferencia, que no frena al dron, sino las sub-metas en ruta libre y el gobernador de velocidad.</p>
+            <p>En los tres controles el orden de tiempo es <code>reactive</code> &lt; <code>depth2loop</code> &lt; <code>fsm</code>, con las nueve comparaciones significativas. La razón <code>depth2loop</code>/<code>reactive</code> baja con la longitud de la ruta (1.95, 1.49 y 1.39 en ~180, ~420 y ~600 m): un costo aproximadamente aditivo. No lo pone la inferencia, que no frena al dron, sino las sub-metas en ruta libre y el gobernador de velocidad.</p>
           </div>
           <div class="card">
             <h4>Obstrucción: Deciden la Evasión y la Salida de Bloqueos</h4>
-            <p>En el corredor arbolado y en el bloqueo frontal de TownSim, el control reactivo no completa ninguna de sus 20 corridas; las celdas con evasión por flujo y alguna salida de los bloqueos completan entre 5 y 9 de cada 10, y <code>fsm:blind</code>, sin profundidad ni capa estratégica, 9 de 10 en los dos lotes. La profundidad estimada no es necesaria para completar. Frente a la FSM, <code>slm:depth</code> la supera en SPL en <code>townsim_ini</code> y <code>citysim_pilot</code> (δ = +0.81 y +1.00), pero la ventaja no se puede atribuir a la capa estratégica.</p>
+            <p>En el corredor arbolado y en el bloqueo frontal de TownSim, el control reactivo no completa ninguna de sus 20 corridas; las celdas con evasión por flujo y alguna salida de los bloqueos completan entre 5 y 9 de cada 10, y <code>fsm:blind</code>, sin profundidad ni capa estratégica, 9 de 10 en los dos lotes. La profundidad estimada no es necesaria para completar. Frente a la FSM, <code>depth2loop</code> la supera en SPL en <code>townsim_ini</code> y <code>citysim_pilot</code> (δ = +0.81 y +1.00), pero la ventaja no se puede atribuir a la capa estratégica.</p>
           </div>
           <div class="card">
             <h4>Dos Defectos del Brazo FSM</h4>
-            <p>El análisis de las corridas encontró que la FSM declara un deadlock falso al terminar el despegue vertical (el contador de bloqueo sube durante el ascenso) y que su techo de escape de 30 m convierte cada escape vertical en un giro en las rutas altas. Ambos la hacen más lenta y la exponen a más fallas: las comparaciones contra la FSM favorecen a <code>slm</code>.</p>
+            <p>El análisis de las corridas encontró que la FSM declara un deadlock falso al terminar el despegue vertical (el contador de bloqueo sube durante el ascenso) y que su techo de escape de 30 m convierte cada escape vertical en un giro en las rutas altas. Ambos la hacen más lenta y la exponen a más fallas: las comparaciones contra la FSM favorecen a <code>depth2loop</code>.</p>
           </div>
           <div class="card">
             <h4>Controles sin Plan de Ruta</h4>
@@ -181,18 +181,20 @@
           severos desafíos derivados de la alta densidad de obstáculos, la degradación de señales satelitales (GNSS) en
           cañones urbanos y las restricciones presupuestarias que descartan sensores de alto costo como LiDAR. Para
           abordar esta problemática bajo estrictas restricciones de hardware y en conformidad con las normativas locales
-          (ANAC Res. 880/2019), esta tesis presenta un sistema integral de navegación basado en <strong>visión monocular</strong> y en
-          <strong>modelos de lenguaje visual pequeños</strong> ejecutados localmente, y evalúa si uno de esos modelos
-          puede actuar como capa de decisión a bordo.
+          (ANAC Res. 880/2019), esta tesis presenta y evalúa en simulación un sistema de navegación basado en <strong>visión monocular</strong>,
+          y mide si un <strong>modelo de visión-lenguaje pequeño</strong> ejecutado localmente puede actuar como capa
+          de decisión a bordo.
         </p>
         <p>
           La arquitectura desacopla un módulo de planificación deliberativa en tierra (estación de control
-          <strong>WebDCS</strong>, que compila directivas en lenguaje natural a un manifiesto inmutable de navegación)
+          <strong>WebDCS</strong>, donde el operador define los waypoints sobre la carta y los fija en un manifiesto
+          inmutable de navegación)
           de un lazo táctico a bordo de alta frecuencia. El módulo de percepción implementa un pipeline ligero de
           <strong>flujo óptico denso derotado</strong> mediante telemetría de actitud, mapeo de ocupación espacial
           (<code>ObstacleField</code>) y estimación de <strong>Tiempo-a-Colisión (TTC)</strong> a partir de la
-          divergencia del campo de flujo, alcanzando un área bajo la curva ROC de <strong>0.96–0.97</strong> en su
-          validación frente a canales de profundidad de referencia. En la capa de decisión a bordo, un grafo de estados
+          divergencia del campo de flujo, con un área bajo la curva ROC de <strong>0.96–0.97</strong> en los escenarios
+          guiados de validación; en vuelo esa discriminación no se reproduce: auditado contra la distancia mínima a los
+          obstáculos, el sector central figura bloqueado en el 23 % de los positivos y en el 17 % de los negativos. En la capa de decisión a bordo, un grafo de estados
           (LangGraph) separa un lazo reactivo rápido de una capa estratégica asíncrona que propone sub-metas en
           coordenadas del mundo, ancladas a la pose del fotograma que analizó, para tolerar la latencia. La capa se
           diseñó para un modelo de visión-lenguaje pequeño; medido contra etiquetas de referencia, el modelo a bordo
@@ -205,8 +207,8 @@
           <p>
             <strong>Entorno de Validación y Benchmarking:</strong> La experimentación se realiza sobre
             <strong>Cosys-AirSim</strong> en <strong>Unreal Engine 5.5</strong>, empleando el entorno urbano
-            <strong><code>CitySim</code></strong> como plataforma principal de benchmark y calibrando la cinemática de
-            vuelo contra conjuntos de datos de telemetría de drones comerciales reales (DJI / Zenodo).
+            <strong><code>CitySim</code></strong> como plataforma principal de benchmark, con la cinemática de vuelo comparada —no reajustada— con telemetría
+            de drones comerciales reales (DJI / Zenodo). Toda la evaluación es en simulación.
           </p>
         </div>
       </section>
@@ -222,14 +224,14 @@
         <figure style="margin: 28px 0; background-color: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;">
           <img src="https://raw.githubusercontent.com/georgsmeinung/dronelm/refs/heads/main/informe/2026-1028 dos_cerebros.png" alt="Arquitectura en tres fases: planificación en tierra, lazo táctico a bordo y auditoría" style="width: 100%; height: auto; display: block; object-fit: contain;">
           <figcaption style="padding: 16px; border-top: 1px solid var(--rule); text-align: left; color: var(--muted); font-size: 13px;">
-            <strong>Arquitectura desacoplada:</strong> en tierra se compila la misión y el VLM planifica la ruta sobre el mapa cenital; a bordo, el lazo rápido es el único que comanda velocidades y el lazo lento propone sub-metas con la profundidad estimada; después, cada corrida queda auditada por ciclo.
+            <strong>Arquitectura desacoplada:</strong> en tierra el operador define la misión y el VLM planifica la ruta sobre el mapa cenital; a bordo, el lazo rápido es el único que comanda velocidades y el lazo lento propone sub-metas con la profundidad estimada; después, cada corrida queda auditada por ciclo.
           </figcaption>
         </figure>
 
         <h3>1. Lazo Deliberativo de Tierra y GCS (<code>airsim-plan</code> / WebDCS)</h3>
         <p>
-          Opera antes de que los motores se armen. El operador humano define la misión en lenguaje natural en la consola
-          de la estación terrena. Un modelo de lenguaje local compila estas directivas en un <strong>Manifiesto de Vuelo
+          Opera antes de que los motores se armen. El operador humano define los waypoints de la misión sobre la carta
+          de la estación terrena, que los fija en un <strong>Manifiesto de Vuelo
             Inmutable</strong> (<code>MissionManifest.json</code>), validado mediante esquemas Pydantic para garantizar
           que todos los waypoints se encuentren dentro del polígono georreferenciado del mapa y en coordenadas locales
           NED seguras (z &lt; 0).
@@ -277,7 +279,7 @@
             conversión de macro-acciones simbólicas a velocidades lineales y tasa de guiñada, asegurando simetría e
             invariancia física en todos los brazos de control.</li>
           <li><strong>Tres Brazos Experimentales Comparables:</strong> Evaluación estandarizada entre el brazo
-            <code>slm</code> (lazo rápido + lazo lento), la máquina de estados <code>fsm</code> y el control reactivo
+            <code>depth2loop</code> (lazo rápido + lazo lento), la máquina de estados <code>fsm</code> y el control reactivo
             <code>reactive</code> bajo idéntico espacio de acciones y percepción; la estrategia <code>blind</code>
             ofrece el contraste sin VLM en ningún punto.</li>
         </ul>
@@ -379,7 +381,7 @@
 
       <!-- Modos de Falla y Contratos -->
       <section id="modos-falla">
-        <h2>Taxonomía de Modos de Falla en Lazos Híbridos con LLM</h2>
+        <h2>Taxonomía de Modos de Falla en un Lazo Híbrido con un Modelo de Visión-Lenguaje</h2>
         <p>
           Uno de los principales aportes metodológicos del trabajo es la documentación sistemática de los modos de falla
           propios de la integración de modelos de lenguaje en lazos robóticos de control en tiempo real:
@@ -479,7 +481,7 @@
             </div>
             <div class="timeline-content">
               <h4>Experimentación y Análisis Comparativo</h4>
-              <p>Evaluación de tres brazos experimentales (arquitectura de dos lazos <code>slm</code>, FSM y reactivo) bajo condiciones idénticas. Medición de métricas de rendimiento y robustez.</p>
+              <p>Evaluación de tres brazos experimentales (arquitectura de dos lazos <code>depth2loop</code>, FSM y reactivo) bajo condiciones idénticas. Medición de métricas de rendimiento y robustez.</p>
             </div>
           </div>
 

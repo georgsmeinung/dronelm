@@ -66,7 +66,7 @@
   <text class="head-ink" x="44" y="384" text-anchor="start" >CAPA TÁCTICA · LAZO RÁPIDO, 5 Hz</text>
   <text class="txt" x="44" y="412" text-anchor="start" >ObstacleField + guiado → macro-acción → action_to_command() → velocidades (cap. 5)</text>
   <rect class="card" x="800" y="372" width="356" height="84" rx="8" />
-  <text class="txt-b" x="816" y="402" text-anchor="start" >implementados: slm, fsm, reactive</text>
+  <text class="txt-b" x="816" y="402" text-anchor="start" >implementados: depth2loop (slm), fsm, reactive</text>
   <text class="txt-b" x="816" y="424" text-anchor="start" >propuesto: rl, política neuronal (este anexo)</text>
   <path class="ln" d="M400 474 L400 496" marker-end="url(#ah)" />
   <text class="small" x="412" y="490" text-anchor="start" >comando de velocidad</text>

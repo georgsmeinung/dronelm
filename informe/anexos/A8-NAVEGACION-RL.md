@@ -32,7 +32,7 @@ mundo, y el barrido de cuatro rumbos juzgado con la misma profundidad
 (`DEADLOCK_STRATEGY=depth`) resuelve los bloqueos duros e inyecta un desvío
 (`inject_corner`), igual que con los brazos existentes (cap. 5, IT.5.5, IT.5.6).
 
-Esta posición garantiza que la comparación de los cuatro brazos (`reactive`, `fsm`, `slm`,
+Esta posición garantiza que la comparación de los cuatro brazos (`reactive`, `fsm`, `depth2loop`,
 `rl`) mida exclusivamente **quién elige mejor la táctica**, no quién tiene mejor lógica de
 seguridad ni mejor infraestructura de actuación, ya que los cuatro comparten:
 
@@ -85,7 +85,7 @@ real donde la calibración del flujo es incierta.
 ## A8.3 Espacio de acciones
 
 Se propone un espacio discreto de seis acciones, tomadas del vocabulario fijo del sistema
-(`VALID_ACTIONS`, `action_map.py`; IT.8.3.4, IT.5.4). Quedan fuera `GIRAR_90`, que el
+(`VALID_ACTIONS`, `action_map.py`; IT.A16.4, IT.5.4). Quedan fuera `GIRAR_90`, que el
 lazo rápido aplica como regla de seguridad, y `RETROCEDER`, que ningún comportamiento
 emite:
 
@@ -101,7 +101,7 @@ emite:
 La traducción a comandos cinemáticos es idéntica a la de los brazos existentes
 (`action_to_command()`, IT.5.4): la política neuronal nunca genera velocidades directamente,
 lo que garantiza que las maniobras elegidas sean físicamente seguras y respeten las mismas
-saturaciones y convenciones de Body Frame que los brazos `fsm` y `slm`.
+saturaciones y convenciones de Body Frame que los brazos `fsm` y `depth2loop`.
 
 **Espacio continuo (extensión futura).** Una vez que el brazo discreto haya convergido, se
 puede reemplazar el cabezal de política por un `Box(low=-1, high=1, shape=(4,))`
@@ -207,7 +207,7 @@ La rama CNN extrae características visuales del frame RGB. La rama FC procesa e
 ## A8.6 Protocolo de evaluación comparativa
 
 El brazo `rl`, una vez entrenado, debe evaluarse bajo exactamente el mismo protocolo que
-los brazos `slm`, `fsm` y `reactive` (cap. 10, IT.10.3), para que la comparación sea válida:
+los brazos `depth2loop`, `fsm` y `reactive` (cap. 10, IT.10.3), para que la comparación sea válida:
 
 ```
 K = 10 semillas por celda, con la celda rl:depth (o rl sin barrido) agregada a cada lote
@@ -235,7 +235,7 @@ distancia mínima, tasa de consulta) más dos métricas específicas del brazo `
 
 La tabla de comparación propuesta para el capítulo 11 sería:
 
-| Métrica | `reactive` | `fsm` | `slm` | `rl` |
+| Métrica | `reactive` | `fsm` | `depth2loop` | `rl` |
 |---|---|---|---|---|
 | Tasa de éxito — tránsito libre | ref | ref | ref | ? |
 | Tasa de éxito — obstrucción densa | ref | ref | ref | ? |
@@ -248,7 +248,7 @@ obstrucción densa (`townsim_ini`) donde el flujo óptico colapsa — porque la 
 neuronal puede aprender a actuar con observación visual directa, sin depender de la
 divergencia del flujo — y competirá con `fsm` en tránsito libre, donde la política debería
 aprender a elegir `MANTENER_RUMBO` de forma casi perfecta. Su comparación más relevante
-para la tesis es contra el brazo `slm`: ambos usan visión directa, pero `slm` juzga el espacio
+para la tesis es contra el brazo `depth2loop`: ambos usan visión directa, pero `depth2loop` juzga el espacio
 libre con una red de profundidad pre-entrenada de propósito general y traduce ese juicio a
 sub-metas, mientras que `rl` es una política especializada en el espacio de maniobras de este
 sistema.
@@ -260,11 +260,11 @@ sistema.
 La implementación del brazo `rl` tiene las siguientes dependencias sobre el trabajo ya
 realizado:
 
-- **Seis lotes completados** (Anexo 12, IT.A12.5.3): la comparación `slm` vs. `fsm` vs. `reactive`
+- **Seis lotes completados** (Anexo 12, IT.A12.5.3): la comparación `depth2loop` vs. `fsm` vs. `reactive`
   debe tener resultados estables antes de agregar un cuarto brazo, para que la comparación
   tenga una línea base válida.
-- **Brazo `slm` validado** con `DEADLOCK_STRATEGY=depth`: la política RL se entrenará
-  en el mismo entorno de simulación en el que se midió el `slm`; si ese entorno cambia
+- **Brazo `depth2loop` validado** con `DEADLOCK_STRATEGY=depth`: la política RL se entrenará
+  en el mismo entorno de simulación en el que se midió el `depth2loop`; si ese entorno cambia
   durante el entrenamiento, los resultados no son comparables.
 
 Las dependencias de software son mínimas (sobre el entorno conda `airsimenv` existente):

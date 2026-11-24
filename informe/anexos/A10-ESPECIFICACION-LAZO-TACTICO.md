@@ -139,13 +139,22 @@ Todos los comportamientos comparten `action_to_command()` (`src/agents/action_ma
 | `FRENAR` | 0 | 0 | 0 (+ ancla) | 0 | — |
 | `RETROCEDER` | −1.2 | 0 | guiado | 0 (rumbo congelado) | — |
 
-`RETROCEDER` forma parte del vocabulario, pero **ningún comportamiento del brazo `slm` lo emite** (IT.5.3.4). `GANAR_ALTURA` asciende en el lugar y sin deriva lateral: una deriva alejaría el waypoint en el plano XY, la métrica que decide si el bloqueo se resolvió.
+`RETROCEDER` forma parte del vocabulario, pero **ningún comportamiento del brazo `depth2loop` lo emite** (IT.5.3.4). `GANAR_ALTURA` asciende en el lugar y sin deriva lateral: una deriva alejaría el waypoint en el plano XY, la métrica que decide si el bloqueo se resolvió.
 
-Las duraciones de las maniobras comprometidas del brazo `slm` son: `MANEUVER_DURATION_S` (2.0 s en producción) para la macro resuelta por el barrido; `ESCAPE_MANEUVER_DURATION_S` (1.6 s) para el escape vertical; `GIRAR90_DURATION_S` (1.0 s) para el giro. Las evasiones laterales de `evasive_node` no se comprometen (IT.A10.4.5): la entrada `EVADIR_*` de `_MANEUVER_DURATION` en `graph.py` solo se usaría si la decidiera `_dispatch`, y en la configuración evaluada ninguna regla lo hace. El brazo `fsm`, en cambio, compromete `EVADIR_*`, `GANAR_ALTURA` y `PERDER_ALTURA` durante `FSM_MANEUVER_DURATION_S` (1.5 s).
+Las duraciones de las maniobras comprometidas del brazo `depth2loop` son: `MANEUVER_DURATION_S` (2.0 s en producción) para la macro resuelta por el barrido; `ESCAPE_MANEUVER_DURATION_S` (1.6 s) para el escape vertical; `GIRAR90_DURATION_S` (1.0 s) para el giro. Las evasiones laterales de `evasive_node` no se comprometen (IT.A10.4.5): la entrada `EVADIR_*` de `_MANEUVER_DURATION` en `graph.py` solo se usaría si la decidiera `_dispatch`, y en la configuración evaluada ninguna regla lo hace. El brazo `fsm`, en cambio, compromete `EVADIR_*`, `GANAR_ALTURA` y `PERDER_ALTURA` durante `FSM_MANEUVER_DURATION_S` (1.5 s).
 
 ### A10.4.8 Detalle del brazo `fsm`
 
-Su detección de bloqueo usa el contador de progreso del tracker (`evasion_stuck_cycles`) con los umbrales efectivo y duro (IT.A10.8.2). Ante un bloqueo, si `DEADLOCK_STRATEGY` es `depth` o `deep_vlm`, delega en el mismo barrido panorámico del brazo `slm` (IT.5.6); si no, alterna `CLIMB`/`DESCEND` hasta `MAX_CONSECUTIVE_ESCAPES` (2) y luego cambia de estrategia con `GIRAR_90` y una esquina de desvío propia.
+Su detección de bloqueo usa el contador de progreso del tracker (`evasion_stuck_cycles`) con los umbrales efectivo y duro (IT.A10.8.2). Ante un bloqueo, si `DEADLOCK_STRATEGY` es `depth` o `deep_vlm`, delega en el mismo barrido panorámico del brazo `depth2loop` (IT.5.6); si no, alterna `CLIMB`/`DESCEND` hasta `MAX_CONSECUTIVE_ESCAPES` (2) y luego cambia de estrategia con `GIRAR_90` y una esquina de desvío propia.
+
+| Estado FSM | Macro-acción | Condición |
+|---|---|---|
+| `CRUISE` | `MANTENER_RUMBO` | Centro despejado (default) |
+| `AVOID_LEFT` / `AVOID_RIGHT` | `EVADIR_*` | Centro bloqueado o TTC ≤ 3.5 s; lado menos ocupado |
+| `CLIMB` / `DESCEND` | `GANAR_ALTURA` / `PERDER_ALTURA` | Bloqueo con todos los sectores bloqueados (alternados) |
+| `BRAKE` | `FRENAR` | TTC central ≤ 1.5 s con un lateral libre |
+
+La FSM usa el mismo `ObstacleField`, el mismo vocabulario de macro-acciones y el mismo traductor a cinemática que el brazo `depth2loop`; cambia quién elige la acción, con estos umbrales fijos.
 
 ---
 
@@ -187,6 +196,31 @@ Si el servicio no tiene el resultado y no hay pedido pendiente durante más de `
 
 NB4.9 recalcula, con el ancla y la respuesta registradas, las sub-metas de una corrida del lote 6 y obtiene los mismos puntos que se inyectaron en vuelo. El ancla guarda posición (x, y, z) y yaw del fotograma, timestamp, etiqueta del waypoint real y su distancia horizontal, la dirección de la meta (azimut y elevación respecto del eje óptico) y el sector en el que cae. El rumbo de cada sector es el yaw del ancla más el azimut del centro del sector, y su elevación la del centro del sector, ambos calculados con proyección *pinhole* sobre los tercios del recorte, con la focal del fotograma completo: para un fotograma de 3:2 y 90° de campo horizontal, el recorte abarca ±33.7° y los centros de los sectores quedan a ±24.0° tanto en azimut como en elevación. La altitud de la sub-meta cambia `d · tan(elevación del sector)`, acotada a ±`VLM_MAX_DZ_M` (4 m) y sin bajar de `VLM_SUBGOAL_MIN_ALT_M` (6 m); una sub-meta que el dron ya superó (a menos de `VLM_SUBGOAL_MIN_AHEAD_M` = 4 m) se descarta.
 
+### A10.6.5 Cuándo se consulta
+
+La capa consulta cada 1 s con la profundidad (3 s con el VLM), o de inmediato cuando la regla 7 lo pide (giro de 90° ante un frente bloqueado), siempre que no haya un barrido en curso, que el dron esté a 8 m de altura o más, que el waypoint real esté a más de 8 m —más cerca, una sub-meta lo saltearía— y que la meta caiga dentro del recorte que analiza la fuente. La excepción es un dron que lleva 3 s sin acercarse a su objetivo, por ejemplo deslizándose a lo largo de una fachada: entonces se consulta igual, y la respuesta nunca se interpreta como «camino directo libre».
+
+La consulta se hace **también con una sub-meta activa**. La pregunta es siempre sobre el waypoint real, y una respuesta nueva reemplaza a la sub-meta pendiente: así una sub-meta mala se corrige en la consulta siguiente, en lugar de persistir hasta que el detector de bloqueo la saque (Anexo 11, IT.A11.4.5).
+
+### A10.6.6 Formato de la respuesta y validación contra el presente
+
+El pedido lleva un recorte cuadrado del centro del fotograma, dividido en una grilla de 3×3 por tercios —columnas A, B, C de izquierda a derecha; filas 1, 2, 3 de arriba abajo, con la fila 2 a la altura del dron— y una marca «GOAL» en la dirección del destino. La respuesta marca cada sector como libre o bloqueado:
+
+```json
+{"cells": {"A1": "free",    "B1": "free",    "C1": "free",
+           "A2": "blocked", "B2": "blocked", "C2": "free",
+           "A3": "blocked", "B3": "blocked", "C3": "blocked"}}
+```
+
+`free` significa «se puede volar al menos 15 m en la dirección de ese sector»; `blocked`, que un edificio, muro, árbol, puente o techo está a menos de 15 m. Con la profundidad estimada, un sector es libre si el percentil 5 de su profundidad es ≥ 15 m.
+
+Cuando la respuesta llega, la capa la traduce con el ancla (IT.A10.6.4) y la valida contra el presente:
+
+1. La descarta si pasaron más de 10 s o si el waypoint real cambió.
+2. Si el sector de la meta está libre, **no agrega nada**; si había una sub-meta pendiente, la descarta: el camino directo está libre y el desvío sobra.
+3. Si no, elige el sector libre más cercano en ángulo a la dirección de la meta —ante empate, la fila del medio, después la de arriba, después la de abajo, de modo que con la meta de frente un rodeo por el costado precede a uno vertical— y fija una sub-meta **desde el ancla** en la dirección de ese sector, a 15 m como máximo y nunca más lejos que el waypoint real. La altitud cambia según la elevación del sector, acotada a ±4 m.
+4. Descarta la sub-meta si el dron ya la superó mientras la fuente procesaba.
+
 ---
 
 ## A10.7 Barrido panorámico en deadlock (`deep_scan`): máquina de estados
@@ -224,7 +258,7 @@ Con la profundidad, el pedido lleva los fotogramas crudos de los rumbos; un rumb
 
 ### A10.8.1 Contador de progreso
 
-`record_progress(dist_xy, bearing_err_deg)` mantiene `evasion_stuck_cycles`: se reinicia cuando la distancia mejora `WAYPOINT_PROGRESS_EPS_M` (0.5 m) sobre la mínima vista; se exime al dron que gira activamente (error de rumbo > 30°) hasta 15 ciclos consecutivos; en otro caso, se incrementa. Este contador lo consume el brazo `fsm`; el brazo `slm` usa las señales del `StallDetector` (IT.A10.3).
+`record_progress(dist_xy, bearing_err_deg)` mantiene `evasion_stuck_cycles`: se reinicia cuando la distancia mejora `WAYPOINT_PROGRESS_EPS_M` (0.5 m) sobre la mínima vista; se exime al dron que gira activamente (error de rumbo > 30°) hasta 15 ciclos consecutivos; en otro caso, se incrementa. Este contador lo consume el brazo `fsm`; el brazo `depth2loop` usa las señales del `StallDetector` (IT.A10.3).
 
 ### A10.8.2 Umbrales de bloqueo
 
@@ -236,7 +270,7 @@ Con un waypoint bajo una estructura horizontal, la corrección de altitud empuja
 
 ### A10.8.4 Sub-metas del lazo lento
 
-`inject_corner_waypoint(x, y, z, label)` inserta una sub-meta temporal delante del waypoint activo. Todas las sub-metas del brazo `slm` provienen del lazo lento (capa estratégica o barrido, con la red de profundidad o con el VLM) y se insertan **tal cual**: una sub-meta nueva reemplaza a las temporales pendientes y reinicia el contador de progreso. La única condición es la deduplicación: si la sub-meta pendiente está a menos de `SUBGOAL_DEDUP_M` (10 m) de la nueva, la nueva se ignora; reemplazarla por otra casi igual reiniciaría el contador de progreso y un dron bloqueado nunca declararía el deadlock.
+`inject_corner_waypoint(x, y, z, label)` inserta una sub-meta temporal delante del waypoint activo. Todas las sub-metas del brazo `depth2loop` provienen del lazo lento (capa estratégica o barrido, con la red de profundidad o con el VLM) y se insertan **tal cual**: una sub-meta nueva reemplaza a las temporales pendientes y reinicia el contador de progreso. La única condición es la deduplicación: si la sub-meta pendiente está a menos de `SUBGOAL_DEDUP_M` (10 m) de la nueva, la nueva se ignora; reemplazarla por otra casi igual reiniciaría el contador de progreso y un dron bloqueado nunca declararía el deadlock.
 
 `update()` mide en cada ciclo la distancia al waypoint **real** aunque el objetivo activo sea una sub-meta: si el dron entra en el radio de aceptación del waypoint real, descarta las sub-metas pendientes (`drop_temporary()`) y lo acepta. El bucle externo también las descarta cuando la capa estratégica marca `_clear_subgoals`.
 

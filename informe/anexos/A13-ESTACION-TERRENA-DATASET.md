@@ -20,6 +20,18 @@ El plan de ruta solo tiene sentido si el mapa coincide con el mundo de vuelo. Lo
 
 Unreal Engine carga el escenario por zonas alrededor del punto de vista, y desde 1000 m no carga la zona de abajo: la imagen muestra solo calles y bases vacías. Por eso, antes de cada toma el dron baja a 40 m sobre el punto (la carga se completa en unos 3 s), vuelve a subir y captura enseguida. La toma se acepta cuando la fracción de píxeles de edificio, medida con la profundidad, deja de crecer entre dos capturas; un criterio por color no sirve, porque el agua animada nunca se estabiliza y una zona sin cargar está quieta. El resultado, `citysim_ortho.png`, cubre la ciudad completa (1920 m norte-sur por 1640 m este-oeste) y es el mapa de todas las misiones de CitySim. El de TownSim, `townsim_ortho.png` (24 tomas, 4 px/m), cubre 500 × 500 m alrededor del origen; superpuestas las trayectorias voladas, ninguna muestra de casi-contacto cae sobre pasto sin obstáculo. Las demás imágenes de esos niveles (`citymap.png`, `citysim_calib.png`, `townsim.png`, `townsim_calib.png`) no están registradas con el mundo y `airsim-plan/missions/maps/map_scales.json` las marca así.
 
+### A13.1.3 Candidatas, juicio por parches y elección
+
+El planificador (`src/planning/route_planner.py`) corre una sola vez por misión, antes del despegue:
+
+1. **Candidatas geométricas.** Para cada tramo A → B (incluido el tramo desde el *spawn* al primer waypoint) se generan rutas sin mirar el mapa: la recta, las dos rutas en L (primero norte-sur o primero este-oeste) y desvíos paralelos a ±25 y ±50 m a cada lado.
+2. **Juicio del VLM por parches.** El modelo no juzga la ruta entera, sino lo que hay debajo de ella: cada 8 m de la candidata se recorta un parche del mapa, con contexto alrededor, y el modelo lo clasifica en una de cinco clases (calle, edificio, árboles, estacionamiento, autopista elevada) con decodificación restringida. La puntuación de la candidata es la probabilidad media de «calle», leída de los *logprobs*. El modelo es el mismo de vuelo.
+3. **Elección.** Gana la candidata de mayor puntuación; a menos de 0.05 de la mejor, la más corta. Si no aprobó ninguna, queda la recta. Los vértices intermedios de la elegida se insertan en el manifiesto como waypoints, con la altura del waypoint de destino.
+
+El modelo evalúa; el código solo genera las opciones y toma la mejor según el propio modelo. El plan se calcula una vez por escenario, antes de la primera corrida, y se guarda completo —cada candidata con su respuesta y probabilidad—, de modo que todas las semillas y brazos de un lote vuelan el mismo plan.
+
+**Por qué parches.** Juzgar la ruta entera, dibujada sobre el mapa, no funciona con los modelos pequeños (IT.A13.1.1). En el banco sobre `citysim_pilot`, ninguno de los dos modelos candidatos (cap. 8, IT.8.1) distinguió una candidata por la calle de una que cruza el techo de un edificio: con la ruta dibujada como línea, uno rechazó las 37 candidatas y el otro aprobó todas; dibujada como pasillo, ambos aprobaron todas; con la pregunta invertida («¿el pasillo cruza algún techo?»), ambos respondieron «sí» a todas. La respuesta depende de la forma de la pregunta y no de la imagen. Los parches le piden al modelo lo que sí hace bien, reconocer qué hay en una imagen, en lugar de juzgar una ruta entera.
+
 ---
 
 ## A13.2 Interfaz WebDCS
@@ -106,7 +118,7 @@ NB2 es su equivalente en Python: abre una corrida de la v4, recalcula desde el r
 
 <img src="../2026-1028 visor_auditoria.png"/>
 
-*Visor de una corrida `slm:depth` de `townsim_ini` (corrida v4, lote 3, semilla 89) en el ciclo 398: un muro cubre el campo, el lazo rápido gira 90° y adelanta la consulta estratégica #40.*
+*Visor de una corrida `depth2loop` de `townsim_ini` (corrida v4, lote 3, semilla 89; en los datos, `arm = slm`) en el ciclo 398: un muro cubre el campo, el lazo rápido gira 90° y adelanta la consulta estratégica #40.*
 
 El visor es un único archivo HTML que se genera al cerrar cada corrida. Lleva la traza embebida como JSON dentro de la página, de modo que se abre con doble clic, sin servidor: un navegador bloquea, desde `file://`, la lectura de otro archivo local con `fetch`, pero sí reproduce un video de la misma carpeta. Tiene cuatro partes:
 

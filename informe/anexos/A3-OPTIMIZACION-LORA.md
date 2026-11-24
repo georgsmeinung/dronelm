@@ -1,11 +1,11 @@
 # Anexo 3: Optimización y especialización de modelos de visión-lenguaje mediante LoRA/QLoRA para navegación aérea autónoma
 
-El modelo multimodal del sistema es **LFM2.5-VL-1.6B** (tag `lfm2.5-vl-1.6b:q4km-ctx8k`), ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (IT.8.1); el otro candidato evaluado es **Qwen2.5-VL-3B-Instruct** (Qwen Team, 2025). Las cifras de memoria de este anexo se calcularon para el modelo de 3 B y son una cota superior para el de 1.6 B. Con la configuración por defecto el VLM no decide en vuelo, porque en el banco de prueba no distingue sectores libres de bloqueados (cap. 8; cap. 11, IT.11.0): una adaptación LoRA sería la vía para que lo haga, si el banco muestra que el modelo adaptado distingue sectores libres de bloqueados en un entorno que no vio durante el entrenamiento. Sin adaptar, el modelo opera en régimen *zero-shot / in-context learning*, guiado por prompts breves (IT.8.5) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (IT.8.2, Anexo 4; Willard & Louf, 2023).
+El modelo multimodal del sistema es **LFM2.5-VL-1.6B** (tag `lfm2.5-vl-1.6b:q4km-ctx8k`), ejecutado localmente bajo cuantización Q4_K_M en un entorno con recursos de cómputo y memoria de video acotados (IT.8.1); el otro candidato evaluado es **Qwen2.5-VL-3B-Instruct** (Qwen Team, 2025). Las cifras de memoria de este anexo se calcularon para el modelo de 3 B y son una cota superior para el de 1.6 B. Con la configuración por defecto el VLM no decide en vuelo, porque en el banco de prueba no distingue sectores libres de bloqueados (cap. 8; cap. 11, IT.11.0): una adaptación LoRA sería la vía para que lo haga, si el banco muestra que el modelo adaptado distingue sectores libres de bloqueados en un entorno que no vio durante el entrenamiento. Sin adaptar, el modelo opera en régimen *zero-shot / in-context learning*, guiado por prompts breves (IT.A16.6) y acoplado a un motor de decodificación gramaticalmente restringida por esquema JSON (IT.8.2, Anexo 4; Willard & Louf, 2023).
 
 Esta configuración tiene dos limitaciones operativas para el vuelo reactivo:
 
 1. **Capacidad de discriminación:** el modelo generalista no separa sectores volables de bloqueados en la imagen de a bordo (AUC 0.53 en el banco) y responde con sesgos por posición en la grilla (Anexo 11, IT.A11.4.6).
-2. **Latencia:** ~0.8 s por consulta con imagen en la GPU compartida con la simulación (cap. 8, IT.8.6), cuatro ciclos del lazo, frente a ~0.1 s de la red de profundidad.
+2. **Latencia:** ~0.8 s por consulta con imagen en la GPU compartida con la simulación (Anexo 16, IT.A16.7), cuatro ciclos del lazo, frente a ~0.1 s de la red de profundidad.
 
 Este anexo desarrolla los fundamentos matemáticos y metodológicos de **Adaptación de Bajo Rango (LoRA; [Hu et al., 2022](../13-REFERENCIAS.md#ref-hu-2022))** y sus extensiones contemporáneas (**QLoRA; Dettmers et al., 2024** y **DoRA; Liu et al., 2024**) como línea de trabajo futuro (IT.12.4): internalizar el dominio físico-espacial y el formato estricto directamente en los tensores de ponderación de la red, habilitando respuestas en tiempo real (< 500 ms) sin alterar la arquitectura base ni requerir hardware de nivel servidor.
 
@@ -82,11 +82,11 @@ La integración de un adaptador LoRA en la consulta al VLM transforma la interfa
 <img src="a3-impacto-lora.png"/>
 
 ### A3.2.1 Reducción del presupuesto de tokens y compresión de latencia
-En el régimen *zero-shot* actual (IT.8.5), cada consulta de la capa estratégica reitera en el *system prompt*:
+En el régimen *zero-shot* actual (IT.A16.6), cada consulta de la capa estratégica reitera en el *system prompt*:
 
 * La definición de la grilla de 3×3 (columnas A–C, filas 1–3) y de la marca de la meta.
 * El criterio operativo: `free` si el dron puede volar 15 m en esa dirección, `blocked` si hay un edificio, muro, árbol, puente o techo más cerca.
-* La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2.1).
+* La instrucción de responder solo con JSON (la forma la fija el esquema de IT.8.2).
 
 Al especializar el modelo con LoRA, **el criterio y la forma de la respuesta quedan incorporados en los pesos**, y la consulta puede reducirse al *user prompt* que ya usa el sistema más la imagen con la grilla dibujada:
 
@@ -94,7 +94,7 @@ Al especializar el modelo con LoRA, **el criterio y la forma de la respuesta que
 Goal WP_3: 34 m, in cell B2. Altitude 10 m.   + [Front camera, 3x3 grid]
 ```
 
-El ahorro es acotado: el *system prompt* ya tiene tres o cuatro oraciones, y la mayor parte del preprocesamiento (*prefill*) la ocupan los 64–256 tokens con que el codificador visual representa la imagen (IT.8.1.2), que LoRA no reduce. La ganancia esperable de LoRA no es de latencia —la consulta ya tarda ~0.8 s, muy por debajo de la edad máxima de 10 s de una respuesta (IT.8.6)— sino de discriminación (IT.A3.2.2).
+El ahorro es acotado: el *system prompt* ya tiene tres o cuatro oraciones, y la mayor parte del preprocesamiento (*prefill*) la ocupan los 64–256 tokens con que el codificador visual representa la imagen (IT.8.1.2), que LoRA no reduce. La ganancia esperable de LoRA no es de latencia —la consulta ya tarda ~0.8 s, muy por debajo de la edad máxima de 10 s de una respuesta (IT.A16.7)— sino de discriminación (IT.A3.2.2).
 
 ### A3.2.2 Discriminación de sectores: de la posición en la imagen a la escena
 El banco de prueba muestra que el modelo sin adaptar responde sobre todo a la posición del sector y no a la escena: las filas superior e inferior de la grilla salen «libres» en todas las muestras, la fila del medio depende de la columna, y los *logprobs* no rescatan la grilla (exactitud balanceada 0.53, AUC 0.53; cap. 11, IT.11.0). LoRA permite reentrenar la distribución condicional $P(y \mid X)$ sobre pares con etiqueta de referencia para que la respuesta dependa de lo que hay en cada sector:
@@ -111,7 +111,7 @@ La adaptación solo se justificaría si el banco de prueba, sobre un entorno no 
 El factor determinante del éxito de la adaptación no radica en el volumen de parámetros, sino en la calidad informativa y la diversidad topológica del conjunto de datos de entrenamiento.
 
 ### A3.3.1 Estructura del dataset multimodal de navegación
-Cada instancia de entrenamiento es un par supervisado $(X_t, Y_t)$ con la misma forma que la consulta estratégica del sistema (IT.8.2.1, IT.A4.9.2):
+Cada instancia de entrenamiento es un par supervisado $(X_t, Y_t)$ con la misma forma que la consulta estratégica del sistema (IT.8.2, IT.A4.9.2):
 
 $$X_t = \left\{ I_t^{\text{grilla}},\ \text{prompt}_t \right\}$$
 
@@ -123,7 +123,7 @@ donde:
 * $\text{prompt}_t$ es el *user prompt* con la distancia a la meta, su sector (o su ángulo si está fuera del recorte) y la altitud.
 * $Y_t$ asigna a cada uno de los nueve sectores la etiqueta de referencia: `free` si el percentil 5 de la profundidad planar del simulador en el sector es ≥ 15 m y `blocked` si no (cap. 7, IT.7.1). La profundidad del simulador solo etiqueta los datos; el modelo nunca la recibe.
 
-El mismo esquema vale para el barrido, con cuatro imágenes numeradas y la salida `views` del esquema panorámico (IT.8.2.1).
+El mismo esquema vale para el barrido, con cuatro imágenes numeradas y la salida `views` del esquema panorámico (IT.8.2).
 
 ### A3.3.2 Mitigación de la deriva cinemática mediante DAgger
 El entrenamiento mediante simple Clonación de Comportamiento (*Behavioral Cloning*, BC) a partir de vuelos nominales perfectos sufre del problema de **deriva covariada (*Covariate Shift*)** ([Codevilla et al., 2019](../13-REFERENCIAS.md#ref-codevilla-2019)): ante el menor error acumulado de predicción, el vehículo ingresa en estados cinemáticos no presentes en el conjunto de entrenamiento, colapsando en decisiones divergentes.
@@ -143,10 +143,10 @@ Para evitar el sobreajuste a texturas específicas de los mapas virtuales de Unr
 | **Exactitud balanceada de la grilla** (banco, IT.11.0) | 0.53 | **≥ 0.65**, IC 95 % sobre el azar, en un entorno no visto |
 | **AUC de la grilla con *logprobs*** (diagnóstico) | 0.53 | > 0.75 |
 | **Barrido: rumbo transitable** (banco, IT.11.0) | no pasa el criterio | pasa el criterio |
-| **Adherencia al esquema JSON** (IT.8.2.1) | ~98 % con decodificación restringida | ~100 % |
-| **Latencia de la consulta estratégica** (IT.8.6) | ~0.8 s | sin cambio (< 10 s de edad máxima) |
+| **Adherencia al esquema JSON** (IT.8.2) | ~98 % con decodificación restringida | ~100 % |
+| **Latencia de la consulta estratégica** (IT.A16.7) | ~0.8 s | sin cambio (< 10 s de edad máxima) |
 
-Las cifras objetivo son criterios de pase, no resultados: ninguna adaptación se entrenó en esta tesis (IT.8.7).
+Las cifras objetivo son criterios de pase, no resultados: ninguna adaptación se entrenó en esta tesis (IT.A16.8).
 
 ---
 
@@ -172,7 +172,7 @@ El ajuste fino no reemplaza la decodificación restringida por gramáticas (IT.8
 Un principio fundacional de DroneLM es que los modelos de lenguaje son aproximadores estocásticos y **bajo ninguna circunstancia deben gobernar de forma directa los actuadores físicos sin arbitraje determinista** (Gat, 1998; cap. 5 y 8). La incorporación de adaptadores LoRA preserva íntegramente las tres salvaguardas del sistema:
 
 1. **Lazo rápido único que comanda velocidades:** la capa deliberativa solo propone sub-metas ancladas al mundo; la evasión por flujo óptico y TTC sigue actuando en el mismo ciclo ante cualquier riesgo inminente (cap. 5, IT.5.3.3).
-2. **Parser por modo:** valida cada respuesta contra su esquema y rechaza la que no coincide, sin sustituirla por un valor por defecto (IT.8.2.2).
-3. **Perro guardián temporal** (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido; edad máxima de 10 s en la capa estratégica, cap. 8, IT.8.6): una respuesta tardía se descarta y el barrido cae al escape vertical.
+2. **Parser por modo:** valida cada respuesta contra su esquema y rechaza la que no coincide, sin sustituirla por un valor por defecto (IT.A16.1).
+3. **Perro guardián temporal** (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido; edad máxima de 10 s en la capa estratégica, Anexo 16, IT.A16.7): una respuesta tardía se descarta y el barrido cae al escape vertical.
 
 Como línea de extensión formulada en el trabajo futuro (IT.12.4), esta especialización posibilitará la transferencia de la capa deliberativa a plataformas de cómputo en borde (NVIDIA Jetson Orin Nano / Xavier NX con enlaces serie MAVLink hacia autopilotos PX4), consolidando a DroneLM como un copiloto táctico local, seguro por diseño y plenamente autónomo en entornos reales.

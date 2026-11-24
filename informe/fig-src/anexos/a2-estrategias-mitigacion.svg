@@ -83,7 +83,7 @@
   <text class="txt" x="40" y="354" text-anchor="start" >Se enmascaran los tokens que</text>
   <text class="txt" x="40" y="374" text-anchor="start" >violan el esquema JSON: el 100 %</text>
   <text class="txt" x="40" y="394" text-anchor="start" >de las respuestas tiene formato</text>
-  <text class="txt" x="40" y="414" text-anchor="start" >válido (IT.8.2.1).</text>
+  <text class="txt" x="40" y="414" text-anchor="start" >válido (IT.8.2).</text>
   <rect class="card-acc" x="316" y="292" width="276" height="166" rx="8" />
   <circle class="badge" cx="342" cy="318" r="12" />
   <text class="badge-t" x="342" y="322.5" text-anchor="middle" >2</text>
@@ -91,7 +91,7 @@
   <text class="txt" x="332" y="354" text-anchor="start" >Respuestas en enumeraciones</text>
   <text class="txt" x="332" y="374" text-anchor="start" >cerradas; la geometría y la</text>
   <text class="txt" x="332" y="394" text-anchor="start" >cinemática son funciones</text>
-  <text class="txt" x="332" y="414" text-anchor="start" >deterministas (IT.8.3, IT.8.4).</text>
+  <text class="txt" x="332" y="414" text-anchor="start" >deterministas (IT.8.3, IT.A16.5).</text>
   <rect class="card-acc" x="608" y="292" width="276" height="166" rx="8" />
   <circle class="badge" cx="634" cy="318" r="12" />
   <text class="badge-t" x="634" y="322.5" text-anchor="middle" >3</text>

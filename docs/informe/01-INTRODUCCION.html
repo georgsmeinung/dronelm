@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -569,7 +569,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -596,7 +596,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1135,6 +1135,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1243,28 +1327,29 @@
 <h1 id="1-introduccion">1. Introducción<a class="headerlink" href="#1-introduccion" title="Permanent link">&para;</a></h1>
 <h2 id="11-motivacion-y-contexto">1.1 Motivación y contexto<a class="headerlink" href="#11-motivacion-y-contexto" title="Permanent link">&para;</a></h2>
 <p>Los drones autónomos han cruzado la frontera que separa la plataforma experimental de la infraestructura real. El mercado global de UAVs comerciales alcanzó los USD 28,6 mil millones en 2025, con una proyección de superar los USD 52,1 mil millones en 2029, impulsado por entregas de última milla, inspección de infraestructura y agricultura de precisión (<a href="13-REFERENCIAS.html#ref-dataintelo-2025">Dataintelo, 2025</a>); en el frente militar, Ucrania fabricó cerca de dos millones de drones en 2024 y reentrenó sus modelos con datos de combate real (<a href="13-REFERENCIAS.html#ref-breaking-defense-2025">Breaking Defense, 2025</a>). En ambos casos la exigencia técnica es la misma: un vehículo de bajo costo debe percibir su entorno, decidir en milisegundos y actuar sin un humano en el lazo, con hardware de borde limitado y a menudo sin conectividad.</p>
-<p>Argentina enfrenta esa exigencia en cuatro dominios concretos. El <strong>litoral marítimo</strong>: una Zona Económica Exclusiva de 1,6 millones de km² que no se puede cubrir con medios tripulados, para la que el país incorporó en 2026 drones VTOL V-Bat (<a href="13-REFERENCIAS.html#ref-infobae-2026">Infobae, 2026</a>) y discute un Sistema Nacional de Vigilancia Marítima con UAVs (<a href="13-REFERENCIAS.html#ref-el-estrategico-2026">El Estratégico, 2026</a>). Los <strong>incendios forestales</strong> en la Patagonia y el litoral fluvial, donde el Ministerio de Ambiente ya opera UAVs de detección temprana. La <strong>agricultura de precisión</strong>, el dominio de adopción más masiva: la superficie tratada con drones pasó de 50.000 hectáreas en 2024 a un millón en 2025 (<a href="13-REFERENCIAS.html#ref-dataportuaria-2026">Dataportuaria, 2026</a>), con una flota en rápido crecimiento (<a href="13-REFERENCIAS.html#ref-infocampo-pulverizacion-2025">Infocampo, 2025</a>), la Red de Drones del INTA (<a href="13-REFERENCIAS.html#ref-inta-2025">INTA, 2025</a>) y ensayos de detección por IA en tiempo real (<a href="13-REFERENCIAS.html#ref-agrolatam-2025">Agrolatam, 2025</a>), pero todavía sin un régimen específico para la aplicación de fitosanitarios. Y la <strong>seguridad y logística urbana en Buenos Aires</strong>, que articula el entorno experimental de este trabajo: la Ciudad abrió en 2025 el marco para la entrega comercial con drones (<a href="13-REFERENCIAS.html#ref-iprofesional-2025">iProfesional, 2025</a>), la ANAC simplificó la operación de aeronaves no tripuladas, y la Policía de la Ciudad ya vuela drones integrados a su sistema de videovigilancia (<a href="13-REFERENCIAS.html#ref-perfil-2026">Perfil, 2026</a>; <a href="13-REFERENCIAS.html#ref-buenos-aires-ciudad-2023">Buenos Aires Ciudad, 2023</a>). El capítulo 2 (IT.2.4) desarrolla estos dominios.</p>
+<p>Argentina enfrenta esa exigencia en cuatro dominios concretos: el <strong>litoral marítimo</strong>, una Zona Económica Exclusiva de 1,6 millones de km² para la que el país incorporó en 2026 drones VTOL (<a href="13-REFERENCIAS.html#ref-infobae-2026">Infobae, 2026</a>); los <strong>incendios forestales</strong>, con UAVs de detección temprana en parques nacionales; la <strong>agricultura de precisión</strong>, donde la superficie tratada con drones pasó de 50.000 hectáreas en 2024 a un millón en 2025 (<a href="13-REFERENCIAS.html#ref-dataportuaria-2026">Dataportuaria, 2026</a>); y la <strong>seguridad y logística urbana en Buenos Aires</strong>, que articula el entorno experimental de este trabajo, con la entrega comercial con drones habilitada y la Policía de la Ciudad volando drones integrados a su videovigilancia (<a href="13-REFERENCIAS.html#ref-perfil-2026">Perfil, 2026</a>). El capítulo 2 (IT.2.4) los sintetiza y el Anexo 14 los desarrolla.</p>
 <p>El vuelo urbano agrega dificultades que no aparecen en espacios abiertos: alta densidad de obstáculos, degradación del GPS en los cañones urbanos, variaciones extremas de iluminación y, en el contexto latinoamericano, presupuestos que descartan sensores costosos como el LiDAR y marcos regulatorios específicos (<a href="13-REFERENCIAS.html#ref-anac-880-2019">Resolución ANAC 880/2019</a>; <a href="13-REFERENCIAS.html#ref-decreto-663-2024">Decreto 663/2024</a>). Un dron sin percepción confiable ni capacidad de decisión robusta puede colisionar, invadir zonas sensibles o interferir con otras operaciones (<a href="13-REFERENCIAS.html#ref-samy-2019">Samy et al., 2019</a>; <a href="13-REFERENCIAS.html#ref-aldao-2022">Aldao et al., 2022</a>).</p>
-<p>Este trabajo se enmarca en esa tensión: cómo dotar a un cuadricóptero eVTOL de navegación autónoma reactiva usando exclusivamente visión monocular y hardware de bajo costo —sin LiDAR ni GPU dedicada—, con rigor metodológico y un diseño de seguridad explícito.</p>
+<p>Este trabajo se enmarca en esa tensión: cómo dotar a un cuadricóptero eVTOL de navegación autónoma reactiva usando exclusivamente visión monocular y hardware de bajo costo —sin LiDAR, y con la simulación, la percepción y los modelos compartiendo una única GPU de consumo (RTX 5060, 8 GB)—, con rigor metodológico y un diseño de seguridad explícito.</p>
 <h2 id="12-objetivos">1.2 Objetivos<a class="headerlink" href="#12-objetivos" title="Permanent link">&para;</a></h2>
-<p><strong>Objetivo general.</strong> Desarrollar un sistema de visión por computadora basado en percepción monocular con capacidad de navegación autónoma de cuadricópteros eVTOL, aplicable a logística urbana, mantenimiento de infraestructura, agricultura de precisión, vigilancia de áreas extensas y atención de emergencias en escenarios representativos del territorio argentino.</p>
+<p><strong>Objetivo general.</strong> Desarrollar y evaluar en simulación un sistema de navegación autónoma para cuadricópteros eVTOL basado en percepción monocular —flujo óptico, profundidad monocular estimada y un modelo de visión-lenguaje pequeño ejecutado localmente—, en tres entornos urbanos de dificultad creciente (<code>MiniSim</code>, <code>TownSim</code> y <code>CitySim</code>).</p>
 <p><strong>Objetivos específicos:</strong></p>
 <ol>
-<li>Implementar un pipeline reproducible sobre el simulador Cosys-AirSim (basado en Unreal Engine 5.5) que permita validar el desempeño del sistema de navegación en condiciones controladas, repetibles y con telemetría calibrada frente a vuelos reales.</li>
+<li>Implementar un pipeline reproducible sobre el simulador Cosys-AirSim (basado en Unreal Engine 5.5) que permita evaluar el sistema de navegación en condiciones controladas y repetibles, con la dinámica de vuelo simulada comparada con telemetría de vuelos reales.</li>
 <li>Integrar detección de obstáculos y navegación reactiva a partir de percepción monocular ligera —flujo óptico denso derotado, estimación de TTC, mapa de ocupación espacial— optimizada para hardware de bajo costo, de modo de sostener un caso de negocio viable para economías con recursos limitados.</li>
-<li>Evaluar el rendimiento de un modelo de lenguaje pequeño (SLM) como capa de decisión táctica frente a una máquina de estados finitos (FSM) —el estándar de facto en pilotos automáticos— y frente a un controlador puramente reactivo, usando tasa de éxito de misión, tiempo de reacción y longitud de trayectoria ponderada por éxito (SPL) como métricas de comparación en entornos urbanos de complejidad creciente.</li>
-<li>Documentar con evidencia medida los modos de falla estructurales de la integración SLM–lazo de control, identificando patrones transferibles a los dominios de aplicación de alta pertinencia local (vigilancia marítima, respuesta a incendios forestales, agricultura de precisión) donde los recursos computacionales de borde y la ausencia de conectividad imponen las mismas restricciones estudiadas en el entorno experimental.</li>
+<li>Evaluar la capa de decisión táctica en dos partes: (a) medir, fuera de vuelo y contra etiquetas de referencia, si un modelo de visión-lenguaje pequeño ejecutado a bordo responde las preguntas de esa capa —qué sectores del fotograma son volables y qué rumbos están abiertos—; y (b) comparar en vuelo la arquitectura de dos lazos resultante con una máquina de estados finitos (FSM) —el estándar de facto en pilotos automáticos— y con un controlador puramente reactivo, usando tasa de éxito de misión, tiempo de reacción y longitud de trayectoria ponderada por éxito (SPL) en escenarios de complejidad creciente.</li>
+<li>Documentar con evidencia medida los modos de falla estructurales de la integración entre la percepción, el estado del grafo de control y el modelo de lenguaje, y las salvaguardas que los contienen.</li>
 </ol>
 <h2 id="13-alcance-y-diseno-de-la-arquitectura">1.3 Alcance y diseño de la arquitectura<a class="headerlink" href="#13-alcance-y-diseno-de-la-arquitectura" title="Permanent link">&para;</a></h2>
 <p>El lazo rápido del sistema usa una percepción monocular ligera <strong>sin redes neuronales de detección</strong>: flujo óptico denso derotado con la telemetría de actitud y estimación física del Tiempo-a-Colisión (TTC). La elección responde a tres razones que el capítulo 6 desarrolla: una latencia determinista en un cómputo compartido con la simulación y los modelos; la robustez ante obstáculos de cualquier clase, porque la divergencia del flujo modela el fenómeno físico de aproximación y no categorías aprendidas; y la adecuación a un campo visual dominado por fachadas, del que el flujo estima la ocupación por sectores sin entrenamiento previo.</p>
 <p>La capa de decisión es un grafo LangGraph con dos lazos desacoplados: un lazo rápido de guiado y evasión por flujo óptico, que es el único que comanda velocidades, y un lazo lento que, de forma asíncrona, propone sub-metas en coordenadas del mundo ancladas a la pose del fotograma que observó. El lazo lento decide qué sectores son volables con una red de profundidad monocular estimada desde el mismo RGB (Depth Anything V2, ~25 M de parámetros). El modelo de visión-lenguaje pequeño (LFM2.5-VL-1.6B, cuantizado, en la misma GPU que la simulación) trabaja en la planificación de ruta previa al vuelo, sobre el mapa cenital: evaluado contra etiquetas de referencia (cap. 11, IT.11.0), no distingue sectores volables de bloqueados en la imagen de a bordo, y por eso esa pregunta la responde la profundidad estimada.</p>
+<p><strong>Alcance experimental.</strong> Toda la evaluación es en simulación, en los tres entornos del capítulo 3; no hay vuelos en hardware físico. Los dominios de aplicación de IT.1.1 motivan las restricciones de diseño —cámara monocular, cómputo local, sin conectividad—, pero no se evalúan. En la comparación entre brazos de la corrida v4 ningún modelo de lenguaje decide en vuelo: el modelo de visión-lenguaje solo planifica la ruta antes del despegue (cap. 11, IT.11.0).</p>
 <h2 id="14-el-hilo-conductor-de-la-tesis">1.4 El hilo conductor de la tesis<a class="headerlink" href="#14-el-hilo-conductor-de-la-tesis" title="Permanent link">&para;</a></h2>
 <p>En arquitecturas robóticas híbridas donde un modelo de lenguaje juzga el entorno para tomar decisiones de navegación, la integridad del contrato de interfaz entre la percepción, el modelo y el control resulta crítica. En este trabajo, <strong>las fallas más costosas de diagnosticar no estuvieron en las respuestas del modelo, sino en la fidelidad y consistencia del contrato de datos que lo alimenta y que ejecuta lo que responde</strong>. Esas fallas tuvieron, además, un efecto que solo se vio al final: mientras la interfaz distorsionaba las respuestas, no se podía saber si el modelo discriminaba la escena. Corregida la interfaz y medido contra etiquetas de referencia, el modelo resultó no hacerlo (IT.11.0), y por eso la decisión a bordo la toma una red de profundidad estimada.</p>
 <p>Cuando la percepción o el estado del sistema entregan representaciones desincronizadas, degradadas o vacías, los modelos de lenguaje generan respuestas sintácticamente válidas y aparentemente razonables a partir de premisas falsas. Como el modelo no lanza excepciones y el vehículo sigue su trayectoria, estas fallas son invisibles si solo se observa el comportamiento cinemático. <a href="13-REFERENCIAS.html#ref-zhu-2024">Zhu et al. (2024)</a> plantean hasta qué punto los LLMs comprenden el contexto que reciben; este trabajo la aborda empíricamente desde el ángulo opuesto: ¿qué ocurre cuando ese contexto está sistemáticamente corrompido?</p>
-<p>La necesidad de auditar los contratos de datos y de salvaguardas deterministas en lazos de control asistidos por modelos de lenguaje es el hilo conductor de este trabajo. Su relevancia excede la simulación: en patrulla marítima, incendios forestales o pulverización dirigida, donde el UAV opera sin red y sin supervisión directa, un fallo silencioso del contrato de datos no distingue un obstáculo real de un falso positivo, y la robustez de ese contrato es un requisito operacional. El capítulo 9 documenta los seis modos de falla estructurales identificados y sus salvaguardas, y el capítulo 12 los retoma como conclusión central.</p>
+<p>La necesidad de auditar los contratos de datos y de salvaguardas deterministas en lazos de control asistidos por modelos de lenguaje es el hilo conductor de este trabajo. Los modos de falla se documentan en simulación y no se verificaron en vuelo real ni en los dominios de IT.1.1; lo que sugieren para ellos es una hipótesis: donde el UAV opera sin red y sin supervisión directa, un fallo silencioso del contrato de datos no se corregiría desde tierra, y la robustez de ese contrato pasaría a ser un requisito operacional. El capítulo 9 documenta los seis modos de falla estructurales identificados y sus salvaguardas, y el capítulo 12 los retoma como conclusión central.</p>
 <h2 id="15-estructura-del-informe">1.5 Estructura del informe<a class="headerlink" href="#15-estructura-del-informe" title="Permanent link">&para;</a></h2>
-<p>El capítulo 2 sitúa el trabajo respecto de la literatura —navegación autónoma de UAVs, percepción monocular, arquitecturas de control con modelos de lenguaje y dominios de aplicación locales— y lo posiciona en el espacio de soluciones. El capítulo 3 describe el entorno de simulación (Unreal Engine 5.5 con Cosys-AirSim, tres entornos de dificultad creciente) y su validación frente a vuelos reales, y el capítulo 4, la planificación en tierra y la estación de control WebDCS. Los capítulos 5 a 9 documentan el sistema a bordo: el grafo de control con sus dos lazos (cap. 5), la percepción monocular (cap. 6), la validación del TTC (cap. 7), la ingeniería del modelo de visión-lenguaje (cap. 8) y los modos de falla de la integración (cap. 9). El capítulo 10 describe la metodología experimental y los capítulos 11 y 12, los resultados y las conclusiones.</p>
-<p>Los anexos reúnen el material que sostiene el argumento sin ser necesario para seguirlo: la exploración de modelos pequeños, su optimización y la decodificación restringida (Anexos 1 a 4); los fundamentos matemáticos de la percepción (Anexo 5); la configuración y reproducibilidad del entorno (Anexo 6); propuestas de trabajo futuro (Anexos 7 a 9); y la especificación de implementación del lazo táctico, el catálogo de incidentes de integración, la operación del experimento y la estación terrena con el dataset de corridas (Anexos 10 a 13).</p>
+<p>El capítulo 2 sitúa el trabajo respecto de la literatura. El capítulo 3 describe el entorno de simulación y su comparación con vuelos reales, y el capítulo 4, la planificación en tierra y la estación WebDCS. Los capítulos 5 a 9 documentan el sistema a bordo: el grafo de control con sus dos lazos (cap. 5), la percepción monocular (cap. 6), la validación del TTC (cap. 7), la ingeniería del modelo de visión-lenguaje (cap. 8) y los modos de falla de la integración (cap. 9). El capítulo 10 describe la metodología experimental y los capítulos 11 y 12, los resultados y las conclusiones.</p>
+<p>Los anexos reúnen el material que sostiene el argumento sin ser necesario para seguirlo: la exploración de modelos pequeños, su optimización y la decodificación restringida (Anexos 1 a 4); los fundamentos de la percepción (Anexo 5); la configuración y reproducibilidad del entorno (Anexo 6); propuestas de trabajo futuro (Anexos 7 a 9); la especificación del lazo táctico, el catálogo de incidentes, la operación del experimento y la estación terrena con el dataset de corridas (Anexos 10 a 13); y los dominios de aplicación, la comparación con telemetría real y la ingeniería del VLM (Anexos 14 a 16).</p>
 
 
 

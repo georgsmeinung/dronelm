@@ -1,6 +1,6 @@
 # Informe de tesis — índice y estado
 
-Estructura de capítulos para la tesis *"Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños"*. Un archivo Markdown por capítulo, para poder
+Estructura de capítulos para la tesis *"Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño"*. Un archivo Markdown por capítulo, para poder
 compilar a PDF o HTML por separado o concatenados (por ejemplo con Pandoc) sin tener que
 reescribir la estructura cada vez.
 
@@ -35,6 +35,9 @@ reescribir la estructura cada vez.
 | — | [`anexos/A11-CATALOGO-INCIDENTES-INTEGRACION.md`](anexos/A11-CATALOGO-INCIDENTES-INTEGRACION.md) | Material de referencia — catálogo de incidentes de integración: vulnerabilidades de estado y precedencia en LangGraph, degradaciones sensoriales y siete casos de corridas de diagnóstico y piloto (deadlock falso, profundidad en el brazo evaluado, `physics_locked`, señales que se tapan, sub-metas que ocultan al waypoint, respuestas truncadas, barrido constante) | IT.9 |
 | — | [`anexos/A12-OPERACION-EXPERIMENTAL.md`](anexos/A12-OPERACION-EXPERIMENTAL.md) | Material de referencia — operación del experimento: nombres heredados, geometría de los escenarios, semillas, procedimiento de los lotes, métricas secundarias, resultados esperados declarados antes de correr, artefactos y trazabilidad, construcción del banco de prueba y plan extendido de pruebas | IT.10 |
 | — | [`anexos/A13-ESTACION-TERRENA-DATASET.md`](anexos/A13-ESTACION-TERRENA-DATASET.md) | Material de referencia — estación terrena WebDCS, juicio por imagen del planificador de ruta, construcción del mapa cenital registrado, estructura completa del dataset de corridas (archivos, traza, resumen) y visor de auditoría con las anotaciones del video | IT.4 |
+| — | [`anexos/A14-DOMINIOS-APLICACION.md`](anexos/A14-DOMINIOS-APLICACION.md) | Material de referencia — dominios de aplicación de pertinencia local, con su literatura (desde el cap. 2) |
+| — | [`anexos/A15-COMPARACION-TELEMETRIA-REAL.md`](anexos/A15-COMPARACION-TELEMETRIA-REAL.md) | Material de referencia — comparación de la dinámica simulada con telemetría DJI: protocolo, estadística, resultados y figuras (desde el cap. 3) |
+| — | [`anexos/A16-INGENIERIA-VLM.md`](anexos/A16-INGENIERIA-VLM.md) | Material de referencia — ingeniería del VLM: parser, geometría de la grilla y del barrido, vocabulario y `action_to_command`, prompts, latencia y LoRA (desde el cap. 8) |
 
 ## Convenciones
 

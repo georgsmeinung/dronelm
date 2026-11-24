@@ -1,6 +1,6 @@
 <img src="https://www.austral.edu.ar/wp-content/uploads/2022/10/facultades-horizontales-03.png" width="50%" alt="Universidad Austral - Facultad de Ingeniería">
 
-# Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños
+# Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño
 ### Tesis para Magister en Ciencia de Datos | Maestría en Ciencia de Datos 2024/2025
 
 Directores:
@@ -20,7 +20,7 @@ Este repositorio contiene la implementación del Trabajo Final de Máster en Ing
 
 [![Website](https://img.shields.io/badge/Project-Website-white.svg)](https://jorgenicolau.ar/dronelm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Activity](https://img.shields.io/badge/CHANGELOG-2026--1113-teal)](CHANGELOG.md) 
+[![Activity](https://img.shields.io/badge/CHANGELOG-2026--1124-teal)](CHANGELOG.md) 
 [![Plan](https://img.shields.io/badge/Plan-Aprobado_2025--0829-drakgray)](./plan-tesis/plan-tesis.md)
 [![Objetivos](https://img.shields.io/badge/Ver-Objetivos-orange)](./plan-tesis/plan-tesis.md#objetivo-del-trabajo)
 [![Infome](https://img.shields.io/badge/Informe-Tesis_MCD-172187)](https://jorgenicolau.ar/dronelm/informe/00-COVER.html)

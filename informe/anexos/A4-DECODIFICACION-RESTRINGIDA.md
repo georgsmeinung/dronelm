@@ -22,8 +22,8 @@ Cuando se solicita una salida JSON únicamente mediante instrucciones en el *sys
 1. **Preámbulos y epílogos conversacionales:** emisión de frases introductorias (*«Sure, here is the drone decision:»*) o explicaciones finales que rompen `json.loads()`.
 2. **Encapsulamiento en Markdown irregular:** uso intermitente de triples comillas invertidas (```` ```json ... ``` ````), a menudo con saltos de línea mal posicionados.
 3. **Malformación sintáctica:** comas terminales huérfanas (*trailing commas*), omisión de llaves de cierre `}` por corte de contexto o escape defectuoso de caracteres en cadenas.
-4. **Alucinación de macro-acciones fuera de lista blanca:** emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., `"GIRAR_RAPIDO"`, `"SUBIR_DIAGONAL"`, `"stop"` en lugar de las ocho de `VALID_ACTIONS`: `MANTENER_RUMBO`, `EVADIR_IZQUIERDA`, `EVADIR_DERECHA`, `GANAR_ALTURA`, `PERDER_ALTURA`, `FRENAR`, `GIRAR_90`, `RETROCEDER`; IT.8.3.4).
-5. **Latencia descontrolada por verbosidad:** generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido, cap. 8, IT.8.6) y forzando la caída al escape de respaldo.
+4. **Alucinación de macro-acciones fuera de lista blanca:** emisión de identificadores plausibles en lenguaje natural pero inexistentes en el mapa de control cinemático (e.g., `"GIRAR_RAPIDO"`, `"SUBIR_DIAGONAL"`, `"stop"` en lugar de las ocho de `VALID_ACTIONS`: `MANTENER_RUMBO`, `EVADIR_IZQUIERDA`, `EVADIR_DERECHA`, `GANAR_ALTURA`, `PERDER_ALTURA`, `FRENAR`, `GIRAR_90`, `RETROCEDER`; IT.A16.4).
+5. **Latencia descontrolada por verbosidad:** generación de decenas de tokens de razonamiento no solicitados, consumiendo el presupuesto temporal del perro guardián (`SLM_DEEP_WATCHDOG_MS`, 18 s en el barrido, Anexo 16, IT.A16.7) y forzando la caída al escape de respaldo.
 
 ```
 Generación Libre (Estocástica, ~120 tokens, ~2.1 s):
@@ -118,12 +118,12 @@ En sistemas avanzados, las restricciones gramaticales se combinan con **decodifi
 
 ## A4.4 Optimización del Grafo de Control (`StateGraph`) mediante Decodificación Restringida
 
-> **Relación con el sistema.** En el sistema descrito en los capítulos 5 y 8, el VLM **no emite acciones**: la consulta estratégica y el barrido usan dos esquemas descriptivos (sectores de una grilla de 3×3, `libre`/`bloqueado`; tipo y transitabilidad por imagen), detallados en el capítulo 8, IT.8.2.1, y validados por `src/agents/vlm_client.py`. Los esquemas, gramáticas y fragmentos de código de esta sección y de IT.A4.5–IT.A4.6 ilustran la técnica sobre un **decisor de acciones** (`DroneTacticalDecision`), que es el caso en el que la poda gramatical tiene mayor efecto; no corresponden al código del sistema.
+> **Relación con el sistema.** En el sistema descrito en los capítulos 5 y 8, el VLM **no emite acciones**: la consulta estratégica y el barrido usan dos esquemas descriptivos (sectores de una grilla de 3×3, `libre`/`bloqueado`; tipo y transitabilidad por imagen), detallados en el capítulo 8, IT.8.2, y validados por `src/agents/vlm_client.py`. Los esquemas, gramáticas y fragmentos de código de esta sección y de IT.A4.5–IT.A4.6 ilustran la técnica sobre un **decisor de acciones** (`DroneTacticalDecision`), que es el caso en el que la poda gramatical tiene mayor efecto; no corresponden al código del sistema.
 
 La interacción entre el modelo de lenguaje y el grafo de control táctico (`src/agents/graph.py`) no debe concebirse como un canal pasivo de consulta y respuesta, sino como una **arquitectura de co-diseño donde la gramática es un componente dinámico del propio grafo**.
 
 ### A4.4.1 Invariantes del lazo táctico garantizados por la gramática
-En el grafo de control de DroneLM, el ciclo de LangGraph (`capture` → `perception` → `navigate` → `motor`) se ejecuta a 5 Hz. Los comportamientos de la capa de decisión (el guiado de `reactive_node`, `evasive_node`, el giro de 90°, el barrido y la FSM) convergen en una interfaz estricta gobernada por `action_to_command()` (IT.8.4); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:
+En el grafo de control de DroneLM, el ciclo de LangGraph (`capture` → `perception` → `navigate` → `motor`) se ejecuta a 5 Hz. Los comportamientos de la capa de decisión (el guiado de `reactive_node`, `evasive_node`, el giro de 90°, el barrido y la FSM) convergen en una interfaz estricta gobernada por `action_to_command()` (IT.A16.5); en el decisor de acciones ilustrativo de esta sección, también la respuesta del modelo:
 
 <img src="a4-invariante-lazo-tactico.png"/>
 
@@ -295,7 +295,7 @@ def _worker_loop(self):
 ```
 
 ### Paso 3: Análisis tolerante de defensa en profundidad (`_parse_decision`)
-A pesar de la garantía matemática de la decodificación restringida, las buenas prácticas de ingeniería en sistemas ciberfísicos exigen **defensa en profundidad** ante posibles migraciones de backend o errores de transporte HTTP (IT.8.2.2). Ejemplo ilustrativo:
+A pesar de la garantía matemática de la decodificación restringida, las buenas prácticas de ingeniería en sistemas ciberfísicos exigen **defensa en profundidad** ante posibles migraciones de backend o errores de transporte HTTP (IT.A16.1). Ejemplo ilustrativo:
 
 ```python
 # ejemplo ilustrativo (decisor de acciones)
@@ -336,7 +336,7 @@ def _parse_decision(raw_text: str, default_action: str = "FRENAR") -> tuple[str,
 ```
 
 ### Paso 4: Sincronización con el perro guardián y continuidad del vuelo
-En el sistema, la integración con la temporalidad del lazo de control se articula con dos reglas (cap. 8, IT.8.6):
+En el sistema, la integración con la temporalidad del lazo de control se articula con dos reglas (Anexo 16, IT.A16.7):
 
 * Mientras una consulta de la capa estratégica está en vuelo, el dron **no se frena**: el lazo rápido sigue volando, lo que además preserva la traslación que el flujo óptico necesita, y la respuesta se traduce con la pose del fotograma que la originó (IT.5.5.3).
 * Durante un barrido, el dron espera en el lugar bajo el perro guardián `SLM_DEEP_WATCHDOG_MS` (18 s); al expirar, cae al escape vertical. Con decodificación restringida, la consulta estratégica del VLM local tarda ~0.8 s (cuatro ciclos) y el barrido de cuatro imágenes ~3 s.
@@ -365,14 +365,14 @@ La decodificación restringida no constituye un mero filtro estético de salida 
 Sus contribuciones cuantitativas y cualitativas en el marco de esta tesis se resumen en tres puntos esenciales:
 
 1. **Fiabilidad operacional categórica:** erradica las excepciones por sintaxis inválida, elevando la tasa de adherencia del modelo desde el 73% hasta el 98–100%, eliminando la causa primaria de bloqueos y degradaciones espurias del sistema.
-2. **Eficiencia temporal crítica:** al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 IT.8.6), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).
+2. **Eficiencia temporal crítica:** al suprimir el parloteo conversacional y permitir la omisión de tokens sintácticos estáticos, acota la latencia de inferencia (~0.8 s por consulta con imagen en la GPU compartida con la simulación, cap. 8 IT.A16.7), muy por debajo de la edad máxima de una respuesta (10 s) y del perro guardián del barrido (18 s).
 3. **Acoplamiento formal con el grafo de control:** permite que las restricciones de seguridad del vuelo (invariantes cinemáticos, distancias de frenado, descarte de maniobras contraproducentes) se traduzcan directamente en máscaras lógicas sobre los tensores de probabilidad del modelo, tendiendo un puente riguroso entre la inteligencia artificial neuronal y el control de vuelo determinista.
 
 ---
 
 ## A4.9 Esquemas, prompts y parámetros de inferencia del sistema evaluado
 
-El capítulo 8 enuncia los principios con que se escriben los prompts y los esquemas del VLM (IT.8.2, IT.8.5). Esta sección los documenta tal como están en el código (`vlm_strategic.py`, `deep_scan.py`).
+El capítulo 8 enuncia los principios con que se escriben los prompts y los esquemas del VLM (IT.8.2, IT.A16.6). Esta sección los documenta tal como están en el código (`vlm_strategic.py`, `deep_scan.py`).
 
 ### A4.9.1 Esquemas de respuesta
 
@@ -394,7 +394,7 @@ El capítulo 8 enuncia los principios con que se escriben los prompts y los esqu
 }
 ```
 
-**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `views` de objetos `{img, view, free}`: número de imagen, lo que hay delante a la altura del dron (enum de seis valores: `open`, `facade`, `wall`, `vegetation`, `inside`, `unclear`) y si se puede volar recto 15 m. El parser los traduce a los valores internos (`libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`; `transitable`). El esquema no pide certeza ni un indicador de imagen degradada: el modelo los rellena con valores fijos (el mismo `0.95, 0.92, 0.89, 0.86` en tres de cuatro barridos de un piloto; `degradada: true` en todas las respuestas) y ninguno decide nada. Una entrada `free: true` cuya vista no es `open` se contradice a sí misma y no cuenta como transitable (cap. 5, IT.5.6). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (IT.8.3.3).
+**Esquema panorámico** (`RESPONSE_JSON_SCHEMA_PANORAMA`, `deep_scan.py`): un array `views` de objetos `{img, view, free}`: número de imagen, lo que hay delante a la altura del dron (enum de seis valores: `open`, `facade`, `wall`, `vegetation`, `inside`, `unclear`) y si se puede volar recto 15 m. El parser los traduce a los valores internos (`libre`, `fachada`, `muro`, `vegetacion`, `interior`, `indeterminado`; `transitable`). El esquema no pide certeza ni un indicador de imagen degradada: el modelo los rellena con valores fijos (el mismo `0.95, 0.92, 0.89, 0.86` en tres de cuatro barridos de un piloto; `degradada: true` en todas las respuestas) y ninguno decide nada. Una entrada `free: true` cuya vista no es `open` se contradice a sí misma y no cuenta como transitable (cap. 5, IT.5.6). Las imágenes se identifican por número y no por ángulo: el rumbo real de cada imagen lo conoce el código, no el modelo (IT.A16.3).
 
 ### A4.9.2 Prompt de la capa estratégica
 

@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -467,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -494,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1247,6 +1247,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1536,14 +1620,14 @@ W = W_0 + \Delta W = W_0 + B \cdot A
 <ol>
 <li>
 <p><strong>Decodificación restringida a nivel de logits (<code>json_schema</code>)</strong>:
-   En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON (<a href="../13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-raspanti-2025">Raspanti et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-willard-2023">Willard &amp; Louf, 2023</a>). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (IT.8.2.1).</p>
+   En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON (<a href="../13-REFERENCIAS.html#ref-geng-2025">Geng et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-raspanti-2025">Raspanti et al., 2025</a>; <a href="../13-REFERENCIAS.html#ref-willard-2023">Willard &amp; Louf, 2023</a>). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (IT.8.2).</p>
 </li>
 <li>
 <p><strong>El modelo describe; el código decide la geometría (IT.8.3)</strong>:
-   El modelo no genera velocidades ni elige macro-acciones: clasifica sectores, imágenes o parches del mapa en enumeraciones cerradas (<code>free</code>/<code>blocked</code>, cinco clases de terreno), y el código traduce esa descripción a una sub-meta en coordenadas del mundo o a una puntuación de ruta. Esta discretización suprime alucinaciones numéricas continuas y deja toda la cinemática en una función de traducción determinista y acotada (<code>action_to_command()</code>, IT.8.4).</p>
+   El modelo no genera velocidades ni elige macro-acciones: clasifica sectores, imágenes o parches del mapa en enumeraciones cerradas (<code>free</code>/<code>blocked</code>, cinco clases de terreno), y el código traduce esa descripción a una sub-meta en coordenadas del mundo o a una puntuación de ruta. Esta discretización suprime alucinaciones numéricas continuas y deja toda la cinemática en una función de traducción determinista y acotada (<code>action_to_command()</code>, IT.A16.5).</p>
 </li>
 <li>
-<p><strong>Arquitectura de dos lazos con un lazo rápido determinista (IT.5.1.2 y IT.8.2.2)</strong>:
+<p><strong>Arquitectura de dos lazos con un lazo rápido determinista (IT.5.1.2 y IT.A16.1)</strong>:
    La capa deliberativa no ejerce control directo sobre los actuadores. El lazo rápido de flujo óptico y TTC es el único que comanda velocidades y reacciona a lo inminente en el mismo ciclo; una respuesta inválida, tardía u obsoleta se descarta sin sustituirse por una decisión inventada, y un barrido sin respuesta válida cae a un escape vertical determinista.</p>
 </li>
 <li>

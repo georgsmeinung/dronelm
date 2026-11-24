@@ -86,12 +86,12 @@ Para hacer viable el despliegue de un modelo compacto (LFM2.5-VL-1.6B, cap. 8 IT
 <img src="a2-estrategias-mitigacion.png">
 
 1. **Decodificación restringida a nivel de logits (`json_schema`)**:
-   En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025); [Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (IT.8.2.1).
+   En lugar de confiar en el seguimiento heurístico del prompt, el motor de inferencia enmascara en tiempo de generación cualquier token que viole la gramática del esquema JSON ([Geng et al., 2025](../13-REFERENCIAS.md#ref-geng-2025); [Raspanti et al., 2025](../13-REFERENCIAS.md#ref-raspanti-2025); [Willard & Louf, 2023](../13-REFERENCIAS.md#ref-willard-2023)). Esto garantiza matemáticamente un 100% de validez estructural, erradicando por completo las alucinaciones de formato (IT.8.2).
 
 2. **El modelo describe; el código decide la geometría (IT.8.3)**:
-   El modelo no genera velocidades ni elige macro-acciones: clasifica sectores, imágenes o parches del mapa en enumeraciones cerradas (`free`/`blocked`, cinco clases de terreno), y el código traduce esa descripción a una sub-meta en coordenadas del mundo o a una puntuación de ruta. Esta discretización suprime alucinaciones numéricas continuas y deja toda la cinemática en una función de traducción determinista y acotada (`action_to_command()`, IT.8.4).
+   El modelo no genera velocidades ni elige macro-acciones: clasifica sectores, imágenes o parches del mapa en enumeraciones cerradas (`free`/`blocked`, cinco clases de terreno), y el código traduce esa descripción a una sub-meta en coordenadas del mundo o a una puntuación de ruta. Esta discretización suprime alucinaciones numéricas continuas y deja toda la cinemática en una función de traducción determinista y acotada (`action_to_command()`, IT.A16.5).
 
-3. **Arquitectura de dos lazos con un lazo rápido determinista (IT.5.1.2 y IT.8.2.2)**:
+3. **Arquitectura de dos lazos con un lazo rápido determinista (IT.5.1.2 y IT.A16.1)**:
    La capa deliberativa no ejerce control directo sobre los actuadores. El lazo rápido de flujo óptico y TTC es el único que comanda velocidades y reacciona a lo inminente en el mismo ciclo; una respuesta inválida, tardía u obsoleta se descarta sin sustituirse por una decisión inventada, y un barrido sin respuesta válida cae a un escape vertical determinista.
 
 4. **Medición contra etiquetas de referencia antes del vuelo (IT.10.2)**:

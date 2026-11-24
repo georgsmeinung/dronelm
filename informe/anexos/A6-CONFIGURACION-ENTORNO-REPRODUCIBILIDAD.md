@@ -203,7 +203,7 @@ A continuación se detalla el diccionario completo de variables y su impacto de 
 | Variable | Valor Nominal | Justificación y Efecto |
 |---|---|---|
 | `LOOP_HZ` | `5.0` | Frecuencia objetivo del bucle de control ($200\text{ ms}$ por ciclo). Calibrada para absorber la captura y el flujo óptico con margen holgado. |
-| `AGENT_ARM` | `slm` | Brazo activo: `slm` (lazo rápido + VLM), `fsm` (máquina de estados determinista) o `reactive` (línea base). |
+| `AGENT_ARM` | `slm` | Brazo activo: `slm` (el brazo `depth2loop` del informe: dos lazos con la capa estratégica y el barrido respondidos por la profundidad estimada; IT.A12.1), `fsm` (máquina de estados determinista) o `reactive` (línea base). |
 | `AIRSIM_SEED` | `1` | Semilla de la corrida. En modo `--seed-jitter`, perturba levemente la pose inicial ($\pm 1.5\text{ m}$, $\pm 10^\circ$). |
 | `CMD_DURATION_S` | `120.0` | Vigencia asignada al comando de velocidad en AirSim. Previene cabeceos parásitos (*pitch jerk*) causados por reemisiones continuas de comandos idénticos al PID interno de SimpleFlight. |
 
@@ -274,7 +274,7 @@ seed_<N>_<ts>/
 ```
 
 ### A6.4.1 Estructura del archivo de resumen (`.summary.json`)
-Contiene la identificación de la corrida y sus indicadores. Ejemplo de una corrida `slm:depth` en `citysim_pilot` (valores ilustrativos; `route_histogram` y `route_plan` abreviados):
+Contiene la identificación de la corrida y sus indicadores. Ejemplo de una corrida `depth2loop` en `citysim_pilot` (valores ilustrativos; `route_histogram` y `route_plan` abreviados):
 
 ```json
 {

@@ -135,8 +135,8 @@ def a2():
             f.arrow([(x + 198, 184), (x + 222, 184)])
     # cuatro salvaguardas
     items = [
-        ("1", "Gramática en los logits", ["Se enmascaran los tokens que", "violan el esquema JSON: el 100 %", "de las respuestas tiene formato", "válido (IT.8.2.1)."]),
-        ("2", "Describir, no decidir", ["Respuestas en enumeraciones", "cerradas; la geometría y la", "cinemática son funciones", "deterministas (IT.8.3, IT.8.4)."]),
+        ("1", "Gramática en los logits", ["Se enmascaran los tokens que", "violan el esquema JSON: el 100 %", "de las respuestas tiene formato", "válido (IT.8.2)."]),
+        ("2", "Describir, no decidir", ["Respuestas en enumeraciones", "cerradas; la geometría y la", "cinemática son funciones", "deterministas (IT.8.3, IT.A16.5)."]),
         ("3", "Un solo lazo comanda", ["Solo el lazo rápido comanda", "velocidades; una respuesta", "inválida, tardía u obsoleta", "se descarta (IT.5.1.2)."]),
         ("4", "Medir antes de confiar", ["Cada pregunta se mide contra", "etiquetas de referencia antes", "del vuelo; la que no pasa el", "criterio no vuela (IT.10.2)."]),
     ]
@@ -607,7 +607,7 @@ def a8_capas():
         ("CAPA ESTRATÉGICA · LAZO LENTO, ~1 Hz, HILO APARTE", "card-blue", ["Qué sectores del fotograma están libres a 15 m → sub-meta en coordenadas del mundo;", "en deadlock, barrido de 4 rumbos (cap. 5, IT.5.5 e IT.5.6)"],
          ["fuente: profundidad estimada (Depth Anything V2);", "nunca comanda velocidades"]),
         ("CAPA TÁCTICA · LAZO RÁPIDO, 5 Hz", "card-green", ["ObstacleField + guiado → macro-acción → action_to_command() → velocidades (cap. 5)"],
-         ["implementados: slm, fsm, reactive", "propuesto: rl, política neuronal (este anexo)"]),
+         ["implementados: depth2loop (slm), fsm, reactive", "propuesto: rl, política neuronal (este anexo)"]),
         ("CONTROL DE VUELO", "card", ["Velocidades → actitud y motores: controlador del simulador (Cosys-AirSim);", "en hardware real, el autopiloto (por ejemplo, PX4). No lo modifica ningún brazo."],
          ["fuera del alcance de la tesis"]),
     ]

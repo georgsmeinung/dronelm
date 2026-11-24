@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -467,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -494,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1209,6 +1209,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a115-falla-1-en-detalle-el-campo-nulo-leido-como-ausencia-de-peligro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.5 Falla 1 en detalle: el campo nulo leído como ausencia de peligro
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a116-falla-2-en-detalle-desalineacion-temporal-del-historial-de-fotogramas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.6 Falla 2 en detalle: desalineación temporal del historial de fotogramas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a117-falla-3-en-detalle-descalibracion-de-escala-en-el-canal-de-divergencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.7 Falla 3 en detalle: descalibración de escala en el canal de divergencia
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a118-reglas-apiladas-sobre-la-decision-del-modelo-detalle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.8 Reglas apiladas sobre la decisión del modelo: detalle
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1261,6 +1305,90 @@
     
   
     A13. Estación Terrena y Dataset de Corridas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
   
 
     
@@ -1501,6 +1629,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a115-falla-1-en-detalle-el-campo-nulo-leido-como-ausencia-de-peligro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.5 Falla 1 en detalle: el campo nulo leído como ausencia de peligro
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a116-falla-2-en-detalle-desalineacion-temporal-del-historial-de-fotogramas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.6 Falla 2 en detalle: desalineación temporal del historial de fotogramas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a117-falla-3-en-detalle-descalibracion-de-escala-en-el-canal-de-divergencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.7 Falla 3 en detalle: descalibración de escala en el canal de divergencia
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a118-reglas-apiladas-sobre-la-decision-del-modelo-detalle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A11.8 Reglas apiladas sobre la decisión del modelo: detalle
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1604,7 +1776,7 @@ $$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))\]</div>
 <p><strong>Mecanismo de contención.</strong> «Detenido» se define como «se ordenó avanzar y el dron no se movió», y no se cuenta bajo el piso óptico ni durante el despegue (cap. 5, IT.5.3.1). Aplicada sobre la telemetría registrada, esa definición no declara el deadlock en ninguna de las tres corridas.</p>
 <h3 id="a1142-una-senal-de-referencia-dentro-del-brazo-evaluado">A11.4.2 Una señal de referencia dentro del brazo evaluado<a class="headerlink" href="#a1142-una-senal-de-referencia-dentro-del-brazo-evaluado" title="Permanent link">&para;</a></h3>
 <p>Un runner que captura el canal de profundidad del simulador «solo como métrica» puede terminar alimentando al brazo evaluado: en una configuración de diagnóstico, esa captura armaba un freno de proximidad que el grafo consumía, cancelaba maniobras, inyectaba retrocesos y registraba puntos de contacto que el tracker usaba para validar desvíos. El brazo evaluado tenía así acceso indirecto a la profundidad exacta del simulador, lo que invalida su comparación con un sistema monocular, y una guardia estática limitada a <code>src/</code> no lo detecta porque el runner está fuera de su alcance.</p>
-<p><strong>Mecanismo de contención.</strong> Ningún componente del lazo de vuelo lee el canal de profundidad, tampoco como métrica, y la guardia (<code>test_no_depth_in_flight_path.py</code>) cubre el runner, <code>main.py</code> y todos los módulos de vuelo, incluido el canal indirecto; la distancia mínima a obstáculo la mide un hilo de auditoría aislado (cap. 5, IT.5.8; cap. 10, IT.10.4.1, punto 3).</p>
+<p><strong>Mecanismo de contención.</strong> Ningún componente del lazo de vuelo lee el canal de profundidad, tampoco como métrica, y la guardia (<code>test_no_depth_in_flight_path.py</code>) cubre el runner, <code>main.py</code> y todos los módulos de vuelo, incluido el canal indirecto; la distancia mínima a obstáculo la mide un hilo de auditoría aislado (cap. 5, IT.5.8; cap. 10, IT.10.4.1).</p>
 <h3 id="a1143-la-causa-fisica-de-los-physics_locked">A11.4.3 La causa física de los <code>physics_locked</code><a class="headerlink" href="#a1143-la-causa-fisica-de-los-physics_locked" title="Permanent link">&para;</a></h3>
 <p>En las tres corridas de diagnóstico que terminaron por <code>physics_locked</code>, el dron no chocó de frente: quedó apoyado sobre una <strong>superficie horizontal a la altura de crucero</strong> —el tablero de una autopista elevada (dos corridas) y la cornisa de un edificio (una)—, con los sectores frontales del flujo libres (<code>occ = 0</code>, TTC infinito). En una corrida, un <code>GANAR_ALTURA</code> liberó al dron hasta −12.2 m y el guiado de altitud lo devolvió a −10 m, sobre la cornisa. Ni el flujo óptico ni una descripción por columnas representan ese tipo de obstáculo.</p>
 <p><strong>Mecanismo de contención.</strong> El manifiesto evita la autopista (<code>WP_0_SUR</code>, Anexo 12, IT.A12.3.3); la capa estratégica juzga el fotograma en una grilla de 3×3, de modo que un obstáculo a la altura del dron puede rodearse por la fila de arriba; y el escape determinista ante falla de la fuente es <code>GANAR_ALTURA</code> (cap. 5, IT.5.3.4, IT.5.5).</p>
@@ -1641,7 +1813,26 @@ $$\psi = \arctan2(2(q_w q_z + q_x q_y),\ 1 - 2(q_y^2 + q_z^2))\]</div>
 <h3 id="a1147-un-barrido-que-no-describe-la-escena">A11.4.7 Un barrido que no describe la escena<a class="headerlink" href="#a1147-un-barrido-que-no-describe-la-escena" title="Permanent link">&para;</a></h3>
 <p>Con las respuestas del barrido completas, tres corridas piloto suman 19 respuestas utilizables. En las 19 el patrón de transitabilidad fue el mismo: las imágenes 2 y 4 —a 90° a cada lado del rumbo inicial— transitables, y la 1 y la 3 —el frente y la dirección de la que venía el dron— bloqueadas, sin importar dónde estaba el dron ni qué mostraban las imágenes. La dirección de la que venía el dron, casi siempre libre, salió bloqueada las 19 veces. Además, el modelo marcó todas las respuestas como degradadas, incluidas imágenes nítidas de calle abierta, y en varias asignó <code>ok: true</code> a imágenes de tipo <code>fachada</code> o <code>interior</code>. Medido contra el avance hacia el waypoint real, las sub-metas del barrido no mostraron efecto: en la mayoría de los casos el avance a los 20 s fue nulo, y en dos el dron se alejó más de 5 m.</p>
 <p>La consecuencia de diseño es doble. Primero, una respuesta constante convierte al barrido, en la práctica, en una regla fija («girar 90° hacia el lado más cercano a la meta»), y una regla de falla basada en el indicador de imagen degradada lo convertiría en un escape vertical ciego (en una de esas corridas habría descartado los 8 barridos). Segundo, elegir el rumbo transitable más cercano a la meta devuelve al dron, deadlock tras deadlock, contra el mismo obstáculo.</p>
-<p><strong>Mecanismo de contención.</strong> El esquema no pide indicador de imagen degradada ni certeza (cap. 8, IT.8.2.1); y la salida del deadlock descarta el rumbo que falló y los rumbos ya probados en la zona, y con deadlocks repetidos explora el rumbo libre más distinto de lo ya probado (cap. 5, IT.5.6). Esto no corrige que el modelo responda lo mismo siempre: con una respuesta constante, la salida queda determinada por la historia del dron y no por la imagen. El registro de la selección permite separar ambos efectos.</p>
+<p><strong>Mecanismo de contención.</strong> El esquema no pide indicador de imagen degradada ni certeza (cap. 8, IT.8.2); y la salida del deadlock descarta el rumbo que falló y los rumbos ya probados en la zona, y con deadlocks repetidos explora el rumbo libre más distinto de lo ya probado (cap. 5, IT.5.6). Esto no corrige que el modelo responda lo mismo siempre: con una respuesta constante, la salida queda determinada por la historia del dron y no por la imagen. El registro de la selección permite separar ambos efectos.</p>
+<hr />
+<h2 id="a115-falla-1-en-detalle-el-campo-nulo-leido-como-ausencia-de-peligro">A11.5 Falla 1 en detalle: el campo nulo leído como ausencia de peligro<a class="headerlink" href="#a115-falla-1-en-detalle-el-campo-nulo-leido-como-ausencia-de-peligro" title="Permanent link">&para;</a></h2>
+<p>Si el estado del campo de obstáculos se comunica como una lista de objetos detectados, con una lista vacía como valor por defecto, la lista vacía es ambigua: puede significar "la percepción corrió y no detectó nada" o "la percepción no corrió, no tiene confianza, o falló silenciosamente". Los consumidores —la capa de decisión, el constructor del prompt del VLM y la FSM— tienden a resolver la ambigüedad en favor de la primera lectura. En una configuración de diagnóstico con ese contrato, el prompt afirmaba al modelo "trayectoria frontal sin obstáculos detectados", el VLM respondía con perfecta coherencia que se podía seguir, el lazo ejecutaba el crucero y no se generaba ninguna alerta, porque la lista vacía es un valor válido.</p>
+<p>Es una instancia de un anti-patrón general: tratar el valor neutro de un tipo (lista vacía, cero, <code>None</code>) como evidencia de ausencia de fenómeno en lugar de como ausencia de información. En señales de seguridad la convención correcta es la inversa: la ausencia de evidencia no es evidencia de ausencia de peligro (<a href="../13-REFERENCIAS.html#ref-altman-1995">Altman y Bland, 1995</a>).</p>
+<p>La contención es el tipo inmutable <code>ObstacleField</code> (cap. 6, IT.6.10), que distingue tres estados epistémicos: percepción con evidencia real (<code>source = "flow"</code>, <code>foe_confidence &gt; 0</code>), percepción que corrió sin evidencia confiable (<code>foe_confidence = 0</code>) y percepción inhibida activamente (<code>source = "degraded"</code>). Ningún consumidor puede confundir "sin obstáculos detectados" con "sin información" sin leer explícitamente <code>has_evidence()</code>; el gobernador de velocidad limita el avance sin evidencia (cap. 5, IT.5.4) y <code>has_open_corridor()</code> no declara corredor libre sin evidencia.</p>
+<h2 id="a116-falla-2-en-detalle-desalineacion-temporal-del-historial-de-fotogramas">A11.6 Falla 2 en detalle: desalineación temporal del historial de fotogramas<a class="headerlink" href="#a116-falla-2-en-detalle-desalineacion-temporal-del-historial-de-fotogramas" title="Permanent link">&para;</a></h2>
+<p>Una consulta que envía al VLM un historial de dos fotogramas (<span class="arithmatex">\(t\)</span> y <span class="arithmatex">\(t-1\)</span>) para que estime la dirección de movimiento depende de que los dos sean genuinamente distintos en el tiempo. Un búfer actualizado sin verificar timestamps produce fotogramas fuera de contexto al cambiar de waypoint (el "t-1" es un fotograma de otro punto de la misión) o duplicados cuando el simulador no entrega uno nuevo a tiempo. Con dos fotogramas idénticos, el modelo infiere que el dron está estático o que nada se acerca.</p>
+<p>El sistema no envía historial temporal al VLM: la capa estratégica usa el fotograma del ciclo y el barrido un fotograma por rumbo, cada uno con su timestamp y su pose de captura (cap. 5, IT.5.5, IT.5.6). El riesgo equivalente pasa a ser espacial —una etiqueta de orientación que no corresponde al fotograma (cap. 9, IT.9.8.1)— y se contiene anclando cada respuesta a la pose medida del fotograma que la originó.</p>
+<h2 id="a117-falla-3-en-detalle-descalibracion-de-escala-en-el-canal-de-divergencia">A11.7 Falla 3 en detalle: descalibración de escala en el canal de divergencia<a class="headerlink" href="#a117-falla-3-en-detalle-descalibracion-de-escala-en-el-canal-de-divergencia" title="Permanent link">&para;</a></h2>
+<p>El canal de divergencia del <code>ObstacleField</code> (cap. 6, IT.6.7) estima <span class="arithmatex">\(\partial u / \partial x + \partial v / \partial y\)</span> sobre el campo de flujo. Un cálculo con gradientes de Sobel 3×3 sin el factor de normalización <span class="arithmatex">\(1/8\)</span> que el kernel requiere para estimar una derivada en unidades de píxel,</p>
+<div class="arithmatex">\[K_{\text{Sobel}} = \frac{1}{8}\begin{pmatrix} -1 &amp; 0 &amp; 1 \ -2 &amp; 0 &amp; 2 \ -1 &amp; 0 &amp; 1 \end{pmatrix}\]</div>
+<p>produce divergencias unas 8 veces mayores que las correctas, y el canal de ocupación satura a <code>1.0</code> con cualquier gradiente de flujo, incluso en espacio abierto.</p>
+<p>La consecuencia ilustra un problema de diseño de predicados disyuntivos sobre canales de distinta confianza. Una celda <span class="arithmatex">\(c\)</span> se declara bloqueada (cap. 6, IT.6.9) si</p>
+<div class="arithmatex">\[\text{bloqueada}(c) = \big(o_c \geq t_o\big) \lor \big(\kappa_c \geq 0.35 \land \hat{\tau}_c \leq 2.5\,\text{s}\big)\]</div>
+<p>con <span class="arithmatex">\(o_c\)</span> la ocupación, <span class="arithmatex">\(\kappa_c\)</span> la confianza y <span class="arithmatex">\(\hat{\tau}_c\)</span> el TTC de la celda (cap. 6, IT.6.8). La disyunción asume canales calibrados en escalas comparables: si uno está sobre-estimado, se vuelve dominante y anula al otro, y el TTC, que tiene validación empírica (cap. 7), pierde toda influencia. El caso inverso también ocurre: un umbral de ocupación demasiado alto deja mudo a ese canal y la detección recae solo en el TTC (cap. 7, IT.7.5).</p>
+<p>La divergencia se calcula ahora con <code>np.gradient()</code>, normalizado intrínsecamente; el umbral de ocupación está calibrado contra profundidad de referencia por curva ROC (cap. 7, IT.7.5); y los dos canales tienen umbrales de confianza diferenciados (0.15 para ocupación, 0.35 para TTC), de modo que ningún canal puede dominar al otro sin confianza suficiente.</p>
+<h2 id="a118-reglas-apiladas-sobre-la-decision-del-modelo-detalle">A11.8 Reglas apiladas sobre la decisión del modelo: detalle<a class="headerlink" href="#a118-reglas-apiladas-sobre-la-decision-del-modelo-detalle" title="Permanent link">&para;</a></h2>
+<p>En una configuración de diagnóstico, compensar cada falla observada en una corrida piloto con una regla determinista había acumulado capas de reescritura sobre la decisión del modelo: retrocesos antes del barrido, escalamiento a un retroceso si el modelo alternaba de lado, un desvío perpendicular con el lado invertido respecto del modelo, cinco reglas sobre la historia de la trayectoria, un escape vertical tras escaneos «fútiles» y filtros en el tracker que reflejaban o descartaban los desvíos. La decisión del VLM pasaba por hasta seis capas de reescritura, y el brazo <code>depth2loop</code> medía esas reglas tanto como al modelo.</p>
+<p>Medidas contra el avance hacia el waypoint real en los 10–20 s siguientes, ninguna mostró beneficio: los retrocesos tuvieron avance mediano negativo, 74 desvíos deterministas avanzaron 0.35 m de mediana en 20 s, y un disparador de deadlock produjo 45 deadlocks sin avance posterior; solo el lazo reactivo mostró avance positivo.</p>
 
 
 

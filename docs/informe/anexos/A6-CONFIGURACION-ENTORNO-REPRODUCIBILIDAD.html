@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -467,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -494,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1424,6 +1424,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2190,7 +2274,7 @@
 <tr>
 <td><code>AGENT_ARM</code></td>
 <td><code>slm</code></td>
-<td>Brazo activo: <code>slm</code> (lazo rápido + VLM), <code>fsm</code> (máquina de estados determinista) o <code>reactive</code> (línea base).</td>
+<td>Brazo activo: <code>slm</code> (el brazo <code>depth2loop</code> del informe: dos lazos con la capa estratégica y el barrido respondidos por la profundidad estimada; IT.A12.1), <code>fsm</code> (máquina de estados determinista) o <code>reactive</code> (línea base).</td>
 </tr>
 <tr>
 <td><code>AIRSIM_SEED</code></td>
@@ -2436,7 +2520,7 @@
 └── seed_&lt;N&gt;_&lt;ts&gt;.viewer.html       &lt;- Visor de auditoría autocontenido
 </code></pre></div>
 <h3 id="a641-estructura-del-archivo-de-resumen-summaryjson">A6.4.1 Estructura del archivo de resumen (<code>.summary.json</code>)<a class="headerlink" href="#a641-estructura-del-archivo-de-resumen-summaryjson" title="Permanent link">&para;</a></h3>
-<p>Contiene la identificación de la corrida y sus indicadores. Ejemplo de una corrida <code>slm:depth</code> en <code>citysim_pilot</code> (valores ilustrativos; <code>route_histogram</code> y <code>route_plan</code> abreviados):</p>
+<p>Contiene la identificación de la corrida y sus indicadores. Ejemplo de una corrida <code>depth2loop</code> en <code>citysim_pilot</code> (valores ilustrativos; <code>route_histogram</code> y <code>route_plan</code> abreviados):</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;scenario&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;citysim_pilot&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;seed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>

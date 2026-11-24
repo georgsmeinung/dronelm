@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -707,7 +707,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -734,7 +734,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1273,6 +1273,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1517,52 +1601,42 @@
 
 
 <h1 id="6-percepcion-monocular-flujo-optico-ttc-campo-de-obstaculos-y-profundidad-estimada">6. Percepción monocular: flujo óptico, TTC, campo de obstáculos y profundidad estimada<a class="headerlink" href="#6-percepcion-monocular-flujo-optico-ttc-campo-de-obstaculos-y-profundidad-estimada" title="Permanent link">&para;</a></h1>
-<p>La percepción usa una sola cámara RGB y tiene dos canales, uno por lazo de control (cap. 5, IT.5.1.2): el <strong>flujo óptico</strong> (IT.6.1–IT.6.11), que alimenta al lazo rápido cada 0.2 s, y la <strong>profundidad monocular estimada</strong> con Depth Anything V2 (IT.6.12), que alimenta al lazo lento y al barrido de resolución de bloqueos. IT.6.13 explica cómo se complementan. El desarrollo matemático, la interfaz completa del campo de obstáculos y los parámetros del estimador están en el <a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">Anexo 5</a>.</p>
+<p>La percepción usa una sola cámara RGB y tiene dos canales, uno por lazo de control (cap. 5, IT.5.1.2): el <strong>flujo óptico</strong> (IT.6.1–IT.6.11), que alimenta al lazo rápido cada 0.2 s, y la <strong>profundidad monocular estimada</strong> con Depth Anything V2 (IT.6.12), que alimenta al lazo lento y al barrido de resolución de bloqueos; IT.6.13 explica cómo se complementan. El desarrollo matemático, la interfaz del campo de obstáculos, las decisiones de implementación y los parámetros están en el <a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">Anexo 5</a>.</p>
 <h2 id="61-fundamentos-de-diseno-percepcion-geometrica-sin-redes-neuronales-en-el-lazo-rapido">6.1 Fundamentos de diseño: percepción geométrica sin redes neuronales en el lazo rápido<a class="headerlink" href="#61-fundamentos-de-diseno-percepcion-geometrica-sin-redes-neuronales-en-el-lazo-rapido" title="Permanent link">&para;</a></h2>
-<p>El lazo rápido prescinde de redes neuronales de detección —detectores de cajas tipo YOLO (<a href="13-REFERENCIAS.html#ref-redmon-2015">Redmon et al., 2015</a>) o segmentadores densos— y estima los obstáculos con visión por computadora clásica: <strong>flujo óptico denso derotado y divergencia del campo traslacional</strong>, por tres razones.</p>
-<p><strong>1. Determinismo y presupuesto de cómputo compartido.</strong> Con el cómputo compartido con la simulación y con las redes del lazo lento, un estimador de flujo clásico garantiza una latencia determinista y acotada, del orden de 20–50 ms por ciclo, sin los picos de inferencia de una red densa (<a href="13-REFERENCIAS.html#ref-shi-s-2024">Shi et al., 2024</a>; <a href="13-REFERENCIAS.html#ref-goel-2021">Goel et al., 2021</a>).</p>
-<p><strong>2. Robustez fuera de distribución.</strong> Un detector supervisado se limita a las clases de su entrenamiento, y en una ciudad los obstáculos incluyen cables, salientes o andamios sin etiqueta previa. El flujo óptico modela el fenómeno <strong>físico</strong> de aproximación —la expansión de textura en el plano focal— y reacciona ante cualquier objeto que genere paralaje, sin importar su clase (<a href="13-REFERENCIAS.html#ref-badrloo-2017">Badrloo &amp; Varshosaz, 2017</a>; <a href="13-REFERENCIAS.html#ref-vera-yanez-2024">Vera-Yanez et al., 2024</a>).</p>
-<p><strong>3. Tiempo-a-Colisión (TTC) físico.</strong> Una caja delimitadora no da información de cierre. La divergencia del flujo traslacional permite derivar el TTC (<span class="arithmatex">\(TTC \approx d / v_{\text{cierre}}\)</span>) en todo el plano de la imagen: es la teoría del <em>tau</em> (<span class="arithmatex">\(\tau\)</span>) de <a href="13-REFERENCIAS.html#ref-lee-1976">Lee (1976)</a>, según la cual el tiempo-a-colisión se lee de la tasa de expansión óptica sin recuperar distancia ni velocidad por separado, aplicada a UAVs por <a href="13-REFERENCIAS.html#ref-al-kaff-2017">Al-Kaff et al. (2017)</a>.</p>
-<p><strong>Limitación estructural.</strong> El flujo óptico necesita <strong>traslación entre frames</strong>: en hover, giro puro o crucero muy lento la señal colapsa, y lo mismo ocurre con un obstáculo centrado en el foco de expansión. El lazo lento, que mira un único fotograma, cubre esa limitación con la profundidad estimada (IT.6.12).</p>
+<p>El lazo rápido prescinde de redes neuronales de detección —detectores de cajas tipo YOLO (<a href="13-REFERENCIAS.html#ref-redmon-2015">Redmon et al., 2015</a>) o segmentadores densos— y estima los obstáculos con <strong>flujo óptico denso derotado y divergencia del campo traslacional</strong>, por tres razones:</p>
+<ol>
+<li><strong>Determinismo.</strong> Con el cómputo compartido con la simulación y las redes del lazo lento, un estimador clásico garantiza una latencia acotada, de 20–50 ms por ciclo, sin los picos de inferencia de una red densa (<a href="13-REFERENCIAS.html#ref-shi-s-2024">Shi et al., 2024</a>; <a href="13-REFERENCIAS.html#ref-goel-2021">Goel et al., 2021</a>).</li>
+<li><strong>Robustez fuera de distribución.</strong> Un detector supervisado se limita a sus clases de entrenamiento; el flujo modela el fenómeno <strong>físico</strong> de aproximación y reacciona ante cualquier objeto que genere paralaje, sea un cable, un saliente o un andamio (<a href="13-REFERENCIAS.html#ref-badrloo-2017">Badrloo &amp; Varshosaz, 2017</a>; <a href="13-REFERENCIAS.html#ref-vera-yanez-2024">Vera-Yanez et al., 2024</a>).</li>
+<li><strong>Tiempo-a-Colisión físico.</strong> La divergencia del flujo permite derivar el TTC en todo el plano de la imagen sin recuperar distancia ni velocidad por separado: la teoría del <em>tau</em> de <a href="13-REFERENCIAS.html#ref-lee-1976">Lee (1976)</a>, aplicada a UAVs por <a href="13-REFERENCIAS.html#ref-al-kaff-2017">Al-Kaff et al. (2017)</a>.</li>
+</ol>
+<p><strong>Limitación estructural.</strong> El flujo necesita <strong>traslación entre fotogramas</strong>: en hover, giro puro o crucero muy lento la señal colapsa, y lo mismo ocurre con un obstáculo centrado en el foco de expansión. El lazo lento cubre esa limitación con la profundidad estimada (IT.6.12).</p>
 <h2 id="62-pipeline-de-percepcion-cinco-etapas">6.2 Pipeline de percepción: cinco etapas<a class="headerlink" href="#62-pipeline-de-percepcion-cinco-etapas" title="Permanent link">&para;</a></h2>
 <p><code>FlowTTCEstimator.estimate()</code> ejecuta cada ciclo cinco etapas en secuencia y produce un <code>ObstacleField</code>:</p>
 <p><img src="2026-1113 pipeline_cinco_etapas.png"/></p>
 <p><em>Figura 6.1. Las cinco etapas del estimador de flujo óptico. Cada ciclo recibe el par de fotogramas y la telemetría de ambos, y produce el <code>ObstacleField</code> que consume el lazo rápido; si alguna etapa no tiene evidencia suficiente, la salida es un campo vacío con confianza nula.</em></p>
-<p>Si en cualquier etapa no hay evidencia suficiente (primer ciclo, modo degradado, rotación grande entre frames, flujo bajo el piso de ruido), la función retorna un campo vacío con confianza nula, marcando explícitamente la ausencia de evidencia sin ningún clamp cosmético que la enmascare.</p>
+<p>Si en cualquier etapa no hay evidencia suficiente —primer ciclo, modo degradado, rotación grande entre fotogramas o flujo bajo el piso de ruido—, el estimador retorna un campo vacío con confianza nula: la ausencia de evidencia queda explícita.</p>
 <h2 id="63-etapa-1-escala-y-parametros-intrinsecos">6.3 Etapa 1: escala y parámetros intrínsecos<a class="headerlink" href="#63-etapa-1-escala-y-parametros-intrinsecos" title="Permanent link">&para;</a></h2>
-<p>Los fotogramas se convierten a escala de grises y se escalan a un ancho de trabajo de 640 px, con la distancia focal escalada en proporción; a 320 px, el valor usado en la validación del capítulo 7, los objetos finos como las ramas quedan bajo el piso de ruido.</p>
-<p><strong>Guard de rotación.</strong> Antes de computar el flujo, el estimador verifica que la rotación entre frames no exceda 2°. Durante maniobras activas (<code>GIRAR_90</code>, <code>EVADIR_*</code>) el yaw cambia 4–9° por ciclo; en esas condiciones el modelo de derotación de primer orden (IT.6.5) introduce errores de linealización y las regiones de baja textura generan flujo esencialmente aleatorio. Sin este guard, cada giro produce «nubes» de falsos obstáculos. La solución conservadora es descartar el ciclo y declarar el campo degradado: es mejor declarar incertidumbre que producir un falso positivo que cancele una maniobra en ejecución.</p>
+<p>Los fotogramas se pasan a escala de grises y se escalan a un ancho de trabajo de 640 px, con la distancia focal escalada en proporción; la validación del capítulo 7 usó 320 px. Un <strong>guard de rotación</strong> descarta el ciclo si la rotación entre fotogramas supera 2°: durante las maniobras el yaw cambia 4–9° por ciclo, la derotación de primer orden deja de valer y cada giro produciría falsos obstáculos (IT.A5.11).</p>
 <h2 id="64-etapa-2-flujo-optico-denso-dis">6.4 Etapa 2: flujo óptico denso (DIS)<a class="headerlink" href="#64-etapa-2-flujo-optico-denso-dis" title="Permanent link">&para;</a></h2>
-<p>El backend de flujo es <strong>DIS</strong> (<em>Dense Inverse Search</em>, <code>cv2.DISOpticalFlow</code>), con Farneback como alternativa. DIS produce un campo vectorial <span class="arithmatex">\(\mathbf{v}(x,y) = (u, v)\)</span> de desplazamientos en píxeles para cada posición del frame actual respecto del anterior, y su búsqueda inversa por parches es entre 5 y 10 veces más rápida que Farneback a resoluciones comparables, con la suavidad que necesita la estimación del FOE (comparación en el Anexo 5, IT.A5.7; <a href="13-REFERENCIAS.html#ref-vera-yanez-2024">Vera-Yanez et al., 2024</a>; <a href="13-REFERENCIAS.html#ref-molineros-2012">Molineros et al., 2012</a>). El campo resultante mezcla el componente traslacional (paralaje de objetos en escena) con el rotacional inducido por los cambios de actitud del vehículo; separarlos es el objetivo de la etapa siguiente.</p>
+<p>El flujo se calcula con <strong>DIS</strong> (<em>Dense Inverse Search</em>, <code>cv2.DISOpticalFlow</code>), 5 a 10 veces más rápido que Farneback a resoluciones comparables y con la suavidad que necesita la estimación del FOE (Anexo 5, IT.A5.7; <a href="13-REFERENCIAS.html#ref-molineros-2012">Molineros et al., 2012</a>). El campo mezcla el componente traslacional, el paralaje de la escena, con el rotacional inducido por la actitud del vehículo.</p>
 <h2 id="65-etapa-3-derotacion-analitica-por-telemetria-imu">6.5 Etapa 3: derotación analítica por telemetría IMU<a class="headerlink" href="#65-etapa-3-derotacion-analitica-por-telemetria-imu" title="Permanent link">&para;</a></h2>
-<p>La rotación propia del vehículo entre frames genera un flujo angular parásito que enmascara la expansión traslacional real. Para una cámara <em>pinhole</em> con rotación pequeña entre frames, ese flujo rotacional es una función analítica de la posición del píxel y de los incrementos de pitch, yaw y roll que reporta la IMU, y se resta del flujo medido para obtener el campo traslacional (las ecuaciones están en el Anexo 5, IT.A5.3). Cuando la telemetría trae la velocidad angular del giroscopio, el estimador la integra en el intervalo entre frames; en AirSim, cuyo IMU es ideal, es equivalente a restar los ángulos de dos ciclos, pero el diseño queda preparado para hardware real.</p>
-<p>Esta corrección es crítica: sin ella, cada corrección de guiado de unos pocos grados genera un flujo rotacional en el sector central que se interpreta como un obstáculo frontal y dispara evasiones espurias en cada ciclo de crucero. El mismo principio se usa en sistemas de visión activa para vehículos terrestres (<a href="13-REFERENCIAS.html#ref-dickmanns-2024">Dickmanns, 2024</a>) y SLAM monocular (<a href="13-REFERENCIAS.html#ref-chen-w-2022">Chen et al., 2022</a>).</p>
+<p>Para una cámara <em>pinhole</em> con rotación pequeña entre fotogramas, el flujo rotacional es una función analítica de la posición del píxel y de los incrementos de actitud que reporta la IMU, y se resta del flujo medido para obtener el campo traslacional (Anexo 5, IT.A5.3). Sin esta corrección, cada ajuste de guiado de unos pocos grados genera un flujo en el sector central que se interpreta como un obstáculo frontal y dispara evasiones espurias.</p>
 <h2 id="66-etapa-4-estimacion-del-foco-de-expansion-foe-con-ransac-lite">6.6 Etapa 4: estimación del Foco de Expansión (FOE) con RANSAC-lite<a class="headerlink" href="#66-etapa-4-estimacion-del-foco-de-expansion-foe-con-ransac-lite" title="Permanent link">&para;</a></h2>
-<p>Bajo traslación pura, todos los vectores del campo traslacional apuntan radialmente desde un único punto, el <strong>Foco de Expansión</strong> (FOE). Su posición en la imagen codifica la dirección de traslación del vehículo, y la magnitud del flujo en cada píxel es inversamente proporcional a la distancia del obstáculo que generó ese paralaje.</p>
-<p>Los píxeles con flujo por debajo de un piso de ruido (0.35 px) se descartan; si queda menos del 1 % de píxeles válidos, el campo entero se declara sin evidencia. Con los válidos, el FOE se estima por <strong>mínimos cuadrados ponderados</strong> —cada vector debe estar alineado con la recta que une su píxel al FOE, y los vectores más largos pesan más— y una segunda pasada tipo <strong>RANSAC-lite</strong> descarta los vectores desalineados más de ~20° y repite el ajuste (<a href="13-REFERENCIAS.html#ref-kaneko-2017">Kaneko et al., 2017</a>; <a href="13-REFERENCIAS.html#ref-molineros-2012">Molineros et al., 2012</a>). Con menos de 30 inliers la confianza del FOE se fija en 0.3 como señal de evidencia degradada; con más, crece con la fracción de inliers; un FOE fuera de la imagen anula la confianza (deducción en el Anexo 5, IT.A5.4).</p>
-<p><strong>Limitación de la implementación evaluada</strong> (se reproduce en NB3.4). La prueba de inliers del código evaluado compara cada vector con la dirección <span class="arithmatex">\(p \to \text{FOE}\)</span>. En el avance, en cambio, el flujo traslacional diverge del FOE (dirección <span class="arithmatex">\(\text{FOE} \to p\)</span>), con un ángulo de ~180° respecto de la recta usada. En una aproximación pura no queda ningún inlier, la confianza del FOE queda en 0.3 y, con ella, la de las celdas: por debajo del umbral con el que el TTC puede bloquear por sí solo (0.35, IT.6.9). Una celda la bloquea entonces la ocupación (divergencia) y casi nunca el TTC. En la corrida de referencia de <code>citysim_pilot</code> (<code>slm</code>, semilla 233), la confianza del FOE supera 0.3 en el 7.6 % de los ciclos con flujo. El efecto de corregirlo se midió fuera de vuelo y no se aplicó (cap. 7, IT.7.7): todos los resultados de este trabajo corresponden al código tal como está descrito.</p>
+<p>Bajo traslación pura, los vectores del campo traslacional apuntan radialmente desde un único punto, el <strong>Foco de Expansión</strong> (FOE), y la magnitud del flujo en cada píxel es inversamente proporcional a la distancia del obstáculo. Descartados los píxeles bajo el piso de ruido (0.35 px), el FOE se estima por <strong>mínimos cuadrados ponderados</strong> y una segunda pasada tipo <strong>RANSAC-lite</strong> descarta los vectores desalineados más de ~20° (<a href="13-REFERENCIAS.html#ref-kaneko-2017">Kaneko et al., 2017</a>). Con menos de 30 inliers la confianza del FOE se fija en 0.3 como señal de evidencia degradada; con más, crece con la fracción de inliers (Anexo 5, IT.A5.4).</p>
+<p><strong>Limitación de la implementación evaluada</strong> (se reproduce en NB3.4). La prueba de inliers del código evaluado compara cada vector con la dirección <span class="arithmatex">\(p \to \text{FOE}\)</span>, cuando en el avance el flujo diverge del FOE (<span class="arithmatex">\(\text{FOE} \to p\)</span>). En una aproximación pura no queda ningún inlier, y la confianza del FOE queda en 0.3: por debajo del umbral con el que el TTC puede bloquear una celda por sí solo (0.35, IT.6.9). En la corrida de referencia de <code>citysim_pilot</code> (<code>depth2loop</code>, semilla 233) la supera en el 7.6 % de los ciclos con flujo. Su consecuencia sobre lo que dispara la evasión, y el efecto de corregirla —medido fuera de vuelo y no aplicado—, se analizan en el cap. 7 (IT.7.7): todos los resultados corresponden al código tal como está descrito.</p>
 <h2 id="67-etapa-5-ttc-por-pixel-y-divergencia">6.7 Etapa 5: TTC por píxel y divergencia<a class="headerlink" href="#67-etapa-5-ttc-por-pixel-y-divergencia" title="Permanent link">&para;</a></h2>
-<p>Con el FOE estimado y el intervalo temporal real <span class="arithmatex">\(\Delta t\)</span> entre frames —la diferencia de timestamps del simulador, nunca el período nominal del lazo—, se calcula para cada píxel válido:</p>
+<p>Con el FOE y el intervalo real <span class="arithmatex">\(\Delta t\)</span> entre fotogramas —la diferencia de timestamps del simulador, nunca el período nominal del lazo—, el TTC de cada píxel válido es</p>
 <div class="arithmatex">\[TTC(x,y) = \frac{\|p - \text{FOE}\| \cdot \Delta t}{\|\mathbf{v}_{\text{trans}}(x,y)\|}\]</div>
-<p>la forma discreta de <span class="arithmatex">\(TTC = Z / v_{\text{cierre}}\)</span>, válida con traslación dominante. Cerca del FOE o con flujo muy pequeño, el TTC tiende a infinito: sin evidencia de aproximación.</p>
-<p><strong>Canal de divergencia.</strong> En paralelo, el estimador computa la divergencia del campo traslacional, <span class="arithmatex">\(\text{div}(x,y) = \partial u / \partial x + \partial v / \partial y\)</span>, con diferencias centradas normalizadas por <span class="arithmatex">\(\Delta t\)</span>. La divergencia positiva indica expansión local: el objeto en ese punto se acerca. Es un indicador complementario que no requiere estimar el FOE: aun si el ajuste del FOE falla, una celda con divergencia positiva elevada sigue siendo evidencia de aproximación.</p>
+<p>la forma discreta de <span class="arithmatex">\(TTC = Z / v_{\text{cierre}}\)</span>. En paralelo se calcula la <strong>divergencia</strong> del campo traslacional, cuyo valor positivo indica expansión local: es evidencia de aproximación que no depende del FOE.</p>
 <h2 id="68-grilla-de-celdas-33-y-agregacion-por-sector">6.8 Grilla de celdas 3×3 y agregación por sector<a class="headerlink" href="#68-grilla-de-celdas-33-y-agregacion-por-sector" title="Permanent link">&para;</a></h2>
-<p>El campo traslacional se divide en una grilla de 3 columnas (sectores <em>izquierda</em>, <em>centro</em>, <em>derecha</em>) × 3 filas. Para cada celda <span class="arithmatex">\(c\)</span>, sea <span class="arithmatex">\(N_c\)</span> su número de píxeles y <span class="arithmatex">\(V_c\)</span> el conjunto de los válidos (flujo por encima del piso de ruido). Se calculan tres valores:</p>
-<div class="arithmatex">\[
-\begin{aligned}
-\kappa_c &amp;= \frac{|V_c|}{N_c}\,\kappa_{\text{FOE}} \\
-\hat{\tau}_c &amp;= P_{20}\big\{\,\tau(p) : p \in V_c,\ \tau(p) &lt; \infty\,\big\} \\
-o_c &amp;= \min\!\big(1,\ \max(0,\ k\,\bar{d}_c)\big)
-\end{aligned}
-\]</div>
+<p>El campo traslacional se divide en una grilla de 3 columnas (sectores <em>izquierda</em>, <em>centro</em>, <em>derecha</em>) × 3 filas, y para cada celda se calculan tres valores (definición formal en el Anexo 5, IT.A5.6.1):</p>
 <ul>
-<li><strong>Confianza</strong> <span class="arithmatex">\(\kappa_c\)</span>: la fracción de píxeles válidos de la celda por la confianza del FOE, <span class="arithmatex">\(\kappa_{\text{FOE}}\)</span> (IT.6.6). Combina la densidad local de flujo con la calidad global del FOE.</li>
-<li><strong>TTC de celda</strong> <span class="arithmatex">\(\hat{\tau}_c\)</span>: el percentil 20 de los TTC finitos de la celda, conservador y resistente a TTC espuriamente bajos en píxeles aislados. Con menos de 5 píxeles válidos, <span class="arithmatex">\(\hat{\tau}_c = \infty\)</span>.</li>
-<li><strong>Ocupación</strong> <span class="arithmatex">\(o_c\)</span>: la divergencia media de la celda, <span class="arithmatex">\(\bar{d}_c = \frac{1}{|V_c|}\sum_{p \in V_c} \text{div}(p)\)</span> (en s⁻¹, IT.6.7), multiplicada por una constante <span class="arithmatex">\(k \approx 0.056\)</span> s y acotada a <span class="arithmatex">\([0, 1]\)</span>. Una celda que en promedio se contrae (<span class="arithmatex">\(\bar{d}_c \le 0\)</span>) tiene ocupación nula; una que se expande la tiene proporcional a la tasa de expansión.</li>
+<li><strong>Confianza</strong>: la fracción de píxeles válidos de la celda por la confianza del FOE.</li>
+<li><strong>TTC de celda</strong>: el percentil 20 de los TTC finitos de la celda, conservador ante TTC espuriamente bajos en píxeles aislados.</li>
+<li><strong>Ocupación</strong>: la divergencia media de la celda multiplicada por una constante de escala empírica (<span class="arithmatex">\(k \approx 0.056\)</span> s) y acotada a <span class="arithmatex">\([0, 1]\)</span>.</li>
 </ul>
-<p>La constante <span class="arithmatex">\(k\)</span> (en el código, <span class="arithmatex">\(0.450/8\)</span>) se determinó empíricamente contra la profundidad de referencia del simulador: no es un valor físicamente derivado sino un factor de escala. Como <span class="arithmatex">\(o_c\)</span> es lineal en <span class="arithmatex">\(\bar{d}_c\)</span> por debajo de 1, el umbral de bloqueo de 0.011 (IT.6.9) equivale a pedir una divergencia media de al menos ~0.2 s⁻¹ en la celda. El protocolo de validación se describe en el capítulo 7.</p>
 <h2 id="69-el-predicado-de-bloqueo-fusion-de-dos-canales">6.9 El predicado de bloqueo: fusión de dos canales<a class="headerlink" href="#69-el-predicado-de-bloqueo-fusion-de-dos-canales" title="Permanent link">&para;</a></h2>
-<p>La decisión de si una celda está <strong>bloqueada</strong> fusiona los dos canales con una compuerta disyuntiva condicionada a la confianza:</p>
+<p>Una celda está <strong>bloqueada</strong> si tiene evidencia mínima (confianza ≥ 0.15) <strong>y</strong> su ocupación supera 0.011, <strong>o</strong> si su TTC es ≤ 2.5 s con confianza ≥ 0.35:</p>
 <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">confidence</span> <span class="o">&lt;</span> <span class="n">MIN_CONFIDENCE_FOR_BLOCKED</span><span class="p">:</span>   <span class="c1"># 0.15</span>
         <span class="k">return</span> <span class="kc">False</span>
@@ -1573,23 +1647,20 @@ o_c &amp;= \min\!\big(1,\ \max(0,\ k\,\bar{d}_c)\big)
         <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ttc_s</span> <span class="o">&lt;=</span> <span class="n">TTC_BLOCKED_THRESHOLD_S</span>          <span class="c1"># 2.5 s</span>
     <span class="p">)</span>
 </code></pre></div>
-<p>Una celda está bloqueada si tiene evidencia mínima de percepción <strong>y</strong> la ocupación es alta, <strong>o</strong> el TTC es bajo con suficiente confianza.</p>
-<p><strong>Calibración del umbral de ocupación (D2).</strong> La ocupación no toma valores comparables a los del TTC: frente a una pared sólida nunca supera 0.082, de modo que un umbral fijado a ojo (0.35) dejaría ese canal <strong>desactivado</strong>. La curva ROC contra la profundidad de referencia dio AUC = 0.87 y un umbral óptimo por <a href="13-REFERENCIAS.html#ref-youden-1950">índice de Youden</a> de <strong>0.011</strong> (cap. 7, IT.7.5). <code>main.py</code> incorpora además un calibrador que ajusta el umbral al ruido de ocupación del entorno en los primeros ciclos; <strong>el ejecutor de experimentos no lo usa</strong>, de modo que las corridas en lote operan con el valor fijo.</p>
-<p><strong>Umbrales diferenciados de confianza.</strong> La ocupación puede votar bloqueo con confianza 0.15, pero el TTC solo, sin apoyo de la ocupación, necesita 0.35. La razón es que el camino de «pocos inliers» del FOE produce una confianza de 0.3 como señal de evidencia degradada, que supera el piso general: con un único umbral, el TTC degradado votaría con la misma autoridad que un FOE robusto y produciría falsos positivos. Por la limitación descrita en IT.6.6, la confianza casi nunca llega a 0.35 en el avance, y en el código evaluado el bloqueo lo decide sobre todo la ocupación.</p>
+<p>El umbral de ocupación sale de la curva ROC contra la profundidad de referencia (AUC = 0.87, índice de <a href="13-REFERENCIAS.html#ref-youden-1950">Youden</a>; cap. 7, IT.7.5): frente a una pared sólida la ocupación nunca supera 0.082, de modo que un umbral fijado a ojo (0.35) dejaría ese canal desactivado. El TTC necesita más confianza que la ocupación para votar solo, porque la confianza degradada del FOE (0.3) supera el piso general (IT.A5.11). Por la limitación de IT.6.6, en el código evaluado el TTC casi nunca alcanza ese umbral en el avance; qué dispara entonces la evasión en vuelo se analiza en el cap. 7 (IT.7.7).</p>
 <h2 id="610-el-contrato-obstaclefield-y-la-ausencia-de-evidencia">6.10 El contrato <code>ObstacleField</code> y la ausencia de evidencia<a class="headerlink" href="#610-el-contrato-obstaclefield-y-la-ausencia-de-evidencia" title="Permanent link">&para;</a></h2>
-<p>Todos los consumidores de la percepción —lazo rápido, evasión, FSM, gobernador de velocidad y registro— acceden al campo de obstáculos <strong>solo</strong> a través de su interfaz pública, un objeto inmutable que ninguno puede modificar; la capa estratégica no lo recibe, porque mira el fotograma (cap. 5, IT.5.5). El campo distingue el origen de su evidencia —flujo, degradado, retenido o sin datos—, y <code>has_evidence()</code> solo es verdadero con flujo y confianza positiva. Ese es el contrato que evita la Falla 1 del capítulo 9: <strong>la falta de evidencia no es espacio libre</strong>. Un hover produce un campo sin evidencia, y tratarlo como camino despejado desactivaría el escape de bloqueo justo cuando el dron está atrapado; por eso la consulta de corredor libre de la FSM devuelve falso sin evidencia y el gobernador limita el avance (cap. 5, IT.5.4). La interfaz completa está en el Anexo 5 (IT.A5.8).</p>
+<p>Todos los consumidores de la percepción —lazo rápido, evasión, FSM, gobernador de velocidad y registro— acceden al campo de obstáculos <strong>solo</strong> a través de su interfaz pública, un objeto inmutable (Anexo 5, IT.A5.8). El campo distingue el origen de su evidencia —flujo, degradado, retenido o sin datos—, y <code>has_evidence()</code> solo es verdadero con flujo y confianza positiva. Es el contrato que evita la Falla 1 del capítulo 9: <strong>la falta de evidencia no es espacio libre</strong>. Un hover produce un campo sin evidencia, y tratarlo como camino despejado desactivaría el escape de bloqueo justo cuando el dron está atrapado; por eso el gobernador limita el avance sin evidencia (cap. 5, IT.5.4).</p>
 <h2 id="611-comportamiento-bajo-condiciones-extremas">6.11 Comportamiento bajo condiciones extremas<a class="headerlink" href="#611-comportamiento-bajo-condiciones-extremas" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Hover o vuelo muy lento:</strong> el campo queda sin evidencia —«sin información», no «despejado»—; el gobernador limita el avance y la capa estratégica sigue juzgando la escena con la profundidad estimada.</li>
 <li><strong>Giro puro:</strong> el guard de rotación declara el ciclo degradado y el lazo continúa la maniobra comprometida; la inhibición se verificó con guiñadas de 0.3 a 1.0 rad/s (cap. 7, IT.7.6).</li>
-<li><strong>Frames aislados sin evidencia:</strong> el estimador retiene el último campo válido, con el TTC descontado, durante hasta 0.6 s, y cerca de un obstáculo el guiado limita su guiñada a 5 °/s, dentro del rango de la derotación (IT.A5.9).</li>
+<li><strong>Fotogramas aislados sin evidencia:</strong> el estimador retiene el último campo válido, con el TTC descontado, durante hasta 0.6 s, y cerca de un obstáculo el guiado limita su guiñada a 5 °/s (IT.A5.9).</li>
 <li><strong>Textura baja o cambios bruscos de iluminación:</strong> sin gradiente la confianza de la celda es casi nula; un cambio de exposición produce flujo sistemático que el recorte de outliers mitiga en parte.</li>
 </ul>
-<p>Los parámetros del estimador están en el Anexo 5 (IT.A5.10).</p>
 <h2 id="612-profundidad-monocular-estimada-depth-anything-v2">6.12 Profundidad monocular estimada: Depth Anything V2<a class="headerlink" href="#612-profundidad-monocular-estimada-depth-anything-v2" title="Permanent link">&para;</a></h2>
 <h3 id="6121-que-es-y-por-que-se-usa">6.12.1 Qué es y por qué se usa<a class="headerlink" href="#6121-que-es-y-por-que-se-usa" title="Permanent link">&para;</a></h3>
-<p><strong>Depth Anything V2</strong> (<a href="13-REFERENCIAS.html#ref-yang-2024">Yang et al., 2024</a>) es una familia de modelos fundacionales de estimación de profundidad monocular: a partir de <strong>una sola imagen RGB</strong> predicen la profundidad de cada píxel. Un modelo maestro entrenado con imágenes sintéticas, de profundidad exacta, etiqueta imágenes reales, y con esas pseudo-etiquetas se entrenan los modelos chicos; las variantes <strong>métricas</strong> devuelven la profundidad <strong>en metros</strong>. Este trabajo usa <code>Depth-Anything-V2-Metric-Outdoor-Small</code>: la variante para exteriores con el codificador más chico, de ~25 M de parámetros.</p>
-<p>La elección responde a una medición. El lazo lento hace una pregunta de <strong>distancia</strong> —si se puede volar 15 m en la dirección de cada sector—, y el banco de prueba (cap. 10, IT.10.2; cap. 11, IT.11.0) midió tres formas de responderla con el mismo fotograma, contra la misma etiqueta de referencia (625 muestras × 9 sectores):</p>
+<p><strong>Depth Anything V2</strong> (<a href="13-REFERENCIAS.html#ref-yang-2024">Yang et al., 2024</a>) es una familia de modelos fundacionales que predicen la profundidad de cada píxel a partir de <strong>una sola imagen RGB</strong>; las variantes <strong>métricas</strong> la devuelven en metros. Este trabajo usa <code>Depth-Anything-V2-Metric-Outdoor-Small</code>, de ~25 M de parámetros.</p>
+<p>La elección responde a una medición. El lazo lento hace una pregunta de <strong>distancia</strong> —si se puede volar 15 m en la dirección de cada sector—, y el banco de prueba (cap. 10, IT.10.2; cap. 11, IT.11.0) midió tres formas de responderla con el mismo fotograma y la misma etiqueta de referencia (625 muestras × 9 sectores):</p>
 <table>
 <thead>
 <tr>
@@ -1620,24 +1691,15 @@ o_c &amp;= \min\!\big(1,\ \max(0,\ k\,\bar{d}_c)\big)
 </tr>
 </tbody>
 </table>
-<p>Solo la profundidad estimada supera el criterio del banco. La segmentación no sirve porque una clase no dice la distancia —«edificio» incluye uno a 100 m—, y en los barridos reales la profundidad separa rumbos abiertos de cerrados con AUC 0.87, mientras el VLM declaró transitables todos los rumbos. Sus errores son conservadores: el 2 % de los sectores que marca libres tienen un obstáculo a menos de 5 m. El espacio libre es una pregunta de geometría, que resuelve una red chica entrenada para estimar distancia y no un modelo de lenguaje generalista (cap. 12, IT.12.2).</p>
+<p>Solo la profundidad estimada supera el criterio del banco: una clase semántica no dice la distancia, y en los barridos reales la profundidad separa rumbos abiertos de cerrados con AUC 0.87, mientras el VLM declaró transitables todos los rumbos. Sus errores son conservadores: el 2 % de los sectores que marca libres tienen un obstáculo a menos de 5 m.</p>
 <h3 id="6122-del-fotograma-a-la-decision">6.12.2 Del fotograma a la decisión<a class="headerlink" href="#6122-del-fotograma-a-la-decision" title="Permanent link">&para;</a></h3>
-<p>La red procesa el fotograma crudo del ciclo, el mismo que usa el flujo óptico, y produce una matriz de profundidades en metros. Sobre el recorte cuadrado central del fotograma —el mismo que recibiría el VLM—, dividido en una grilla de 3×3, se toma el <strong>percentil 5</strong> de la profundidad de cada sector: lo más cercano, sin que lo decidan píxeles sueltos. Un sector es libre si ese valor es ≥ 15 m, la misma distancia a la que se fija la sub-meta. Es exactamente el estadístico con el que se construyen las etiquetas de referencia del banco (cap. 7, IT.7.1), de modo que la exactitud medida allí es la del juicio que usa el vuelo.</p>
-<p>El servicio devuelve <strong>la misma estructura que el VLM</strong> —el estado de los nueve sectores para la capa estratégica, y si cada rumbo es transitable para el barrido (cap. 5, IT.5.5.3, IT.5.6)—, de modo que el resto del sistema no distingue la fuente. La auditoría guarda el p5 de cada sector en metros, para revisar cada decisión contra la distancia que la produjo.</p>
+<p>Sobre el recorte cuadrado central del fotograma, dividido en una grilla de 3×3, se toma el <strong>percentil 5</strong> de la profundidad estimada de cada sector, y el sector es libre si ese valor es ≥ 15 m: el mismo estadístico con que se construyen las etiquetas del banco (cap. 7, IT.7.1). El servicio devuelve la misma estructura que el VLM, de modo que el resto del sistema no distingue la fuente (detalle en el Anexo 5, IT.A5.12).</p>
 <h3 id="6123-donde-corre-y-que-no-es">6.12.3 Dónde corre y qué no es<a class="headerlink" href="#6123-donde-corre-y-que-no-es" title="Permanent link">&para;</a></h3>
-<p>La red <strong>nunca corre dentro del lazo de 5 Hz</strong>: corre en un hilo de servicio (Anexo 10, IT.A10.6.2), tarda ~110 ms en vuelo con la GPU compartida —la mitad de un ciclo, frente a ~0.8 s del VLM— y ocupa ~440 MiB de VRAM. Por eso no reemplaza al flujo en el lazo rápido: el flujo detecta un cierre en milisegundos, y la profundidad decide, cada segundo, hacia dónde está el espacio libre. La red <strong>no lee el canal de profundidad del simulador</strong>: recibe el mismo fotograma RGB que el flujo, como una red a bordo de un dron que solo tiene una cámara. Ese canal sigue fuera del lazo (cap. 5, IT.5.8), porque de él salen las etiquetas de referencia, y una guardia automatizada lo verifica.</p>
+<p>La red <strong>nunca corre dentro del lazo de 5 Hz</strong>: corre en un hilo de servicio, en ~110 ms con la GPU compartida. No reemplaza al flujo en el lazo rápido —el flujo detecta un cierre en milisegundos; la profundidad decide, cada segundo, hacia dónde está el espacio libre— y <strong>no lee el canal de profundidad del simulador</strong>: recibe el mismo fotograma RGB que el flujo, como una red a bordo de un dron con una sola cámara.</p>
 <h3 id="6124-limitaciones">6.12.4 Limitaciones<a class="headerlink" href="#6124-limitaciones" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Dominio.</strong> Depth Anything V2 se entrenó en parte con imágenes sintéticas, y la etiqueta del banco sale del mismo render que la red ve. En una cámara real el desempeño puede ser menor; la validación en imágenes reales está pendiente.</li>
-<li><strong>Escala métrica.</strong> La variante para exteriores se ajustó con datos de conducción, a la altura de un auto. Las distancias absolutas a 10–30 m de altura no están calibradas: el umbral de 15 m funciona como corte de clasificación validado en el banco, no como una medición en metros.</li>
-<li><strong>Objetos finos y follaje.</strong> Ramas, cables y copas semitransparentes son el caso más difícil para cualquier estimador denso; el lote del corredor arbolado de TownSim (Anexo 12, IT.A12.3.2) lo pone a prueba.</li>
-<li><strong>Sin memoria.</strong> Cada consulta juzga un fotograma aislado, sin fusión temporal ni mapa.</li>
-<li><strong>Campo de visión.</strong> Solo se analiza el recorte central; lo que queda a los costados del fotograma no participa del juicio.</li>
-</ul>
+<p>La red se evaluó sobre el mismo render sintético del que salen sus etiquetas, y en una cámara real puede rendir menos; su escala métrica no está calibrada a 10–30 m de altura, de modo que el umbral de 15 m funciona como corte de clasificación y no como medición; el follaje y los objetos finos son su caso más difícil; y cada consulta juzga un fotograma aislado, solo en el recorte central (detalle en el Anexo 5, IT.A5.12).</p>
 <h2 id="613-complementariedad-entre-flujo-optico-y-profundidad-estimada">6.13 Complementariedad entre flujo óptico y profundidad estimada<a class="headerlink" href="#613-complementariedad-entre-flujo-optico-y-profundidad-estimada" title="Permanent link">&para;</a></h2>
-<p>El <strong>flujo óptico</strong> detecta un cierre en milisegundos cuando el dron se traslada con textura suficiente, pero es ciego en hover, en giro puro, ante obstáculos centrados en el foco de expansión y ante superficies horizontales. La <strong>profundidad estimada</strong> no necesita traslación y ve esos casos, pero tarda demasiado para lo inminente: sirve para decidir el rodeo cada segundo. La interfaz entre ambos es <strong>geométrica, no textual</strong> —bloqueos por sector para el lazo rápido, sub-metas en coordenadas del mundo para el guiado—, y ninguno recibe la salida del otro, de modo que no hay que reconciliar dos descripciones de la escena con latencias distintas.</p>
-<hr />
-<p><em>La evaluación cuantitativa del estimador de flujo (curvas ROC, AUC, comparación con profundidad de referencia) se desarrolla en el capítulo 7; la de la profundidad estimada, en el capítulo 11 (IT.11.0). El análisis de los modos de falla de la percepción y su impacto en el comportamiento del lazo se presenta en el capítulo 9.</em></p>
+<p>El <strong>flujo óptico</strong> detecta un cierre en milisegundos cuando el dron se traslada con textura suficiente, pero es ciego en hover, en giro puro, ante obstáculos centrados en el foco de expansión y ante superficies horizontales. La <strong>profundidad estimada</strong> no necesita traslación y ve esos casos, pero tarda demasiado para lo inminente: sirve para decidir el rodeo cada segundo. La interfaz entre ambos es <strong>geométrica</strong>, no textual —bloqueos por sector para el lazo rápido, sub-metas en coordenadas del mundo para el guiado—, y ninguno recibe la salida del otro. La evaluación del flujo está en el capítulo 7 y la de la profundidad, en el capítulo 11 (IT.11.0).</p>
 
 
 

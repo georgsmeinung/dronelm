@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -467,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -494,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1229,6 +1229,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1429,7 +1513,7 @@
 
 
 <h1 id="anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge">Anexo 9: Modelos de Mundo Latentes (LeWorldModel) como Alternativa al SLM — Trade-offs y Viabilidad en Hardware Edge<a class="headerlink" href="#anexo-9-modelos-de-mundo-latentes-leworldmodel-como-alternativa-al-slm-trade-offs-y-viabilidad-en-hardware-edge" title="Permanent link">&para;</a></h1>
-<p>Este anexo analiza, como línea de trabajo futuro (IT.12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, cap. 8) por un <strong>modelo de mundo latente</strong> del tipo <em>Joint-Embedding Predictive Architecture</em> (JEPA), tomando como caso de estudio <strong>LeWorldModel</strong> (LeWM; <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo <code>slm</code>, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una <em>companion computer</em> como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).</p>
+<p>Este anexo analiza, como línea de trabajo futuro (IT.12.4), la sustitución —total o parcial— del modelo de lenguaje visivo (LFM2.5-VL-1.6B, <code>lfm2.5-vl-1.6b:q4km-ctx8k</code>, cap. 8) por un <strong>modelo de mundo latente</strong> del tipo <em>Joint-Embedding Predictive Architecture</em> (JEPA), tomando como caso de estudio <strong>LeWorldModel</strong> (LeWM; <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>). El objetivo es doble: (i) determinar qué aportaría y qué perdería el sistema frente al brazo deliberativo <code>depth2loop</code>, y (ii) estimar la viabilidad de ejecutar inferencia y planificación en una <em>companion computer</em> como la contemplada en el plan de tesis (NVIDIA Jetson Nano / Orin).</p>
 <p><img src="a9-alternativa-con-lewm.png"/></p>
 <p><strong>Alcance y convención de rigor.</strong> Nada de lo aquí descrito está implementado ni medido en el sistema evaluado en el capítulo 11. Las cifras se rotulan según su origen:</p>
 <ul>
@@ -1487,7 +1571,7 @@
 <p><strong>Trabajos de contexto aéreo.</strong> El antecedente más cercano al dominio de esta tesis es SkyJEPA (<a href="../13-REFERENCIAS.html#ref-rao-2026">Rao et al., 2026</a>), que aplica un modelo de dinámica latente de estilo JEPA al control de cuadrirrotores con transferencia <em>sim-to-real</em> y optimización por muestreo en hardware embebido; según su resumen opera sobre <strong>estado</strong>, no sobre imágenes, por lo que no valida el caso visual monocular. En navegación con imagen objetivo, <a href="../13-REFERENCIAS.html#ref-chahe-2026">Chahe et al. (2026)</a> muestran que el costo de planificación en el espacio latente requiere diseño explícito (monotonía respecto del progreso). No se realizó un relevamiento exhaustivo de esta literatura, muy activa en 2026.</p>
 <hr />
 <h2 id="a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente">A9.2 Qué cambiaría en el sistema: SLM vs. modelo de mundo latente<a class="headerlink" href="#a92-que-cambiaria-en-el-sistema-slm-vs-modelo-de-mundo-latente" title="Permanent link">&para;</a></h2>
-<p>El VLM del sistema es un <strong>perceptor semántico de escala de segundos</strong>: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, IT.5.5), con una latencia de ~0,8 s con el modelo local [T] (cap. 8, IT.8.6). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, IT.6.12) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
+<p>El VLM del sistema es un <strong>perceptor semántico de escala de segundos</strong>: recibe un fotograma (con una grilla de 3×3 dibujada o, en un deadlock, cuatro imágenes de un barrido) y describe qué direcciones son volables; el código traduce esa descripción a una sub-meta en coordenadas del mundo (cap. 5, IT.5.5), con una latencia de ~0,8 s con el modelo local [T] (Anexo 16, IT.A16.7). Con la configuración por defecto esa pregunta la responde una red de profundidad estimada (cap. 6, IT.6.12) y el VLM queda en el plan de ruta. Un modelo de mundo latente es un <strong>predictor de consecuencias</strong>: no decide por sí mismo; permite evaluar secuencias de acciones candidatas y elegir la de menor costo. No son sustitutos directos, sino componentes de naturaleza distinta.</p>
 <table>
 <thead>
 <tr>
@@ -1656,7 +1740,7 @@
 </table>
 <p>Los rangos de throughput efectivo son <strong>hipótesis</strong> a validar en IT.A9.7: los <em>matmuls</em> pequeños y batcheados rara vez saturan las unidades tensoriales. Dos consecuencias:</p>
 <ol>
-<li><strong>Con la configuración del paper, el modelo de mundo no es claramente más rápido que el SLM en el borde</strong>: su ventaja (48× sobre DINO-WM) es relativa a otros modelos de mundo, no al SLM del sistema. En una Orin Nano el plan completo caería en el mismo orden de magnitud que la latencia del VLM en la estación de desarrollo (mediana 1,46 s [T]; en la Orin Nano, con menos ancho de banda que una GPU de escritorio, sería mayor [E]) y del watchdog original (<code>SLM_WATCHDOG_MS = 1500 ms</code>; el valor vigente es 13 000 ms, ampliado precisamente para no descartar respuestas del VLM, cap. 8, IT.8.6).</li>
+<li><strong>Con la configuración del paper, el modelo de mundo no es claramente más rápido que el SLM en el borde</strong>: su ventaja (48× sobre DINO-WM) es relativa a otros modelos de mundo, no al SLM del sistema. En una Orin Nano el plan completo caería en el mismo orden de magnitud que la latencia del VLM en la estación de desarrollo (mediana 1,46 s [T]; en la Orin Nano, con menos ancho de banda que una GPU de escritorio, sería mayor [E]) y del watchdog original (<code>SLM_WATCHDOG_MS = 1500 ms</code>; el valor vigente es 13 000 ms, ampliado precisamente para no descartar respuestas del VLM, Anexo 16, IT.A16.7).</li>
 <li><strong>Reduciendo el presupuesto de muestreo</strong> (menos candidatos e iteraciones, <em>warm start</em> de la distribución CEM con el plan previo, horizonte corto) el plan baja a decenas de milisegundos en Orin Nano, compatible con el lazo de 5 Hz (200 ms por ciclo, con el ciclo también ocupado por percepción y flujo óptico). El costo es calidad de plan, cuyo impacto no está caracterizado y debe medirse (el paper fija sus hiperparámetros por tarea [P]).</li>
 </ol>
 <p>En la Jetson Nano original (Maxwell, sin unidades tensoriales), solo la configuración reducida es plausible, y la pila de software heredada (JetPack 4.x, versiones antiguas de PyTorch/TensorRT) añade fricción de portabilidad [E]. La Orin Nano es la plataforma realista para esta línea.</p>
@@ -1738,7 +1822,7 @@
 <li><strong>Recolección de datos.</strong> Generar trayectorias (frame RGB, acción, telemetría) en AirSim para los tres tiers, incluyendo trayectorias de casi-colisión y maniobras de escape; las corridas ya registradas de los lotes de la tesis pueden reutilizarse como semilla, evaluando su cobertura antes de entrenar.</li>
 <li><strong>Entrenamiento y diagnóstico del latente.</strong> Entrenar LeWM (código oficial del paper, <a href="../13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>); entrenar <em>probes</em> lineales para TTC/ocupación usando las etiquetas de referencia de profundidad ya disponibles (cap. 7) y medir su error; medir error de rollout vs. horizonte.</li>
 <li><strong>Medición en el borde.</strong> Medir latencia real de <code>encoder</code>, <code>predictor</code> y plan CEM en la estación de desarrollo y en Jetson Orin Nano (FP16 y INT8/TensorRT), variando <code>N</code>, iteraciones y <code>H</code>; reportar p50/p95/p99 y potencia. Esto reemplaza las estimaciones [E] de IT.A9.5.3.</li>
-<li><strong>Evaluación en lazo cerrado.</strong> Comparar, sobre los mismos escenarios y semillas del cap. 10, <code>slm</code> contra <code>slm + verificador latente</code> (Opción B), con las mismas métricas (éxito, colisiones, tiempo, distancia). Con K = 5 los resultados serían indicativos (cap. 12, IT.12.3); se recomienda K ≥ 10–15.</li>
+<li><strong>Evaluación en lazo cerrado.</strong> Comparar, sobre los mismos escenarios y semillas del cap. 10, <code>depth2loop</code> contra <code>depth2loop + verificador latente</code> (Opción B), con las mismas métricas (éxito, colisiones, tiempo, distancia). Con K = 5 los resultados serían indicativos (cap. 12, IT.12.3); se recomienda K ≥ 10–15.</li>
 <li><strong>Criterio go/no-go.</strong> Continuar solo si (a) el <em>probe</em> de riesgo alcanza una capacidad discriminativa medida (AUC/Youden, como en el Anexo 5) sobre escenas fuera del conjunto de entrenamiento, y (b) el plan completo cabe en el presupuesto del lazo táctico en Jetson Orin Nano sin degradar el ciclo de percepción.</li>
 </ol>
 <hr />

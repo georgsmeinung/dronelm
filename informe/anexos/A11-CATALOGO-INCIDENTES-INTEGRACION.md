@@ -134,7 +134,7 @@ En todas las corridas de diagnóstico, el primer deadlock se declaró en los cic
 
 Un runner que captura el canal de profundidad del simulador «solo como métrica» puede terminar alimentando al brazo evaluado: en una configuración de diagnóstico, esa captura armaba un freno de proximidad que el grafo consumía, cancelaba maniobras, inyectaba retrocesos y registraba puntos de contacto que el tracker usaba para validar desvíos. El brazo evaluado tenía así acceso indirecto a la profundidad exacta del simulador, lo que invalida su comparación con un sistema monocular, y una guardia estática limitada a `src/` no lo detecta porque el runner está fuera de su alcance.
 
-**Mecanismo de contención.** Ningún componente del lazo de vuelo lee el canal de profundidad, tampoco como métrica, y la guardia (`test_no_depth_in_flight_path.py`) cubre el runner, `main.py` y todos los módulos de vuelo, incluido el canal indirecto; la distancia mínima a obstáculo la mide un hilo de auditoría aislado (cap. 5, IT.5.8; cap. 10, IT.10.4.1, punto 3).
+**Mecanismo de contención.** Ningún componente del lazo de vuelo lee el canal de profundidad, tampoco como métrica, y la guardia (`test_no_depth_in_flight_path.py`) cubre el runner, `main.py` y todos los módulos de vuelo, incluido el canal indirecto; la distancia mínima a obstáculo la mide un hilo de auditoría aislado (cap. 5, IT.5.8; cap. 10, IT.10.4.1).
 
 ### A11.4.3 La causa física de los `physics_locked`
 
@@ -188,4 +188,42 @@ Con las respuestas del barrido completas, tres corridas piloto suman 19 respuest
 
 La consecuencia de diseño es doble. Primero, una respuesta constante convierte al barrido, en la práctica, en una regla fija («girar 90° hacia el lado más cercano a la meta»), y una regla de falla basada en el indicador de imagen degradada lo convertiría en un escape vertical ciego (en una de esas corridas habría descartado los 8 barridos). Segundo, elegir el rumbo transitable más cercano a la meta devuelve al dron, deadlock tras deadlock, contra el mismo obstáculo.
 
-**Mecanismo de contención.** El esquema no pide indicador de imagen degradada ni certeza (cap. 8, IT.8.2.1); y la salida del deadlock descarta el rumbo que falló y los rumbos ya probados en la zona, y con deadlocks repetidos explora el rumbo libre más distinto de lo ya probado (cap. 5, IT.5.6). Esto no corrige que el modelo responda lo mismo siempre: con una respuesta constante, la salida queda determinada por la historia del dron y no por la imagen. El registro de la selección permite separar ambos efectos.
+**Mecanismo de contención.** El esquema no pide indicador de imagen degradada ni certeza (cap. 8, IT.8.2); y la salida del deadlock descarta el rumbo que falló y los rumbos ya probados en la zona, y con deadlocks repetidos explora el rumbo libre más distinto de lo ya probado (cap. 5, IT.5.6). Esto no corrige que el modelo responda lo mismo siempre: con una respuesta constante, la salida queda determinada por la historia del dron y no por la imagen. El registro de la selección permite separar ambos efectos.
+
+---
+
+## A11.5 Falla 1 en detalle: el campo nulo leído como ausencia de peligro
+
+Si el estado del campo de obstáculos se comunica como una lista de objetos detectados, con una lista vacía como valor por defecto, la lista vacía es ambigua: puede significar "la percepción corrió y no detectó nada" o "la percepción no corrió, no tiene confianza, o falló silenciosamente". Los consumidores —la capa de decisión, el constructor del prompt del VLM y la FSM— tienden a resolver la ambigüedad en favor de la primera lectura. En una configuración de diagnóstico con ese contrato, el prompt afirmaba al modelo "trayectoria frontal sin obstáculos detectados", el VLM respondía con perfecta coherencia que se podía seguir, el lazo ejecutaba el crucero y no se generaba ninguna alerta, porque la lista vacía es un valor válido.
+
+Es una instancia de un anti-patrón general: tratar el valor neutro de un tipo (lista vacía, cero, `None`) como evidencia de ausencia de fenómeno en lugar de como ausencia de información. En señales de seguridad la convención correcta es la inversa: la ausencia de evidencia no es evidencia de ausencia de peligro ([Altman y Bland, 1995](../13-REFERENCIAS.md#ref-altman-1995)).
+
+La contención es el tipo inmutable `ObstacleField` (cap. 6, IT.6.10), que distingue tres estados epistémicos: percepción con evidencia real (`source = "flow"`, `foe_confidence > 0`), percepción que corrió sin evidencia confiable (`foe_confidence = 0`) y percepción inhibida activamente (`source = "degraded"`). Ningún consumidor puede confundir "sin obstáculos detectados" con "sin información" sin leer explícitamente `has_evidence()`; el gobernador de velocidad limita el avance sin evidencia (cap. 5, IT.5.4) y `has_open_corridor()` no declara corredor libre sin evidencia.
+
+## A11.6 Falla 2 en detalle: desalineación temporal del historial de fotogramas
+
+Una consulta que envía al VLM un historial de dos fotogramas ($t$ y $t-1$) para que estime la dirección de movimiento depende de que los dos sean genuinamente distintos en el tiempo. Un búfer actualizado sin verificar timestamps produce fotogramas fuera de contexto al cambiar de waypoint (el "t-1" es un fotograma de otro punto de la misión) o duplicados cuando el simulador no entrega uno nuevo a tiempo. Con dos fotogramas idénticos, el modelo infiere que el dron está estático o que nada se acerca.
+
+El sistema no envía historial temporal al VLM: la capa estratégica usa el fotograma del ciclo y el barrido un fotograma por rumbo, cada uno con su timestamp y su pose de captura (cap. 5, IT.5.5, IT.5.6). El riesgo equivalente pasa a ser espacial —una etiqueta de orientación que no corresponde al fotograma (cap. 9, IT.9.8.1)— y se contiene anclando cada respuesta a la pose medida del fotograma que la originó.
+
+## A11.7 Falla 3 en detalle: descalibración de escala en el canal de divergencia
+
+El canal de divergencia del `ObstacleField` (cap. 6, IT.6.7) estima $\partial u / \partial x + \partial v / \partial y$ sobre el campo de flujo. Un cálculo con gradientes de Sobel 3×3 sin el factor de normalización $1/8$ que el kernel requiere para estimar una derivada en unidades de píxel,
+
+$$K_{\text{Sobel}} = \frac{1}{8}\begin{pmatrix} -1 & 0 & 1 \ -2 & 0 & 2 \ -1 & 0 & 1 \end{pmatrix}$$
+
+produce divergencias unas 8 veces mayores que las correctas, y el canal de ocupación satura a `1.0` con cualquier gradiente de flujo, incluso en espacio abierto.
+
+La consecuencia ilustra un problema de diseño de predicados disyuntivos sobre canales de distinta confianza. Una celda $c$ se declara bloqueada (cap. 6, IT.6.9) si
+
+$$\text{bloqueada}(c) = \big(o_c \geq t_o\big) \lor \big(\kappa_c \geq 0.35 \land \hat{\tau}_c \leq 2.5\,\text{s}\big)$$
+
+con $o_c$ la ocupación, $\kappa_c$ la confianza y $\hat{\tau}_c$ el TTC de la celda (cap. 6, IT.6.8). La disyunción asume canales calibrados en escalas comparables: si uno está sobre-estimado, se vuelve dominante y anula al otro, y el TTC, que tiene validación empírica (cap. 7), pierde toda influencia. El caso inverso también ocurre: un umbral de ocupación demasiado alto deja mudo a ese canal y la detección recae solo en el TTC (cap. 7, IT.7.5).
+
+La divergencia se calcula ahora con `np.gradient()`, normalizado intrínsecamente; el umbral de ocupación está calibrado contra profundidad de referencia por curva ROC (cap. 7, IT.7.5); y los dos canales tienen umbrales de confianza diferenciados (0.15 para ocupación, 0.35 para TTC), de modo que ningún canal puede dominar al otro sin confianza suficiente.
+
+## A11.8 Reglas apiladas sobre la decisión del modelo: detalle
+
+En una configuración de diagnóstico, compensar cada falla observada en una corrida piloto con una regla determinista había acumulado capas de reescritura sobre la decisión del modelo: retrocesos antes del barrido, escalamiento a un retroceso si el modelo alternaba de lado, un desvío perpendicular con el lado invertido respecto del modelo, cinco reglas sobre la historia de la trayectoria, un escape vertical tras escaneos «fútiles» y filtros en el tracker que reflejaban o descartaban los desvíos. La decisión del VLM pasaba por hasta seis capas de reescritura, y el brazo `depth2loop` medía esas reglas tanto como al modelo.
+
+Medidas contra el avance hacia el waypoint real en los 10–20 s siguientes, ninguna mostró beneficio: los retrocesos tuvieron avance mediano negativo, 74 desvíos deterministas avanzaron 0.35 m de mediana en 20 s, y un disparador de deadlock produjo 45 deadlocks sin avance posterior; solo el lazo reactivo mostró avance positivo.

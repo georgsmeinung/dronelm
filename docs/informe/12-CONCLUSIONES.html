@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -467,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -494,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1174,6 +1174,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1320,22 +1404,22 @@
 
 <h1 id="12-conclusiones">12. Conclusiones<a class="headerlink" href="#12-conclusiones" title="Permanent link">&para;</a></h1>
 <h2 id="121-retomar-el-hilo-conductor">12.1 Retomar el hilo conductor<a class="headerlink" href="#121-retomar-el-hilo-conductor" title="Permanent link">&para;</a></h2>
-<p>Este trabajo partió de una constatación práctica: en un sistema de control donde un modelo de lenguaje visual juzga la escena para decidir maniobras, las fallas más caras de diagnosticar no estuvieron en las respuestas del modelo sino en la interfaz que lo alimenta y que ejecuta lo que responde. Desincronización de esquemas, descalibración de escala, descarte silencioso de estado, respuestas ejecutadas en el marco de referencia equivocado: ninguna emergió observando el vuelo; emergieron auditando los contratos de datos y la propagación de estado entre capas (cap. 9). Y tuvieron una segunda consecuencia, más importante: mientras la interfaz distorsionaba las respuestas, no se podía saber si el modelo discriminaba. Una vez corregida, el banco de prueba contra etiquetas de referencia mostró que no lo hace (AUC 0.53). El límite final resultó ser la capacidad del modelo; la interfaz fue lo que impidió verlo antes.</p>
-<p>El sistema resultante se evaluó con dos instrumentos. El banco de prueba a bordo (cap. 11, IT.11.0) midió qué preguntas sabe responder cada fuente del lazo lento y fijó la configuración que vuela: la capa estratégica y el barrido responden con profundidad monocular estimada, y el VLM queda en el plan de ruta previo al despegue. La corrida v4 (cap. 11, IT.11.1–IT.11.7) evaluó esa configuración en seis escenarios, con 10 semillas por celda y 210 corridas. En ella ningún modelo de lenguaje decide en vuelo: el brazo que conserva el nombre <code>slm</code> es la arquitectura de dos lazos con la capa estratégica respondida por la red de profundidad.</p>
-<p><strong>Alcance de la evidencia.</strong> La comparación entre brazos tiene un sesgo conocido: el brazo FSM tiene dos defectos de implementación —un deadlock falso al terminar el despegue y un techo de altitud que convierte sus escapes verticales en giros por encima de 30 m— que lo hacen más lento y lo exponen a más fallas (cap. 11, IT.11.5). Las conclusiones frente a <code>reactive</code> no están afectadas; las conclusiones frente a la FSM favorecen a <code>slm</code> en una medida que estos datos no permiten estimar.</p>
+<p>Este trabajo partió de una constatación práctica: en un sistema de control donde un modelo de lenguaje visual juzga la escena, las fallas más caras de diagnosticar no estuvieron en las respuestas del modelo sino en la interfaz que lo alimenta y que ejecuta lo que responde, y ninguna emergió observando el vuelo: emergieron auditando los contratos de datos entre capas (cap. 9). Tuvieron además una consecuencia más importante: mientras la interfaz distorsionaba las respuestas, no se podía saber si el modelo discriminaba. Una vez corregida, el banco de prueba contra etiquetas de referencia mostró que no lo hace (AUC 0.53). El límite final resultó ser la capacidad del modelo; la interfaz fue lo que impidió verlo antes.</p>
+<p>El banco de prueba a bordo (cap. 11, IT.11.0) fijó la configuración que vuela —la capa estratégica y el barrido responden con profundidad estimada, y el VLM queda en el plan de ruta previo al despegue—, y la corrida v4 la evaluó en seis escenarios y 210 corridas. En ella ningún modelo de lenguaje decide en vuelo: el brazo <code>depth2loop</code> —<code>slm</code> en el código y en los datos— es la arquitectura de dos lazos con la capa estratégica respondida por la red de profundidad.</p>
+<p><strong>Alcance de la evidencia.</strong> La comparación entre brazos tiene un sesgo conocido: el brazo FSM tiene dos defectos de implementación —un deadlock falso al terminar el despegue y un techo de altitud que convierte sus escapes verticales en giros por encima de 30 m— que lo hacen más lento y lo exponen a más fallas (cap. 11, IT.11.5). Las conclusiones frente a <code>reactive</code> no están afectadas; las conclusiones frente a la FSM favorecen a <code>depth2loop</code> en una medida que estos datos no permiten estimar.</p>
 <hr />
 <h2 id="122-respuesta-a-la-pregunta-de-investigacion">12.2 Respuesta a la pregunta de investigación<a class="headerlink" href="#122-respuesta-a-la-pregunta-de-investigacion" title="Permanent link">&para;</a></h2>
-<p><strong>¿Aporta el brazo deliberativo (<code>slm</code>) sobre la máquina de estados (<code>fsm</code>) y sobre el control puramente reactivo (<code>reactive</code>) en navegación autónoma de dron en entornos urbanos simulados?</strong></p>
-<p>La pregunta tiene dos partes. Si un modelo de lenguaje pequeño sirve como capa de decisión a bordo (objetivo 3) lo responde el banco de prueba, y la respuesta es no. Si una arquitectura con capa deliberativa —con la profundidad estimada como fuente— aporta frente a una FSM y al control reactivo lo responde la corrida v4, y la respuesta depende del escenario y del brazo de comparación.</p>
+<p><strong>¿Aporta el brazo deliberativo (<code>depth2loop</code>) sobre la máquina de estados (<code>fsm</code>) y sobre el control puramente reactivo (<code>reactive</code>) en navegación autónoma de dron en entornos urbanos simulados?</strong></p>
+<p>La pregunta tiene dos partes. Si un modelo de visión-lenguaje pequeño sirve como capa de decisión a bordo (objetivo 3a) lo responde el banco de prueba, y la respuesta es no. Si una arquitectura con capa deliberativa —con la profundidad estimada como fuente— aporta frente a una FSM y al control reactivo lo responde la corrida v4 (objetivo 3b), y la respuesta depende del escenario y del brazo de comparación.</p>
 <h3 id="en-ruta-libre-solo-costo-prediccion-de-h2-cumplida">En ruta libre: solo costo (predicción de H2 cumplida)<a class="headerlink" href="#en-ruta-libre-solo-costo-prediccion-de-h2-cumplida" title="Permanent link">&para;</a></h3>
-<p>En los tres escenarios de control <code>slm</code> completa 29 de 30 misiones y <code>reactive</code> las 30, sin colisiones (la FSM, 25), con la misma distancia a las estructuras. <code>slm</code> no gana seguridad ni éxito; cuesta tiempo. Las nueve comparaciones de tiempo son significativas tras Bonferroni, y el orden es el mismo en los tres tiers: <code>reactive</code> &lt; <code>slm</code> &lt; <code>fsm</code>.</p>
+<p>En los tres escenarios de control <code>depth2loop</code> completa 29 de 30 misiones y <code>reactive</code> las 30 (la FSM, 25), sin colisiones registradas y con la misma distancia a las estructuras. La bandera de colisión de AirSim no ve el follaje ni los apoyos: las 6 corridas de los controles que terminan por <code>physics_locked</code> son contactos que no registra; en los seis lotes son 21, y en los lotes con obstrucción la distancia mínima cae a ~0.1 m (IT.12.3). <code>depth2loop</code> no gana seguridad ni éxito; cuesta tiempo. Las nueve comparaciones de tiempo son significativas tras Bonferroni, y el orden es el mismo en los tres tiers: <code>reactive</code> &lt; <code>depth2loop</code> &lt; <code>fsm</code>.</p>
 <table>
 <thead>
 <tr>
 <th>Escenario</th>
 <th>Ruta</th>
-<th><span class="arithmatex">\(t_{\text{slm}}/t_{\text{reactive}}\)</span></th>
-<th><span class="arithmatex">\(t_{\text{slm}} - t_{\text{reactive}}\)</span></th>
+<th><span class="arithmatex">\(t_{\text{depth2loop}}/t_{\text{reactive}}\)</span></th>
+<th><span class="arithmatex">\(t_{\text{depth2loop}} - t_{\text{reactive}}\)</span></th>
 </tr>
 </thead>
 <tbody>
@@ -1359,33 +1443,36 @@
 </tr>
 </tbody>
 </table>
-<p>La razón decrece con la longitud de la ruta y la diferencia absoluta crece mucho menos que la ruta: el costo se comporta como un término aproximadamente aditivo, lo que predice H2. El mecanismo que H2 postulaba, en cambio, no se confirma: el costo no lo pone la inferencia —la capa estratégica corre en su propio hilo y responde en ~110 ms— sino lo que el brazo hace con las respuestas y el gobernador de velocidad. En el plano vacío de MiniSim, el 27 % de las consultas desvían al dron, y el gobernador limita el avance en el 27–43 % de los ciclos de <code>slm</code>, frente al 7–18 % de <code>reactive</code>. Reducir el costo en ruta libre es un problema de cuándo desviar y cuándo frenar, no de acelerar el modelo. Con un solo escenario por tier, la forma aditiva es descriptiva.</p>
+<p>La razón decrece con la longitud de la ruta: el costo se comporta como un término aproximadamente aditivo, lo que predice H2, aunque con un solo escenario por tier la forma es descriptiva. El mecanismo que H2 postulaba no se confirma: el costo no lo pone la inferencia, que corre en su propio hilo, sino las sub-metas en ruta libre y el gobernador de velocidad (cap. 11, IT.11.3). Reducirlo es un problema de cuándo desviar y cuándo frenar, no de acelerar el modelo.</p>
 <h3 id="con-obstruccion-la-evasion-y-la-salida-de-bloqueos-deciden-la-capa-estrategica-sin-demostrar">Con obstrucción: la evasión y la salida de bloqueos deciden; la capa estratégica, sin demostrar<a class="headerlink" href="#con-obstruccion-la-evasion-y-la-salida-de-bloqueos-deciden-la-capa-estrategica-sin-demostrar" title="Permanent link">&para;</a></h3>
 <p><strong>Frente al control reactivo, la diferencia es binaria.</strong> En el corredor arbolado de <code>townsim_ini</code> y en el bloqueo frontal de <code>townsim_calib_cruce_frontal</code>, <code>reactive</code> no completa ninguna de sus 20 corridas, y las otras tres celdas completan entre 5 y 9 de cada 10. Es el resultado más firme del trabajo, pero no es un efecto de la deliberación ni de la profundidad: <code>fsm:blind</code>, que evade y tiene una salida de bloqueos pero no usa la profundidad ni tiene capa estratégica, completa 9 de 10 en los dos lotes. Lo que separa a <code>reactive</code> del resto es la evasión por flujo óptico y alguna forma de salir de un bloqueo, aunque sea un escape vertical ciego.</p>
-<p><strong>H3 no se sostiene con el criterio declarado.</strong> El diseño fijó de antemano que H3 se sostiene si el efecto <code>slm</code> − <code>fsm</code> cambia de signo entre los controles y los escenarios con obstrucción (cap. 10, IT.10.7.4), y no cambia: <code>slm</code> gana o empata frente a la FSM en los seis lotes. El cambio de signo frente a <code>reactive</code> es exploratorio y mide la evasión, no la deliberación.</p>
-<p><strong>Frente a la FSM, la ventaja de <code>slm</code> existe pero no se puede atribuir.</strong> <code>slm:depth</code> supera en SPL a <code>fsm:depth</code> en <code>townsim_ini</code> (δ = +0.81) y a las dos FSM en <code>citysim_pilot</code> (δ = +1.00), las tres comparaciones significativas tras Bonferroni; en el bloqueo frontal no hay diferencia y <code>slm</code> pierde la mitad de sus corridas. Tres razones impiden leer esas ventajas como un aporte de la capa estratégica: los defectos de la FSM la hacen más lenta en toda la ruta, y en <code>townsim_ini</code> la ventaja de <code>slm</code> está repartida a lo largo del recorrido en lugar de concentrarse en el follaje; el plan de ruta cambia los tres escenarios con obstrucción —en <code>citysim_pilot</code> resuelve el bloqueo antes del vuelo, al punto de que hasta <code>reactive</code> completa las 10 corridas—; y el bloqueo frontal, donde se esperaba el beneficio más claro de rodear en lugar de subir, es justamente donde <code>slm</code> no muestra ventaja. La capa estratégica sí discrimina —declara libre el camino directo en dos tercios a tres cuartos de las consultas y propone sub-metas en el resto—, pero no se midió si esas sub-metas acercan al waypoint real.</p>
+<p><strong>H3 no se sostiene con el criterio declarado.</strong> El diseño fijó de antemano que H3 se sostiene si el efecto <code>depth2loop</code> − <code>fsm</code> cambia de signo entre los controles y los escenarios con obstrucción (cap. 10, IT.10.7.4), y no cambia: <code>depth2loop</code> gana o empata frente a la FSM en los seis lotes. El cambio de signo frente a <code>reactive</code> es exploratorio y mide la evasión, no la deliberación.</p>
+<p><strong>Frente a la FSM, la ventaja de <code>depth2loop</code> existe pero no se puede atribuir.</strong> <code>depth2loop</code> supera en SPL a <code>fsm:depth</code> en <code>townsim_ini</code> (δ = +0.81) y a las dos FSM en <code>citysim_pilot</code> (δ = +1.00), las tres comparaciones significativas tras Bonferroni; en el bloqueo frontal no hay diferencia y <code>depth2loop</code> pierde la mitad de sus corridas. Tres razones impiden leer esas ventajas como un aporte de la capa estratégica: los defectos de la FSM la hacen más lenta en toda la ruta, y en <code>townsim_ini</code> la ventaja está repartida a lo largo del recorrido; el plan de ruta en <code>citysim_pilot</code> resuelve el bloqueo antes del vuelo, al punto de que hasta <code>reactive</code> completa las 10 corridas; y el bloqueo frontal, donde se esperaba el beneficio más claro, es justamente donde <code>depth2loop</code> no muestra ventaja. La capa estratégica sí discrimina —declara libre el camino directo en dos tercios a tres cuartos de las consultas y propone sub-metas en el resto—, pero a los 20 s esas sub-metas acercan al waypoint tanto como el camino directo, y más solo en el corredor arbolado; en el bloqueo frontal, menos (cap. 11, IT.11.4). La capa no estorba, pero su aporte no se distingue del de volar directo.</p>
 <h3 id="el-vlm">El VLM<a class="headerlink" href="#el-vlm" title="Permanent link">&para;</a></h3>
-<p>Medido contra etiquetas de referencia, el VLM de 1.6 B no separa sectores volables de bloqueados (AUC 0.53) ni rumbos abiertos de cerrados; una red de profundidad monocular de ~25 M de parámetros sí lo hace (AUC 0.83–0.87), en ~110 ms (cap. 11, IT.11.0). Por eso el VLM no vuela, y esa es la respuesta al objetivo 3: un modelo de visión-lenguaje de 1.6 B, a bordo y <em>zero-shot</em>, no sirve como capa de decisión táctica. Su único aporte medible está fuera del lazo: el plan de ruta sobre el mapa cenital (AUC 0.81), donde la pregunta es de reconocimiento de calles y techos, no de distancia. En <code>citysim_pilot</code> ese plan basta para que el control reactivo complete una misión de rodeo de manzanas; sobre una ruta ya libre, en cambio, elige un desvío bloqueado, y por eso los controles vuelan sin plan.</p>
+<p>Medido contra etiquetas de referencia, el VLM de 1.6 B no separa sectores volables de bloqueados (AUC 0.53) ni rumbos abiertos de cerrados; una red de profundidad monocular de ~25 M de parámetros sí lo hace (AUC 0.83–0.87), en ~110 ms (cap. 11, IT.11.0). Por eso el VLM no vuela, y esa es la respuesta al objetivo 3a: un modelo de visión-lenguaje de 1.6 B, a bordo y <em>zero-shot</em>, no sirve como capa de decisión táctica. Su único aporte medible está fuera del lazo: el plan de ruta sobre el mapa cenital (AUC 0.81), una pregunta de reconocimiento y no de distancia, que en <code>citysim_pilot</code> basta para que el control reactivo complete la misión.</p>
 <h3 id="sintesis">Síntesis<a class="headerlink" href="#sintesis" title="Permanent link">&para;</a></h3>
-<p><strong>En ruta libre el brazo <code>slm</code> solo cuesta</strong>: entre 1.4 y 2 veces el tiempo del control reactivo, sin ganar éxito ni seguridad. <strong>Donde la ruta directa se tranca, evadir con el flujo óptico y tener una salida de los bloqueos es lo que permite completar la misión</strong>; la profundidad estimada no es necesaria para eso. <strong>La ventaja de la capa estratégica sobre una máquina de estados no está demostrada</strong>: las diferencias a favor de <code>slm</code> existen, pero los defectos de la FSM evaluada las inflan, y H3 no se sostiene con el criterio declarado. <strong>Un VLM pequeño no aporta en el lazo de vuelo; aporta como planificador de ruta sobre un mapa registrado.</strong> Y, transversal a todo lo anterior, el hilo conductor: en un lazo híbrido, auditar los contratos de datos es condición para poder medir el modelo.</p>
+<p><strong>En ruta libre el brazo <code>depth2loop</code> solo cuesta</strong>: entre 1.4 y 2 veces el tiempo del control reactivo, sin ganar éxito ni seguridad. <strong>Donde la ruta directa se tranca, evadir con el flujo óptico y tener una salida de los bloqueos es lo que permite completar la misión</strong>; la profundidad estimada no es necesaria para eso. <strong>La ventaja de la capa estratégica sobre una máquina de estados no está demostrada</strong>: las diferencias a favor de <code>depth2loop</code> existen, pero los defectos de la FSM evaluada las inflan, y H3 no se sostiene con el criterio declarado. <strong>Un VLM pequeño no aporta en el lazo de vuelo; aporta como planificador de ruta sobre un mapa registrado.</strong> Y, transversal a todo lo anterior, el hilo conductor: en un lazo híbrido, auditar los contratos de datos es condición para poder medir el modelo.</p>
 <hr />
 <h2 id="123-limitaciones">12.3 Limitaciones<a class="headerlink" href="#123-limitaciones" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Defectos del brazo FSM</strong> (cap. 11, IT.11.5): afectan todas las comparaciones <code>slm</code>–<code>fsm</code>, que son por eso cotas favorables a <code>slm</code>.</li>
+<li><strong>Defectos del brazo FSM</strong> (cap. 11, IT.11.5): afectan todas las comparaciones <code>depth2loop</code>–<code>fsm</code>, que son por eso cotas favorables a <code>depth2loop</code>.</li>
 <li><strong>Plan de ruta común en los escenarios con obstrucción:</strong> desvía entre 2 y 4 tramos por escenario, igual para las cuatro celdas; en <code>citysim_pilot</code> rodea el único tramo bloqueado antes del vuelo, de modo que el lote más difícil no ejerce la resolución en vuelo, y en los otros dos su efecto no se midió.</li>
-<li><strong>Un escenario por tipo y tamaño de muestra:</strong> cada nivel de dificultad tiene una ruta concreta, y con K = 10 una separación parcial no supera Bonferroni: <code>slm:depth</code>–<code>fsm:blind</code> en <code>townsim_ini</code> (δ = +0.73, p = 0.0039) es un efecto grande no detectado con esta potencia, no un efecto ausente.</li>
-<li><strong>Contribución de la capa estratégica sin medir:</strong> no se midió el avance hacia el waypoint real tras cada sub-meta (cap. 10, IT.10.6.3), y el lote piloto de fuentes previo a la v4 no mostró ventaja frente a volar sin la capa (IT.10.2). Sus umbrales son decisiones de diseño, no valores calibrados.</li>
-<li><strong>Componentes del lazo rápido sin aislar:</strong> los brazos no comparten el mismo lazo rápido —la evasión por flujo la tienen <code>slm</code> y <code>fsm</code>; la reacción a contacto, el giro ante un frente bloqueado y el descenso bajo un techo, solo <code>slm</code>— y ninguna celda los aísla, de modo que las diferencias entre brazos mezclan la capa estratégica con esas reglas. El gobernador de velocidad explica buena parte del costo de <code>slm</code> en ruta libre.</li>
-<li><strong>Seguridad sin un detector de contacto confiable:</strong> la bandera de colisión de AirSim no ve el contacto con follaje ni el dron apoyado sobre una cornisa (cap. 10, IT.10.6.1). La distancia mínima cae a ~0.1–0.25 m en todos los brazos con evasión en los escenarios con vegetación y fachadas, y las 21 terminaciones <code>physics_locked</code> son, en la práctica, contactos no registrados. «Cero colisiones» no es evidencia de vuelo seguro: la seguridad de este trabajo no está medida.</li>
-<li><strong>Percepción:</strong> el flujo óptico es ciego a obstáculos centrados en el foco de expansión y a superficies horizontales a la altura de vuelo (Anexo 11, IT.A11.4.3); en vuelo distingue obstáculos cercanos poco más que al azar (cap. 7, IT.7.7), y la implementación evaluada tiene invertida la prueba de inliers del FOE (cap. 6, IT.6.6). El canal de ocupación está calibrado con una sola escena (cap. 7, IT.7.5). La profundidad estimada (<a href="13-REFERENCIAS.html#ref-yang-2024">Yang et al., 2024</a>) se evaluó sobre el mismo render sintético con que se construyen sus etiquetas y su escala métrica no está calibrada a la altura de vuelo.</li>
-<li><strong>Modelo y entorno fijos:</strong> las conclusiones sobre el VLM son sobre LFM2.5-VL-1.6B <em>zero-shot</em> en el render de CitySim; las de la arquitectura, sobre dos mapas urbanos y en simulación, sin validación en hardware físico, que el plan de trabajo aprobado sitúa como etapa siguiente.</li>
+<li><strong>Un escenario por tipo y tamaño de muestra:</strong> cada nivel de dificultad tiene una ruta concreta, y con K = 10 una separación parcial no supera Bonferroni: <code>depth2loop</code>–<code>fsm:blind</code> en <code>townsim_ini</code> (δ = +0.73, p = 0.0039) es un efecto grande no detectado con esta potencia, no un efecto ausente.</li>
+<li><strong>Réplicas, no muestras independientes:</strong> las 10 semillas de una celda son réplicas de la misma sesión de simulador y de la misma pose de partida; su variación viene de la estocasticidad del sistema (cap. 10, IT.10.5.1). Los intervalos y los <em>p</em>-valores miden la variabilidad entre réplicas de esa sesión, no entre sesiones, poses ni rutas.</li>
+<li><strong>Tiempos condicionados al éxito:</strong> en los controles la métrica primaria es el tiempo de las misiones exitosas, de modo que las celdas se comparan sobre subconjuntos distintos de semillas —en el lote 5, 9 corridas de <code>depth2loop</code> frente a 6 de la FSM—, y el tiempo no penaliza las fallas, que solo registra la tasa de éxito.</li>
+<li><strong>AUC del plan de ruta sobre muestras dependientes:</strong> el 0.81 sale de 59 candidatas en 11 tramos (cap. 11, IT.11.0); las candidatas de un mismo tramo comparten mapa y extremos, de modo que la muestra efectiva se acerca más a 11 que a 59 y el valor no tiene un intervalo confiable.</li>
+<li><strong>Contribución de la capa estratégica no atribuible:</strong> el avance tras cada sub-meta se midió a 20 s (cap. 11, IT.11.4), pero ninguna celda vuela <code>depth2loop</code> sin la capa y las sub-metas aparecen justo donde el camino directo no está libre; el lote piloto de fuentes tampoco mostró ventaja frente a volar sin ella (IT.10.2). Sus umbrales son decisiones de diseño, no valores calibrados.</li>
+<li><strong>Componentes del lazo rápido sin aislar:</strong> la reacción a contacto, el giro ante un frente bloqueado y el descenso bajo un techo los tiene solo <code>depth2loop</code>, y ninguna celda los aísla, de modo que las diferencias entre brazos mezclan la capa estratégica con esas reglas y con el gobernador de velocidad.</li>
+<li><strong>Seguridad sin un detector de contacto confiable:</strong> la bandera de colisión de AirSim no ve el follaje ni el dron apoyado sobre una cornisa (cap. 10, IT.10.6.1); la distancia mínima cae a ~0.1–0.25 m con vegetación y fachadas, y las 21 terminaciones <code>physics_locked</code> son contactos no registrados. «Cero colisiones» no es evidencia de vuelo seguro: la seguridad de este trabajo no está medida.</li>
+<li><strong>Percepción:</strong> el flujo óptico es ciego a obstáculos centrados en el foco de expansión y a superficies horizontales a la altura de vuelo (Anexo 11, IT.A11.4.3); la implementación evaluada tiene invertida la prueba de inliers del FOE (cap. 6, IT.6.6) y usa a 640 px umbrales calibrados con el flujo a 320 px; en vuelo el campo distingue obstáculos cercanos poco más que al azar, y la evasión la disparan sobre todo la ocupación y el contacto (cap. 7, IT.7.7). La ocupación está calibrada con una sola escena (cap. 7, IT.7.5), y la profundidad estimada se evaluó sobre el mismo render del que salen sus etiquetas, sin calibrar su escala a la altura de vuelo (cap. 6, IT.6.12.4).</li>
+<li><strong>Modelo y entorno fijos:</strong> las conclusiones sobre el VLM son sobre LFM2.5-VL-1.6B <em>zero-shot</em> en el render de CitySim; las de la arquitectura, sobre dos mapas urbanos y en simulación, con una dinámica de vuelo más ágil que la real y no reajustada a ella (cap. 3, IT.3.4), sin validación en hardware físico, que el plan de trabajo aprobado sitúa como etapa siguiente.</li>
 </ul>
 <hr />
 <h2 id="124-trabajo-futuro">12.4 Trabajo futuro<a class="headerlink" href="#124-trabajo-futuro" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Validación del sistema</strong>, la continuación más directa porque condiciona la comparación con la FSM: corregir los dos defectos de la FSM y repetir las comparaciones; medir el avance hacia el waypoint real tras cada sub-meta; agregar celdas que aíslen el gobernador de velocidad, la capa estratégica (<code>slm</code> sin capa) y las reglas de contacto y giro del brazo <code>slm</code>; correr los escenarios con obstrucción con y sin plan de ruta; medir el contacto con un detector que vea el follaje; e incorporar un test de contrato que falle ante cualquier clave de estado no declarada. El resto del plan extendido de pruebas —curva de degradación por ancho de corredor, barrido de velocidad, repetición entre sesiones, banco en TownSim y con otros modelos— está en el Anexo 12 (IT.A12.11).</li>
-<li><strong>Percepción monocular:</strong> validar el umbral de ocupación en más escenas; corregir la prueba de inliers del FOE y recalibrar el TTC y la ocupación en las escenas de los lotes, con la auditoría de distancia mínima como etiqueta, no solo en escenarios guiados; y completar la validación de la derotación entre 0 y 0.3 rad/s y con IMU real (<a href="anexos/A5-PERCEPCION-MONOCULAR-FLUJO-OPTICO.html">Anexo 5</a>). Para los obstáculos centrados en la trayectoria, donde el flujo se anula, un par estéreo recupera profundidad métrica en un instante, sin depender del movimiento (<a href="anexos/A7-MALDICION-MONOCULAR-ESTEREO.html">Anexo 7</a>).</li>
-<li><strong>El modelo de lenguaje:</strong> un ajuste fino ligero vía LoRA (cap. 8, IT.8.7; <a href="anexos/A3-OPTIMIZACION-LORA.html">Anexo 3</a>) apuntaría a la <strong>calidad</strong> de la respuesta —que el modelo distinga sectores libres de bloqueados—, con un conjunto de entrenamiento natural: las más de 7500 consultas de la capa estratégica registradas en la v4, etiquetadas fuera de línea con la profundidad del simulador. Las gramáticas dinámicas condicionadas por el estado del grafo (<a href="anexos/A4-DECODIFICACION-RESTRINGIDA.html">Anexo 4</a>, IT.A4.4.2) acotarían qué describe el modelo, aunque el esquema por sí solo no garantiza que discrimine.</li>
+<li><strong>Validación del sistema</strong>, la continuación más directa porque condiciona la comparación con la FSM: corregir los dos defectos de la FSM y repetir las comparaciones; agregar celdas que aíslen el gobernador de velocidad, la capa estratégica (<code>depth2loop</code> sin capa) y las reglas de contacto y giro del brazo <code>depth2loop</code>; correr los escenarios con obstrucción con y sin plan de ruta; medir el contacto con un detector que vea el follaje; e incorporar un test de contrato que falle ante cualquier clave de estado no declarada. El resto del plan extendido de pruebas —curva de degradación por ancho de corredor, barrido de velocidad, repetición entre sesiones, banco en TownSim y con otros modelos— está en el Anexo 12 (IT.A12.11).</li>
+<li><strong>Percepción monocular:</strong> corregir la prueba de inliers del FOE y recalibrar el TTC y la ocupación en las escenas de los lotes, con la auditoría de distancia mínima como etiqueta; validar la derotación entre 0 y 0.3 rad/s y con IMU real; y, para los obstáculos centrados en la trayectoria, un par estéreo que recupere profundidad métrica sin depender del movimiento (<a href="anexos/A7-MALDICION-MONOCULAR-ESTEREO.html">Anexo 7</a>).</li>
+<li><strong>El modelo de lenguaje:</strong> un ajuste fino ligero vía LoRA (Anexo 16, IT.A16.8; <a href="anexos/A3-OPTIMIZACION-LORA.html">Anexo 3</a>) apuntaría a que el modelo distinga sectores libres de bloqueados, con un conjunto de entrenamiento natural: las más de 7500 consultas de la capa estratégica de la v4, etiquetadas fuera de línea con la profundidad del simulador.</li>
 <li><strong>Otros brazos de decisión:</strong> una política entrenada por aprendizaje por refuerzo como cuarto brazo (<a href="anexos/A8-NAVEGACION-RL.html">Anexo 8</a>) y los modelos de mundo latentes como LeWorldModel (<a href="13-REFERENCIAS.html#ref-maes-2026">Maes et al., 2026</a>; <a href="anexos/A9-MODELOS-DE-MUNDO-LATENTES-EDGE.html">Anexo 9</a>), como verificador de consecuencias o simulador latente; ambos requieren antes una comparación entre brazos limpia.</li>
 <li><strong>Transferencia a hardware:</strong> integración en una <em>companion computer</em> de bajo consumo (Jetson Nano / Orin) conectada a un cuadrirrotor real con cámara monocular, según las fases del plan de trabajo aprobado, y extensión a navegación cooperativa en enjambre.</li>
 </ul>

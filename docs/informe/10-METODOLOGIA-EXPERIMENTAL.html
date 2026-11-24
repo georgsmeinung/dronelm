@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Navegación Autónoma de Drones Urbanos con Visión Monocular y Modelos de Lenguaje Visual Pequeños">
+        <meta name="description" content="Navegación Autónoma de Drones en Entornos Urbanos Simulados con Visión Monocular: Flujo Óptico, Profundidad Estimada y los Límites de un Modelo de Visión-Lenguaje Pequeño">
       
       
         <meta name="author" content="Jorge Nicolau">
@@ -467,7 +467,7 @@
   <span class="md-ellipsis">
     
   
-    8. Decisiones SLM
+    8. Ingeniería del VLM
   
 
     
@@ -494,7 +494,7 @@
   <span class="md-ellipsis">
     
   
-    9. Modos de Falla LLM
+    9. Modos de falla de la integración
   
 
     
@@ -1352,6 +1352,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A14-DOMINIOS-APLICACION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A14. Dominios de Aplicación
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A15-COMPARACION-TELEMETRIA-REAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A15. Comparación con Telemetría Real
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="anexos/A16-INGENIERIA-VLM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    A16. Ingeniería del VLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1675,23 +1759,22 @@
 
 
 <h1 id="10-metodologia-experimental">10. Metodología experimental<a class="headerlink" href="#10-metodologia-experimental" title="Permanent link">&para;</a></h1>
-<p>Este capítulo especifica el protocolo con el que se evalúa la hipótesis central: si una capa deliberativa sobre percepción monocular aporta un beneficio medible sobre una heurística rígida en la capa táctica de un dron autónomo, y a qué costo. Hay dos instrumentos. El <strong>banco de prueba a bordo</strong> (IT.10.2) mide, fuera de vuelo y contra etiquetas de referencia, si una fuente —el VLM o la red de profundidad estimada— sabe responder la pregunta que el lazo lento le hace. Los <strong>lotes de vuelo</strong> (IT.10.3–IT.10.5) miden si el sistema completo, con la fuente que pasa el banco, vuela mejor que una máquina de estados y que un controlador reactivo. Las métricas primarias y las comparaciones, y los resultados esperados de cada lote (Anexo 12, IT.A12.8), se fijaron antes de existir los datos. El detalle operativo está en el <a href="anexos/A12-OPERACION-EXPERIMENTAL.html">Anexo 12</a>.</p>
+<p>Este capítulo especifica el protocolo con el que se evalúa si una capa deliberativa sobre percepción monocular aporta un beneficio medible sobre una heurística rígida en la capa táctica de un dron, y a qué costo. Hay dos instrumentos: el <strong>banco de prueba a bordo</strong> (IT.10.2) mide, fuera de vuelo y contra etiquetas de referencia, si una fuente sabe responder la pregunta del lazo lento; los <strong>lotes de vuelo</strong> (IT.10.3–IT.10.5) miden si el sistema completo, con la fuente que pasa el banco, vuela mejor que una máquina de estados y que un controlador reactivo. Las métricas primarias, las comparaciones y los resultados esperados de cada lote (Anexo 12, IT.A12.8) se fijaron antes de existir los datos. El detalle operativo está en el <a href="anexos/A12-OPERACION-EXPERIMENTAL.html">Anexo 12</a>.</p>
 <hr />
 <h2 id="101-preguntas-experimentales-e-hipotesis-operativas">10.1 Preguntas experimentales e hipótesis operativas<a class="headerlink" href="#101-preguntas-experimentales-e-hipotesis-operativas" title="Permanent link">&para;</a></h2>
-<p>El diseño no persigue una única comparación global "SLM vs. FSM", sino tres preguntas separables, cada una con su propia condición de falsación:</p>
+<p>El diseño no persigue una única comparación global "<code>depth2loop</code> vs. FSM", sino tres preguntas separables, cada una con su propia condición de falsación:</p>
 <p><strong>H1 — Beneficio de la capa deliberativa.</strong>
-En escenarios donde la trayectoria directa está obstruida por geometría que exige decidir un rodeo, el brazo <code>slm</code> alcanza un SPL superior al de una FSM con significancia estadística.
-<em>Condición de falsación:</em> si en los escenarios con obstrucción la FSM iguala o supera al <code>slm</code> en SPL, la capa deliberativa no aporta, y el resultado negativo es igualmente publicable.</p>
+En escenarios donde la trayectoria directa está obstruida por geometría que exige decidir un rodeo, el brazo <code>depth2loop</code> alcanza un SPL superior al de una FSM con significancia estadística.
+<em>Condición de falsación:</em> si en los escenarios con obstrucción la FSM iguala o supera al <code>depth2loop</code> en SPL, la capa deliberativa no aporta.</p>
 <p><strong>H2 — Costo de la arquitectura.</strong>
-El sobrecosto temporal del brazo <code>slm</code> no escala con la distancia recorrida sino con la <strong>frecuencia de consulta del lazo lento</strong>: es aproximadamente un término aditivo <span class="arithmatex">\(N_{\text{inv}} \times \bar{\ell}\)</span> (número de consultas por su costo medio), no un factor multiplicativo sobre el tiempo de misión.
-<em>Condición de falsación:</em> si el ratio <span class="arithmatex">\(t_{\text{slm}} / t_{\text{reactive}}\)</span> es aproximadamente constante entre escenarios de control en lugar de decrecer con la longitud de la ruta, el costo es multiplicativo.</p>
+El sobrecosto temporal del brazo <code>depth2loop</code> no escala con la distancia recorrida sino con la <strong>frecuencia de consulta del lazo lento</strong>: es aproximadamente un término aditivo <span class="arithmatex">\(N_{\text{inv}} \times \bar{\ell}\)</span> (número de consultas por su costo medio), no un factor multiplicativo sobre el tiempo de misión.
+<em>Condición de falsación:</em> si el ratio <span class="arithmatex">\(t_{\text{depth2loop}} / t_{\text{reactive}}\)</span> es aproximadamente constante entre escenarios de control en lugar de decrecer con la longitud de la ruta, el costo es multiplicativo.</p>
 <p><strong>H3 — Estratificación del beneficio por dificultad ambiental.</strong>
 En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de existir, aparece donde la geometría exige una decisión que la heurística no puede tomar. La hipótesis operativa es que <strong>existe una interacción entre el factor "brazo" y el factor "escenario"</strong>, no un efecto principal uniforme del brazo.</p>
-<p>H3 dicta la arquitectura de escenarios en tres niveles, cada uno con un control despejado: sin controles no se puede separar el costo fijo del brazo <code>slm</code> de su beneficio condicional, y sin obstrucción genuina el beneficio no puede manifestarse. Es la práctica de los <em>benchmarks</em> de conducción y navegación, que estratifican la dificultad en niveles con un número fijo de episodios por nivel (<a href="13-REFERENCIAS.html#ref-dosovitskiy-2017">Dosovitskiy et al., 2017</a>; <a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>) y reportan la navegación aérea en función de la densidad de obstáculos (<a href="13-REFERENCIAS.html#ref-loquercio-2021">Loquercio et al., 2021</a>).</p>
+<p>H3 dicta la arquitectura de escenarios en tres niveles, cada uno con un control despejado: sin controles no se puede separar el costo fijo del brazo de su beneficio condicional, y sin obstrucción genuina el beneficio no puede manifestarse. Es la práctica de los <em>benchmarks</em> de conducción y navegación, que estratifican la dificultad en niveles (<a href="13-REFERENCIAS.html#ref-dosovitskiy-2017">Dosovitskiy et al., 2017</a>; <a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>; <a href="13-REFERENCIAS.html#ref-loquercio-2021">Loquercio et al., 2021</a>).</p>
 <hr />
 <h2 id="102-banco-de-prueba-a-bordo-vlm_bench">10.2 Banco de prueba a bordo (<code>vlm_bench</code>)<a class="headerlink" href="#102-banco-de-prueba-a-bordo-vlm_bench" title="Permanent link">&para;</a></h2>
-<p>El banco es una medición <strong>fuera de vuelo</strong> que responde una pregunta previa a cualquier lote: <strong>¿la fuente del lazo lento sabe responder la pregunta que el lazo le hace?</strong> —si un sector de la imagen está libre a 15 m, si un rumbo del barrido es transitable, si un tramo de ruta sobre el mapa va por la calle—. Compara, muestra por muestra, la respuesta de la fuente con una <strong>etiqueta de referencia</strong> calculada con la profundidad del simulador en la misma pose (cap. 7, IT.7.1): un sector es libre si el percentil 5 de su profundidad es ≥ 15 m. Las muestras son poses registradas en corridas reales, y las etiquetas nunca entran al lazo de vuelo (IT.10.4.1, punto 3).</p>
-<p>Un lote de vuelo no puede responder esa pregunta: el resultado de una misión mezcla la percepción con el guiado, el lazo rápido, los bloqueos y el azar del simulador, y con pocas semillas una fuente que responde al azar puede empatar con una que acierta. El banco aísla el juicio. Una fuente que no lo supera no se lleva al vuelo; una que lo supera se juzga después en los lotes. Tres reglas lo mantienen como medición <strong>generalista</strong> y no como ajuste a un escenario: prompts y preguntas fijos, iguales a los de vuelo, que no nombran objetos de un entorno; la respuesta se lee tal como sale, sin umbrales calibrados sobre los datos; y el criterio de pase —exactitud balanceada ≥ 0.65 con el intervalo de confianza del 95 % por encima del azar, con <em>bootstrap</em> por corrida— debe cumplirse en todos los entornos medidos. Una pregunta que no pasa se descarta: adaptarla al escenario sería un entrenamiento manual por entorno.</p>
+<p>El banco es una medición <strong>fuera de vuelo</strong> que responde una pregunta previa a cualquier lote: <strong>¿la fuente del lazo lento sabe responder la pregunta que el lazo le hace?</strong> —si un sector de la imagen está libre a 15 m, si un rumbo del barrido es transitable, si un tramo de ruta sobre el mapa va por la calle—. Compara, muestra por muestra, la respuesta de la fuente con una <strong>etiqueta de referencia</strong> calculada con la profundidad del simulador en la misma pose (cap. 7, IT.7.1): un sector es libre si el percentil 5 de su profundidad es ≥ 15 m. Las muestras son poses de corridas reales, y las etiquetas nunca entran al lazo de vuelo. El criterio de pase —exactitud balanceada ≥ 0.65 con el IC 95 % por encima del azar— debe cumplirse sin adaptar la pregunta al escenario; las reglas y la construcción del banco están en el Anexo 12 (IT.A12.10).</p>
 <table>
 <thead>
 <tr>
@@ -1732,25 +1815,24 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 <td>La capa estratégica y el barrido usan la profundidad estimada</td>
 </tr>
 <tr>
-<td>Lote piloto de fuentes: 15 corridas <code>slm</code> en <code>citysim_pilot</code> con fuentes <code>depth</code>, <code>vlm</code> y <code>off</code>, 5 semillas emparejadas</td>
+<td>Lote piloto de fuentes: 15 corridas en <code>citysim_pilot</code> con fuentes <code>depth</code>, <code>vlm</code> y <code>off</code>, 5 semillas emparejadas</td>
 <td>Avance equivalente en las tres; éxitos 3/5, 4/5 y 5/5</td>
-<td><code>depth</code> sobre <code>vlm</code> por latencia (~0.1 s frente a ~0.8 s). Frente a <code>off</code>, el lote no muestra ventaja de la capa, pero con 5 pares tampoco puede descartarla; se conserva para juzgarla en la v4</td>
+<td><code>depth</code> sobre <code>vlm</code> por latencia; frente a <code>off</code>, sin ventaja de la capa, aunque con 5 pares no se puede descartar</td>
 </tr>
 </tbody>
 </table>
-<p>Las cifras completas están en el capítulo 11 (IT.11.0) y NB5 recalcula cada fila; la construcción del banco, el etiquetado y sus límites —un solo entorno medido, muestras sesgadas hacia los tramos difíciles, render sintético— están en el Anexo 12 (IT.A12.10).</p>
+<p>Las cifras completas están en el capítulo 11 (IT.11.0) y NB5 recalcula cada fila.</p>
 <hr />
 <h2 id="103-diseno-factorial">10.3 Diseño factorial<a class="headerlink" href="#103-diseno-factorial" title="Permanent link">&para;</a></h2>
 <h3 id="1031-factor-principal-brazo-de-decision">10.3.1 Factor principal: brazo de decisión<a class="headerlink" href="#1031-factor-principal-brazo-de-decision" title="Permanent link">&para;</a></h3>
-<p>Los tres brazos comparten <strong>el mismo <code>ObstacleField</code></strong> (cap. 6), <strong>el mismo vocabulario de macro-acciones</strong> y <strong>el mismo traductor a cinemática</strong>: la diferencia entre ellos es <em>quién elige la macro-acción y quién decide los rodeos</em>. Elegir la macro-acción incluye las reglas del lazo rápido, que no son las mismas en los tres brazos (cap. 5, IT.5.3.3), de modo que cada comparación mide el brazo completo, no la capa deliberativa sola.</p>
+<p>Los tres brazos comparten <strong>el mismo <code>ObstacleField</code></strong> (cap. 6), <strong>el mismo vocabulario de macro-acciones</strong> y <strong>el mismo traductor a cinemática</strong>: la diferencia es <em>quién elige la macro-acción y quién decide los rodeos</em>. Como las reglas del lazo rápido tampoco son las mismas (cap. 5, IT.5.3.3), cada comparación mide el brazo completo, no la capa deliberativa sola.</p>
 <ul>
-<li><strong><code>slm</code></strong> — el grafo con sus dos lazos (cap. 5): el lazo lento juzga, cada ≥ 1 s o de inmediato ante un muro, qué sectores de una grilla de 3×3 son volables y traduce la respuesta a una sub-meta anclada a la pose del fotograma; ante un deadlock, un barrido de 4 rumbos produce la sub-meta de salida. Con el resultado del banco, la fuente es la red de profundidad estimada (cap. 6, IT.6.12): pese al nombre, heredado de versiones anteriores, <strong>ningún modelo de lenguaje decide en vuelo</strong>, y el VLM solo planifica la ruta antes del despegue (cap. 4, IT.4.3.1). Los nombres heredados se explican en el Anexo 12 (IT.A12.1).</li>
-<li><strong><code>fsm</code></strong> — una máquina de estados explícita (<code>CRUISE → AVOID_LEFT | AVOID_RIGHT | CLIMB | BRAKE → CRUISE</code>) con umbrales fijos sobre el mismo <code>ObstacleField</code> y su propia lógica de bloqueo (cap. 5, IT.5.7): la línea de base directa, predecible y de costo mínimo.</li>
-<li><strong><code>reactive</code></strong> — solo guiado al waypoint, <strong>sin evasión</strong>, sin deliberación y sin resolución de bloqueos: la <strong>cota inferior de rendimiento</strong>. Lo que lo separa de los otros brazos es a la vez la evasión del lazo rápido y la resolución de bloqueos. Su varianza entre semillas es el control negativo del diseño (IT.10.5.1).</li>
+<li><strong><code>depth2loop</code></strong> — el grafo con sus dos lazos (cap. 5): la capa estratégica juzga qué sectores de una grilla de 3×3 son volables y propone sub-metas ancladas a la pose del fotograma, y ante un deadlock un barrido de 4 rumbos produce la sub-meta de salida, ambos con la profundidad estimada (cap. 6, IT.6.12). <strong>Ningún modelo de lenguaje decide en vuelo</strong>; el VLM solo planifica la ruta antes del despegue (cap. 4, IT.4.3.1). En el código y en los datos de la v4 el brazo figura como <code>slm</code> (celda <code>slm:depth</code>), nombre heredado de versiones en que el lazo lento consultaba al VLM (Anexo 12, IT.A12.1).</li>
+<li><strong><code>fsm</code></strong> — una máquina de estados con umbrales fijos sobre el mismo <code>ObstacleField</code> y su propia lógica de bloqueo (cap. 5, IT.5.7): la línea de base directa, predecible y de costo mínimo.</li>
+<li><strong><code>reactive</code></strong> — solo guiado al waypoint, <strong>sin evasión</strong>, sin deliberación y sin resolución de bloqueos: la <strong>cota inferior de rendimiento</strong>, y su varianza entre semillas, el control negativo del diseño (IT.10.5.1).</li>
 </ul>
 <h3 id="1032-factores-secundarios-resolucion-de-bloqueos-y-fuente-de-la-capa-estrategica">10.3.2 Factores secundarios: resolución de bloqueos y fuente de la capa estratégica<a class="headerlink" href="#1032-factores-secundarios-resolucion-de-bloqueos-y-fuente-de-la-capa-estrategica" title="Permanent link">&para;</a></h3>
-<p><strong>Resolución de bloqueos.</strong> Ante un deadlock, un barrido panorámico dentro del lazo y una única consulta que juzga cada rumbo (cap. 5, IT.5.6); sin respuesta válida, escape vertical. Valores: <strong><code>depth</code></strong> (por defecto; los rumbos los juzga la profundidad estimada), <strong><code>deep_vlm</code></strong> (los juzga el VLM; evaluado en el banco, no en los lotes) y <strong><code>blind</code></strong> (sin barrido, escape determinista). <strong>Fuente de la capa estratégica</strong> (solo <code>slm</code>): <code>depth</code>, <code>vlm</code> u <code>off</code>; los lotes la fijan en <code>depth</code>.</p>
-<p><strong>El barrido es común a <code>slm</code> y <code>fsm</code>.</strong> Con <code>depth</code>, la FSM delega sus deadlocks en el mismo barrido, de modo que <code>slm:depth</code> vs. <code>fsm:depth</code> aísla la capa estratégica y la política del lazo rápido, no la resolución de bloqueos. El brazo sin barrido es <code>fsm:blind</code>.</p>
+<p><strong>Resolución de bloqueos:</strong> <strong><code>depth</code></strong> (barrido panorámico juzgado por la profundidad estimada; por defecto), <strong><code>deep_vlm</code></strong> (juzgado por el VLM; evaluado en el banco, no en los lotes) y <strong><code>blind</code></strong> (sin barrido, escape determinista). <strong>Fuente de la capa estratégica</strong> (solo <code>depth2loop</code>): <code>depth</code>, <code>vlm</code> u <code>off</code>; los lotes la fijan en <code>depth</code>. Con <code>depth</code>, la FSM delega sus deadlocks en el mismo barrido, de modo que <code>depth2loop</code> vs. <code>fsm:depth</code> aísla la capa estratégica y la política del lazo rápido, no la resolución de bloqueos.</p>
 <h3 id="1033-celdas-y-comparaciones-planificadas">10.3.3 Celdas y comparaciones planificadas<a class="headerlink" href="#1033-celdas-y-comparaciones-planificadas" title="Permanent link">&para;</a></h3>
 <p>La celda es la tupla (escenario × brazo × estrategia de bloqueo), replicada con <span class="arithmatex">\(K = 10\)</span> semillas (IT.10.5.1):</p>
 <table>
@@ -1764,8 +1846,8 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 </thead>
 <tbody>
 <tr>
-<td><code>slm:depth</code></td>
-<td>El sistema completo: capa estratégica + política del lazo rápido del brazo <code>slm</code> + barrido</td>
+<td><code>depth2loop</code></td>
+<td>El sistema completo: capa estratégica + política del lazo rápido del brazo <code>depth2loop</code> + barrido</td>
 <td>✓</td>
 <td>✓</td>
 </tr>
@@ -1795,19 +1877,12 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 </tr>
 </tbody>
 </table>
-<p><code>fsm:blind</code> solo se corre donde hay bloqueos que resolver. En los lotes con obstrucción, las tres comparaciones planificadas son: (i) <code>slm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) <code>fsm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el barrido con profundidad? (iii) <code>slm:depth</code> vs. <code>fsm:depth</code>: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo <code>slm</code>? La pregunta «¿aporta el VLM en vuelo?» la responde el banco (IT.10.2), no los lotes.</p>
+<p>En los lotes con obstrucción, las tres comparaciones planificadas son: (i) <code>depth2loop</code> vs. <code>fsm:blind</code>: ¿aporta el sistema completo frente a una FSM sin barrido? (ii) <code>fsm:depth</code> vs. <code>fsm:blind</code>: ¿aporta el barrido con profundidad? (iii) <code>depth2loop</code> vs. <code>fsm:depth</code>: ¿aporta la capa estratégica junto con la política del lazo rápido del brazo <code>depth2loop</code>? La pregunta «¿aporta el VLM en vuelo?» la responde el banco (IT.10.2), no los lotes.</p>
 <hr />
 <h2 id="104-escenarios">10.4 Escenarios<a class="headerlink" href="#104-escenarios" title="Permanent link">&para;</a></h2>
 <p>Tres niveles crecientes de dificultad ambiental, cada uno sobre un <strong>proyecto de Unreal Engine distinto</strong> (cap. 3), con un escenario de control despejado por nivel y uno o dos con obstrucción en los niveles 1 y 2.</p>
 <h3 id="1041-principios-de-diseno-comunes">10.4.1 Principios de diseño comunes<a class="headerlink" href="#1041-principios-de-diseno-comunes" title="Permanent link">&para;</a></h3>
-<p>Cinco principios gobiernan todos los escenarios (justificación en el Anexo 12, IT.A12.2):</p>
-<ol>
-<li><strong>Sin teletransporte.</strong> Todas las misiones despegan del punto de inicio nativo del nivel: reposicionar el dron no verifica colisión y podría materializarlo dentro de un obstáculo.</li>
-<li><strong>Ninguna coordenada se inventa sobre el mapa.</strong> Toda coordenada se deriva de posiciones ya voladas o se verifica ubicando el dron en ella.</li>
-<li><strong>Exclusión total de profundidad del lazo de vuelo.</strong> Ni el grafo ni el runner leen el canal de profundidad del simulador, del que salen las etiquetas de referencia (Anexo 11, IT.A11.4.2); una guardia automatizada lo verifica, y la única lectura es la auditoría de distancia mínima (IT.10.6.1), en un hilo aislado del grafo.</li>
-<li><strong>Validación previa obligatoria.</strong> Antes de un lote, la ruta se confirma en el simulador y una misión piloto debe cumplir el criterio de pase del escenario (IT.A12.7.2).</li>
-<li><strong>Los controles vuelan una ruta fija.</strong> Los controles (lotes 1, 2 y 5) vuelan el manifiesto sin plan de ruta, porque miden el costo de la arquitectura en tránsito libre. El plan con el VLM se usa solo en los escenarios con obstrucción (lotes 3, 4 y 6), donde cambia la ruta que se vuela —desvía entre 2 y 4 tramos por escenario— igual para las cuatro celdas: el obstáculo que enfrenta cada brazo es el de la ruta planificada.</li>
-</ol>
+<p>Todos los escenarios despegan del punto de inicio nativo del nivel, sin teletransporte; ninguna coordenada se inventa sobre el mapa; ningún componente del lazo de vuelo lee el canal de profundidad del simulador, salvo la auditoría de distancia mínima en un hilo aislado (IT.10.6.1); y antes de cada lote una misión piloto debe cumplir el criterio de pase del escenario (justificación en el Anexo 12, IT.A12.2). <strong>Los controles vuelan una ruta fija</strong>: los lotes 1, 2 y 5 vuelan el manifiesto sin plan de ruta, porque miden el costo de la arquitectura en tránsito libre, y el plan con el VLM se usa solo en los lotes con obstrucción (3, 4 y 6), donde desvía entre 2 y 4 tramos por escenario, igual para las cuatro celdas.</p>
 <h3 id="1042-la-bateria-de-escenarios">10.4.2 La batería de escenarios<a class="headerlink" href="#1042-la-bateria-de-escenarios" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1878,38 +1953,35 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 </tr>
 </tbody>
 </table>
-<p><em>Ruta: longitud desde el punto de partida, con el ascenso; <span class="arithmatex">\(\ell_{\text{opt}}\)</span>: suma de los tramos entre waypoints del manifiesto, la que usa el SPL (IT.10.6.1). T0–T2: nivel de dificultad del entorno. En los lotes 3, 4 y 6 el plan de ruta agrega puntos de paso a la ruta volada (IT.10.4.1, punto 5).</em></p>
-<p><strong>Tier 0 — MiniSim.</strong> Un plano sin estructuras verticales: mide el <strong>costo puro del brazo <code>slm</code></strong>, sin nada que decidir, y la <strong>tasa de falsos positivos de percepción</strong>, porque todo evento de evasión o deadlock es, por construcción, falso.</p>
-<p><strong>Tier 1 — TownSim.</strong> Un complejo semiurbano con pasajes arbolados, cuya particularidad son los obstáculos <strong>orgánicos y semitransparentes</strong>: una copa de árbol produce un flujo de baja coherencia y una evidencia geométrica ambigua, el régimen donde un juicio sobre el fotograma completo debería aportar. <code>townsim_clear</code> recorre el perímetro sobre los tejados con una ruta 3.3× más larga que la de MiniSim, la prueba directa de H2; <code>townsim_ini</code> cruza a nivel de calle el corredor arbolado; <code>townsim_calib_cruce_frontal</code> enfrenta al dron con una fachada continua y lo obliga a elegir entre sobrevolar y buscar un corredor lateral. Si la FSM escala el edificio y el <code>slm</code> encuentra la calle transversal, ambos llegan con SPL muy distintos: <strong>por eso la métrica primaria con obstrucción es el SPL y no el éxito</strong>.</p>
-<p><strong>Tier 2 — CitySim.</strong> Una cuadrícula regular con edificios de 50 a 100 m, donde un escape por altura ya no despeja el obstáculo y la textura repetitiva hace casi indistinguibles dos calles paralelas. <code>citysim_clear</code> es el control en rampa; <code>citysim_pilot</code>, a −10 m entre edificios, obliga a <strong>rodear manzanas y elegir corredor</strong>, y es donde H1 tiene mayor potencia y se espera la mayor tasa de fallo. La geometría de cada escenario está en el Anexo 12 (IT.A12.3) y los manifiestos, en el Anexo 6 (IT.A6.5).</p>
+<p><em>Ruta: longitud desde el punto de partida, con el ascenso; <span class="arithmatex">\(\ell_{\text{opt}}\)</span>: suma de los tramos entre waypoints del manifiesto, la que usa el SPL (IT.10.6.1). T0–T2: nivel de dificultad del entorno.</em></p>
+<p><strong>MiniSim</strong> es un plano sin estructuras: mide el <strong>costo puro del brazo</strong>, sin nada que decidir, y la tasa de falsos positivos de percepción. <strong>TownSim</strong> agrega obstáculos <strong>orgánicos y semitransparentes</strong> —copas de árboles con flujo de baja coherencia—: <code>townsim_clear</code> recorre los tejados con una ruta 3.3× más larga que la de MiniSim, la prueba directa de H2; <code>townsim_ini</code> cruza a nivel de calle un corredor arbolado; y <code>townsim_calib_cruce_frontal</code> enfrenta al dron con una fachada continua, donde sobrevolar y rodear producen SPL muy distintos, <strong>por eso la métrica primaria con obstrucción es el SPL y no el éxito</strong>. <strong>CitySim</strong> es una cuadrícula de edificios de 50 a 100 m, donde un escape por altura ya no despeja el obstáculo; <code>citysim_pilot</code>, a −10 m, obliga a <strong>rodear manzanas y elegir corredor</strong>. La geometría de cada escenario está en el Anexo 12 (IT.A12.3) y los manifiestos, en el Anexo 6 (IT.A6.5).</p>
 <hr />
 <h2 id="105-replicas-y-organizacion-en-lotes">10.5 Réplicas y organización en lotes<a class="headerlink" href="#105-replicas-y-organizacion-en-lotes" title="Permanent link">&para;</a></h2>
 <h3 id="1051-semillas">10.5.1 Semillas<a class="headerlink" href="#1051-semillas" title="Permanent link">&para;</a></h3>
-<p>Una corrida única no permite inferencia: el sistema es estocástico, y pocas corridas son una fuente documentada de conclusiones no reproducibles en agentes secuenciales (<a href="13-REFERENCIAS.html#ref-henderson-2018">Henderson et al., 2018</a>; <a href="13-REFERENCIAS.html#ref-colas-2018">Colas et al., 2018</a>), agravada cuando cada corrida cuesta minutos de simulación (<a href="13-REFERENCIAS.html#ref-agarwal-2021">Agarwal et al., 2021</a>). <strong>Una semilla identifica una réplica, no una condición distinta</strong>: el dron parte siempre de la misma pose, y la variación entre semillas viene de la estocasticidad del sistema —el desfase temporal del lazo, el render y la física no deterministas, la sensibilidad no lineal del flujo y el momento en que llegan las respuestas asíncronas—, que se realimenta a lo largo de miles de ciclos (análisis en el Anexo 12, IT.A12.4). La varianza del brazo <code>reactive</code> mide cuánta variabilidad introduce el entorno por sí solo: es el <strong>control negativo del diseño</strong>.</p>
-<p>Se corren <strong><span class="arithmatex">\(K = 10\)</span> semillas por celda</strong>, número que impone la potencia: el <span class="arithmatex">\(p\)</span>-valor mínimo de la prueba de rangos es <span class="arithmatex">\(2/\binom{2K}{K}\)</span>, de modo que con <span class="arithmatex">\(K = 5\)</span> (0.0079) ninguna comparación sobreviviría la corrección de Bonferroni (IT.10.7.3) ni con separación perfecta, y con <span class="arithmatex">\(K = 10\)</span> baja a <span class="arithmatex">\(1.1 \times 10^{-5}\)</span>. Dentro de cada semilla las celdas se alternan, para repartir la deriva del simulador a lo largo de horas.</p>
+<p>Una corrida única no permite inferencia: el sistema es estocástico, y pocas corridas son una fuente documentada de conclusiones no reproducibles en agentes secuenciales (<a href="13-REFERENCIAS.html#ref-henderson-2018">Henderson et al., 2018</a>; <a href="13-REFERENCIAS.html#ref-colas-2018">Colas et al., 2018</a>; <a href="13-REFERENCIAS.html#ref-agarwal-2021">Agarwal et al., 2021</a>). <strong>Una semilla identifica una réplica, no una condición distinta</strong>: el dron parte siempre de la misma pose, y la variación entre semillas viene de la estocasticidad del sistema —el desfase temporal del lazo, el render y la física no deterministas y el momento en que llegan las respuestas asíncronas— (Anexo 12, IT.A12.4). La varianza del brazo <code>reactive</code> mide cuánta variabilidad introduce el entorno por sí solo: es el <strong>control negativo del diseño</strong>.</p>
+<p>Se corren <strong><span class="arithmatex">\(K = 10\)</span> semillas por celda</strong>, número que impone la potencia: el <span class="arithmatex">\(p\)</span>-valor mínimo de la prueba de rangos es <span class="arithmatex">\(2/\binom{2K}{K}\)</span>, de modo que con <span class="arithmatex">\(K = 5\)</span> (0.0079) ninguna comparación sobreviviría la corrección de Bonferroni (IT.10.7.3) ni con separación perfecta, y con <span class="arithmatex">\(K = 10\)</span> baja a <span class="arithmatex">\(1.1 \times 10^{-5}\)</span>.</p>
 <h3 id="1052-lotes">10.5.2 Lotes<a class="headerlink" href="#1052-lotes" title="Permanent link">&para;</a></h3>
-<p>La unidad de ejecución es el <strong>lote</strong>: todas las corridas de un escenario. Seis escenarios dan seis lotes y <strong>210 corridas</strong>. Como los tiers son proyectos de Unreal Engine distintos, solo se corren juntos los lotes del mismo nivel; todas las corridas de un lote comparten nivel, configuración gráfica y sesión de simulador, de modo que <strong>comparar celdas dentro de un lote es limpio</strong>, y comparar entre lotes es de segundo orden (IT.10.7.4). Todas las corridas tienen el mismo techo holgado de <strong>1200 s / 6000 ciclos</strong>, para que una celda lenta falle por el obstáculo y no por el tiempo; las corridas con otra versión del código, con cambios sin confirmar o con menos de 50 ciclos se descartan (IT.A12.7.2). El procedimiento, las semillas de cada lote y la trazabilidad están en el Anexo 12 (IT.A12.5, IT.A12.9).</p>
+<p>La unidad de ejecución es el <strong>lote</strong>: todas las corridas de un escenario. Seis escenarios dan seis lotes y <strong>210 corridas</strong>. Todas las corridas de un lote comparten nivel, configuración gráfica y sesión de simulador, de modo que <strong>comparar celdas dentro de un lote es limpio</strong>, y comparar entre lotes es de segundo orden (IT.10.7.4). Todas tienen el mismo techo holgado de <strong>1200 s</strong>, para que una celda lenta falle por el obstáculo y no por el tiempo; las corridas con otra versión del código, con cambios sin confirmar o con menos de 50 ciclos se descartan (procedimiento y trazabilidad en el Anexo 12, IT.A12.5, IT.A12.7.2, IT.A12.9).</p>
 <hr />
 <h2 id="106-metricas-reportadas">10.6 Métricas reportadas<a class="headerlink" href="#106-metricas-reportadas" title="Permanent link">&para;</a></h2>
 <p>Todas se derivan del registro por ciclo y se consolidan en el resumen de cada corrida (cap. 4, IT.4.4); el detalle de cálculo está en el Anexo 12 (IT.A12.6).</p>
 <h3 id="1061-eficacia-y-seguridad-de-vuelo">10.6.1 Eficacia y seguridad de vuelo<a class="headerlink" href="#1061-eficacia-y-seguridad-de-vuelo" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Tasa de éxito</strong> sobre las <span class="arithmatex">\(K\)</span> semillas, con intervalo de Wilson al 95 %, y <strong>motivo de terminación</strong>: éxito, tope de tiempo, colisión o <code>physics_locked</code> (dron incrustado en la malla, cap. 5, IT.5.4), que cuenta como falla.</li>
-<li><strong>Colisiones</strong>, por misión y por kilómetro. La bandera de colisión de AirSim <strong>no detecta todos los contactos</strong> —ni el follaje ni el dron apoyado sobre una cornisa—: cero colisiones no equivale a cero contactos.</li>
+<li><strong>Colisiones.</strong> La bandera de colisión de AirSim <strong>no detecta todos los contactos</strong> —ni el follaje ni el dron apoyado sobre una cornisa—: cero colisiones no equivale a cero contactos.</li>
 <li><strong>Distancia mínima a obstáculo</strong> (DistMin): el mínimo, sobre la corrida, del percentil 5 de la profundidad del tercio central de la imagen, muestreado a 1 Hz por un hilo de auditoría que no comparte nada con el grafo.</li>
-<li><strong>SPL</strong> (<a href="13-REFERENCIAS.html#ref-anderson-2018">Anderson et al., 2018</a>): <span class="arithmatex">\(\text{SPL} = S \cdot \ell_{\text{opt}} / \max(\ell_{\text{real}}, \ell_{\text{opt}})\)</span>, con <span class="arithmatex">\(S\)</span> el éxito y <span class="arithmatex">\(\ell_{\text{opt}}\)</span> la suma de las distancias entre waypoints del manifiesto, idéntica para todas las celdas. Penaliza a la vez no llegar y llegar dando vueltas, y es la métrica primaria con obstrucción. Como <span class="arithmatex">\(\ell_{\text{opt}}\)</span> omite el tramo desde el punto de partida, el SPL está subestimado en una proporción constante por escenario (IT.A12.6.2) y se interpreta <strong>dentro de cada lote</strong>.</li>
+<li><strong>SPL</strong> (<a href="13-REFERENCIAS.html#ref-anderson-2018">Anderson et al., 2018</a>): <span class="arithmatex">\(\text{SPL} = S \cdot \ell_{\text{opt}} / \max(\ell_{\text{real}}, \ell_{\text{opt}})\)</span>, con <span class="arithmatex">\(S\)</span> el éxito y <span class="arithmatex">\(\ell_{\text{opt}}\)</span> la suma de las distancias entre waypoints del manifiesto. Penaliza a la vez no llegar y llegar dando vueltas, y es la métrica primaria con obstrucción; como <span class="arithmatex">\(\ell_{\text{opt}}\)</span> omite el tramo desde el punto de partida, se interpreta <strong>dentro de cada lote</strong> (IT.A12.6.2).</li>
 <li><strong>Tiempo</strong> a destino.</li>
 </ul>
 <h3 id="1062-dinamica-del-lazo-tactico">10.6.2 Dinámica del lazo táctico<a class="headerlink" href="#1062-dinamica-del-lazo-tactico" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Tiempo de reacción</strong>, medido como la <strong>latencia del grafo por ciclo</strong>, desde el fotograma hasta el comando; la capa estratégica no participa, porque corre en su propio hilo (cap. 5, IT.5.1.2). Se reporta la mediana y el <span class="arithmatex">\(p_{95}\)</span>, que es el que importa para el tiempo real.</li>
-<li><strong>Histograma de rutas</strong>: la distribución de ciclos entre los comportamientos del grafo, que caracteriza el vuelo mejor que el éxito.</li>
-<li><strong>Tasa de deliberación</strong>: fracción de ciclos con una consulta nueva del lazo lento.</li>
+<li><strong>Tiempo de reacción</strong>: la <strong>latencia del grafo por ciclo</strong>, desde el fotograma hasta el comando, con su mediana y su <span class="arithmatex">\(p_{95}\)</span>; la capa estratégica no participa, porque corre en su propio hilo (cap. 5, IT.5.1.2).</li>
+<li><strong>Histograma de rutas</strong> entre los comportamientos del grafo y <strong>tasa de deliberación</strong>, la fracción de ciclos con una consulta nueva del lazo lento.</li>
 </ul>
 <h3 id="1063-lazo-lento-y-resolucion-de-bloqueos">10.6.3 Lazo lento y resolución de bloqueos<a class="headerlink" href="#1063-lazo-lento-y-resolucion-de-bloqueos" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Resultados de la capa estratégica</strong>: fracción de consultas que proponen sub-meta, que declaran libre el camino directo o que no encuentran sector libre; una capa que declara libre el camino en casi todas las consultas, incluso cuando el dron termina en deadlock, no aporta información.</li>
-<li><strong>Avance hacia el waypoint real tras cada sub-meta</strong>, a los 20 s: la medida directa de si las sub-metas ayudan.</li>
+<li><strong>Resultados de la capa estratégica</strong>: fracción de consultas que proponen sub-meta, que declaran libre el camino directo o que no encuentran sector libre.</li>
+<li><strong>Avance hacia el waypoint real tras cada sub-meta</strong>, a los 20 s, sobre la ruta restante del manifiesto: la medida directa de si las sub-metas ayudan (cálculo en el Anexo 12, IT.A12.6.4).</li>
 <li><strong>Bloqueos</strong>: número de deadlocks, fracción resuelta por el barrido y fracción que cae al escape vertical. «Resuelto» significa que se fijó una sub-meta, <strong>no</strong> que el dron haya salido del bloqueo.</li>
 <li><strong>Desglose por waypoint</strong>, para no atribuir a todo el escenario la dificultad de un solo tramo.</li>
 </ul>
@@ -1919,20 +1991,21 @@ En ambientes despejados la capa deliberativa solo agrega costo; el beneficio, de
 <h3 id="1071-metricas-primarias-y-comparaciones-planificadas">10.7.1 Métricas primarias y comparaciones planificadas<a class="headerlink" href="#1071-metricas-primarias-y-comparaciones-planificadas" title="Permanent link">&para;</a></h3>
 <p>Declaradas antes de ver los datos: en los <strong>lotes despejados</strong>, el tiempo de las misiones exitosas (H2), con las tres comparaciones entre brazos; en los <strong>lotes con obstrucción</strong>, el SPL (H1), con las tres comparaciones de IT.10.3.3. Tres comparaciones por lote y seis lotes forman la familia de <strong>18 comparaciones primarias</strong>.</p>
 <h3 id="1072-pruebas-de-hipotesis-y-tamanos-de-efecto">10.7.2 Pruebas de hipótesis y tamaños de efecto<a class="headerlink" href="#1072-pruebas-de-hipotesis-y-tamanos-de-efecto" title="Permanent link">&para;</a></h3>
-<p>Cada comparación usa una <strong>prueba de permutación exacta sobre rangos</strong>, equivalente a la U de Mann-Whitney exacta (<a href="13-REFERENCIAS.html#ref-mann-1947">Mann &amp; Whitney, 1947</a>) pero válida con empates, frecuentes en SPL porque toda corrida fallida tiene SPL = 0. Las pruebas no paramétricas son una necesidad del dato: los tiempos están truncados por el presupuesto y el SPL tiene una masa en cero. El éxito y la distancia mínima se informan como métricas secundarias, sin corrección.</p>
-<p>Se reporta <strong>Cliff's Delta</strong> (<span class="arithmatex">\(\delta\)</span>; <a href="13-REFERENCIAS.html#ref-cliff-1993">Cliff, 1993</a>), la proporción de pares en que una muestra domina a la otra, con intervalo <em>bootstrap</em> y la escala de <a href="13-REFERENCIAS.html#ref-romano-2006">Romano et al. (2006)</a>: grande por encima de 0.474. Con <span class="arithmatex">\(K\)</span> pequeño, <strong>el tamaño de efecto es el resultado principal</strong> (<a href="13-REFERENCIAS.html#ref-agarwal-2021">Agarwal et al., 2021</a>): un <span class="arithmatex">\(\delta\)</span> grande con <span class="arithmatex">\(p\)</span> no significativo describe un efecto que el diseño no tuvo potencia para detectar, no un efecto ausente.</p>
+<p>Cada comparación usa una <strong>prueba de permutación exacta sobre rangos</strong>, equivalente a la U de Mann-Whitney exacta (<a href="13-REFERENCIAS.html#ref-mann-1947">Mann &amp; Whitney, 1947</a>) pero válida con empates, frecuentes en SPL porque toda corrida fallida tiene SPL = 0. El éxito y la distancia mínima se informan como métricas secundarias, sin corrección. Se reporta <strong>Cliff's Delta</strong> (<span class="arithmatex">\(\delta\)</span>; <a href="13-REFERENCIAS.html#ref-cliff-1993">Cliff, 1993</a>) con intervalo <em>bootstrap</em> y la escala de <a href="13-REFERENCIAS.html#ref-romano-2006">Romano et al. (2006)</a>: grande por encima de 0.474. Con <span class="arithmatex">\(K\)</span> pequeño, <strong>el tamaño de efecto es el resultado principal</strong> (<a href="13-REFERENCIAS.html#ref-agarwal-2021">Agarwal et al., 2021</a>): un <span class="arithmatex">\(\delta\)</span> grande con <span class="arithmatex">\(p\)</span> no significativo describe un efecto que el diseño no tuvo potencia para detectar, no un efecto ausente.</p>
 <h3 id="1073-comparaciones-multiples">10.7.3 Comparaciones múltiples<a class="headerlink" href="#1073-comparaciones-multiples" title="Permanent link">&para;</a></h3>
 <p><strong>Corrección de Bonferroni</strong> sobre la familia de 18: <span class="arithmatex">\(\alpha \approx 0.0028\)</span>. Se aplica <strong>solo a las comparaciones declaradas antes de ver los datos</strong>; cualquier otra se reporta como <strong>exploratoria</strong>.</p>
 <h3 id="1074-analisis-desagregado-y-comparacion-entre-lotes">10.7.4 Análisis desagregado y comparación entre lotes<a class="headerlink" href="#1074-analisis-desagregado-y-comparacion-entre-lotes" title="Permanent link">&para;</a></h3>
-<p>El análisis se informa <strong>por escenario</strong>, la única forma de contrastar H3: un promedio sobre los seis mezclaría escenarios donde <code>slm</code> solo puede perder con escenarios donde puede ganar (<a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>). Como los tiers corren en sesiones y proyectos distintos, la comparación entre lotes usa cantidades normalizadas dentro de cada lote: las <strong>razones</strong> <span class="arithmatex">\(t_{\text{brazo}}/t_{\text{reactive}}\)</span>, cuya progresión entre los tres controles es la evidencia central de H2; el <strong>perfil de consulta</strong> por escenario; y la <strong>interacción brazo × escenario</strong>. El resultado que sostiene H3 es un <strong>cambio de signo</strong> del efecto <code>slm</code> − <code>fsm</code> entre los controles y los escenarios con obstrucción, reportado como patrón de tamaños de efecto con sus intervalos y no como prueba formal de interacción, que con datos truncados y 10 réplicas no sería defendible. La conclusión no es un número sino un mapa: <strong>dónde la capa deliberativa paga y dónde no</strong>.</p>
+<p>El análisis se informa <strong>por escenario</strong>, la única forma de contrastar H3: un promedio sobre los seis mezclaría escenarios donde <code>depth2loop</code> solo puede perder con escenarios donde puede ganar (<a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>). Como los tiers corren en sesiones y proyectos distintos, la comparación entre lotes usa cantidades normalizadas dentro de cada lote: las <strong>razones</strong> <span class="arithmatex">\(t_{\text{brazo}}/t_{\text{reactive}}\)</span>, cuya progresión entre los tres controles es la evidencia central de H2, y la <strong>interacción brazo × escenario</strong>. El resultado que sostiene H3 es un <strong>cambio de signo</strong> del efecto <code>depth2loop</code> − <code>fsm</code> entre los controles y los escenarios con obstrucción, reportado como patrón de tamaños de efecto con sus intervalos y no como prueba formal de interacción, que con datos truncados y 10 réplicas no sería defendible.</p>
 <hr />
 <h2 id="108-amenazas-a-la-validez">10.8 Amenazas a la validez<a class="headerlink" href="#108-amenazas-a-la-validez" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Potencia estadística.</strong> Con <span class="arithmatex">\(K = 10\)</span>, una separación parcial puede no superar Bonferroni: un resultado no significativo se lee como "no detectado con esta potencia", nunca como "ausente".</li>
 <li><strong>Validez externa respecto de los modelos.</strong> Las conclusiones son sobre una red de profundidad concreta y sobre LFM2.5-VL-1.6B cuantizado, no sobre "modelos de lenguaje pequeños" en general; el banco mide además un solo entorno (IT.A12.10.3).</li>
 <li><strong>Efecto de sesión entre tiers.</strong> Las comparaciones absolutas entre tiers no son limpias (IT.10.5.2); la mitigación parcial son las razones normalizadas.</li>
-<li><strong>Sin obstáculos dinámicos.</strong> El diseño asume geometría estática, y las conclusiones no se extienden a agentes móviles, el escalón que la literatura de conducción identifica como decisivo (<a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>).</li>
+<li><strong>Sin obstáculos dinámicos.</strong> El diseño asume geometría estática, y las conclusiones no se extienden a agentes móviles (<a href="13-REFERENCIAS.html#ref-codevilla-2019">Codevilla et al., 2019</a>).</li>
 <li><strong>Un escenario por lote.</strong> Un efecto es una propiedad de esa geometría hasta que se replique en otra ruta del mismo tipo; la generalización entre escenarios es descriptiva.</li>
+<li><strong>Réplicas de una sesión.</strong> Las semillas de un lote comparten sesión de simulador y pose de partida (IT.10.5.1): la inferencia es sobre la variabilidad entre réplicas de esa sesión, no entre sesiones ni poses.</li>
+<li><strong>Métrica condicionada al éxito.</strong> En los controles se compara el tiempo de las misiones exitosas: si una celda falla más, su tiempo se calcula sobre menos semillas y no refleja esas fallas, que se leen en la tasa de éxito.</li>
 </ol>
 <p>Ninguna invalida el diseño para las preguntas que sí responde; todas acotan lo que puede afirmarse. Las extensiones que las mitigan están en el plan extendido de pruebas (Anexo 12, IT.A12.11).</p>
 
