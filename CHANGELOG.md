@@ -1,3 +1,14 @@
+# 2026-11-25 - Resumen condensado a una pagina y caratula con el nombre oficial de la maestria
+
+Sin cambios de codigo.
+
+- Resumen reducido de ~720 a ~450 palabras para que entre en una hoja del PDF junto con las palabras clave; se
+  mantienen todos los datos clave (AUC del TTC, auditoria en vuelo 23 %/17 %, LFM2.5-VL AUC 0.53 frente a
+  Depth Anything V2 AUC 0.83-0.87, planificacion cenital AUC 0.81, 210 corridas en seis escenarios, resultados
+  frente a reactivo y FSM).
+- Caratula: "Maestria en Explotacion de Datos y Gestion del Conocimiento (MEDGC/2020)", cohorte 2024/2025.
+- HTML y PDF del informe regenerados.
+
 # 2026-11-24 - Revision de cierre: titulo y objetivos acotados, brazo `depth2loop`, avance a 20 s e informe a ~24.200 palabras
 
 Sin cambios de comportamiento del codigo de vuelo. La tesis se cierra en su estado actual, sin campanas nuevas de
